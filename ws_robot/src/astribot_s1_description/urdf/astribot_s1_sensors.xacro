@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<!--
+  文件用途：可选传感器（2D 激光雷达 + RGB 相机），用 xacro:if 通过顶层参数 use_lidar/use_camera 开关。
+  雷达装在底盘前方（astribot_torso_base 前沿），相机装在头部 astribot_head_link_2（随头部俯仰转动）。
+  均使用 Gazebo 官方 gz-sim 传感器插件（非实验性），通过 ros_gz_bridge 转出标准 ROS2 话题
+  （見 astribot_s1_gazebo_bringup/config/astribot_s1_bridge.yaml）。
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="astribot_s1_lidar" params="parent:=astribot_torso_base robot_name:=astribot_s1">
+    <link name="lidar_link">
+      <inertial>
+        <mass value="0.15"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+      <visual>
+        <geometry>
+          <cylinder radius="0.035" length="0.04"/>
+        </geometry>
+        <material name="astribot_lidar_color">
+          <color rgba="0.1 0.1 0.1 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="0.035" length="0.04"/>
+        </geometry>
+      </collision>
+    </link>
+    <!-- 装在底盘前沿（+x 方向）、略高于地面，避免与底盘外壳碰撞体自相交 -->
+    <joint name="lidar_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="lidar_link"/>
+      <origin xyz="0.30 0 0.05" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="lidar_link">
+      <sensor name="astribot_lidar" type="gpu_lidar">
+        <pose>0 0 0 0 0 0</pose>
+        <!-- 用带 robot_name 的绝对话题名(以 / 开头)，避免 gz-sim 按 world/model/link/sensor
+             层级自动生成一长串话题名——绝对名字才能在 bridge yaml 里写死映射关系 -->
+        <topic>/model/${robot_name}/scan</topic>
+        <update_rate>10</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>360</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.12</min>
+            <max>12.0</max>
+            <resolution>0.01</resolution>
+          </range>
+        </lidar>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="astribot_s1_camera" params="parent:=astribot_head_link_2 robot_name:=astribot_s1">
+    <link name="camera_link">
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+      <visual>
+        <geometry>
+          <box size="0.03 0.08 0.03"/>
+        </geometry>
+        <material name="astribot_camera_color">
+          <color rgba="0.05 0.05 0.05 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.03 0.08 0.03"/>
+        </geometry>
+      </collision>
+    </link>
+    <!-- head_link_2 的+y方向即"前方"（其球面碰撞体 collision 原点在 y=-0.15，
+         说明 mesh 正面朝 -y？此处按已知 head 前视方向挂载，出生后可在 RViz 里核对朝向再微调） -->
+    <joint name="camera_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="camera_link"/>
+      <origin xyz="0 -0.22 0" rpy="-1.5708 0 -1.5708"/>
+    </joint>
+
+    <gazebo reference="camera_link">
+      <sensor name="astribot_camera" type="camera">
+        <pose>0 0 0 0 0 0</pose>
+        <topic>/model/${robot_name}/camera/image_raw</topic>
+        <update_rate>30</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>50</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+</robot>

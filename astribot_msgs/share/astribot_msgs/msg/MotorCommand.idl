@@ -1,0 +1,59 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from astribot_msgs/msg/MotorCommand.msg
+// generated code does not contain a copyright notice
+
+
+module astribot_msgs {
+  module msg {
+    typedef double double__9[9];
+    typedef int8 int8__9[9];
+    module MotorCommand_Constants {
+      @verbatim (language="comment", text=
+        "Matches the existing constant")
+      const uint8 MAX_MOTOR_NUM = 9;
+    };
+    struct MotorCommand {
+      @verbatim (language="comment", text=
+        "Control parameters" "\n"
+        "Proportional gain")
+      double__9 kp;
+
+      @verbatim (language="comment", text=
+        "Derivative gain")
+      double__9 kd;
+
+      @verbatim (language="comment", text=
+        "Position setpoint")
+      double__9 p;
+
+      @verbatim (language="comment", text=
+        "Velocity setpoint")
+      double__9 v;
+
+      @verbatim (language="comment", text=
+        "Feedforward torque")
+      double__9 t_ff;
+
+      @verbatim (language="comment", text=
+        "Torque limit")
+      double__9 t_limit;
+
+      @verbatim (language="comment", text=
+        "Brake release status")
+      int8__9 break_relase;
+
+      @verbatim (language="comment", text=
+        "Slave derivative gain")
+      double__9 kd_slave;
+
+      @verbatim (language="comment", text=
+        "Velocity setpoint for slave motors")
+      double__9 vel_slave;
+
+      @verbatim (language="comment", text=
+        "Motor IDs (variable length)" "\n"
+        "List of motor IDs to control")
+      sequence<int32> motor_id_list;
+    };
+  };
+};

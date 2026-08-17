@@ -1,0 +1,1207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="astribot_s1_whole_body">
+  <link
+    name="astribot_torso_base">
+    <inertial>
+      <origin
+        xyz="-0.062784 0.007017 0.035375"
+        rpy="0 0 0" />
+      <mass
+        value="39.24781" />
+      <inertia
+        ixx="1.071997"
+        ixy="0.015889"
+        ixz="-0.058447"
+        iyy="1.218431"
+        iyz="-0.002015"
+        izz="1.489411" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://meshes/astribot_torso_base.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_base.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="astribot_torso_link_1">
+    <inertial>
+      <origin
+        xyz="-0.18903 9.4372E-05 8.3536E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.68965" />
+      <inertia
+        ixx="0.0033659"
+        ixy="0.00024984"
+        ixz="1.729E-05"
+        iyy="0.020221"
+        iyz="1.5896E-06"
+        izz="0.017713" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_torso_joint_1"
+    type="revolute">
+    <origin
+      xyz="0 0 0.12"
+      rpy="1.5708 1.5708 -3.14159" />
+    <parent
+      link="astribot_torso_base" />
+    <child
+      link="astribot_torso_link_1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.06"
+      upper="1.5"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_torso_link_2">
+    <inertial>
+      <origin
+        xyz="-0.15752 0.023726 -1.2518E-05"
+        rpy="0 0 0" />
+      <mass
+        value="1.1291" />
+      <inertia
+        ixx="0.0024171"
+        ixy="-0.00019413"
+        ixz="2.0002E-06"
+        iyy="0.0051763"
+        iyz="-1.1283E-06"
+        izz="0.0051247" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_torso_joint_2"
+    type="revolute">
+    <origin
+      xyz="-0.38 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="astribot_torso_link_1" />
+    <child
+      link="astribot_torso_link_2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-2.4"
+      upper="0.03"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_torso_link_3">
+    <inertial>
+      <origin
+        xyz="-0.0035801 -0.022712 -1.7068E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.17771" />
+      <inertia
+        ixx="0.00031478"
+        ixy="-1.1387E-05"
+        ixz="-6.5169E-09"
+        iyy="0.00017828"
+        iyz="-8.0815E-08"
+        izz="0.00022365" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_torso_joint_3"
+    type="revolute">
+    <origin
+      xyz="-0.38952 0 0"
+      rpy="0 0 -1.5708" />
+    <parent
+      link="astribot_torso_link_2" />
+    <child
+      link="astribot_torso_link_3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.03"
+      upper="2.4"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_torso_link_4">
+    <inertial>
+      <origin
+        xyz="-0.010399 -0.00030287 -0.068886"
+        rpy="0 0 0" />
+      <mass
+        value="1.0791" />
+      <inertia
+        ixx="0.010807"
+        ixy="9.9087E-07"
+        ixz="-7.0429E-05"
+        iyy="0.0069254"
+        iyz="1.048E-05"
+        izz="0.0055619" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_torso_link_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_torso_joint_4"
+    type="revolute">
+    <origin
+      xyz="0 -0.34475 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="astribot_torso_link_3" />
+    <child
+      link="astribot_torso_link_4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.6"
+      upper="1.6"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_left_link_1">
+    <inertial>
+      <origin
+        xyz="0.0016667 0.0014755 -0.051441"
+        rpy="0 0 0" />
+      <mass
+        value="0.12227" />
+      <inertia
+        ixx="0.00015017"
+        ixy="-1.66E-06"
+        ixz="4.2033E-07"
+        iyy="0.00015194"
+        iyz="7.8827E-07"
+        izz="8.9255E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_left_joint_1"
+    type="revolute">
+    <origin
+      xyz="0 0.15 0.054596"
+      rpy="0 -1.2217 -1.5708" />
+    <parent
+      link="astribot_torso_link_4" />
+    <child
+      link="astribot_arm_left_link_1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1"
+      upper="3.1"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_left_link_2">
+    <inertial>
+      <origin
+        xyz="-0.037047 -0.0047768 0.038209"
+        rpy="0 0 0" />
+      <mass
+        value="0.4283" />
+      <inertia
+        ixx="0.00038363"
+        ixy="1.2736E-05"
+        ixz="-1.9365E-05"
+        iyy="0.00055189"
+        iyz="-1.1577E-05"
+        izz="0.00051661" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_left_joint_2"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="1.5708 1.5708 0" />
+    <parent
+      link="astribot_arm_left_link_1" />
+    <child
+      link="astribot_arm_left_link_2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5"
+      upper="0.5"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_left_link_3">
+    <inertial>
+      <origin
+        xyz="0.010208 -1.5962E-05 -0.08069"
+        rpy="0 0 0" />
+      <mass
+        value="0.28916" />
+      <inertia
+        ixx="0.0018747"
+        ixy="-8.3086E-08"
+        ixz="0.00021946"
+        iyy="0.0016896"
+        iyz="1.0617E-07"
+        izz="0.00038132" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_left_joint_3"
+    type="revolute">
+    <origin
+      xyz="-0.05 -0.309 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="astribot_arm_left_link_2" />
+    <child
+      link="astribot_arm_left_link_3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.14"
+      upper="1.57"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_left_link_4">
+    <inertial>
+      <origin
+        xyz="-0.00014512 0.01392 1.4553E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.061714" />
+      <inertia
+        ixx="7.0831E-05"
+        ixy="-9.4107E-07"
+        ixz="-1.2516E-10"
+        iyy="2.5049E-05"
+        iyz="8.4675E-09"
+        izz="6.2506E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_left_joint_4"
+    type="revolute">
+    <origin
+      xyz="0.03 0 0"
+      rpy="-1.5708 0 0" />
+    <parent
+      link="astribot_arm_left_link_3" />
+    <child
+      link="astribot_arm_left_link_4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.02"
+      upper="2.55"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_left_link_5">
+    <inertial>
+      <origin
+        xyz="0.00064012 -8.8963E-05 -0.082635"
+        rpy="0 0 0" />
+      <mass
+        value="0.15484" />
+      <inertia
+        ixx="0.00035736"
+        ixy="-7.3241E-08"
+        ixz="1.3056E-06"
+        iyy="0.00030227"
+        iyz="9.9985E-07"
+        izz="0.00010817" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_left_joint_5"
+    type="revolute">
+    <origin
+      xyz="0 -0.277 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="astribot_arm_left_link_4" />
+    <child
+      link="astribot_arm_left_link_5" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-2.15"
+      upper="2.15"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_left_link_6">
+    <inertial>
+      <origin
+        xyz="-3.6739E-07 -1.3897E-05 3.703E-08"
+        rpy="0 0 0" />
+      <mass
+        value="0.023337" />
+      <inertia
+        ixx="1.5265E-05"
+        ixy="-8.1819E-10"
+        ixz="-8.282E-11"
+        iyy="5.6E-06"
+        iyz="-9.5358E-11"
+        izz="1.259E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_6.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_6.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_left_joint_6"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="-1.5708 -1.5708 0" />
+    <parent
+      link="astribot_arm_left_link_5" />
+    <child
+      link="astribot_arm_left_link_6" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.78"
+      upper="0.78"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_left_link_7">
+    <inertial>
+      <origin
+        xyz="7.9929E-06 -0.0090537 -0.0048515"
+        rpy="0 0 0" />
+      <mass
+        value="0.036322" />
+      <inertia
+        ixx="2.8485E-05"
+        ixy="1.1952E-08"
+        ixz="-9.5307E-09"
+        iyy="2.205E-05"
+        iyz="-7.072E-10"
+        izz="1.5779E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_7.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_left_link_7.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_left_joint_7"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="-1.5708 1.5708 0" />
+    <parent
+      link="astribot_arm_left_link_6" />
+    <child
+      link="astribot_arm_left_link_7" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.55"
+      upper="1.55"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_right_link_1">
+    <inertial>
+      <origin
+        xyz="0.00057138 0.00035022 -0.05144"
+        rpy="0 0 0" />
+      <mass
+        value="0.1223" />
+      <inertia
+        ixx="0.00014942"
+        ixy="7.0625E-07"
+        ixz="-1.3635E-07"
+        iyy="0.00015319"
+        iyz="-3.192E-07"
+        izz="8.9752E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_right_joint_1"
+    type="revolute">
+    <origin
+      xyz="0 -0.15 0.054596"
+      rpy="0 -1.2217 1.5708" />
+    <parent
+      link="astribot_torso_link_4" />
+    <child
+      link="astribot_arm_right_link_1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1"
+      upper="3.1"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_right_link_2">
+    <inertial>
+      <origin
+        xyz="-0.037264 -0.0048313 -0.036803"
+        rpy="0 0 0" />
+      <mass
+        value="0.42625" />
+      <inertia
+        ixx="0.00038174"
+        ixy="1.2426E-05"
+        ixz="1.8666E-05"
+        iyy="0.00054681"
+        iyz="1.1449E-05"
+        izz="0.00050976" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_right_joint_2"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 1.5708 -1.5708" />
+    <parent
+      link="astribot_arm_right_link_1" />
+    <child
+      link="astribot_arm_right_link_2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5"
+      upper="0.5"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_right_link_3">
+    <inertial>
+      <origin
+        xyz="0.010208 -1.5993E-05 -0.08069"
+        rpy="0 0 0" />
+      <mass
+        value="0.28917" />
+      <inertia
+        ixx="0.0018747"
+        ixy="-8.3288E-08"
+        ixz="0.00021946"
+        iyy="0.0016896"
+        iyz="1.0566E-07"
+        izz="0.00038132" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_right_joint_3"
+    type="revolute">
+    <origin
+      xyz="-0.05 -0.309 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="astribot_arm_right_link_2" />
+    <child
+      link="astribot_arm_right_link_3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.57"
+      upper="3.14"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_right_link_4">
+    <inertial>
+      <origin
+        xyz="-0.00014514 -0.01392 -1.4551E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.061713" />
+      <inertia
+        ixx="7.0829E-05"
+        ixy="9.411E-07"
+        ixz="2.6607E-10"
+        iyy="2.5048E-05"
+        iyz="8.4836E-09"
+        izz="6.2505E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_right_joint_4"
+    type="revolute">
+    <origin
+      xyz="0.03 0 0"
+      rpy="-1.5708 0 0" />
+    <parent
+      link="astribot_arm_right_link_3" />
+    <child
+      link="astribot_arm_right_link_4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.02"
+      upper="2.55"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_right_link_5">
+    <inertial>
+      <origin
+        xyz="0.00064077 -9.076E-05 -0.082636"
+        rpy="0 0 0" />
+      <mass
+        value="0.15484" />
+      <inertia
+        ixx="0.00035737"
+        ixy="-7.045E-08"
+        ixz="1.3048E-06"
+        iyy="0.00030227"
+        iyz="1.0023E-06"
+        izz="0.00010818" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_right_joint_5"
+    type="revolute">
+    <origin
+      xyz="0 -0.277 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="astribot_arm_right_link_4" />
+    <child
+      link="astribot_arm_right_link_5" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-2.15"
+      upper="2.15"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_right_link_6">
+    <inertial>
+      <origin
+        xyz="1.1937E-06 -2.5613E-05 1.7708E-06"
+        rpy="0 0 0" />
+      <mass
+        value="0.023344" />
+      <inertia
+        ixx="1.5274E-05"
+        ixy="-6.6005E-10"
+        ixz="1.8232E-09"
+        iyy="5.604E-06"
+        iyz="4.6785E-10"
+        izz="1.26E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_6.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_6.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_right_joint_6"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="1.5708 -1.5708 3.1416" />
+    <parent
+      link="astribot_arm_right_link_5" />
+    <child
+      link="astribot_arm_right_link_6" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.78"
+      upper="0.78"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_arm_right_link_7">
+    <inertial>
+      <origin
+        xyz="7.9945E-06 -0.0090537 -0.0048515"
+        rpy="0 0 0" />
+      <mass
+        value="0.036322" />
+      <inertia
+        ixx="2.8485E-05"
+        ixy="1.1964E-08"
+        ixz="-9.5125E-09"
+        iyy="2.205E-05"
+        iyz="-7.1897E-10"
+        izz="1.5779E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_7.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_arm_right_link_7.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_arm_right_joint_7"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="-1.5708 1.5708 0" />
+    <parent
+      link="astribot_arm_right_link_6" />
+    <child
+      link="astribot_arm_right_link_7" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.55"
+      upper="1.55"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_head_link_1">
+    <inertial>
+      <origin
+        xyz="5.1659E-05 -0.0010417 -0.017788"
+        rpy="0 0 0" />
+      <mass
+        value="0.016467" />
+      <inertia
+        ixx="9.2916E-06"
+        ixy="1.1256E-08"
+        ixz="1.386E-08"
+        iyy="9.996E-06"
+        iyz="-2.6305E-07"
+        izz="1.9643E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_head_link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_head_link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_head_joint_1"
+    type="revolute">
+    <origin
+      xyz="0 0 0.1229"
+      rpy="0 0 0" />
+    <parent
+      link="astribot_torso_link_4" />
+    <child
+      link="astribot_head_link_1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.6"
+      upper="1.6"
+      effort="20"
+      velocity="20" />
+  </joint>
+  <link
+    name="astribot_head_link_2">
+    <inertial>
+      <origin
+        xyz="-0.16054 -0.007113 -2.4502E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.28593" />
+      <inertia
+        ixx="0.00108"
+        ixy="-1.9259E-05"
+        ixz="5.9938E-08"
+        iyy="0.0011785"
+        iyz="-7.5246E-08"
+        izz="0.00071595" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_head_link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://astribot_s1_whole_body/meshes/astribot_head_link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="astribot_head_joint_2"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="-1.5708 1.5708 0" />
+    <parent
+      link="astribot_head_link_1" />
+    <child
+      link="astribot_head_link_2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.0"
+      upper="1.0"
+      effort="20"
+      velocity="20" />
+  </joint>
+</robot>

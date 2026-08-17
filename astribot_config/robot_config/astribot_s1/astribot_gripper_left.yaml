@@ -1,0 +1,16 @@
+robot_name: astribot_gripper_left
+robot_type: effector
+frequency: 100
+max_velocity_coefficient: 1.0
+max_acceleration_coefficient: 1.0
+max_jerk_coefficient: 1.0
+max_torque_coefficient: 1.0
+model: {
+  model_name: astribot_gripper,
+  joint_names: ['astribot_gripper_joint'],
+  joint_types: [2], # 1 revolute, 2 prismatic
+  joint_upper_positions: [100.0],
+  joint_lower_positions: [0.0],
+  joint_max_torques: [145.0],
+  joint_max_velocities: [1000.0],
+}

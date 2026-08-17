@@ -1,0 +1,5 @@
+string part_name
+bool is_controlled
+string holder_internal_id
+string holder_user_id
+builtin_interfaces/Time acquired_at

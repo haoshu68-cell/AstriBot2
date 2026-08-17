@@ -1,0 +1,21 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from astribot_msgs/msg/SlaveMotorCommand.msg
+// generated code does not contain a copyright notice
+
+#include "astribot_msgs/msg/AstribotHeader.idl"
+#include "astribot_msgs/msg/MotorCommand.idl"
+
+module astribot_msgs {
+  module msg {
+    typedef astribot_msgs::msg::MotorCommand astribot_msgs__msg__MotorCommand;
+    typedef astribot_msgs__msg__MotorCommand astribot_msgs__msg__MotorCommand__3[3];
+    module SlaveMotorCommand_Constants {
+      const uint8 MAX_SLAVE_MOTOR = 3;
+    };
+    struct SlaveMotorCommand {
+      astribot_msgs::msg::AstribotHeader header;
+
+      astribot_msgs__msg__MotorCommand__3 slave_motor_command;
+    };
+  };
+};

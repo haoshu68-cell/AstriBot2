@@ -1,0 +1,133 @@
+# controller_manager + 4 个 JointTrajectoryController + joint_state_broadcaster
+#
+# 关节分组与 astribot_config/robot_config/astribot_s1/astribot_{torso,head,arm_left,arm_right}.yaml
+# 里的 robot_type 划分保持一致（torso / head / arm），方便和真实设备侧的分组对应，
+# 便于以后把真机的运动指令改造成同一套 JointTrajectoryController 接口。
+#
+# update_rate 与 astribot_torso.yaml 等现有配置里的 frequency: 100 保持一致。
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    torso_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    head_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    arm_left_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    arm_right_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+joint_state_broadcaster:
+  ros__parameters:
+    joints:
+      - astribot_torso_joint_1
+      - astribot_torso_joint_2
+      - astribot_torso_joint_3
+      - astribot_torso_joint_4
+      - astribot_head_joint_1
+      - astribot_head_joint_2
+      - astribot_arm_left_joint_1
+      - astribot_arm_left_joint_2
+      - astribot_arm_left_joint_3
+      - astribot_arm_left_joint_4
+      - astribot_arm_left_joint_5
+      - astribot_arm_left_joint_6
+      - astribot_arm_left_joint_7
+      - astribot_arm_right_joint_1
+      - astribot_arm_right_joint_2
+      - astribot_arm_right_joint_3
+      - astribot_arm_right_joint_4
+      - astribot_arm_right_joint_5
+      - astribot_arm_right_joint_6
+      - astribot_arm_right_joint_7
+    interfaces:
+      - position
+      - velocity
+      - effort
+
+torso_controller:
+  ros__parameters:
+    joints:
+      - astribot_torso_joint_1
+      - astribot_torso_joint_2
+      - astribot_torso_joint_3
+      - astribot_torso_joint_4
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 0.5
+
+head_controller:
+  ros__parameters:
+    joints:
+      - astribot_head_joint_1
+      - astribot_head_joint_2
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 0.5
+
+arm_left_controller:
+  ros__parameters:
+    joints:
+      - astribot_arm_left_joint_1
+      - astribot_arm_left_joint_2
+      - astribot_arm_left_joint_3
+      - astribot_arm_left_joint_4
+      - astribot_arm_left_joint_5
+      - astribot_arm_left_joint_6
+      - astribot_arm_left_joint_7
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 0.5
+
+arm_right_controller:
+  ros__parameters:
+    joints:
+      - astribot_arm_right_joint_1
+      - astribot_arm_right_joint_2
+      - astribot_arm_right_joint_3
+      - astribot_arm_right_joint_4
+      - astribot_arm_right_joint_5
+      - astribot_arm_right_joint_6
+      - astribot_arm_right_joint_7
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 0.5

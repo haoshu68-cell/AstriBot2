@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+
+  <transport_descriptors>
+    <transport_descriptor>
+      <transport_id>CustomUDPTransport</transport_id>
+      <type>UDPv4</type>
+      <!-- 只允许使用这台机器在 192.168.0.x 下的 IP -->
+      <interfaceWhiteList>
+        <address>__LOCAL_192_IP__</address>
+      </interfaceWhiteList>
+    </transport_descriptor>
+  </transport_descriptors>
+
+  <!-- 默认参与者配置，使用上面的 UDPv4 传输，并禁用内置传输 -->
+  <participant profile_name="participant_profile" is_default_profile="true">
+    <rtps>
+      <useBuiltinTransports>false</useBuiltinTransports>
+      <userTransports>
+        <transport_id>CustomUDPTransport</transport_id>
+      </userTransports>
+    </rtps>
+  </participant>
+
+</profiles>

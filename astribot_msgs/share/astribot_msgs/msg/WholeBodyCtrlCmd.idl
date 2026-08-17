@@ -1,0 +1,48 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from astribot_msgs/msg/WholeBodyCtrlCmd.msg
+// generated code does not contain a copyright notice
+
+#include "astribot_msgs/msg/AstribotHeader.idl"
+#include "geometry_msgs/msg/Twist.idl"
+
+module astribot_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Request")
+    struct WholeBodyCtrlCmd {
+      astribot_msgs::msg::AstribotHeader header;
+
+      @verbatim (language="comment", text=
+        "Twist for left and right arms (linear and angular velocity)")
+      geometry_msgs::msg::Twist left_arm_twist;
+
+      geometry_msgs::msg::Twist right_arm_twist;
+
+      geometry_msgs::msg::Twist torso_twist;
+
+      @verbatim (language="comment", text=
+        "[x,y,z,qx,qy,qz,qw] desired poses in world frame for cartesian commands")
+      sequence<double> pose_world_to_torso_desired;
+
+      sequence<double> pose_world_to_left_arm_desired;
+
+      sequence<double> pose_world_to_right_arm_desired;
+
+      sequence<double> pose_world_to_chassis_current;
+
+      boolean torso_open_loop;
+
+      boolean enable_collision_avoidance;
+
+      @verbatim (language="comment", text=
+        "# !!!It will not work!!! Reset WBC first loop flag if true" "\n"
+        "bool first_flag" "\n"
+        "Current smooth time (0.0 to smooth_duration)")
+      double smooth_t;
+
+      @verbatim (language="comment", text=
+        "Total duration for smooth transition (default: 1.0)")
+      double smooth_duration;
+    };
+  };
+};

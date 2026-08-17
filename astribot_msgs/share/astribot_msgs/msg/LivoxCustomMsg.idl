@@ -1,0 +1,39 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from astribot_msgs/msg/LivoxCustomMsg.msg
+// generated code does not contain a copyright notice
+
+#include "astribot_msgs/msg/CustomPoint.idl"
+#include "std_msgs/msg/Header.idl"
+
+module astribot_msgs {
+  module msg {
+    typedef uint8 uint8__3[3];
+    @verbatim (language="comment", text=
+      "Livox publish pointcloud msg format.")
+    struct LivoxCustomMsg {
+      @verbatim (language="comment", text=
+        "ROS standard message header")
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "The time of first point")
+      uint64 timebase;
+
+      @verbatim (language="comment", text=
+        "Total number of pointclouds")
+      uint32 point_num;
+
+      @verbatim (language="comment", text=
+        "Lidar device id number")
+      uint8 lidar_id;
+
+      @verbatim (language="comment", text=
+        "Reserved use")
+      uint8__3 rsvd;
+
+      @verbatim (language="comment", text=
+        "Pointcloud data")
+      sequence<astribot_msgs::msg::CustomPoint> points;
+    };
+  };
+};

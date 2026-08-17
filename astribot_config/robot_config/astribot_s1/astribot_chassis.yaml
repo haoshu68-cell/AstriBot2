@@ -1,0 +1,21 @@
+robot_name: astribot_chassis
+robot_type: chassis
+frequency: 100
+max_velocity_coefficient: 1.0
+max_acceleration_coefficient: 1.0
+max_jerk_coefficient: 1.0
+max_torque_coefficient: 1.0
+model: {
+  model_name: astribot_chassis,
+  joint_names: ['astribot_chassis_x', 'astribot_chassis_y', 'astribot_chassis_z_rot'],
+  joint_types: [2, 2, 1], # 1 revolute, 2 prismatic
+  joint_upper_positions: [99999999, 99999999, 99999999],
+  joint_lower_positions: [-99999999, -99999999, -99999999],
+  joint_max_torques: [1000.0, 1000.0, 1000.0],
+  joint_max_velocities: [1.0, 1.0, 2.0],
+}
+transform: {
+  weld_to_base_pose: [0.0, 0, 0.0, 0, 0, 0], # world to chassis when slam pose is 0
+  effector_to_tool_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+  effector_to_ft_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+}

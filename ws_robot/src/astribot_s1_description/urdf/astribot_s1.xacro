@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!--
+  文件用途：Astribot S1 轮式双臂机器人 —— 顶层 xacro 入口。
+  聚合：底盘(4麦克纳姆轮+4自由度升降躯干) + 头部(2自由度) + 左右机械臂(各7自由度)
+       + 可选传感器(2D激光雷达/RGB相机) + ros2_control + Gazebo 插件。
+
+  用法（供 launch.py 调用，见 astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py）：
+    xacro astribot_s1.xacro robot_name:=astribot_s1 use_lidar:=true use_camera:=true \
+          controllers_config:=<colcon安装后由 FindPackageShare 算出的绝对路径>
+-->
+<robot name="$(arg robot_name)" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============ 可调参数（全部通过 launch 参数外部传入，禁止在此写死） ============ -->
+  <!-- robot_name：同时用作 <robot name="">、Gazebo 生成实体名(-name)、传感器 gz 话题前缀，
+       三处必须一致，才能保证 ros_gz_bridge 桥接到正确的 gz 话题；用于避免多机器人重名冲突。 -->
+  <xacro:arg name="robot_name" default="astribot_s1"/>
+  <xacro:arg name="use_lidar" default="true"/>
+  <xacro:arg name="use_camera" default="true"/>
+  <!-- controllers_config：ros2_control 控制器 yaml 的绝对路径字符串，
+       由调用方（launch.py）用 FindPackageShare + PathJoinSubstitution 拼出后传入，
+       本文件内部不出现任何硬编码路径。 -->
+  <xacro:arg name="controllers_config" default=""/>
+
+  <xacro:property name="use_lidar_prop" value="$(arg use_lidar)"/>
+  <xacro:property name="use_camera_prop" value="$(arg use_camera)"/>
+  <xacro:property name="robot_name_prop" value="$(arg robot_name)"/>
+
+  <!-- ============ 载入各功能模块 ============ -->
+  <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_torso_wheel.xacro"/>
+  <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_head.xacro"/>
+  <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_arm.xacro"/>
+  <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_sensors.xacro"/>
+  <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_ros2_control.xacro"/>
+  <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1.gazebo.xacro"/>
+
+  <!-- ============ 传感器（按参数开关，默认都打开） ============ -->
+  <xacro:if value="${use_lidar_prop}">
+    <xacro:astribot_s1_lidar parent="astribot_torso_base" robot_name="${robot_name_prop}"/>
+  </xacro:if>
+  <xacro:if value="${use_camera_prop}">
+    <xacro:astribot_s1_camera parent="astribot_head_link_2" robot_name="${robot_name_prop}"/>
+  </xacro:if>
+
+  <!-- ============ ros2_control + gz_ros2_control 插件 ============ -->
+  <xacro:astribot_s1_ros2_control controllers_config="$(arg controllers_config)"/>
+
+  <!-- ============ 底盘全向轮驱动 + 里程计 + 轮子摩擦 ============ -->
+  <xacro:astribot_s1_gazebo_chassis_plugins wheel_radius="0.08" wheel_separation="0.4327" wheelbase="0.4327"/>
+
+</robot>

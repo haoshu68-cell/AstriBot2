@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_description</name>
+  <version>0.1.0</version>
+  <description>
+    Astribot S1 轮式双臂机器人（麦克纳姆全向底盘 + 4自由度升降躯干 + 2自由度头部 + 双7自由度机械臂）
+    的 xacro/URDF 描述、mesh 资源与 RViz 配置。数据基于 astribot_config/robot_config/astribot_s1
+    现有模型改造，补全了仿真所需的碰撞体，并加入 ros2_control / Gazebo 插件标签。
+  </description>
+  <maintainer email="dev@astribot.local">astribot-dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <!-- Gazebo(Ignition/Gz Sim) 侧运行时依赖：解析 <ros2_control>/<gazebo> 标签、生成实体 -->
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>gz_ros2_control</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

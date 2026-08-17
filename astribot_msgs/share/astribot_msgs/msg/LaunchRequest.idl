@@ -1,0 +1,29 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from astribot_msgs/msg/LaunchRequest.msg
+// generated code does not contain a copyright notice
+
+
+module astribot_msgs {
+  module msg {
+    module LaunchRequest_Constants {
+      const uint8 ENUM_UNKNOWN = 0;
+      const uint8 ENUM_ASTRIBOT_CAMERA = 1;
+      const uint8 ENUM_ASTRIBOT_JOY = 2;
+      const uint8 ENUM_ASTRIBOT_VR = 3;
+      const uint8 ENUM_ASTRIBOT_MIC = 4;
+      const uint8 ENUM_ASTRIBOT_LIDAR = 5;
+      const uint8 ENUM_ASTRIBOT_TELEOP = 6;
+      @verbatim (language="comment", text=
+        "启动或停止类型")
+      const uint8 ENUM_DEACTIVE = 1;
+      const uint8 ENUM_ACTIVE = 2;
+    };
+    @verbatim (language="comment", text=
+      "启动/停止的目标类型")
+    struct LaunchRequest {
+      uint8 launch_target;
+
+      uint8 launch_action;
+    };
+  };
+};

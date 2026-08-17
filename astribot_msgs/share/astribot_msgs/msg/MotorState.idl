@@ -1,0 +1,68 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from astribot_msgs/msg/MotorState.msg
+// generated code does not contain a copyright notice
+
+
+module astribot_msgs {
+  module msg {
+    typedef double double__9[9];
+    typedef uint8 uint8__9[9];
+    typedef boolean boolean__9[9];
+    module MotorState_Constants {
+      @verbatim (language="comment", text=
+        "Kept for documentation purposes")
+      const uint8 MAX_MOTOR_NUM = 9;
+    };
+    struct MotorState {
+      @verbatim (language="comment", text=
+        "Position, velocity, and dynamics arrays" "\n"
+        "Position")
+      double__9 p;
+
+      @verbatim (language="comment", text=
+        "Velocity")
+      double__9 v;
+
+      @verbatim (language="comment", text=
+        "Current")
+      double__9 c;
+
+      @verbatim (language="comment", text=
+        "Voltage")
+      double__9 vol;
+
+      @verbatim (language="comment", text=
+        "Acceleration")
+      double__9 acc;
+
+      @verbatim (language="comment", text=
+        "CAN communication status")
+      uint8__9 can_count;
+
+      uint8__9 can_count_last;
+
+      @verbatim (language="comment", text=
+        "For CanErrorStatus, you might need a separate message or define it here" "\n"
+        "If using a simple approach for now:" "\n"
+        "Error status for each motor")
+      uint8__9 can_error;
+
+      @verbatim (language="comment", text=
+        "Joint sensor data" "\n"
+        "Joint encoder status")
+      boolean__9 j_s;
+
+      @verbatim (language="comment", text=
+        "Joint position (rad)")
+      double__9 j_p;
+
+      @verbatim (language="comment", text=
+        "Joint velocity (rad/s)")
+      double__9 j_v;
+
+      @verbatim (language="comment", text=
+        "Joint acceleration (rad/s^2)")
+      double__9 j_a;
+    };
+  };
+};

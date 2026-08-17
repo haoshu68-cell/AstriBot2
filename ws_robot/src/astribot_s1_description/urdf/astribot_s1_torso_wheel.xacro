@@ -1,0 +1,300 @@
+<?xml version="1.0"?>
+<!--
+  文件用途：Astribot S1 底盘部分（麦克纳姆全向轮 x4 + 4 自由度升降躯干）。
+
+  数据来源：astribot_config/robot_config/astribot_s1/model/astribot_whole_body_with_wheel.urdf
+  （link/joint 名称、惯性参数、几何尺寸与原文件完全一致，未改动任何数值），本文件只做了两处必要修正：
+    1. mesh filename 由原文件里残缺的相对路径 "s1_torso/xxx.STL"
+       改写为 package:// 形式，指向本包 CMakeLists.txt 安装的 meshes 目录；
+    2. 四个轮子（wheel_RF/LF/RR/LR_Link）原文件完全没有 <collision>，仿真中会直接穿透地板，
+       这里按照实测 STL 包围盒（半径 0.08m、厚度 0.05m，见 config/collision_overrides.yaml）
+       补上圆柱体碰撞体 —— 对应任务书中"机器人生成后下坠/穿透地面"异常场景的修复。
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 麦克纳姆轮碰撞体公共尺寸（来自 STL 包围盒实测，见 config/collision_overrides.yaml） -->
+  <xacro:property name="wheel_collision_radius" value="0.08"/>
+  <xacro:property name="wheel_collision_length" value="0.05"/>
+
+  <!-- 躯干底座：唯一根 link，无 parent；平动升降+轮式全向底盘均挂在它上面 -->
+  <link name="astribot_torso_base">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.062784 0.007017 0.035375"/>
+      <mass value="39.24781"/>
+      <inertia ixx="1.071997" ixy="0.015889" ixz="-0.058447" iyy="1.218431" iyz="-0.002015" izz="1.489411"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/astribot_torso_base_link.STL"/>
+      </geometry>
+      <material name="astribot_torso_color">
+        <color rgba="0.79216 0.81961 0.93333 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.05"/>
+      <geometry>
+        <cylinder length="0.1" radius="0.3"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- ============ 四个麦克纳姆轮（各自朝向旋转45°/135°，构成全向底盘） ============ -->
+  <link name="wheel_RF_Link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="2.7624E-07 -1.7583E-07 0.014539"/>
+      <mass value="0.56418"/>
+      <inertia ixx="0.00083188" ixy="3.5362E-09" ixz="-2.2361E-10" iyy="0.00083188" iyz="1.788E-10" izz="0.0015639"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/wheel_RF_Link.STL"/>
+      </geometry>
+      <material name="astribot_wheel_color">
+        <color rgba="0.75294 0.75294 0.75294 1"/>
+      </material>
+    </visual>
+    <!-- 补充碰撞体：圆柱沿 link 局部 Z 轴（即转轴）——原文件缺失，必须补，否则轮子会穿地 -->
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.0145"/>
+      <geometry>
+        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="wheel_RF_Joint" type="continuous">
+    <origin rpy="2.35619 -1.5708 0" xyz="0.21634675 -0.21634675 -0.015"/>
+    <parent link="astribot_torso_base"/>
+    <child link="wheel_RF_Link"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="wheel_LF_Link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="2.7617E-07 -1.7589E-07 0.014539"/>
+      <mass value="0.56418"/>
+      <inertia ixx="0.00083188" ixy="3.5366E-09" ixz="-2.2387E-10" iyy="0.00083188" iyz="1.782E-10" izz="0.0015639"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/wheel_LF_Link.STL"/>
+      </geometry>
+      <material name="astribot_torso_color">
+        <color rgba="0.79216 0.81961 0.93333 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.0145"/>
+      <geometry>
+        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="wheel_LF_Joint" type="continuous">
+    <origin rpy="-2.35619 -1.5708 0" xyz="0.21634675 0.21634675 -0.015"/>
+    <parent link="astribot_torso_base"/>
+    <child link="wheel_LF_Link"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="wheel_RR_Link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-2.7619E-07 1.7583E-07 0.014539"/>
+      <mass value="0.56418"/>
+      <inertia ixx="0.00083188" ixy="3.5357E-09" ixz="2.2361E-10" iyy="0.00083188" iyz="-1.7877E-10" izz="0.0015639"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/wheel_RR_Link.STL"/>
+      </geometry>
+      <material name="astribot_torso_color">
+        <color rgba="0.79216 0.81961 0.93333 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.0145"/>
+      <geometry>
+        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="wheel_RR_Joint" type="continuous">
+    <origin rpy="0.785398 -1.5708 0" xyz="-0.21634675 -0.21134675 -0.015"/>
+    <parent link="astribot_torso_base"/>
+    <child link="wheel_RR_Link"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="wheel_LR_Link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0019998 -0.0070713 0.014539"/>
+      <mass value="0.56418"/>
+      <inertia ixx="0.00083188" ixy="-3.5327E-09" ixz="1.7812E-10" iyy="0.00083188" iyz="2.2432E-10" izz="0.0015639"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/wheel_LR_Link.STL"/>
+      </geometry>
+      <material name="astribot_torso_color">
+        <color rgba="0.79216 0.81961 0.93333 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.0145"/>
+      <geometry>
+        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="wheel_LR_Joint" type="continuous">
+    <origin rpy="-0.785398 -1.5708 0" xyz="-0.21634675 0.21134675 -0.015"/>
+    <parent link="astribot_torso_base"/>
+    <child link="wheel_LR_Link"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <!-- ============ 4 自由度升降躯干（astribot_torso_joint_1..4） ============ -->
+  <link name="astribot_torso_link_1">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.15249 0.00021066 -0.0033476"/>
+      <mass value="7.3766"/>
+      <inertia ixx="0.028834" ixy="-0.0052759" ixz="0.00010767" iyy="0.1483" iyz="1.1652E-05" izz="0.14268"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/astribot_torso_link_1.STL"/>
+      </geometry>
+      <material name="astribot_light_color">
+        <color rgba="0.89804 0.91765 0.92941 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 1.57 0" xyz="-0.15 0 0"/>
+      <geometry>
+        <cylinder length="0.3" radius="0.1"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="astribot_torso_joint_1" type="revolute">
+    <origin rpy="-1.5708 1.5708 0" xyz="0 0 0.12"/>
+    <parent link="astribot_torso_base"/>
+    <child link="astribot_torso_link_1"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="100" lower="0.0" upper="1.4" velocity="6.0"/>
+  </joint>
+
+  <link name="astribot_torso_link_2">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.22214 0.028873 0.00059024"/>
+      <mass value="5.6183"/>
+      <inertia ixx="0.0082545" ixy="0.0011523" ixz="0.00035614" iyy="0.012677" iyz="-5.8287E-05" izz="0.017512"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/astribot_torso_link_2.STL"/>
+      </geometry>
+      <material name="astribot_light_color">
+        <color rgba="0.89804 0.91765 0.92941 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 1.57 -0.25" xyz="-0.15 0.03 0"/>
+      <geometry>
+        <cylinder length="0.3" radius="0.1"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="astribot_torso_joint_2" type="revolute">
+    <origin rpy="0 0 0" xyz="-0.38 0 0"/>
+    <parent link="astribot_torso_link_1"/>
+    <child link="astribot_torso_link_2"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="100" lower="-2.3" upper="0.0" velocity="6.0"/>
+  </joint>
+
+  <link name="astribot_torso_link_3">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.017519 0.00059523 0.00025821"/>
+      <mass value="0.49013"/>
+      <inertia ixx="0.00022212" ixy="-2.6767E-07" ixz="4.3987E-07" iyy="0.00036522" iyz="3.8834E-07" izz="0.00038039"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/astribot_torso_link_3.STL"/>
+      </geometry>
+      <material name="astribot_light_color">
+        <color rgba="0.89804 0.91765 0.92941 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 1.57 0" xyz="-0.18 0.01 0"/>
+      <geometry>
+        <cylinder length="0.35" radius="0.09"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="astribot_torso_joint_3" type="revolute">
+    <origin rpy="0 0 0" xyz="-0.390 0 0"/>
+    <parent link="astribot_torso_link_2"/>
+    <child link="astribot_torso_link_3"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="100" lower="0.0" upper="2.3" velocity="6.0"/>
+  </joint>
+
+  <link name="astribot_torso_link_4">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.00476227191516749 -4.56966810241128E-05 0.242912573510671"/>
+      <mass value="3.55695635704638"/>
+      <inertia ixx="0.0165768322563514" ixy="-9.94098112646385E-06" ixz="-0.000100011483384926"
+                iyy="0.014904355097835" iyz="9.86752047032885E-07" izz="0.0110629318711333"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://astribot_s1_description/meshes/s1_torso/astribot_torso_link_4.STL"/>
+      </geometry>
+      <material name="astribot_light_color">
+        <color rgba="0.898039215686275 0.917647058823529 0.929411764705882 1"/>
+      </material>
+    </visual>
+    <!-- 原文件缺失 collision：按 STL 包围盒(0.2014x0.2710x0.3824, 中心 z≈0.267) 补简化盒体碰撞 -->
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.0075 0 0.2672"/>
+      <geometry>
+        <box size="0.20 0.27 0.38"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="astribot_torso_joint_4" type="revolute">
+    <origin rpy="1.5708 0 -1.5708" xyz="0 0 0"/>
+    <parent link="astribot_torso_link_3"/>
+    <child link="astribot_torso_link_4"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="100" lower="-1.5" upper="1.5" velocity="6.0"/>
+  </joint>
+
+  <!-- 质量/惯量为 0 的虚拟挂载点，双臂与头部都挂在这里 -->
+  <link name="astribot_torso_end_effector">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.001"/>
+      <!-- 注：原文件 mass=0 对纯运动学(Drake/Pinocchio)没问题，但部分物理引擎不接受零质量刚体，
+           这里给一个可忽略的极小质量(1g)避免 Gazebo 物理求解器报 NaN/警告。 -->
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+    </inertial>
+  </link>
+  <joint name="astribot_torso_end_effector_fixed_joint" type="fixed">
+    <origin rpy="0.0 0.0 0.0" xyz="0 0 0.34475"/>
+    <parent link="astribot_torso_link_4"/>
+    <child link="astribot_torso_end_effector"/>
+  </joint>
+
+</robot>

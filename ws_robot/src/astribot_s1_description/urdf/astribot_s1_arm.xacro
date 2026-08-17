@@ -1,0 +1,321 @@
+<?xml version="1.0"?>
+<!--
+  文件用途：Astribot S1 单侧机械臂（7 自由度）宏定义，在本文件末尾分别以 side="left"/"right"
+  实例化左右两条臂。宏内 link_1/3/4/5/6/7 的惯性参数与碰撞体两侧完全相同（原始 URDF 里也是同一份
+  数据copy两份），只有 base_link、link_2 的惯性数据以及躯干末端固定关节的 origin、joint_3 的
+  上下限 两侧不同，因此把这些差异值做成宏参数，其余数值直接写死在宏体内，
+  避免用符号翻转公式去"推导"左右差异（原始工程数据不是简单镜像关系，直接照抄原文件数值最安全）。
+
+  数值来源：astribot_config/robot_config/astribot_s1/model/astribot_whole_body_with_wheel.urdf
+  （未改动任何数值），只修正了 mesh 路径，并为缺失 collision 的 link
+  （base_link、link_1、link_2、link_6）按 STL 包围盒补了简化碰撞体。
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="astribot_s1_arm"
+               params="side base_mesh base_inertial_xyz base_mass
+                       base_ixx base_ixy base_ixz base_iyy base_iyz base_izz
+                       link2_mesh link2_inertial_xyz link2_mass
+                       link2_ixx link2_ixy link2_ixz link2_iyy link2_iyz link2_izz
+                       joint3_lower joint3_upper
+                       base_fixed_rpy base_fixed_xyz">
+
+    <!-- ===== base_link：左右手臂各自的安装基座，mesh/惯量不同，原文件也缺 collision ===== -->
+    <link name="astribot_arm_${side}_base_link">
+      <inertial>
+        <origin rpy="0 0 0" xyz="${base_inertial_xyz}"/>
+        <mass value="${base_mass}"/>
+        <inertia ixx="${base_ixx}" ixy="${base_ixy}" ixz="${base_ixz}"
+                 iyy="${base_iyy}" iyz="${base_iyz}" izz="${base_izz}"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/${base_mesh}"/>
+        </geometry>
+        <material name="astribot_light_color">
+          <color rgba="0.898039215686275 0.917647058823529 0.929411764705882 1"/>
+        </material>
+      </visual>
+      <!-- 补充碰撞体：按 STL 包围盒(0.1606x0.1527x0.0165) 近似为薄盒体 -->
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0.008"/>
+        <geometry>
+          <box size="0.16 0.15 0.016"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- ===== link_1：两侧惯量/mesh 相同（原文件即如此） ===== -->
+    <link name="astribot_arm_${side}_link_1">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0.00012026 0.00047499 -0.05682561"/>
+        <mass value="0.59936716"/>
+        <inertia ixx="0.00064791" ixy="0.00000149" ixz="0.00000133" iyy="0.00065264" iyz="0.00000160" izz="0.00050137"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/astribot_arm_link_1.STL"/>
+        </geometry>
+        <material name="astribot_light_color">
+          <color rgba="0.898039215686275 0.917647058823529 0.929411764705882 1"/>
+        </material>
+      </visual>
+      <!-- 补充碰撞体：按 STL 包围盒(0.0486x0.0490x0.1355, 中心 z≈-0.046) 补圆柱碰撞 -->
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 -0.046"/>
+        <geometry>
+          <cylinder radius="0.025" length="0.13"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="astribot_arm_${side}_joint_1" type="revolute">
+      <origin rpy="0 0 0" xyz="0 0 0.091"/>
+      <parent link="astribot_arm_${side}_base_link"/>
+      <child link="astribot_arm_${side}_link_1"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="265" lower="-3.0" upper="3.0" velocity="8.4"/>
+    </joint>
+
+    <!-- ===== link_2：左右 mesh/惯量不同（肩部结构件） ===== -->
+    <link name="astribot_arm_${side}_link_2">
+      <inertial>
+        <origin rpy="0 0 0" xyz="${link2_inertial_xyz}"/>
+        <mass value="${link2_mass}"/>
+        <inertia ixx="${link2_ixx}" ixy="${link2_ixy}" ixz="${link2_ixz}"
+                 iyy="${link2_iyy}" iyz="${link2_iyz}" izz="${link2_izz}"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/${link2_mesh}"/>
+        </geometry>
+        <material name="astribot_gray_color">
+          <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1"/>
+        </material>
+      </visual>
+      <!-- 补充碰撞体：按 STL 包围盒(0.1042x0.1495x0.1654) 补圆柱碰撞近似 -->
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0.026 0.028"/>
+        <geometry>
+          <cylinder radius="0.06" length="0.15"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="astribot_arm_${side}_joint_2" type="revolute">
+      <origin rpy="1.5708 0 0" xyz="0 0 0"/>
+      <parent link="astribot_arm_${side}_link_1"/>
+      <child link="astribot_arm_${side}_link_2"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="265" lower="-1.4" upper="0.4" velocity="8.4"/>
+    </joint>
+
+    <!-- ===== link_3：两侧惯量相同，但 joint_3 上下限左右相反（镜像安装），已作为参数传入 ===== -->
+    <link name="astribot_arm_${side}_link_3">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0.00531263 0.00020707 0.16136713"/>
+        <mass value="2.0926399"/>
+        <inertia ixx="0.01752179" ixy="2.336e-05" ixz="0.00144018" iyy="0.01784671" iyz="-3.027e-05" izz="0.0021843"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/astribot_arm_link_3.STL"/>
+        </geometry>
+        <material name="astribot_gray_color">
+          <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0.15"/>
+        <geometry>
+          <cylinder length="0.18" radius="0.05"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="astribot_arm_${side}_joint_3" type="revolute">
+      <origin rpy="1.5708 0 -1.5708" xyz="0 0.05 0"/>
+      <parent link="astribot_arm_${side}_link_2"/>
+      <child link="astribot_arm_${side}_link_3"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="132" lower="${joint3_lower}" upper="${joint3_upper}" velocity="8.4"/>
+    </joint>
+
+    <link name="astribot_arm_${side}_link_4">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0.00017294 -0.01269315 0.00196140"/>
+        <mass value="0.36587933"/>
+        <inertia ixx="0.00047693" ixy="0.00000635" ixz="0.00000135" iyy="0.00036801" iyz="0.00000705" izz="0.00050082"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/astribot_arm_link_4.STL"/>
+        </geometry>
+        <material name="astribot_gray_color">
+          <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <sphere radius="0.06"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="astribot_arm_${side}_joint_4" type="revolute">
+      <origin rpy="-1.5708 0 0" xyz="0.03 0 0.309"/>
+      <parent link="astribot_arm_${side}_link_3"/>
+      <child link="astribot_arm_${side}_link_4"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="142" lower="0.0" upper="2.4" velocity="15"/>
+    </joint>
+
+    <link name="astribot_arm_${side}_link_5">
+      <inertial>
+        <origin rpy="0 0 0" xyz="-0.00032037 -0.00015185 0.15370447"/>
+        <mass value="1.24085064"/>
+        <inertia ixx="0.00454092" ixy="1.58e-06" ixz="-5.91e-06" iyy="0.00438922" iyz="-4.927e-05" izz="0.00079442"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/astribot_arm_link_5.STL"/>
+        </geometry>
+        <material name="astribot_gray_color">
+          <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0.14"/>
+        <geometry>
+          <cylinder length="0.14" radius="0.05"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="astribot_arm_${side}_joint_5" type="revolute">
+      <origin rpy="1.5708 0 0" xyz="0 0 0"/>
+      <parent link="astribot_arm_${side}_link_4"/>
+      <child link="astribot_arm_${side}_link_5"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="71" lower="-2.0" upper="2.0" velocity="15"/>
+    </joint>
+
+    <link name="astribot_arm_${side}_link_6">
+      <inertial>
+        <origin rpy="0 0 0" xyz="-0.00010311 0.00001218 0.00013181"/>
+        <mass value="0.22465307"/>
+        <inertia ixx="0.00016474" ixy="0.00000007" ixz="0.00000025" iyy="0.00015608" iyz="0.00000018" izz="0.00008555"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/astribot_arm_link_6.STL"/>
+        </geometry>
+        <material name="astribot_gray_color">
+          <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1"/>
+        </material>
+      </visual>
+      <!-- 补充碰撞体：按 STL 包围盒(0.0752x0.0870x0.0455，几乎居中) 补小圆柱碰撞 -->
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.04" length="0.045"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="astribot_arm_${side}_joint_6" type="revolute">
+      <origin rpy="-1.5708 0 0" xyz="0 0 0.277"/>
+      <parent link="astribot_arm_${side}_link_5"/>
+      <child link="astribot_arm_${side}_link_6"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="20" lower="-0.6" upper="0.6" velocity="16.8"/>
+    </joint>
+
+    <link name="astribot_arm_${side}_link_7">
+      <inertial>
+        <origin rpy="0 0 0" xyz="4.333e-05 -0.00723447 -0.00362428"/>
+        <mass value="0.12772019"/>
+        <inertia ixx="0.00013672" ixy="1.6e-07" ixz="-2.4e-07" iyy="0.00010783" iyz="-3.35e-06" izz="5.858e-05"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://astribot_s1_description/meshes/s1_arm/astribot_arm_link_7.STL"/>
+        </geometry>
+        <material name="astribot_light_color">
+          <color rgba="0.898039215686275 0.917647058823529 0.929411764705882 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0.006 0 0"/>
+        <geometry>
+          <sphere radius="0.05"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="astribot_arm_${side}_joint_7" type="revolute">
+      <origin rpy="0 1.5708 0" xyz="0 0 0"/>
+      <parent link="astribot_arm_${side}_link_6"/>
+      <child link="astribot_arm_${side}_link_7"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="20" lower="-1.4" upper="1.4" velocity="16.8"/>
+    </joint>
+
+    <!-- 末端工具挂载点（法兰），预留给夹爪/工具，本方案未挂夹爪，保留 fixed link 便于后续扩展 -->
+    <link name="astribot_arm_${side}_tool_link">
+      <inertial>
+        <origin rpy="0 0 0" xyz="-0.00019766 -0.10719761 0.00190898"/>
+        <mass value="0.64762850"/>
+        <inertia ixx="0.00152446" ixy="0.00000144" ixz="-0.00000058" iyy="0.00033076" iyz="0.00004144" izz="0.00156453"/>
+      </inertial>
+    </link>
+    <joint name="astribot_arm_${side}_tool_joint" type="fixed">
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <parent link="astribot_arm_${side}_link_7"/>
+      <child link="astribot_arm_${side}_tool_link"/>
+    </joint>
+
+    <!-- 挂到躯干末端虚拟点，左右各自的安装角度/偏移不同 -->
+    <joint name="astribot_arm_${side}_base_fixed_joint" type="fixed">
+      <parent link="astribot_torso_end_effector"/>
+      <child link="astribot_arm_${side}_base_link"/>
+      <origin rpy="${base_fixed_rpy}" xyz="${base_fixed_xyz}"/>
+    </joint>
+
+  </xacro:macro>
+
+  <!-- ================= 左臂实例化（数值取自原 URDF astribot_arm_left_* 数据） ================= -->
+  <xacro:astribot_s1_arm
+    side="left"
+    base_mesh="astribot_arm_left_base_link.STL"
+    base_inertial_xyz="-0.04309067 -0.01849796 -0.01384838"
+    base_mass="2.22887320"
+    base_ixx="0.00386389" base_ixy="-0.00050396" base_ixz="0.00025566"
+    base_iyy="0.00306042" base_iyz="0.00019224" base_izz="0.00570294"
+    link2_mesh="astribot_arm_left_link_2.STL"
+    link2_inertial_xyz="-0.00396228 0.03490708 0.04270156"
+    link2_mass="1.43694657"
+    link2_ixx="0.00360751" link2_ixy="-0.00009193" link2_ixz="0.00007764"
+    link2_iyy="0.00283747" link2_iyz="0.00054945" link2_izz="0.00172927"
+    joint3_lower="-3.0" joint3_upper="1.4"
+    base_fixed_rpy="0 -1.22173 -1.5707963" base_fixed_xyz="0 0.06449 0.02348"/>
+
+  <!-- ================= 右臂实例化（数值取自原 URDF astribot_arm_right_* 数据） ================= -->
+  <xacro:astribot_s1_arm
+    side="right"
+    base_mesh="astribot_arm_right_base_link.STL"
+    base_inertial_xyz="-0.04450932 0.01988693 0.00162589"
+    base_mass="2.22887320"
+    base_ixx="0.00396811" base_ixy="0.00041290" base_ixz="-0.00033387"
+    base_iyy="0.00304615" base_iyz="-0.00021572" base_izz="0.00574641"
+    link2_mesh="astribot_arm_right_link_2.STL"
+    link2_inertial_xyz="-0.00384709 0.03502105 -0.04050705"
+    link2_mass="1.45811037"
+    link2_ixx="0.00394196" link2_ixy="-8.846e-05" link2_ixz="-3.742e-05"
+    link2_iyy="0.00316298" link2_iyz="-0.0007079" link2_izz="0.00177295"
+    joint3_lower="-1.4" joint3_upper="3.1"
+    base_fixed_rpy="0 -1.22173 1.5707963" base_fixed_xyz="0 -0.06449 0.02348"/>
+
+</robot>

@@ -1,0 +1,6 @@
+std_msgs/Header header
+string part_name
+string old_holder_internal_id
+string old_holder_user_id
+string new_holder_internal_id
+string new_holder_user_id

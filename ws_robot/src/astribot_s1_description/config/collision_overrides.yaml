@@ -1,0 +1,82 @@
+# 碰撞体补全记录（用于可追溯 / 复核）
+#
+# astribot_whole_body_with_wheel.urdf 原文件中，以下 link 只有 visual+inertial、完全没有 <collision>。
+# 直接用于仿真会导致这些部位"看得见摸不着"——四个轮子缺 collision 会让机器人直接穿透地面。
+# 本文件记录了每个缺失 collision 的 link 用二进制 STL 实测得到的包围盒尺寸(size)与几何中心(center)，
+# 对应 astribot_s1_description/urdf/*.xacro 里补的简化碰撞体(圆柱/盒体/球体)，方便日后核对或精细化替换。
+#
+# 计算方式：解析对应 STL 文件所有三角面顶点坐标，取 (min,max) 得到轴对齐包围盒。
+# STL 源文件路径基于 astribot_config/robot_config/astribot_s1/meshes/<sub>/<file>.STL
+
+wheel_common: # 4 个轮子（RF/LF/RR/LR）尺寸完全一致，独立计算取平均后一致
+  stl: "s1_torso/wheel_*_Link.STL"
+  size_xyz: [0.1592, 0.1605, 0.0533]
+  center_xyz: [0.0000, 0.0000, 0.0026]
+  applied_collision: "cylinder radius=0.08 length=0.05 (沿 link 局部 Z 轴，即转轴方向)"
+
+astribot_torso_link_4:
+  stl: "s1_torso/astribot_torso_link_4.STL"
+  size_xyz: [0.2014, 0.2710, 0.3824]
+  center_xyz: [-0.0075, 0.0000, 0.2672]
+  applied_collision: "box size=0.20x0.27x0.38"
+
+astribot_head_base_link:
+  stl: "s1_head/astribot_head_base_link.STL"
+  size_xyz: [0.0971, 0.1077, 0.0110]
+  center_xyz: [-0.0322, 0.0000, -0.0478]
+  applied_collision: "box size=0.10x0.11x0.02"
+
+astribot_head_link_1:
+  stl: "s1_head/astribot_head_link_1.STL"
+  size_xyz: [0.0315, 0.0312, 0.0928]
+  center_xyz: [0.0000, -0.0004, -0.0309]
+  applied_collision: "cylinder radius=0.02 length=0.09"
+
+astribot_arm_left_base_link: # 右臂 base_link 尺寸一致（镜像件），碰撞体沿用同一近似
+  stl: "s1_arm/astribot_arm_left_base_link.STL"
+  size_xyz: [0.1606, 0.1527, 0.0165]
+  center_xyz: [-0.0259, -0.0194, 0.0083]
+  applied_collision: "box size=0.16x0.15x0.016"
+
+astribot_arm_right_base_link:
+  stl: "s1_arm/astribot_arm_right_base_link.STL"
+  size_xyz: [0.1606, 0.1527, 0.0165]
+  center_xyz: [-0.0259, 0.0194, 0.0083]
+  applied_collision: "box size=0.16x0.15x0.016 (与左臂共用同一 xacro 碰撞体定义)"
+
+astribot_arm_link_1: # 左右臂 link_1 是同一 mesh(astribot_arm_link_1.STL)
+  stl: "s1_arm/astribot_arm_link_1.STL"
+  size_xyz: [0.0486, 0.0490, 0.1355]
+  center_xyz: [0.0000, 0.0000, -0.0457]
+  applied_collision: "cylinder radius=0.025 length=0.13"
+
+astribot_arm_left_link_2:
+  stl: "s1_arm/astribot_arm_left_link_2.STL"
+  size_xyz: [0.1042, 0.1495, 0.1654]
+  center_xyz: [-0.0029, 0.0262, 0.0276]
+  applied_collision: "cylinder radius=0.06 length=0.15 (左右臂 link_2 共用同一近似)"
+
+astribot_arm_right_link_2:
+  stl: "s1_arm/astribot_arm_right_link_2.STL"
+  size_xyz: [0.1042, 0.1495, 0.1654]
+  center_xyz: [-0.0029, 0.0262, -0.0276]
+  applied_collision: "cylinder radius=0.06 length=0.15 (与左臂共用同一 xacro 碰撞体定义)"
+
+astribot_arm_link_6: # 左右臂 link_6 是同一 mesh(astribot_arm_link_6.STL)
+  stl: "s1_arm/astribot_arm_link_6.STL"
+  size_xyz: [0.0752, 0.0870, 0.0455]
+  center_xyz: [-0.0000, 0.0000, 0.0000]
+  applied_collision: "cylinder radius=0.04 length=0.045"
+
+# 出生高度计算：
+#   轮关节原点相对 astribot_torso_base 原点 z 偏移 = -0.015
+#   轮子半径(碰撞体) = 0.08
+#   轮子底部相对 torso_base 原点 z = -0.015 - 0.08 = -0.095
+#   => torso_base 原点离地高度 >= 0.095m 时轮子才不会陷入地面
+#   launch 参数 spawn_z 默认取 0.10（留 5mm 余量），见
+#   astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py
+spawn_height:
+  wheel_joint_z_offset: -0.015
+  wheel_collision_radius: 0.08
+  min_spawn_z: 0.095
+  default_spawn_z: 0.10

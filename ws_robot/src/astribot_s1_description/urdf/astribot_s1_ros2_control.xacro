@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!--
+  文件用途：为躯干升降(4)+头部(2)+左臂(7)+右臂(7) 共 20 个 revolute 关节声明 <ros2_control> 硬件接口，
+  并挂载 gz_ros2_control 的 Gazebo 系统插件，使 ros2_control 的 controller_manager 能在 gz sim 内部运行。
+
+  注意：4 个轮子(wheel_*_Joint) 不在这里声明，底盘运动学由 astribot_s1.gazebo.xacro 里的
+  MecanumDrive 系统插件直接接管（原生支持全向运动，无需再套 ros2_control），
+  避免"同一关节被两个控制系统同时下发指令"的冲突。
+
+  command_interface 统一用 position（对应真实设备的位置控制模式，也是 astribot_*.yaml 里
+  frequency/coefficient 抽象所隐含的控制方式）；state_interface 同时给 position+velocity，
+  供 joint_state_broadcaster 发布完整 /joint_states。
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="astribot_s1_position_joint" params="name">
+    <joint name="${name}">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="astribot_s1_ros2_control" params="controllers_config">
+    <ros2_control name="astribot_s1_system" type="system">
+      <hardware>
+        <!-- Gazebo Garden/Fortress 通用写法；若切换 Gazebo Classic 需改为
+             gazebo_ros2_control/GazeboSystem（不在本方案范围内，仅作兼容提示） -->
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+
+      <xacro:astribot_s1_position_joint name="astribot_torso_joint_1"/>
+      <xacro:astribot_s1_position_joint name="astribot_torso_joint_2"/>
+      <xacro:astribot_s1_position_joint name="astribot_torso_joint_3"/>
+      <xacro:astribot_s1_position_joint name="astribot_torso_joint_4"/>
+
+      <xacro:astribot_s1_position_joint name="astribot_head_joint_1"/>
+      <xacro:astribot_s1_position_joint name="astribot_head_joint_2"/>
+
+      <xacro:astribot_s1_position_joint name="astribot_arm_left_joint_1"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_left_joint_2"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_left_joint_3"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_left_joint_4"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_left_joint_5"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_left_joint_6"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_left_joint_7"/>
+
+      <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_1"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_2"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_3"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_4"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_5"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_6"/>
+      <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_7"/>
+    </ros2_control>
+
+    <gazebo>
+      <!-- gz_ros2_control 官方写法：filename=gz_ros2_control-system，
+           name=gz_ros2_control::GazeboSimROS2ControlPlugin。
+           ${controllers_config} 由顶层 astribot_s1.xacro 的同名参数透传，
+           实际路径在 launch.py 里用 FindPackageShare+PathJoinSubstitution 算出，
+           这里不出现任何硬编码绝对路径。 -->
+      <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+        <parameters>${controllers_config}</parameters>
+        <robot_param>robot_description</robot_param>
+        <robot_param_node>robot_state_publisher</robot_param_node>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+</robot>

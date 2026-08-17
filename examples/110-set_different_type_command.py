@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2024, Astribot Co., Ltd.
+# All rights reserved.
+# License: BSD 3-Clause License
+# -----------------------------------------------------------------------------
+# Author: Astribot Team
+# -----------------------------------------------------------------------------
+
+"""
+File: 110-set_different_type_command.py
+Brief: Control the robot to reach the desired command in real-time, command is different type.
+
+Overview
+========
+1. start a control loop
+2. set desired control in each control loop
+3. sleep according to the set frequency and then enter the next loop
+"""
+
+import copy
+import numpy as np
+from astribot_sdk.core.astribot_api.astribot_client import Astribot
+import astribot_ros_middleware as ast_astribot_middleware
+
+if __name__ == '__main__':
+    # Connect astribot
+    freq = 250.0    # Control frequency of robot (in Hz)
+    dt = 1.0 / freq
+    astribot = Astribot(freq=freq)
+    
+    # Create rate object
+    rate = ast_astribot_middleware.Rate(freq)
+
+    astribot.move_to_home()
+
+    names = [astribot.arm_left_name, astribot.arm_right_name, astribot.head_name]
+    types = ["cartesian", "cartesian", "joints"]
+    init_pose = astribot.get_desired_cartesian_pose(names=[astribot.arm_left_name, astribot.arm_right_name])
+    init_pose.append(astribot.get_desired_joints_position(names=[astribot.head_name])[0])
+
+    print(init_pose)
+
+    t = 0.0
+    while ast_astribot_middleware.ok():
+        command_list = copy.deepcopy(init_pose)
+        command_list[0][1] = init_pose[0][1] + 0.1 * np.sin(t)
+        command_list[1][1] = init_pose[1][1] - 0.1 * np.sin(t)
+        command_list[2][0] = 0.8 * np.sin(t)
+        astribot.set_different_type_command(names, types, command_list)
+        t += dt
+        if t > 2 * np.pi:
+            break
+        rate.sleep()
