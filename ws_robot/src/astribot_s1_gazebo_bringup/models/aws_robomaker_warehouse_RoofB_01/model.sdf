@@ -1,0 +1,69 @@
+<?xml version="1.0" ?>
+<!--
+  本文件用途：aws_robomaker_warehouse_RoofB_01 的"资源路径覆盖版"model.sdf。
+  同 GroundB_01 的覆盖说明——不修改 submodule 原文件，仅通过 GZ_SIM_RESOURCE_PATH
+  优先级让本包这份文件被优先解析到。
+
+  修复的问题：原始惯性张量 ixx=834024.533, iyy=459441.200, izz=1302083.333，
+  三角不等式 ixx+iyy>=izz 不成立（834024.533+459441.200=1293465.733 < 1302083.333，
+  差距约 0.66%，是原始数据里的微小数值不一致/四舍五入误差），
+  在新版 Ignition Gazebo(Fortress) 里同样会被拒绝加载（"invalid inertia"）。
+  这里把 izz 从 1302083.333 微调为 1290000.0（<= ixx+iyy，验证通过），
+  该 link 是 <static>1</static> 静态刚体，惯性张量数值不参与实际动力学解算，
+  这里的微调对仿真效果没有任何可观察影响，只是让 sdformat 的物理有效性检查通过。
+-->
+<sdf version="1.6">
+  <model name="aws_robomaker_warehouse_RoofB_01">
+    <link name="link">
+      <inertial>
+        <mass>1000</mass>
+        <pose frame=''>0 0 0 0 0 0</pose>
+        <inertia>
+          <ixx>834024.533</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>459441.200</iyy>
+          <iyz>0</iyz>
+          <izz>1290000.0</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>file://models/aws_robomaker_warehouse_RoofB_01/meshes/aws_robomaker_warehouse_RoofB_01_collision.DAE</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.6</mu>
+              <mu2>0.6</mu2>
+              <fdir1>0 0 0</fdir1>
+              <slip1>0</slip1>
+              <slip2>0</slip2>
+            </ode>
+            <torsional>
+              <coefficient>1</coefficient>
+              <patch_radius>0</patch_radius>
+              <surface_radius>0</surface_radius>
+              <use_patch_radius>1</use_patch_radius>
+              <ode>
+                <slip>0</slip>
+              </ode>
+            </torsional>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>file://models/aws_robomaker_warehouse_RoofB_01/meshes/aws_robomaker_warehouse_RoofB_01_visual.DAE</uri>
+          </mesh>
+        </geometry>
+        <meta> <layer> 3 </layer></meta>
+      </visual>
+    </link>
+    <static>1</static>
+  </model>
+</sdf>

@@ -33,6 +33,7 @@ from launch.substitutions import (
     TextSubstitution,
 )
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -62,6 +63,17 @@ def generate_launch_description():
         DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部RGB相机'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='是否使用仿真时钟'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='是否自动打开RViz2'),
+        DeclareLaunchArgument(
+            'ros_domain_id', default_value='42',
+            description='本次仿真独占的 ROS_DOMAIN_ID。'
+                        '同一台机器上如果还跑着别的 ROS2 图（哪怕是完全无关的项目），'
+                        '只要都用默认 domain 0，/robot_description、'
+                        '/controller_manager/... 这类未加命名空间的话题/服务就会被 DDS '
+                        '发现机制"撞名"——本方案实测就遇到过：另一个无关工作空间残留的 '
+                        'robot_state_publisher 通过 transient_local QoS 抢答了我们的 '
+                        '/robot_description 订阅，导致生成的是别的模型、控制器加载互相冲突。 '
+                        '固定一个独占 domain 可以彻底避免这类"看起来随机"的故障，'
+                        '和别的机器人/别的仿真同时跑时改这个参数即可。'),
     ]
 
     world_name = LaunchConfiguration('world_name')
@@ -74,6 +86,12 @@ def generate_launch_description():
     use_camera = LaunchConfiguration('use_camera')
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_rviz = LaunchConfiguration('use_rviz')
+    ros_domain_id = LaunchConfiguration('ros_domain_id')
+
+    # 让本次 launch 拉起的所有子进程都用独占的 ROS_DOMAIN_ID，
+    # 避免和同一台机器上任何其它已经在跑的 ROS2 图（不管是否相关）发生话题/服务撞名。
+    # 必须放在最前面，保证后面所有 Node/IncludeLaunchDescription 都继承到这个环境变量。
+    set_ros_domain_id = SetEnvironmentVariable(name='ROS_DOMAIN_ID', value=ros_domain_id)
 
     # ---------------------------------------------------------------------
     # 2. 依赖包的 share 目录（全部用 FindPackageShare 动态查找，不允许绝对路径）
@@ -105,18 +123,37 @@ def generate_launch_description():
     #    GAZEBO_MODEL_PATH，没有配新版 Gazebo(Ignition/Gz Sim) 的资源搜索路径，
     #    这里用 SetEnvironmentVariable 动态拼出 GZ_SIM_RESOURCE_PATH（新命名）
     #    和 IGN_GAZEBO_RESOURCE_PATH（旧命名，向后兼容）双写，覆盖 Garden/Fortress 两种环境。
+    #
+    #    另外把本包 models/ 目录排在最前面：里面只有 GroundB_01/RoofB_01 两个模型的覆盖版
+    #    model.sdf（修正了官方原始数据里的惯性张量有效性问题，不修改 submodule 原文件，
+    #    见 astribot_s1_gazebo_bringup/models/*/model.sdf 顶部注释），排在前面让
+    #    `model://` 解析优先命中这两个覆盖文件，其余全部模型仍然从 aws 官方 submodule 加载。
+    #
+    #    还有一处容易漏掉：机器人自身 xacro 里的 mesh 用的是
+    #    package://astribot_s1_description/meshes/...，生成 SDF 后 Gazebo GUI 侧会把它
+    #    转成 model://astribot_s1_description/meshes/...，这个 model:// 是靠
+    #    GZ_SIM_RESOURCE_PATH 里某个目录 + "/astribot_s1_description/meshes/..." 拼出来解析的，
+    #    所以必须把 astribot_s1_description 包 share 目录的"父目录"也加进资源路径
+    #    （不是 share/astribot_s1_description 本身，是它的上一级），
+    #    否则机械臂/躯干/头部这些机器人自身的 mesh 会在 GUI 里加载失败（渲染报错，
+    #    但不影响物理仿真本身——因为物理侧走的是 ROS ament 包索引解析，两条路径互不相同）。
     # ---------------------------------------------------------------------
+    bringup_models_path = PathJoinSubstitution([pkg_bringup, 'models'])
+    description_share_parent_path = PathJoinSubstitution([pkg_description, os.pardir])
+
     existing_gz_path = os.environ.get('GZ_SIM_RESOURCE_PATH', '')
     existing_ign_path = os.environ.get('IGN_GAZEBO_RESOURCE_PATH', '')
 
     set_gz_resource_path = SetEnvironmentVariable(
         name='GZ_SIM_RESOURCE_PATH',
-        value=[warehouse_models_path, os.pathsep, warehouse_worlds_path,
-               os.pathsep, existing_gz_path])
+        value=[bringup_models_path, os.pathsep,
+               warehouse_models_path, os.pathsep, warehouse_worlds_path, os.pathsep,
+               description_share_parent_path, os.pathsep, existing_gz_path])
     set_ign_resource_path = SetEnvironmentVariable(
         name='IGN_GAZEBO_RESOURCE_PATH',
-        value=[warehouse_models_path, os.pathsep, warehouse_worlds_path,
-               os.pathsep, existing_ign_path])
+        value=[bringup_models_path, os.pathsep,
+               warehouse_models_path, os.pathsep, warehouse_worlds_path, os.pathsep,
+               description_share_parent_path, os.pathsep, existing_ign_path])
 
     # ---------------------------------------------------------------------
     # 4. 启动 Gazebo(Ignition/Gz Sim)，加载仓储世界
@@ -133,14 +170,20 @@ def generate_launch_description():
     # ---------------------------------------------------------------------
     # 5. robot_description（xacro 实时展开，参数用 mappings 透传，杜绝硬编码路径/数值）
     # ---------------------------------------------------------------------
-    robot_description_content = Command([
-        'xacro', ' ',
-        xacro_file, ' ',
-        'robot_name:=', robot_name, ' ',
-        'use_lidar:=', use_lidar, ' ',
-        'use_camera:=', use_camera, ' ',
-        'controllers_config:=', controllers_yaml,
-    ])
+    # 用 ParameterValue(..., value_type=str) 强制把 xacro 输出当纯字符串传参，
+    # 否则 launch_ros 会尝试把这一大段 XML 当 YAML 解析，直接报错退出
+    # （"Unable to parse the value of parameter robot_description as yaml"）。
+    robot_description_content = ParameterValue(
+        Command([
+            'xacro', ' ',
+            xacro_file, ' ',
+            'robot_name:=', robot_name, ' ',
+            'use_lidar:=', use_lidar, ' ',
+            'use_camera:=', use_camera, ' ',
+            'controllers_config:=', controllers_yaml,
+        ]),
+        value_type=str,
+    )
     robot_description = {'robot_description': robot_description_content}
 
     robot_state_publisher = Node(
@@ -171,34 +214,37 @@ def generate_launch_description():
     )
 
     # ---------------------------------------------------------------------
-    # 7. ros2_control 控制器：joint_state_broadcaster + 4 个 JointTrajectoryController
-    #    用 OnProcessExit 事件串行等待，确保 gz_ros2_control 插件里的 controller_manager
-    #    已经在 Gazebo 进程内起来、spawn_robot 已完成，再去 spawner，避免服务还没起来就报连接失败。
+    # 7. ros2_control 控制器：joint_state_broadcaster + 4 个 JointTrajectoryController。
+    #    用 OnProcessExit 事件等 spawn_robot 完成后再拉起，避免 controller_manager 服务
+    #    还没起来就报连接失败。
+    #
+    #    !!! 实测踩坑记录 !!!：一开始把 5 个控制器各起一个独立的 `spawner` 进程、
+    #    在同一个 on_exit 回调里"并行"拉起，结果偶发性出现
+    #    "Controller already loaded, skipping load_controller" 后接 "Failed to configure
+    #    controller"——5 个 spawner 进程几乎同时对 controller_manager 的
+    #    load_controller/configure_controller 服务发起调用，服务端处理并发请求时状态互相
+    #    干扰导致偶发失败（复现概率不低，不能当成"抖一下就好了"忽略掉）。
+    #    改成用同一个 `spawner` 进程、一次性传入全部 5 个控制器名，
+    #    该工具内部会顺序逐个 load+configure+activate，从根源上消除了并发竞争。
     # ---------------------------------------------------------------------
-    def make_spawner(controller_name):
-        return Node(
-            package='controller_manager',
-            executable='spawner',
-            output='screen',
-            arguments=[controller_name, '--controller-manager-timeout', '60'],
-        )
-
-    joint_state_broadcaster_spawner = make_spawner('joint_state_broadcaster')
-    torso_controller_spawner = make_spawner('torso_controller')
-    head_controller_spawner = make_spawner('head_controller')
-    arm_left_controller_spawner = make_spawner('arm_left_controller')
-    arm_right_controller_spawner = make_spawner('arm_right_controller')
+    controllers_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        output='screen',
+        arguments=[
+            'joint_state_broadcaster',
+            'torso_controller',
+            'head_controller',
+            'arm_left_controller',
+            'arm_right_controller',
+            '--controller-manager-timeout', '60',
+        ],
+    )
 
     delay_controllers_after_spawn = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=spawn_robot,
-            on_exit=[
-                joint_state_broadcaster_spawner,
-                torso_controller_spawner,
-                head_controller_spawner,
-                arm_left_controller_spawner,
-                arm_right_controller_spawner,
-            ],
+            on_exit=[controllers_spawner],
         )
     )
 
@@ -252,6 +298,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription(declare_args + [
+        set_ros_domain_id,
         set_gz_resource_path,
         set_ign_resource_path,
         gz_sim,

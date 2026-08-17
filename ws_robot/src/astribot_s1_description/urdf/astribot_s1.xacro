@@ -45,6 +45,7 @@
   <xacro:astribot_s1_ros2_control controllers_config="$(arg controllers_config)"/>
 
   <!-- ============ 底盘全向轮驱动 + 里程计 + 轮子摩擦 ============ -->
-  <xacro:astribot_s1_gazebo_chassis_plugins wheel_radius="0.08" wheel_separation="0.4327" wheelbase="0.4327"/>
+  <xacro:astribot_s1_gazebo_chassis_plugins
+    robot_name="${robot_name_prop}" wheel_radius="0.08" wheel_separation="0.4327" wheelbase="0.4327"/>
 
 </robot>

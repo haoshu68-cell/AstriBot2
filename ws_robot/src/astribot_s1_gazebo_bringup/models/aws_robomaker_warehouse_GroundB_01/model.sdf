@@ -1,0 +1,68 @@
+<?xml version="1.0" ?>
+<!--
+  本文件用途：aws_robomaker_warehouse_GroundB_01 的"资源路径覆盖版"model.sdf。
+
+  !!! 重要：这不是修改 aws-robomaker-small-warehouse-world 仓库(submodule)本身 !!!
+  submodule 里的原始文件完全没有改动。这是我们自己包(astribot_s1_gazebo_bringup)里的一份
+  独立文件，通过在 warehouse_sim.launch.py 里把本包 models/ 目录排在
+  GZ_SIM_RESOURCE_PATH 更靠前的位置，让 `model://aws_robomaker_warehouse_GroundB_01`
+  优先解析到这里，从而"覆盖"官方原文件里的一处数据问题，其它 ~40 个仓储模型仍然正常从
+  submodule 里加载，不受影响。
+
+  修复的问题：原始 model.sdf 里 <inertia><iyy> 是 8333416.66，
+  和同一批模型（WallB/RoofB 等，数量级都在 4e5~1.3e6）相比明显多了一位数字，
+  与 ixx=1200083.33、izz=2033333.33 一起代入惯性张量"三角不等式"物理有效性检验
+  （ixx+izz >= iyy 等三条）不成立 —— ixx+izz=3233416.66 < iyy=8333416.66，
+  new版本 Ignition Gazebo(Fortress, gz-sim6/DART) 在加载世界时会直接报错拒绝：
+    "A link named link has invalid inertia." / "Failed to load a world."
+  （Gazebo Classic/ODE 当年没有做这项校验，所以官方仓库这个数据错误一直没被发现）。
+  这里把 iyy 改回去掉多余的一位数字后的 833416.66（与 ixx/izz 同数量级，
+  三角不等式验证通过），其余数值、mesh/材质引用、collision/visual 完全照抄原文件。
+  该 link 本身是 <static>1</static> 静态刚体，惯性张量数值本来就不参与实际动力学解算，
+  这里只是为了通过 sdformat 的物理有效性检查。
+-->
+<sdf version="1.6">
+  <model name="aws_robomaker_warehouse_GroundB_01">
+    <link name="link">
+      <inertial>
+        <mass>1000</mass>
+        <inertia>
+          <ixx>1200083.33</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>833416.66</iyy>
+          <iyz>0</iyz>
+          <izz>2033333.33</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>file://models/aws_robomaker_warehouse_GroundB_01/meshes/aws_robomaker_warehouse_GroundB_01_collision.DAE</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>100</mu>
+              <mu2>50</mu2>
+              <fdir1>0 0 0</fdir1>
+              <slip1>0</slip1>
+              <slip2>0</slip2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>file://models/aws_robomaker_warehouse_GroundB_01/meshes/aws_robomaker_warehouse_GroundB_01_visual.DAE</uri>
+          </mesh>
+        </geometry>
+        <meta> <layer> 1 </layer></meta>
+      </visual>
+    </link>
+    <static>1</static>
+  </model>
+</sdf>

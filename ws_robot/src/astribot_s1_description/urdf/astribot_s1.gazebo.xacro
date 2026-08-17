@@ -13,12 +13,19 @@
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:macro name="astribot_s1_gazebo_chassis_plugins" params="wheel_radius:=0.08 wheel_separation:=0.4327 wheelbase:=0.4327">
+  <xacro:macro name="astribot_s1_gazebo_chassis_plugins"
+               params="robot_name:=astribot_s1 wheel_radius:=0.08 wheel_separation:=0.4327 wheelbase:=0.4327">
 
     <!-- ========== 麦克纳姆全向轮驱动：官方 MecanumDrive 系统插件，天然支持 x/y/yaw 三自由度 ==========
          与 astribot_chassis.yaml 里 astribot_chassis_x/y/z_rot 三个独立自由度的抽象完全对应。
          订阅话题 /model/<robot_name>/cmd_vel(geometry_msgs/Twist，含 linear.y 侧移分量)，
-         发布 /model/<robot_name>/odometry(gz.msgs.Odometry)——由 ros_gz_bridge 转成 ROS2 话题。 -->
+         发布 /model/<robot_name>/odometry(gz.msgs.Odometry)——由 ros_gz_bridge 转成 ROS2 话题。
+
+         !!! 实测踩坑记录 !!!：MecanumDrive 的 <topic> 只要显式写了，就是"字面量"话题名，
+         不会像 OdometryPublisher 的 <odom_topic> 那样自动补上 "/model/<name>/" 前缀
+         （本方案联调时验证过：不写绝对路径会导致 /cmd_vel 消息桥接过去后机器人纹丝不动，
+         因为插件实际订阅的是裸的 "cmd_vel"，跟 ros_gz_bridge 转发目标 "/model/<name>/cmd_vel"
+         对不上）。所以这里显式写成和 ros_gz_bridge 配置一致的绝对话题名。 -->
     <gazebo>
       <plugin filename="gz-sim-mecanum-drive-system" name="gz::sim::systems::MecanumDrive">
         <!-- 兼容提示（旧版 Ignition Gazebo Fortress 早期/自编译环境可能仍需要这两行写法）：
@@ -40,13 +47,19 @@
         <max_acceleration>5.0</max_acceleration>
         <min_jerk>-50.0</min_jerk>
         <max_jerk>50.0</max_jerk>
-        <topic>cmd_vel</topic>
-        <odom_topic>odometry</odom_topic>
+        <topic>/model/${robot_name}/cmd_vel</topic>
+        <odom_topic>/model/${robot_name}/odometry</odom_topic>
         <frame_id>odom</frame_id>
         <child_frame_id>astribot_torso_base</child_frame_id>
       </plugin>
 
-      <!-- MecanumDrive 本身不发布 TF（已知限制），单独挂 OdometryPublisher 补 /tf 与 nav_msgs/Odometry -->
+      <!-- MecanumDrive 本身不发布 TF（已知限制），单独挂 OdometryPublisher 补 /tf 与 nav_msgs/Odometry。
+           !!! 实测踩坑记录 !!!：一开始仿照 MecanumDrive 那样给它加了显式的
+           <odom_topic>/<tf_topic> 绝对路径，结果这个插件直接不再发布任何东西了
+           （<odom_topic>不是 OdometryPublisher 认识的标签名，多出来的未知子标签让这个
+           plugin 加载/解析出了问题）。OdometryPublisher 自己的默认行为就是按
+           "/model/<模型名>/odometry"、"/model/<模型名>/tf" 这样自动加前缀发布
+           （已实测验证过默认行为正确），所以这里保持默认，不要再加那两个标签。 -->
       <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
         <!-- 兼容提示：ignition-gazebo-odometry-publisher-system /
              ignition::gazebo::systems::OdometryPublisher -->
