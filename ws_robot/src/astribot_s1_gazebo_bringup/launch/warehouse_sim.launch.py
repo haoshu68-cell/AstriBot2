@@ -260,8 +260,14 @@ def generate_launch_description():
          TextSubstitution(text='/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist')],
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry')],
+        # !!! 实测踩坑记录 !!!：OdometryPublisher 插件的 TF 等效输出，实际发布的 gz 话题
+        # 名字是 "/model/<name>/pose"（发布 Pose_V 消息），不是直觉上以为的
+        # "/model/<name>/tf"——一开始想当然桥了后者，结果那是个从来没有真实数据源
+        # 发布过的空话题，桥了个寂寞，/tf 上永远等不到 odom -> 机器人根 link 的变换，
+        # RViz 里 Fixed Frame(odom) 报 "does not exist"，整个模型因为挂不到 Fixed Frame
+        # 下而"坍缩"。这里改成订阅插件实际发布的 "/model/<name>/pose"。
         [TextSubstitution(text='/model/'), robot_name,
-         TextSubstitution(text='/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V')],
+         TextSubstitution(text='/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V')],
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan')],
         [TextSubstitution(text='/model/'), robot_name,
@@ -278,6 +284,13 @@ def generate_launch_description():
               TextSubstitution(text='/cmd_vel')], '/cmd_vel'),
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/odometry')], '/odom'),
+            # !!! 实测踩坑记录 !!!：这一条最容易漏——OdometryPublisher 发布的
+            # odom -> astribot_torso_base 变换实际在 gz 话题 "/model/<name>/pose"
+            # 上（发布 Pose_V 消息，见上面 bridge_args 的注释），必须重映射到标准
+            # /tf，否则 RViz 里 Fixed Frame(odom) 报 "does not exist"，
+            # 整棵模型因为挂不到 Fixed Frame 下而"坍缩成一团"。
+            ([TextSubstitution(text='/model/'), robot_name,
+              TextSubstitution(text='/pose')], '/tf'),
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/scan')], '/scan'),
             ([TextSubstitution(text='/model/'), robot_name,
