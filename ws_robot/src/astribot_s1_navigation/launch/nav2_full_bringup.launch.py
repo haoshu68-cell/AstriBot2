@@ -25,7 +25,7 @@
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetLaunchConfiguration
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
@@ -56,10 +56,28 @@ def generate_launch_description():
             'controller_plugin', default_value='rpp',
             description='rpp(任务书默认要求，非全向退化行为) 或 '
                         'mppi(推荐，能真正利用全向底盘能力，见README)'),
+        DeclareLaunchArgument(
+            'enable_arm_chassis_coupling', default_value='true',
+            description='是否接入臂-底盘动力学耦合动态调速节点(astribot_s1_dynamics_'
+                        'coupling)，透传给 navigation.launch.py'),
     ]
 
     env = LaunchConfiguration('env')
     mode = LaunchConfiguration('mode')
+
+    # !!! 实测踩坑记录（跟 perception_slam_bringup.launch.py 里记录过的是同一类坑，
+    # 这里当时漏加了，导致demo时rviz2根本没启动）!!!：下面 include
+    # perception_slam_bringup.launch.py 时传了 launch_arguments={'use_rviz':'false',...}
+    # （不想重复开两个RViz），但 ROS2 launch 的 LaunchConfiguration 不是按 include
+    # 层级隔离的——IncludeLaunchDescription 的 launch_arguments 本质上是在"当前"这个
+    # 共享的 launch 上下文里设置同名变量，会把共享上下文里的 'use_rviz' 覆盖成
+    # 'false'，导致本文件自己下面的 rviz_node 读到的 LaunchConfiguration('use_rviz')
+    # 也变成了'false'，不管用户传的是什么，rviz2 都不会被启动（而且没有任何报错日志，
+    # 非常隐蔽——进程列表里就是干脆没有rviz2）。修复：在 include
+    # perception_slam_bringup 之前，先把用户真正传入的 use_rviz 值另存一份到
+    # 'nav2_rviz_flag' 这个不会被覆盖的独立变量名，本文件自己的 rviz_node 用这个
+    # 副本判断。save_use_rviz 必须排在 include 前面，抢在共享变量被覆盖之前先存一份。
+    save_use_rviz = SetLaunchConfiguration('nav2_rviz_flag', LaunchConfiguration('use_rviz'))
 
     # 复用已验证过的感知+SLAM栈，不重新实现。始终显式传 autonomous_patrol:='false'——
     # 反应式自主巡游节点和 Nav2 都会发 /cmd_vel，两者同时开会打架，这个入口存在的
@@ -87,6 +105,7 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': use_sim_time_expr,
             'controller_plugin': LaunchConfiguration('controller_plugin'),
+            'enable_arm_chassis_coupling': LaunchConfiguration('enable_arm_chassis_coupling'),
         }.items(),
     )
 
@@ -96,10 +115,11 @@ def generate_launch_description():
         output='screen',
         arguments=['-d', PathJoinSubstitution([pkg_navigation, 'rviz', 'nav2_view.rviz'])],
         parameters=[{'use_sim_time': True}],
-        condition=IfCondition(LaunchConfiguration('use_rviz')),
+        condition=IfCondition(LaunchConfiguration('nav2_rviz_flag')),
     )
 
     return LaunchDescription(declare_args + [
+        save_use_rviz,   # 必须排在 perception_slam 前面，抢在共享变量被覆盖之前先存一份快照
         perception_slam,
         navigation,
         rviz_node,

@@ -1,0 +1,26 @@
+# 臂-底盘动力学耦合动态调速节点(arm_chassis_speed_coupling_node)参数。
+#
+# 展开幅度、运动速率两个维度各自独立换算成 0~1.0 的"活跃度比例"，取两者较严格
+# (数值更大、更接近1.0)的一个作为最终活跃度，再换算成限速系数——宁可保守，不做
+# 加权平均掩盖掉某一个维度的剧烈运动。
+#
+# !!! 部署/调参提醒 !!!：folded_reference_rad 是双臂14个关节的"收纳姿态"参考角度
+# (跟 astribot_s1_navigation 包里静态限速节点用的是同一套关节命名规范，但两份
+# 参数完全独立维护，不共享)，默认全0，换了机器人的默认收纳姿态要重新核对。
+# extension_full_rad / velocity_full_rad_s 这两个"满量程"阈值也要结合实际机械臂
+# 尺寸/使用场景调整：调得太小会导致轻微动作就大幅限速(过度保守)，调得太大则起不到
+# 保护作用。
+arm_chassis_speed_coupling_node:
+  ros__parameters:
+    input_topic: /cmd_vel_pre_arm_coupling
+    output_topic: /cmd_vel
+    joint_states_topic: /joint_states
+    folded_reference_rad: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    extension_full_rad: 1.2
+    velocity_full_rad_s: 2.0
+    min_speed_scale: 0.15
+    scale_smoothing_alpha: 0.25
+    joint_state_timeout_sec: 0.5
+    degraded_scale: 0.3
+    log_throttle_sec: 2.0

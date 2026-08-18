@@ -26,7 +26,11 @@ remapping在ROS2 launch里没有保证，与其猜不如直接复制节点定义
 import os
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
+from launch.actions import (
+    DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, SetEnvironmentVariable,
+)
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
@@ -36,6 +40,7 @@ from nav2_common.launch import RewrittenYaml
 
 def generate_launch_description():
     pkg_navigation = FindPackageShare('astribot_s1_navigation')
+    pkg_dynamics_coupling = FindPackageShare('astribot_s1_dynamics_coupling')
 
     namespace = LaunchConfiguration('namespace')
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -43,6 +48,7 @@ def generate_launch_description():
     controller_plugin = LaunchConfiguration('controller_plugin')
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
+    enable_arm_chassis_coupling = LaunchConfiguration('enable_arm_chassis_coupling')
 
     # controller_plugin(rpp|mppi) 决定用哪一份参数文件——两份文件除了
     # controller_server.FollowPath 那一段之外完全一致，见 config/ 目录下两个文件的注释。
@@ -85,7 +91,25 @@ def generate_launch_description():
             description='rpp(任务书默认，非全向退化行为) 或 mppi(推荐，全向)'),
         DeclareLaunchArgument('use_respawn', default_value='False'),
         DeclareLaunchArgument('log_level', default_value='info'),
+        DeclareLaunchArgument(
+            'enable_arm_chassis_coupling', default_value='true',
+            description='是否接入 astribot_s1_dynamics_coupling 的臂-底盘动力学耦合'
+                        '动态调速节点（机械臂展开/快速运动时自动降低底盘速度，防止'
+                        '重心偏移诱发倾倒）。设为false时cmd_vel_body_to_world_node的'
+                        '输出直接就是/cmd_vel，跟本节点接入之前完全一样，互不影响。'),
     ]
+
+    # !!! 无侵入接入方式说明 !!!：不修改 cmd_vel_body_to_world_node.py 的任何代码，
+    # 只是在这里把它本来就有的 output_topic 参数覆盖成一个中间话题名——它本来的默认值
+    # 是直接输出到 '/cmd_vel'，这里让它输出到 'cmd_vel_pre_arm_coupling'，改由
+    # arm_chassis_speed_coupling_node 接手，根据机械臂状态动态缩放后才真正发到
+    # '/cmd_vel'。enable_arm_chassis_coupling:=false 时这个覆盖不生效，行为跟接入
+    # 耦合节点之前完全一样（用 PythonExpression 三元表达式做条件选择，不用 IfCondition
+    # 套两份Node定义——省得重复维护 cmd_vel_body_to_world_node 的其它参数）。
+    cmd_vel_body_output_topic = PythonExpression([
+        "'/cmd_vel_pre_arm_coupling' if '", enable_arm_chassis_coupling, "' == 'true' "
+        "else '/cmd_vel'"
+    ])
 
     load_nodes = GroupAction(
         actions=[
@@ -175,13 +199,19 @@ def generate_launch_description():
                             {'autostart': autostart},
                             {'node_names': lifecycle_nodes}]),
             # 本包自己的两个适配节点：body->world cmd_vel 转换(必须存在，见文件头部说明)
-            # + 机械臂展开限速。
+            # + 机械臂展开限速(Nav2官方/speed_limit机制，静态阈值判断)。
             Node(
                 package='astribot_s1_navigation',
                 executable='cmd_vel_body_to_world_node',
                 name='cmd_vel_body_to_world_node',
                 output='screen',
-                parameters=[{'use_sim_time': use_sim_time}],
+                parameters=[{
+                    'use_sim_time': use_sim_time,
+                    # 见上面 cmd_vel_body_output_topic 的说明：enable_arm_chassis_coupling
+                    # 打开时这里输出到中间话题，交给下面的耦合节点处理后才真正到/cmd_vel；
+                    # 关闭时这个覆盖等于什么都没做(默认值本来就是/cmd_vel)。
+                    'output_topic': cmd_vel_body_output_topic,
+                }],
             ),
             Node(
                 package='astribot_s1_navigation',
@@ -193,9 +223,29 @@ def generate_launch_description():
         ]
     )
 
+    # 臂-底盘动力学耦合动态调速(astribot_s1_dynamics_coupling独立包，见该包README)：
+    # 接住上面 cmd_vel_body_to_world_node 被重定向过去的中间话题，根据双臂展开幅度/
+    # 运动速率算连续0~1.0限速系数，缩放后才真正发到/cmd_vel。跟静态的
+    # arm_speed_limiter_node(Nav2 /speed_limit机制、二值判断)是两套独立、互不冲突的
+    # 保护——一个走Nav2官方限速通道作用于controller_server的速度上限，一个是本节点
+    # 直接在最终world系速度上做连续缩放，两者同时生效、互相不知道对方存在，符合
+    # "无侵入、不修改既有静态限速逻辑"的要求。
+    arm_chassis_coupling = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [pkg_dynamics_coupling, 'launch', 'arm_chassis_coupling.launch.py'])),
+        launch_arguments={
+            'input_topic': 'cmd_vel_pre_arm_coupling',
+            'output_topic': '/cmd_vel',
+            'use_sim_time': use_sim_time,
+        }.items(),
+        condition=IfCondition(enable_arm_chassis_coupling),
+    )
+
     ld = LaunchDescription()
     ld.add_action(stdout_linebuf_envvar)
     for action in declare_args:
         ld.add_action(action)
     ld.add_action(load_nodes)
+    ld.add_action(arm_chassis_coupling)
     return ld
