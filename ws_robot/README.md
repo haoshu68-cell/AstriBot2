@@ -2,12 +2,13 @@
 
 本工作空间把仓库自带的 Astribot S1（麦克纳姆全向轮底盘 + 4自由度升降躯干 + 2自由度头部 +
 左右各7自由度机械臂 + 双 Livox Mid-360 激光雷达）接入 `aws-robomaker-small-warehouse-world`
-（ros2 分支）仓储场景，运行在 ROS2 Humble + Gazebo(Ignition/Gz Sim) 上，并集成了 SLAM Toolbox
-建图/纯定位能力。
+（ros2 分支）仓储场景，运行在 ROS2 Humble + Gazebo(Ignition/Gz Sim) 上，集成了 SLAM Toolbox
+建图/纯定位能力，以及 Nav2 自主导航（发目标点、自动规划避障路径）。
 
 设计细节与决策依据见实施方案：`/home/yjh/.claude/plans/synthetic-snuggling-pizza.md`；
-故障排查见 [`src/astribot_s1_gazebo_bringup/README_TROUBLESHOOTING.md`](src/astribot_s1_gazebo_bringup/README_TROUBLESHOOTING.md)（仿真/底盘/机械臂）
-和 [`src/astribot_s1_perception/README_PERCEPTION.md`](src/astribot_s1_perception/README_PERCEPTION.md)（双雷达感知/SLAM/硬件分支）。
+故障排查见 [`src/astribot_s1_gazebo_bringup/README_TROUBLESHOOTING.md`](src/astribot_s1_gazebo_bringup/README_TROUBLESHOOTING.md)（仿真/底盘/机械臂）、
+[`src/astribot_s1_perception/README_PERCEPTION.md`](src/astribot_s1_perception/README_PERCEPTION.md)（双雷达感知/SLAM/硬件分支/自主巡游/麦克纳姆轮bug修复）
+和 [`src/astribot_s1_navigation/README_NAVIGATION.md`](src/astribot_s1_navigation/README_NAVIGATION.md)（Nav2导航集成）。
 
 ## 1. 依赖安装
 
@@ -158,6 +159,25 @@ ros2 launch astribot_s1_perception perception_slam_bringup.launch.py \
 单实例实测连续巡游 22+ 分钟零次异常。完整排查过程、根因、修复代码位置见
 [`src/astribot_s1_perception/README_PERCEPTION.md`](src/astribot_s1_perception/README_PERCEPTION.md#10-自主巡游节点autonomous_patrol_node与麦克纳姆轮平移bug的完整修复记录)
 第10节。
+
+## 7.2 Nav2 自主导航（发目标点，自动规划路径避开货架）
+
+```bash
+# 建图 + 导航同时进行（推荐用 mppi 发挥麦克纳姆轮全向能力）
+ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
+  env:=sim mode:=mapping launch_gazebo:=true controller_plugin:=mppi
+
+# 预建图 + SLAM定位 + 导航
+ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
+  env:=sim mode:=localization launch_gazebo:=true \
+  map_file_name:=/绝对路径/my_map controller_plugin:=mppi
+```
+
+不跑 `nav2_map_server`/`amcl`（SLAM Toolbox 自己在两种模式下都会发布 `/map` +
+`map->odom` TF），底盘用 gz-sim `VelocityControl` 插件按 world 系解释速度，接了
+一个专门的 `cmd_vel_body_to_world_node` 做车体系→world系转换（否则会重现"原地
+打转不挪窝"的旧问题）。两种模式、机械臂展开限速均已实测跑通，完整设计取舍/踩坑
+记录见 [`src/astribot_s1_navigation/README_NAVIGATION.md`](src/astribot_s1_navigation/README_NAVIGATION.md)。
 
 ## 8. 关于 git
 

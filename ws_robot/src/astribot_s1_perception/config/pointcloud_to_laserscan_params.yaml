@@ -13,7 +13,21 @@ pointcloud_to_laserscan:
     angle_max: 3.14159
     angle_increment: 0.0087  # 0.5度，约720线，仓储场景足够
     scan_time: 0.1
-    range_min: 0.15
+    # !!! 实测踩坑记录（接入Nav2后才暴露出来的真实bug，之前只跑SLAM+反应式巡游时
+    # 一直没发现）!!!：livox_preprocess_node 的 range_min=0.35 是按点的**完整3D
+    # 球面距离**(sqrt(x²+y²+z²))过滤的，但这里 pointcloud_to_laserscan 投影成2D
+    # LaserScan 时用的是**纯XY平面距离**(sqrt(x²+y²))——如果一个自撞点打在机身
+    # 结构上一个z方向偏移比较大的位置(比如接近垂直往上/往下的角度撞到机身)，它的
+    # 3D距离可能刚好过了0.35m这道关，但去掉z分量后纯XY距离能一下子缩水到
+    # 0.15m左右，照样会被投影进最终的/scan里。实测现象：接入Nav2、给global_costmap
+    # 配置基于footprint的严格碰撞检测后，规划器一直报"Starting point in lethal
+    # space"——查了好几层数据才定位到：不是SLAM地图里烧进了什么陈旧的幽灵点，是
+    # 机器人当前位置持续、实时地被自己检测成"周围全是障碍物"，这个自撞blob跟着
+    # 机器人到哪都在（之前跑反应式巡游节点时因为它自己的避障逻辑早就有专门的全向
+    # 最近距离/移动方向安全扇区兜底，没有靠"起点是否在致命空间"这种严格的几何检查，
+    # 所以一直没暴露这个具体缺口）。把这里的 range_min 也提到 0.35（跟点云层的
+    # 3D过滤门限对齐），彻底堵住"3D距离够远但投影后XY距离变近"这个漏洞。
+    range_min: 0.35
     range_max: 20.0
     use_inf: true
     inf_epsilon: 1.0
