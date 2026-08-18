@@ -1,0 +1,21 @@
+# pointcloud_to_laserscan（官方 ros-humble-pointcloud-to-laserscan 包）参数：
+# 把融合后的 3D 点云（已经在 astribot_torso_base 系下）按高度切片投影成 2D LaserScan，
+# 喂给 SLAM Toolbox（它只吃 2D LaserScan，不直接吃 PointCloud2，见任务书/实施方案说明）。
+pointcloud_to_laserscan:
+  ros__parameters:
+    target_frame: astribot_torso_base
+    transform_tolerance: 0.02
+    # 高度切片：只取躯干中段附近的点，避开地面反射噪声(z<0.05)和机械臂/头部可能
+    # 挥动到的高度(z>0.6)，专门捕捉墙面/货架立柱等适合2D建图的稳定竖直结构。
+    min_height: 0.05
+    max_height: 0.6
+    angle_min: -3.14159
+    angle_max: 3.14159
+    angle_increment: 0.0087  # 0.5度，约720线，仓储场景足够
+    scan_time: 0.1
+    range_min: 0.15
+    range_max: 20.0
+    use_inf: true
+    inf_epsilon: 1.0
+    # 点数较多时用 concurrency_level>1 可以多线程处理，仿真单机资源有限先保持默认单线程
+    concurrency_level: 1

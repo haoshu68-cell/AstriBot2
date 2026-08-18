@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_perception</name>
+  <version>0.1.0</version>
+  <description>
+    Astribot S1 双 Livox Mid-360 点云感知与 SLAM Toolbox 建图/定位栈：点云预处理
+    （直通/半径滤波/地面剔除）、双雷达时间同步融合、2D投影、建图与纯定位两种模式，
+    区分仿真(Ignition Gazebo 近似仿真)与实体硬件(livox_ros_driver2)两套启动分支。
+  </description>
+  <maintainer email="dev@astribot.local">astribot-dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>sensor_msgs_py</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2_sensor_msgs</exec_depend>
+  <exec_depend>message_filters</exec_depend>
+  <!-- 点云投影/建图/定位：全部走 apt 官方发行版，不使用实验性/未维护插件 -->
+  <exec_depend>pointcloud_to_laserscan</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>astribot_s1_description</exec_depend>
+  <exec_depend>astribot_s1_gazebo_bringup</exec_depend>
+  <!-- 硬件分支依赖：livox_ros_driver2 无 ROS2 apt 包，作为 workspace 内 submodule 源码编译，
+       这里仍声明依赖名，方便 rosdep/文档追踪，即使它不是一个可以被 rosdep 解析的标准条目 -->
+  <exec_depend>livox_ros_driver2</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

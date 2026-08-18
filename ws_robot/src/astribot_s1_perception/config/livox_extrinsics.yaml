@@ -1,0 +1,25 @@
+# 双 Livox Mid-360 安装外参文档化记录。
+#
+# !!! 唯一权威数据源是 astribot_s1_description/urdf/astribot_s1.xacro 里的
+#     livox_left_xyz / livox_left_rpy / livox_right_xyz / livox_right_rpy 四个 xacro:arg !!!
+# 本文件只是把同一份数值以更适合标定/现场核对的 yaml 格式再记录一遍，方便：
+#   1) 现场标定后核对/回填新的外参数值；
+#   2) 不需要打开 xacro 也能快速查安装位姿；
+#   3) 后续如果做真实的手眼/多雷达外参标定工具，标定结果先写在这里，再手动同步回 xacro
+#      （或者由标定脚本直接改这里，再有一个小工具脚本把这份 yaml 转成 xacro 参数——
+#      本方案暂未提供自动转换脚本，改动后请记得两边保持一致）。
+#
+# 坐标约定：以 astribot_torso_base 为参考系，+x 朝前、+y 朝左、+z 朝上，
+# rpy 为绕 x/y/z 轴的欧拉角（弧度，urdf/xacro 惯例：先绕x(roll)、再绕y(pitch)、再绕z(yaw)）。
+
+livox_mid360_left:
+  parent_frame: astribot_torso_base
+  mount_position: 左前
+  xyz: [0.28, 0.18, 0.10]
+  rpy: [0.0, 0.0, 0.4]
+
+livox_mid360_right:
+  parent_frame: astribot_torso_base
+  mount_position: 右后
+  xyz: [-0.28, -0.18, 0.10]
+  rpy: [0.0, 0.0, 2.74]

@@ -68,6 +68,23 @@
         <odom_publish_frequency>50</odom_publish_frequency>
         <dimensions>3</dimensions>
       </plugin>
+
+      <!-- !!! 实测踩坑记录（新增，非常关键）!!!：aws_robomaker_small_warehouse_world 的
+           world 文件本身一个 <plugin> 标签都没有，gz-sim 找不到 world 级插件配置时，
+           会退回 ~/.gz(或.ignition)/sim/<ver>/server.config 里的默认系统插件列表——
+           实测那份默认列表只有 Physics/UserCommands/SceneBroadcaster 三个，
+           **没有 Sensors 系统**！缺了它，机器人身上所有 camera/gpu_lidar 传感器
+           （包括这里新加的双 Livox Mid-360，也包括头部相机）只会被解析、
+           永远不会真正渲染/发布任何数据——话题能在 `ros2 topic list` 里看到，
+           但 `ros2 topic hz` 永远拿不到消息，很容易被误判成"话题名/桥接配置错了"。
+           因为不允许修改 aws 官方仓库的 world 文件，这里改成把 Sensors 系统插件挂在
+           "我们自己机器人模型"的 <gazebo> 标签下——gz-sim 的 Sensors 系统一旦在
+           场景里任意实体上加载成功，就会全局接管整个仿真里所有传感器的渲染，
+           不需要非挂在 world 实体上不可，这是应对"不能改 world 文件"场景的标准做法。 -->
+      <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+        <!-- 兼容提示：ignition-gazebo-sensors-system / ignition::gazebo::systems::Sensors -->
+        <render_engine>ogre2</render_engine>
+      </plugin>
     </gazebo>
 
     <!-- 四个轮子摩擦系数：提高地面附着力，避免全向轮"打滑不走直线" -->

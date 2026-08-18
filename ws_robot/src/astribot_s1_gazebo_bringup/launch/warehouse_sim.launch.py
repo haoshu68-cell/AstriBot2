@@ -59,7 +59,7 @@ def generate_launch_description():
                         '安全值（见 astribot_s1_description/config/collision_overrides.yaml），'
                         '若更换轮子/底盘尺寸需要同步调整，否则机器人会陷进地板或悬空掉落'),
         DeclareLaunchArgument('spawn_yaw', default_value='0.0', description='出生朝向 yaw (rad)'),
-        DeclareLaunchArgument('use_lidar', default_value='true', description='是否挂载2D激光雷达'),
+        DeclareLaunchArgument('use_lidar', default_value='true', description='是否挂载双Livox Mid-360激光雷达'),
         DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部RGB相机'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='是否使用仿真时钟'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='是否自动打开RViz2'),
@@ -268,8 +268,13 @@ def generate_launch_description():
         # 下而"坍缩"。这里改成订阅插件实际发布的 "/model/<name>/pose"。
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V')],
+        # 双 Livox Mid-360（用 gpu_lidar 近似仿真，见 astribot_s1_sensors.xacro 顶部说明）：
+        # gz-sim 的 gpu_lidar 传感器会在 <topic> 后缀 "/points" 上发布点云
+        # （gz.msgs.PointCloudPacked），桥接成标准 sensor_msgs/PointCloud2。
         [TextSubstitution(text='/model/'), robot_name,
-         TextSubstitution(text='/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan')],
+         TextSubstitution(text='/livox_mid360_left/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked')],
+        [TextSubstitution(text='/model/'), robot_name,
+         TextSubstitution(text='/livox_mid360_right/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked')],
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image')],
     ]
@@ -291,15 +296,53 @@ def generate_launch_description():
             # 整棵模型因为挂不到 Fixed Frame 下而"坍缩成一团"。
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/pose')], '/tf'),
+            # 桥接后的话题名统一成 /livox/lidar_left、/livox/lidar_right——
+            # 和真实 livox_ros_driver2 硬件分支（astribot_s1_perception/launch/
+            # hardware_livox.launch.py）发布的话题名保持一致，这样下游的预处理/融合/
+            # SLAM 节点代码在仿真和实体机器人上完全不用改。
             ([TextSubstitution(text='/model/'), robot_name,
-              TextSubstitution(text='/scan')], '/scan'),
+              TextSubstitution(text='/livox_mid360_left/points')], '/livox/lidar_left'),
+            ([TextSubstitution(text='/model/'), robot_name,
+              TextSubstitution(text='/livox_mid360_right/points')], '/livox/lidar_right'),
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/camera/image_raw')], '/image_raw'),
         ],
     )
 
     # ---------------------------------------------------------------------
-    # 9. RViz2（可选），用于离线核对模型外观/TF树是否断裂
+    # 9. !!! 实测踩坑记录 !!!：gz-sim 给 camera/gpu_lidar 传感器消息生成的 frame_id
+    #    不是简单的链接名，而是 "<model>/<parent_link>/<sensor_name>" 这种带全路径的字符串
+    #    （实测得到：astribot_s1/astribot_torso_base/livox_mid360_left_sensor），
+    #    这个 frame 在 robot_state_publisher 发布的 TF 树里根本不存在，点云/图像消息的
+    #    header.frame_id 没法直接 tf2 变换。用 static_transform_publisher 做一次
+    #    "零位姿别名"，把这个 gz 生成的长 frame 名字挂到我们真正的传感器 link 下面
+    #    （两者物理上就是同一个位置，零变换是精确的，不是近似）。
+    # ---------------------------------------------------------------------
+    def make_sensor_frame_alias(real_link, gz_parent_link, gz_sensor_name):
+        return Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            output='screen',
+            arguments=[
+                '--x', '0', '--y', '0', '--z', '0',
+                '--yaw', '0', '--pitch', '0', '--roll', '0',
+                '--frame-id', real_link,
+                '--child-frame-id',
+                [robot_name, TextSubstitution(text='/'), TextSubstitution(text=gz_parent_link),
+                 TextSubstitution(text='/'), TextSubstitution(text=gz_sensor_name)],
+            ],
+            parameters=[{'use_sim_time': use_sim_time}],
+        )
+
+    livox_left_frame_alias = make_sensor_frame_alias(
+        'livox_mid360_left', 'astribot_torso_base', 'livox_mid360_left_sensor')
+    livox_right_frame_alias = make_sensor_frame_alias(
+        'livox_mid360_right', 'astribot_torso_base', 'livox_mid360_right_sensor')
+    camera_frame_alias = make_sensor_frame_alias(
+        'camera_link', 'astribot_head_link_2', 'astribot_camera')
+
+    # ---------------------------------------------------------------------
+    # 10. RViz2（可选），用于离线核对模型外观/TF树是否断裂
     # ---------------------------------------------------------------------
     rviz_node = Node(
         package='rviz2',
@@ -319,5 +362,8 @@ def generate_launch_description():
         spawn_robot,
         delay_controllers_after_spawn,
         ros_gz_bridge,
+        livox_left_frame_alias,
+        livox_right_frame_alias,
+        camera_frame_alias,
         rviz_node,
     ])

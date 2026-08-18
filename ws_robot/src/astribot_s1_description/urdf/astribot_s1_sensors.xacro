@@ -1,21 +1,35 @@
 <?xml version="1.0"?>
 <!--
-  文件用途：可选传感器（2D 激光雷达 + RGB 相机），用 xacro:if 通过顶层参数 use_lidar/use_camera 开关。
-  雷达装在底盘前方（astribot_torso_base 前沿），相机装在头部 astribot_head_link_2（随头部俯仰转动）。
-  均使用 Gazebo 官方 gz-sim 传感器插件（非实验性），通过 ros_gz_bridge 转出标准 ROS2 话题
-  （見 astribot_s1_gazebo_bringup/config/astribot_s1_bridge.yaml）。
+  文件用途：机器人自身携带的传感器 —— 双 Livox Mid-360 3D 激光雷达 + 头部 RGB 相机。
+  用 xacro:if 通过顶层参数 use_lidar/use_camera 开关。均使用 Gazebo 官方 gz-sim 传感器插件
+  （非实验性），通过 ros_gz_bridge 转出标准 ROS2 话题（見
+  astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py 里的 bridge_args）。
+
+  ============================ Livox Mid-360 仿真说明（务必先读） ============================
+  实测确认：Ignition/Gz Sim 目前没有官方或主流维护的 Mid-360 真实"非重复花瓣扫描"仿真插件
+  （官方 livox_laser_simulation 仓库只支持 Gazebo Classic，没有 gz-sim 移植版）。
+  本方案采用社区通用做法：用 gz-sim 原生 <sensor type="gpu_lidar"> 配置成与 Mid-360 规格
+  一致的视场角（水平360°、垂直 -7°~+52°共59°）来近似，输出标准 PointCloud2 点云，
+  在数据链路和下游算法层面与真实 Mid-360 等价，但不是逐点还原真实花瓣扫描图案——
+  这一点在 astribot_s1_perception 包的 README 里也会再次说明，避免误认为是精确仿真。
+  ============================================================================================
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:macro name="astribot_s1_lidar" params="parent:=astribot_torso_base robot_name:=astribot_s1">
-    <link name="lidar_link">
+  <!-- ================= Livox Mid-360 宏：左右各实例化一次 ================= -->
+  <xacro:macro name="astribot_s1_livox_mid360"
+               params="side parent:=astribot_torso_base robot_name:=astribot_s1
+                       xyz:='0.28 0.18 0.10' rpy:='0 0 0.4'">
+
+    <link name="livox_mid360_${side}">
       <inertial>
-        <mass value="0.15"/>
-        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+        <!-- 官方规格：65x65x60mm, 265g -->
+        <mass value="0.265"/>
+        <inertia ixx="0.00015" ixy="0" ixz="0" iyy="0.00015" iyz="0" izz="0.00012"/>
       </inertial>
       <visual>
         <geometry>
-          <cylinder radius="0.035" length="0.04"/>
+          <cylinder radius="0.0325" length="0.06"/>
         </geometry>
         <material name="astribot_lidar_color">
           <color rgba="0.1 0.1 0.1 1"/>
@@ -23,38 +37,50 @@
       </visual>
       <collision>
         <geometry>
-          <cylinder radius="0.035" length="0.04"/>
+          <cylinder radius="0.0325" length="0.06"/>
         </geometry>
       </collision>
     </link>
-    <!-- 装在底盘前沿（+x 方向）、略高于地面，避免与底盘外壳碰撞体自相交 -->
-    <joint name="lidar_joint" type="fixed">
+
+    <joint name="livox_mid360_${side}_joint" type="fixed">
       <parent link="${parent}"/>
-      <child link="lidar_link"/>
-      <origin xyz="0.30 0 0.05" rpy="0 0 0"/>
+      <child link="livox_mid360_${side}"/>
+      <origin xyz="${xyz}" rpy="${rpy}"/>
     </joint>
 
-    <gazebo reference="lidar_link">
-      <sensor name="astribot_lidar" type="gpu_lidar">
+    <gazebo reference="livox_mid360_${side}">
+      <sensor name="livox_mid360_${side}_sensor" type="gpu_lidar">
         <pose>0 0 0 0 0 0</pose>
-        <!-- 用带 robot_name 的绝对话题名(以 / 开头)，避免 gz-sim 按 world/model/link/sensor
-             层级自动生成一长串话题名——绝对名字才能在 bridge yaml 里写死映射关系 -->
-        <topic>/model/${robot_name}/scan</topic>
+        <!-- 绝对话题名，gz-sim 会在其后缀 "/points" 输出 gz.msgs.PointCloudPacked 点云
+             （对应 ros_gz_bridge 里 .../points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked
+             的桥接写法，见 warehouse_sim.launch.py）。 -->
+        <topic>/model/${robot_name}/livox_mid360_${side}</topic>
         <update_rate>10</update_rate>
         <always_on>true</always_on>
         <visualize>false</visualize>
         <lidar>
           <scan>
             <horizontal>
-              <samples>360</samples>
+              <!-- 水平 360°，采样数按 Mid-360 单帧约 20000 点(10Hz下等效200000pts/s)量级近似取，
+                   实测如果卡顿可调低（见 astribot_s1_perception/README_PERCEPTION.md 里的降采样建议）。 -->
+              <samples>400</samples>
               <resolution>1</resolution>
               <min_angle>-3.14159</min_angle>
               <max_angle>3.14159</max_angle>
             </horizontal>
+            <vertical>
+              <!-- Mid-360 真实垂直视场 -7°~+52°(共59°)，换算弧度：-0.1222 ~ 0.9076 -->
+              <samples>32</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.1222</min_angle>
+              <max_angle>0.9076</max_angle>
+            </vertical>
           </scan>
           <range>
-            <min>0.12</min>
-            <max>12.0</max>
+            <!-- 官方规格：盲区0.1~0.2m，最远70m(高反射率)；仿真里取中间值，太远会引入仓储世界
+                 外墙/屋顶的无效远点，拖慢下游点云处理 -->
+            <min>0.10</min>
+            <max>40.0</max>
             <resolution>0.01</resolution>
           </range>
         </lidar>

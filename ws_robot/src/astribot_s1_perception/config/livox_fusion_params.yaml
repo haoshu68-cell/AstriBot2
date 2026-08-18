@@ -1,0 +1,13 @@
+# 双雷达时间同步融合参数（livox_fusion_node）。
+livox_fusion_node:
+  ros__parameters:
+    left_topic: 'left/cloud_filtered'
+    right_topic: 'right/cloud_filtered'
+    output_topic: 'fused_points'
+    target_frame: 'astribot_torso_base'
+    # 时间同步容差：仿真两路雷达各自 10Hz 独立采集，帧间隔 0.1s，
+    # slop 设成半个周期左右比较合理；实测建图效果不理想可以适当调大/调小。
+    sync_slop_sec: 0.05
+    tf_timeout_sec: 0.2
+    # 逐点去畸变开关，默认关闭，见 livox_fusion_node.py 文件头部详细说明。
+    deskew_enable: false

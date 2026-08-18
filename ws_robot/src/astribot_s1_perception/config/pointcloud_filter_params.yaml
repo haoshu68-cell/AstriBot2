@@ -1,0 +1,27 @@
+# 点云预处理参数（livox_preprocess_node），左右两台雷达各一份 namespace。
+# 对应任务书要求：直通滤波、半径滤波、地面点去除，全部可调不写死。
+#
+# ground_z_min 的取值依据：雷达在自身局部坐标系里，地面大致处于一个固定的负高度
+# （传感器装得越高，这个值越负）。本机器人两台 Mid-360 都装在 torso_base 上方 0.10m，
+# 而 torso_base 出生高度约 0.10~0.13m（见 astribot_s1_description/config/
+# collision_overrides.yaml 的 spawn_height 小节），所以地面在雷达局部系大致在
+# z ≈ -0.20 ~ -0.23m 附近；这里取 -0.18 留一点余量（宁可切少一点地面，也不要切掉
+# 低矮障碍物），实际部署 / 换了安装高度后需要重新估算这个值。
+
+/livox_preprocess_left:
+  ros__parameters:
+    range_min: 0.15
+    range_max: 35.0
+    ground_z_min: -0.18
+    height_max: 3.0
+    voxel_size: 0.15
+    min_points_per_voxel: 2
+
+/livox_preprocess_right:
+  ros__parameters:
+    range_min: 0.15
+    range_max: 35.0
+    ground_z_min: -0.18
+    height_max: 3.0
+    voxel_size: 0.15
+    min_points_per_voxel: 2
