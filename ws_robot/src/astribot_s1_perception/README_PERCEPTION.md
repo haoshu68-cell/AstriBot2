@@ -224,3 +224,73 @@ ros2 launch astribot_s1_perception perception_slam_bringup.launch.py \
 | livox_ros_driver2 启动报错/端口占用 | 确认没有两个 driver 实例用了同一个 IP/端口；检查系统是否已经装好 Livox-SDK2（`ldconfig -p \| grep livox`） |
 | 定位模式加载地图失败 | 确认 `map_file_name` 是绝对路径、不带扩展名；确认对应的 `.data`/`.posegraph` 两个文件都存在 |
 | 点云过载、CPU占用过高 | 调大 `astribot_s1_sensors.xacro` 里 gpu_lidar 的采样间隔(降低samples)，或调大 `pointcloud_filter_params.yaml` 的 `voxel_size` |
+
+## 10. 自主巡游节点（`autonomous_patrol_node`）与麦克纳姆轮平移bug的完整修复记录
+
+用户反馈"底盘移动时机器人的身体会倾倒"后排查出的 **4 个独立真实 bug**，均为实测复现，
+详细技术记录见 `astribot_s1.gazebo.xacro`（bug 1/2）和 `autonomous_patrol_node.py`
+文件头部注释（bug 3/4）：
+
+1. 各向异性摩擦近似方案在本机轮子半径(0.08m)下失效 → 改用 `VelocityControl` 系统插件
+   直接设定车身速度，`MecanumDrive` 只做轮子视觉转动。
+2. `MecanumDrive` 独立计算的轮速（假设真实摩擦驱动）与 `VelocityControl` 强制的车身
+   速度不一致，只要轮子还有摩擦系数，这个差异就通过轮地接触力矩反馈到车身
+   z/roll/pitch，几十秒到一两分钟内缓慢累积成卡死的倾斜姿态 → 四个轮子
+   `mu1`/`mu2` 清零，两个插件彻底解耦。
+3. 双 Mid-360 打在机器人自己身上的固定结构（0.10~0.25m 距离，稳定聚簇），被巡游
+   节点误判成"到处都是障碍物/被困角落"，只会原地自转 → `pointcloud_filter_params.yaml`
+   的 `range_min` 由 0.15 提高到 0.35。
+4. 巡游节点把车体系下的"最开阔方向"角度直接当 world 系角度发给 `/cmd_vel`，但
+   `VelocityControl` 插件二进制里的组件类型是 `WorldLinearVelocityCmdTag`
+   （用 `strings libignition-gazebo6-velocity-control-system.so` 核实），说明它按
+   world 系解释速度——车身同时还在自转，车体系角度每周期漂移，导致推力方向随之转动，
+   一整圈平均抵消，车子"一直打转不挪窝" → `autonomous_patrol_node.py` 新增订阅
+   `/odom` 拿当前航向角，用 `world_angle = best_angle(车体系) + current_yaw` 换算后
+   再计算 vx/vy。
+
+同时新增了两层工程纵深防御（不是对上述根因的替代）：
+- 基于 `/odom` 的安全监控：z 高度/roll/pitch 超出阈值（默认 `max_height_deviation=0.06`,
+  `max_tilt_rad=0.12`≈7°）时强制持续下发零速度并报错，不依赖任何单一修复"包治百病"。
+- 碰撞安全扇区跟随实际移动方向（`best_angle`）而不是车体固定正前方，外加不分方向的
+  全向最近距离紧急阈值 `critical_stop_distance`（默认0.4m）。
+
+**最终验证**：单实例连续运行 22+ 分钟（`autonomous_patrol:=true`），z 全程稳定在
+0.1342m 标称值，roll/pitch 全程 0，安全监控零触发，`/map` 栅格从 274x232 增长到
+274x282（真实新增覆盖）。
+
+### 10.1 联调环境踩坑（调试工具本身的问题，不是仿真/机器人 bug）
+
+反复启停 launch 调试时，`pkill -f astribot_sdk_ros2/ws_robot` 这类按工作空间路径
+匹配的杀进程命令**杀不掉** `ros_gz_bridge/parameter_bridge`——它的二进制在系统路径
+`/opt/ros/humble/lib/ros_gz_bridge/` 下。这次调试一度累积 6-7 个僵尸 bridge 进程
+同时抢占同一个 `ROS_DOMAIN_ID`，表现为 `tf2_buffer: Detected jump back in time`
+刷屏、`ros2 topic echo` 超时拿不到消息——排查时务必用 `ps -ef | grep parameter_bridge`
+单独确认，不能只信"按工作空间路径杀干净了"。
+
+长时间高频反复启停还会在 `/dev/shm/fastrtps_*` 下累积大量共享内存分段，最终导致
+`RTPS_TRANSPORT_SHM Error: Failed init_port ... open_and_lock_file failed`（正常
+一次性使用不会遇到）。应对：导出下面这份只用 UDPv4、禁用 SHM 的 profile：
+
+```bash
+cat > /tmp/disable_shm.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <profiles>
+    <transport_descriptors>
+      <transport_descriptor>
+        <transport_id>udp_transport</transport_id>
+        <type>UDPv4</type>
+      </transport_descriptor>
+    </transport_descriptors>
+    <participant profile_name="udp_only" is_default_profile="true">
+      <rtps>
+        <userTransports><transport_id>udp_transport</transport_id></userTransports>
+        <useBuiltinTransports>false</useBuiltinTransports>
+      </rtps>
+    </participant>
+  </profiles>
+</dds>
+EOF
+export FASTRTPS_DEFAULT_PROFILES_FILE=/tmp/disable_shm.xml
+```
+

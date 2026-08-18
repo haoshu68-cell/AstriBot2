@@ -33,6 +33,7 @@ setup(
         'console_scripts': [
             'livox_preprocess_node = astribot_s1_perception.livox_preprocess_node:main',
             'livox_fusion_node = astribot_s1_perception.livox_fusion_node:main',
+            'autonomous_patrol_node = astribot_s1_perception.autonomous_patrol_node:main',
         ],
     },
 )

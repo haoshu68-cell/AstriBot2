@@ -22,7 +22,7 @@
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetLaunchConfiguration
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
@@ -51,6 +51,12 @@ def generate_launch_description():
                         'slam_localization.launch.py 里的详细说明'),
         DeclareLaunchArgument('use_rviz', default_value='true'),
         DeclareLaunchArgument('robot_name', default_value='astribot_s1'),
+        DeclareLaunchArgument(
+            'autonomous_patrol', default_value='true',
+            description='是否启动反应式自主巡游节点(autonomous_patrol_node)，'
+                        '让机器人边走边建图，而不是原地不动只靠雷达自转覆盖；'
+                        '只想手动操控(遥操作/自己发cmd_vel)时设成 false 关掉它，'
+                        '避免和手动指令打架。'),
     ]
 
     env = LaunchConfiguration('env')
@@ -59,6 +65,20 @@ def generate_launch_description():
     is_hardware = PythonExpression(["'", env, "' == 'hardware'"])
     is_mapping = PythonExpression(["'", mode, "' == 'mapping'"])
     is_localization = PythonExpression(["'", mode, "' == 'localization'"])
+
+    # !!! 实测踩坑记录 !!!：下面 include warehouse_sim.launch.py 时传了
+    # launch_arguments={'use_rviz': 'false', ...}（不想重复开两个RViz），
+    # 但 ROS2 launch 的 LaunchConfiguration 并不是按 include 层级严格隔离的——
+    # IncludeLaunchDescription 的 launch_arguments 本质上是在"当前"这个共享的
+    # launch 上下文里设置同名变量，等 warehouse_sim.launch.py 执行完
+    # DeclareLaunchArgument('use_rviz', ...) 时，会把共享上下文里的 'use_rviz'
+    # 覆盖成 'false'——导致本文件自己最下面的 rviz_node 读到的
+    # LaunchConfiguration('use_rviz') 也变成了 'false'，不管用户在命令行传了
+    # use_rviz:=true 还是默认值 true，RViz 都不会被打开（而且日志里连尝试启动的
+    # 记录都没有，非常隐蔽）。修复：在 include warehouse_sim 之前，先把用户真正
+    # 传入的 use_rviz 值另存一份到 'use_rviz_actual' 这个不会被覆盖的独立变量名，
+    # 本文件自己的 rviz_node 用这个副本判断，不用原名。
+    save_use_rviz = SetLaunchConfiguration('use_rviz_actual', LaunchConfiguration('use_rviz'))
 
     # ---- 仿真分支 ----
     warehouse_sim = IncludeLaunchDescription(
@@ -117,10 +137,22 @@ def generate_launch_description():
         arguments=['-d', PathJoinSubstitution(
             [pkg_perception, 'rviz', 'perception_slam_view.rviz'])],
         parameters=[{'use_sim_time': use_sim_time_str}],
-        condition=IfCondition(LaunchConfiguration('use_rviz')),
+        condition=IfCondition(LaunchConfiguration('use_rviz_actual')),
+    )
+
+    autonomous_patrol_node = Node(
+        package='astribot_s1_perception',
+        executable='autonomous_patrol_node',
+        output='screen',
+        parameters=[
+            PathJoinSubstitution([pkg_perception, 'config', 'autonomous_patrol_params.yaml']),
+            {'use_sim_time': use_sim_time_str},
+        ],
+        condition=IfCondition(LaunchConfiguration('autonomous_patrol')),
     )
 
     return LaunchDescription(declare_args + [
+        save_use_rviz,   # 必须排在 warehouse_sim 前面，抢在共享变量被覆盖之前先存一份快照
         warehouse_sim,
         sim_perception,
         hardware_livox,
@@ -128,4 +160,5 @@ def generate_launch_description():
         slam_mapping,
         slam_localization,
         rviz_node,
+        autonomous_patrol_node,
     ])

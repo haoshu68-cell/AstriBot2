@@ -3,18 +3,25 @@
   文件用途：Astribot S1 底盘部分（麦克纳姆全向轮 x4 + 4 自由度升降躯干）。
 
   数据来源：astribot_config/robot_config/astribot_s1/model/astribot_whole_body_with_wheel.urdf
-  （link/joint 名称、惯性参数、几何尺寸与原文件完全一致，未改动任何数值），本文件只做了两处必要修正：
+  （link/joint 名称、惯性参数、几何尺寸与原文件完全一致，未改动任何数值），本文件做了三处必要修正：
     1. mesh filename 由原文件里残缺的相对路径 "s1_torso/xxx.STL"
        改写为 package:// 形式，指向本包 CMakeLists.txt 安装的 meshes 目录；
     2. 四个轮子（wheel_RF/LF/RR/LR_Link）原文件完全没有 <collision>，仿真中会直接穿透地板，
-       这里按照实测 STL 包围盒（半径 0.08m、厚度 0.05m，见 config/collision_overrides.yaml）
-       补上圆柱体碰撞体 —— 对应任务书中"机器人生成后下坠/穿透地面"异常场景的修复。
+       这里按照实测 STL 包围盒（半径 0.08m）补上碰撞体 —— 对应任务书中
+       "机器人生成后下坠/穿透地面"异常场景的修复；
+    3. !!! 实测踩坑记录 !!!：碰撞体形状从圆柱改成了球体。起因是麦克纳姆轮平移 bug——
+       用官方 gz-sim 各向异性摩擦(fdir1+mu2=0)方案让轮子真正产生平移前，
+       对照 `/usr/share/ignition/ignition-gazebo6/worlds/mecanum_drive.sdf`
+       官方示例发现它的轮子碰撞体用的是球体而不是圆柱体。球体在任意姿态下都是干净的
+       单点接触，圆柱在轮子侧滚接触时理论上也是单点接触，但数值上更容易在边缘/端面出现
+       意外的多点/线接触导致摩擦方向解算不稳定——球体更贴合"各向异性摩擦只在一个干净
+       接触点上生效"这个假设，改成球体后经实测确认轮子真的能带动底盘平移了
+       （见 astribot_s1.gazebo.xacro 里 fdir1/mu2 配置的详细说明）。
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!-- 麦克纳姆轮碰撞体公共尺寸（来自 STL 包围盒实测，见 config/collision_overrides.yaml） -->
   <xacro:property name="wheel_collision_radius" value="0.08"/>
-  <xacro:property name="wheel_collision_length" value="0.05"/>
 
   <!-- 躯干底座：唯一根 link，无 parent；平动升降+轮式全向底盘均挂在它上面 -->
   <link name="astribot_torso_base">
@@ -56,11 +63,13 @@
         <color rgba="0.75294 0.75294 0.75294 1"/>
       </material>
     </visual>
-    <!-- 补充碰撞体：圆柱沿 link 局部 Z 轴（即转轴）——原文件缺失，必须补，否则轮子会穿地 -->
+    <!-- 补充碰撞体：球体，中心与轮子局部原点重合——原文件缺失，必须补，否则轮子会穿地；
+         用球体而不是圆柱体是为了配合麦克纳姆轮各向异性摩擦(fdir1/mu2)方案，
+         见文件顶部注释第3点和 astribot_s1.gazebo.xacro 里的详细说明 -->
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0.0145"/>
       <geometry>
-        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+        <sphere radius="${wheel_collision_radius}"/>
       </geometry>
     </collision>
   </link>
@@ -89,7 +98,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0.0145"/>
       <geometry>
-        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+        <sphere radius="${wheel_collision_radius}"/>
       </geometry>
     </collision>
   </link>
@@ -118,7 +127,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0.0145"/>
       <geometry>
-        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+        <sphere radius="${wheel_collision_radius}"/>
       </geometry>
     </collision>
   </link>
@@ -147,7 +156,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0.0145"/>
       <geometry>
-        <cylinder radius="${wheel_collision_radius}" length="${wheel_collision_length}"/>
+        <sphere radius="${wheel_collision_radius}"/>
       </geometry>
     </collision>
   </link>

@@ -16,17 +16,35 @@
   <xacro:macro name="astribot_s1_gazebo_chassis_plugins"
                params="robot_name:=astribot_s1 wheel_radius:=0.08 wheel_separation:=0.4327 wheelbase:=0.4327">
 
-    <!-- ========== 麦克纳姆全向轮驱动：官方 MecanumDrive 系统插件，天然支持 x/y/yaw 三自由度 ==========
-         与 astribot_chassis.yaml 里 astribot_chassis_x/y/z_rot 三个独立自由度的抽象完全对应。
-         订阅话题 /model/<robot_name>/cmd_vel(geometry_msgs/Twist，含 linear.y 侧移分量)，
-         发布 /model/<robot_name>/odometry(gz.msgs.Odometry)——由 ros_gz_bridge 转成 ROS2 话题。
+    <!-- ========== 底盘全向驱动：VelocityControl(实际驱动身体位移) + MecanumDrive(轮子视觉旋转) ==========
 
-         !!! 实测踩坑记录 !!!：MecanumDrive 的 <topic> 只要显式写了，就是"字面量"话题名，
-         不会像 OdometryPublisher 的 <odom_topic> 那样自动补上 "/model/<name>/" 前缀
-         （本方案联调时验证过：不写绝对路径会导致 /cmd_vel 消息桥接过去后机器人纹丝不动，
-         因为插件实际订阅的是裸的 "cmd_vel"，跟 ros_gz_bridge 转发目标 "/model/<name>/cmd_vel"
-         对不上）。所以这里显式写成和 ros_gz_bridge 配置一致的绝对话题名。 -->
+         !!! 实测踩坑记录（麦克纳姆轮"轮子转、车不走"bug 的完整排查过程）!!!
+         第一轮尝试：给四个轮子配置各向异性摩擦（fdir1 按 45°对角线 + mu2=0，完全照抄
+         gz-sim 官方示例 `/usr/share/ignition/ignition-gazebo6/worlds/mecanum_drive.sdf`
+         的写法，连碰撞体形状都改成官方示例用的球体）。结果实测：
+           - 直接跑官方示例：车辆确实产生了平移（验证这套摩擦方案在本机物理引擎下可行）；
+           - 把官方示例的轮子等比例缩小到接近我们机器人的尺寸(半径0.3m→0.075m)后
+             重新测试同一份官方示例：**平移消失了**——证明这不是我们的配置错误，
+             而是 gz-sim6(Fortress)+DART 物理引擎组合下，这套"各向异性摩擦"近似方案本身
+             在小尺寸轮子上会失效（大概率是接触点计算/摩擦锥在小尺寸下数值不稳定，
+             不是文档记录的已知限制，是本方案实测发现的）。本机器人轮子半径只有0.08m，
+             正好落在这个失效区间内，所以无论怎么调摩擦系数/坐标系表达都不会有效果。
+         第二轮修复（本方案最终采用）：改用 gz-sim 官方 `VelocityControl` 系统插件
+         （示例：`/usr/share/ignition/ignition-gazebo6/worlds/velocity_control.sdf`）
+         ——它不依赖轮子-地面摩擦力学，而是直接对模型本体设置线速度/角速度，
+         从根本上绕开了"小尺寸轮子摩擦近似失效"这个物理引擎数值问题，实测在本机器人
+         真实质量(39kg躯干)和真实轮子尺寸(0.08m)下 x/y/yaw 三个自由度平移旋转都正常。
+         MecanumDrive 插件保留下来，只用来让轮子按论理转速转起来做视觉效果
+         （它自己单独驱动的车身位移量在我们的尺寸下可忽略不计，不会和 VelocityControl
+         的真实位移打架，两者互不干扰，同时生效）。 -->
     <gazebo>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+        <!-- 兼容提示：ignition-gazebo-velocity-control-system /
+             ignition::gazebo::systems::VelocityControl。
+             没有 <topic> 子标签可配置——它固定订阅 "/model/<模型名>/cmd_vel"
+             （官方示例验证过，和 ros_gz_bridge 里桥接的目标话题名天然一致，不用额外配置）。 -->
+      </plugin>
+
       <plugin filename="gz-sim-mecanum-drive-system" name="gz::sim::systems::MecanumDrive">
         <!-- 兼容提示（旧版 Ignition Gazebo Fortress 早期/自编译环境可能仍需要这两行写法）：
              filename="ignition-gazebo-mecanum-drive-system"
@@ -47,13 +65,18 @@
         <max_acceleration>5.0</max_acceleration>
         <min_jerk>-50.0</min_jerk>
         <max_jerk>50.0</max_jerk>
+        <!-- !!! 实测踩坑记录 !!!：MecanumDrive 的 <topic> 只要显式写了，就是"字面量"话题名，
+             不会像 OdometryPublisher 的 <odom_topic> 那样自动补上 "/model/<name>/" 前缀，
+             必须显式写成和 ros_gz_bridge 配置一致的绝对话题名，否则订阅不到消息。 -->
         <topic>/model/${robot_name}/cmd_vel</topic>
-        <odom_topic>/model/${robot_name}/odometry</odom_topic>
+        <odom_topic>/model/${robot_name}/mecanum_odometry</odom_topic>
         <frame_id>odom</frame_id>
         <child_frame_id>astribot_torso_base</child_frame_id>
       </plugin>
 
-      <!-- MecanumDrive 本身不发布 TF（已知限制），单独挂 OdometryPublisher 补 /tf 与 nav_msgs/Odometry。
+      <!-- MecanumDrive/VelocityControl 都不发布可靠的 TF，单独挂 OdometryPublisher 补
+           /tf 与 nav_msgs/Odometry（它是基于模型真实位姿变化算出来的，不受上面选用哪个
+           驱动插件影响）。
            !!! 实测踩坑记录 !!!：一开始仿照 MecanumDrive 那样给它加了显式的
            <odom_topic>/<tf_topic> 绝对路径，结果这个插件直接不再发布任何东西了
            （<odom_topic>不是 OdometryPublisher 认识的标签名，多出来的未知子标签让这个
@@ -87,22 +110,40 @@
       </plugin>
     </gazebo>
 
-    <!-- 四个轮子摩擦系数：提高地面附着力，避免全向轮"打滑不走直线" -->
+    <!-- !!! 实测踩坑记录（第三轮，真正的"平移正常但会慢慢倾倒"根因）!!!：上一版本把
+         四个轮子摩擦系数恢复成普通各向同性摩擦(mu1=mu2=1.0)，理由是"轮子不再负责实际
+         驱动身体位移，只是给轮子一个合理的地面摩擦力，避免打滑的观感问题"——这个理由
+         本身是错的。MecanumDrive 插件仍然在**独立**按照它自己内部的全向轮运动学公式
+         计算并驱动四个轮子关节的转速（只是为了让轮子在视觉上转得"看起来对"），这个转速
+         是按"轮子和地面之间存在真实摩擦、靠摩擦力驱动车身"这个假设算出来的；但车身实际
+         的位移是由 VelocityControl 直接设定的，和轮子转速隐含的"应有位移"并不是同一回事
+         （两者独立计算，几乎不可能完全一致）。只要轮子还有摩擦(mu1/mu2>0)，这个"轮子
+         转速暗示的运动"和"车身实际被强制的运动"之间的差异，就会在每一步物理仿真里
+         通过轮地接触点的摩擦力反馈到车身上——而 VelocityControl 只接管了车身的
+         线速度/角速度(vx,vy,yaw角速度)这三个自由度，并不接管 z 高度和 roll/pitch，
+         这三个"没人管"的自由度会持续吸收这部分冲突产生的力矩，日积月累就是实测看到的
+         现象：机器人明明没怎么移动（长时间原地小范围巡游/自转），也没有撞到任何货架，
+         z 高度和俯仰角却在几十秒到一两分钟内缓慢爬升，最终以一个不上不下、卡住不动的
+         倾斜姿态"定住"。
+         根治办法：既然车身位移已经完全交给 VelocityControl 负责，轮子和地面之间就
+         不应该再有任何真实摩擦力参与——把 mu1/mu2 直接清零，轮子只保留碰撞形状用来
+         防止穿模，不再通过摩擦对车身产生任何反作用力，MecanumDrive 算出来的轮速只用来
+         让轮子在视觉上"转起来"，不变成任何实际作用力。这样两个插件才是真正互不干扰。 -->
     <gazebo reference="wheel_RF_Link">
-      <mu1>1.0</mu1>
-      <mu2>1.0</mu2>
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
     </gazebo>
     <gazebo reference="wheel_LF_Link">
-      <mu1>1.0</mu1>
-      <mu2>1.0</mu2>
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
     </gazebo>
     <gazebo reference="wheel_RR_Link">
-      <mu1>1.0</mu1>
-      <mu2>1.0</mu2>
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
     </gazebo>
     <gazebo reference="wheel_LR_Link">
-      <mu1>1.0</mu1>
-      <mu2>1.0</mu2>
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
     </gazebo>
 
   </xacro:macro>

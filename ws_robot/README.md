@@ -140,6 +140,25 @@ ros2 launch astribot_s1_perception perception_slam_bringup.launch.py \
 完整用法、建图/定位切换、地图保存加载、硬件分支联调清单见
 [`src/astribot_s1_perception/README_PERCEPTION.md`](src/astribot_s1_perception/README_PERCEPTION.md)。
 
+## 7.1 自主巡游建图（麦克纳姆轮"轮子转、车不走/一动就倒"bug 已修复）
+
+上面的建图命令默认会顺带启动一个反应式自主巡游节点（`autonomous_patrol_node`），
+让机器人边走边转、自动扩大 SLAM 覆盖范围，不需要人工遥操作：
+
+```bash
+ros2 launch astribot_s1_perception perception_slam_bringup.launch.py \
+  env:=sim mode:=mapping launch_gazebo:=true autonomous_patrol:=true   # 默认就是true
+```
+
+只想手动遥操作、不想自主巡游节点抢着发 `/cmd_vel` 时，加 `autonomous_patrol:=false`。
+
+底盘曾经存在"轮子转、身体不平移"以及"平移过程中身体会倾倒"两个真实 bug，
+均已定位并修复（4 个独立根因：轮子小尺寸下各向异性摩擦失效、`MecanumDrive`/
+`VelocityControl` 摩擦力冲突、双雷达自撞点被误判成障碍物、车体系/world系速度混用），
+单实例实测连续巡游 22+ 分钟零次异常。完整排查过程、根因、修复代码位置见
+[`src/astribot_s1_perception/README_PERCEPTION.md`](src/astribot_s1_perception/README_PERCEPTION.md#10-自主巡游节点autonomous_patrol_node与麦克纳姆轮平移bug的完整修复记录)
+第10节。
+
 ## 8. 关于 git
 
 本次已把 `astribot_sdk_ros2` 初始化为本地 git 仓库（`git init`，仅本地提交，未配置/推送任何远程），
