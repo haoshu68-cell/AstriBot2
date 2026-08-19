@@ -1,0 +1,82 @@
+# mecanum_effort_drive_node 参数配置。
+#
+# !!! 逆解系数是几何推导出来的，不是猜的符号（这一段务必先读）!!!
+# 本机器人四个轮子的轴线在 torso_base 系里指向 45° 对角线
+# (RF=[0.707,-0.707,0]、LF=[0.707,0.707,0]、RR=[-0.707,-0.707,0]、LR=[-0.707,0.707,0]，
+# 直接由 astribot_s1_torso_wheel.xacro 里各轮关节的 origin rpy 算出)——
+# 也就是说这是一台 **X型布局全向轮(omni)** 底盘，**不是**"轮轴沿±y、辊子45°"的
+# 标准麦克纳姆布局。两者逆解公式完全不同，早期版本按标准麦克纳姆的
+# 符号模式配置(vx全正、vy左右分组、wz对角分组)是错的，实测表现为：
+# 发纯旋转指令时四个轮子转向按对角分组、地面反作用力两两抵消，
+# 车身净力矩为0——轮子转得飞快但车身一动不动，同时轮子因为完全空载而
+# 飙到关节速度限位(±40rad/s)、PID在扭矩限幅之间bang-bang振荡。
+# 两个"看起来独立"的问题其实是同一个根因。
+#
+# 正确模型（全向轮投影模型）：轮子只在自己滚动方向 d_i(垂直于轴线)着力
+#   ω_i * r = d_i · (v_body + wz × p_i)
+# 展开后每轮三个系数：c_vx=d_i.x, c_vy=d_i.y, c_wz=(p_i × d_i)_z
+# 注意 c_wz 里已经含了真实力臂(≈0.30m)，所以**不要再乘轮距参数**
+# (旧代码乘了 l=0.4327，比真实力臂大41%)。
+mecanum_effort_drive_node:
+  ros__parameters:
+    cmd_vel_topic: /cmd_vel
+    joint_states_topic: /joint_states
+    effort_command_topic: /wheel_effort_controller/commands
+
+    # 几何参数：随"改变轮子大小做多轮测试"的扫描而变的就是这个 wheel_radius。
+    # 注意：改轮径时 c_wz 里的力臂不变(轮子挂载位置没变)，但轮径变化会同时改变
+    # "同样的摩擦力产生多大的反抗力矩"(τ=F·r)——实测 r=0.30 时摩擦反抗力矩
+    # 20N·m 直接超过 15N·m 力矩限幅，轮子会被彻底憋死转不动，需要同步放大
+    # wheel_effort_limit_nm 才能公平比较。
+    wheel_radius: 0.08
+
+    # 顺序固定为 [RF, LF, RR, LR]，跟 wheel_effort_controller 的 joints 列表一致。
+    wheel_coeff_vx: [-0.7071, 0.7071, -0.7071, 0.7071]
+    wheel_coeff_vy: [-0.7071, -0.7071, 0.7071, 0.7071]
+    wheel_coeff_wz: [-0.3060, -0.3060, -0.3024, -0.3024]
+    # 全局符号：上面12个系数只保证四轮相对关系正确；"正ω让车前进还是后退"
+    # 取决于关节正转方向与地面反作用力的约定。实测车身运动方向与cmd_vel相反时，
+    # **只翻这一个参数**，不要动上面的系数(那会破坏相对关系)。
+    kinematics_global_sign: 1.0
+
+    # !!! 轮速PID：按实际被控对象动力学算出来的，不是拍的 !!!
+    # 轮子转动惯量 izz=0.0015639 kg·m²，加上新配的关节阻尼 d=1.0 N·m·s/rad，
+    # 被控对象极点 = -d/I = -639 rad/s，时间常数只有 1.56ms——而控制周期是
+    # 10ms(100Hz)，也就是**被控对象比控制环快约6倍**：两次采样之间轮子已经
+    # 完全稳定到 ω_ss = τ/d。这种"准静态"情况下离散环路近似为
+    #   τ[k+1] = kp*(target - τ[k]/d)，环路增益 = -kp/d
+    # 所以稳定的硬条件是 **kp < d**。原来的 kp=2.0 对应环路增益 2.0 > 1，
+    # 数学上必然发散→撞上力矩限幅→在±τ_max之间bang-bang振荡，实测现象
+    # (转速在±15rad/s之间来回跳、永不收敛)和这个推导完全对得上。
+    # 取 kp=0.4(增益0.4，留足余量)，ki 小量补稳态误差，kd=0——被控对象比采样
+    # 快6倍时微分项只会放大采样噪声，没有任何抑制超调的作用。
+    pid_kp: 0.4
+    pid_ki: 0.1
+    pid_kd: 0.0
+
+    # 摩擦前馈：库伦+粘性模型，跟实机辨识参数同源(见方案第10节)。
+    # !!! 这两个值必须和 URDF 里轮关节 <dynamics damping/friction> 对齐 !!!：
+    # 粘性项就是用来抵消关节阻尼的，关节阻尼 d=1.0 时要维持目标转速 1.15rad/s
+    # 就需要 1.15N·m 前馈，而原来配的 0.02 只能提供 0.023N·m(小了50倍)，
+    # 全部压力都推给PID去积分，是振荡的另一个助推因素。对齐之后前馈几乎
+    # 独立完成稳态维持，PID只负责残差，环路自然更稳。
+    friction_coulomb_nm: 0.1      # 对齐 wheel_joint_friction
+    friction_viscous_nm_s: 1.0    # 对齐 wheel_joint_damping
+    friction_deadband_rad_s: 0.05
+
+    # 强制限幅：需要匹配"电机最大持续力矩"这个物理约束，15N·m是39kg整机、
+    # 0.08m轮径下的起始估算值，不是任何实测数据，必须经测试①校正。
+    wheel_effort_limit_nm: 15.0
+    wheel_velocity_limit_rad_s: 40.0
+
+    cmd_vel_timeout_sec: 0.5
+    joint_state_timeout_sec: 0.3
+    control_period_sec: 0.01  # 100Hz，对齐astribot_chassis.yaml的frequency:100
+
+    warn_effort_ratio: 0.9
+    tracking_error_error_rad_s: 3.0
+    tracking_error_error_duration_sec: 1.0
+    auto_slowdown_on_tracking_error: false
+    auto_slowdown_scale: 0.5
+
+    log_throttle_sec: 2.0

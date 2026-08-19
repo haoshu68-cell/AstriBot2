@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_chassis_effort_drive</name>
+  <version>0.1.0</version>
+  <description>
+    麦克纳姆底盘力矩闭环驱动：治本方案，替代"VelocityControl本体直控 +
+    MecanumDrive轮子仅视觉转动"两套独立运动学并行架构。本包只负责
+    "/cmd_vel → 麦克纳姆逆解 → 四轮目标转速 → 轮速PID+摩擦前馈 → effort力矩"
+    这一层解算，力矩指令通过 forward_command_controller 转发给 ros2_control
+    的 effort command_interface，真正的力传递、轮地接触摩擦交给
+    gz_ros2_control + DART 物理引擎完成，不在本包内。
+    对外 /cmd_vel、/odom、/joint_states 接口不变，Nav2/巡游/臂-底盘耦合等
+    上层节点零改动。
+  </description>
+  <maintainer email="dev@astribot.local">astribot-dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
