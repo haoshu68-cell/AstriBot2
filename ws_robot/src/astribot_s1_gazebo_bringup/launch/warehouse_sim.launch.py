@@ -109,6 +109,17 @@ def generate_launch_description():
                         '/robot_description 订阅，导致生成的是别的模型、控制器加载互相冲突。 '
                         '固定一个独占 domain 可以彻底避免这类"看起来随机"的故障，'
                         '和别的机器人/别的仿真同时跑时改这个参数即可。'),
+        DeclareLaunchArgument(
+            'localhost_only', default_value='true',
+            description='把本次仿真的所有话题限制在本机，局域网内其它机器发现不到也抓不到。'
+                        '默认 true——仿真栈会拉起 25+ 个节点，其中 /cmd_vel 之类是可写的，'
+                        '不该暴露在办公网。实测（/proc/net/igmp 逐网卡数多播加入次数）：'
+                        'ROS_LOCALHOST_ONLY=1 能真正阻止 DDS 在物理网卡上加入 239.255.0.1；'
+                        '而 Fast DDS 的 interfaceWhiteList XML 无效（只过滤单播 locator）。'
+                        'Gazebo 的 ign-transport 是独立于 DDS 的第二条通道，'
+                        '必须另设 IGN_IP/GZ_IP，否则它照样多播 239.255.0.7。'
+                        '需要跨机联调（如另一台机器跑 RViz）时设 false，'
+                        '并配合 ASTRIBOT_NET_MODE=lan source env.sh 走网段白名单。'),
     ]
 
     world_name = LaunchConfiguration('world_name')
@@ -128,11 +139,37 @@ def generate_launch_description():
     wheel_joint_friction = LaunchConfiguration('wheel_joint_friction')
     enable_effort_drive = LaunchConfiguration('enable_effort_drive')
     ros_domain_id = LaunchConfiguration('ros_domain_id')
+    localhost_only = LaunchConfiguration('localhost_only')
 
     # 让本次 launch 拉起的所有子进程都用独占的 ROS_DOMAIN_ID，
     # 避免和同一台机器上任何其它已经在跑的 ROS2 图（不管是否相关）发生话题/服务撞名。
     # 必须放在最前面，保证后面所有 Node/IncludeLaunchDescription 都继承到这个环境变量。
     set_ros_domain_id = SetEnvironmentVariable(name='ROS_DOMAIN_ID', value=ros_domain_id)
+
+    # 把话题限制在本机。注意 Domain ID 只是频道号、不具备任何隔离作用：
+    # 同网段任何人 export 相同 Domain ID 就能读写本仿真的话题（包括往 /cmd_vel 发指令），
+    # 所以真正的隔离必须靠下面这几个变量。
+    # 这里在 launch 里再设一遍（env.sh 已经设过），是为了兼顾「只 source 了
+    # install/setup.bash、忘了 source env.sh」的用法——仿真栈节点多，不能漏。
+    # 仿真专属：与实机共用的部分不涉及这些变量。
+    set_localhost_env = [
+        # DDS 通道：经实测这一项才是真正生效的开关
+        SetEnvironmentVariable(
+            name='ROS_LOCALHOST_ONLY', value='1',
+            condition=IfCondition(localhost_only)),
+        # 清掉可能从 lan 模式残留下来的 Fast DDS profile，
+        # 否则带 is_default_profile 的 XML 会盖掉上面的 localhost 限制。
+        SetEnvironmentVariable(
+            name='FASTRTPS_DEFAULT_PROFILES_FILE', value='',
+            condition=IfCondition(localhost_only)),
+        # Gazebo/ign-transport 通道：独立于 DDS，必须单独封
+        SetEnvironmentVariable(
+            name='IGN_IP', value='127.0.0.1',
+            condition=IfCondition(localhost_only)),
+        SetEnvironmentVariable(
+            name='GZ_IP', value='127.0.0.1',
+            condition=IfCondition(localhost_only)),
+    ]
 
     # ---------------------------------------------------------------------
     # 2. 依赖包的 share 目录（全部用 FindPackageShare 动态查找，不允许绝对路径）
@@ -425,7 +462,7 @@ def generate_launch_description():
         condition=IfCondition(use_rviz),
     )
 
-    return LaunchDescription(declare_args + [
+    return LaunchDescription(declare_args + set_localhost_env + [
         set_ros_domain_id,
         set_gz_resource_path,
         set_ign_resource_path,
