@@ -46,6 +46,10 @@ class CmdVelBodyToWorldNode(Node):
         self.declare_parameter('normal_height', 0.134)
         self.declare_parameter('max_height_deviation', 0.06)
         self.declare_parameter('max_tilt_rad', 0.12)  # 约7°
+        # 见 cmd_vel_callback 里的详细说明：VelocityControl(world系语义)已被力矩闭环
+        # (车体系语义)取代，默认不再做 body→world 旋转，本节点退化为
+        # "直通转发 + 姿态安全监控"。换回VelocityControl架构时设回 true。
+        self.declare_parameter('enable_body_to_world', False)
 
         input_topic = self.get_parameter('input_topic').value
         output_topic = self.get_parameter('output_topic').value
@@ -59,10 +63,12 @@ class CmdVelBodyToWorldNode(Node):
         self.create_subscription(Odometry, odom_topic, self.odom_callback, 10)
 
         self.get_logger().info(
-            'cmd_vel_body_to_world_node 已启动：订阅 %s(车体系, Nav2输出) + %s(取航向角)，'
-            '换算成 world 系后发到 %s（gz-sim VelocityControl 插件按 world 系解释速度，'
-            '这个转换是必须的，不是可选优化）。同时监控 /odom 做异常姿态安全止损。' %
-            (input_topic, odom_topic, output_topic))
+            'cmd_vel_body_to_world_node 已启动：订阅 %s(车体系, Nav2输出) + %s，'
+            '转发到 %s。body→world旋转=%s（力矩闭环底盘吃车体系，默认关闭旋转，'
+            '详见cmd_vel_callback注释）。同时监控 /odom 做异常姿态安全止损。' %
+            (input_topic, odom_topic, output_topic,
+             'ON(VelocityControl架构)' if self.get_parameter('enable_body_to_world').value
+             else 'OFF(直通)'))
 
     def odom_callback(self, msg: Odometry):
         q = msg.pose.pose.orientation
@@ -95,17 +101,31 @@ class CmdVelBodyToWorldNode(Node):
             self.cmd_pub.publish(Twist())
             return
 
-        # msg.linear.x/y 是 Nav2 按车体系(astribot_torso_base)算出来的速度分量；
-        # wz(角速度)不受坐标系影响，直接照抄。
-        body_speed = math.hypot(msg.linear.x, msg.linear.y)
-        if body_speed > 1e-6:
-            body_angle = math.atan2(msg.linear.y, msg.linear.x)
-            world_angle = body_angle + self.current_yaw
-            vx = math.cos(world_angle) * body_speed
-            vy = math.sin(world_angle) * body_speed
+        # !!! 力控重构方案后的关键变化（务必读完再改）!!!：
+        # 这个 body→world 旋转当初存在的唯一理由是 gz-sim VelocityControl 插件
+        # 按 **world 系** 解释速度指令。现在 VelocityControl 已经整体移除，
+        # 底盘换成 astribot_s1_chassis_effort_drive 的力矩闭环，它的麦克纳姆/全向轮
+        # 逆解吃的是 **车体系** (vx,vy,wz)——正好就是 Nav2 原生输出的坐标系。
+        # 此时如果还做这个旋转，等于把 Nav2 要求的方向额外转了一个航向角 yaw：
+        # 机器人正对 x 轴(yaw=0)时看起来正常，一旦转弯就会往错误方向走，导航必然失败。
+        # 所以默认 enable_body_to_world=false（直通转发），只保留本节点的
+        # z/roll/pitch 安全监控职责。若哪天换回 VelocityControl 那套架构，
+        # 把这个参数设回 true 即可，转换代码原样保留、没有删。
+        if self.get_parameter('enable_body_to_world').value:
+            # msg.linear.x/y 是 Nav2 按车体系(astribot_torso_base)算出来的速度分量；
+            # wz(角速度)不受坐标系影响，直接照抄。
+            body_speed = math.hypot(msg.linear.x, msg.linear.y)
+            if body_speed > 1e-6:
+                body_angle = math.atan2(msg.linear.y, msg.linear.x)
+                world_angle = body_angle + self.current_yaw
+                vx = math.cos(world_angle) * body_speed
+                vy = math.sin(world_angle) * body_speed
+            else:
+                vx = 0.0
+                vy = 0.0
         else:
-            vx = 0.0
-            vy = 0.0
+            vx = msg.linear.x
+            vy = msg.linear.y
 
         out = Twist()
         out.linear.x = vx
@@ -122,7 +142,8 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        # 退出前发一个零速度：VelocityControl 是"设定即保持"，不会因为没有新消息自动归零。
+        # 退出前发一个零速度做兜底（力矩闭环节点自己也有cmd_vel超时归零逻辑，
+        # 但多发一个零速度没有坏处）。
         try:
             node.cmd_pub.publish(Twist())
         except Exception:
