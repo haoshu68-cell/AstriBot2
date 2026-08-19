@@ -54,15 +54,50 @@ def generate_launch_description():
         DeclareLaunchArgument('spawn_x', default_value='0.0', description='出生点 X (m)'),
         DeclareLaunchArgument('spawn_y', default_value='0.0', description='出生点 Y (m)'),
         DeclareLaunchArgument(
-            'spawn_z', default_value='0.10',
-            description='出生点 Z (m)。0.10 是按轮子碰撞体半径(0.08)+轮关节z偏移(-0.015)算出的'
-                        '安全值（见 astribot_s1_description/config/collision_overrides.yaml），'
-                        '若更换轮子/底盘尺寸需要同步调整，否则机器人会陷进地板或悬空掉落'),
+            'spawn_z', default_value='0.15',
+            description='出生点 Z (m)。!!! 力控重构方案实测更新 !!!：改成0.15，'
+                        '因为修掉"躯干碰撞圆柱体比轮子只高1.7mm、整机其实坐在肚皮上"'
+                        '这个根因后(见astribot_s1_torso_wheel.xacro的记录)，'
+                        '现在真正靠四个轮子接地，实测静止高度 z≈0.1292，'
+                        '出生点比静止高度略高一点(留约2cm)自然落到轮子上，避免初始穿透。'
+                        '!!! 跟 wheel_radius 联动扫描测试时 !!!：静止高度 ≈ wheel_radius+0.049，'
+                        '出生点取 wheel_radius+0.07 左右；同时注意轮径变大后'
+                        '"同样摩擦力产生的反抗力矩 τ=F·r"也按比例变大，'
+                        'wheel_effort_limit 要同步放大，否则轮子会被憋死转不动'
+                        '(实测 r=0.30 时需要 >20N·m)'),
         DeclareLaunchArgument('spawn_yaw', default_value='0.0', description='出生朝向 yaw (rad)'),
         DeclareLaunchArgument('use_lidar', default_value='true', description='是否挂载双Livox Mid-360激光雷达'),
         DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部RGB相机'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='是否使用仿真时钟'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='是否自动打开RViz2'),
+        # !!! 麦轮力控重构方案新增：轮子几何/力矩边界，专门为"改变轮子大小做多轮测试"
+        # 这个扫描场景暴露成 launch 参数，命令行覆盖即可，不用改任何xacro/yaml文件。
+        # 三个值最终会传进 astribot_s1.xacro 的同名 xacro:arg，再分别驱动
+        # astribot_s1_torso_wheel.xacro 的碰撞球半径、轮关节<limit>、
+        # astribot_s1_ros2_control.xacro 的effort command_interface边界。
+        DeclareLaunchArgument(
+            'wheel_radius', default_value='0.08',
+            description='轮子碰撞球半径(m)，同时驱动逆解运动学(与enable_effort_drive节点的'
+                        'wheel_radius参数保持一致，见下方)，扫描测试改这个'),
+        DeclareLaunchArgument(
+            'wheel_effort_limit', default_value='15.0',
+            description='轮关节effort力矩限幅(N·m)，起始估算值，需要单轮测试标定'),
+        DeclareLaunchArgument(
+            'wheel_velocity_limit', default_value='40.0',
+            description='轮关节速度限幅(rad/s)'),
+        DeclareLaunchArgument(
+            'wheel_joint_damping', default_value='1.0',
+            description='轮关节粘性阻尼(N·m·s/rad)。力矩闭环稳定的必要条件——'
+                        '没有阻尼时轮子是无阻尼自由旋转体，一旦地面反作用力不足就会'
+                        '几毫秒内飙到速度限位、PID在扭矩限幅间bang-bang振荡'),
+        DeclareLaunchArgument(
+            'wheel_joint_friction', default_value='0.1',
+            description='轮关节静摩擦(N·m)，模拟减速器/轴承的干摩擦'),
+        DeclareLaunchArgument(
+            'enable_effort_drive', default_value='true',
+            description='是否拉起 astribot_s1_chassis_effort_drive 的力矩闭环驱动节点。'
+                        'VelocityControl/MecanumDrive已整体移除，关掉这个底盘就完全没有'
+                        '驱动力——仅用于调试阶段单独核对ros2_control/SDF是否加载正确的场景'),
         DeclareLaunchArgument(
             'ros_domain_id', default_value='42',
             description='本次仿真独占的 ROS_DOMAIN_ID。'
@@ -86,6 +121,12 @@ def generate_launch_description():
     use_camera = LaunchConfiguration('use_camera')
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_rviz = LaunchConfiguration('use_rviz')
+    wheel_radius = LaunchConfiguration('wheel_radius')
+    wheel_effort_limit = LaunchConfiguration('wheel_effort_limit')
+    wheel_velocity_limit = LaunchConfiguration('wheel_velocity_limit')
+    wheel_joint_damping = LaunchConfiguration('wheel_joint_damping')
+    wheel_joint_friction = LaunchConfiguration('wheel_joint_friction')
+    enable_effort_drive = LaunchConfiguration('enable_effort_drive')
     ros_domain_id = LaunchConfiguration('ros_domain_id')
 
     # 让本次 launch 拉起的所有子进程都用独占的 ROS_DOMAIN_ID，
@@ -180,7 +221,12 @@ def generate_launch_description():
             'robot_name:=', robot_name, ' ',
             'use_lidar:=', use_lidar, ' ',
             'use_camera:=', use_camera, ' ',
-            'controllers_config:=', controllers_yaml,
+            'controllers_config:=', controllers_yaml, ' ',
+            'wheel_radius:=', wheel_radius, ' ',
+            'wheel_effort_limit:=', wheel_effort_limit, ' ',
+            'wheel_velocity_limit:=', wheel_velocity_limit, ' ',
+            'wheel_joint_damping:=', wheel_joint_damping, ' ',
+            'wheel_joint_friction:=', wheel_joint_friction,
         ]),
         value_type=str,
     )
@@ -214,7 +260,8 @@ def generate_launch_description():
     )
 
     # ---------------------------------------------------------------------
-    # 7. ros2_control 控制器：joint_state_broadcaster + 4 个 JointTrajectoryController。
+    # 7. ros2_control 控制器：joint_state_broadcaster + 4 个 JointTrajectoryController
+    #    + 麦轮力控重构方案新增的 wheel_effort_controller（合计6个）。
     #    用 OnProcessExit 事件等 spawn_robot 完成后再拉起，避免 controller_manager 服务
     #    还没起来就报连接失败。
     #
@@ -224,7 +271,7 @@ def generate_launch_description():
     #    controller"——5 个 spawner 进程几乎同时对 controller_manager 的
     #    load_controller/configure_controller 服务发起调用，服务端处理并发请求时状态互相
     #    干扰导致偶发失败（复现概率不低，不能当成"抖一下就好了"忽略掉）。
-    #    改成用同一个 `spawner` 进程、一次性传入全部 5 个控制器名，
+    #    改成用同一个 `spawner` 进程、一次性传入全部控制器名，
     #    该工具内部会顺序逐个 load+configure+activate，从根源上消除了并发竞争。
     # ---------------------------------------------------------------------
     controllers_spawner = Node(
@@ -237,6 +284,7 @@ def generate_launch_description():
             'head_controller',
             'arm_left_controller',
             'arm_right_controller',
+            'wheel_effort_controller',
             '--controller-manager-timeout', '60',
         ],
     )
@@ -248,16 +296,42 @@ def generate_launch_description():
         )
     )
 
+    # !!! 麦轮力控重构方案新增 !!!：VelocityControl/MecanumDrive 已整体移除，
+    # 底盘完全靠 mecanum_effort_drive_node 算力矩驱动，不然车身没有任何驱动力。
+    # 等 wheel_effort_controller(在controllers_spawner里)加载完成后再拉起，
+    # 避免节点启动瞬间往还没激活的controller发力矩指令(无害但会打日志噪音)。
+    pkg_effort_drive = FindPackageShare('astribot_s1_chassis_effort_drive')
+    effort_drive_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [pkg_effort_drive, 'launch', 'mecanum_effort_drive.launch.py'])),
+        launch_arguments={
+            'wheel_radius': wheel_radius,
+            'use_sim_time': use_sim_time,
+        }.items(),
+        condition=IfCondition(enable_effort_drive),
+    )
+    delay_effort_drive_after_controllers = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=controllers_spawner,
+            on_exit=[effort_drive_node],
+        )
+    )
+
     # ---------------------------------------------------------------------
     # 8. ros_gz_bridge：把 gz 话题桥接成标准 ROS2 话题
     #    （/clock 必须桥，否则 use_sim_time 的节点全部收不到仿真时间会卡住）
-    #    cmd_vel/odometry 的 gz 话题名由 MecanumDrive/OdometryPublisher 插件按
-    #    "/model/<robot_name>/..." 自动生成（对应 astribot_s1.gazebo.xacro 里的相对话题名配置）。
+    #    odometry 的 gz 话题名由 OdometryPublisher 插件按 "/model/<robot_name>/..."
+    #    自动生成（对应 astribot_s1.gazebo.xacro 里的相对话题名配置）。
+    #    !!! 麦轮力控重构方案：cmd_vel 桥已移除 !!!：原来这里桥的
+    #    "/model/<name>/cmd_vel" 是给 VelocityControl/MecanumDrive 两个插件订阅用的
+    #    gz内部话题，现在两个插件都已整体移除，没有任何东西再订阅它——
+    #    新架构里 /cmd_vel 完全走标准 ROS2 话题，直接被
+    #    astribot_s1_chassis_effort_drive 包的 mecanum_effort_drive_node 订阅，
+    #    不需要、也不应该再经过 ros_gz_bridge 转一趟 gz 内部话题。
     # ---------------------------------------------------------------------
     bridge_args = [
         '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
-        [TextSubstitution(text='/model/'), robot_name,
-         TextSubstitution(text='/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist')],
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry')],
         # !!! 实测踩坑记录 !!!：OdometryPublisher 插件的 TF 等效输出，实际发布的 gz 话题
@@ -285,8 +359,6 @@ def generate_launch_description():
         output='screen',
         arguments=bridge_args,
         remappings=[
-            ([TextSubstitution(text='/model/'), robot_name,
-              TextSubstitution(text='/cmd_vel')], '/cmd_vel'),
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/odometry')], '/odom'),
             # !!! 实测踩坑记录 !!!：这一条最容易漏——OdometryPublisher 发布的
@@ -361,6 +433,7 @@ def generate_launch_description():
         robot_state_publisher,
         spawn_robot,
         delay_controllers_after_spawn,
+        delay_effort_drive_after_controllers,
         ros_gz_bridge,
         livox_left_frame_alias,
         livox_right_frame_alias,
