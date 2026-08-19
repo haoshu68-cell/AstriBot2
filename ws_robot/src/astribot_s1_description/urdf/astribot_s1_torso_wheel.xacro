@@ -20,8 +20,13 @@
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- 麦克纳姆轮碰撞体公共尺寸（来自 STL 包围盒实测，见 config/collision_overrides.yaml） -->
-  <xacro:property name="wheel_collision_radius" value="0.08"/>
+  <!-- 麦克纳姆轮碰撞体公共尺寸——治本改造后改成从顶层 astribot_s1.xacro 的
+       $(arg wheel_radius) 传入(默认仍是0.08m，跟原STL包围盒实测值一致)，
+       不再写死，专门为"改变轮子大小做多轮测试"这个扫描场景准备。
+       改这个值只影响碰撞球半径本身，轮子关节origin/spawn_z等其它几何量
+       不会跟着自动联动，扫描测试前必须按 astribot_s1_chassis_effort_drive/
+       README_CHASSIS_EFFORT_DRIVE.md 里的公式手动同步调整spawn_z。 -->
+  <xacro:property name="wheel_collision_radius" value="$(arg wheel_radius)"/>
 
   <!-- 躯干底座：唯一根 link，无 parent；平动升降+轮式全向底盘均挂在它上面 -->
   <link name="astribot_torso_base">
@@ -63,7 +68,25 @@
     </collision>
   </link>
 
-  <!-- ============ 四个麦克纳姆轮（各自朝向旋转45°/135°，构成全向底盘） ============ -->
+  <!-- ============ 四个麦克纳姆轮（各自朝向旋转45°/135°，构成全向底盘） ============
+
+       !!! 轮关节 dynamics(阻尼/静摩擦) 实测记录（力控重构方案新增）!!!：
+       原文件四个轮关节既没有<limit>也没有<dynamics>，轮子在物理上是一个几乎
+       "无阻尼自由旋转体"(izz只有0.0015639 kg·m²)。切到 effort 力矩闭环之后
+       实测暴露出问题：只要地面反作用力不足(实测是逆解系数配错导致四轮力矩
+       互相抵消)，轮子会在几毫秒内被力矩加速到关节速度限位(±40rad/s)，
+       PID随即看到巨大误差、把力矩打到反向限幅，来回bang-bang剧烈振荡，
+       转速在±40之间跳变完全不收敛。真实带减速器的轮驱动本身就存在可观的
+       粘性阻尼和静摩擦，补上 <dynamics damping/friction> 既是物理保真，
+       也是力矩闭环能稳定收敛的必要条件。两个值都走xacro参数，便于按实测调整。
+
+       !!! 另一个重要的几何事实（逆解必须按这个来）!!!：下面四个轮关节的
+       origin rpy 决定了轮子**轴线在torso_base系里指向45°对角线**
+       (RF=[0.707,-0.707,0]、LF=[0.707,0.707,0]、RR=[-0.707,-0.707,0]、
+       LR=[-0.707,0.707,0])——这是一台 **X型布局全向轮(omni)** 底盘，
+       不是"轮轴沿±y、辊子45°"的标准麦克纳姆布局，两者的运动学逆解公式完全
+       不同。逆解系数推导见 astribot_s1_chassis_effort_drive/config/
+       mecanum_effort_drive_params.yaml 顶部注释。 -->
   <link name="wheel_RF_Link">
     <inertial>
       <origin rpy="0 0 0" xyz="2.7624E-07 -1.7583E-07 0.014539"/>
@@ -94,6 +117,14 @@
     <parent link="astribot_torso_base"/>
     <child link="wheel_RF_Link"/>
     <axis xyz="0 0 1"/>
+    <!-- 力控重构方案新增：原文件里continuous轮关节完全没有limit标签(实测确认，
+         对比躯干关节都有effort/velocity)。effort/velocity边界从顶层xacro:arg
+         传入，须跟astribot_s1_ros2_control.xacro的effort command_interface
+         min/max、astribot_s1_chassis_effort_drive的wheel_effort_limit_nm
+         参数保持同一个数值。 -->
+    <limit effort="$(arg wheel_effort_limit)" velocity="$(arg wheel_velocity_limit)"/>
+    <!-- 关节阻尼/静摩擦：力控闭环稳定的必要条件，详见本文件顶部"轮关节dynamics"说明 -->
+    <dynamics damping="$(arg wheel_joint_damping)" friction="$(arg wheel_joint_friction)"/>
   </joint>
 
   <link name="wheel_LF_Link">
@@ -123,6 +154,9 @@
     <parent link="astribot_torso_base"/>
     <child link="wheel_LF_Link"/>
     <axis xyz="0 0 1"/>
+    <limit effort="$(arg wheel_effort_limit)" velocity="$(arg wheel_velocity_limit)"/>
+    <!-- 关节阻尼/静摩擦：力控闭环稳定的必要条件，详见本文件顶部"轮关节dynamics"说明 -->
+    <dynamics damping="$(arg wheel_joint_damping)" friction="$(arg wheel_joint_friction)"/>
   </joint>
 
   <link name="wheel_RR_Link">
@@ -152,6 +186,9 @@
     <parent link="astribot_torso_base"/>
     <child link="wheel_RR_Link"/>
     <axis xyz="0 0 1"/>
+    <limit effort="$(arg wheel_effort_limit)" velocity="$(arg wheel_velocity_limit)"/>
+    <!-- 关节阻尼/静摩擦：力控闭环稳定的必要条件，详见本文件顶部"轮关节dynamics"说明 -->
+    <dynamics damping="$(arg wheel_joint_damping)" friction="$(arg wheel_joint_friction)"/>
   </joint>
 
   <link name="wheel_LR_Link">
@@ -181,6 +218,9 @@
     <parent link="astribot_torso_base"/>
     <child link="wheel_LR_Link"/>
     <axis xyz="0 0 1"/>
+    <limit effort="$(arg wheel_effort_limit)" velocity="$(arg wheel_velocity_limit)"/>
+    <!-- 关节阻尼/静摩擦：力控闭环稳定的必要条件，详见本文件顶部"轮关节dynamics"说明 -->
+    <dynamics damping="$(arg wheel_joint_damping)" friction="$(arg wheel_joint_friction)"/>
   </joint>
 
   <!-- ============ 4 自由度升降躯干（astribot_torso_joint_1..4） ============ -->

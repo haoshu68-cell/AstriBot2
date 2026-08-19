@@ -30,6 +30,26 @@
        本文件内部不出现任何硬编码路径。 -->
   <xacro:arg name="controllers_config" default=""/>
 
+  <!-- 麦克纳姆轮力矩闭环驱动改造新增：轮子effort硬件接口边界 + 几何半径统一从这里
+       外部传入，禁止在 torso_wheel/ros2_control xacro 里写死。
+       wheel_radius 同时驱动碰撞体球半径(astribot_s1_torso_wheel.xacro)和
+       astribot_s1_chassis_effort_drive 包里逆解运动学的同名ROS2参数——
+       "改变轮子大小做多轮测试"时只需要改这一个xacro参数，但 spawn_z 要跟着按
+       spawn_z=0.02+wheel_radius 这个经验公式同步调整(见
+       astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py 的 spawn_z 说明)，
+       否则出生时轮子和地面的穿透/悬空量不对，扫描结果没有意义。
+       wheel_effort_limit/wheel_velocity_limit 是轮关节URDF<limit>标签和
+       ros2_control effort command_interface的min/max边界，起始估算值，
+       需要方案里的单轮测试①标定。 -->
+  <xacro:arg name="wheel_radius" default="0.08"/>
+  <xacro:arg name="wheel_effort_limit" default="15.0"/>
+  <xacro:arg name="wheel_velocity_limit" default="40.0"/>
+  <!-- 轮关节粘性阻尼(N·m·s/rad)和静摩擦(N·m)：力矩闭环稳定的必要条件，
+       没有它轮子是无阻尼自由旋转体、PID会在扭矩限幅间bang-bang振荡，
+       详见 astribot_s1_torso_wheel.xacro 顶部"轮关节dynamics"实测记录。 -->
+  <xacro:arg name="wheel_joint_damping" default="1.0"/>
+  <xacro:arg name="wheel_joint_friction" default="0.1"/>
+
   <xacro:property name="use_lidar_prop" value="$(arg use_lidar)"/>
   <xacro:property name="use_camera_prop" value="$(arg use_camera)"/>
   <xacro:property name="robot_name_prop" value="$(arg robot_name)"/>
@@ -58,10 +78,19 @@
   </xacro:if>
 
   <!-- ============ ros2_control + gz_ros2_control 插件 ============ -->
+  <!-- wheel_effort_limit 不再传进 astribot_s1_ros2_control 宏——实测发现
+       gz_ros2_control(ros-humble-hardware-interface 2.54.0) 解析
+       <command_interface name="effort"><param name="min"/><param name="max"/></command_interface>
+       这种带子标签的写法时会把该关节整体跳过(initSim日志里"Loading joint"
+       完全不出现)，改成最简单的<command_interface name="effort"/>后正常。
+       力矩限幅改成完全交给 astribot_s1_chassis_effort_drive 包的PID闭环代码
+       clamp(软件层强制限幅，真正生效的那一层)，详见
+       astribot_s1_ros2_control.xacro 里的踩坑记录。 -->
   <xacro:astribot_s1_ros2_control controllers_config="$(arg controllers_config)"/>
 
-  <!-- ============ 底盘全向轮驱动 + 里程计 + 轮子摩擦 ============ -->
-  <xacro:astribot_s1_gazebo_chassis_plugins
-    robot_name="${robot_name_prop}" wheel_radius="0.08" wheel_separation="0.4327" wheelbase="0.4327"/>
+  <!-- ============ 底盘：里程计发布 + 轮子各向异性摩擦(力矩闭环治本改造后，
+       VelocityControl/MecanumDrive 已移除，车身运动完全由轮子effort力矩经
+       轮地接触物理驱动，见 astribot_s1_chassis_effort_drive 包) ============ -->
+  <xacro:astribot_s1_gazebo_chassis_plugins robot_name="${robot_name_prop}"/>
 
 </robot>

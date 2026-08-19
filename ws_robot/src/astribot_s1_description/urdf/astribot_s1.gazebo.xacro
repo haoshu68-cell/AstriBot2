@@ -13,12 +13,12 @@
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:macro name="astribot_s1_gazebo_chassis_plugins"
-               params="robot_name:=astribot_s1 wheel_radius:=0.08 wheel_separation:=0.4327 wheelbase:=0.4327">
+  <xacro:macro name="astribot_s1_gazebo_chassis_plugins" params="robot_name:=astribot_s1">
 
-    <!-- ========== 底盘全向驱动：VelocityControl(实际驱动身体位移) + MecanumDrive(轮子视觉旋转) ==========
+    <!-- ========== 底盘驱动架构演进史（麦克纳姆轮"轮子转、车不走"→"两套独立运动学
+         打架诱发倾倒"→"治本：力矩闭环"的完整排查过程，务必先读完再改这个文件）==========
 
-         !!! 实测踩坑记录（麦克纳姆轮"轮子转、车不走"bug 的完整排查过程）!!!
+         !!! 实测踩坑记录 !!!
          第一轮尝试：给四个轮子配置各向异性摩擦（fdir1 按 45°对角线 + mu2=0，完全照抄
          gz-sim 官方示例 `/usr/share/ignition/ignition-gazebo6/worlds/mecanum_drive.sdf`
          的写法，连碰撞体形状都改成官方示例用的球体）。结果实测：
@@ -29,54 +29,39 @@
              在小尺寸轮子上会失效（大概率是接触点计算/摩擦锥在小尺寸下数值不稳定，
              不是文档记录的已知限制，是本方案实测发现的）。本机器人轮子半径只有0.08m，
              正好落在这个失效区间内，所以无论怎么调摩擦系数/坐标系表达都不会有效果。
-         第二轮修复（本方案最终采用）：改用 gz-sim 官方 `VelocityControl` 系统插件
-         （示例：`/usr/share/ignition/ignition-gazebo6/worlds/velocity_control.sdf`）
-         ——它不依赖轮子-地面摩擦力学，而是直接对模型本体设置线速度/角速度，
-         从根本上绕开了"小尺寸轮子摩擦近似失效"这个物理引擎数值问题，实测在本机器人
-         真实质量(39kg躯干)和真实轮子尺寸(0.08m)下 x/y/yaw 三个自由度平移旋转都正常。
-         MecanumDrive 插件保留下来，只用来让轮子按论理转速转起来做视觉效果
-         （它自己单独驱动的车身位移量在我们的尺寸下可忽略不计，不会和 VelocityControl
-         的真实位移打架，两者互不干扰，同时生效）。 -->
+         第二轮修复：改用 gz-sim 官方 `VelocityControl` 系统插件直接对模型本体设置
+         线速度/角速度，绕开"小尺寸轮子摩擦近似失效"问题，配合 `MecanumDrive` 插件
+         单独驱动四个轮子关节做视觉转动——这是很长一段时间的"最终采用"方案。
+         第三轮踩坑（真正的"平移正常但会慢慢倾倒"根因）：MecanumDrive 独立按运动学
+         公式算轮速、VelocityControl 独立设定车身速度，两者互不知情；只要轮子还有
+         摩擦(mu1/mu2>0)，两套独立计算的残差就会通过轮地接触点反馈到车身，而
+         VelocityControl 不接管 z/roll/pitch，这三个自由度持续吸收残差力矩，
+         日积月累导致"没撞任何东西也会缓慢倾倒"。根治：把 mu1/mu2 直接清零。
+         第四轮尝试（已实测验证不可行，已回退）：想在清零摩擦的基础上重新引入一组
+         大幅收紧的各向异性摩擦，做"可量化误差力矩风险"和"真实轮地约束"之间的折中。
+         4组测试（纯旋转零漂移 vs 纯平移必然复现倾倒，且跟mu大小无关只跟时长/路程
+         相关）证实：只要 MecanumDrive+VelocityControl 两套独立运动学并行的架构不变，
+         mu>0 就必然有风险，不是参数问题，是结构问题——真正的根治方案只能是把两套
+         独立运动学合并成一条经过真实轮地接触物理的力矩闭环链路。
+
+         !!! 第五轮（治本改造，本次落地）!!!：按"麦轮力控重构方案"实施——
+           - VelocityControl、MecanumDrive 两个插件**整体移除**（见下方，不再声明）；
+           - 车身运动完全由轮子 effort 力矩经真实轮地接触摩擦驱动，力矩由新增的
+             astribot_s1_chassis_effort_drive 包（mecanum_effort_drive_node：
+             麦克纳姆逆解 + 轮速PID + 摩擦前馈）计算，经 ros2_control 的
+             effort command_interface 下发（见 astribot_s1_ros2_control.xacro）；
+           - 车轮不再需要"视觉转动"这个概念——转速是真实力矩驱动出来的物理结果，
+             跟车身位移天然一致，不存在"两套独立运动学"这个问题了；
+           - 各向异性摩擦（fdir1对角线方案，第一轮已验证的坐标系表达）重新启用，
+             但语义变了：mu 不再是"尽量清零避免冲突残差"，是**真实驱动摩擦力**，
+             第一轮"小轮子在DART下数值不稳定"这个历史踩坑依然可能复现——如果这次
+             实测又出现"轮转车不动"，先跑接触求解器调参清单，再考虑TPE物理引擎，
+             不要立刻怀疑逆解代码，两种故障现象不同（符号错了是"转向不对/原地
+             打转"，摩擦失效是"轮子转但完全没有对应位移"）。 -->
     <gazebo>
-      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
-        <!-- 兼容提示：ignition-gazebo-velocity-control-system /
-             ignition::gazebo::systems::VelocityControl。
-             没有 <topic> 子标签可配置——它固定订阅 "/model/<模型名>/cmd_vel"
-             （官方示例验证过，和 ros_gz_bridge 里桥接的目标话题名天然一致，不用额外配置）。 -->
-      </plugin>
-
-      <plugin filename="gz-sim-mecanum-drive-system" name="gz::sim::systems::MecanumDrive">
-        <!-- 兼容提示（旧版 Ignition Gazebo Fortress 早期/自编译环境可能仍需要这两行写法）：
-             filename="ignition-gazebo-mecanum-drive-system"
-             name="ignition::gazebo::systems::MecanumDrive" -->
-        <front_left_joint>wheel_LF_Joint</front_left_joint>
-        <front_right_joint>wheel_RF_Joint</front_right_joint>
-        <back_left_joint>wheel_LR_Joint</back_left_joint>
-        <back_right_joint>wheel_RR_Joint</back_right_joint>
-        <wheel_separation>${wheel_separation}</wheel_separation>
-        <wheelbase>${wheelbase}</wheelbase>
-        <wheel_radius>${wheel_radius}</wheel_radius>
-        <!-- 与 astribot_chassis.yaml 的 joint_max_velocities: [1.0, 1.0, 2.0] (x, y, yaw) 保持一致 -->
-        <max_linear_velocity>1.0</max_linear_velocity>
-        <min_linear_velocity>-1.0</min_linear_velocity>
-        <max_angular_velocity>2.0</max_angular_velocity>
-        <min_angular_velocity>-2.0</min_angular_velocity>
-        <min_acceleration>-5.0</min_acceleration>
-        <max_acceleration>5.0</max_acceleration>
-        <min_jerk>-50.0</min_jerk>
-        <max_jerk>50.0</max_jerk>
-        <!-- !!! 实测踩坑记录 !!!：MecanumDrive 的 <topic> 只要显式写了，就是"字面量"话题名，
-             不会像 OdometryPublisher 的 <odom_topic> 那样自动补上 "/model/<name>/" 前缀，
-             必须显式写成和 ros_gz_bridge 配置一致的绝对话题名，否则订阅不到消息。 -->
-        <topic>/model/${robot_name}/cmd_vel</topic>
-        <odom_topic>/model/${robot_name}/mecanum_odometry</odom_topic>
-        <frame_id>odom</frame_id>
-        <child_frame_id>astribot_torso_base</child_frame_id>
-      </plugin>
-
       <!-- MecanumDrive/VelocityControl 都不发布可靠的 TF，单独挂 OdometryPublisher 补
-           /tf 与 nav_msgs/Odometry（它是基于模型真实位姿变化算出来的，不受上面选用哪个
-           驱动插件影响）。
+           /tf 与 nav_msgs/Odometry（它是基于模型真实位姿变化算出来的，跟底盘是运动学
+           直控还是力矩闭环驱动完全无关，两套架构切换都不用碰这个插件）。
            !!! 实测踩坑记录 !!!：一开始仿照 MecanumDrive 那样给它加了显式的
            <odom_topic>/<tf_topic> 绝对路径，结果这个插件直接不再发布任何东西了
            （<odom_topic>不是 OdometryPublisher 认识的标签名，多出来的未知子标签让这个
@@ -92,14 +77,14 @@
         <dimensions>3</dimensions>
       </plugin>
 
-      <!-- !!! 实测踩坑记录（新增，非常关键）!!!：aws_robomaker_small_warehouse_world 的
+      <!-- !!! 实测踩坑记录（非常关键）!!!：aws_robomaker_small_warehouse_world 的
            world 文件本身一个 <plugin> 标签都没有，gz-sim 找不到 world 级插件配置时，
            会退回 ~/.gz(或.ignition)/sim/<ver>/server.config 里的默认系统插件列表——
            实测那份默认列表只有 Physics/UserCommands/SceneBroadcaster 三个，
            **没有 Sensors 系统**！缺了它，机器人身上所有 camera/gpu_lidar 传感器
-           （包括这里新加的双 Livox Mid-360，也包括头部相机）只会被解析、
-           永远不会真正渲染/发布任何数据——话题能在 `ros2 topic list` 里看到，
-           但 `ros2 topic hz` 永远拿不到消息，很容易被误判成"话题名/桥接配置错了"。
+           （包括双 Livox Mid-360，也包括头部相机）只会被解析、永远不会真正渲染/
+           发布任何数据——话题能在 `ros2 topic list` 里看到，但 `ros2 topic hz`
+           永远拿不到消息，很容易被误判成"话题名/桥接配置错了"。
            因为不允许修改 aws 官方仓库的 world 文件，这里改成把 Sensors 系统插件挂在
            "我们自己机器人模型"的 <gazebo> 标签下——gz-sim 的 Sensors 系统一旦在
            场景里任意实体上加载成功，就会全局接管整个仿真里所有传感器的渲染，
@@ -110,40 +95,125 @@
       </plugin>
     </gazebo>
 
-    <!-- !!! 实测踩坑记录（第三轮，真正的"平移正常但会慢慢倾倒"根因）!!!：上一版本把
-         四个轮子摩擦系数恢复成普通各向同性摩擦(mu1=mu2=1.0)，理由是"轮子不再负责实际
-         驱动身体位移，只是给轮子一个合理的地面摩擦力，避免打滑的观感问题"——这个理由
-         本身是错的。MecanumDrive 插件仍然在**独立**按照它自己内部的全向轮运动学公式
-         计算并驱动四个轮子关节的转速（只是为了让轮子在视觉上转得"看起来对"），这个转速
-         是按"轮子和地面之间存在真实摩擦、靠摩擦力驱动车身"这个假设算出来的；但车身实际
-         的位移是由 VelocityControl 直接设定的，和轮子转速隐含的"应有位移"并不是同一回事
-         （两者独立计算，几乎不可能完全一致）。只要轮子还有摩擦(mu1/mu2>0)，这个"轮子
-         转速暗示的运动"和"车身实际被强制的运动"之间的差异，就会在每一步物理仿真里
-         通过轮地接触点的摩擦力反馈到车身上——而 VelocityControl 只接管了车身的
-         线速度/角速度(vx,vy,yaw角速度)这三个自由度，并不接管 z 高度和 roll/pitch，
-         这三个"没人管"的自由度会持续吸收这部分冲突产生的力矩，日积月累就是实测看到的
-         现象：机器人明明没怎么移动（长时间原地小范围巡游/自转），也没有撞到任何货架，
-         z 高度和俯仰角却在几十秒到一两分钟内缓慢爬升，最终以一个不上不下、卡住不动的
-         倾斜姿态"定住"。
-         根治办法：既然车身位移已经完全交给 VelocityControl 负责，轮子和地面之间就
-         不应该再有任何真实摩擦力参与——把 mu1/mu2 直接清零，轮子只保留碰撞形状用来
-         防止穿模，不再通过摩擦对车身产生任何反作用力，MecanumDrive 算出来的轮速只用来
-         让轮子在视觉上"转起来"，不变成任何实际作用力。这样两个插件才是真正互不干扰。 -->
+    <!-- !!! 各向异性摩擦：真实驱动力，不是第四轮的"误差力矩折中"（第五轮/治本改造） !!!
+         力矩闭环架构下，摩擦力是轮子唯一的驱动力来源，mu 从第四轮的收紧值(0.05)
+         改回接近真实橡胶轮-混凝土地面实测范围(0.6~0.8)，比第一轮用过的1.0略低作为
+         起点。collision 命名沿用离线核对过的 "<link名>_collision" 正确格式。
+         fdir1 方向沿用第一轮验证过的对角线模式(RF/LR共享一条对角线、LF/RR共享另一条)，
+         ignition:expressed_in="astribot_torso_base" 写法也是第一轮验证过的，直接复用。
+         kp/kd 比第四轮更硬(1e6/50 vs 1e5/10)：第四轮软化是为了减少"运动学冲突残差"
+         的接触抖动，现在不存在这个冲突了，需要的是真实支撑力，配置太软容易穿透。
+         这组 mu/kp/kd 都是起始估算值，未经实测标定，部署前必须先跑方案第8节的
+         分级测试①②③，尤其关注第一轮记录过的"小轮子在DART下数值不稳定"是否复现——
+         如果复现，先走接触求解器调参清单，这也是本次"改变轮子大小做多轮测试"重点
+         要验证的问题：数值不稳定的边界到底在多大的轮径。 -->
     <gazebo reference="wheel_RF_Link">
-      <mu1>0.0</mu1>
-      <mu2>0.0</mu2>
+      <collision name="wheel_RF_Link_collision">
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.7</mu>
+              <mu2>0.0</mu2>
+              <fdir1 xmlns:ignition="http://ignitionrobotics.org/schema"
+                     ignition:expressed_in="astribot_torso_base">1 1 0</fdir1>
+            </ode>
+            <torsional>
+              <coefficient>0.05</coefficient>
+              <use_patch_radius>true</use_patch_radius>
+              <patch_radius>0.01</patch_radius>
+            </torsional>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1e6</kp>
+              <kd>50.0</kd>
+              <max_vel>0.05</max_vel>
+              <min_depth>0.0005</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
     </gazebo>
     <gazebo reference="wheel_LF_Link">
-      <mu1>0.0</mu1>
-      <mu2>0.0</mu2>
+      <collision name="wheel_LF_Link_collision">
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.7</mu>
+              <mu2>0.0</mu2>
+              <fdir1 xmlns:ignition="http://ignitionrobotics.org/schema"
+                     ignition:expressed_in="astribot_torso_base">1 -1 0</fdir1>
+            </ode>
+            <torsional>
+              <coefficient>0.05</coefficient>
+              <use_patch_radius>true</use_patch_radius>
+              <patch_radius>0.01</patch_radius>
+            </torsional>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1e6</kp>
+              <kd>50.0</kd>
+              <max_vel>0.05</max_vel>
+              <min_depth>0.0005</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
     </gazebo>
     <gazebo reference="wheel_RR_Link">
-      <mu1>0.0</mu1>
-      <mu2>0.0</mu2>
+      <collision name="wheel_RR_Link_collision">
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.7</mu>
+              <mu2>0.0</mu2>
+              <fdir1 xmlns:ignition="http://ignitionrobotics.org/schema"
+                     ignition:expressed_in="astribot_torso_base">1 -1 0</fdir1>
+            </ode>
+            <torsional>
+              <coefficient>0.05</coefficient>
+              <use_patch_radius>true</use_patch_radius>
+              <patch_radius>0.01</patch_radius>
+            </torsional>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1e6</kp>
+              <kd>50.0</kd>
+              <max_vel>0.05</max_vel>
+              <min_depth>0.0005</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
     </gazebo>
     <gazebo reference="wheel_LR_Link">
-      <mu1>0.0</mu1>
-      <mu2>0.0</mu2>
+      <collision name="wheel_LR_Link_collision">
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.7</mu>
+              <mu2>0.0</mu2>
+              <fdir1 xmlns:ignition="http://ignitionrobotics.org/schema"
+                     ignition:expressed_in="astribot_torso_base">1 1 0</fdir1>
+            </ode>
+            <torsional>
+              <coefficient>0.05</coefficient>
+              <use_patch_radius>true</use_patch_radius>
+              <patch_radius>0.01</patch_radius>
+            </torsional>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1e6</kp>
+              <kd>50.0</kd>
+              <max_vel>0.05</max_vel>
+              <min_depth>0.0005</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
     </gazebo>
 
   </xacro:macro>

@@ -3,19 +3,52 @@
   文件用途：为躯干升降(4)+头部(2)+左臂(7)+右臂(7) 共 20 个 revolute 关节声明 <ros2_control> 硬件接口，
   并挂载 gz_ros2_control 的 Gazebo 系统插件，使 ros2_control 的 controller_manager 能在 gz sim 内部运行。
 
-  注意：4 个轮子(wheel_*_Joint) 不在这里声明，底盘运动学由 astribot_s1.gazebo.xacro 里的
-  MecanumDrive 系统插件直接接管（原生支持全向运动，无需再套 ros2_control），
-  避免"同一关节被两个控制系统同时下发指令"的冲突。
+  !!! 麦轮力控重构方案实施记录（治本改造）!!!：4 个轮子(wheel_*_Joint) 原来不在这里声明，
+  理由是"底盘运动学由 astribot_s1.gazebo.xacro 里的 MecanumDrive 系统插件直接接管，
+  避免同一关节被两个控制系统同时下发指令的冲突"——现在 MecanumDrive 和 VelocityControl
+  两个插件已经整体移除（见 astribot_s1.gazebo.xacro 的对应记录），轮子改成通过
+  effort command_interface 接入 ros2_control，由 astribot_s1_chassis_effort_drive 包的
+  mecanum_effort_drive_node 计算力矩、经 forward_command_controller 下发，不再有
+  "两个控制系统抢同一个关节"这个问题——这正是本次改造要消除的东西，现在轮子和
+  躯干/头部/双臂共用同一个 ros2_control 硬件实例、同一个 controller_manager，
+  是治本方案的一部分，不是疏忽。
 
   command_interface 统一用 position（对应真实设备的位置控制模式，也是 astribot_*.yaml 里
   frequency/coefficient 抽象所隐含的控制方式）；state_interface 同时给 position+velocity，
-  供 joint_state_broadcaster 发布完整 /joint_states。
+  供 joint_state_broadcaster 发布完整 /joint_states。轮子单独用 effort command_interface
+  （见下面 astribot_s1_effort_wheel_joint 宏），跟其它20个position关节类型不同但
+  ros2_control 原生支持同一硬件实例内混用不同 command_interface 类型。
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:macro name="astribot_s1_position_joint" params="name">
     <joint name="${name}">
       <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- 轮子effort硬件接口。
+       !!! 实测踩坑记录(本次任务新增)!!!：最初按 gz_ros2_control 官方文档示例写法，
+       在 <command_interface name="effort"> 下加了 <param name="min">/<param name="max">
+       子标签做min/max边界声明——结果实测这4个轮关节被 gz_ros2_control 的
+       initSim **整体跳过**：启动日志里只有"Loading joint: astribot_xxx"20条
+       (躯干/头部/双臂，全部是不带<param>子标签的position接口)，wheel_*_Joint
+       一条都没出现，导致 export_command_interfaces 里根本不存在这4个effort接口，
+       controller_manager激活wheel_effort_controller时报"Not existing"直接拒绝。
+       躯干/头部/双臂的20个关节写法完全不带<param>子标签、正常加载，只有带
+       <param>子标签的这4个轮关节被跳过——两者唯一差异就是这个<param>子标签，
+       实测确认是这个版本(ros-humble-hardware-interface 2.54.0)的URDF解析在
+       command_interface带子标签时有问题。既然效力限幅本来就在
+       astribot_s1_chassis_effort_drive包的PID闭环里做了强制clamp(软件层，
+       真正生效的那一层)，这里的<param>只是"补充声明"，不是必须的，直接去掉，
+       只留最简单的 <command_interface name="effort"/>，跟20个position关节
+       的写法保持同样"干净"的格式。 -->
+  <xacro:macro name="astribot_s1_effort_wheel_joint" params="name">
+    <joint name="${name}">
+      <command_interface name="effort"/>
       <state_interface name="position"/>
       <state_interface name="velocity"/>
       <state_interface name="effort"/>
@@ -53,6 +86,11 @@
       <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_5"/>
       <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_6"/>
       <xacro:astribot_s1_position_joint name="astribot_arm_right_joint_7"/>
+
+      <xacro:astribot_s1_effort_wheel_joint name="wheel_RF_Joint"/>
+      <xacro:astribot_s1_effort_wheel_joint name="wheel_LF_Joint"/>
+      <xacro:astribot_s1_effort_wheel_joint name="wheel_RR_Joint"/>
+      <xacro:astribot_s1_effort_wheel_joint name="wheel_LR_Joint"/>
     </ros2_control>
 
     <gazebo>
