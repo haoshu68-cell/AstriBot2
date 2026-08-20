@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_autonomy</name>
+  <version>0.1.0</version>
+  <description>
+    Astribot S1 自主感知与探索：
+    (1) 感知模块 pointcloud_slice_scan —— 3D 点云多层高度切片投影生成 2D LaserScan，
+        依赖 TF 实时剔除底盘与双臂自身点云，供 Nav2 costmap 使用；
+    (2) 决策模块 frontier_explorer —— 基于占据栅格的「边界遍历 + 前沿点自适应采样」
+        自主探索，只输出目标位姿，由外部 Nav2 执行运动。
+    两个模块均为 rclcpp 组件，可单独启动或由 component_container 一起加载。
+  </description>
+
+  <maintainer email="dev@astribot.local">Astribot Robotics</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>rcl_interfaces</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>pcl_conversions</depend>
+  <depend>libpcl-all-dev</depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

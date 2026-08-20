@@ -1,0 +1,166 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /切片层点云1
+        - /前沿与采样1
+      Splitter Ratio: 0.5
+    Tree Height: 700
+  - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+
+Visualization Manager:
+  Class: ""
+  Name: root
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: map
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Cell Size: 1
+      Plane Cell Count: 20
+      Color: 160; 160; 164
+      Alpha: 0.3
+
+    - Class: rviz_default_plugins/TF
+      Enabled: false
+      Name: TF
+      Marker Scale: 0.4
+      Show Names: true
+      # 默认关掉：本机器人 TF 有 30+ 个 frame，全开会挡住其它内容。
+      # 排查自身点剔除时再打开，重点看双臂各 link 的位置。
+
+    - Class: rviz_default_plugins/Map
+      Enabled: true
+      Name: SLAM 占据栅格
+      Topic:
+        Value: /map
+        Depth: 1
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Color Scheme: map
+      Alpha: 0.7
+
+    # ---------------- 感知模块 ----------------
+    - Class: rviz_default_plugins/LaserScan
+      Enabled: true
+      Name: 多层切片融合 scan
+      Topic:
+        Value: /scan_from_cloud
+        Depth: 5
+        Durability Policy: Volatile
+        Reliability Policy: Best Effort
+      Size (m): 0.05
+      Style: Spheres
+      Color: 255; 25; 0
+      Color Transformer: FlatColor
+
+    - Class: rviz_default_plugins/LaserScan
+      Enabled: false
+      Name: 对照-原单层切片 scan
+      Topic:
+        Value: /scan
+        Depth: 5
+        Durability Policy: Volatile
+        Reliability Policy: Best Effort
+      Size (m): 0.04
+      Style: Points
+      Color: 0; 170; 255
+      Color Transformer: FlatColor
+      # 打开这个和上面那条对比，能直观看出多层切片多检出了哪些障碍物
+      # （尤其是低矮障碍和悬空横梁）。
+
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: 切片层点云
+      Topic:
+        Value: /pointcloud_slice_scan_node/debug_markers
+        Depth: 1
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+      # 命名空间含义：
+      #   slice_low_obstacle / slice_main_nav / slice_torso_high / slice_overhead
+      #     —— 各高度层的点，按层用不同色相；半透明表示该层 enabled:=false
+      #   self_filtered      —— 被判为「机器人自身」而剔除的点（灰色）
+      #   self_filter_capsule—— 双臂/躯干/头部的剔除胶囊体轴线（橙色粗线）
+      # 调试要点：机械臂挥动时，灰色点应始终贴着橙色胶囊，
+      #          红色的 scan 上不应出现跟着手臂动的障碍物。
+
+    # ---------------- 探索模块 ----------------
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: 前沿与采样
+      Topic:
+        Value: /frontier_explorer_node/debug_markers
+        Depth: 1
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+      # 命名空间含义：
+      #   frontier_cluster        —— 通过过滤的前沿连通域，每块一个色调
+      #   frontier_rejected       —— 被过滤掉的前沿块（暗灰）
+      #   frontier_label          —— 每块的 面积/增益/被拒原因 文字
+      #   frontier_traversal_path —— 边界遍历路径（黄线依次连接各前沿块质心）
+      #   candidate_valid         —— 通过校验的候选采样点（绿球）
+      #   candidate_rejected      —— 被拒的候选点（红球）
+      #   selected_goal           —— 最终选中的目标位姿（橙色箭头，方向即朝向）
+      #   visit_history           —— 历史访问记录（紫球，代价函数的惩罚区）
+
+    - Class: rviz_default_plugins/Pose
+      Enabled: true
+      Name: 探索目标位姿
+      Topic:
+        Value: /explore/goal_pose
+        Depth: 5
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+      Shape: Arrow
+      Color: 255; 140; 0
+      Alpha: 1
+      Shaft Length: 0.6
+      Head Length: 0.2
+
+    - Class: rviz_default_plugins/Marker
+      Enabled: false
+      Name: 局部代价地图
+      Topic:
+        Value: /local_costmap/costmap
+        Depth: 1
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Distance: 18
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 1.0
+      Yaw: 3.14
+      Target Frame: <Fixed Frame>
+
+Window Geometry:
+  Height: 1000
+  Width: 1600
+  Displays:
+    collapsed: false
+  Views:
+    collapsed: false
