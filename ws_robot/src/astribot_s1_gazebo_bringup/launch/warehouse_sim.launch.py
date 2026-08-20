@@ -157,11 +157,6 @@ def generate_launch_description():
         SetEnvironmentVariable(
             name='ROS_LOCALHOST_ONLY', value='1',
             condition=IfCondition(localhost_only)),
-        # 清掉可能从 lan 模式残留下来的 Fast DDS profile，
-        # 否则带 is_default_profile 的 XML 会盖掉上面的 localhost 限制。
-        SetEnvironmentVariable(
-            name='FASTRTPS_DEFAULT_PROFILES_FILE', value='',
-            condition=IfCondition(localhost_only)),
         # Gazebo/ign-transport 通道：独立于 DDS，必须单独封
         SetEnvironmentVariable(
             name='IGN_IP', value='127.0.0.1',
@@ -169,6 +164,12 @@ def generate_launch_description():
         SetEnvironmentVariable(
             name='GZ_IP', value='127.0.0.1',
             condition=IfCondition(localhost_only)),
+        # 注意：这里**刻意不去动** FASTRTPS_DEFAULT_PROFILES_FILE。
+        # launch 只能 set 不能 unset，而把它 set 成空字符串会让 Fast DDS
+        # 拿空路径去 realpath，每个进程都刷一堆
+        #   [XMLPARSER Error] realpath failed No such file or directory
+        # （实测一次启动刷了 26 条）。清理残留 profile 属于 env.sh 的职责，
+        # 那里可以真正 unset。
     ]
 
     # ---------------------------------------------------------------------
