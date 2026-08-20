@@ -19,6 +19,7 @@ import os
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
+    GroupAction,
     IncludeLaunchDescription,
     SetEnvironmentVariable,
     RegisterEventHandler,
@@ -338,15 +339,45 @@ def generate_launch_description():
     # 底盘完全靠 mecanum_effort_drive_node 算力矩驱动，不然车身没有任何驱动力。
     # 等 wheel_effort_controller(在controllers_spawner里)加载完成后再拉起，
     # 避免节点启动瞬间往还没激活的controller发力矩指令(无害但会打日志噪音)。
+    #
+    # !!! 实测踩坑记录：params_file 必须显式传，而且必须 GroupAction(scoped=True) !!!
+    # LaunchConfiguration 是**共享上下文**，不按 include 层级隔离；
+    # 而本 include 被 RegisterEventHandler 延迟到 controllers_spawner 退出之后才求值，
+    # 那时上层(nav2_full_bringup)的 slice_scan / exploration_coordinator 早已把共享的
+    # params_file 占住了。于是 mecanum_effort_drive.launch.py 里
+    # DeclareLaunchArgument('params_file', default=mecanum_effort_drive_params.yaml)
+    # 不生效，底盘节点吃到的是**别的节点的 yaml**。
+    #
+    # 后果是三个"看起来无关"的故障，其实是同一个根因（实测全部对上）：
+    #   · 那些 yaml 都是 `/**:` 通配，会被正常加载且不报错。协调器的 yaml 里
+    #     control_period_sec: 0.5 直接把底盘控制周期从 100Hz 改成 2Hz(实测 1.85Hz)。
+    #   · 底盘自己的参数一条都没加载，全部退回代码里的声明默认值 ——
+    #     恰好是重构前那套**已知会发散**的值：pid_kp=2.0(稳定条件要求 <1.0)、
+    #     friction_viscous_nm_s=0.02(该配 1.0，小了 50 倍)。
+    #   · 于是 PID 发散→四轮撞上 ±15N·m 限幅 bang-bang→净旋转力矩 60N·m→
+    #     车身在**没有任何 cmd_vel** 的情况下持续自转 3.3rad/s。
+    #     这又超出 MPPI 的 wz_max=2.0，控制器求解必然失败
+    #     ("Optimizer fail to compute path")，机器人只自转不前进，
+    #     Nav2 进度检查器判"Failed to make progress"，每个目标都在剩 ~1m 处中止。
+    #
+    # 排查手段：pgrep -af mecanum_effort_drive_node | grep -o "params-file [^ ]*"
+    # 直接看进程实际吃到的是哪个文件；再用 get_parameters 服务核对 pid_kp 是否为 0.4。
     pkg_effort_drive = FindPackageShare('astribot_s1_chassis_effort_drive')
-    effort_drive_node = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution(
-                [pkg_effort_drive, 'launch', 'mecanum_effort_drive.launch.py'])),
-        launch_arguments={
-            'wheel_radius': wheel_radius,
-            'use_sim_time': use_sim_time,
-        }.items(),
+    effort_drive_node = GroupAction(
+        scoped=True,
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [pkg_effort_drive, 'launch', 'mecanum_effort_drive.launch.py'])),
+                launch_arguments={
+                    'wheel_radius': wheel_radius,
+                    'use_sim_time': use_sim_time,
+                    'params_file': PathJoinSubstitution(
+                        [pkg_effort_drive, 'config', 'mecanum_effort_drive_params.yaml']),
+                }.items(),
+            ),
+        ],
         condition=IfCondition(enable_effort_drive),
     )
     delay_effort_drive_after_controllers = RegisterEventHandler(

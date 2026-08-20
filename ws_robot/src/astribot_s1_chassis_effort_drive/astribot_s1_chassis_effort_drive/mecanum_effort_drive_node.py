@@ -129,14 +129,27 @@ class MecanumEffortDriveNode(Node):
         # 12个系数（那12个是几何算出来的，翻了就破坏相对关系）。
         self.declare_parameter('kinematics_global_sign', 1.0)
 
-        # ---- 轮速PID(初始估算值，须经单轮测试①标定，见方案第8节) ----
-        self.declare_parameter('pid_kp', 2.0)
-        self.declare_parameter('pid_ki', 0.5)
-        self.declare_parameter('pid_kd', 0.02)
+        # ---- 轮速PID ----
+        # !!! 这里的声明默认值必须和 config/mecanum_effort_drive_params.yaml 保持一致 !!!
+        # 原来这三个默认值是重构前那套(kp=2.0/ki=0.5/kd=0.02)，也就是**已知会发散**的值：
+        # 稳定硬条件是 kp < 关节阻尼 d(=1.0)，kp=2.0 的环路增益 2.0 > 1，
+        # 数学上必然发散→撞上力矩限幅→在 ±τ_max 之间 bang-bang 振荡。
+        # 实测踩过：launch 的 params_file 被别的 yaml 顶掉时(共享 LaunchConfiguration 泄漏)，
+        # 本节点悄悄退回这套默认值，四轮全部钉在 ±15N·m、净旋转力矩 60N·m，
+        # 车身在没有任何 cmd_vel 的情况下自转 3.3rad/s，还连带把 MPPI 求解和
+        # Nav2 进度检查一起搞崩 —— 而日志里看不出参数没加载。
+        # 所以默认值一律取"已验证可用"的那套：配置缺失时退化成**能站住**的行为，
+        # 而不是退化成一台会自己转起来的车。
+        self.declare_parameter('pid_kp', 0.4)
+        self.declare_parameter('pid_ki', 0.1)
+        self.declare_parameter('pid_kd', 0.0)
 
-        # ---- 摩擦前馈(库伦+粘性，与实机辨识参数同源，仿真侧初始估算值待标定) ----
-        self.declare_parameter('friction_coulomb_nm', 0.3)
-        self.declare_parameter('friction_viscous_nm_s', 0.02)
+        # ---- 摩擦前馈(库伦+粘性) ----
+        # 同上：必须与 yaml 一致，且与 URDF 轮关节 <dynamics damping/friction> 对齐。
+        # 粘性项就是用来抵消关节阻尼 d=1.0 的，配 0.02 只能提供 0.023N·m(小 50 倍)，
+        # 稳态维持全压给 PID 去积分，是发散的另一个助推因素。
+        self.declare_parameter('friction_coulomb_nm', 0.1)
+        self.declare_parameter('friction_viscous_nm_s', 1.0)
         self.declare_parameter('friction_deadband_rad_s', 0.05)
 
         # ---- 强制限幅(所有力矩输出都必须clamp，编码规范硬要求) ----
@@ -188,6 +201,29 @@ class MecanumEffortDriveNode(Node):
         }
 
         period = self._safe_param('control_period_sec', 0.01)
+        # ---- 启动自检：拿到的参数是不是"本节点的"参数 ----
+        # 实测踩过：launch 的共享 params_file 被别的 yaml 顶掉后，本节点吃到的是
+        # 探索协调器的 yaml —— 那份文件用 `/**:` 通配，会被正常加载且不报任何错，
+        # 里面的 control_period_sec: 0.5 直接把 100Hz 控制环变成 2Hz，
+        # 同时本节点自己的 PID/摩擦参数一条都没加载。三个"看起来无关"的故障
+        # (底盘只有 2cm/s、MPPI 求解失败、控制器保不住 20Hz) 全是这一个根因。
+        # 这两条自检就是为了让"参数没加载"这件事在启动时立刻可见，而不是靠猜。
+        if period > 0.05:
+            self.get_logger().error(
+                'control_period_sec=%.3fs (%.1fHz) 远慢于本节点的设计值 0.01s(100Hz)。'
+                '轮速PID的稳定性推导是按 100Hz 做的，这么慢必然发散并撞上力矩限幅，'
+                '车身会在没有 cmd_vel 的情况下自己转起来。'
+                '最常见原因是 launch 把**别的节点的 yaml** 传给了本节点'
+                '(共享 LaunchConfiguration params_file 泄漏)，'
+                '用 `pgrep -af mecanum_effort_drive_node | grep -o "params-file [^ ]*"` 核对。'
+                % (period, 1.0 / period if period > 0 else float('inf')))
+        kp_check = self._safe_param('pid_kp', 0.4)
+        tau_v_check = self._safe_param('friction_viscous_nm_s', 1.0)
+        if kp_check >= tau_v_check:
+            self.get_logger().error(
+                '轮速PID稳定条件不满足：pid_kp=%.3f 必须 < 粘性前馈/关节阻尼 %.3f。'
+                '当前取值会让环路增益 >= 1，数学上必然发散→力矩 bang-bang 振荡。'
+                % (kp_check, tau_v_check))
         self._timer = self.create_timer(period, self._control_step)
 
         self.get_logger().info(
@@ -291,11 +327,14 @@ class MecanumEffortDriveNode(Node):
             targets = {name: 0.0 for name in JOINT_NAMES}
 
         v_limit = self._safe_param('wheel_velocity_limit_rad_s', 40.0)
-        kp = self._safe_param('pid_kp', 2.0)
-        ki = self._safe_param('pid_ki', 0.5)
-        kd = self._safe_param('pid_kd', 0.02)
-        tau_c = self._safe_param('friction_coulomb_nm', 0.3)
-        tau_v = self._safe_param('friction_viscous_nm_s', 0.02)
+        # 这些兜底值必须和 declare_parameter 里的一致(都是已验证可用的那套)。
+        # 写成重构前的 kp=2.0/tau_v=0.02 等于埋了第二份发散配置：
+        # 一旦哪天 _safe_param 真的走进兜底分支，车会自己转起来。
+        kp = self._safe_param('pid_kp', 0.4)
+        ki = self._safe_param('pid_ki', 0.1)
+        kd = self._safe_param('pid_kd', 0.0)
+        tau_c = self._safe_param('friction_coulomb_nm', 0.1)
+        tau_v = self._safe_param('friction_viscous_nm_s', 1.0)
         deadband = self._safe_param('friction_deadband_rad_s', 0.05)
         tau_max = self._safe_param('wheel_effort_limit_nm', 15.0)
         warn_ratio = self._safe_param('warn_effort_ratio', 0.9)
