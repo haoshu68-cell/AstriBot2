@@ -152,7 +152,13 @@ planner_server:
       tolerance: 0.5
       downsample_costmap: false
       downsampling_factor: 1
-      allow_unknown: true
+      # 未知区域禁行：全局规划器不得把未知栅格纳入路径。
+      # 原来是 true —— 那会让 SmacPlanner2D 直接穿过没扫过的区域「抄近道」，
+      # 与探索协调器的「未知区绝对禁行」冲突：协调器会把这种路径整条否掉，
+      # 于是候选一个个被拒、探索原地打转。
+      # 改成 false 后规划器自己就不会产生这种路径，两层约束方向一致。
+      # 代价：探索初期已知区很小，可达目标也少；这是刻意的保守取向。
+      allow_unknown: false
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 2.0

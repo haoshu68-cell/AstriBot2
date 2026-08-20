@@ -41,6 +41,11 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
+# 探索协调器要用 Nav2 的 NavigateToPose / ComputePathToPose 动作，
+# 以及 Trigger 服务做人工暂停/恢复。只用官方接口，不依赖 Nav2 内部头文件。
+find_package(nav2_msgs REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(std_srvs REQUIRED)
 # 只用 common/filters：本包不需要 pcl_ros（该包在本机未安装），
 # 点云的 TF 变换由我们自己用 Eigen 仿射变换完成，避免多引一层依赖。
 find_package(PCL REQUIRED COMPONENTS common filters)
@@ -58,6 +63,9 @@ set(ASTRIBOT_AUTONOMY_DEPS
   tf2_ros
   tf2_geometry_msgs
   pcl_conversions
+  nav2_msgs
+  rclcpp_action
+  std_srvs
 )
 
 # ---------------------------------------------------------------------------
@@ -67,8 +75,10 @@ add_library(${PROJECT_NAME}_components SHARED
   src/slice_projector.cpp
   src/self_filter.cpp
   src/frontier_search.cpp
+  src/path_validator.cpp
   src/pointcloud_slice_scan_node.cpp
   src/frontier_explorer_node.cpp
+  src/exploration_coordinator_node.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_components PUBLIC
@@ -89,6 +99,7 @@ ament_target_dependencies(${PROJECT_NAME}_components ${ASTRIBOT_AUTONOMY_DEPS})
 rclcpp_components_register_nodes(${PROJECT_NAME}_components
   "astribot_s1_autonomy::PointcloudSliceScanNode"
   "astribot_s1_autonomy::FrontierExplorerNode"
+  "astribot_s1_autonomy::ExplorationCoordinatorNode"
 )
 
 # ---------------------------------------------------------------------------
@@ -101,6 +112,10 @@ ament_target_dependencies(pointcloud_slice_scan_node ${ASTRIBOT_AUTONOMY_DEPS})
 add_executable(frontier_explorer_node src/frontier_explorer_main.cpp)
 target_link_libraries(frontier_explorer_node ${PROJECT_NAME}_components)
 ament_target_dependencies(frontier_explorer_node ${ASTRIBOT_AUTONOMY_DEPS})
+
+add_executable(exploration_coordinator_node src/exploration_coordinator_main.cpp)
+target_link_libraries(exploration_coordinator_node ${PROJECT_NAME}_components)
+ament_target_dependencies(exploration_coordinator_node ${ASTRIBOT_AUTONOMY_DEPS})
 
 # ---------------------------------------------------------------------------
 # 安装
@@ -119,7 +134,7 @@ install(
 )
 
 install(
-  TARGETS pointcloud_slice_scan_node frontier_explorer_node
+  TARGETS pointcloud_slice_scan_node frontier_explorer_node exploration_coordinator_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -167,11 +182,23 @@ if(BUILD_TESTING)
   # 真正的静态分析器 cppcheck 保留且全部通过。
   set(ament_cmake_cpplint_FOUND TRUE)
 
+  # lint_cmake 不跳过，但要**限定扫描范围**：它的自动钩子是
+  # `file(GLOB_RECURSE ... "*.cmake")`，会递归扫整个包目录。而本包常被直接在包内
+  # `colcon build`（build/ install/ 就落在源码树里），CMake 自己生成的
+  # export_*.cmake、*.dir/*.cmake 一律不符合 lint 规则，一跑就是 194 条报错，
+  # 全部出自生成物，把真实问题彻底淹掉。
+  # 所以用官方的 AMENT_LINT_AUTO_EXCLUDE 只关掉它的**自动钩子**
+  # （find_package 照常执行，ament_lint_cmake() 函数仍然可用），
+  # 再手工只检查唯一一个手写的 CMakeLists.txt。
+  set(AMENT_LINT_AUTO_EXCLUDE ament_cmake_lint_cmake)
+
   ament_lint_auto_find_test_dependencies()
+
+  ament_lint_cmake(CMakeLists.txt)
 
   find_package(ament_cmake_gtest REQUIRED)
 
-  # 三套单元测试都只依赖纯算法核心，不需要 ROS 运行时，
+  # 四套单元测试都只依赖纯算法核心，不需要 ROS 运行时，
   # 因此可以在 CI 里无仿真环境直接跑。
   ament_add_gtest(test_slice_projector test/test_slice_projector.cpp)
   target_link_libraries(test_slice_projector ${PROJECT_NAME}_components)
@@ -180,6 +207,10 @@ if(BUILD_TESTING)
   ament_add_gtest(test_self_filter test/test_self_filter.cpp)
   target_link_libraries(test_self_filter ${PROJECT_NAME}_components)
   ament_target_dependencies(test_self_filter ${ASTRIBOT_AUTONOMY_DEPS})
+
+  ament_add_gtest(test_path_validator test/test_path_validator.cpp)
+  target_link_libraries(test_path_validator ${PROJECT_NAME}_components)
+  ament_target_dependencies(test_path_validator ${ASTRIBOT_AUTONOMY_DEPS})
 
   ament_add_gtest(test_frontier_search test/test_frontier_search.cpp)
   target_link_libraries(test_frontier_search ${PROJECT_NAME}_components)
