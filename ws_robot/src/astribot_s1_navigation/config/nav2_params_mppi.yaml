@@ -243,15 +243,35 @@ local_costmap:
       # consider_footprint:true 时会调用 costmap 的"足迹多边形"接口，只给
       # robot_radius(不给显式footprint) 时这个接口在controller_server启动的那次
       # 生命周期transition里报"no robot footprint provided in the costmap"直接FATAL退出。
-      # 改成显式给一个八边形footprint(仍然近似圆形，半径0.35m跟原来robot_radius一致)，
-      # 问题消失——这是 nav2_costmap_2d 在"只给radius不给footprint"这条路径下的一个
-      # 实测发现的真实限制，不是配置错误。
-      footprint: "[[0.35, 0.0], [0.2475, 0.2475], [0.0, 0.35], [-0.2475, 0.2475], [-0.35, 0.0], [-0.2475, -0.2475], [0.0, -0.35], [0.2475, -0.2475]]"
+      # 改成显式给一个八边形footprint，问题消失——这是 nav2_costmap_2d 在
+      # "只给radius不给footprint"这条路径下的一个实测发现的真实限制，不是配置错误。
+      #
+      # !!! 足迹尺寸按真实底盘几何重算过（原来的 0.35 偏小，会规划出蹭到障碍的路径）!!!
+      # 从 URDF 实测：轮心离轴 0.306m + 轮球半径 0.080m => 底盘真实外接半径 0.386m。
+      # 关键点：本底盘是 X 型布局，四个轮子正好在 ±45° 对角线上，
+      # 也就是八边形的**顶点方向**——原配置在这个方向只有 0.35，比轮缘小 36mm，
+      # 等于告诉 Nav2「机器人比实际更小」，代价地图算出来的可通行区域偏大，
+      # 于是规划出的路径会让轮子蹭上货架立柱。
+      # 现在取外接半径 0.42：顶点 0.42 > 轮缘 0.386（余量 34mm）；
+      # 顶点之间凹陷处的内切半径 0.388 > 躯干圆柱 0.30，也够。
+      footprint: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
       plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
+        # !!! 原值 0.25 比足迹外接半径还小，Nav2 每次启动都在报 ERROR：
+        #   "The configured inflation radius (0.250) is smaller than the robot radius (0.35)"
+        # 后果是膨胀层连机器人自身轮廓都覆盖不住，规划器拿不到"离墙远一点"的代价梯度，
+        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(0.42)。
+        #
+        # 取 0.65 后的代价梯度（内切半径 0.388、cost_scaling_factor 3.0）：
+        #   离障碍 0.42m -> 229   (刚好轮缘擦到，重罚)
+        #   离障碍 0.50m -> 180
+        #   离障碍 0.60m -> 133
+        #   离障碍 >0.65m -> 0    (自由通行)
+        # 注意膨胀代价只在内切半径以内才是致死值，所以放大 inflation_radius
+        # 不会把窄通道变成不可通行，只是让规划器更偏向走通道中间。
         cost_scaling_factor: 3.0
-        inflation_radius: 0.25
+        inflation_radius: 0.65
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -276,7 +296,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: astribot_torso_base
       use_sim_time: True
-      footprint: "[[0.35, 0.0], [0.2475, 0.2475], [0.0, 0.35], [-0.2475, 0.2475], [-0.35, 0.0], [-0.2475, -0.2475], [0.0, -0.35], [0.2475, -0.2475]]"
+      footprint: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -300,6 +320,18 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
+        # !!! 原值 0.25 比足迹外接半径还小，Nav2 每次启动都在报 ERROR：
+        #   "The configured inflation radius (0.250) is smaller than the robot radius (0.35)"
+        # 后果是膨胀层连机器人自身轮廓都覆盖不住，规划器拿不到"离墙远一点"的代价梯度，
+        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(0.42)。
+        #
+        # 取 0.65 后的代价梯度（内切半径 0.388、cost_scaling_factor 3.0）：
+        #   离障碍 0.42m -> 229   (刚好轮缘擦到，重罚)
+        #   离障碍 0.50m -> 180
+        #   离障碍 0.60m -> 133
+        #   离障碍 >0.65m -> 0    (自由通行)
+        # 注意膨胀代价只在内切半径以内才是致死值，所以放大 inflation_radius
+        # 不会把窄通道变成不可通行，只是让规划器更偏向走通道中间。
         cost_scaling_factor: 3.0
-        inflation_radius: 0.25
+        inflation_radius: 0.65
       always_send_full_costmap: True

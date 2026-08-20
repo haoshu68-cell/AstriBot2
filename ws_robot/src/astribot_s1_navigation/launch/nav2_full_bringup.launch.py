@@ -60,6 +60,17 @@ def generate_launch_description():
             'enable_arm_chassis_coupling', default_value='true',
             description='是否接入臂-底盘动力学耦合动态调速节点(astribot_s1_dynamics_'
                         'coupling)，透传给 navigation.launch.py'),
+        DeclareLaunchArgument(
+            'scan_source', default_value='slice_scan',
+            description='Nav2 costmap 的障碍物数据来源，一个开关同时切好两端：\n'
+                        '  slice_scan(默认) = 拉起 astribot_s1_autonomy 的多层高度切片'
+                        '感知节点，Nav2 订阅 /scan_from_cloud。四层切片跨层取最近距离，'
+                        '低矮托盘(离地5~25cm)和悬空横梁(离地1.18~1.63m)都能检出，'
+                        '并且靠 TF 实时剔除底盘/双臂自身点，机械臂运动不会污染代价地图。\n'
+                        '  laserscan = 沿用既有 pointcloud_to_laserscan 的单层切片'
+                        '(min_height 0.05/max_height 0.6)，Nav2 订阅 /scan。\n'
+                        '刻意做成一个开关而不是两个：只切 Nav2 话题却忘了起感知节点，'
+                        'costmap 会一个障碍物都收不到——那是最危险的误配。'),
     ]
 
     env = LaunchConfiguration('env')
@@ -99,6 +110,23 @@ def generate_launch_description():
     # use_sim_time 跟随 env，跟 perception_slam_bringup.launch.py 里的写法保持一致。
     use_sim_time_expr = PythonExpression(["'true' if '", env, "' == 'sim' else 'false'"])
 
+    # scan_source 一次决定两件事：Nav2 订阅哪个话题、要不要拉起多层切片感知节点。
+    scan_source = LaunchConfiguration('scan_source')
+    scan_topic_expr = PythonExpression([
+        "'/scan_from_cloud' if '", scan_source, "' == 'slice_scan' else '/scan'"])
+    use_slice_scan = PythonExpression(["'", scan_source, "' == 'slice_scan'"])
+
+    # 多层切片感知节点。只在 scan_source:=slice_scan 时启动。
+    # 直接 include 本包自己的 slice_scan.launch.py，参数走它的 config/*.yaml，
+    # 不在这里重复一份参数（避免两处配置漂移）。
+    slice_scan = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('astribot_s1_autonomy'), 'launch', 'slice_scan.launch.py'])),
+        launch_arguments={'use_sim_time': use_sim_time_expr}.items(),
+        condition=IfCondition(use_slice_scan),
+    )
+
     navigation = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_navigation, 'launch', 'navigation.launch.py'])),
@@ -106,6 +134,7 @@ def generate_launch_description():
             'use_sim_time': use_sim_time_expr,
             'controller_plugin': LaunchConfiguration('controller_plugin'),
             'enable_arm_chassis_coupling': LaunchConfiguration('enable_arm_chassis_coupling'),
+            'scan_topic': scan_topic_expr,
         }.items(),
     )
 
@@ -121,6 +150,7 @@ def generate_launch_description():
     return LaunchDescription(declare_args + [
         save_use_rviz,   # 必须排在 perception_slam 前面，抢在共享变量被覆盖之前先存一份快照
         perception_slam,
+        slice_scan,      # 排在 navigation 前面：让 /scan_from_cloud 先开始出数据
         navigation,
         rviz_node,
     ])

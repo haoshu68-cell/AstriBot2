@@ -88,6 +88,14 @@ bool SliceProjector::configure(const Params & params, std::string & error)
 
 bool SliceProjector::angleToBucket(double angle, std::size_t & bucket) const
 {
+  // 用 round 而非截断，让点落到**最近**的角度桶，最大角度误差半个桶。
+  //
+  // 与 pointcloud_to_laserscan 的差异提示（排查时会遇到，先写在这里省得再查一遍）：
+  // 官方那份实现用的是截断(int 强转)，所以同一个点可能被分到相邻的桶里。
+  // 逐束对比两路 scan 时会看到「各有约 90 束对方没有」的对称差异，
+  // 看着像漏检，其实只是分桶取整方式不同——实测把容差放到 ±1 个桶(±0.5°)
+  // 之后两路差异**精确归零**。0.25° 的角度偏差在 2m 处只有约 1cm 横向误差，
+  // 对导航避障没有实际影响。
   if (angle < params_.angle_min || angle > params_.angle_max) {
     return false;
   }

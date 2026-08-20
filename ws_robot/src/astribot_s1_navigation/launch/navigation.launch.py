@@ -48,6 +48,7 @@ def generate_launch_description():
     controller_plugin = LaunchConfiguration('controller_plugin')
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
+    scan_topic = LaunchConfiguration('scan_topic')
     enable_arm_chassis_coupling = LaunchConfiguration('enable_arm_chassis_coupling')
 
     # controller_plugin(rpp|mppi) 决定用哪一份参数文件——两份文件除了
@@ -67,9 +68,14 @@ def generate_launch_description():
 
     remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
 
+    # 'topic' 这个键在两份 nav2_params 里只出现在 obstacle_layer.scan 下面
+    # （局部+全局各一处，已核对：其余带 topic 的键都是 costmap_topic/footprint_topic/
+    #  odom_topic/map_topic/speed_limit_topic 这类带前缀的名字，不会被误改），
+    # 所以用 RewrittenYaml 重写 'topic' 是安全的，不需要维护两份 yaml。
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'autostart': autostart}
+        'autostart': autostart,
+        'topic': scan_topic}
 
     configured_params = ParameterFile(
         RewrittenYaml(
@@ -91,6 +97,17 @@ def generate_launch_description():
             description='rpp(任务书默认，非全向退化行为) 或 mppi(推荐，全向)'),
         DeclareLaunchArgument('use_respawn', default_value='False'),
         DeclareLaunchArgument('log_level', default_value='info'),
+        DeclareLaunchArgument(
+            'scan_topic', default_value='/scan',
+            description='costmap 障碍层订阅的 LaserScan 话题。'
+                        '/scan = 既有 pointcloud_to_laserscan 的单层切片结果；'
+                        '/scan_from_cloud = astribot_s1_autonomy 的多层高度切片融合结果'
+                        '（能检出低矮托盘和悬空横梁，单层切片会漏）。'
+                        '通过 RewrittenYaml 改写 costmap 里的 obstacle_layer.scan.topic，'
+                        '两份 nav2_params 文件都不用改。'
+                        '注意：切到 /scan_from_cloud 时必须确保感知节点在跑，'
+                        '否则 costmap 收不到任何障碍物数据——'
+                        '用 nav2_full_bringup.launch.py 的 scan_source 参数可以一次性切好两端。'),
         DeclareLaunchArgument(
             'enable_arm_chassis_coupling', default_value='true',
             description='是否接入 astribot_s1_dynamics_coupling 的臂-底盘动力学耦合'
