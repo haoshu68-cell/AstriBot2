@@ -71,7 +71,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部RGB相机'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='是否使用仿真时钟'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='是否自动打开RViz2'),
-        # !!! 麦轮力控重构方案新增：轮子几何/力矩边界，专门为"改变轮子大小做多轮测试"
+        # !!! 全向轮力控重构方案新增：轮子几何/力矩边界，专门为"改变轮子大小做多轮测试"
         # 这个扫描场景暴露成 launch 参数，命令行覆盖即可，不用改任何xacro/yaml文件。
         # 三个值最终会传进 astribot_s1.xacro 的同名 xacro:arg，再分别驱动
         # astribot_s1_torso_wheel.xacro 的碰撞球半径、轮关节<limit>、
@@ -300,7 +300,7 @@ def generate_launch_description():
 
     # ---------------------------------------------------------------------
     # 7. ros2_control 控制器：joint_state_broadcaster + 4 个 JointTrajectoryController
-    #    + 麦轮力控重构方案新增的 wheel_effort_controller（合计6个）。
+    #    + 全向轮力控重构方案新增的 wheel_effort_controller（合计6个）。
     #    用 OnProcessExit 事件等 spawn_robot 完成后再拉起，避免 controller_manager 服务
     #    还没起来就报连接失败。
     #
@@ -335,8 +335,8 @@ def generate_launch_description():
         )
     )
 
-    # !!! 麦轮力控重构方案新增 !!!：VelocityControl/MecanumDrive 已整体移除，
-    # 底盘完全靠 mecanum_effort_drive_node 算力矩驱动，不然车身没有任何驱动力。
+    # !!! 全向轮力控重构方案新增 !!!：VelocityControl/MecanumDrive 已整体移除，
+    # 底盘完全靠 omni_effort_drive_node 算力矩驱动，不然车身没有任何驱动力。
     # 等 wheel_effort_controller(在controllers_spawner里)加载完成后再拉起，
     # 避免节点启动瞬间往还没激活的controller发力矩指令(无害但会打日志噪音)。
     #
@@ -344,8 +344,8 @@ def generate_launch_description():
     # LaunchConfiguration 是**共享上下文**，不按 include 层级隔离；
     # 而本 include 被 RegisterEventHandler 延迟到 controllers_spawner 退出之后才求值，
     # 那时上层(nav2_full_bringup)的 slice_scan / exploration_coordinator 早已把共享的
-    # params_file 占住了。于是 mecanum_effort_drive.launch.py 里
-    # DeclareLaunchArgument('params_file', default=mecanum_effort_drive_params.yaml)
+    # params_file 占住了。于是 omni_effort_drive.launch.py 里
+    # DeclareLaunchArgument('params_file', default=omni_effort_drive_params.yaml)
     # 不生效，底盘节点吃到的是**别的节点的 yaml**。
     #
     # 后果是三个"看起来无关"的故障，其实是同一个根因（实测全部对上）：
@@ -360,7 +360,7 @@ def generate_launch_description():
     #     ("Optimizer fail to compute path")，机器人只自转不前进，
     #     Nav2 进度检查器判"Failed to make progress"，每个目标都在剩 ~1m 处中止。
     #
-    # 排查手段：pgrep -af mecanum_effort_drive_node | grep -o "params-file [^ ]*"
+    # 排查手段：pgrep -af omni_effort_drive_node | grep -o "params-file [^ ]*"
     # 直接看进程实际吃到的是哪个文件；再用 get_parameters 服务核对 pid_kp 是否为 0.4。
     pkg_effort_drive = FindPackageShare('astribot_s1_chassis_effort_drive')
     effort_drive_node = GroupAction(
@@ -369,12 +369,12 @@ def generate_launch_description():
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution(
-                        [pkg_effort_drive, 'launch', 'mecanum_effort_drive.launch.py'])),
+                        [pkg_effort_drive, 'launch', 'omni_effort_drive.launch.py'])),
                 launch_arguments={
                     'wheel_radius': wheel_radius,
                     'use_sim_time': use_sim_time,
                     'params_file': PathJoinSubstitution(
-                        [pkg_effort_drive, 'config', 'mecanum_effort_drive_params.yaml']),
+                        [pkg_effort_drive, 'config', 'omni_effort_drive_params.yaml']),
                 }.items(),
             ),
         ],
@@ -392,11 +392,11 @@ def generate_launch_description():
     #    （/clock 必须桥，否则 use_sim_time 的节点全部收不到仿真时间会卡住）
     #    odometry 的 gz 话题名由 OdometryPublisher 插件按 "/model/<robot_name>/..."
     #    自动生成（对应 astribot_s1.gazebo.xacro 里的相对话题名配置）。
-    #    !!! 麦轮力控重构方案：cmd_vel 桥已移除 !!!：原来这里桥的
+    #    !!! 全向轮力控重构方案：cmd_vel 桥已移除 !!!：原来这里桥的
     #    "/model/<name>/cmd_vel" 是给 VelocityControl/MecanumDrive 两个插件订阅用的
     #    gz内部话题，现在两个插件都已整体移除，没有任何东西再订阅它——
     #    新架构里 /cmd_vel 完全走标准 ROS2 话题，直接被
-    #    astribot_s1_chassis_effort_drive 包的 mecanum_effort_drive_node 订阅，
+    #    astribot_s1_chassis_effort_drive 包的 omni_effort_drive_node 订阅，
     #    不需要、也不应该再经过 ros_gz_bridge 转一趟 gz 内部话题。
     # ---------------------------------------------------------------------
     bridge_args = [

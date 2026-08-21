@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
   文件用途：Astribot S1 轮式双臂机器人 —— 顶层 xacro 入口。
-  聚合：底盘(4麦克纳姆轮+4自由度升降躯干) + 头部(2自由度) + 左右机械臂(各7自由度)
+  聚合：底盘(4 个 X 型布局全向轮+4自由度升降躯干) + 头部(2自由度) + 左右机械臂(各7自由度)
        + 可选传感器(双 Livox Mid-360 3D激光雷达/RGB相机) + ros2_control + Gazebo 插件。
 
   用法（供 launch.py 调用，见 astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py）：
@@ -30,7 +30,7 @@
        本文件内部不出现任何硬编码路径。 -->
   <xacro:arg name="controllers_config" default=""/>
 
-  <!-- 麦克纳姆轮力矩闭环驱动改造新增：轮子effort硬件接口边界 + 几何半径统一从这里
+  <!-- 全向轮力矩闭环驱动改造新增：轮子effort硬件接口边界 + 几何半径统一从这里
        外部传入，禁止在 torso_wheel/ros2_control xacro 里写死。
        wheel_radius 同时驱动碰撞体球半径(astribot_s1_torso_wheel.xacro)和
        astribot_s1_chassis_effort_drive 包里逆解运动学的同名ROS2参数——

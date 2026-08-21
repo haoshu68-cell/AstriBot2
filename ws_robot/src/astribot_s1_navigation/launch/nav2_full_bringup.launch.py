@@ -163,7 +163,7 @@ def generate_launch_description():
     #   · 谁先 include，谁的默认值就成了后面所有人的值。实测 slice_scan 先 include，
     #     协调器就拿到了**切片感知的 yaml**，自己的一条参数都没生效。
     #   · 反过来，在 launch_arguments 里显式传 params_file 同样会写进共享上下文，
-    #     于是它会**继续往后泄漏**：实测 mecanum_effort_drive_node 收到了
+    #     于是它会**继续往后泄漏**：实测 omni_effort_drive_node 收到了
     #     exploration_coordinator_params.yaml。只显式传参并不能治本。
     #
     # 症状极其隐蔽：这些 yaml 用的都是 `/**:` 通配，会被**正常加载且不报任何错**，

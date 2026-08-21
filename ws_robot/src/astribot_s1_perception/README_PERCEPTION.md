@@ -225,7 +225,7 @@ ros2 launch astribot_s1_perception perception_slam_bringup.launch.py \
 | 定位模式加载地图失败 | 确认 `map_file_name` 是绝对路径、不带扩展名；确认对应的 `.data`/`.posegraph` 两个文件都存在 |
 | 点云过载、CPU占用过高 | 调大 `astribot_s1_sensors.xacro` 里 gpu_lidar 的采样间隔(降低samples)，或调大 `pointcloud_filter_params.yaml` 的 `voxel_size` |
 
-## 10. 自主巡游节点（`autonomous_patrol_node`）与麦克纳姆轮平移bug的完整修复记录
+## 10. 自主巡游节点（`autonomous_patrol_node`）与全向轮平移bug的完整修复记录
 
 用户反馈"底盘移动时机器人的身体会倾倒"后排查出的 **4 个独立真实 bug**，均为实测复现，
 详细技术记录见 `astribot_s1.gazebo.xacro`（bug 1/2）和 `autonomous_patrol_node.py`

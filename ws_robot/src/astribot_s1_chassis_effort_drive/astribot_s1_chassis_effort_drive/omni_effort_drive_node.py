@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-文件用途：麦克纳姆底盘力矩闭环驱动节点——治本方案的核心新增节点，替代
+文件用途：X 型布局全向轮底盘力矩闭环驱动节点——治本方案的核心新增节点，替代
 "VelocityControl 本体直控 + MecanumDrive 轮子仅视觉转动"两套独立运动学并行架构。
 
-    /cmd_vel(不变) → 【本节点：麦克纳姆逆解 → 四轮目标转速 → 轮速PID+摩擦前馈】
+    /cmd_vel(不变) → 【本节点：全向轮逆解 → 四轮目标转速 → 轮速PID+摩擦前馈】
         → effort_controller/commands(Float64MultiArray)
         → ros2_control effort command_interface → gz_ros2_control GazeboSimSystem
         → 轮子关节(DART物理) → 轮地各向异性摩擦接触力 → 车身真实动力学响应 → /odom
@@ -45,7 +45,7 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, Float64
 
 
-# 麦克纳姆四轮顺序，跟仓库既有 fdir1 对角线摩擦分组(RF/LR一组、LF/RR一组)、
+# 四轮顺序，跟仓库既有 fdir1 对角线摩擦分组(RF/LR一组、LF/RR一组)、
 # astribot_s1_controllers.yaml 里 wheel_effort_controller 的 joints 列表顺序
 # 必须完全一致——这个顺序本身就是一份"接口契约"，改了任何一处都要三处同步改。
 WHEEL_ORDER = ('RF', 'LF', 'RR', 'LR')
@@ -95,17 +95,17 @@ class _WheelLoop:
         return tau, error
 
 
-class MecanumEffortDriveNode(Node):
+class OmniEffortDriveNode(Node):
 
     def __init__(self):
-        super().__init__('mecanum_effort_drive_node')
+        super().__init__('omni_effort_drive_node')
 
         # ---- 话题 ----
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
         self.declare_parameter('joint_states_topic', '/joint_states')
         self.declare_parameter('effort_command_topic', '/wheel_effort_controller/commands')
 
-        # ---- 麦克纳姆几何参数(统一走参数服务器，不写死；随轮径扫描测试改这里即可) ----
+        # ---- 全向轮几何参数(统一走参数服务器，不写死；随轮径扫描测试改这里即可) ----
         self.declare_parameter('wheel_radius', 0.08)
 
         # ---- 逆解系数矩阵：ω_i = global_sign*(1/r)*(c_vx*vx + c_vy*vy + c_wz*wz) ----
@@ -130,7 +130,7 @@ class MecanumEffortDriveNode(Node):
         self.declare_parameter('kinematics_global_sign', 1.0)
 
         # ---- 轮速PID ----
-        # !!! 这里的声明默认值必须和 config/mecanum_effort_drive_params.yaml 保持一致 !!!
+        # !!! 这里的声明默认值必须和 config/omni_effort_drive_params.yaml 保持一致 !!!
         # 原来这三个默认值是重构前那套(kp=2.0/ki=0.5/kd=0.02)，也就是**已知会发散**的值：
         # 稳定硬条件是 kp < 关节阻尼 d(=1.0)，kp=2.0 的环路增益 2.0 > 1，
         # 数学上必然发散→撞上力矩限幅→在 ±τ_max 之间 bang-bang 振荡。
@@ -215,7 +215,7 @@ class MecanumEffortDriveNode(Node):
                 '车身会在没有 cmd_vel 的情况下自己转起来。'
                 '最常见原因是 launch 把**别的节点的 yaml** 传给了本节点'
                 '(共享 LaunchConfiguration params_file 泄漏)，'
-                '用 `pgrep -af mecanum_effort_drive_node | grep -o "params-file [^ ]*"` 核对。'
+                '用 `pgrep -af omni_effort_drive_node | grep -o "params-file [^ ]*"` 核对。'
                 % (period, 1.0 / period if period > 0 else float('inf')))
         kp_check = self._safe_param('pid_kp', 0.4)
         tau_v_check = self._safe_param('friction_viscous_nm_s', 1.0)
@@ -406,7 +406,7 @@ class MecanumEffortDriveNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = MecanumEffortDriveNode()
+    node = OmniEffortDriveNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

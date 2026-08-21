@@ -104,7 +104,7 @@ class CmdVelBodyToWorldNode(Node):
         # !!! 力控重构方案后的关键变化（务必读完再改）!!!：
         # 这个 body→world 旋转当初存在的唯一理由是 gz-sim VelocityControl 插件
         # 按 **world 系** 解释速度指令。现在 VelocityControl 已经整体移除，
-        # 底盘换成 astribot_s1_chassis_effort_drive 的力矩闭环，它的麦克纳姆/全向轮
+        # 底盘换成 astribot_s1_chassis_effort_drive 的力矩闭环，它的全向轮
         # 逆解吃的是 **车体系** (vx,vy,wz)——正好就是 Nav2 原生输出的坐标系。
         # 此时如果还做这个旋转，等于把 Nav2 要求的方向额外转了一个航向角 yaw：
         # 机器人正对 x 轴(yaw=0)时看起来正常，一旦转弯就会往错误方向走，导航必然失败。

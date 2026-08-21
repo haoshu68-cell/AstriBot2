@@ -68,10 +68,23 @@ ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \
 
 ## 4. 关键设计决策（如实记录取舍，不是纸面设计）
 
-### 4.1 机器人是麦克纳姆全向底盘，不是差速轮
+### 4.1 机器人是 X 型布局全向轮底盘，不是差速轮
 
-底盘运动完全由 gz-sim 的 `VelocityControl` 系统插件直接接管，不经过
-`ros2_control`，没有 `diff_drive_controller`。
+四个轮子的轴线在 `astribot_torso_base` 系里指向 ±45° 对角线
+（RF=[0.707,-0.707,0]、LF=[0.707,0.707,0]、RR=[-0.707,-0.707,0]、LR=[-0.707,0.707,0]，
+直接由 `astribot_s1_torso_wheel.xacro` 各轮关节的 origin rpy 算出）。这是
+**X 型布局全向轮(omni)**，**不是**"轮轴沿 ±y、辊子 45°"的标准麦克纳姆布局 ——
+两者的运动学逆解公式完全不同，逆解系数推导见
+`astribot_s1_chassis_effort_drive/config/omni_effort_drive_params.yaml` 顶部注释。
+没有 `diff_drive_controller`。
+
+> ⚠️ 本节原先写的是"底盘运动完全由 gz-sim 的 `VelocityControl` 系统插件直接接管，
+> 不经过 `ros2_control`"。那是**旧架构**，已经不成立：`VelocityControl` 与
+> `MecanumDrive` 两个插件都已整体移除，现在底盘由 `omni_effort_drive_node`
+> 做逆解 + 轮速 PID + 摩擦前馈算出力矩，经 `ros2_control` 的
+> `forward_command_controller`（`wheel_effort_controller`）下发。
+> 下面 4.2 节讲的 `VelocityControl` world 系语义是当时定位问题的记录，
+> 保留是因为 `cmd_vel_body_to_world_node` 这一层至今仍在链路里。
 
 ### 4.2 【最关键】cmd_vel 必须做 body→world 转换
 
@@ -112,7 +125,7 @@ map_file_name:=<刚存的文件>` 后，日志确认 "Load From File...posegraph
 ### 4.4 控制器选型：任务书要求 vs 机器人实际运动学
 
 任务书要求"优先使用 Smac全局规划 + Regulated Pure Pursuit 局部控制器"，但 RPP
-是为非全向（差速/阿克曼）载体设计的，不会真正利用麦克纳姆轮的全向平移能力（车体
+是为非全向（差速/阿克曼）载体设计的，不会真正利用全向轮的全向平移能力（车体
 基本会先转向、再沿朝向前进）。方案默认仍配 RPP（满足任务书字面要求，行为正确、
 只是没发挥全向优势），同时完整配一套 MPPI（`motion_model: "Omni"`，原生支持全向
 运动），用 `controller_plugin:=rpp|mppi` 一键切换。**推荐实际使用 mppi**。

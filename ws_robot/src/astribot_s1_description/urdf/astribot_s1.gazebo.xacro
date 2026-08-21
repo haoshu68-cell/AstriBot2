@@ -15,7 +15,7 @@
 
   <xacro:macro name="astribot_s1_gazebo_chassis_plugins" params="robot_name:=astribot_s1">
 
-    <!-- ========== 底盘驱动架构演进史（麦克纳姆轮"轮子转、车不走"→"两套独立运动学
+    <!-- ========== 底盘驱动架构演进史（全向轮"轮子转、车不走"→"两套独立运动学
          打架诱发倾倒"→"治本：力矩闭环"的完整排查过程，务必先读完再改这个文件）==========
 
          !!! 实测踩坑记录 !!!
@@ -44,11 +44,11 @@
          mu>0 就必然有风险，不是参数问题，是结构问题——真正的根治方案只能是把两套
          独立运动学合并成一条经过真实轮地接触物理的力矩闭环链路。
 
-         !!! 第五轮（治本改造，本次落地）!!!：按"麦轮力控重构方案"实施——
+         !!! 第五轮（治本改造，本次落地）!!!：按"全向轮力控重构方案"实施——
            - VelocityControl、MecanumDrive 两个插件**整体移除**（见下方，不再声明）；
            - 车身运动完全由轮子 effort 力矩经真实轮地接触摩擦驱动，力矩由新增的
-             astribot_s1_chassis_effort_drive 包（mecanum_effort_drive_node：
-             麦克纳姆逆解 + 轮速PID + 摩擦前馈）计算，经 ros2_control 的
+             astribot_s1_chassis_effort_drive 包（omni_effort_drive_node：
+             全向轮逆解 + 轮速PID + 摩擦前馈）计算，经 ros2_control 的
              effort command_interface 下发（见 astribot_s1_ros2_control.xacro）；
            - 车轮不再需要"视觉转动"这个概念——转速是真实力矩驱动出来的物理结果，
              跟车身位移天然一致，不存在"两套独立运动学"这个问题了；

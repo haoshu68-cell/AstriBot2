@@ -1,4 +1,4 @@
-# mecanum_effort_drive_node 参数配置。
+# omni_effort_drive_node 参数配置。
 #
 # !!! 逆解系数是几何推导出来的，不是猜的符号（这一段务必先读）!!!
 # 本机器人四个轮子的轴线在 torso_base 系里指向 45° 对角线
@@ -17,7 +17,7 @@
 # 展开后每轮三个系数：c_vx=d_i.x, c_vy=d_i.y, c_wz=(p_i × d_i)_z
 # 注意 c_wz 里已经含了真实力臂(≈0.30m)，所以**不要再乘轮距参数**
 # (旧代码乘了 l=0.4327，比真实力臂大41%)。
-mecanum_effort_drive_node:
+omni_effort_drive_node:
   ros__parameters:
     cmd_vel_topic: /cmd_vel
     joint_states_topic: /joint_states

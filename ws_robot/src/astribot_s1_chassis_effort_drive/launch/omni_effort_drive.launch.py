@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-文件用途：麦克纳姆力矩闭环驱动节点启动文件。
+文件用途：X 型全向轮力矩闭环驱动节点启动文件。
 
 单独暴露 wheel_radius 这个launch参数（而不是只靠yaml），是专门为"改变轮子
 大小做多轮测试"这个扫描场景准备的——扫描不同轮径时只需要在命令行加
@@ -34,15 +34,15 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'params_file',
             default_value=PathJoinSubstitution(
-                [pkg, 'config', 'mecanum_effort_drive_params.yaml']),
+                [pkg, 'config', 'omni_effort_drive_params.yaml']),
             description='本节点的YAML参数文件，可整体替换成自定义调参版本'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
     ]
 
     drive_node = Node(
         package='astribot_s1_chassis_effort_drive',
-        executable='mecanum_effort_drive_node',
-        name='mecanum_effort_drive_node',
+        executable='omni_effort_drive_node',
+        name='omni_effort_drive_node',
         output='screen',
         respawn=True,
         respawn_delay=1.0,

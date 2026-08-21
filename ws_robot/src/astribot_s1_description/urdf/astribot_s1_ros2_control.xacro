@@ -3,12 +3,12 @@
   文件用途：为躯干升降(4)+头部(2)+左臂(7)+右臂(7) 共 20 个 revolute 关节声明 <ros2_control> 硬件接口，
   并挂载 gz_ros2_control 的 Gazebo 系统插件，使 ros2_control 的 controller_manager 能在 gz sim 内部运行。
 
-  !!! 麦轮力控重构方案实施记录（治本改造）!!!：4 个轮子(wheel_*_Joint) 原来不在这里声明，
+  !!! 全向轮力控重构方案实施记录（治本改造）!!!：4 个轮子(wheel_*_Joint) 原来不在这里声明，
   理由是"底盘运动学由 astribot_s1.gazebo.xacro 里的 MecanumDrive 系统插件直接接管，
   避免同一关节被两个控制系统同时下发指令的冲突"——现在 MecanumDrive 和 VelocityControl
   两个插件已经整体移除（见 astribot_s1.gazebo.xacro 的对应记录），轮子改成通过
   effort command_interface 接入 ros2_control，由 astribot_s1_chassis_effort_drive 包的
-  mecanum_effort_drive_node 计算力矩、经 forward_command_controller 下发，不再有
+  omni_effort_drive_node 计算力矩、经 forward_command_controller 下发，不再有
   "两个控制系统抢同一个关节"这个问题——这正是本次改造要消除的东西，现在轮子和
   躯干/头部/双臂共用同一个 ros2_control 硬件实例、同一个 controller_manager，
   是治本方案的一部分，不是疏忽。

@@ -20,15 +20,15 @@ setup(
     maintainer='astribot-dev',
     maintainer_email='dev@astribot.local',
     description=(
-        '麦克纳姆底盘力矩闭环驱动：/cmd_vel经逆解+轮速PID+摩擦前馈算出effort力矩，'
+        'X 型布局全向轮底盘力矩闭环驱动：/cmd_vel经逆解+轮速PID+摩擦前馈算出effort力矩，'
         '替代VelocityControl+MecanumDrive双运动学并行架构'
     ),
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'mecanum_effort_drive_node = '
-            'astribot_s1_chassis_effort_drive.mecanum_effort_drive_node:main',
+            'omni_effort_drive_node = '
+            'astribot_s1_chassis_effort_drive.omni_effort_drive_node:main',
         ],
     },
 )

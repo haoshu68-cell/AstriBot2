@@ -1,5 +1,5 @@
 # controller_manager + 4 个 JointTrajectoryController + joint_state_broadcaster
-# + 麦轮力控重构方案新增的 wheel_effort_controller。
+# + 全向轮力控重构方案新增的 wheel_effort_controller。
 #
 # 关节分组与 astribot_config/robot_config/astribot_s1/astribot_{torso,head,arm_left,arm_right}.yaml
 # 里的 robot_type 划分保持一致（torso / head / arm），方便和真实设备侧的分组对应，
@@ -28,20 +28,20 @@ controller_manager:
     arm_right_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
-    # !!! 麦轮力控重构方案新增 !!!：不重新实现PID/摩擦前馈逆解逻辑，只用官方
+    # !!! 全向轮力控重构方案新增 !!!：不重新实现PID/摩擦前馈逆解逻辑，只用官方
     # ForwardCommandController把astribot_s1_chassis_effort_drive包算好的四轮
     # effort力矩原样转发给ros2_control——运动学解算/控制闭环(在那个包的
-    # mecanum_effort_drive_node里)跟"怎么把力矩指令送进硬件接口"(这里)解耦。
+    # omni_effort_drive_node里)跟"怎么把力矩指令送进硬件接口"(这里)解耦。
     wheel_effort_controller:
       type: forward_command_controller/ForwardCommandController
 
 joint_state_broadcaster:
   ros__parameters:
-    # !!! 麦轮力控重构方案实测踩坑记录 !!!：这份joints列表原来只有20个非轮关节，
+    # !!! 全向轮力控重构方案实测踩坑记录 !!!：这份joints列表原来只有20个非轮关节，
     # 轮子的effort/position/velocity state_interface虽然在gz_ros2_control里
     # 正确注册了(见启动日志"Loading joint: wheel_RF_Joint"等)，但joint_state_broadcaster
     # 只广播这份显式列表里的关节，导致/joint_states里完全没有轮子——
-    # mecanum_effort_drive_node订阅/joint_states拿不到轮速反馈，
+    # omni_effort_drive_node订阅/joint_states拿不到轮速反馈，
     # 判定为"陈旧"，按设计的fail-safe规则永久输出全零effort，表现成
     # "cmd_vel发了、轮子一动不动"，容易被误判成effort接口没生效，实际是这里的
     # 白名单漏了轮子关节。补上4个轮关节后问题解决。
@@ -155,8 +155,8 @@ arm_right_controller:
       stopped_velocity_tolerance: 0.05
       goal_time: 0.5
 
-# !!! 麦轮力控重构方案新增 !!!：joints 顺序 RF/LF/RR/LR 是"接口契约"——
-# astribot_s1_chassis_effort_drive 包的 mecanum_effort_drive_node 按这个
+# !!! 全向轮力控重构方案新增 !!!：joints 顺序 RF/LF/RR/LR 是"接口契约"——
+# astribot_s1_chassis_effort_drive 包的 omni_effort_drive_node 按这个
 # 顺序往 /wheel_effort_controller/commands 发 Float64MultiArray，这里的顺序
 # 改了必须同步改那个节点(或反过来)，否则力矩会算对但发错轮子。
 wheel_effort_controller:

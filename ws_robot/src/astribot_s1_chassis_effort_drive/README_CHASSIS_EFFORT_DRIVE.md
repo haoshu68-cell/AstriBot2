@@ -1,12 +1,12 @@
 # astribot_s1_chassis_effort_drive
 
-麦克纳姆底盘力矩闭环驱动——治本方案，替代"VelocityControl 本体直控 +
+X 型布局全向轮底盘力矩闭环驱动——治本方案，替代"VelocityControl 本体直控 +
 MecanumDrive 轮子仅视觉转动"两套独立运动学并行架构。
 
 ## 链路
 
 ```
-/cmd_vel(不变) → 麦克纳姆逆解 → 四轮目标转速 → 轮速PID+摩擦前馈
+/cmd_vel(不变) → 全向轮逆解 → 四轮目标转速 → 轮速PID+摩擦前馈
   → /wheel_effort_controller/commands(Float64MultiArray)
   → ros2_control effort command_interface → gz_ros2_control GazeboSimSystem
   → 轮子关节(DART物理) → 轮地各向异性摩擦接触力 → 车身真实动力学响应 → /odom
@@ -17,18 +17,18 @@ MecanumDrive 轮子仅视觉转动"两套独立运动学并行架构。
 
 ## 必须先标定，不能直接信任默认值
 
-- **逆解符号方案**（`config/mecanum_effort_drive_params.yaml` 里的
+- **逆解符号方案**（`config/omni_effort_drive_params.yaml` 里的
   `kinematics_sign_{vx,vy,wz}`）：默认值是按现有 `fdir1` 对角线摩擦分组倒推
   的初始假设，真实符号取决于每个轮关节各不相同的物理安装朝向。跑完单轮测试、
   原地旋转测试才能确认对不对。
 - **PID增益/摩擦前馈/力矩限幅**：全部是起始估算值，不是实测数据。
-- 详细的分阶段测试步骤、判定指标、风险清单，见项目 plan 文件里"麦轮力控
+- 详细的分阶段测试步骤、判定指标、风险清单，见项目 plan 文件里"全向轮力控
   重构方案"章节。
 
 ## 轮径扫描测试
 
 ```bash
-ros2 launch astribot_s1_chassis_effort_drive mecanum_effort_drive.launch.py \
+ros2 launch astribot_s1_chassis_effort_drive omni_effort_drive.launch.py \
   wheel_radius:=0.12
 ```
 

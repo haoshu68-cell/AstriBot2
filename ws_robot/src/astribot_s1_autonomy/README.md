@@ -500,7 +500,7 @@ ros2 run astribot_s1_autonomy scan_slice_debug.py
 于是 `params_file` 这个被所有子 launch 共用的名字会互相串——谁先 include，
 谁的默认值就成了后面所有人的值。实测 `slice_scan` 先 include，协调器就拿到了
 **切片感知的 yaml**；反过来在 `launch_arguments` 里显式传也会**继续往后泄漏**，
-实测 `mecanum_effort_drive_node` 收到了协调器的 yaml。
+实测 `omni_effort_drive_node` 收到了协调器的 yaml。
 
 之所以极难发现：这些 yaml 都用 `/**:` 通配，**会被正常加载且不报任何错**，
 只是里面没有该节点的参数，所有阈值静默退回声明默认值。
@@ -532,7 +532,7 @@ pgrep -af <node_name> | grep -o "params-file [^ ]*"
 ### 8. 底盘只有 2cm/s、MPPI 频繁求解失败、控制器保不住 20Hz
 
 这三个「看起来无关」的现象是**同一个根因**，就是上面第 6 条的参数泄漏，
-只不过受害者是 `mecanum_effort_drive_node`：
+只不过受害者是 `omni_effort_drive_node`：
 
 1. 它吃到了协调器的 yaml，其中 `control_period_sec: 0.5` 把底盘控制环
    从 100Hz 改成 2Hz（实测 1.85Hz）；

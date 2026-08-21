@@ -1,7 +1,7 @@
 # Nav2 参数文件（controller_plugin=mppi：MPPI + Smac2D，推荐配置）。
 #
 # MPPI (Model Predictive Path Integral) 原生支持 holonomic 全向运动模型
-# （motion_model: "Omni"），能真正利用本机器人麦克纳姆轮的全向平移能力（斜着直接走，
+# （motion_model: "Omni"），能真正利用本机器人全向轮的全向平移能力（斜着直接走，
 # 不需要先转向），比 nav2_params_rpp.yaml 里的 RPP 更适合这个机器人——推荐实际部署用
 # 这一份，rpp 只是为了满足任务书字面要求保留的默认值。除 controller_server 外，
 # 其它 server(planner/behavior/bt_navigator/waypoint_follower/velocity_smoother/
@@ -55,7 +55,7 @@ controller_server:
       gamma: 0.015
       # !!! 关键参数 !!!：motion_model 必须是 "Omni"（全向），不是 MPPI 默认示例常见的
       # "DiffDrive"——设成 DiffDrive 的话 MPPI 也会跟 RPP 一样退化成"先转向再前进"，
-      # 白白浪费麦克纳姆轮的全向能力。
+      # 白白浪费全向轮的全向能力。
       motion_model: "Omni"
       visualize: false
       reset_period: 1.0
