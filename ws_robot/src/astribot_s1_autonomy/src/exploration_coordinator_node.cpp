@@ -1168,7 +1168,30 @@ void ExplorationCoordinatorNode::rejectCurrentCandidate(const std::string & reas
     onCandidatesExhausted(reason);
     return;
   }
-  requestPlanForCurrentCandidate();
+  // 刻意**不**在这里直接调 requestPlanForCurrentCandidate()（原来是这么写的，实测踩坑）。
+  //
+  // 本函数的调用方之一是 onPlanGoalResponse()，它在入口就持有 state_mutex_
+  // （非递归 std::mutex）。在持锁状态下再发一个 action goal，如果这个 goal 又被
+  // 同步拒绝，就会在同一条 io_cb_group_（MutuallyExclusive）上重新进入
+  // onPlanGoalResponse 并二次取同一把锁 —— 整个节点会彻底静默。
+  //
+  // 实测现象（planner_server 因为 Nav2 bringup 卡住而停在 inactive、于是
+  // compute_path_to_pose 同步拒绝每一个 goal）：日志停在
+  //   丢弃候选 1/4 (-0.58, 0.69): 规划请求被拒绝
+  // 之后 283s 零输出 —— 既没有"校验候选 2/4"，也没有本该立刻打印的
+  // "全局规划动作尚未就绪"节流告警，连 0.5s 的 tick 日志都没有
+  // （tick 也要取 state_mutex_，所以锁一挂住就全静默）。
+  //
+  // 不需要在这里重发：tickValidating() 每个节拍都会检查
+  // "校验请求不在途 -> requestPlanForCurrentCandidate()"，
+  // 由定时器入口统一持锁、单层调用，天然不会重入。代价只是每个被拒候选
+  // 多等一个 0.5s 节拍（4 个候选最多 2s），换掉一个能让节点假死的重入路径，
+  // 这个交换很值。
+  //
+  // 不变式（新增的，别再破坏它）：**持有 state_mutex_ 时不得发 action goal**。
+  // 同一风险还存在于 dispatchGoal() 里的 nav_client_->async_send_goal()，
+  // 那条路径上 onNavGoalResponse 只走 registerNavFailure、不再回头发 goal，
+  // 所以目前只差一层、没有闭环重入，但同样不该指望这一点长期成立。
 }
 
 void ExplorationCoordinatorNode::onCandidatesExhausted(const std::string & reason)
