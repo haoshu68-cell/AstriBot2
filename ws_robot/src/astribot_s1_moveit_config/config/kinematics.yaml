@@ -1,0 +1,49 @@
+# =============================================================================
+# IK 求解器配置
+#
+# 求解器选择：KDL (kdl_kinematics_plugin)。理由：
+#   · 本机 /opt/ros/humble/lib 下实测可用的 IK 插件只有 KDL、LMA、cached_ik
+#     三种（没装 trac_ik / bio_ik / IKFast）。
+#   · LMA (Levenberg-Marquardt) 对 7-DOF 冗余臂容易收敛到关节限位边缘；
+#     KDL 的 Newton-Raphson 配随机重启在 7 自由度上实测更稳。
+#   · IKFast 需要针对具体机型离线生成解析解，本机没有生成产物。
+#
+# !!! 闭链规划对 IK 的要求和普通抓取完全不同 !!!
+# leader-follower 闭链方案里，follower 臂的每一个 waypoint 都要解一次 IK
+# （见 astribot_s1_manipulation/src/closed_chain_constraint.cpp）。
+# 一条 50 点的轨迹就是 50 次 IK 调用，所以：
+#   · kinematics_solver_timeout 不能给大：给 0.05s 的话 50 点最坏 2.5s，
+#     再乘上重规划次数就慢得没法用。这里给 0.01s，靠"多次尝试"而不是
+#     "单次久等"来提高成功率 —— 单次 IK 要么很快收敛，要么就是真的无解，
+#     久等基本等不出结果。
+#   · kinematics_solver_attempts 给 3：每次尝试用不同随机种子重启，
+#     对冗余臂能明显提高成功率。
+#   · search_resolution 影响冗余自由度的离散搜索精度，给太细会拖慢单次求解。
+#
+# 如果实测 follower IK 成功率偏低（demo 节点会打印每条轨迹的 IK 失败点数），
+# 优先调 attempts 而不是 timeout，原因同上。
+# =============================================================================
+
+arm_left:
+  kinematics_solver: kdl_kinematics_plugin/KDLKinematicsPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 0.01
+  kinematics_solver_attempts: 3
+
+arm_right:
+  kinematics_solver: kdl_kinematics_plugin/KDLKinematicsPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 0.01
+  kinematics_solver_attempts: 3
+
+# 双臂组不配 IK 求解器：14 DOF 的"整组 IK"没有明确定义
+# （两个末端两个目标，KDL 只能处理单链单末端）。
+# 双臂的位姿求解走 astribot_s1_manipulation 的闭链投影：
+# leader 用 OMPL 规划关节轨迹，follower 用上面 arm_left/arm_right 的单链 IK
+# 逐点求解并强制相对位姿约束。这是刻意设计，不是漏配。
+
+torso:
+  kinematics_solver: kdl_kinematics_plugin/KDLKinematicsPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 0.01
+  kinematics_solver_attempts: 3

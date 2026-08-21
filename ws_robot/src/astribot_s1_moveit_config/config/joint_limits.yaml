@@ -1,0 +1,170 @@
+# =============================================================================
+# 关节限位配置
+#
+# !!! 本文件存在的根本原因：URDF 里没有加速度限位 !!!
+# 实测 astribot_s1.xacro 展开后的 URDF，每个 revolute 关节只有
+#   <limit lower= upper= velocity= effort= />
+# 四个字段，**没有任何加速度信息**。而 MoveIt 的时间参数化
+# (IterativeParabolicTimeParameterization / TimeOptimalTrajectoryGeneration)
+# 必须有加速度上限才能给轨迹打时间戳，缺了就无法生成可执行轨迹。
+# 所以加速度限位只能在这里补，这是 MoveIt 的标准做法，不算"硬编码"——
+# 代码里不出现任何数值，全部从本 yaml 读。
+#
+# ---- max_velocity 为什么照抄 URDF 而不调小 ----
+# URDF 给的 8.4 / 15 / 16.8 rad/s 是**样本手册峰值**（480~960 °/s），
+# 不是协同作业该用的速度。但本文件的职责是给出**硬上限**，用于
+# "轨迹是否非法"的判定（任务要求：禁止输出超速轨迹）。
+# 实际作业速度由 manipulation_params.yaml 里的
+# velocity_scaling_factor / acceleration_scaling_factor 控制，
+# 节拍优化就是在这个硬上限之内把 scaling 用满。
+# 两者职责分离：这里是"红线"，那里是"油门"。
+#
+# ---- max_acceleration 的取值依据（是假设，不是实测，必须标定）----
+# 取 a_max = max_velocity / ramp_time，ramp_time = 0.35 s，
+# 含义是"从静止加速到该关节满速所需时间"，这是伺服关节的常见量级假设。
+#   torso (6.0 rad/s)      -> 17.1 rad/s^2
+#   head  (4.0 rad/s)      -> 11.4 rad/s^2
+#   arm joint 1-3 (8.4)    -> 24.0 rad/s^2
+#   arm joint 4-5 (15.0)   -> 42.9 rad/s^2
+#   arm joint 6-7 (16.8)   -> 48.0 rad/s^2
+# !!! 诚实说明：ramp_time=0.35s 没有实机辨识数据支撑，是工程起始估算值。
+#     上真机前必须用单关节阶跃响应标定，否则 TOTG 会按这个上限压缩节拍，
+#     生成控制器实际跟不住的轨迹（表现为跟踪误差告警、抖动）。
+#     标定方法见 astribot_s1_manipulation/README.md「节拍调参方法」。
+#     真机偏保守时把 ramp_time 调大（= a_max 调小）即可，不用改代码。
+#
+# ---- 为什么不写 max_jerk ----
+# 只有 Ruckig 平滑器用得上 jerk 限位，而 URDF/手册都没有 jerk 数据，
+# 编个数字进去等于给后续调参埋一个来源不明的常量。
+# Ruckig 在 manipulation_params.yaml 里默认关闭；要开的话先补真实 jerk 数据。
+# =============================================================================
+
+joint_limits:
+
+  # ---------------- 躯干 4 DOF ----------------
+  # 规划双臂时躯干锁定，但单独规划躯干（抬升/侧倾）时用这些限位。
+  astribot_torso_joint_1:
+    has_velocity_limits: true
+    max_velocity: 6.0
+    has_acceleration_limits: true
+    max_acceleration: 17.1
+  astribot_torso_joint_2:
+    has_velocity_limits: true
+    max_velocity: 6.0
+    has_acceleration_limits: true
+    max_acceleration: 17.1
+  astribot_torso_joint_3:
+    has_velocity_limits: true
+    max_velocity: 6.0
+    has_acceleration_limits: true
+    max_acceleration: 17.1
+  astribot_torso_joint_4:
+    has_velocity_limits: true
+    max_velocity: 6.0
+    has_acceleration_limits: true
+    max_acceleration: 17.1
+
+  # ---------------- 头部 2 DOF ----------------
+  astribot_head_joint_1:
+    has_velocity_limits: true
+    max_velocity: 4.0
+    has_acceleration_limits: true
+    max_acceleration: 11.4
+  astribot_head_joint_2:
+    has_velocity_limits: true
+    max_velocity: 4.0
+    has_acceleration_limits: true
+    max_acceleration: 11.4
+
+  # ---------------- 左臂 7 DOF ----------------
+  # 注意 joint_3 的限位左右不对称（左 [-3.0, 1.4]，右 [-1.4, 3.1]），
+  # 这是机械结构决定的，SRDF 的 ready 姿态因此左右符号相反。
+  astribot_arm_left_joint_1:
+    has_velocity_limits: true
+    max_velocity: 8.4
+    has_acceleration_limits: true
+    max_acceleration: 24.0
+  astribot_arm_left_joint_2:
+    has_velocity_limits: true
+    max_velocity: 8.4
+    has_acceleration_limits: true
+    max_acceleration: 24.0
+  astribot_arm_left_joint_3:
+    has_velocity_limits: true
+    max_velocity: 8.4
+    has_acceleration_limits: true
+    max_acceleration: 24.0
+  astribot_arm_left_joint_4:
+    has_velocity_limits: true
+    max_velocity: 15.0
+    has_acceleration_limits: true
+    max_acceleration: 42.9
+  astribot_arm_left_joint_5:
+    has_velocity_limits: true
+    max_velocity: 15.0
+    has_acceleration_limits: true
+    max_acceleration: 42.9
+  astribot_arm_left_joint_6:
+    has_velocity_limits: true
+    max_velocity: 16.8
+    has_acceleration_limits: true
+    max_acceleration: 48.0
+  astribot_arm_left_joint_7:
+    has_velocity_limits: true
+    max_velocity: 16.8
+    has_acceleration_limits: true
+    max_acceleration: 48.0
+
+  # ---------------- 右臂 7 DOF ----------------
+  astribot_arm_right_joint_1:
+    has_velocity_limits: true
+    max_velocity: 8.4
+    has_acceleration_limits: true
+    max_acceleration: 24.0
+  astribot_arm_right_joint_2:
+    has_velocity_limits: true
+    max_velocity: 8.4
+    has_acceleration_limits: true
+    max_acceleration: 24.0
+  astribot_arm_right_joint_3:
+    has_velocity_limits: true
+    max_velocity: 8.4
+    has_acceleration_limits: true
+    max_acceleration: 24.0
+  astribot_arm_right_joint_4:
+    has_velocity_limits: true
+    max_velocity: 15.0
+    has_acceleration_limits: true
+    max_acceleration: 42.9
+  astribot_arm_right_joint_5:
+    has_velocity_limits: true
+    max_velocity: 15.0
+    has_acceleration_limits: true
+    max_acceleration: 42.9
+  astribot_arm_right_joint_6:
+    has_velocity_limits: true
+    max_velocity: 16.8
+    has_acceleration_limits: true
+    max_acceleration: 48.0
+  astribot_arm_right_joint_7:
+    has_velocity_limits: true
+    max_velocity: 16.8
+    has_acceleration_limits: true
+    max_acceleration: 48.0
+
+  # ---------------- 轮子 ----------------
+  # 4 个轮关节是 continuous 型，不属于任何 MoveIt 规划组（底盘走 Nav2 力矩闭环，
+  # 见 astribot_s1_chassis_effort_drive）。这里显式关掉限位声明，
+  # 避免 MoveIt 因为 continuous 关节缺限位而打无意义的警告。
+  wheel_RF_Joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  wheel_LF_Joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  wheel_RR_Joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false
+  wheel_LR_Joint:
+    has_velocity_limits: false
+    has_acceleration_limits: false

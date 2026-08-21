@@ -1,0 +1,393 @@
+# astribot_s1_manipulation — 双臂运动规划栈
+
+Astribot S1 的 MoveIt2 运动规划能力包。四块能力：OMPL 规划器扩展、双臂闭链约束、
+碰撞/奇异检测、轨迹节拍优化。配套配置在 `astribot_s1_moveit_config`。
+
+---
+
+## ⚠️ 先读这三条（都是实测踩过的坑，不知道会白花很多时间）
+
+### 1. 本机器人的「全零构型」是奇异构型，不能从它起步规划
+
+两条臂的 `joint_4` 是肘关节，限位 `[0.0, 2.4]`。**`joint_4 = 0` 就是肘部完全伸直**，
+即教科书上的奇异构型。实测该构型 `sigma_min = 0.0077`，低于本工程阈值 `0.02`，
+奇异检测会（正确地）拒绝任何以它为起点的轨迹：
+
+```
+attempt 1/3: singular configuration at waypoint 0/12
+             (sigma_min=0.00771057 below threshold 0.02) -> discarding solution
+```
+
+而 `joint_state_publisher` 默认把所有关节发成 0，SRDF 里的 `home` 也是全零。
+所以：**规划前必须先让机器人离开全零构型**。SRDF 的 `ready` 姿态就是为此准备的
+（`joint_4 = 1.0`，实测 `sigma_min = 0.116`，余量充足）。
+`demo.move_to_ready_first: true` 会自动做这件事。
+
+### 2. `planning_attempts` 必须是 1，否则 Informed RRT* / BIT* 必定失败
+
+这是一条真实的 **OMPL ↔ MoveIt 不兼容**，不是配置写错。
+
+`planning_attempts > 1` 时 MoveIt 走 `ompl::tools::ParallelPlan` 并行跑多个规划器实例，
+而 MoveIt 的目标是用 `GoalLazySamples`（懒惰目标采样线程）表达的。
+informed 采样类规划器在创建采样器时要求"至少已有 1 个起点和 1 个目标状态"，
+并行分支下目标线程常常一次都没跑完，于是：
+
+```
+Debug:   Stopped goal sampling thread after 0 sampling attempts
+Error:   Exception thrown during ParallelPlan::solveMore:
+         PathLengthDirectInfSampler: There must be at least 1 start and
+         and 1 goal state when the informed sampler is created.
+Warning: Goal sampling thread never did any work.
+```
+
+MoveIt 把它翻译成一句毫无信息量的 `Unable to solve the planning problem`，
+看起来像"这个规划器不行"或"目标不可达"，极难定位。
+
+设 `planning_attempts: 1` 后走单规划器路径，日志出现 `Using informed sampling.`
+并正常出解。需要多次尝试请用本包自己的 `max_replan_attempts`
+（每次是完整一轮"规划 + 全套校验"，不走 ParallelPlan）。
+
+### 3. 换回官方 OMPL 插件会让 BIT* / Informed RRT* 静默失效
+
+MoveIt2 Humble 官方的 `ompl_interface/OMPLPlanner` 只注册了 25 个规划器，实测
+三个必需规划器里**只有 `RRTstar`**：
+
+```bash
+strings /opt/ros/humble/lib/libmoveit_ompl_interface.so \
+  | grep -oE "geometric::[A-Za-z_]+" | sort -u    # 25 个，无 BITstar / InformedRRTstar
+```
+
+而 OMPL 1.7 本体是有的（`informedtrees/BITstar.h`、`rrt/InformedRRTstar.h`）。
+本包的 `astribot_s1_manipulation/OmplPlannerExtension` 插件用 MoveIt 公开 API
+把它们补注册进去（不改任何系统库源码）。
+
+**关键风险**：`ompl_planning.yaml` 里写一个 MoveIt 不认识的规划器名时，
+MoveIt **不报错**，而是静默回退到该组默认规划器。所以切换规划器后一定要看日志：
+
+```
+[astribot_s1_manipulation.ompl_extension]: registered extra OMPL planners: 25 -> 30 total
+[astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::RRTstar
+[astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::BITstar
+[astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::InformedRRTstar
+[moveit.ompl_planning...]: Planner configuration 'arm_left[BITstarConfig]'
+                           will use planner 'geometric::BITstar'
+```
+
+最后那行是"真的在跑 BIT*"的唯一证据。
+
+---
+
+## 编译
+
+```bash
+cd ~/WorkSpace/astribot_sdk_ros2/ws_robot
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install --packages-select \
+    astribot_s1_moveit_config astribot_s1_manipulation
+source install/setup.bash
+```
+
+跑单元测试（不需要仿真、不需要 move_group）：
+
+```bash
+colcon test --packages-select astribot_s1_manipulation
+colcon test-result --all --verbose
+```
+
+---
+
+## 启动
+
+### 只验证规划（不开 Gazebo，最快）
+
+需要有 `/robot_description` 和 `/joint_states`。开三个终端：
+
+```bash
+# 终端 1：机器人模型
+xacro $(ros2 pkg prefix astribot_s1_description)/share/astribot_s1_description/urdf/astribot_s1.xacro \
+      robot_name:=astribot_s1 > /tmp/astribot_s1.urdf
+ros2 run robot_state_publisher robot_state_publisher \
+      --ros-args -p robot_description:="$(cat /tmp/astribot_s1.urdf)" -p use_sim_time:=false
+
+# 终端 2：关节状态。注意不要用默认的全零（见上面第 1 条），
+# 要么用 GUI 手动拖离全零，要么发一个 ready 姿态。
+ros2 run joint_state_publisher_gui joint_state_publisher_gui
+
+# 终端 3：move_group + demo
+ros2 launch astribot_s1_manipulation planning_demo.launch.py use_sim_time:=false
+```
+
+### 全链路仿真（能真的看到机器人动）
+
+```bash
+# 终端 1：仿真（含 Gazebo、ros2_control、4 个 JointTrajectoryController）
+ros2 launch astribot_s1_gazebo_bringup warehouse_sim.launch.py
+
+# 终端 2：move_group + demo，并把轨迹下发执行
+ros2 launch astribot_s1_manipulation planning_demo.launch.py execute:=true
+```
+
+MoveIt 通过既有的 `arm_left_controller` / `arm_right_controller` / `torso_controller`
+下发轨迹（都是 `JointTrajectoryController`，100Hz），不需要新增任何控制器。
+
+### 只起 move_group（自己写客户端时）
+
+```bash
+ros2 launch astribot_s1_moveit_config move_group.launch.py use_rviz:=true
+```
+
+---
+
+## 如何切换 OMPL 规划器
+
+三种方式，优先级从高到低：
+
+```bash
+# 1) 命令行（最常用）
+ros2 launch astribot_s1_manipulation planning_demo.launch.py planner_id:=BITstarConfig
+
+# 2) 改 yaml：astribot_s1_manipulation/config/manipulation_params.yaml
+#    planner_id: "InformedRRTstarConfig"
+
+# 3) 代码里按请求覆盖：SingleArmPlanRequest::planner_id / ClosedChainPlanRequest::planner_id
+```
+
+可用的**配置名**（不是 OMPL 类名，别写混）：
+
+| 配置名 | 实际规划器 | 说明 |
+|---|---|---|
+| `RRTstarConfig` | `geometric::RRTstar` | 官方已注册，渐进最优 |
+| `BITstarConfig` | `geometric::BITstar` | **本包插件注册**，批量启发式，收敛快 |
+| `InformedRRTstarConfig` | `geometric::InformedRRTstar` | **本包插件注册**，椭球启发采样 |
+| `RRTConnectConfig` | `geometric::RRTConnect` | 非最优但快，作对比基线 |
+
+另外插件还注册了 `geometric::ABITstar` / `AITstar` / `SORRTstar`，想用的话在
+`ompl_planning.yaml` 里照样加一段 `type:` 即可。
+
+每个规划器的参数在 `astribot_s1_moveit_config/config/ompl_planning.yaml`，
+各自独立一段。**参数名写错不会报错但也不生效** —— 本包插件会检出并打 WARN：
+
+```
+planner 'arm_left/arm_left[InformedRRTstarConfig]' has no parameter named 'focus_search'
+(value 'true' ignored); check the key spelling against OMPL's declareParam names
+```
+
+（OMPL 原生行为是静默忽略未知参数，所以这条 WARN 是本包特意加的。）
+
+---
+
+## 如何修改闭链约束
+
+全部在 `config/manipulation_params.yaml` 的 `closed_chain:` 段。
+
+### 闭链的数学定义
+
+两臂夹持同一刚体 ⇒ 两个 TCP 的相对位姿恒定：
+
+```
+T_rel = T_L^{-1} · T_R = const
+```
+
+残差按下式算，**位置与姿态量纲不同，分开设阈值，不能加成一个标量**：
+
+```
+E   = T_L^{-1} · T_R · T_rel^{-1}      理想为单位矩阵
+e_p = ||translation(E)||               单位 m
+e_r = |angle-axis(rotation(E))|        单位 rad
+```
+
+### 常用改法
+
+```yaml
+closed_chain:
+  # 换哪条臂当 leader（物体偏右时用右臂当 leader 更容易规划）
+  leader_group: "arm_left"
+  follower_group: "arm_right"
+
+  # 换夹具/换 TCP 只改这两行，不用动 SRDF
+  leader_tcp_link: "astribot_arm_left_tool_link"
+  follower_tcp_link: "astribot_arm_right_tool_link"
+
+  # true  = 从当前状态捕获 T_rel（推荐：先手动把两臂摆到夹持位姿再规划，
+  #         夹持几何由实际摆位决定，不需要任何人去量尺寸）
+  # false = 用下面两行显式给定（适合已知物体尺寸的标定场景）
+  capture_from_current_state: true
+  relative_translation: [0.0, -0.4, 0.0]      # m
+  relative_rotation_xyzw: [0.0, 0.0, 0.0, 1.0]
+
+  # 残差阈值。放宽会让夹持物体承受更大内力，收紧会让 IK 更容易被拒
+  position_tolerance: 0.005        # m
+  orientation_tolerance: 0.02      # rad
+```
+
+### 闭链规划失败时怎么查
+
+demo 会打印 `follower IK 失败点数`。按这个数字判断：
+
+| 现象 | 处置 |
+|---|---|
+| IK 失败点数多（>轨迹一半） | follower 目标超出可达空间。换 leader、缩小 leader 运动幅度，或调 `ik_attempts`（**不要**调大 `ik_timeout`，单次 IK 要么很快收敛要么真无解） |
+| 错误码 `CLOSED_CHAIN_RESIDUAL_TOO_LARGE` | IK 收敛到了容差外的解。适度放宽 `position_tolerance`，或减小 `densify_max_joint_step` 让相邻点更近（IK 种子更好） |
+| 错误码 `SINGULAR_CONFIGURATION` | 闭链构型把某条臂推到奇异。换起始姿态，或适度降低 `singularity.min_singular_value`（但别低于 0.01） |
+| 错误码 `SELF_COLLISION` | 两臂在闭链约束下互撞。改 `T_rel`（夹持更宽/更窄），或换 leader |
+
+---
+
+## 如何看节拍指标 / 怎么调节拍
+
+### 指标从哪来
+
+demo 每条轨迹都会打印：
+
+```
+  总运动时长: 0.381 s
+  最大关节速度: 3.9132 rad/s (astribot_arm_right_joint_1)
+  最大关节加速度: 21.6085 rad/s^2 (astribot_arm_right_joint_1)
+  速度利用率峰值: 46.6% (越接近 100% 说明节拍越紧)
+  轨迹合法性: 合法
+优化: 节拍对比: 时长 0.707s -> 0.381s (缩短 46.1%) | ... | 优化后合法性: 合法
+  已采纳 TOTG 优化，节拍缩短 46.1%
+```
+
+「速度利用率」= 实际峰值速度 / 关节硬限位。这是判断"还有多少压缩余量"的核心指标：
+远小于 100% 说明还能更快，接近 100% 说明已经贴着限位。
+
+### 节拍优化怎么工作
+
+同一条几何路径分别做两次时间参数化，取更快且**合法**的：
+
+- **baseline = IPTP**（`IterativeParabolicTimeParameterization`）：保守、鲁棒，作对比分母
+- **优化 = TOTG**（`TimeOptimalTrajectoryGeneration`）：时间最优，把限位真正跑满
+
+优化不改路径形状，只重新分配时间戳，所以不会引入新的碰撞风险。
+
+**硬契约**：优化结果由 `trajectory_metrics` 独立复核限位，
+超限 / 参数化失败 / 反而更慢 → **回退 baseline 并告警**，绝不输出非法轨迹。
+连 baseline 都超限 → 直接返回 `JOINT_LIMIT_VIOLATION`，**不输出任何轨迹**。
+
+### 调参手册
+
+```yaml
+time_optimizer:
+  # 想更快：把这两个往 1.0 推。但真机建议留 10% 余量给跟踪误差，
+  # 否则控制器一滞后就超限报警
+  optimized_velocity_scaling: 0.90
+  optimized_acceleration_scaling: 0.90
+
+  # 拐角抹圆容差。给大了节拍更好但会偏离原路径（有碰撞风险，
+  # 因为碰撞是在原路径上校验的）；给 0 会让拐角速度掉到 0，节拍反而更差
+  totg_path_tolerance: 0.1
+
+  # 这条很关键：OMPL 路径常含几乎重合的点，不合并会让 TOTG
+  # 在这些点上算出巨大速度（除以接近 0 的距离）
+  totg_min_angle_change: 0.001
+```
+
+### ⚠️ 加速度限位是估算值，上真机前必须标定
+
+URDF 里**只有** velocity/effort，**没有加速度限位**（实测确认）。
+`astribot_s1_moveit_config/config/joint_limits.yaml` 里的加速度是按
+`a_max = v_max / ramp_time`（`ramp_time = 0.35s`）推导的，
+**这是工程起始估算值，没有实机辨识数据支撑**。
+
+TOTG 会按这个上限压缩节拍。如果它偏大，生成的轨迹控制器根本跟不住
+（表现为跟踪误差告警、抖动）。上真机前用单关节阶跃响应标定：
+给一个已知幅值的位置阶跃，测实际达到满速所需时间，用它替换 `ramp_time`。
+偏保守时把 `ramp_time` 调大（= `a_max` 调小），不用改代码。
+
+---
+
+## 实测结果（bare 环境，无 Gazebo，2026-08-20）
+
+```
+---------- 场景 [closed_chain] 结果 ----------
+错误码: SUCCESS (成功), 尝试次数: 1
+关节轨迹: 9 点, 关节数 14
+笛卡尔轨迹(leader TCP): 9 个位姿
+笛卡尔轨迹(follower TCP): 9 个位姿
+  总运动时长: 0.381 s
+  速度利用率峰值: 46.6%
+  轨迹合法性: 合法
+  已采纳 TOTG 优化，节拍缩短 46.1%
+闭链残差(全轨迹最差): 位置 0.000293 m, 姿态 0.000366 rad -> 满足约束
+奇异余量(全轨迹最差): sigma_min=0.116389, 条件数=15.34
+
+---------- 规划器对比 ----------
+  RRTstarConfig            成功 | 时长 0.236s | 6 点 | 速度利用率 25.7%
+  BITstarConfig            成功 | 时长 0.236s | 6 点 | 速度利用率 25.7%
+  InformedRRTstarConfig    成功 | 时长 0.236s | 6 点 | 速度利用率 25.7%
+```
+
+闭链残差 0.29mm / 0.00037rad，远优于 5mm / 0.02rad 的阈值 —— 这是
+"逐点 IK 投影"相比"两条独立单臂规划"的直接差别（后者残差会一路漂移到厘米级）。
+
+---
+
+## 工具：重新生成 SRDF 的碰撞关闭列表
+
+SRDF 里 42 条 `disable_collisions` 不是手填的，是推导 + 实测的产物：
+27 条相邻对由 URDF 树确定性推导，另 15 条由实测得到。
+
+漏了会怎样：起始构型直接判自碰撞，OMPL 报
+`There are no valid initial states!` → `Unable to solve the planning problem`，
+现场看起来像"规划器不行"，实际是起点非法、规划器根本没机会跑。
+
+重新生成：
+
+```bash
+ros2 run astribot_s1_manipulation self_collision_pair_generator 10000
+```
+
+输出到 stdout（不带日志前缀，可直接复制）。三类结果：
+- `ALWAYS` → `reason="Default"`，**必须关**
+- `NEVER` → `reason="Never"`，关掉纯为省开销
+- `有时碰撞` → **绝对不要关**，必须留给运行时检测（只以注释形式列出）
+
+---
+
+## 代码结构
+
+```
+include/astribot_s1_manipulation/
+├── error_codes.hpp                 统一错误码 + isRetryable（区分该不该重试）
+├── singularity_monitor.hpp         雅可比 SVD 奇异检测（sigma_min + 条件数双判据）
+├── closed_chain_constraint.hpp     T_rel / 残差 / follower IK 投影
+├── collision_validator.hpp         自碰撞 + 臂-底盘 + 环境碰撞，分别返回错误码
+├── trajectory_metrics.hpp          节拍量化 + 限位合法性判定
+├── trajectory_time_optimizer.hpp   IPTP vs TOTG + 超限回退
+└── dual_arm_planner.hpp            对外总接口（单臂 / 闭链 / 执行）
+src/
+├── ompl_planner_extension.cpp      ★ 注册 BIT* / Informed RRT* 的 PlannerManager 插件
+├── planning_demo_node.cpp          demo：四个场景 + 全量指标输出
+└── self_collision_pair_generator.cpp  SRDF 碰撞对生成工具
+```
+
+规划流程（`planClosedChain`）：
+
+```
+捕获 T_rel  →  leader 单臂 OMPL 规划(7维)  →  加密路径  →  逐点 follower IK 投影
+   →  逐点校验(闭链残差 / 碰撞 / 奇异)  →  合并成 14 维轨迹
+   →  时间参数化 + 节拍优化  →  在最终轨迹上复核闭链残差  →  输出
+```
+
+最后那步"复核"不能省：TOTG 会重采样路径点，插出来的新点未必满足闭链约束。
+
+## 错误码
+
+| 错误码 | 含义 | 可重试 |
+|---|---|---|
+| `SUCCESS` | 成功，且已通过限位/碰撞/奇异/闭链四项校验 | — |
+| `INVALID_INPUT` | 入参非法（空组名、维度不符、目标超限位） | 否 |
+| `PLANNING_GROUP_NOT_FOUND` | SRDF 里没这个组 | 否 |
+| `NOT_CONFIGURED` | 没 initialize 就调规划接口 | 否 |
+| `PLANNER_FAILED` | OMPL 无解或超时 | **是** |
+| `IK_FAILED` | follower IK 无解（闭链目标超出可达空间） | **是** |
+| `CLOSED_CHAIN_RESIDUAL_TOO_LARGE` | 闭链残差超阈值 | **是** |
+| `SINGULAR_CONFIGURATION` | 轨迹含奇异构型 | **是** |
+| `SELF_COLLISION` / `ENVIRONMENT_COLLISION` | 碰撞 | **是** |
+| `TIME_PARAMETERIZATION_FAILED` | IPTP/TOTG 都失败 | 否 |
+| `JOINT_LIMIT_VIOLATION` | 轨迹超硬限位（此时**不输出轨迹**） | 否 |
+| `RETRIES_EXHAUSTED` | 重试用尽 | 否 |
+| `EXCEPTION_CAUGHT` | 捕获到第三方库异常（已记日志，不上抛） | 否 |
+
+失败时 `PlanResult::trajectory` 一定为空 —— 任何失败都不会输出半成品轨迹。

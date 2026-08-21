@@ -1,0 +1,192 @@
+# =============================================================================
+# 双臂运动规划参数
+#
+# 任务要求"规划器参数、闭链约束参数、轨迹优化参数全部外部可配置，不写死在代码"，
+# 这份文件就是唯一的数值来源。C++ 里所有默认值只是"yaml 缺项时的兜底"，
+# 正式运行以本文件为准。
+#
+# 关键量纲提醒（写错单位是最常见的调参事故）：
+#   长度 m，角度 rad，时间 s，速度 rad/s，加速度 rad/s^2
+# =============================================================================
+planning_demo_node:
+  ros__parameters:
+
+    use_sim_time: true
+
+    # ---------------- 规划组与规划器 ----------------
+    # dual_arm(14 DOF，躯干锁定) 或 dual_arm_with_torso(18 DOF，躯干参与)。
+    # SRDF 里两个都定义好了，切换只改这里，代码不写死组名。
+    dual_arm_group: "dual_arm"
+
+    # OMPL 规划器。必须是 ompl_planning.yaml 里定义过的**配置名**，
+    # 不是 OMPL 类名：
+    #   RRTstarConfig          -> geometric::RRTstar         (MoveIt 官方已注册)
+    #   BITstarConfig          -> geometric::BITstar         (本工程插件注册)
+    #   InformedRRTstarConfig  -> geometric::InformedRRTstar (本工程插件注册)
+    #   RRTConnectConfig       -> geometric::RRTConnect      (基线对比用)
+    #
+    # !!! 切换后务必核对 move_group 日志里打印的实际规划器名 !!!
+    # 写了 MoveIt 不认识的名字时它会**静默回退**到组默认规划器而不报错，
+    # 于是"以为在跑 BIT*、实际跑的是别的"完全看不出来。
+    planner_id: "RRTstarConfig"
+
+    allowed_planning_time: 5.0
+
+    # !!! 必须是 1，不能给更大 !!!（实测踩坑，见 ompl_planning.yaml 里 
+    # InformedRRTstarConfig 那段的完整记录）
+    # >1 时 MoveIt 会走 ompl::tools::ParallelPlan 并行跑多个规划器实例，
+    # 而 InformedRRTstar / BITstar 这类 informed 采样规划器要求创建采样器时
+    # 已经至少有 1 个起点和 1 个目标状态；并行分支下 MoveIt 的懒惰目标采样线程
+    # 常常一次都没跑，于是抛
+    #   PathLengthDirectInfSampler: There must be at least 1 start and 1 goal state
+    # 被 MoveIt 翻译成无信息量的 "Unable to solve the planning problem"。
+    # 设 1 后走单规划器路径，日志出现 "Using informed sampling." 并正常出解。
+    # 需要多次尝试就调下面的 max_replan_attempts（本包自己实现的重试，
+    # 每次都是完整的一轮规划+校验，不走 ParallelPlan）。
+    planning_attempts: 1
+
+    # 单次"规划-校验"循环失败后的最大重试次数。
+    # 采样式规划器有随机性，重试确实可能拿到合法解；但必须有上限 ——
+    # 任务明确禁止无限重试死循环。
+    max_replan_attempts: 3
+
+    # ---------------- leader 路径加密 ----------------
+    # OMPL 返回的路径点可能极稀（几个点）。闭链场景下 follower 的 IK 是我们
+    # 自己在 waypoint 上算的，两个稀疏点之间 IK 解可能跳变（IK 多解），
+    # 中间构型从未被校验 —— 所以必须加密后逐点投影。
+    densify_leader_path: true
+    # 加密后相邻点的最大关节角变化。给太小会让 IK 调用次数爆炸
+    # （总 IK 次数 ≈ 路径弧长 / 本值）。0.05rad ≈ 2.9°。
+    densify_max_joint_step: 0.05
+    # 点数上限，防止病态输入把内存打爆。
+    densify_max_waypoints: 400
+
+    # ---------------- 闭链约束 ----------------
+    closed_chain:
+      # leader 在自己的 7 维空间里跑 OMPL；follower 逐点 IK 跟随。
+      # 左右互换只改这两行（比如物体偏在右侧时，用右臂当 leader 更容易规划）。
+      leader_group: "arm_left"
+      follower_group: "arm_right"
+
+      # TCP 坐标系。本机器人没有夹爪，实测这两个 link 是纯坐标系、无碰撞几何，
+      # 正好适合当 TCP。换夹具时只改这里，不动 SRDF。
+      leader_tcp_link: "astribot_arm_left_tool_link"
+      follower_tcp_link: "astribot_arm_right_tool_link"
+
+      # T_rel（两 TCP 的相对位姿）来源。
+      # true  = 从当前状态捕获：先把两臂摆到夹持位姿再启动规划。
+      #         **推荐**，因为夹持几何由实际摆位决定，不需要任何人去量尺寸，
+      #         也就不存在"硬编码闭链几何尺寸"的问题。
+      # false = 用下面 relative_* 显式给定（适合已知物体尺寸的标定场景）。
+      capture_from_current_state: true
+
+      # 显式模式下的 T_rel。translation 单位 m，rotation 是四元数 (x,y,z,w)。
+      # 下面这组示例含义：follower TCP 在 leader TCP 坐标系的 y 轴负方向 0.4m，
+      # 姿态相同 —— 相当于两手正对夹持一个 0.4m 宽的物体。
+      relative_translation: [0.0, -0.4, 0.0]
+      relative_rotation_xyzw: [0.0, 0.0, 0.0, 1.0]
+
+      # 残差阈值。位置与姿态量纲不同，必须分开设，不能加成一个标量。
+      # 5mm：对刚性夹持来说，5mm 相对错位已足以在物体上产生明显内力。
+      position_tolerance: 0.005
+      # 0.02rad ≈ 1.15°
+      orientation_tolerance: 0.02
+
+      # follower 单点 IK 的超时与尝试次数。
+      # 总开销 = 路径点数 × attempts × timeout，所以 timeout 要小、
+      # 靠 attempts 换成功率（单次 IK 要么很快收敛，要么就是真无解，久等无用）。
+      ik_timeout: 0.01
+      ik_attempts: 3
+
+    # ---------------- 奇异点检测 ----------------
+    singularity:
+      enabled: true
+      # 最小奇异值下限，量纲 m/rad。低于此值判奇异。
+      # 参考实测量级（合成 3R 臂，臂长 1.2m）：完全伸直 2e-17（精确奇异）、
+      # 几乎伸直 2.4e-3、明显弯曲 0.11。真实 7-DOF 臂正常工作构型在
+      # 0.05~0.3 之间，所以 0.02 能挡住真奇异又不误杀。
+      min_singular_value: 0.02
+      # 条件数上限。sigma_max/sigma_min 过大意味着逆解数值病态：
+      # 末端的小位移误差会被放大成巨大关节速度，真机上表现为突然抖动。
+      max_condition_number: 80.0
+      # sigma_max 本身的下限。这是**除零保护**而非业务阈值：
+      # sigma_max 都接近 0 说明雅可比整体退化，此时直接判奇异，
+      # 不去算条件数（会除零得到假的有限值）。
+      degenerate_jacobian_epsilon: 1.0e-9
+
+    # ---------------- 碰撞检测 ----------------
+    collision:
+      # 任务明确禁止跳过碰撞校验。这两个开关不应在正式运行时关闭；
+      # 两个都关会被 configure() 直接拒绝。
+      check_self_collision: true
+      check_environment_collision: true
+      # 逐点校验时用 false（发现第一对就返回，快）；
+      # 失败后想看全部接触对时临时改 true。
+      collect_all_contacts: false
+      max_contacts: 16
+
+    # ---------------- 时间参数化与节拍优化 ----------------
+    time_optimizer:
+      enable_optimization: true
+
+      # baseline 用 IPTP（保守、鲁棒），同时作为节拍对比的分母。
+      baseline_velocity_scaling: 0.30
+      baseline_acceleration_scaling: 0.30
+
+      # 优化档用 TOTG（时间最优），把限位真正跑满。
+      # 不建议给 1.0：真机要留余量给跟踪误差，否则控制器一滞后就超限报警。
+      optimized_velocity_scaling: 0.90
+      optimized_acceleration_scaling: 0.90
+
+      # TOTG 的路径几何容差(rad)：允许在拐角处稍微"抹圆"换取更快通过速度。
+      # 给大了会偏离原路径（有碰撞风险，因为碰撞是在原路径上校验的）；
+      # 给 0 会让拐角速度被迫降到 0，节拍反而更差。
+      totg_path_tolerance: 0.1
+      # 输出重采样步长(s)。0.05s(20Hz) 与 JointTrajectoryController 的
+      # 100Hz 更新率配合良好（控制器会在点之间自己插值）。
+      totg_resample_dt: 0.05
+      # 判定"路径点重复"的最小关节角变化。这一条很关键：OMPL 的路径经常
+      # 含几乎重合的点，不合并会让 TOTG 在这些点上算出巨大速度。
+      totg_min_angle_change: 0.001
+
+      # Ruckig 平滑默认关闭：它需要 jerk 限位，而 URDF 和手册都没有本机器人的
+      # jerk 数据，编一个数字进去等于埋一个来源不明的常量。
+      enable_ruckig_smoothing: false
+
+      # 限位复核的相对容差。完全零容差会把浮点误差误判为超限。
+      limit_tolerance_ratio: 0.001
+
+    metrics:
+      limit_tolerance_ratio: 0.001
+      allow_finite_difference: true
+
+    # ---------------- demo 场景 ----------------
+    demo:
+      # 依次跑哪些场景。可选：single_arm_joint / single_arm_named /
+      # closed_chain / planner_comparison
+      scenarios: ["single_arm_named", "closed_chain", "planner_comparison"]
+
+      # 单臂场景用的组与目标
+      single_arm_group: "arm_left"
+      single_arm_named_target: "ready"
+      # 关节目标（7 个值，对应 arm_left_joint_1..7），取值必须在 URDF 限位内：
+      # joint_1 [-3.0,3.0] joint_2 [-1.4,0.4] joint_3 [-3.0,1.4] joint_4 [0.0,2.4]
+      # joint_5 [-2.0,2.0] joint_6 [-0.6,0.6] joint_7 [-1.4,1.4]
+      single_arm_joint_target: [0.3, -0.6, -0.5, 1.2, 0.2, 0.1, 0.0]
+
+      # 闭链场景：leader 的关节目标（follower 由闭链约束唯一决定，不给目标）。
+      # 这是"两臂夹着物体一起挪动"的动作。
+      closed_chain_leader_joint_target: [0.4, -0.7, -0.4, 1.3, 0.1, 0.0, 0.0]
+
+      # planner_comparison 场景依次用这些规划器跑同一个任务并对比节拍与成功率。
+      # 这正是任务成功判定里"可切换 RRT*/BIT*/Informed RRT*"的自证手段。
+      comparison_planners: ["RRTstarConfig", "BITstarConfig", "InformedRRTstarConfig"]
+
+      # 是否把规划出的轨迹真的下发执行（Gazebo 仿真里机器人会动起来）。
+      # 首次验证建议 false，先看规划指标；确认无误后再开 true。
+      execute_trajectory: false
+
+      # 执行前是否先把双臂摆到 SRDF 的 ready 姿态。
+      # 闭链场景强烈建议 true：ready 姿态刻意让肘部离开完全伸直的奇异构型
+      # （joint_4 = 1.0），从奇异构型起步会让第一个点就被判奇异。
+      move_to_ready_first: true

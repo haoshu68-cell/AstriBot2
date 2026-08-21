@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Astribot S1 双臂 SRDF
+  =====================
+  所有 link/joint 名称均取自 astribot_s1_description 生成的 URDF 实测结果
+  （xacro 展开后 33 joints / 34 links），不是照抄别的机器人模板。
+
+  !!! 本机器人最关键的结构特点（决定了双臂规划怎么建组）!!!
+  两条手臂的基座 astribot_arm_{left,right}_base_link 都用 fixed joint 固连在
+  astribot_torso_end_effector 上，而后者是 4 自由度躯干串链
+  (astribot_torso_joint_1..4) 的末端。也就是说：
+
+      torso_base -> torso_1 -> torso_2 -> torso_3 -> torso_4 -> torso_end_effector
+                                                                 |-> arm_left_base  -> L1..L7 -> left_tool
+                                                                 `-> arm_right_base -> R1..R7 -> right_tool
+
+  躯干一动，两条臂的基座同时动 —— 双臂通过躯干强耦合。因此：
+    · dual_arm 组按当前方案**只含 14 个手臂关节**，躯干在规划期间锁定为当前值。
+      好处是维度低、行为可预测、闭链约束只涉双臂；代价是可达空间小于把躯干放开。
+    · 如果以后要把躯干放开，直接用下面已经定义好的 dual_arm_with_torso 组，
+      代码里不写死组名（从 yaml 读），不需要改 C++。
+
+  另一个实测事实：两个 tool_link 和 torso_end_effector 都**没有 collision 几何**，
+  是纯坐标系。正好适合当 TCP：既能做 IK/约束的参考系，又不会自己制造碰撞。
+-->
+<robot name="astribot_s1">
+
+  <!-- ==================== 规划组 ==================== -->
+
+  <!-- 单臂组：7 自由度。base_link/tip_link 用 chain 形式声明，
+       这样 MoveIt 自动取链上所有活动关节，避免手工枚举漏关节。 -->
+  <group name="arm_left">
+    <chain base_link="astribot_arm_left_base_link" tip_link="astribot_arm_left_tool_link"/>
+  </group>
+
+  <group name="arm_right">
+    <chain base_link="astribot_arm_right_base_link" tip_link="astribot_arm_right_tool_link"/>
+  </group>
+
+  <!-- 双臂协同组：两条链的并集 = 14 DOF。
+       闭链抓取规划用的就是这个组：leader 臂规划 + follower 臂 IK 投影后，
+       两臂关节合并成这个组的一条轨迹统一做时间参数化。 -->
+  <group name="dual_arm">
+    <group name="arm_left"/>
+    <group name="arm_right"/>
+  </group>
+
+  <!-- 躯干组：单独成组，规划双臂时锁定，需要抬升/侧倾时单独规划。 -->
+  <group name="torso">
+    <chain base_link="astribot_torso_base" tip_link="astribot_torso_end_effector"/>
+  </group>
+
+  <group name="head">
+    <chain base_link="astribot_head_base_link" tip_link="astribot_head_link_2"/>
+  </group>
+
+  <!-- 18 DOF 备用组（躯干 + 双臂）。当前方案默认不用，但先定义好：
+       manipulation 包的 group 名从 yaml 读，切过去不需要改代码。 -->
+  <group name="dual_arm_with_torso">
+    <group name="torso"/>
+    <group name="arm_left"/>
+    <group name="arm_right"/>
+  </group>
+
+  <!-- ==================== 末端执行器：刻意不声明 ====================
+       本机器人**没有夹爪关节**（实测：两臂止于 link_7，其后只有一个无碰撞体的
+       tool_link 纯坐标系），因此不存在可以独立成组的"手爪组"。
+
+       SRDF 的 <end_effector> 语义是「group = 手爪自己的关节组，
+       parent_group = 带着手爪走的手臂组」，两者**不能是同一个组**。
+       实测写成 group="arm_left" parent_group="arm_left" 会被 MoveIt 直接拒绝：
+         [ERROR] Group 'arm_left' for end-effector 'eef_left' cannot be its own parent
+       而且这条只是 ERROR 日志、模型仍然加载，很容易被忽略过去。
+
+       所以这里不声明 end_effector。TCP 坐标系由
+       astribot_s1_manipulation/config/manipulation_params.yaml 的
+       left_tcp_link / right_tcp_link 指定（默认两个 tool_link）——
+       这比依赖 SRDF 的 eef 声明更灵活：换夹具只改 yaml，不动 SRDF。
+       代价是 RViz 里没有自动生成的末端交互 marker，对本任务无影响。 -->
+
+  <!-- ==================== 预定义姿态 ====================
+       取值全部落在 URDF 实测限位内（左右臂 joint_3 限位不对称：
+       左 [-3.0, 1.4]、右 [-1.4, 3.1]，所以 ready 姿态左右符号相反）。 -->
+  <group_state name="home" group="arm_left">
+    <joint name="astribot_arm_left_joint_1" value="0"/>
+    <joint name="astribot_arm_left_joint_2" value="0"/>
+    <joint name="astribot_arm_left_joint_3" value="0"/>
+    <joint name="astribot_arm_left_joint_4" value="0"/>
+    <joint name="astribot_arm_left_joint_5" value="0"/>
+    <joint name="astribot_arm_left_joint_6" value="0"/>
+    <joint name="astribot_arm_left_joint_7" value="0"/>
+  </group_state>
+
+  <group_state name="home" group="arm_right">
+    <joint name="astribot_arm_right_joint_1" value="0"/>
+    <joint name="astribot_arm_right_joint_2" value="0"/>
+    <joint name="astribot_arm_right_joint_3" value="0"/>
+    <joint name="astribot_arm_right_joint_4" value="0"/>
+    <joint name="astribot_arm_right_joint_5" value="0"/>
+    <joint name="astribot_arm_right_joint_6" value="0"/>
+    <joint name="astribot_arm_right_joint_7" value="0"/>
+  </group_state>
+
+  <!-- ready：两臂略微前伸屈肘，是闭链夹持的合理起始构型
+       （joint_4 取 1.0 rad 让肘部离开完全伸直的奇异构型 —— 伸直时
+       雅可比丢秩，奇异点检测会直接拒绝，起始点就该避开）。 -->
+  <group_state name="ready" group="arm_left">
+    <joint name="astribot_arm_left_joint_1" value="0"/>
+    <joint name="astribot_arm_left_joint_2" value="-0.5"/>
+    <joint name="astribot_arm_left_joint_3" value="-0.6"/>
+    <joint name="astribot_arm_left_joint_4" value="1.0"/>
+    <joint name="astribot_arm_left_joint_5" value="0"/>
+    <joint name="astribot_arm_left_joint_6" value="0"/>
+    <joint name="astribot_arm_left_joint_7" value="0"/>
+  </group_state>
+
+  <group_state name="ready" group="arm_right">
+    <joint name="astribot_arm_right_joint_1" value="0"/>
+    <joint name="astribot_arm_right_joint_2" value="-0.5"/>
+    <joint name="astribot_arm_right_joint_3" value="0.6"/>
+    <joint name="astribot_arm_right_joint_4" value="1.0"/>
+    <joint name="astribot_arm_right_joint_5" value="0"/>
+    <joint name="astribot_arm_right_joint_6" value="0"/>
+    <joint name="astribot_arm_right_joint_7" value="0"/>
+  </group_state>
+
+  <group_state name="home" group="torso">
+    <joint name="astribot_torso_joint_1" value="0.2"/>
+    <joint name="astribot_torso_joint_2" value="-0.4"/>
+    <joint name="astribot_torso_joint_3" value="0.2"/>
+    <joint name="astribot_torso_joint_4" value="0"/>
+  </group_state>
+
+  <!-- ==================== 虚拟关节 ====================
+       底盘是 X 型全向轮平台（4 个 continuous 轮，无转向关节），移动由 Nav2 负责，
+       不进 MoveIt 规划组。本机器人**没有 base_link**，根 link 就是 astribot_torso_base。
+
+       !!! 这里用 fixed 而不是 planar，是实测后的决定 !!!
+       最初写的是 planar（parent_frame="odom"），语义上更"正确"——毕竟底盘真的能
+       在平面里移动。但实测代价很大：MoveIt 会在每次状态更新时去查
+       odom -> astribot_torso_base 的 TF，查不到就报
+         Unable to update multi-DOF joint 'virtual_base': Failure to lookup
+         transform between 'odom' and 'astribot_torso_base'
+       并且**拿不到完整机器人状态**，于是规划直接不可用。
+       这意味着「只想验证手臂规划」时也必须先把定位链路(Gazebo/AMCL)全起来。
+
+       改成 fixed 后：模型系就是 astribot_torso_base 自己，不需要任何外部 TF，
+       手臂规划在机器人自身坐标系里完成 —— 这恰好是操作任务需要的语义
+       （抓取目标本来就该相对机器人给），而且不再依赖定位是否就绪。
+
+       代价（必须知道）：环境障碍物的坐标也变成"相对机器人本体"。底盘一移动，
+       之前加进 PlanningScene 的世界物体位置就不再正确，需要上层重新下发。
+       本工程的分工是「Nav2 管移动、MoveIt 管手臂」，移动与操作不同时进行，
+       所以这个代价可以接受。若将来要做"边走边操作"，再换回 planar 并
+       确保 odom TF 始终可用。 -->
+  <virtual_joint name="virtual_base" type="fixed"
+                 parent_frame="world" child_link="astribot_torso_base"/>
+
+  <!-- ==================== 碰撞关闭列表 ====================
+       下面 27 对是从 URDF 运动学树**确定性推导**出来的相邻对（父子 link 且双方
+       都有 collision 几何），不是手填的：相邻 link 在关节处必然接触，不关掉的话
+       任何构型都会被判碰撞，规划根本无法开始。
+
+       生成方式（可复现）：
+         遍历 URDF 所有 joint，取 (parent, child)，双方都有 <collision> 才输出。
+
+       除相邻对之外的「结构上必然重叠」和「永不碰撞」对，由
+       astribot_s1_manipulation 的 self_collision_pair_generator 采样实测生成，
+       不靠猜（用法见该工具的 usage 输出与本包 README）。 -->
+  <disable_collisions link1="astribot_torso_base" link2="wheel_RF_Link" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_base" link2="wheel_LF_Link" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_base" link2="wheel_RR_Link" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_base" link2="wheel_LR_Link" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_base" link2="astribot_torso_link_1" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_link_1" link2="astribot_torso_link_2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_link_2" link2="astribot_torso_link_3" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_link_3" link2="astribot_torso_link_4" reason="Adjacent"/>
+  <disable_collisions link1="astribot_head_base_link" link2="astribot_head_link_1" reason="Adjacent"/>
+  <disable_collisions link1="astribot_head_link_1" link2="astribot_head_link_2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_left_base_link" link2="astribot_arm_left_link_1" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_left_link_1" link2="astribot_arm_left_link_2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_left_link_2" link2="astribot_arm_left_link_3" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_left_link_3" link2="astribot_arm_left_link_4" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_left_link_4" link2="astribot_arm_left_link_5" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_left_link_5" link2="astribot_arm_left_link_6" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_left_link_6" link2="astribot_arm_left_link_7" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_right_base_link" link2="astribot_arm_right_link_1" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_right_link_1" link2="astribot_arm_right_link_2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_right_link_2" link2="astribot_arm_right_link_3" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_right_link_3" link2="astribot_arm_right_link_4" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_right_link_4" link2="astribot_arm_right_link_5" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_right_link_5" link2="astribot_arm_right_link_6" reason="Adjacent"/>
+  <disable_collisions link1="astribot_arm_right_link_6" link2="astribot_arm_right_link_7" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_base" link2="livox_mid360_left" reason="Adjacent"/>
+  <disable_collisions link1="astribot_torso_base" link2="livox_mid360_right" reason="Adjacent"/>
+  <disable_collisions link1="astribot_head_link_2" link2="camera_link" reason="Adjacent"/>
+
+  <!-- 下面这几对不是相邻对，但结构上必然重叠：两条臂的基座和头部基座都通过
+       无碰撞体的 astribot_torso_end_effector 挂在 torso_link_4 上，几何上是嵌套的。
+       它们不会出现在「父子相邻」推导结果里，但不关掉会让所有构型都判碰撞。
+       reason 用 Default（= 在默认/home 构型下即碰撞），与 MoveIt 语义一致。 -->
+  <disable_collisions link1="astribot_torso_link_4" link2="astribot_arm_left_base_link" reason="Default"/>
+  <disable_collisions link1="astribot_torso_link_4" link2="astribot_arm_right_base_link" reason="Default"/>
+  <disable_collisions link1="astribot_torso_link_4" link2="astribot_head_base_link" reason="Default"/>
+  <disable_collisions link1="astribot_arm_left_base_link" link2="astribot_arm_right_base_link" reason="Default"/>
+  <disable_collisions link1="astribot_arm_left_base_link" link2="astribot_head_base_link" reason="Default"/>
+  <disable_collisions link1="astribot_arm_right_base_link" link2="astribot_head_base_link" reason="Default"/>
+
+  <!-- ==================== 实测补充的 9 对 ====================
+       上面那 6 对是按结构关系推断的，**不够**。实测（用真实 URDF+SRDF 跑
+       PlanningScene::checkSelfCollision，全零构型与 SRDF default 构型都试过）
+       发现还有 9 对在默认构型下就已经碰撞，全部是「手臂/头的前两节压在自己
+       所挂的躯干连杆上」—— 因为 torso_link_3/link_4 的碰撞体是尺寸不小的
+       box(0.20x0.27x0.38)，而臂基座就装在它顶端，几何上必然重叠。
+
+       不关掉这 9 对的后果是致命且难查的：起始构型直接判自碰撞，OMPL 报
+         Discarded start state / Skipping invalid start state (invalid state)
+         There are no valid initial states!  ->  Unable to solve the planning problem
+       现场看起来像"规划器不行/目标不可达"，实际是起点就非法，规划器根本没机会跑。
+
+       这 9 对是**实测产物**而不是手填：用 self_collision_pair_generator
+       （或本包 README 里那段 collision_check 用法）可原样复现。 -->
+  <disable_collisions link1="astribot_arm_left_base_link" link2="astribot_torso_link_3" reason="Default"/>
+  <disable_collisions link1="astribot_arm_left_link_1" link2="astribot_torso_link_3" reason="Default"/>
+  <disable_collisions link1="astribot_arm_left_link_1" link2="astribot_torso_link_4" reason="Default"/>
+  <disable_collisions link1="astribot_arm_left_link_2" link2="astribot_torso_link_4" reason="Default"/>
+  <disable_collisions link1="astribot_arm_right_base_link" link2="astribot_torso_link_3" reason="Default"/>
+  <disable_collisions link1="astribot_arm_right_link_1" link2="astribot_torso_link_3" reason="Default"/>
+  <disable_collisions link1="astribot_arm_right_link_1" link2="astribot_torso_link_4" reason="Default"/>
+  <disable_collisions link1="astribot_arm_right_link_2" link2="astribot_torso_link_4" reason="Default"/>
+  <disable_collisions link1="astribot_head_link_1" link2="astribot_torso_link_4" reason="Default"/>
+
+</robot>

@@ -1,0 +1,196 @@
+# =============================================================================
+# OMPL 规划器配置
+#
+# !!! 先读这一段：为什么 BIT* / Informed RRT* 需要额外的插件才能用 !!!
+#
+# MoveIt2 Humble 的官方 OMPL 接口 (libmoveit_ompl_interface.so) 只注册了 25 个
+# 规划器，实测枚举结果里**只有 RRTstar**，没有 BITstar，也没有 InformedRRTstar：
+#   strings /opt/ros/humble/lib/libmoveit_ompl_interface.so \
+#     | grep -oE "geometric::[A-Za-z_]+" | sort -u
+# 而 OMPL 1.7 本体是**有**这两个规划器的：
+#   /opt/ros/humble/include/ompl-1.7/ompl/geometric/planners/informedtrees/BITstar.h
+#   /opt/ros/humble/include/ompl-1.7/ompl/geometric/planners/rrt/InformedRRTstar.h
+#
+# 所以本工程用 astribot_s1_manipulation 里的自定义 PlannerManager 插件
+# (astribot_s1_manipulation/OmplPlannerExtension) 把这两个规划器补注册进去。
+# 该插件只用 MoveIt 的公开 API：
+#   ompl_interface::OMPLInterface::getPlanningContextManager()      (公开, 非 const)
+#     -> PlanningContextManager::registerPlannerAllocator(id, alloc) (公开)
+# 不修改任何系统库源码。planning_pipelines.yaml 里把 planning_plugin 指向它。
+#
+# 直接用官方 ompl_interface/OMPLPlanner 插件的话，下面 BITstar/InformedRRTstar
+# 两段配置会被 MoveIt 判为「未知规划器」而回退到默认规划器，**不会报错**，
+# 很容易误以为在跑 BIT* 其实跑的是 RRTConnect。切换后务必看 move_group 日志里
+# 打出的实际规划器名。
+#
+# 参数含义与量纲全部沿用 OMPL 原生定义，这里只给本机器人（7-DOF 手臂，
+# 关节限位见 joint_limits.yaml）实测可用的取值。
+# =============================================================================
+
+planner_configs:
+
+  # ---------------------------------------------------------------------------
+  # RRT*：渐进最优采样规划器。官方已注册，开箱可用。
+  # 特点是一直优化到超时为止，所以 allowed_planning_time 给多少就用多少。
+  # ---------------------------------------------------------------------------
+  RRTstarConfig:
+    type: geometric::RRTstar
+    # 采样时以 goal_bias 概率直接朝目标采样。0.05 是 OMPL 默认值，
+    # 双臂 14 维空间里调太大容易陷在局部（一直往目标撞而不去探索绕行）。
+    goal_bias: 0.05
+    # 单步扩展最大长度(弧度)。0 = 让 OMPL 按状态空间尺度自动取。
+    # 手动给值时注意：给太大会跨过狭窄通道里的碰撞，给太小会让树长得极慢。
+    range: 0.0
+    # 是否延迟碰撞检测到必要时再做。开启后建树更快，代价是可能留下无效边。
+    delay_collision_checking: true
+    # 是否用 k-nearest 而非半径邻域找近邻。k-nearest 在高维（本例 14 维）更稳。
+    use_k_nearest: true
+    # 邻域半径的缩放系数，只在 use_k_nearest=false 时生效。
+    rewire_factor: 1.1
+    # 找到第一个解后是否继续优化。RRT* 的价值就在这里，必须 true，
+    # 否则退化成普通 RRT。
+    focus_search: true
+
+  # ---------------------------------------------------------------------------
+  # BIT*（Batch Informed Trees）：批量启发式搜索，本质是把 RRT* 的
+  # 增量采样换成"一批一批采样 + 类 A* 的启发式排序展开"。
+  # 在有明确启发（欧氏距离）的场景收敛比 RRT* 快，适合本例这种
+  # 关节空间目标明确的抓取任务。需要上面说的插件注册后才可用。
+  # ---------------------------------------------------------------------------
+  BITstarConfig:
+    type: geometric::BITstar
+    # 每批采样点数。给大了单批处理慢、内存涨；给小了启发式排序的优势发挥不出来。
+    # 100 是 OMPL 默认，14 维下实测这个量级合适。
+    samples_per_batch: 100
+    # 是否用 k-nearest 找近邻（同 RRT*，高维推荐开）。
+    use_k_nearest: true
+    # 是否在每批之间做图剪枝，把不可能改进当前解的顶点删掉。
+    # 开启能显著省内存，是 BIT* 的核心机制之一。
+    use_graph_pruning: true
+    # 剪枝触发阈值：解的代价改进比例超过这个值才做一次剪枝。
+    prune_threshold_as_fractional_cost_change: 0.05
+    # 是否延迟 rewiring 到必要时。
+    delay_rewiring_to_first_solution: false
+    # 是否用"及时"(just-in-time)采样，只在需要时才生成样本，省内存。
+    use_just_in_time_sampling: false
+    # 是否丢弃已经无用的样本（配合 graph pruning 一起省内存）。
+    drop_unconnected_samples_on_prune: false
+    # 是否停在第一个解就返回。必须 false，否则失去渐进最优性。
+    stop_on_solution_improvement: false
+    rewire_factor: 1.1
+
+  # ---------------------------------------------------------------------------
+  # Informed RRT*：RRT* + 椭球启发式采样。找到第一个解之后，
+  # 把采样域收缩到"以起点终点为焦点、当前解长度为长轴"的超椭球内 ——
+  # 域外的点数学上不可能改进解，采了就是浪费。所以它的
+  # "第一个解之后的收敛速度"明显优于原生 RRT*。同样需要插件注册。
+  #
+  # !!! 用它必须把 planning_attempts 设为 1，否则必定规划失败 !!!
+  # 实测踩坑（这是一条真实的 OMPL <-> MoveIt 不兼容，不是配置写错）：
+  #   planning_attempts > 1 时 MoveIt 会走 ompl::tools::ParallelPlan 并行跑多个
+  #   规划器实例；而 MoveIt 的目标是用 GoalLazySamples（懒惰目标采样线程）表达的。
+  #   InformedRRTstar 在 solve() 里创建 informed 采样器时要求
+  #   "至少已有 1 个起点和 1 个目标状态"，但并行分支下目标采样线程往往
+  #   一次都还没跑（日志: "Stopped goal sampling thread after 0 sampling attempts"
+  #   / "Goal sampling thread never did any work"），于是抛异常：
+  #     Error: Exception thrown during ParallelPlan::solveMore:
+  #       PathLengthDirectInfSampler: There must be at least 1 start and
+  #       and 1 goal state when the informed sampler is created.
+  #   MoveIt 把它翻译成一句无信息量的 "Unable to solve the planning problem"，
+  #   看起来就像"这个规划器不行/目标不可达"，极难定位。
+  #   设 planning_attempts=1 后走单规划器路径，日志出现 "Using informed sampling."
+  #   并正常出解（实测 6 点、0.236s）。
+  #   本工程的 manipulation_params.yaml 已默认设为 1，launch 也暴露了该参数。
+  # ---------------------------------------------------------------------------
+  InformedRRTstarConfig:
+    type: geometric::InformedRRTstar
+    goal_bias: 0.05
+    range: 0.0
+    delay_collision_checking: true
+    # 注意：这里**不能**写 use_k_nearest。InformedRRTstar 的构造函数会
+    # setPrunedMeasure(true)，而 pruned measure 与 k-nearest 邻域不兼容。
+    rewire_factor: 1.1
+    # 椭球内拒绝采样的最大尝试次数。高维下椭球体积占比很小，
+    # 给太小会导致采样失败退化成全空间均匀采样，失去 informed 的意义。
+    number_sampling_attempts: 100
+    # 注意：InformedRRTstar **没有** focus_search 参数（那是 RRTstar 的）。
+    # 写了会被本工程插件检出并打 WARN：
+    #   planner '...' has no parameter named 'focus_search' (value 'true' ignored)
+    # 这个 WARN 机制本身很有用 —— OMPL 原生行为是静默忽略未知参数，
+    # 于是"参数写错了却以为调过参"完全看不出来。
+
+  # ---------------------------------------------------------------------------
+  # RRTConnect：双向 RRT，不追求最优但求解快。
+  # 保留它有两个实际用途：① 作为节拍/成功率对比的基线；
+  # ② 闭链投影失败率高时先用它快速探明"是不是根本无解"。
+  # ---------------------------------------------------------------------------
+  RRTConnectConfig:
+    type: geometric::RRTConnect
+    range: 0.0
+
+# =============================================================================
+# 各规划组的默认规划器与可选列表
+#
+# default_planner_config 只是默认值；运行时通过 MotionPlanRequest.planner_id
+# 覆盖即可切换（demo 节点用 yaml 参数 planner_id 控制，见
+# astribot_s1_manipulation/config/manipulation_params.yaml）。
+#
+# projection_evaluator 对采样式规划器很重要：它把高维状态投影到低维做
+# 网格覆盖统计，投影选得差会让 KPIECE 类规划器退化。这里对每条手臂取
+# 前两个关节 —— 它们对末端位置影响最大，是信息量最高的二维投影。
+#
+# longest_valid_segment_fraction：相邻两个状态之间做碰撞插值检查的最大步长
+# （占状态空间最大范围的比例）。给大了会"跨过"薄障碍物导致轨迹实际碰撞，
+# 给小了碰撞检测开销激增。0.01 是双臂 14 维下实测的折中值。
+# =============================================================================
+
+arm_left:
+  default_planner_config: RRTstarConfig
+  planner_configs:
+    - RRTstarConfig
+    - BITstarConfig
+    - InformedRRTstarConfig
+    - RRTConnectConfig
+  projection_evaluator: joints(astribot_arm_left_joint_1,astribot_arm_left_joint_2)
+  longest_valid_segment_fraction: 0.01
+
+arm_right:
+  default_planner_config: RRTstarConfig
+  planner_configs:
+    - RRTstarConfig
+    - BITstarConfig
+    - InformedRRTstarConfig
+    - RRTConnectConfig
+  projection_evaluator: joints(astribot_arm_right_joint_1,astribot_arm_right_joint_2)
+  longest_valid_segment_fraction: 0.01
+
+dual_arm:
+  default_planner_config: BITstarConfig
+  planner_configs:
+    - RRTstarConfig
+    - BITstarConfig
+    - InformedRRTstarConfig
+    - RRTConnectConfig
+  # 双臂组的投影取左右各一个肩关节，覆盖两条链的主要自由度。
+  projection_evaluator: joints(astribot_arm_left_joint_1,astribot_arm_right_joint_1)
+  longest_valid_segment_fraction: 0.01
+
+torso:
+  default_planner_config: RRTstarConfig
+  planner_configs:
+    - RRTstarConfig
+    - BITstarConfig
+    - InformedRRTstarConfig
+    - RRTConnectConfig
+  projection_evaluator: joints(astribot_torso_joint_1,astribot_torso_joint_2)
+  longest_valid_segment_fraction: 0.01
+
+dual_arm_with_torso:
+  default_planner_config: BITstarConfig
+  planner_configs:
+    - RRTstarConfig
+    - BITstarConfig
+    - InformedRRTstarConfig
+    - RRTConnectConfig
+  projection_evaluator: joints(astribot_torso_joint_1,astribot_torso_joint_2)
+  longest_valid_segment_fraction: 0.01

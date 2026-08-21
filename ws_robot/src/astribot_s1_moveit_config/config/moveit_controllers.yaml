@@ -1,0 +1,84 @@
+# =============================================================================
+# MoveIt 控制器对接
+#
+# 本文件把 MoveIt 的轨迹执行接到**既有的** ros2_control 控制器上，
+# 不新建任何控制器。控制器定义在
+#   astribot_s1_gazebo_bringup/config/astribot_s1_controllers.yaml
+# 实测已存在且都是 joint_trajectory_controller/JointTrajectoryController，
+# controller_manager update_rate = 100Hz：
+#   arm_left_controller / arm_right_controller / torso_controller / head_controller
+#   （另有 wheel_effort_controller 走 forward_command_controller，与 MoveIt 无关）
+#
+# JointTrajectoryController 自动提供 FollowJointTrajectory action，
+# action 名为 /<controller_name>/follow_joint_trajectory，
+# 所以 moveit_simple_controller_manager 可以直接对接，无需适配层。
+#
+# !!! 双臂协同执行的关键点 !!!
+# dual_arm 组横跨 arm_left_controller 和 arm_right_controller 两个控制器。
+# MoveIt 会把一条 14 关节轨迹按关节名拆给两个控制器**并行下发**。
+# 闭链抓取要求两臂严格同步 —— 两个控制器各自跟踪自己的那半条轨迹，
+# 时间戳同源（同一条规划轨迹切出来的），所以同步性取决于两个控制器
+# 收到指令的时刻差和各自的跟踪误差，不是由 MoveIt 保证的硬同步。
+# 实测中若发现闭链在执行期被破坏（残差变大），优先降低
+# velocity_scaling_factor，让两臂都在跟踪能力之内。
+# =============================================================================
+
+moveit_simple_controller_manager:
+
+  # MoveIt 只管这三个：头部不参与操作任务，轮子不是 MoveIt 的规划对象。
+  controller_names:
+    - arm_left_controller
+    - arm_right_controller
+    - torso_controller
+
+  arm_left_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - astribot_arm_left_joint_1
+      - astribot_arm_left_joint_2
+      - astribot_arm_left_joint_3
+      - astribot_arm_left_joint_4
+      - astribot_arm_left_joint_5
+      - astribot_arm_left_joint_6
+      - astribot_arm_left_joint_7
+
+  arm_right_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - astribot_arm_right_joint_1
+      - astribot_arm_right_joint_2
+      - astribot_arm_right_joint_3
+      - astribot_arm_right_joint_4
+      - astribot_arm_right_joint_5
+      - astribot_arm_right_joint_6
+      - astribot_arm_right_joint_7
+
+  torso_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - astribot_torso_joint_1
+      - astribot_torso_joint_2
+      - astribot_torso_joint_3
+      - astribot_torso_joint_4
+
+# =============================================================================
+# 轨迹执行监控
+# allowed_execution_duration_scaling：实际执行时长超过规划时长这个倍数就中止。
+# 给 1.2 太紧（力矩闭环底盘带着躯干抖时容易误触发），给 3.0 太松（真卡住了
+# 还要等 3 倍时间才报错）。2.0 是折中。
+# allowed_goal_duration_margin：在 scaling 之外再给的固定余量（秒）。
+# =============================================================================
+trajectory_execution:
+  allowed_execution_duration_scaling: 2.0
+  allowed_goal_duration_margin: 0.5
+  # 单个轨迹点的关节位置容差。JointTrajectoryController 自己也有容差配置，
+  # 两边不一致时以更严的一方为准。
+  allowed_start_tolerance: 0.05
+
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager

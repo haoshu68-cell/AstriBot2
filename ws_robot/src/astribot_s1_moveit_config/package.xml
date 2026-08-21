@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_moveit_config</name>
+  <version>0.1.0</version>
+  <description>
+    Astribot S1 双臂 MoveIt2 配置包：SRDF 规划组、OMPL 规划器参数、
+    IK 求解器、关节限位（含 URDF 里缺失的加速度限位）、控制器对接。
+
+    本包只放配置，不放任何 C++ 代码；规划能力扩展（BIT* / Informed RRT* 注册、
+    闭链约束、奇异点检测、节拍优化）全部在 astribot_s1_manipulation 包里。
+  </description>
+  <maintainer email="dev@astribot.com">astribot-dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 机器人模型来源：SRDF 引用的 link/joint 名称全部来自这个包的 xacro -->
+  <exec_depend>astribot_s1_description</exec_depend>
+
+  <exec_depend>moveit_ros_move_group</exec_depend>
+  <exec_depend>moveit_kinematics</exec_depend>
+  <exec_depend>moveit_planners_ompl</exec_depend>
+  <exec_depend>moveit_simple_controller_manager</exec_depend>
+  <exec_depend>moveit_configs_utils</exec_depend>
+  <exec_depend>moveit_ros_visualization</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+
+  <!-- 自定义规划器插件（注册 BIT* / Informed RRT*）由本包的 launch 加载 -->
+  <exec_depend>astribot_s1_manipulation</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_lint_cmake</test_depend>
+  <test_depend>ament_cmake_xmllint</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

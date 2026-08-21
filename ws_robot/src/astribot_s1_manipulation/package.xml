@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_manipulation</name>
+  <version>0.1.0</version>
+  <description>
+    Astribot S1 双臂运动规划能力包。四块能力：
+
+    1. OMPL 规划器扩展插件：MoveIt2 Humble 官方 OMPL 接口只注册了 25 个规划器，
+       实测三个必需规划器里只有 RRTstar，BITstar / InformedRRTstar 都没注册
+       （而 OMPL 1.7 本体是有的）。本包用自定义 PlannerManager 插件把它们补注册进去，
+       只用 MoveIt 公开 API，不改任何系统库源码。
+    2. 双臂闭链约束：leader-follower + IK 投影，强制两末端相对位姿恒定，
+       不是把双臂当两条独立单臂规划。
+    3. 检测：雅可比 SVD 奇异点检测 + 自碰撞/臂-底盘碰撞检测。
+    4. 轨迹后处理：节拍量化 + TOTG 时间最优压缩，超限位则回退原始轨迹。
+  </description>
+  <maintainer email="dev@astribot.com">astribot-dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>pluginlib</depend>
+
+  <depend>moveit_core</depend>
+  <depend>moveit_ros_planning</depend>
+  <depend>moveit_ros_planning_interface</depend>
+  <depend>moveit_msgs</depend>
+  <depend>moveit_planners_ompl</depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>eigen</depend>
+  <depend>ompl</depend>
+
+  <exec_depend>astribot_s1_description</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_lint_cmake</test_depend>
+  <test_depend>ament_cmake_xmllint</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <!-- 自定义 OMPL 规划器扩展插件（注册 BIT* / Informed RRT*） -->
+    <planning_interface plugin="${prefix}/ompl_planner_extension_plugin_description.xml"/>
+  </export>
+</package>
