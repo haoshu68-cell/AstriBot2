@@ -25,13 +25,32 @@
 #
 # 参数含义与量纲全部沿用 OMPL 原生定义，这里只给本机器人（7-DOF 手臂，
 # 关节限位见 joint_limits.yaml）实测可用的取值。
+#
+# 三类键的来源要分清，改参数前先看清在改哪一类
+# --------------------------------------------
+#   ① OMPL 规划器自己 declareParam 的键（goal_bias / range / rewire_factor ...）
+#      由本包插件透传给 planner->params().setParam()。键名拼错时插件会打 WARN
+#      "planner '...' has no parameter named '...'" —— OMPL 原生行为是静默忽略，
+#      那会让人以为参数生效了。
+#   ② MoveIt 自己消费的键（type / projection_evaluator /
+#      longest_valid_segment_fraction / termination_condition ...）
+#      插件不碰，原样交给 MoveIt。
+#      其中 termination_condition 支持
+#        Iteration[num] | CostConvergence[solutions_window,epsilon] | ExactSolution
+#      （见 moveit/ompl_interface/model_based_planning_context.h 的
+#       constructPlannerTerminationCondition 注释）。本工程没用它，
+#       理由写在 optimizing_planner_wrapper.hpp 的文件头。
+#   ③ 本工程扩展键（optimization_budget_sec / goal_state_wait_sec）
+#      由 astribot_s1_manipulation 的 OptimizingPlannerWrapper 消费，
+#      在透传给 OMPL 之前就被摘掉。语义与实测依据见各配置段内的注释。
 # =============================================================================
 
 planner_configs:
 
   # ---------------------------------------------------------------------------
-  # RRT*：渐进最优采样规划器。官方已注册，开箱可用。
-  # 特点是一直优化到超时为止，所以 allowed_planning_time 给多少就用多少。
+  # RRT*：渐进最优采样规划器。官方已注册，但本工程覆盖注册了它
+  # （见 ompl_planner_extension.cpp 的 registerExtraPlanners），
+  # 目的是套上 optimization_budget_sec，否则它会把超时时间全部烧掉。
   # ---------------------------------------------------------------------------
   RRTstarConfig:
     type: geometric::RRTstar
@@ -47,9 +66,48 @@ planner_configs:
     use_k_nearest: true
     # 邻域半径的缩放系数，只在 use_k_nearest=false 时生效。
     rewire_factor: 1.1
-    # 找到第一个解后是否继续优化。RRT* 的价值就在这里，必须 true，
-    # 否则退化成普通 RRT。
-    focus_search: true
+    # >>> 本工程扩展键（不是 OMPL 参数，由 OptimizingPlannerWrapper 消费）<<<
+    # 首个可行解出现后，最多再优化 0.5s 就返回。
+    #
+    # 为什么必须配这个（Gazebo 实测）：RRT* 只在 PTC 成立或解代价达到
+    # optimization objective 的 cost threshold 时才返回，而 MoveIt 默认用
+    # PathLengthOptimizationObjective、threshold=0（日志里那句
+    # "Seeking a solution better than 0.00000"），永远达不到 —— 于是
+    # allowed_planning_time 给多少烧多少。实测一次 arm_left 规划：
+    #   Found an initial solution with a cost of 0.60 in 4 iterations
+    #   Created 6508 new states. Checked 21160774 rewire options.
+    #   Final solution cost 0.600
+    #   Solution found in 5.001364 seconds
+    # 第 4 次迭代（毫秒级）就拿到了最终解，剩下 4.99s 做了 2116 万次 rewire
+    # 检查，代价 0.600 -> 0.600 一点没降。demo 5 次规划白等 25s。
+    #
+    # 0.5s 怎么来的：本例 7-DOF 手臂、无障碍关节空间查询，首解通常已接近最优；
+    # 留 0.5s 给"首解不是最优"的场景（例如绕过货架）通过 rewiring 降代价，
+    # 同时把单次规划总耗时钉在"首解耗时 + 0.5s"这个可预测的量级上 ——
+    # 工业节拍要的是可预测，不是"能拿到的最优"。
+    # 障碍多、要求更优路径的场景把它调大；只要求可行解的场景调到接近 0，
+    # 或者改用 MoveIt 官方的 termination_condition: ExactSolution。
+    # 置 0 或删掉该键 = 完全退回 OMPL 原生行为（烧完超时）。
+    optimization_budget_sec: 0.5
+    # !!! 刻意**不配** focus_search !!!（Gazebo 实测踩坑）
+    # OMPL 里 RRTstar::setFocusSearch(true) 会连带 setInformedSampling(true)，
+    # 于是 RRT* 也变成 informed 采样规划器，踩进和 InformedRRTstar 完全一样的坑：
+    #   Exception caught executing adapter 'Fix Start State In Collision':
+    #     PathLengthDirectInfSampler: There must be at least 1 start and
+    #     and 1 goal state when the informed sampler is created.
+    # 这个异常会沿着 MoveIt 的整条 request-adapter 链层层重抛（实测一次规划
+    # 刷出 900+ 条），最终 MoveIt 返回"成功但轨迹为空"，
+    # 本包检出后报 "planner returned an empty trajectory"。
+    # bare 环境下它有时能侥幸跑过（懒惰目标采样线程恰好先产出了状态），
+    # 一到 Gazebo（负载重、走 sim time）就必然复现 —— 这种"时序竞争型"的坑
+    # 最容易在集成阶段才暴露。
+    #
+    # 现在 OptimizingPlannerWrapper 的 goal_state_wait_sec 已经能治这个竞争
+    # （委托 solve() 前先等惰性目标采样器产出首个状态），所以理论上可以把
+    # focus_search 打开了。仍然保持关闭，理由是：去掉它不削弱 RRT* 的渐进
+    # 最优性（那是 rewiring 的固有性质），focus_search 只是额外的椭球采样
+    # 加速手段；真需要 informed 采样就直接用 InformedRRTstarConfig，
+    # 少一个交叉变量。
 
   # ---------------------------------------------------------------------------
   # BIT*（Batch Informed Trees）：批量启发式搜索，本质是把 RRT* 的
@@ -78,6 +136,11 @@ planner_configs:
     # 是否停在第一个解就返回。必须 false，否则失去渐进最优性。
     stop_on_solution_improvement: false
     rewire_factor: 1.1
+    # 刻意**不配** optimization_budget_sec。
+    # BIT* 有自己的批次收敛判据（一批采样带不来改进就收），实测 0.0154s 返回，
+    # 不存在 RRT* 那种"烧完 allowed_planning_time"的问题。给它配一个 0.5s 的
+    # 优化窗口反而会把 0.015s 拖成 0.5s —— 是纯粹的性能倒退。
+    # 这也说明这两个扩展键必须是**按配置**的，不能做成插件级全局参数。
 
   # ---------------------------------------------------------------------------
   # Informed RRT*：RRT* + 椭球启发式采样。找到第一个解之后，
@@ -113,6 +176,32 @@ planner_configs:
     # 椭球内拒绝采样的最大尝试次数。高维下椭球体积占比很小，
     # 给太小会导致采样失败退化成全空间均匀采样，失去 informed 的意义。
     number_sampling_attempts: 100
+    # >>> 本工程扩展键（不是 OMPL 参数，由 OptimizingPlannerWrapper 消费）<<<
+    # 首解后的优化窗口，理由同 RRTstarConfig（实测同样烧满 5.001s、
+    # 代价 0.600 -> 0.600）。Informed RRT* 的椭球采样本来就是为了"首解之后
+    # 更快收敛"，配一个有界窗口正好把这个优势用在刀刃上。
+    optimization_budget_sec: 0.5
+    # 委托 solve() 之前，最多等 0.1s 让 MoveIt 的惰性目标采样器
+    # (ob::GoalLazySamples) 产出第 1 个目标状态。
+    #
+    # 为什么需要（实测，一次规划刷 13 条 ERROR）：
+    #   [ERROR] Exception caught executing adapter 'Fix Start State Path
+    #   Constraints': PathLengthDirectInfSampler: There must be at least 1
+    #   start and and 1 goal state when the informed sampler is created.
+    #   Warning: Goal sampling thread never did any work.
+    #   Debug:   Stopped goal sampling thread after 0 sampling attempts
+    # PathLengthDirectInfSampler 在构造时就要求 pdef 里已有 >=1 个目标状态，
+    # 而 MoveIt 的目标状态是后台线程陆续产出的 —— 线程刚 start 还没排上 CPU
+    # 时状态数是 0，于是抛异常。异常沿 MoveIt 的 request-adapter 链层层重抛，
+    # 每个 adapter 报一条 ERROR。它会"自愈"（adapter 被跳过，后续尝试通常
+    # 已经有目标状态了），不影响成功率，但真正的规划失败会被埋在这堆
+    # ERROR 里看不见。
+    #
+    # 0.1s 怎么来的：实测失败的那几次相隔约 10ms，成功的那次拿到 10 个目标
+    # 状态。给到 0.1s 有十倍余量。状态来得快时立刻返回，不产生任何等待成本；
+    # 采样线程已结束（目标真不可达）时也立刻返回，不白等。
+    # 等不到也照常委托给 OMPL —— 让它用自己的路径报错，不在这里吞掉失败。
+    goal_state_wait_sec: 0.1
     # 注意：InformedRRTstar **没有** focus_search 参数（那是 RRTstar 的）。
     # 写了会被本工程插件检出并打 WARN：
     #   planner '...' has no parameter named 'focus_search' (value 'true' ignored)

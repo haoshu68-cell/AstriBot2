@@ -72,6 +72,8 @@ DualArmPlannerParams loadParams(const rclcpp::Node::SharedPtr & node)
     loader.get<double>("densify_max_joint_step", p.densify_max_joint_step);
   p.densify_max_waypoints = static_cast<int>(
     loader.get<int64_t>("densify_max_waypoints", p.densify_max_waypoints));
+  p.already_at_goal_tolerance_rad = loader.get<double>(
+    "already_at_goal_tolerance_rad", p.already_at_goal_tolerance_rad);
 
   // ---- 闭链 ----
   auto & cc = p.closed_chain;
@@ -126,6 +128,8 @@ DualArmPlannerParams loadParams(const rclcpp::Node::SharedPtr & node)
     loader.get<double>("singularity.max_condition_number", sg.max_condition_number);
   sg.degenerate_jacobian_epsilon = loader.get<double>(
     "singularity.degenerate_jacobian_epsilon", sg.degenerate_jacobian_epsilon);
+  sg.allow_singular_start =
+    loader.get<bool>("singularity.allow_singular_start", sg.allow_singular_start);
 
   // ---- 碰撞 ----
   auto & col = p.collision;
@@ -176,8 +180,15 @@ void reportResult(
   RCLCPP_INFO(logger, "---------- 场景 [%s] 结果 ----------", scenario.c_str());
   RCLCPP_INFO(
     logger, "错误码: %s (%s), 尝试次数: %d, 消息: %s",
-    toString(result.code), result.succeeded() ? "成功" : "失败",
+    toString(result.code),
+    result.succeeded() ? "成功" : (result.noActionNeeded() ? "无需动作" : "失败"),
     result.attempts_used, result.message.c_str());
+
+  if (result.noActionNeeded()) {
+    // 不走下面的失败分支：这不是故障，没什么要"定位"的。
+    RCLCPP_INFO(logger, "无轨迹输出，因为当前构型已经满足目标，无需运动");
+    return;
+  }
 
   if (!result.succeeded()) {
     // 失败时也要把已知信息打全，便于定位。
@@ -346,7 +357,8 @@ int main(int argc, char ** argv)
           std::string message;
           planner.executeTrajectory(single_arm_group, result.trajectory, message);
         }
-        if (!result.succeeded()) {
+        // kAlreadyAtGoal 不是失败：没有轨迹可执行，但状态本身就是想要的结果。
+        if (!result.succeeded() && !result.noActionNeeded()) {
           exit_code = 1;
         }
       } else if (scenario == "single_arm_joint") {
@@ -363,7 +375,8 @@ int main(int argc, char ** argv)
           std::string message;
           planner.executeTrajectory(single_arm_group, result.trajectory, message);
         }
-        if (!result.succeeded()) {
+        // kAlreadyAtGoal 不是失败：没有轨迹可执行，但状态本身就是想要的结果。
+        if (!result.succeeded() && !result.noActionNeeded()) {
           exit_code = 1;
         }
       } else if (scenario == "closed_chain") {
@@ -381,7 +394,8 @@ int main(int argc, char ** argv)
           std::string message;
           planner.executeTrajectory(params.dual_arm_group, result.trajectory, message);
         }
-        if (!result.succeeded()) {
+        // kAlreadyAtGoal 不是失败：没有轨迹可执行，但状态本身就是想要的结果。
+        if (!result.succeeded() && !result.noActionNeeded()) {
           exit_code = 1;
         }
       } else if (scenario == "planner_comparison") {

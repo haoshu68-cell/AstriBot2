@@ -34,6 +34,21 @@ enum class PlanErrorCode : std::int32_t
   /// 配置未完成就调用了求解接口（configure 没跑或返回失败）。
   kNotConfigured = 4,
 
+  // ---- 无需动作类：不是失败，但也没有轨迹可输出 ----
+  /// 起点已经在目标上（各关节偏差都在 already_at_goal_tolerance_rad 以内）。
+  /// 调用方应当跳过执行、继续往下走，**不要**当成错误处理，也不要重试。
+  ///
+  /// 为什么值得单独一个码（Gazebo 实测踩坑）：起点==目标时 OMPL 返回一条
+  /// "2 个相同状态、代价 0.00" 的退化路径（日志里是
+  /// "Found an initial solution with a cost of 0.00" +
+  /// "changed from 2 to 2 states"），加密后有效路点数 < 2。
+  /// 原先这被判成 kPlannerFailed 并重试 3 次 —— 每次都必然拿到同一条退化
+  /// 路径，最后报 kRetriesExhausted，消息是
+  /// "leader path has fewer than 2 waypoints after densification"。
+  /// 那句话把"已经到位了"说成"规划器坏了"，排查方向完全错；
+  /// 而且这是确定性结果，重试一次都是纯浪费（实测白烧 1.5s 规划时间）。
+  kAlreadyAtGoal = 5,
+
   // ---- 规划求解类：重试可能有效（采样式规划器有随机性）----
   /// OMPL 规划器无解或超时。
   kPlannerFailed = 10,

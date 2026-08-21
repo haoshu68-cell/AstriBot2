@@ -26,9 +26,43 @@ namespace
 {
 constexpr const char * kLoggerName = "astribot_s1_manipulation.dual_arm_planner";
 
+
 /// PlanningSceneMonitor 等待场景就绪的超时。超过这个时间还没收到
 /// /joint_states 就认为环境没起来，让调用方优雅退出而不是死等。
 constexpr double kSceneWaitTimeoutSec = 10.0;
+
+/// 两个状态在指定组上的**最大**单关节偏差(rad)。
+///
+/// 刻意用无穷范数而不是 RobotState::distance()（那是各关节距离之和）：
+/// "起点是否已在目标上"这种判定要的是"每一个关节都到位"，
+/// 用求和的话 14 个关节各差一点会被累加成一个大数，阈值没法定；
+/// 反过来一个关节差很多、其余为 0 时求和值也可能落在阈值内，会误判。
+double maxJointDeviation(
+  const moveit::core::RobotState & lhs,
+  const moveit::core::RobotState & rhs,
+  const moveit::core::JointModelGroup * jmg)
+{
+  if (jmg == nullptr) {
+    // 调用方已经校验过组存在；这里返回无穷大保证任何阈值都判为"不相等"，
+    // 也就是宁可多规划一次，绝不误报"已经到位"。
+    return std::numeric_limits<double>::infinity();
+  }
+  double worst = 0.0;
+  for (const moveit::core::JointModel * joint : jmg->getActiveJointModels()) {
+    if (joint == nullptr) {
+      continue;
+    }
+    const double * a = lhs.getJointPositions(joint);
+    const double * b = rhs.getJointPositions(joint);
+    if (a == nullptr || b == nullptr) {
+      return std::numeric_limits<double>::infinity();
+    }
+    for (std::size_t i = 0; i < joint->getVariableCount(); ++i) {
+      worst = std::max(worst, std::abs(a[i] - b[i]));
+    }
+  }
+  return worst;
+}
 }  // namespace
 
 // ===========================================================================
@@ -333,6 +367,7 @@ bool DualArmPlanner::initialize(const DualArmPlannerParams & params, std::string
   }
 
   params_ = params;
+
   initialized_ = true;
 
   RCLCPP_INFO(
@@ -819,6 +854,26 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         leader_states = impl_->extractStates(leader_trajectory);
       }
       if (leader_states.size() < 2U) {
+        // 到这里只有两种可能，必须分开处理，否则会把"已经到位"误报成
+        // "规划器坏了"并白重试（Gazebo 实测踩过，见 error_codes.hpp 的
+        // kAlreadyAtGoal 说明）：
+        //   ① 起点就在目标上 —— OMPL 返回 2 个相同状态、代价 0.00 的退化路径，
+        //      加密后自然凑不出 2 个有效点。这是确定性结论，重试毫无意义。
+        //   ② 别的原因导致路径退化 —— 那才是真的规划失败，值得重试。
+        if (maxJointDeviation(
+            leader_trajectory.getWayPoint(0U), leader_trajectory.getLastWayPoint(),
+            leader_jmg) <= params_.already_at_goal_tolerance_rad)
+        {
+          result.code = PlanErrorCode::kAlreadyAtGoal;
+          result.message = "leader group '" + leader_jmg->getName() +
+            "' is already at the requested target (max joint deviation <= " +
+            std::to_string(params_.already_at_goal_tolerance_rad) +
+            " rad); no closed-chain motion is needed";
+          RCLCPP_INFO(rclcpp::get_logger(kLoggerName), "%s", result.message.c_str());
+          // 刻意不输出轨迹：没有动作可执行，给一条零长度轨迹只会让调用方
+          // 误以为"执行完了这段就到位了"。轨迹为空 + 明确状态码更不容易用错。
+          return result;
+        }
         result.code = PlanErrorCode::kPlannerFailed;
         result.message = "leader path has fewer than 2 waypoints after densification";
         RCLCPP_WARN(rclcpp::get_logger(kLoggerName), "%s", result.message.c_str());
@@ -1079,6 +1134,19 @@ PlanErrorCode DualArmPlanner::executeTrajectory(
   }
 
   try {
+    // 用 MoveGroupInterface::execute()（阻塞，内部走 /execute_trajectory action）。
+    //
+    // 曾经怀疑过这个调用本身有并发问题：实测它返回 MoveItErrorCode=-7
+    // (CONTROL_FAILED)，同时日志刷
+    //   [ERROR] [<node>.rclcpp_action]: unknown goal response, ignoring...
+    // 而 move_group 那边却是 "Execution completed: SUCCEEDED"。
+    // 真实原因与本调用无关：当时域内泄漏了 7 个 move_group 进程，
+    // 7 组同名 action server 互相抢答。根治办法在
+    // launch/planning_demo.launch.py 里（demo 节点退出即关闭整个 launch），
+    // 那里有完整的排查记录。单一 move_group 下本调用工作正常。
+    //
+    // 失败时把 MoveItErrorCode 原样打出来：-7 是 CONTROL_FAILED，
+    // -1 是 FAILURE，值本身是定位的第一手线索。
     moveit::planning_interface::MoveGroupInterface::Plan plan;
     plan.trajectory_ = trajectory;
     const moveit::core::MoveItErrorCode code = move_group->execute(plan);

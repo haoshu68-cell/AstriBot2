@@ -191,6 +191,18 @@ if(BUILD_TESTING)
   target_include_directories(test_trajectory_optimizer PRIVATE test)
   ament_target_dependencies(test_trajectory_optimizer
     ${ASTRIBOT_MANIPULATION_DEPS} urdf srdfdom)
+
+  # OptimizingPlannerWrapper 是 header-only 模板，测试直接在 OMPL 的
+  # RealVectorStateSpace 上造合成规划问题，不碰机器人模型，所以只需要链 ompl。
+  # 超时给足：其中几条用例本身就是在验证"原生 RRT* 会烧完超时"。
+  ament_add_gtest(test_optimizing_planner_wrapper
+    test/test_optimizing_planner_wrapper.cpp TIMEOUT 120)
+  target_include_directories(test_optimizing_planner_wrapper PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_include_directories(test_optimizing_planner_wrapper SYSTEM PRIVATE
+    ${OMPL_INCLUDE_DIRS})
+  target_link_libraries(test_optimizing_planner_wrapper ${OMPL_LIBRARIES})
+  ament_target_dependencies(test_optimizing_planner_wrapper rclcpp)
 endif()
 
 ament_export_include_directories(include)

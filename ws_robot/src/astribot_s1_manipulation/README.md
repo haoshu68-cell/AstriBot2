@@ -5,7 +5,7 @@ Astribot S1 的 MoveIt2 运动规划能力包。四块能力：OMPL 规划器扩
 
 ---
 
-## ⚠️ 先读这三条（都是实测踩过的坑，不知道会白花很多时间）
+## ⚠️ 先读这几条（都是实测踩过的坑，不知道会白花很多时间）
 
 ### 1. 本机器人的「全零构型」是奇异构型，不能从它起步规划
 
@@ -220,6 +220,23 @@ closed_chain:
   orientation_tolerance: 0.02      # rad
 ```
 
+### 闭链返回 ALREADY_AT_GOAL 是什么意思
+
+不是失败。leader 每个关节与目标的偏差都在 `already_at_goal_tolerance_rad`
+（默认 1e-3 rad）以内时，本包直接返回 `ALREADY_AT_GOAL`、不输出轨迹、也不重试。
+
+判断"要不要当失败处理"请用 `!succeeded() && !noActionNeeded()`，
+不要只看 `!succeeded()` —— `succeeded()` 的语义是"有一条合法轨迹可以执行"，
+已经到位时它理应为 false。
+
+这个码是实测加出来的：起点==目标时 OMPL 返回一条"2 个相同状态、代价 0.00"的
+退化路径（日志 `Found an initial solution with a cost of 0.00` +
+`changed from 2 to 2 states`），加密后有效路点数 < 2。原先这被判成
+`PLANNER_FAILED` 并重试 3 次（每次必然拿到同一条退化路径，白烧 1.5s），
+最后报 `RETRIES_EXHAUSTED`，消息还是
+`leader path has fewer than 2 waypoints after densification` ——
+把"已经到位了"说成"规划器坏了"，排查方向完全错。
+
 ### 闭链规划失败时怎么查
 
 demo 会打印 `follower IK 失败点数`。按这个数字判断：
@@ -297,6 +314,68 @@ TOTG 会按这个上限压缩节拍。如果它偏大，生成的轨迹控制器
 
 ---
 
+## 实测结果（Gazebo 仿真，全链路执行，2026-08-21）
+
+一次 `ros2 launch astribot_s1_manipulation planning_demo.launch.py execute:=true`
+（3 个场景 + 2 个预备动作 + 3 规划器对比）的完整输出摘要：
+
+```
+预备动作 [arm_left  -> ready]: SUCCESS   trajectory executed successfully on group 'arm_left'
+预备动作 [arm_right -> ready]: SUCCESS   trajectory executed successfully on group 'arm_right'
+
+---------- 场景 [single_arm_named] 结果 ----------
+错误码: SUCCESS (成功), 尝试次数: 1
+trajectory executed successfully on group 'arm_left'
+
+---------- 场景 [closed_chain] 结果 ----------
+错误码: SUCCESS (成功), 尝试次数: 1
+闭链残差(全轨迹最差): 位置 0.000293 m, 姿态 0.000366 rad -> 满足约束
+trajectory executed successfully on group 'dual_arm'
+
+---------- 规划器对比 ----------
+  RRTstarConfig            成功 | 时长 0.119s | 最大速度 1.5891 rad/s | 最差 sigma_min 0.1369
+  BITstarConfig            成功 | 时长 0.136s | 最大速度 1.0821 rad/s | 最差 sigma_min 0.1369
+  InformedRRTstarConfig    成功 | 时长 0.136s | 最大速度 1.0809 rad/s | 最差 sigma_min 0.1369
+
+demo 全部场景执行完毕，退出码 0
+```
+
+同一次运行的 move_group 侧规划耗时（`allowed_planning_time` 是 5.0s）：
+
+| 规划器 | 优化前 | 优化后 |
+|---|---|---|
+| RRTstarConfig | 5.001 s | 0.512 ~ 0.558 s |
+| InformedRRTstarConfig | 5.001 s | 0.512 s |
+| BITstarConfig | 0.015 s | 0.014 s（本来就没问题，刻意不配优化窗口）|
+
+以及日志噪声：
+
+| 现象 | 优化前 | 优化后 |
+|---|---|---|
+| `PathLengthDirectInfSampler: There must be at least 1 start ...` | 13 条 / 次 InformedRRT* 规划 | 0 |
+| `unknown goal response, ignoring...` | 6 ~ 13 条 / 次运行 | 0 |
+| 每跑一次 demo 泄漏的 move_group 进程 | +1 | 0 |
+
+执行侧的物理验证（闭链场景，`ros2 topic echo /joint_states`）：
+
+```
+arm_left : +0.3999 +0.6999 +0.3999 +1.3000 +0.1000 +0.0000 +0.0000   <- 就是下发的 leader 目标
+arm_right: +0.8249 +0.8929 +0.4244 +1.4926 +0.1156 +0.0767 +0.4265   <- 没人直接下发过
+```
+
+`arm_right` 这组值不是任何地方配置的目标，它完全由闭链约束经逐点 IK 投影算出 ——
+这是"两臂真的被同一个相对位姿约束着"的直接证据。
+
+> 尚未独立验证的一项：**执行过程中间路点**的 T_rel。
+> 现在的证据链是「最终时间参数化轨迹的每个路点残差 <= 0.29mm」+「执行终点与
+> 规划终点一致到 1e-4 rad」。中间过程另外用 TF 采样验证的尝试没成功
+> （采样脚本读到的 `astribot_torso_base -> astribot_arm_left_tool_link`
+> 全程不变，与 `/joint_states` 明显矛盾，怀疑与本仓库已知的动态 TF 读取问题
+> 同源，未定位）。要补这一项，建议在 demo 节点内部用 PlanningSceneMonitor
+> 的当前状态直接算残差，而不是从外部读 TF。
+
+---
+
 ## 实测结果（bare 环境，无 Gazebo，2026-08-20）
 
 ```
@@ -355,6 +434,7 @@ include/astribot_s1_manipulation/
 ├── collision_validator.hpp         自碰撞 + 臂-底盘 + 环境碰撞，分别返回错误码
 ├── trajectory_metrics.hpp          节拍量化 + 限位合法性判定
 ├── trajectory_time_optimizer.hpp   IPTP vs TOTG + 超限回退
+├── optimizing_planner_wrapper.hpp  ★ 渐进最优规划器的收敛策略包装（header-only 模板）
 └── dual_arm_planner.hpp            对外总接口（单臂 / 闭链 / 执行）
 src/
 ├── ompl_planner_extension.cpp      ★ 注册 BIT* / Informed RRT* 的 PlannerManager 插件
@@ -371,6 +451,76 @@ src/
 ```
 
 最后那步"复核"不能省：TOTG 会重采样路径点，插出来的新点未必满足闭链约束。
+
+## 排查手册：规划很慢 / 日志刷 ERROR / 执行报 -7
+
+### 规划每次都恰好用满 allowed_planning_time
+
+RRT* / Informed RRT* 是**渐进最优**规划器，只在 PTC 成立或解的代价达到
+optimization objective 的 cost threshold 时才返回。MoveIt 默认用
+`PathLengthOptimizationObjective`、threshold = 0（日志里那句
+`Seeking a solution better than 0.00000`），永远达不到 —— 唯一出口就是超时。
+
+本工程在 `ompl_planning.yaml` 里给这类规划器配了扩展键
+`optimization_budget_sec`（首解出现后再优化多少秒），由
+`OptimizingPlannerWrapper` 实现。默认 0.5s，实测把 5.001s 压到 0.51s。
+置 0 或删掉该键 = 退回原生行为。
+
+**不要**给 BIT* 配这个键：它有自己的批次收敛判据，实测 0.014s 就返回，
+配了反而会被拖到 0.5s。
+
+MoveIt 官方也有 `termination_condition: CostConvergence[w,eps] | ExactSolution
+| Iteration[n]` 可用（本包原样透传），但治不了这个场景：CostConvergence 要靠
+**发现更好的解**推进计数，首解即最优的查询计数停在 1，永不收敛；
+ExactSolution 一有可行解就停，等于放弃渐进最优性。细节见
+`include/astribot_s1_manipulation/optimizing_planner_wrapper.hpp` 文件头。
+
+### 日志刷 `PathLengthDirectInfSampler: There must be at least 1 start and and 1 goal state`
+
+informed 采样器构造时就要求 pdef 里已有 >=1 个目标状态，而 MoveIt 的目标是
+`ob::GoalLazySamples`（后台线程陆续产出）。线程刚 start 还没排上 CPU 时状态数为 0，
+于是抛异常，并沿 MoveIt 的整条 request-adapter 链层层重抛（实测 13 条 / 次规划）。
+它会自愈，但真正的规划失败会被埋在这堆 ERROR 里看不见。
+
+解法：`InformedRRTstarConfig` 里配 `goal_state_wait_sec: 0.1`，
+包装层在委托 `solve()` 前有界等待第一个目标状态。实测 13 条 -> 0 条。
+
+### 日志刷 `unknown goal response, ignoring...`，执行返回 MoveItErrorCode=-7
+
+**先数一下 move_group 进程有几个**：
+
+```bash
+ps aux | grep -c '[m]ove_group --ros-args'
+```
+
+大于 1 就是这个原因。多个 move_group = 多组同名 action server
+（`move_action` / `execute_trajectory`）互相抢答，客户端匹配不上自己的 goal；
+更糟的是**其中一个 move_group 把轨迹发给了控制器、机器人真的动了，另一个稍后
+才做起点校验**，此时机器人已经离开规划起点，于是报
+
+```
+Invalid Trajectory: start point deviates from current robot state more than 0.05
+joint 'astribot_arm_left_joint_1': expected: 0.399907, current: 0.267065
+```
+
+并返回 ABORTED / MoveItErrorCode=-7 (CONTROL_FAILED)。极易被误判成"执行链路有
+并发 bug"，实际只是进程泄漏。
+
+泄漏来源：demo 是一次性任务，跑完就退出，但 launch 里其他节点没有退出条件，
+`ros2 launch` 就一直挂着。`planning_demo.launch.py` 已经加了
+`OnProcessExit -> Shutdown`，demo 节点退出即关闭整个 launch。
+手写 launch 时务必照做，否则每跑一次泄漏一个 move_group。
+
+清理：
+
+```bash
+ps aux | grep -E "[m]ove_group --ros-args|[p]lanning_demo" | awk '{print $2}' | xargs -r kill
+```
+
+（注意别用 `pkill -f <工作区路径>`：move_group 的可执行文件在
+`/opt/ros/humble/lib/` 下，按工作区路径匹配抓不到它。）
+
+---
 
 ## 错误码
 

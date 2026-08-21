@@ -77,6 +77,17 @@ struct DualArmPlannerParams
   /// 加密后的点数上限，防止病态输入导致内存爆掉。
   int densify_max_waypoints{400};
 
+  /// "起点已经在目标上"的判定阈值(rad)：leader 每个关节与目标的偏差都在
+  /// 这个值以内时，直接返回 kAlreadyAtGoal，不去调规划器、也不重试。
+  ///
+  /// 为什么要有（Gazebo 实测）：起点==目标时 OMPL 返回一条"2 个相同状态、
+  /// 代价 0.00"的退化路径，加密后有效点数 < 2，会被误判成规划器失败并
+  /// 白重试 3 次。见 error_codes.hpp 里 kAlreadyAtGoal 的说明。
+  ///
+  /// 取值：要明显大于控制器稳态误差（实测 ~1e-4 rad），又要明显小于
+  /// 最小的有意义动作幅度。1e-3 rad ≈ 0.057°，两边都留了一个数量级。
+  double already_at_goal_tolerance_rad{1e-3};
+
   ClosedChainParams closed_chain;
   SingularityParams singularity;
   CollisionParams collision;
@@ -141,6 +152,17 @@ struct PlanResult
   bool succeeded() const noexcept
   {
     return code == PlanErrorCode::kSuccess && !trajectory.joint_trajectory.points.empty();
+  }
+
+  /// 规划链路没有报错，但也确实没有轨迹可执行 —— 目前只有"起点已在目标上"
+  /// 这一种情况（kAlreadyAtGoal）。
+  ///
+  /// 调用方判断"要不要当失败处理"时必须用 `!succeeded() && !noActionNeeded()`，
+  /// 而不是单看 `!succeeded()`：succeeded() 的语义是"有一条合法轨迹可以执行"，
+  /// 已经到位时它理应为 false，但那不是错误，不该让 demo/上层置失败退出码。
+  bool noActionNeeded() const noexcept
+  {
+    return code == PlanErrorCode::kAlreadyAtGoal;
   }
 };
 
@@ -207,6 +229,7 @@ private:
   std::unique_ptr<Impl> impl_;
 
   rclcpp::Node::SharedPtr node_;
+
   DualArmPlannerParams params_;
   moveit::core::RobotModelConstPtr robot_model_;
   planning_scene_monitor::PlanningSceneMonitorPtr scene_monitor_;

@@ -61,6 +61,21 @@ planning_demo_node:
     # 点数上限，防止病态输入把内存打爆。
     densify_max_waypoints: 400
 
+    # "起点已经在目标上"的判定阈值(rad)。leader 每个关节与目标的偏差都在
+    # 这个值以内时，直接返回 ALREADY_AT_GOAL，不调规划器也不重试。
+    #
+    # 为什么需要（Gazebo 实测）：起点==目标时 OMPL 返回一条"2 个相同状态、
+    # 代价 0.00"的退化路径（日志: "Found an initial solution with a cost of 0.00"
+    # + "changed from 2 to 2 states"），加密后有效点数 < 2，
+    # 原先被误判成 PLANNER_FAILED 并白重试 3 次（烧掉 1.5s），
+    # 最后报的还是 "leader path has fewer than 2 waypoints after densification" ——
+    # 把"已经到位了"说成"规划器坏了"，排查方向完全错。
+    #
+    # 取值：要明显大于控制器稳态误差（实测 ~1e-4 rad），
+    # 又要明显小于最小的有意义动作幅度。1e-3 rad ≈ 0.057°，两边各留一个数量级。
+    already_at_goal_tolerance_rad: 0.001
+
+
     # ---------------- 闭链约束 ----------------
     closed_chain:
       # leader 在自己的 7 维空间里跑 OMPL；follower 逐点 IK 跟随。
@@ -113,6 +128,13 @@ planning_demo_node:
       # sigma_max 都接近 0 说明雅可比整体退化，此时直接判奇异，
       # 不去算条件数（会除零得到假的有限值）。
       degenerate_jacobian_epsilon: 1.0e-9
+      # 允许**起点**处于奇异构型（默认 true，Gazebo 实测逼出来的）。
+      # 仿真里机器人以全零构型出生，而本机器人全零即肘部完全伸直、精确奇异
+      # (实测 joint_4=0.0008, sigma_min=0.0077 < 阈值 0.02)。
+      # 连起点都拒的话，从奇异构型出发的任何轨迹都会被否决 ——
+      # 机器人被永久锁死，连"挪出去"这唯一出路都堵上了。
+      # 奇异检测该阻止的是"走进"奇异，不是"离开"奇异。
+      allow_singular_start: true
 
     # ---------------- 碰撞检测 ----------------
     collision:

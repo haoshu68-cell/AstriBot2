@@ -32,10 +32,14 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
+    EmitEvent,
     GroupAction,
     IncludeLaunchDescription,
     OpaqueFunction,
+    RegisterEventHandler,
 )
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
@@ -122,25 +126,52 @@ def _build_demo(context, *args, **kwargs):
             'robot_description_planning': yaml.safe_load(handle),
         }
 
+    demo_node = Node(
+        package='astribot_s1_manipulation',
+        executable='planning_demo_node',
+        name='planning_demo_node',
+        output='screen',
+        emulate_tty=True,
+        parameters=[
+            params_file,
+            robot_description,
+            robot_description_semantic,
+            robot_description_kinematics,
+            robot_description_planning,
+            overrides,
+        ],
+        arguments=[
+            '--ros-args', '--log-level',
+            LaunchConfiguration('log_level').perform(context),
+        ],
+    )
+
     return [
-        Node(
-            package='astribot_s1_manipulation',
-            executable='planning_demo_node',
-            name='planning_demo_node',
-            output='screen',
-            emulate_tty=True,
-            parameters=[
-                params_file,
-                robot_description,
-                robot_description_semantic,
-                robot_description_kinematics,
-                robot_description_planning,
-                overrides,
-            ],
-            arguments=[
-                '--ros-args', '--log-level',
-                LaunchConfiguration('log_level').perform(context),
-            ],
+        demo_node,
+        # demo 节点跑完就关掉整个 launch，**这条不能少**。
+        #
+        # 不加的话 move_group 会一直活着：demo 是一次性任务，跑完就退出，
+        # 但 launch 里其他节点没有退出条件，`ros2 launch` 就一直挂着。
+        # 于是每跑一次 demo 就泄漏一个 move_group 进程。
+        #
+        # 实测后果（连跑 7 次之后）：域内同时存在 7 个 move_group，
+        # 也就是 7 组同名 action server（move_action / execute_trajectory）。
+        # 客户端的 goal/result response 于是被多个 server 抢答，日志刷
+        #   [ERROR] [<node>.rclcpp_action]: unknown goal response, ignoring...
+        #   [ERROR] [<node>.rclcpp_action]: unknown result response, ignoring...
+        # 更糟的是**其中一个 move_group 把轨迹发给了控制器、机器人真的动了，
+        # 另一个 move_group 稍后才做起点校验**，此时机器人已经离开规划起点，
+        # 于是报
+        #   Invalid Trajectory: start point deviates from current robot state
+        #   more than 0.05
+        #   joint 'astribot_arm_left_joint_1': expected: 0.399907, current: 0.267065
+        # 并返回 ABORTED / MoveItErrorCode=-7 (CONTROL_FAILED)。
+        # 排查时极易被误导成"执行链路有并发 bug"，实际只是进程泄漏。
+        RegisterEventHandler(
+            OnProcessExit(
+                target_action=demo_node,
+                on_exit=[EmitEvent(event=Shutdown(reason='planning_demo_node finished'))],
+            )
         ),
     ]
 

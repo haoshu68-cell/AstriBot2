@@ -18,6 +18,8 @@ const char * toString(PlanErrorCode code) noexcept
       return "PLANNING_GROUP_NOT_FOUND";
     case PlanErrorCode::kNotConfigured:
       return "NOT_CONFIGURED";
+    case PlanErrorCode::kAlreadyAtGoal:
+      return "ALREADY_AT_GOAL";
     case PlanErrorCode::kPlannerFailed:
       return "PLANNER_FAILED";
     case PlanErrorCode::kIkFailed:
@@ -64,6 +66,8 @@ bool isRetryable(PlanErrorCode code) noexcept
     case PlanErrorCode::kRobotModelUnavailable:
     case PlanErrorCode::kPlanningGroupNotFound:
     case PlanErrorCode::kNotConfigured:
+    // 已经在目标上是确定性结论，重试一万次还是同一条退化路径。
+    case PlanErrorCode::kAlreadyAtGoal:
     case PlanErrorCode::kRetriesExhausted:
     case PlanErrorCode::kTimeParameterizationFailed:
     case PlanErrorCode::kJointLimitViolation:

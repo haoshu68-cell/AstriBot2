@@ -187,6 +187,15 @@ SingularityReport SingularityMonitor::checkStates(
   double worst_sigma = std::numeric_limits<double>::infinity();
   std::size_t worst_i = 0;
   bool any_valid = false;
+  // 「逃离段」标志：轨迹开头一段可能仍然贴着奇异构型 —— 从奇异点出发，
+  // 头几个点必然还在奇异邻域里（实测：全零起步时 waypoint 1 的
+  // sigma_min 仍只有 0.0104）。只豁免第 0 点是不够的。
+  // 规则：在**首次出现非奇异点之前**的所有点都算逃离段、一律豁免；
+  // 一旦出现过非奇异点，就说明已经脱离奇异邻域，之后任何奇异点
+  // 都是"走进奇异"，必须否决。
+  // 这个规则自带终止性（不需要配一个拍脑袋的豁免点数上限），
+  // 而且严格实现了"允许离开、禁止进入"的语义。
+  bool still_escaping = params_.allow_singular_start;
 
   for (std::size_t i = 0; i < states.size(); ++i) {
     const SingularityReport r = check(states[i], jmg, tip_link_name);
@@ -198,14 +207,26 @@ SingularityReport SingularityMonitor::checkStates(
       return r;
     }
     any_valid = true;
-    // 一旦发现奇异点立即返回：轨迹只要有一点奇异就整条不可用，
-    // 没必要把剩下的点算完（省时间，且错误定位更准）。
-    if (r.singular) {
+
+    if (!r.singular) {
+      // 见到第一个非奇异点：逃离段结束，后面严格检查。
+      still_escaping = false;
+    } else if (still_escaping) {
+      RCLCPP_INFO(
+        rclcpp::get_logger(kLoggerName),
+        "waypoint %zu is still singular (%s) but exempt as part of the escape "
+        "from a singular start; the trajectory is allowed to move away from it",
+        i, r.reason.c_str());
+    } else {
+      // 已经脱离过奇异邻域又走回去 —— 这才是要拦的情况。
+      // 立即返回：轨迹只要有一点奇异就整条不可用，没必要算完剩下的点
+      // （省时间，且错误定位更准）。
       if (worst_index != nullptr) {
         *worst_index = i;
       }
       return r;
     }
+
     if (r.min_singular_value < worst_sigma) {
       worst_sigma = r.min_singular_value;
       worst_i = i;
@@ -220,6 +241,20 @@ SingularityReport SingularityMonitor::checkStates(
   if (worst_index != nullptr) {
     *worst_index = worst_i;
   }
+
+  // 走到这里说明**没有任何需要否决的点**：真正奇异的非豁免点会在循环里
+  // 提前 return。但 worst 可能是被豁免的起点的报告，它自己的 singular 标志
+  // 是 true —— 直接返回会让调用方误判"整条轨迹奇异"。
+  // 所以这里显式把聚合结论置为"不奇异"，同时保留实测数值供观察。
+  if (worst.valid && worst.singular) {
+    std::ostringstream oss;
+    oss << "ok (start waypoint exempt): worst sigma_min=" << worst.min_singular_value
+        << " at index " << worst_i
+        << ", no non-exempt waypoint is singular";
+    worst.reason = oss.str();
+    worst.singular = false;
+  }
+
   RCLCPP_DEBUG(
     rclcpp::get_logger(kLoggerName),
     "checked %zu states, worst sigma_min=%.6f at index %zu",

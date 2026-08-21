@@ -54,12 +54,17 @@
 #include <pluginlib/class_list_macros.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include "astribot_s1_manipulation/optimizing_planner_wrapper.hpp"
+
 // OMPL 里官方未注册、但本工程需要的两个规划器
 #include <ompl/geometric/planners/informedtrees/ABITstar.h>
 #include <ompl/geometric/planners/informedtrees/AITstar.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
 #include <ompl/geometric/planners/rrt/SORRTstar.h>
+// RRTstar 官方已注册，但本包要覆盖注册它以套上 OptimizingPlannerWrapper，
+// 见 registerExtraPlanners() 里的说明。
+#include <ompl/geometric/planners/rrt/RRTstar.h>
 
 namespace astribot_s1_manipulation
 {
@@ -140,22 +145,32 @@ void applyYamlParams(
 }
 
 /// 通用 allocator 工厂：为任意 OMPL geometric 规划器生成 MoveIt 需要的 allocator。
+///
+/// 一律套上 OptimizingPlannerWrapper（见该头文件的长注释）。策略两项都不配时
+/// 包装类内部直接短路到 PlannerT::solve()，行为与原生规划器逐字节一致 ——
+/// 所以这里不做"要不要包装"的分支，只保留一条代码路径。
 template<typename PlannerT>
 ompl_interface::ConfiguredPlannerAllocator makeAllocator()
 {
   return [](const ob::SpaceInformationPtr & si, const std::string & name,
       const ompl_interface::ModelBasedPlanningContextSpecification & spec) -> ob::PlannerPtr {
+           const rclcpp::Logger logger = rclcpp::get_logger(kLoggerName);
            if (!si) {
              RCLCPP_ERROR(
-               rclcpp::get_logger(kLoggerName),
-               "space information is null, cannot allocate planner '%s'", name.c_str());
+               logger, "space information is null, cannot allocate planner '%s'", name.c_str());
              return ob::PlannerPtr();
            }
-           auto planner = std::make_shared<PlannerT>(si);
+           // 先把本包自己的策略键取出来（并从副本里删掉），剩下的才是
+           // 要透传给 OMPL ParamSet 的真参数。顺序不能反：否则这两个键
+           // 会被当成拼错的 OMPL 参数报 WARN。
+           std::map<std::string, std::string> config = spec.config_;
+           const OptimizingPlannerPolicy policy = extractOptimizingPolicy(config, name, logger);
+
+           auto planner = std::make_shared<OptimizingPlannerWrapper<PlannerT>>(si, policy, logger);
            if (!name.empty()) {
              planner->setName(name);
            }
-           applyYamlParams(planner, spec.config_);
+           applyYamlParams(planner, config);
            return planner;
          };
 }
@@ -332,6 +347,17 @@ private:
     manager.registerPlannerAllocator("geometric::ABITstar", makeAllocator<og::ABITstar>());
     manager.registerPlannerAllocator("geometric::AITstar", makeAllocator<og::AITstar>());
     manager.registerPlannerAllocator("geometric::SORRTstar", makeAllocator<og::SORRTstar>());
+
+    // ---- 覆盖注册 RRTstar ----
+    // RRT* 官方**已经**注册了，本来不需要动。但官方 allocator 直接 new
+    // og::RRTstar，拿不到 OptimizingPlannerWrapper 的两条策略，于是
+    // RRTstarConfig 会继续把 allowed_planning_time 全部烧掉（实测 5.001s，
+    // 而首解在第 4 次迭代就出了，代价 0.600 -> 0.600 一点没降）。
+    // known_planners_ 是 std::map，同名 id 重复注册即覆盖，所以在这里
+    // 用同一个 id 重新注册一遍，让 RRT* 也走本包的包装层。
+    // 不覆盖 geometric::RRTConnect：它不是渐进最优规划器，拿到首解就返回，
+    // 本来就没有"烧完超时"的问题。
+    manager.registerPlannerAllocator("geometric::RRTstar", makeAllocator<og::RRTstar>());
 
     const auto & allocators = manager.getRegisteredPlannerAllocators();
     RCLCPP_INFO(

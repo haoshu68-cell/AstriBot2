@@ -253,6 +253,58 @@ TEST(SingularityMonitor, DisabledMonitorStillReportsNumbersButNeverFlags) {
   EXPECT_GT(report.max_singular_value, 0.0);
 }
 
+TEST(SingularityMonitor, SingularStartIsExemptButLaterSingularWaypointIsNot) {
+  // 这条锁住 Gazebo 实测逼出来的语义：奇异检测要阻止"轨迹走进奇异"，
+  // 而不是"轨迹从奇异离开"。
+  // 仿真里机器人以全零构型出生（本机器人全零 = 肘部完全伸直 = 精确奇异），
+  // 如果连起点都拒，从奇异构型出发的任何轨迹都被否决，机器人永久锁死。
+  auto model = astribot_test::makeRobotModel();
+  ASSERT_TRUE(model != nullptr);
+  const moveit::core::JointModelGroup * left = model->getJointModelGroup("arm_left");
+
+  moveit::core::RobotState straight(model);   // 精确奇异
+  straight.setToDefaultValues();
+  setArm(straight, "arm_left", {0.0, 0.0, 0.0});
+
+  moveit::core::RobotState bent(model);       // 远离奇异
+  bent.setToDefaultValues();
+  setArm(bent, "arm_left", {0.0, 1.0, 1.0});
+
+  std::string error;
+  SingularityParams params;   // allow_singular_start 默认 true
+  ASSERT_TRUE(params.allow_singular_start) << "default should exempt the start waypoint";
+  SingularityMonitor monitor;
+  ASSERT_TRUE(monitor.configure(params, error)) << error;
+
+  // 奇异起点 + 后续都正常 -> 必须放行（这正是"从奇异逃离"的动作）
+  const std::vector<moveit::core::RobotState> escaping = {straight, bent, bent};
+  std::size_t worst_index = 0;
+  const SingularityReport escape =
+    monitor.checkStates(escaping, left, "left_tcp", &worst_index);
+  EXPECT_TRUE(escape.valid) << escape.reason;
+  EXPECT_FALSE(escape.singular)
+    << "a trajectory leaving a singular start must be allowed; " << escape.reason;
+
+  // 奇异点出现在**中途** -> 必须拒绝（这才是"走进奇异"）
+  const std::vector<moveit::core::RobotState> entering = {bent, bent, straight, bent};
+  const SingularityReport enter =
+    monitor.checkStates(entering, left, "left_tcp", &worst_index);
+  EXPECT_TRUE(enter.valid) << enter.reason;
+  EXPECT_TRUE(enter.singular) << "a trajectory entering a singularity must be rejected";
+  EXPECT_EQ(worst_index, 2U);
+
+  // 关掉豁免后，奇异起点也要被拒
+  SingularityParams strict = params;
+  strict.allow_singular_start = false;
+  SingularityMonitor strict_monitor;
+  ASSERT_TRUE(strict_monitor.configure(strict, error)) << error;
+  const SingularityReport strict_report =
+    strict_monitor.checkStates(escaping, left, "left_tcp", &worst_index);
+  EXPECT_TRUE(strict_report.singular)
+    << "with allow_singular_start=false the singular start must be rejected";
+  EXPECT_EQ(worst_index, 0U);
+}
+
 TEST(SingularityMonitor, CheckStatesReturnsFirstSingularWaypoint) {
   auto model = astribot_test::makeRobotModel();
   ASSERT_TRUE(model != nullptr);
