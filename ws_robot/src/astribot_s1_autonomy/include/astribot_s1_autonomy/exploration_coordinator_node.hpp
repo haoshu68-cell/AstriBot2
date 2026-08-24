@@ -13,6 +13,11 @@
 //   · 双层校验 —— 目标点本身 + 从当前位置到目标的全局路径，都不许碰未知栅格
 //   · 异常闭环 —— 导航失败/定位丢失/候选不合法都有明确的状态与限次重试
 //
+// 两类栅格图的分工（实测踩坑后定下的，混用会让探索一个目标都发不出去，
+// 完整机制见 costmap_adapter.hpp 文件头）：
+//   /map                       —— 只用于前沿搜索（前沿的定义依赖「未知」状态）
+//   /global_costmap/costmap_raw —— 只用于下发前校验（与 planner_server 同一张图）
+//
 // 与 Nav2 的关系：**只用官方接口，不改 Nav2 任何源码**。
 //   NavigateToPose      —— 执行导航
 //   ComputePathToPose   —— 只为拿到全局路径做校验，不用它来控制
@@ -29,6 +34,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav2_msgs/action/compute_path_to_pose.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
+#include "nav2_msgs/msg/costmap.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
@@ -40,6 +46,7 @@
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
+#include "astribot_s1_autonomy/costmap_adapter.hpp"
 #include "astribot_s1_autonomy/exploration_state.hpp"
 #include "astribot_s1_autonomy/frontier_search.hpp"
 #include "astribot_s1_autonomy/path_validator.hpp"
@@ -106,6 +113,10 @@ private:
   // ---------------- 数据回调 ----------------
   void mapCallback(const nav_msgs::msg::OccupancyGrid::ConstSharedPtr & msg);
   void odomCallback(const nav_msgs::msg::Odometry::ConstSharedPtr & msg);
+  /// 全局代价地图回调。这是**下发前校验**所用的栅格图，
+  /// 与 planner_server 规划时所用的是同一张，避免两层判据互相锁死。
+  /// 详细机制见 costmap_adapter.hpp 文件头。
+  void costmapCallback(const nav2_msgs::msg::Costmap::ConstSharedPtr & msg);
 
   // ---------------- 前置条件 ----------------
   /// 地图是否可用（非空、自洽、未超时）。不可用时拦截生成逻辑。
@@ -114,6 +125,12 @@ private:
   bool odomReady(std::string & why);
   /// 机器人位姿是否可用。取不到即视为定位丢失。
   bool robotPose(double & x, double & y, double & yaw, std::string & why);
+  /// 取「下发前校验」应当使用的栅格图快照。
+  ///
+  /// use_costmap_for_validation_ 为真时返回代价地图快照（不可用/过期则返回
+  /// nullptr 并填 why —— 绝不静默退回 /map，否则又变成两张图校验）；
+  /// 为假时返回 /map 快照（保留旧行为，供出问题时一键回退对比）。
+  std::shared_ptr<GridMap> validationGrid(std::string & why);
 
   // ---------------- 目标生成与校验 ----------------
   /// 跑前沿搜索，产出按代价升序排列的候选点。
@@ -158,6 +175,7 @@ private:
   // ================= 成员 =================
   // ---- 参数：话题/坐标系 ----
   std::string map_topic_;
+  std::string costmap_topic_;
   std::string odom_topic_;
   std::string state_topic_;
   std::string complete_topic_;
@@ -172,6 +190,7 @@ private:
   double control_period_sec_{0.0};
   double tf_timeout_sec_{0.0};
   double map_timeout_sec_{0.0};
+  double costmap_timeout_sec_{0.0};
   double odom_timeout_sec_{0.0};
   double plan_timeout_sec_{0.0};
   double nav_timeout_sec_{0.0};
@@ -198,9 +217,15 @@ private:
   FrontierSearch search_;
   FrontierSearchParams search_params_;
   PathValidator validator_;
+  CostmapAdapterParams costmap_params_;
+  /// 下发前校验是否使用全局代价地图（默认 true）。
+  /// 置 false 会退回「用 /map 校验」的旧行为——那是已知会锁死探索的配置，
+  /// 只保留作对比排查用，正常运行不要关。
+  bool use_costmap_for_validation_{true};
 
   // ---- ROS 句柄 ----
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
+  rclcpp::Subscription<nav2_msgs::msg::Costmap>::SharedPtr costmap_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr complete_pub_;
@@ -256,9 +281,15 @@ private:
   uint64_t candidates_rejected_{0U};
 
   // ---- 数据快照 ----
+  /// SLAM 原始占据栅格。**只用于前沿搜索**：前沿的定义依赖「未知」这个状态，
+  /// 代价地图被 obstacle_layer 清障刷过之后未知区不完整，拿它找前沿会漏区域。
   std::shared_ptr<GridMap> latest_map_;
   rclcpp::Time latest_map_time_;
   std::mutex map_mutex_;
+  /// 全局代价地图（已转成三态 GridMap）。**只用于下发前校验**。
+  std::shared_ptr<GridMap> latest_costmap_;
+  rclcpp::Time latest_costmap_time_;
+  std::mutex costmap_mutex_;
   double odom_speed_{0.0};
   rclcpp::Time latest_odom_time_;
   std::mutex odom_mutex_;

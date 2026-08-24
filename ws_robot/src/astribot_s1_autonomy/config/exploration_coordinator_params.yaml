@@ -6,6 +6,11 @@
 #   · 目标点与全局路径都必须整体落在已知可通行栅格内
 #   · 只用 Nav2 官方 action（NavigateToPose / ComputePathToPose），不改 Nav2 源码
 #
+# 两张栅格图分工明确，**不要混用**（混用会让探索一个目标都发不出去，
+# 完整机制见 include/astribot_s1_autonomy/costmap_adapter.hpp 文件头）：
+#   /map                        —— 只用于前沿搜索（前沿的定义依赖「未知」这个状态）
+#   /global_costmap/costmap_raw —— 只用于下发前校验（与 planner_server 同一张图）
+#
 # 坐标系前提：本机器人没有 base_link，本体系是 astribot_torso_base。
 # 尺度前提：SLAM 分辨率 0.05 m/格；Nav2 footprint 外接半径 0.42 m。
 #   凡是「距离」类阈值都和这两个数字耦合，换机器人/换分辨率必须一起调。
@@ -14,7 +19,8 @@
   ros__parameters:
 
     # ---------------- 话题、动作与坐标系 ----------------
-    map_topic: "/map"                        # slam_toolbox 输出，transient_local QoS
+    map_topic: "/map"                        # slam_toolbox 输出，transient_local QoS；仅用于前沿搜索
+    costmap_topic: "/global_costmap/costmap_raw"   # nav2_msgs/Costmap，仅用于下发前校验
     odom_topic: "/odom"                      # 用于「稳定驻留」的速度判定
     state_topic: "/exploration/state"        # std_msgs/String，状态机对外唯一状态出口
     complete_topic: "/exploration/complete"  # std_msgs/Bool，transient_local
@@ -31,6 +37,10 @@
     tf_timeout_sec: 0.2
     # 地图超时给得比 slam_toolbox 的发布间隔宽裕：地图静止时它也会周期重发。
     map_timeout_sec: 10.0
+    # 代价地图超时 5s。global_costmap 的 update_frequency 是 1.0Hz，
+    # 5s 已经是 5 个周期；超时就拒绝下发，**不会**退回用 /map 校验
+    # （退回就又变成两层判据查两张图，那是已知会锁死探索的配置）。
+    costmap_timeout_sec: 5.0
     # 里程计超时 1s：超过即视为里程计丢失，必须冻结目标发布。
     odom_timeout_sec: 1.0
     plan_timeout_sec: 5.0
@@ -73,9 +83,26 @@
     validator:
       occupied_threshold: 65
       free_threshold: 25
-      # 【占据】净空半径。取 0.42 = Nav2 footprint 外接半径：
-      # 机器人停在目标点时整个足迹都不能压到障碍物。这是碰撞约束。
-      goal_clearance_radius: 0.42
+      # 【占据】净空半径。**用 costmap 校验时必须为 0**，与下面 validation.use_costmap 联动。
+      #
+      # 为什么不是 0.42：0.42 是按「/map 里的占据格 = 原始障碍本体」标定的 ——
+      # 机器人停在目标点时整个足迹不能压到障碍，所以要留一个外接半径的余量。
+      # 但改用 global_costmap 之后，被判成「占据」的是代价 >=253 的格，
+      # 而 253 = INSCRIBED_INFLATED_OBSTACLE 的语义本身就是
+      # 「机器人中心落在此处 → 足迹必然碰撞」，膨胀余量**已经算进去了**。
+      # 再要求 0.42m 邻域无占据格，等于把足迹半径重复计了一次：
+      #   nav2 内切半径 0.388(inflation_radius=0.65) + 0.42 ≈ 0.81m，
+      #   目标点得离真实障碍 0.8m 以上才合法，而实际只需要 0.42m。
+      #
+      # 实测证据（方案A 落地后同一轮运行）：18 次成功下发，但目标点复检否决 691 次，
+      # 其中 691/697 = 99.1% 是「净空半径(0.42m)内存在占据栅格」。
+      # 探索能跑，但绝大多数贴墙前沿被白白丢掉，效率被压掉一个数量级。
+      #
+      # 设成 0 后 validateGoal 退化为只检查目标格自己（max_radius>0 的邻域循环整段跳过），
+      # 而在 costmap 口径下「目标格非致命」恰好就是精确的足迹碰撞判据，不多不少。
+      # 想更保守应该去调 nav2 的 inflation_radius，让 costmap 自己扩大致命区，
+      # 两边判据才不会脱钩 —— 这也是本文件反复强调的同一条原则。
+      goal_clearance_radius: 0.0
       # 【未知】净空半径。必须为 0，而且刻意是独立参数。
       #
       # 踩过的坑（栽了两次，第二次是数值没到位）：
@@ -105,6 +132,39 @@
       # 返回一条半截路径，也被当成校验通过。
       path_endpoint_tolerance: 0.5
       max_samples: 200000
+
+    # ---------------- 下发前校验用哪张栅格图 ----------------
+    # 这一节是「探索一个目标都发不出去」那个缺陷的正解，改动前务必先看
+    # include/astribot_s1_autonomy/costmap_adapter.hpp 的文件头。
+    #
+    # 实测证据（分阶段启动，状态机健康）：441 个候选、631 次否决，
+    # 100% 是「路径第 N 段穿过未知栅格」，dispatched 恒为 0。
+    # 而失败点只落在 4 个固定位置上，最近的一个在机器人正前方 **0.05m**
+    # （路径第 3 个采样点就非法）—— 任何路径都活不过起步阶段。
+    #
+    # 根因不是判据太严，是**两层判据查了两张不同的图**：
+    #   planner_server 在 global_costmap 上规划，其 obstacle_layer 配了
+    #   clearing:True / raytrace_max_range:6.0，会沿每条扫描射线(含无回波射线)
+    #   把栅格刷成 FREE_SPACE，覆盖掉 NO_INFORMATION；
+    #   而 /map 由 slam_toolbox(Karto) 产出，Karto 丢弃 inf 读数，那些方向永远是未知。
+    #   /scan_from_cloud 约 66% 的束无回波(723 束仅 245 束检出)，
+    #   于是 costmap 自由区 ⊋ /map 自由区 —— 规划器合法穿过的格，校验器一律判未知。
+    validation:
+      # true = 用 global_costmap 校验（与规划器同一张图，正解）。
+      # false = 退回用 /map 校验，即上面那个已知会锁死探索的旧行为，只留作对比排查。
+      use_costmap: true
+      # nav2 代价值语义(nav2_costmap_2d/cost_values.hpp)：
+      #   255 未知 / 254 障碍本体 / 253 足迹必碰 / 1~252 膨胀梯度(可通行) / 0 自由
+      costmap_unknown_cost: 255
+      # 致命障碍下界。253 = INSCRIBED_INFLATED_OBSTACLE，
+      # 语义正好是「机器人中心落此处则足迹必然碰撞」，与校验职责精确对应。
+      #
+      # 不要为了「更安全」调低：1~252 是膨胀梯度，是代价偏好而非不可通行。
+      # 调低会把可通行的膨胀带判成障碍，所有贴墙路径被否决，探索换个理由再锁死一次
+      # （实测 local_costmap 有 27.9% 的栅格带非零代价，目标点本身代价 99 也很常见）。
+      # 真要更保守，应该去调 nav2 inflation_layer 的 inflation_radius，
+      # 让 costmap 自己把致命区扩大，两边判据才不会脱钩。
+      costmap_lethal_cost_threshold: 253
 
     # ---------------- 前沿搜索（与 frontier_explorer 同一套语义）----------------
     search:

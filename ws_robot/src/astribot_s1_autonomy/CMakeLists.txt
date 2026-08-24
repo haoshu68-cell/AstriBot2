@@ -76,6 +76,7 @@ add_library(${PROJECT_NAME}_components SHARED
   src/self_filter.cpp
   src/frontier_search.cpp
   src/path_validator.cpp
+  src/costmap_adapter.cpp
   src/pointcloud_slice_scan_node.cpp
   src/frontier_explorer_node.cpp
   src/exploration_coordinator_node.cpp
@@ -198,7 +199,7 @@ if(BUILD_TESTING)
 
   find_package(ament_cmake_gtest REQUIRED)
 
-  # 四套单元测试都只依赖纯算法核心，不需要 ROS 运行时，
+  # 五套单元测试都只依赖纯算法核心，不需要 ROS 运行时，
   # 因此可以在 CI 里无仿真环境直接跑。
   ament_add_gtest(test_slice_projector test/test_slice_projector.cpp)
   target_link_libraries(test_slice_projector ${PROJECT_NAME}_components)
@@ -215,6 +216,10 @@ if(BUILD_TESTING)
   ament_add_gtest(test_frontier_search test/test_frontier_search.cpp)
   target_link_libraries(test_frontier_search ${PROJECT_NAME}_components)
   ament_target_dependencies(test_frontier_search ${ASTRIBOT_AUTONOMY_DEPS})
+
+  ament_add_gtest(test_costmap_adapter test/test_costmap_adapter.cpp)
+  target_link_libraries(test_costmap_adapter ${PROJECT_NAME}_components)
+  ament_target_dependencies(test_costmap_adapter ${ASTRIBOT_AUTONOMY_DEPS})
 endif()
 
 ament_export_include_directories(include)

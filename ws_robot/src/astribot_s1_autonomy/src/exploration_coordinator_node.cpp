@@ -112,6 +112,25 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
     [this](const nav_msgs::msg::Odometry::ConstSharedPtr msg) {odomCallback(msg);},
     sub_opts);
 
+  // 全局代价地图。只在启用「用 costmap 校验」时才订阅——关掉时不订阅，
+  // 免得白占一份带宽和一次 O(w*h) 的转换开销。
+  //
+  // QoS 用默认的 reliable/volatile：costmap_raw 由 nav2_costmap_2d 以
+  // update_frequency(本项目 1.0Hz) 周期发布，是持续更新的活数据，
+  // 不像 /map 那样需要 transient_local 补发历史。
+  if (use_costmap_for_validation_) {
+    costmap_sub_ = create_subscription<nav2_msgs::msg::Costmap>(
+      costmap_topic_, rclcpp::QoS(1),
+      [this](const nav2_msgs::msg::Costmap::ConstSharedPtr msg) {costmapCallback(msg);},
+      sub_opts);
+  } else {
+    RCLCPP_WARN(
+      get_logger(),
+      "validation.use_costmap=false：下发前校验将使用 /map 而不是全局代价地图。"
+      "这是已知会让探索一个目标都发不出去的配置(两层判据查不同的图)，"
+      "仅供对比排查，正常运行请置 true");
+  }
+
   nav_client_ = rclcpp_action::create_client<NavigateToPose>(
     this, nav_action_name_, io_cb_group_);
   plan_client_ = rclcpp_action::create_client<ComputePathToPose>(
@@ -178,7 +197,10 @@ void ExplorationCoordinatorNode::declareParameters()
       return d;
     };
 
-  declare_parameter<std::string>("map_topic", "/map", describe("输入占据栅格话题"));
+  declare_parameter<std::string>("map_topic", "/map", describe("输入占据栅格话题(仅用于前沿搜索)"));
+  declare_parameter<std::string>(
+    "costmap_topic", "/global_costmap/costmap_raw",
+    describe("全局代价地图话题(nav2_msgs/Costmap，仅用于下发前校验)"));
   declare_parameter<std::string>("odom_topic", "/odom", describe("里程计话题，用于速度收敛判定"));
   declare_parameter<std::string>(
     "state_topic", "/exploration/state", describe("状态机状态话题(String)"));
@@ -199,6 +221,9 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<double>("control_period_sec", 0.5, describe("状态机节拍(s)"));
   declare_parameter<double>("tf_timeout_sec", 0.2, describe("TF 查询超时(s)"));
   declare_parameter<double>("map_timeout_sec", 10.0, describe("地图多久未更新算超时(s)"));
+  declare_parameter<double>(
+    "costmap_timeout_sec", 5.0,
+    describe("全局代价地图多久未更新算超时(s)。超时则拒绝下发，绝不退回用 /map 校验"));
   declare_parameter<double>("odom_timeout_sec", 1.0, describe("里程计多久未更新算丢失(s)"));
   declare_parameter<double>("plan_timeout_sec", 5.0, describe("路径校验请求超时(s)"));
   declare_parameter<double>("nav_timeout_sec", 120.0, describe("单个导航目标最长允许时间(s)"));
@@ -249,6 +274,20 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<int>(
     "validator.max_samples", 200000, describe("单条路径采样点数上限，防御性无界保护"));
 
+  // ---- 下发前校验所用栅格图的选择 + 代价地图转换参数 ----
+  declare_parameter<bool>(
+    "validation.use_costmap", true,
+    describe("下发前校验是否用全局代价地图(与规划器同一张图)。"
+      "置 false 退回用 /map 校验，那是已知会锁死探索的旧行为，仅供对比排查"));
+  declare_parameter<int>(
+    "validation.costmap_unknown_cost", 255,
+    describe("代价地图中视为未知的值。nav2 固定为 255(NO_INFORMATION)"));
+  declare_parameter<int>(
+    "validation.costmap_lethal_cost_threshold", 253,
+    describe("代价地图中视为致命障碍的下界(含)。默认 253=INSCRIBED_INFLATED_OBSTACLE，"
+      "语义是「机器人中心在此则足迹必然碰撞」。不要调低：调低会把可通行的膨胀带"
+      "判成障碍，贴墙路径全被否决，探索重新锁死"));
+
   // ---- 前沿搜索算法参数（与 frontier_explorer 同一套语义）----
   declare_parameter<int>("search.occupied_threshold", 65, describe("占据判定阈值(0~100)"));
   declare_parameter<int>("search.free_threshold", 25, describe("空闲判定阈值(0~100)"));
@@ -275,6 +314,7 @@ void ExplorationCoordinatorNode::declareParameters()
 bool ExplorationCoordinatorNode::loadParameters(std::string & error)
 {
   map_topic_ = get_parameter("map_topic").as_string();
+  costmap_topic_ = get_parameter("costmap_topic").as_string();
   odom_topic_ = get_parameter("odom_topic").as_string();
   state_topic_ = get_parameter("state_topic").as_string();
   complete_topic_ = get_parameter("complete_topic").as_string();
@@ -294,11 +334,13 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   control_period_sec_ = get_parameter("control_period_sec").as_double();
   tf_timeout_sec_ = get_parameter("tf_timeout_sec").as_double();
   map_timeout_sec_ = get_parameter("map_timeout_sec").as_double();
+  costmap_timeout_sec_ = get_parameter("costmap_timeout_sec").as_double();
   odom_timeout_sec_ = get_parameter("odom_timeout_sec").as_double();
   plan_timeout_sec_ = get_parameter("plan_timeout_sec").as_double();
   nav_timeout_sec_ = get_parameter("nav_timeout_sec").as_double();
   if (control_period_sec_ <= 0.0 || tf_timeout_sec_ < 0.0 || map_timeout_sec_ <= 0.0 ||
-    odom_timeout_sec_ <= 0.0 || plan_timeout_sec_ <= 0.0 || nav_timeout_sec_ <= 0.0)
+    odom_timeout_sec_ <= 0.0 || plan_timeout_sec_ <= 0.0 || nav_timeout_sec_ <= 0.0 ||
+    costmap_timeout_sec_ <= 0.0)
   {
     error = "节拍/超时参数非法：control_period_sec>0, tf_timeout_sec>=0, 其余超时>0";
     return false;
@@ -356,6 +398,38 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   if (!validator_.configure(vp, validator_error)) {
     error = "未知区校验参数非法: " + validator_error;
     return false;
+  }
+
+  use_costmap_for_validation_ = get_parameter("validation.use_costmap").as_bool();
+  costmap_params_.unknown_cost =
+    static_cast<int>(get_parameter("validation.costmap_unknown_cost").as_int());
+  costmap_params_.lethal_cost_threshold =
+    static_cast<int>(get_parameter("validation.costmap_lethal_cost_threshold").as_int());
+  std::string costmap_param_error;
+  if (!validateCostmapAdapterParams(costmap_params_, costmap_param_error)) {
+    error = "代价地图转换参数非法: " + costmap_param_error;
+    return false;
+  }
+  if (use_costmap_for_validation_ && costmap_topic_.empty()) {
+    error = "validation.use_costmap=true 时 costmap_topic 不能为空";
+    return false;
+  }
+  // 「阈值口径」与「校验数据源」必须配套。这条实测栽过：方案A 刚落地时
+  // goal_clearance_radius 还留着按 /map 标定的 0.42，结果一轮跑下来 18 次成功下发、
+  // 却有 691 次目标复检否决(99.1% 都是这一条)——贴墙前沿几乎全被白丢。
+  //
+  // 原因是重复计算足迹半径：costmap 里代价 >=253 的语义已经是
+  // 「机器人中心在此则足迹必然碰撞」，膨胀余量算过了；再套一个 0.42m 邻域，
+  // 等于要求目标离真实障碍 内切半径0.388 + 0.42 ≈ 0.81m。
+  if (use_costmap_for_validation_ && vp.goal_clearance_radius > 0.0) {
+    RCLCPP_WARN(
+      get_logger(),
+      "validator.goal_clearance_radius=%.3fm 与 validation.use_costmap=true 不配套："
+      "代价地图里 >=%d 的格本身就表示「机器人中心在此则足迹必然碰撞」，"
+      "再要求邻域净空等于把足迹半径重复计一次，会让大量贴墙前沿被误否决"
+      "(实测该配置下 99%% 的目标复检失败都源于此)。建议改成 0.0；"
+      "想更保守请去调 nav2 inflation_layer 的 inflation_radius",
+      vp.goal_clearance_radius, costmap_params_.lethal_cost_threshold);
   }
 
   FrontierSearchParams sp;
@@ -462,6 +536,89 @@ void ExplorationCoordinatorNode::mapCallback(
   std::lock_guard<std::mutex> lock(map_mutex_);
   latest_map_ = std::move(snapshot);
   latest_map_time_ = now();
+}
+
+void ExplorationCoordinatorNode::costmapCallback(
+  const nav2_msgs::msg::Costmap::ConstSharedPtr & msg)
+{
+  if (!msg) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), kLogThrottleMs, "收到空的代价地图消息指针，已忽略");
+    return;
+  }
+
+  // 尺寸/长度/分辨率的全部校验都在 costmapToGridMap 里，
+  // 这里不重复一遍——重复校验迟早会和被调方漂移，出问题时两处说法不一致更难查。
+  auto snapshot = std::make_shared<GridMap>();
+  std::string convert_error;
+  if (!costmapToGridMap(
+      msg->metadata.size_x, msg->metadata.size_y,
+      static_cast<double>(msg->metadata.resolution),
+      msg->metadata.origin.position.x, msg->metadata.origin.position.y,
+      msg->data, costmap_params_, *snapshot, convert_error))
+  {
+    RCLCPP_ERROR_THROTTLE(
+      get_logger(), *get_clock(), kLogThrottleMs,
+      "代价地图转换失败，忽略本帧: %s", convert_error.c_str());
+    return;
+  }
+
+  // 代价地图的 origin 会随机器人滚动(rolling window)，与 /map 的 origin 不同，
+  // 这是正常的——两张图各自用自己的 origin 做 worldToMap，不能混用。
+  // 这里只在首帧打一条日志，便于确认订阅到的确实是全局图。
+  const CostmapGridStats stats = summarizeGrid(*snapshot);
+  const unsigned int width = snapshot->width;
+  const unsigned int height = snapshot->height;
+  const double resolution = snapshot->resolution;
+  const double ox = snapshot->origin_x;
+  const double oy = snapshot->origin_y;
+
+  bool first_frame = false;
+  {
+    // latest_costmap_time_ 由本锁保护，首帧判定必须在锁内做，不能在锁外读。
+    std::lock_guard<std::mutex> lock(costmap_mutex_);
+    first_frame = (latest_costmap_time_.nanoseconds() == 0);
+    latest_costmap_ = std::move(snapshot);
+    latest_costmap_time_ = now();
+  }
+
+  RCLCPP_INFO_EXPRESSION(
+    get_logger(), first_frame,
+    "首帧全局代价地图: %ux%u @%.3fm 原点(%.2f, %.2f) | 未知 %.1f%% 致命 %.1f%% 空闲 %.1f%%"
+    " (阈值: 未知值=%d 致命下界=%d)",
+    width, height, resolution, ox, oy,
+    stats.unknownRatio() * 100.0, stats.lethalRatio() * 100.0,
+    (1.0 - stats.unknownRatio() - stats.lethalRatio()) * 100.0,
+    costmap_params_.unknown_cost, costmap_params_.lethal_cost_threshold);
+}
+
+std::shared_ptr<GridMap> ExplorationCoordinatorNode::validationGrid(std::string & why)
+{
+  why.clear();
+  if (!use_costmap_for_validation_) {
+    // 回退路径：用 /map 校验。已知会锁死探索，仅供对比排查，构造时已 WARN 过。
+    std::lock_guard<std::mutex> lock(map_mutex_);
+    if (!latest_map_ || !latest_map_->consistent()) {
+      why = "校验用 /map 不可用";
+      return nullptr;
+    }
+    return latest_map_;
+  }
+
+  std::lock_guard<std::mutex> lock(costmap_mutex_);
+  if (!latest_costmap_ || !latest_costmap_->consistent()) {
+    // 绝不在这里退回 /map：那正是把两层判据放到两张图上的错误做法。
+    // 拿不到代价地图就不下发，宁可停着也不能拿错误的图放行目标。
+    why = "尚未收到可用的全局代价地图(" + costmap_topic_ + ")";
+    return nullptr;
+  }
+  const double age = (now() - latest_costmap_time_).seconds();
+  if (age > costmap_timeout_sec_) {
+    why = "全局代价地图已 " + std::to_string(age) + "s 未更新(超时上限 " +
+      std::to_string(costmap_timeout_sec_) + "s)";
+    return nullptr;
+  }
+  return latest_costmap_;
 }
 
 void ExplorationCoordinatorNode::odomCallback(
@@ -1108,33 +1265,39 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
     return;
   }
 
-  std::shared_ptr<GridMap> map;
-  {
-    std::lock_guard<std::mutex> map_lock(map_mutex_);
-    map = latest_map_;
-  }
-  if (!map || !map->consistent()) {
-    RCLCPP_WARN(get_logger(), "校验时地图不可用，本次候选作废(绝不在无图状态下下发)");
-    rejectCurrentCandidate("校验时地图不可用");
+  // 下发前校验用的栅格图 —— 必须是 planner_server 规划时所用的那一张
+  // （默认全局代价地图），否则两层判据查不同的图，会互相锁死：
+  // 实测用 /map 校验时 631/631 次候选全被否，探索一个目标都发不出去。
+  // 详见 costmap_adapter.hpp 文件头。
+  std::string grid_why;
+  const std::shared_ptr<GridMap> grid = validationGrid(grid_why);
+  if (!grid) {
+    RCLCPP_WARN(
+      get_logger(), "校验用栅格图不可用(%s)，本次候选作废(绝不在无图状态下下发)",
+      grid_why.c_str());
+    rejectCurrentCandidate("校验用栅格图不可用: " + grid_why);
     return;
   }
 
   // 目标点重新校验一遍：从生成到现在地图可能已经更新，
   // 原先合法的目标可能已经被新观测判成占据/未知。
-  const ValidationResult goal_check = validator_.validateGoal(*map, candidate.x, candidate.y);
+  const ValidationResult goal_check = validator_.validateGoal(*grid, candidate.x, candidate.y);
   if (!goal_check.valid) {
     rejectCurrentCandidate("目标点复检未通过: " + goal_check.reason);
     return;
   }
 
   // 校验2（路径）：逐段插值采样，任何一个采样点落在未知格上就整条否掉。
+  // 终点截断检查(path_endpoint_tolerance)也在 validatePath 内，一并保留——
+  // 它拦的是「规划器把不可达目标尽力靠近后返回半截路径、action 仍报成功」这一类，
+  // 与查哪张图无关，是独立有价值的一条。
   std::vector<PlanarPoint> pts;
   pts.reserve(path.poses.size());
   for (const auto & p : path.poses) {
     pts.push_back(PlanarPoint{p.pose.position.x, p.pose.position.y});
   }
   const PlanarPoint requested{candidate.x, candidate.y};
-  const ValidationResult path_check = validator_.validatePath(*map, pts, requested);
+  const ValidationResult path_check = validator_.validatePath(*grid, pts, requested);
   if (!path_check.valid) {
     RCLCPP_WARN(
       get_logger(),
