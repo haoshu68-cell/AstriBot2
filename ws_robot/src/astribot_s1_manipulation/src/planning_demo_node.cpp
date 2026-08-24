@@ -11,11 +11,16 @@
 //
 // 所有参数从 yaml 读，节点内不写死任何数值。
 
+#include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+
+#include <moveit_msgs/msg/planning_scene.hpp>
+#include <shape_msgs/msg/solid_primitive.hpp>
 
 #include "astribot_s1_manipulation/dual_arm_planner.hpp"
 
@@ -260,6 +265,116 @@ void reportResult(
   }
 }
 
+// ==================== 搬运场景 ====================
+//
+// 把一个目标物体从位置 A 搬到位置 B。
+//
+// !!! 这是纯运动学演示，务必看清边界 !!!
+// 本机器人**没有夹爪关节**：两臂止于 link_7，其后只有一个无碰撞体的 tool_link
+// 纯坐标系，SRDF 里刻意没有声明 end_effector（原因见 astribot_s1.srdf 注释）。
+// 所以：
+//   真的   —— 完整搬运动作序列的规划与执行：home -> A上方 -> 降到A -> 抬起
+//             -> B上方 -> 降到B -> 抬起 -> 回home，每步都是笛卡尔位姿目标，
+//             每步都过碰撞与奇异点校验，每步都真实下发到控制器执行
+//   真的   —— 物体是规划场景里的**真实碰撞体**，规划器必须绕开它而不是穿过去
+//   做不到 —— 物体在 Gazebo 里被夹住并跟着走（没有夹爪，物理抓取无法实现）
+//
+// 物体在规划场景里的位置会在"抬起后"从 A 更新到 B，让后续避障用的是新位置 ——
+// 这一步是必要的，否则回程规划仍以为物体在 A，会绕开一个已经不在那儿的障碍。
+
+/// 搬运航路点。名字用于日志与失败定位。
+struct TransportStep
+{
+  std::string name;
+  geometry_msgs::msg::PoseStamped pose;
+};
+
+/// 造一个位姿。frame 用规划坐标系（本机是 astribot_torso_base，没有 base_link）。
+geometry_msgs::msg::PoseStamped makeTransportPose(
+  const std::string & frame, double x, double y, double z,
+  const std::vector<double> & quat_xyzw)
+{
+  geometry_msgs::msg::PoseStamped ps;
+  ps.header.frame_id = frame;
+  ps.pose.position.x = x;
+  ps.pose.position.y = y;
+  ps.pose.position.z = z;
+  if (quat_xyzw.size() == 4U) {
+    ps.pose.orientation.x = quat_xyzw[0];
+    ps.pose.orientation.y = quat_xyzw[1];
+    ps.pose.orientation.z = quat_xyzw[2];
+    ps.pose.orientation.w = quat_xyzw[3];
+  } else {
+    // 不给姿态时用单位四元数。注意这**不是**"保持当前姿态"，
+    // 而是一个明确的朝向；给不出合理姿态时宁可显式指定，不要留 0000 非法值。
+    ps.pose.orientation.w = 1.0;
+  }
+  return ps;
+}
+
+/// 把物体作为碰撞体放进规划场景。pose 是物体中心。
+moveit_msgs::msg::CollisionObject makeBoxObject(
+  const std::string & id, const std::string & frame,
+  const std::vector<double> & center_xyz, const std::vector<double> & size_xyz)
+{
+  moveit_msgs::msg::CollisionObject obj;
+  obj.id = id;
+  obj.header.frame_id = frame;
+  shape_msgs::msg::SolidPrimitive box;
+  box.type = shape_msgs::msg::SolidPrimitive::BOX;
+  box.dimensions = {size_xyz[0], size_xyz[1], size_xyz[2]};
+  obj.primitives.push_back(box);
+  geometry_msgs::msg::Pose p;
+  p.position.x = center_xyz[0];
+  p.position.y = center_xyz[1];
+  p.position.z = center_xyz[2];
+  p.orientation.w = 1.0;
+  obj.primitive_poses.push_back(p);
+  obj.operation = moveit_msgs::msg::CollisionObject::ADD;
+  return obj;
+}
+
+/// 生成完整搬运序列。approach_height 是接近/离开时在抓取点上方留的高度。
+std::vector<TransportStep> buildTransportSteps(
+  const std::string & frame,
+  const std::vector<double> & pick_xyz, const std::vector<double> & place_xyz,
+  double grasp_z_offset, double approach_height,
+  const std::vector<double> & quat_xyzw)
+{
+  const double px = pick_xyz[0], py = pick_xyz[1];
+  const double pz = pick_xyz[2] + grasp_z_offset;
+  const double qx = place_xyz[0], qy = place_xyz[1];
+  const double qz = place_xyz[2] + grasp_z_offset;
+  return {
+    {"1-接近A上方", makeTransportPose(frame, px, py, pz + approach_height, quat_xyzw)},
+    {"2-下降到A", makeTransportPose(frame, px, py, pz, quat_xyzw)},
+    {"3-抬起(带物体)", makeTransportPose(frame, px, py, pz + approach_height, quat_xyzw)},
+    {"4-移动到B上方", makeTransportPose(frame, qx, qy, qz + approach_height, quat_xyzw)},
+    {"5-下降到B", makeTransportPose(frame, qx, qy, qz, quat_xyzw)},
+    {"6-抬起(已放下)", makeTransportPose(frame, qx, qy, qz + approach_height, quat_xyzw)},
+  };
+}
+
+/// 把碰撞体变更以「场景差分」的形式发到 /planning_scene。
+///
+/// 刻意**不用** PlanningSceneInterface：它的 applyCollisionObject 走
+/// /apply_planning_scene 服务，而服务调用会阻塞等待应答。实测在本 demo 里
+/// 会整体挂死（预备动作打完 SUCCESS 之后再无输出、直到超时被杀），
+/// 排查成本很高。发差分话题不依赖任何服务与 move_group capability，
+/// PlanningSceneMonitor 本身就订阅这个话题，行为更可预期。
+///
+/// is_diff 必须置 true：否则会被当成一整个新场景，把机器人状态等其它内容全覆盖掉。
+void publishSceneDiff(
+  const rclcpp::Publisher<moveit_msgs::msg::PlanningScene>::SharedPtr & pub,
+  const moveit_msgs::msg::CollisionObject & obj)
+{
+  moveit_msgs::msg::PlanningScene scene;
+  scene.is_diff = true;
+  scene.robot_state.is_diff = true;
+  scene.world.collision_objects.push_back(obj);
+  pub->publish(scene);
+}
+
 }  // namespace astribot_s1_manipulation
 
 int main(int argc, char ** argv)
@@ -313,6 +428,27 @@ int main(int argc, char ** argv)
       "demo.comparison_planners",
       std::vector<std::string>{"RRTstarConfig", "BITstarConfig", "InformedRRTstarConfig"});
     const bool execute = loader.get<bool>("demo.execute_trajectory", false);
+
+    // ---- 搬运场景参数 ----
+    // 全部从 yaml 读，不硬编码：换物体尺寸/换搬运位置只改 yaml。
+    const std::string transport_group =
+      loader.get<std::string>("demo.transport_group", std::string("arm_left"));
+    const std::string transport_tcp_link =
+      loader.get<std::string>("demo.transport_tcp_link", std::string(""));
+    const std::string transport_frame = loader.get<std::string>(
+      "demo.transport_frame", std::string("astribot_torso_base"));
+    const std::vector<double> transport_pick =
+      loader.get<std::vector<double>>("demo.transport_pick_xyz", std::vector<double>{});
+    const std::vector<double> transport_place =
+      loader.get<std::vector<double>>("demo.transport_place_xyz", std::vector<double>{});
+    const std::vector<double> transport_size = loader.get<std::vector<double>>(
+      "demo.transport_object_size_xyz", std::vector<double>{0.06, 0.06, 0.12});
+    const double transport_grasp_z_offset =
+      loader.get<double>("demo.transport_grasp_z_offset", 0.0);
+    const double transport_approach_height =
+      loader.get<double>("demo.transport_approach_height", 0.15);
+    const std::vector<double> transport_quat = loader.get<std::vector<double>>(
+      "demo.transport_grasp_orientation_xyzw", std::vector<double>{});
     const bool move_to_ready = loader.get<bool>("demo.move_to_ready_first", true);
 
     RCLCPP_INFO(logger, "==================================================");
@@ -347,7 +483,112 @@ int main(int argc, char ** argv)
     }
 
     for (const std::string & scenario : scenarios) {
-      if (scenario == "single_arm_named") {
+      if (scenario == "transport") {
+        // ---- 搬运场景：物体从 A 到 B ----
+        if (transport_pick.size() != 3U || transport_place.size() != 3U ||
+          transport_size.size() != 3U)
+        {
+          RCLCPP_ERROR(
+            logger,
+            "跳过 transport: demo.transport_pick_xyz / transport_place_xyz / "
+            "transport_object_size_xyz 必须各是 3 个数，当前分别是 %zu/%zu/%zu 个",
+            transport_pick.size(), transport_place.size(), transport_size.size());
+          exit_code = 1;
+          continue;
+        }
+
+        const std::string object_id = "transport_target";
+        // 场景差分用 transient_local：晚订阅的 PlanningSceneMonitor 也能收到，
+        // 不然一发即丢，物体可能压根没进场景而我们毫不知情。
+        auto scene_pub = node->create_publisher<moveit_msgs::msg::PlanningScene>(
+          "/planning_scene", rclcpp::QoS(1).transient_local());
+
+        // 物体先放在 A。它是规划场景里的真实碰撞体，会参与后续每一步的避障。
+        publishSceneDiff(
+          scene_pub, makeBoxObject(object_id, transport_frame, transport_pick, transport_size));
+        // 给 PlanningSceneMonitor 一点时间把差分吃进去，否则第一步规划时物体还不在场景里。
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));        RCLCPP_INFO(
+          logger,
+          "[transport] 物体已加入规划场景: A=(%.3f, %.3f, %.3f) 尺寸=(%.3f, %.3f, %.3f) "
+          "frame=%s；目标位置 B=(%.3f, %.3f, %.3f)",
+          transport_pick[0], transport_pick[1], transport_pick[2],
+          transport_size[0], transport_size[1], transport_size[2],
+          transport_frame.c_str(),
+          transport_place[0], transport_place[1], transport_place[2]);
+        RCLCPP_WARN(
+          logger,
+          "[transport] 本机无夹爪关节，这是**纯运动学演示**："
+          "动作序列/碰撞校验/轨迹执行都是真的，物体不会真的被夹住跟着走");
+
+        const std::vector<TransportStep> steps = buildTransportSteps(
+          transport_frame, transport_pick, transport_place,
+          transport_grasp_z_offset, transport_approach_height, transport_quat);
+
+        bool all_ok = true;
+        for (std::size_t i = 0; i < steps.size(); ++i) {
+          const TransportStep & step = steps[i];
+          SingleArmPlanRequest request;
+          request.group = transport_group;
+          request.use_pose_target = true;
+          request.pose_target = step.pose;
+          request.tcp_link = transport_tcp_link;
+
+          const PlanResult result = planner.planSingleArm(request);
+          RCLCPP_INFO(
+            logger, "[transport] 步骤 %zu/%zu %s -> 目标(%.3f, %.3f, %.3f): %s",
+            i + 1U, steps.size(), step.name.c_str(),
+            step.pose.pose.position.x, step.pose.pose.position.y,
+            step.pose.pose.position.z, toString(result.code));
+
+          if (!result.succeeded() && !result.noActionNeeded()) {
+            // 中间步失败就中止：继续做下一步会让机器人从一个错误的位姿出发，
+            // 后面的位姿目标都失去意义，且可能撞上物体。
+            RCLCPP_ERROR(
+              logger, "[transport] 步骤 %s 失败(%s)，中止搬运（不做无意义的后续步骤）",
+              step.name.c_str(), toString(result.code));
+            all_ok = false;
+            exit_code = 1;
+            break;
+          }
+          if (result.succeeded() && execute) {
+            std::string message;
+            const PlanErrorCode exec = planner.executeTrajectory(
+              transport_group, result.trajectory, message);
+            if (exec != PlanErrorCode::kSuccess) {
+              RCLCPP_ERROR(
+                logger, "[transport] 步骤 %s 执行失败: %s (%s)",
+                step.name.c_str(), toString(exec), message.c_str());
+              all_ok = false;
+              exit_code = 1;
+              break;
+            }
+          }
+
+          // 抬起之后把物体在规划场景里从 A 挪到 B。
+          // 必须在这一步做：否则后续规划仍以为物体在 A，会绕开一个已经不在那儿的
+          // 障碍，同时对 B 处的真实占用视而不见。
+          if (step.name == "3-抬起(带物体)") {
+            publishSceneDiff(
+              scene_pub,
+              makeBoxObject(object_id, transport_frame, transport_place, transport_size));
+            std::this_thread::sleep_for(std::chrono::milliseconds(800));
+            RCLCPP_INFO(
+              logger, "[transport] 规划场景中的物体位置已更新到 B=(%.3f, %.3f, %.3f)",
+              transport_place[0], transport_place[1], transport_place[2]);
+          }
+        }
+
+        // 收尾：把物体从场景里移掉，避免污染后续场景的规划。
+        moveit_msgs::msg::CollisionObject remove;
+        remove.id = object_id;
+        remove.header.frame_id = transport_frame;
+        remove.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+        publishSceneDiff(scene_pub, remove);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        RCLCPP_INFO(
+          logger, "[transport] 搬运序列%s，物体已从规划场景移除",
+          all_ok ? "全部完成" : "中止");
+      } else if (scenario == "single_arm_named") {
         SingleArmPlanRequest request;
         request.group = single_arm_group;
         request.named_target = single_arm_named;

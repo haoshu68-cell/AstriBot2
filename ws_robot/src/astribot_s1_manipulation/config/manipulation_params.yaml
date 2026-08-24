@@ -185,7 +185,7 @@ planning_demo_node:
     # ---------------- demo 场景 ----------------
     demo:
       # 依次跑哪些场景。可选：single_arm_joint / single_arm_named /
-      # closed_chain / planner_comparison
+      # closed_chain / planner_comparison / transport
       scenarios: ["single_arm_named", "closed_chain", "planner_comparison"]
 
       # 单臂场景用的组与目标
@@ -203,6 +203,62 @@ planning_demo_node:
       # planner_comparison 场景依次用这些规划器跑同一个任务并对比节拍与成功率。
       # 这正是任务成功判定里"可切换 RRT*/BIT*/Informed RRT*"的自证手段。
       comparison_planners: ["RRTstarConfig", "BITstarConfig", "InformedRRTstarConfig"]
+
+      # ---------------- 搬运场景 transport ----------------
+      # 把一个目标物体从 A 搬到 B。
+      #
+      # !!! 纯运动学演示，边界要看清 !!!
+      # 本机没有夹爪关节（两臂止于 link_7，其后只有无碰撞体的 tool_link 纯坐标系，
+      # SRDF 刻意不声明 end_effector）。所以：
+      #   真的   —— 动作序列(接近/下降/抬起/平移/下降/抬起)逐步笛卡尔规划、
+      #             每步过碰撞与奇异点校验、每步真实下发执行
+      #   真的   —— 物体是规划场景里的真实碰撞体，规划器必须绕开它
+      #   做不到 —— 物体在 Gazebo 里被夹住跟着走
+      transport_group: "arm_left"
+      # TCP link；空则用规划组默认 tip。默认即 astribot_arm_left_tool_link。
+      transport_tcp_link: ""
+      # 坐标系：本机没有 base_link，本体系是 astribot_torso_base。
+      transport_frame: "astribot_torso_base"
+      # 物体中心在 A / B 的位置。注意 z：本体系下地面在 z≈-0.095，
+      # 所以 z=0.15 大约是离地 0.245m（桌面高度量级）。
+      # !!! 这两个坐标必须落在该臂真实可达域内，否则第一步就 IK 失败 !!!
+      # 实测（/compute_fk，arm_left 的 ready 位姿 [0,-0.5,-0.6,1.0,0,0,0]）：
+      #     TCP = (0.149, 0.384, 0.861)
+      # 注意 z 有 0.86m —— 这是个**高位**作业臂，凭"桌面高度 0.15m"直觉取值
+      # 会离可达域差 0.7m，实测就是这么第一步 RETRIES_EXHAUSTED 的。
+      # 取值方法：先用 /compute_fk 量出该臂某个已知位姿的 TCP，再在其邻域内取 A/B。
+      # A/B 及其"上方"点(z+approach_height)全部经 /compute_ik 实测可达：
+      #   A=(0.249,0.464,0.861) A上方=(0.249,0.464,0.961)  均 IK OK
+      #   B=(0.249,0.234,0.861) B上方=(0.249,0.234,0.961)  均 IK OK
+      # 选点方法：先 /compute_fk 量出已知位姿的 TCP，再用 /compute_ik
+      # 在其邻域扫一遍网格，只取实测可达的点 —— 凭直觉取值实测失败过两轮。
+      # 物体中心放低到 0.771，让 TCP(中心 + grasp_z_offset) 正好落在实测可达的 0.861，
+      # 且高于物体顶面(0.771+0.06/2... 见下)——这样 TCP 不会插进物体里。
+      transport_pick_xyz: [0.249, 0.464, 0.771]
+      transport_place_xyz: [0.249, 0.234, 0.771]
+      transport_object_size_xyz: [0.06, 0.06, 0.12]
+      # TCP 相对物体中心的抓取高度偏移。没有夹爪，这里表示"TCP 该到达的位置"。
+      # !!! 不能为 0 !!! 0 会让 TCP 落在物体**中心**，也就是插进物体内部，
+      # 碰撞校验必然失败（实测：步骤1 直接 RETRIES_EXHAUSTED）。
+      # 本机没有夹爪，TCP 只能停在物体**上方**：
+      #   物体半高 0.06 + 余量 0.03 = 0.09
+      #   TCP z = 0.771 + 0.09 = 0.861  <- 实测 IK 可达
+      #   接近点 = 0.861 + 0.10 = 0.961 <- 实测 IK 可达
+      # 另外注意：我先前用 /compute_ik 扫可达域时物体**不在**场景里，
+      # 所以那轮 IK 通过并不能说明"带着物体也可达"，这一点坑过一轮。
+      transport_grasp_z_offset: 0.09
+      # 接近/离开时在抓取点上方留的高度。太小会让下降段与物体碰撞校验冲突。
+      transport_approach_height: 0.10
+      # TCP 姿态四元数 (x,y,z,w)。
+      # !!! 不要写成空列表 [] !!! ROS2 参数系统无法从空 YAML 序列推断类型，
+      # declare_parameter 会直接抛 InvalidParameterValueException
+      # （"parameter_value_from failed ... No parameter value set"），
+      # 而且异常会连带把 move_group 一起搞崩，报出来的却是
+      # "failed to create guard condition"，看着像资源耗尽，极易误判。
+      # 不想指定姿态就给单位四元数，显式而不是留空。
+      # 用实测 ready 位姿的 TCP 姿态，而不是单位四元数：
+      # 单位四元数对这条 7-DOF 链多半是不可达姿态，会让每一步都 IK 失败。
+      transport_grasp_orientation_xyzw: [0.6227, -0.0410, 0.2927, 0.7245]
 
       # 是否把规划出的轨迹真的下发执行（Gazebo 仿真里机器人会动起来）。
       # 首次验证建议 false，先看规划指标；确认无误后再开 true。
