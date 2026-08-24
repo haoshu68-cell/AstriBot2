@@ -246,12 +246,28 @@
       </geometry>
     </collision>
   </link>
+  <!-- ===== 躯干 4 自由度 =====
+       !!! 限位以 per-part 模型 model/astribot_torso.urdf 为准（2026-08-20 改）!!!
+       各部件 yaml 的 model: 字段指向的才是 SDK 运行时加载的那一份；
+       whole_body_*.urdf 一份都没被引用。详见 docs/sim_real_alignment.md 第 0 节。
+
+       本次变更里**速度限位是安全相关的**，不是可选优化：
+         joint_1  0.0~1.4  v6.0  ->  -0.04~1.5  v1.8
+         joint_2 -2.3~0.0  v6.0  ->  -2.3~0.06  v1.8
+         joint_3  0.0~2.3  v6.0  ->  -0.4~2.3   v1.8
+         joint_4 -1.5~1.5  v6.0  ->  -1.2~1.2   v1.8
+       原先 6.0 rad/s 比真机控制栈认定的 1.8 rad/s 宽 3.3 倍 ——
+       也就是说 optimized_velocity_scaling: 0.90 跑满的"时间最优"轨迹，
+       躯干段速度可以达到真机限位的 3 倍，而 Gazebo 会照 URDF 老实执行、
+       什么都不报。收紧后节拍会相应变长，这是正确的代价。
+       joint_4 位置范围同样收窄（±1.5 -> ±1.2），方向也是变安全。
+  -->
   <joint name="astribot_torso_joint_1" type="revolute">
     <origin rpy="-1.5708 1.5708 0" xyz="0 0 0.12"/>
     <parent link="astribot_torso_base"/>
     <child link="astribot_torso_link_1"/>
     <axis xyz="0 0 1"/>
-    <limit effort="100" lower="0.0" upper="1.4" velocity="6.0"/>
+    <limit effort="100" lower="-0.04" upper="1.5" velocity="1.8"/>
   </joint>
 
   <link name="astribot_torso_link_2">
@@ -281,7 +297,7 @@
     <parent link="astribot_torso_link_1"/>
     <child link="astribot_torso_link_2"/>
     <axis xyz="0 0 1"/>
-    <limit effort="100" lower="-2.3" upper="0.0" velocity="6.0"/>
+    <limit effort="100" lower="-2.3" upper="0.06" velocity="1.8"/>
   </joint>
 
   <link name="astribot_torso_link_3">
@@ -311,7 +327,7 @@
     <parent link="astribot_torso_link_2"/>
     <child link="astribot_torso_link_3"/>
     <axis xyz="0 0 1"/>
-    <limit effort="100" lower="0.0" upper="2.3" velocity="6.0"/>
+    <limit effort="100" lower="-0.4" upper="2.3" velocity="1.8"/>
   </joint>
 
   <link name="astribot_torso_link_4">
@@ -343,7 +359,7 @@
     <parent link="astribot_torso_link_3"/>
     <child link="astribot_torso_link_4"/>
     <axis xyz="0 0 1"/>
-    <limit effort="100" lower="-1.5" upper="1.5" velocity="6.0"/>
+    <limit effort="100" lower="-1.2" upper="1.2" velocity="1.8"/>
   </joint>
 
   <!-- 质量/惯量为 0 的虚拟挂载点，双臂与头部都挂在这里 -->

@@ -45,4 +45,23 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}/meshes
 )
 
+# ---------------------------------------------------------------------------------------
+# 关节限位一致性测试
+#
+# 把"限位以厂商 per-part 模型为准"这条规则机器化。厂商 ship 了四份互不一致的模型，
+# 本包早期抄的是 whole_body_with_wheel.urdf —— 一份 SDK 运行时并不加载的模型，
+# 导致躯干速度限位比真机宽 3.3 倍（方向不安全）、左臂 joint_3 白丢 1.7 rad 行程。
+# 详见 docs/sim_real_alignment.md 第 0 节与 test/test_joint_limits_parity.py 的模块注释。
+#
+# 注意这是 `colcon test` 阶段的测试，不是 `colcon build` 阶段的检查 ——
+# 因为它要展开 xacro，而 xacro 的 $(find astribot_s1_description) 需要本包先装好。
+# ---------------------------------------------------------------------------------------
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_joint_limits_parity
+    test/test_joint_limits_parity.py
+    TIMEOUT 300
+  )
+endif()
+
 ament_package()

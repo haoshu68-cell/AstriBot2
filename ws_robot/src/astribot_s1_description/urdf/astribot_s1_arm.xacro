@@ -6,9 +6,39 @@
   上下限 两侧不同，因此把这些差异值做成宏参数，其余数值直接写死在宏体内，
   避免用符号翻转公式去"推导"左右差异（原始工程数据不是简单镜像关系，直接照抄原文件数值最安全）。
 
-  数值来源：astribot_config/robot_config/astribot_s1/model/astribot_whole_body_with_wheel.urdf
-  （未改动任何数值），只修正了 mesh 路径，并为缺失 collision 的 link
-  （base_link、link_1、link_2、link_6）按 STL 包围盒补了简化碰撞体。
+  数值来源（2026-08-20 改）：关节限位以
+  astribot_config/robot_config/astribot_s1/model/astribot_arm_left.urdf
+  与 astribot_arm_right.urdf（**per-part 模型**）为准。
+  连杆惯量/质量/关节原点仍取自 astribot_whole_body_with_wheel.urdf ——
+  实测这两份在惯量与关节原点上**逐项完全一致**（0 处差异），只有限位表不同，
+  所以只需要换限位，不需要动几何与惯量。
+  mesh 路径为本工程修正；为缺失 collision 的 link（base_link、link_1、link_2、link_6）
+  按 STL 包围盒补了简化碰撞体 —— per-part 模型同样缺这几个 collision 且完全无 mesh，
+  这也正是不能直接 xacro:include 厂商 URDF 的原因。
+
+  !!! 为什么换成 per-part：厂商 ship 了四份互不一致的模型 !!!
+  各部件 yaml 的 model: 字段指向的才是 SDK 运行时真正加载的那一份，
+  whole_body_*.urdf 一份都没被引用。以 SDK 加载的为准才能与真机对齐。
+  详见 docs/sim_real_alignment.md 第 0 节。
+
+  本次限位变更（旧 = whole_body_with_wheel，新 = per-part）：
+    joint_1  -3.0~3.0        -> -3.1~3.1
+    joint_2  -1.4~0.4        -> -1.53~0.46
+    joint_3  左 -3.0~1.4 / 右 -1.4~3.1  -> 两侧统一 -3.1~3.1
+    joint_4   0.0~2.4        -> -0.06~2.61
+    joint_5  -2.0~2.0 v15    -> -2.56~2.56 v20
+    joint_6  -0.6~0.6        -> -0.76~0.76
+    joint_7  -1.4~1.4        -> -1.53~1.53
+
+  注意两点副作用：
+  1) joint_3 原先左右不对称（镜像限制），per-band 模型两侧都是 ±3.1，
+     故 joint3_lower/joint3_upper 这对参数现在两侧取值相同。参数保留不删 ——
+     它记录了这个非对称限制曾经存在，且换机型时仍是有用的钩子。
+     放开后搜索空间变大，可能进入原先被限位挡住的自碰撞区域，
+     但碰撞由 CollisionValidator 实际校验，不靠限位兜底。
+  2) joint_4 下限从 0.0 放到 -0.06，意味着允许略微越过"肘部完全伸直"这个
+     精确奇异构型（实测 joint_4=0 时 sigma_min=0.0077）。真机允许，所以照抄，
+     但这让奇异点监视器变得更重要，不要关掉它。
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
@@ -75,7 +105,7 @@
       <parent link="astribot_arm_${side}_base_link"/>
       <child link="astribot_arm_${side}_link_1"/>
       <axis xyz="0 0 1"/>
-      <limit effort="265" lower="-3.0" upper="3.0" velocity="8.4"/>
+      <limit effort="265" lower="-3.1" upper="3.1" velocity="8.4"/>
     </joint>
 
     <!-- ===== link_2：左右 mesh/惯量不同（肩部结构件） ===== -->
@@ -108,7 +138,7 @@
       <parent link="astribot_arm_${side}_link_1"/>
       <child link="astribot_arm_${side}_link_2"/>
       <axis xyz="0 0 1"/>
-      <limit effort="265" lower="-1.4" upper="0.4" velocity="8.4"/>
+      <limit effort="265" lower="-1.53" upper="0.46" velocity="8.4"/>
     </joint>
 
     <!-- ===== link_3：两侧惯量相同，但 joint_3 上下限左右相反（镜像安装），已作为参数传入 ===== -->
@@ -169,7 +199,7 @@
       <parent link="astribot_arm_${side}_link_3"/>
       <child link="astribot_arm_${side}_link_4"/>
       <axis xyz="0 0 1"/>
-      <limit effort="142" lower="0.0" upper="2.4" velocity="15"/>
+      <limit effort="142" lower="-0.06" upper="2.61" velocity="15"/>
     </joint>
 
     <link name="astribot_arm_${side}_link_5">
@@ -199,7 +229,7 @@
       <parent link="astribot_arm_${side}_link_4"/>
       <child link="astribot_arm_${side}_link_5"/>
       <axis xyz="0 0 1"/>
-      <limit effort="71" lower="-2.0" upper="2.0" velocity="15"/>
+      <limit effort="71" lower="-2.56" upper="2.56" velocity="20"/>
     </joint>
 
     <link name="astribot_arm_${side}_link_6">
@@ -230,7 +260,7 @@
       <parent link="astribot_arm_${side}_link_5"/>
       <child link="astribot_arm_${side}_link_6"/>
       <axis xyz="0 0 1"/>
-      <limit effort="20" lower="-0.6" upper="0.6" velocity="16.8"/>
+      <limit effort="20" lower="-0.76" upper="0.76" velocity="16.8"/>
     </joint>
 
     <link name="astribot_arm_${side}_link_7">
@@ -260,7 +290,7 @@
       <parent link="astribot_arm_${side}_link_6"/>
       <child link="astribot_arm_${side}_link_7"/>
       <axis xyz="0 0 1"/>
-      <limit effort="20" lower="-1.4" upper="1.4" velocity="16.8"/>
+      <limit effort="20" lower="-1.53" upper="1.53" velocity="16.8"/>
     </joint>
 
     <!-- 末端工具挂载点（法兰），预留给夹爪/工具，本方案未挂夹爪，保留 fixed link 便于后续扩展 -->
@@ -299,7 +329,7 @@
     link2_mass="1.43694657"
     link2_ixx="0.00360751" link2_ixy="-0.00009193" link2_ixz="0.00007764"
     link2_iyy="0.00283747" link2_iyz="0.00054945" link2_izz="0.00172927"
-    joint3_lower="-3.0" joint3_upper="1.4"
+    joint3_lower="-3.1" joint3_upper="3.1"
     base_fixed_rpy="0 -1.22173 -1.5707963" base_fixed_xyz="0 0.06449 0.02348"/>
 
   <!-- ================= 右臂实例化（数值取自原 URDF astribot_arm_right_* 数据） ================= -->
@@ -315,7 +345,7 @@
     link2_mass="1.45811037"
     link2_ixx="0.00394196" link2_ixy="-8.846e-05" link2_ixz="-3.742e-05"
     link2_iyy="0.00316298" link2_iyz="-0.0007079" link2_izz="0.00177295"
-    joint3_lower="-1.4" joint3_upper="3.1"
+    joint3_lower="-3.1" joint3_upper="3.1"
     base_fixed_rpy="0 -1.22173 1.5707963" base_fixed_xyz="0 -0.06449 0.02348"/>
 
 </robot>

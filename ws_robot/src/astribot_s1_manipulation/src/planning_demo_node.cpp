@@ -490,7 +490,58 @@ struct ProbeVerdict
 /// 局限（要如实知道）：这里的碰撞场景只含机器人自身 + 我们放进去的那个物体，
 /// 不含 Gazebo 里的环境。对本 demo 够用（物体是唯一环境障碍），
 /// 但不能当成"真跑一定不碰"的证明。
+/// 单次 IK 尝试。由 probeTcpPose 重试调用，不要直接用（单次结果是随机的）。
+ProbeVerdict probeTcpPoseOnce(
+  const moveit::core::RobotState & seed,
+  const moveit::core::JointModelGroup * jmg,
+  const std::string & tcp_link,
+  const geometry_msgs::msg::PoseStamped & pose,
+  double ik_timeout,
+  const CollisionValidator & collision,
+  const SingularityMonitor & singularity);
+
 ProbeVerdict probeTcpPose(
+  const moveit::core::RobotState & seed,
+  const moveit::core::JointModelGroup * jmg,
+  const std::string & tcp_link,
+  const geometry_msgs::msg::PoseStamped & pose,
+  double ik_timeout,
+  int ik_attempts,
+  const CollisionValidator & collision,
+  const SingularityMonitor & singularity)
+{
+  // !!! 为什么要重试 ik_attempts 次并取"最好的一次" !!!（实测教训）
+  // setFromIK 是随机重启的局部解算器。早先这里只调一次、超时用闭链那套的
+  // 0.01s，结果整张表是个**随机指标**：同一份配置连跑三次得到
+  // 48/80、46/80、47/80，run-to-run 抖动 ±2，足以盖住真实差异。
+  // 我曾拿"可用候选数变化"去判定改限位有没有生效——那是拿噪声当信号，
+  // 判据本身不成立（当时甚至没量过噪声底）。
+  //
+  // 现在的语义变成"**至少存在一个**合法解"：任一次尝试拿到 good() 就立刻返回。
+  // 这把点估计换成了稳定的下界，重复跑收敛得多；代价只是探针慢一些
+  // （探针不在控制环里，慢无所谓）。
+  // 全部失败时返回信息量最大的那一次（有 IK 解的优先于无解的），便于定位原因。
+  ProbeVerdict best;
+  bool have_any = false;
+  const int attempts = std::max(1, ik_attempts);
+  for (int attempt = 0; attempt < attempts; ++attempt) {
+    ProbeVerdict trial = probeTcpPoseOnce(
+      seed, jmg, tcp_link, pose, ik_timeout, collision, singularity);
+    if (trial.good()) {
+      return trial;
+    }
+    // 挑一个"更有信息量"的失败：有 IK 解 > 无 IK 解；同样有解时取 σ 更大的。
+    if (!have_any || (trial.ik_ok && !best.ik_ok) ||
+      (trial.ik_ok == best.ik_ok && trial.sigma_min > best.sigma_min))
+    {
+      best = trial;
+      have_any = true;
+    }
+  }
+  return best;
+}
+
+ProbeVerdict probeTcpPoseOnce(
   const moveit::core::RobotState & seed,
   const moveit::core::JointModelGroup * jmg,
   const std::string & tcp_link,
@@ -819,6 +870,13 @@ int main(int argc, char ** argv)
       "demo.transport_probe_y_list", std::vector<double>{});
     const std::vector<double> probe_z_list = loader.get<std::vector<double>>(
       "demo.transport_probe_z_list", std::vector<double>{});
+    // 探针的 IK 预算。**必须比闭链那套(0.01s/3 次)大得多**：
+    // 探针不在控制环里，慢无所谓，但它的结论要稳定。用小预算时整张表是随机的
+    // （实测同配置连跑三次 48/46/47，抖动 ±2 盖过真实差异）。
+    const double probe_ik_timeout =
+      loader.get<double>("demo.transport_probe_ik_timeout", 0.05);
+    const int probe_ik_attempts = static_cast<int>(
+      loader.get<int64_t>("demo.transport_probe_ik_attempts", 20));
     // mobile_transport（搬运 -> 导航 -> 搬运）的导航段参数。
     const std::string mobile_map_frame = loader.get<std::string>(
       "demo.mobile_transport_map_frame", std::string("map"));
@@ -913,11 +971,13 @@ int main(int argc, char ** argv)
         RCLCPP_INFO(
           logger,
           "[probe] 组=%s TCP=%s 判据: sigma_min>=%.4f 条件数<=%.1f；"
-          "物体尺寸=(%.3f,%.3f,%.3f) grasp_z_offset=%.3f approach=%.3f",
+          "物体尺寸=(%.3f,%.3f,%.3f) grasp_z_offset=%.3f approach=%.3f；"
+          "IK 预算 %.3fs × %d 次(取任一成功)",
           transport_group.c_str(), probe_tcp_link.c_str(),
           params.singularity.min_singular_value, params.singularity.max_condition_number,
           transport_size[0], transport_size[1], transport_size[2],
-          transport_grasp_z_offset, transport_approach_height);
+          transport_grasp_z_offset, transport_approach_height,
+          probe_ik_timeout, probe_ik_attempts);
         RCLCPP_INFO(
           logger,
           "[probe] 每个候选按「抓取点 + 接近点」成对判定，两点全过才算可用；"
@@ -950,12 +1010,12 @@ int main(int argc, char ** argv)
               const ProbeVerdict grasp = probeTcpPose(
                 *seed, jmg, probe_tcp_link,
                 makeTransportPose(transport_frame, px, py, pz, transport_quat),
-                params.closed_chain.ik_timeout, probe_collision, probe_singularity);
+                probe_ik_timeout, probe_ik_attempts, probe_collision, probe_singularity);
               const ProbeVerdict approach = probeTcpPose(
                 *seed, jmg, probe_tcp_link,
                 makeTransportPose(
                   transport_frame, px, py, pz + transport_approach_height, transport_quat),
-                params.closed_chain.ik_timeout, probe_collision, probe_singularity);
+                probe_ik_timeout, probe_ik_attempts, probe_collision, probe_singularity);
 
               const bool pair_ok = grasp.good() && approach.good();
               const double pair_sigma = std::min(grasp.sigma_min, approach.sigma_min);

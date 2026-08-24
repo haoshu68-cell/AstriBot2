@@ -22,6 +22,11 @@
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>gz_ros2_control</exec_depend>
 
+  <!-- 关节限位一致性测试（test/test_joint_limits_parity.py）：
+       展开本包 xacro 并与厂商 per-part 模型逐项比对 -->
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>xacro</test_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>
