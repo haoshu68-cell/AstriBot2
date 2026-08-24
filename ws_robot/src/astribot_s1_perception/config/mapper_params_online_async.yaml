@@ -9,6 +9,12 @@ slam_toolbox:
     odom_frame: odom
     map_frame: map
     base_frame: astribot_torso_base
+    # 注意：这里是单层的 /scan（pointcloud_to_laserscan，min_height 0.05 / max_height 0.6，
+    # use_inf: true），**不是**四层切片的 /scan_from_cloud。
+    # 也就是说多层高度切片感知只进了 Nav2 costmap，没进 SLAM ——
+    # 矮托盘(离地5~25cm)和悬空横梁在代价地图里有、在这张 SLAM 地图里没有。
+    # 这是已知遗留，改它要和下面的 max_laser_range 联动，
+    # 详见 astribot_s1_autonomy/README.md「已知遗留」一节。
     scan_topic: /scan
     mode: mapping
 
@@ -20,6 +26,16 @@ slam_toolbox:
     resolution: 0.05
     # 融合点云投影出的 2D scan 最远距离要覆盖到 pointcloud_to_laserscan 的
     # range_max（见 config 里同名参数），两边不一致会导致远处障碍物在 SLAM 里被裁掉。
+    #
+    # !!! 但「恰好相等」有个隐蔽副作用 !!!
+    # Karto 只对落在半开区间 [rangeThreshold, maxRange) 内的读数「沿途碾出自由空间」
+    # （OccupancyGrid::AddScan, Karto.h:6167；>= maxRange 的整条丢掉）。
+    # maxRange 取自 scan 消息的 range_max，rangeThreshold = clip(本参数, min, max)。
+    # 本参数 20.0 == scan 的 range_max 20.0 → 区间为空 →
+    # **无回波方向永远碾不出自由空间**，/map 的自由空间只来自真有回波的方向
+    # （实测 723 束里仅 245 束有回波）。机器人静止时已知区只有约 1.4m 半径。
+    # 要修必须降到 range_max 以下（如 12.0）并同时新增一档无回波值，
+    # 详见 astribot_s1_autonomy/README.md「已知遗留」一节。不要只改这一处。
     max_laser_range: 20.0
     minimum_time_interval: 0.5
     transform_timeout: 0.2

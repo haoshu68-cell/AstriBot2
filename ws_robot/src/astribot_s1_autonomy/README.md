@@ -194,17 +194,83 @@ Nav2 报成功但实测超差，按导航失败处理（否则「抵达校验」
 
 ### 未知区域禁行的两层校验
 
-| 层 | 检查什么 | 为什么单靠上一层不够 |
-|---|---|---|
-| 校验1 目标点 | 目标格已知空闲，且 `goal_clearance_radius` 邻域内无未知/占据格 | 只查单格不够：机器人有 0.42m 外接半径，目标格空闲但紧邻未知区时，停过去会有半个身子在未知区里 |
-| 校验2 路径 | Nav2 返回的路径**逐段插值采样**，步长 ≤ `resolution/2`，每个采样点都必须已知空闲 | **只查顶点会漏**：Smac 的路径点可能几十厘米一个，一小块未知区正好夹在两个合法顶点中间时会被完全放过 |
+**两层校验必须和 Nav2 规划器查同一张栅格图**，否则两层判据会互相锁死。
+分工固定为：**`/map` 找前沿，`global_costmap` 判可站**。
 
-单元测试 `SegmentCrossingUnknownIsRejected` 专门钉死第二条：路径只有两个顶点、两个顶点都合法、
+| 层 | 查哪张图 | 检查什么 |
+|---|---|---|
+| 前沿搜索 | `/map` | 前沿的定义依赖「未知」这个状态。costmap 被 obstacle_layer 清障刷过之后未知区不完整，拿它找前沿会漏掉大片没探索过的区域 |
+| 校验1 目标点 | `global_costmap` | 目标格已知空闲，且 `goal_clearance_radius` 邻域内无未知/占据格 |
+| 校验2 路径 | `global_costmap` | Nav2 返回的路径**逐段插值采样**，步长 ≤ `resolution/2`，每个采样点都必须已知空闲 |
+
+混用两张图的实测后果（2026-08-24）：441 个候选、631 次否决 100% 是「路径穿过未知栅格」，
+下发数恒为 0，最近的非法点在机器人正前方 **0.05m**——路径第 3 个采样点就非法。
+机制是 costmap 的 `obstacle_layer` 配了 `clearing:True`，沿每条扫描射线（含无回波射线）
+把栅格刷成 `FREE_SPACE` 覆盖 `NO_INFORMATION`；而 Karto 丢弃 `range >= maxRange` 的读数，
+同一片区域在 `/map` 里仍是 `-1`。`/scan_from_cloud` 约 66% 的束无回波
+（实测 723 束仅 245 束检出），两图自由区的差集正好是那 66% 的方向。
+
+**换校验数据源时，所有距离阈值的口径必须一起改**，否则换个理由再锁死一次。
+`goal_clearance_radius` 实测走了个来回：
+
+| 取值 | 结果 |
+|---|---|
+| `0.42`（按 /map 的「占据格=原始障碍本体」标定） | 重复计足迹半径。costmap 里 `>=253` 的语义已经是「机器人中心在此则足迹必然碰撞」，膨胀余量算过了。实测 691 次误否，占目标复检失败的 99.1% |
+| `0.0`（纯碰撞判据，理论上不多不少） | **不碰撞 ≠ 到得了**。目标压在致命区边界，而控制器有自己的 `xy_goal_tolerance` 收敛球，球内处处可能碰撞。实测 3 个目标全部导航超时、26 次 `Failed to make progress` |
+| `0.25` = 控制器的 `xy_goal_tolerance` | **正确值**。语义：以目标为心、控制器容差为半径的球内足迹处处不碰撞。换控制器容差时要跟着改 |
+
+膨胀梯度 `1~252` 在转换时刻意压成「空闲」：第二层校验的职责是拦【穿越未知】和【硬碰撞】，
+不是替规划器重新评价「贴墙走划不划算」。保留梯度会让贴墙路径全被否决，
+只是换个理由再锁死一次（实测 local_costmap 有 27.9% 的栅格带非零代价）。
+
+单元测试 `SegmentCrossingUnknownIsRejected` 专门钉死路径层：路径只有两个顶点、两个顶点都合法、
 中间夹一条 0.15m 宽的未知窄带。只查顶点的实现会判「路径合法」并放行。
+`test_costmap_adapter.cpp` 里另有两组回归哨兵：`TwoGridDeadlock_*` 复现「同一条路径在 costmap 上
+合法、在 /map 上被判穿越未知」；`ClearanceCaliber_*` 钉死净空半径的口径必须跟着数据源改。
 
 配套改了 Nav2 侧：`nav2_params_{mppi,rpp}.yaml` 的 `allow_unknown` 由 `true` 改成 **`false`**。
 否则 SmacPlanner2D 会主动穿未知区抄近道，协调器把这种路径整条否掉，
 结果是候选一个个被拒、探索原地打转。两层约束方向必须一致。
+
+### 已知遗留（未修）：SLAM 地图从不主动碾出自由空间
+
+**现象**：机器人静止时 `/map` 的已知区只有约 1.4m 半径 —— 自由空间只来自那 245/723 束
+真有回波的方向。机器人一动起来，多姿态并集会把图填到 75% 自由，所以平时不显形。
+上面那个「两图锁死」之所以能把探索彻底卡死，根子就在这里：
+机器人不动 → 图不长 → 候选全被否 → 更不动，自我强化。
+
+**机制**（`/opt/ros/humble/include/karto_sdk/Karto.h:6167`，`OccupancyGrid::AddScan`）：
+
+```cpp
+if (rangeReading <= minRange || rangeReading >= maxRange || isnan) continue;  // 整条丢掉
+else if (rangeReading >= rangeThreshold) { /* 缩放到 threshold，沿途碾自由 */ }
+```
+
+能碾出自由空间的读数**必须落在半开区间 `[rangeThreshold, maxRange)` 内**，其中
+`maxRange` 取自 LaserScan 消息的 `range_max`，`rangeThreshold = clip(max_laser_range, min, max)`。
+而本仓库 `astribot_s1_perception/config/mapper_params_online_async.yaml` 的
+`max_laser_range: 20.0` **恰好等于** `config/pointcloud_slice_scan_params.yaml` 的
+`range_max: 20.0`，**这个区间是空的**。
+
+于是 `no_return_mode: "range_max"`（需求规定的默认行为）**对 SLAM 是静默无效的**：
+填 `inf` 还是填 `range_max`，Karto 都一样整条丢掉，一样碾不出自由空间。
+
+另有一条独立的：**slam_toolbox 订阅的是 `/scan`**（单层 `pointcloud_to_laserscan`，
+`min_height 0.05 / max_height 0.6`，`use_inf: true`），**不是**四层切片的 `/scan_from_cloud`。
+多层切片感知只进了 Nav2 costmap，没进 SLAM —— 矮托盘(离地 5~25cm)和悬空横梁
+在代价地图里有、在 SLAM 地图里没有。
+
+**要修必须三处联动，缺一处都无效**：
+
+1. slam_toolbox 的 `scan_topic` 指向 `/scan_from_cloud`
+2. `max_laser_range` 降到切片 `range_max` 以下（如 12.0 vs 20.0），让半开区间非空
+3. 无回波值落进 `[max_laser_range, range_max)` —— 现有 `range_max` / `infinity`
+   两档都在区间外，需要新增一档
+
+**暂不动的原因**：把多层切片喂给 Karto 做 scan matching 有退化风险 —— 跨层取最近距离
+产出的扫描不是一致的水平切面，而 Karto 是 scan-to-map 匹配，几何一致性比物理真实更重要，
+这条没有验证过。而两图锁死修掉之后，收益已从「探索能不能工作」降级为「地图填得更快」。
+动这三处之前必须先设计定位精度的对照实验。
 
 ### 话题与服务
 
