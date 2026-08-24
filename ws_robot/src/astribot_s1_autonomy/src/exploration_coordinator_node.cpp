@@ -414,21 +414,32 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
     error = "validation.use_costmap=true 时 costmap_topic 不能为空";
     return false;
   }
-  // 「阈值口径」与「校验数据源」必须配套。这条实测栽过：方案A 刚落地时
-  // goal_clearance_radius 还留着按 /map 标定的 0.42，结果一轮跑下来 18 次成功下发、
-  // 却有 691 次目标复检否决(99.1% 都是这一条)——贴墙前沿几乎全被白丢。
+  // 「阈值口径」与「校验数据源」必须配套。这条实测栽过两次，两次方向相反：
   //
-  // 原因是重复计算足迹半径：costmap 里代价 >=253 的语义已经是
-  // 「机器人中心在此则足迹必然碰撞」，膨胀余量算过了；再套一个 0.42m 邻域，
-  // 等于要求目标离真实障碍 内切半径0.388 + 0.42 ≈ 0.81m。
-  if (use_costmap_for_validation_ && vp.goal_clearance_radius > 0.0) {
+  // 1) 太大：方案A 刚落地时 goal_clearance_radius 还留着按 /map 标定的 0.42，
+  //    一轮跑下来 18 次成功下发、却有 691 次目标复检否决(99.1% 都是这一条)。
+  //    原因是重复计算足迹半径：costmap 里代价 >=253 的语义已经是
+  //    「机器人中心在此则足迹必然碰撞」，膨胀余量算过了；再套 0.42m 邻域，
+  //    等于要求目标离真实障碍 内切半径0.388 + 0.42 ≈ 0.81m。
+  //
+  // 2) 太小：于是改成 0.0（纯碰撞判据，理论上不多不少），结果 3 个目标全部
+  //    校验通过、Nav2 全部接受、然后**全部导航超时**，恢复行为触发 9 次，
+  //    控制器 26 次 "Failed to make progress"。目标压在致命区边界上，
+  //    而控制器有自己的收敛容差球，球内任何一点都可能让足迹碰撞。
+  //
+  // 结论：正确取值是**控制器的 xy_goal_tolerance**，语义是
+  // 「以目标为心、控制器容差为半径的球内，足迹处处不碰撞」——既合法又收敛得进去。
+  // 这里只能查出方向1(重复计算)；方向2 依赖 Nav2 侧参数，本节点读不到，
+  // 靠 yaml 注释和这段记录约束。
+  if (use_costmap_for_validation_ && vp.goal_clearance_radius > 0.42) {
     RCLCPP_WARN(
       get_logger(),
       "validator.goal_clearance_radius=%.3fm 与 validation.use_costmap=true 不配套："
       "代价地图里 >=%d 的格本身就表示「机器人中心在此则足迹必然碰撞」，"
-      "再要求邻域净空等于把足迹半径重复计一次，会让大量贴墙前沿被误否决"
-      "(实测该配置下 99%% 的目标复检失败都源于此)。建议改成 0.0；"
-      "想更保守请去调 nav2 inflation_layer 的 inflation_radius",
+      "再要求这么大的邻域净空等于把足迹半径重复计一次，会让大量贴墙前沿被误否决"
+      "(实测该配置下 99%% 的目标复检失败都源于此)。"
+      "建议取 nav2 controller 的 xy_goal_tolerance(本项目 0.25)："
+      "既不重复计足迹，又能保证控制器收敛球内不碰撞",
       vp.goal_clearance_radius, costmap_params_.lethal_cost_threshold);
   }
 
@@ -1122,9 +1133,30 @@ ExplorationCoordinatorNode::generateCandidates(
 
   // 校验1（目标点）就在这里做：前沿搜索只保证「不在膨胀障碍里」，
   // 它不保证目标点净空半径内没有未知格。未知区禁行是本节点自己的责任。
+  //
+  // 这里用的是**校验图**（默认 global_costmap），不是传进来的 /map。
+  // 两张图对「占据」的定义并不一致，只用 /map 筛会让候选队列装满
+  // 「在 /map 里空闲、但在 costmap 里是致命区」的点，每一个都要白跑一次
+  // ComputePathToPose 才在下发前复检时被否掉。
+  // 实测（净空半径校准到 0.25 之后）：536 次目标复检否决里 514 次（95.9%）
+  // 是「目标格在 costmap 里代价=100(致命)」，正是这一类。
+  //
+  // 前沿**搜索**仍然必须用 /map —— 前沿的定义依赖「未知」这个状态。
+  // 分工不变：/map 找前沿，costmap 判可站。
+  std::string screen_why;
+  const std::shared_ptr<GridMap> screen_grid = validationGrid(screen_why);
+  if (!screen_grid) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), kLogThrottleMs,
+      "候选筛选所需的校验图不可用(%s)，本轮不产出候选(绝不用错误的图放行目标)",
+      screen_why.c_str());
+    return out;
+  }
+
   std::size_t dropped_unknown = 0U;
   std::size_t dropped_by_search = 0U;
   std::string search_reject_sample;
+  std::string goal_reject_sample;
   for (const auto & c : result.candidates) {
     if (!c.valid) {
       // 前沿搜索自己否掉的候选。必须能看到原因，否则「候选 0 个」这种现象
@@ -1138,9 +1170,12 @@ ExplorationCoordinatorNode::generateCandidates(
         c.x, c.y, c.reject_reason.c_str());
       continue;
     }
-    const ValidationResult vr = validator_.validateGoal(map, c.x, c.y);
+    const ValidationResult vr = validator_.validateGoal(*screen_grid, c.x, c.y);
     if (!vr.valid) {
       ++dropped_unknown;
+      if (goal_reject_sample.empty()) {
+        goal_reject_sample = vr.reason;
+      }
       RCLCPP_DEBUG(
         get_logger(), "候选点(%.2f, %.2f) 目标校验未通过: %s", c.x, c.y, vr.reason.c_str());
       continue;
@@ -1172,6 +1207,15 @@ ExplorationCoordinatorNode::generateCandidates(
     RCLCPP_WARN(
       get_logger(), "全部 %zu 个候选被前沿搜索否决，首个原因: %s",
       dropped_by_search, search_reject_sample.c_str());
+  }
+  if (out.empty() && dropped_unknown > 0U) {
+    // 同理：被目标校验（在 costmap 上）淘汰光时也要给出首个原因。
+    // 最常见的两条是「目标格在 costmap 里是致命区」（前沿贴墙，被膨胀吃掉）
+    // 和「净空半径内有占据格」（净空半径与控制器容差不匹配）。
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), kLogThrottleMs,
+      "全部 %zu 个候选被目标校验淘汰，首个原因: %s",
+      dropped_unknown, goal_reject_sample.c_str());
   }
   return out;
 }

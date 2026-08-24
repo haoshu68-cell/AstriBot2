@@ -461,7 +461,11 @@ TEST(ClearanceCaliber, NonZeroRadiusDoubleCountsTheFootprintOnCostmap)
 
 TEST(ClearanceCaliber, ZeroRadiusAcceptsTheLegalWallHuggingGoal)
 {
-  // 同一个目标点，净空半径改 0（costmap 口径的正确值）→ 通过。
+  // 同一个目标点，净空半径改 0 → 通过。
+  //
+  // 注意：0 是精确的**碰撞**判据，但**不是**推荐的生产取值。
+  // 实测 0.0 会让目标压在致命区边界上，控制器在自己的收敛容差球内反复碰撞代价，
+  // 结果 3 个目标全部导航超时（见下面 ControllerToleranceIsTheRightCaliber）。
   PathValidatorParams vp = defaultValidatorParams();
   vp.goal_clearance_radius = 0.0;
   PathValidator validator;
@@ -471,6 +475,35 @@ TEST(ClearanceCaliber, ZeroRadiusAcceptsTheLegalWallHuggingGoal)
   const GridMap grid = costmapWithInflatedLethalBand();
   const ValidationResult r = validator.validateGoal(grid, 0.35, 0.50);
   EXPECT_TRUE(r.valid) << r.reason;
+}
+
+TEST(ClearanceCaliber, ControllerToleranceIsTheRightCaliber)
+{
+  // 生产取值 = nav2 controller 的 xy_goal_tolerance(本项目 0.25)。
+  // 语义：以目标为心、控制器容差为半径的球内，足迹处处不碰撞
+  // —— 目标既合法(不像 0.42 那样重复计足迹)，又真的收敛得进去(不像 0.0 那样超时)。
+  PathValidatorParams vp = defaultValidatorParams();
+  vp.goal_clearance_radius = 0.25;
+  PathValidator validator;
+  std::string cfg_error;
+  ASSERT_TRUE(validator.configure(vp, cfg_error)) << cfg_error;
+
+  const GridMap grid = costmapWithInflatedLethalBand();   // 致命区 x ∈ [0, 0.30)
+
+  // 距致命区仅 0.05m —— 控制器容差球会伸进致命区，必须否掉。
+  const ValidationResult too_close = validator.validateGoal(grid, 0.35, 0.50);
+  EXPECT_FALSE(too_close.valid) << too_close.reason;
+
+  // 距致命区 0.30m > 0.25m —— 容差球整体在安全区内，放行。
+  const ValidationResult ok = validator.validateGoal(grid, 0.60, 0.50);
+  EXPECT_TRUE(ok.valid) << ok.reason;
+
+  // 而同一个点在旧的 0.42m 口径下会被误否 —— 这就是「重复计足迹」的代价。
+  PathValidatorParams old_vp = defaultValidatorParams();
+  old_vp.goal_clearance_radius = 0.42;
+  PathValidator old_validator;
+  ASSERT_TRUE(old_validator.configure(old_vp, cfg_error)) << cfg_error;
+  EXPECT_FALSE(old_validator.validateGoal(grid, 0.60, 0.50).valid);
 }
 
 TEST(ClearanceCaliber, ZeroRadiusStillRejectsGoalsInsideTheLethalRegion)
