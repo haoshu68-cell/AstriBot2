@@ -11,7 +11,10 @@
 //
 // 所有参数从 yaml 读，节点内不写死任何数值。
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <string>
 #include <thread>
@@ -19,8 +22,13 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_model/link_model.h>
+#include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_state/robot_state.h>
 #include <moveit_msgs/msg/planning_scene.hpp>
 #include <shape_msgs/msg/solid_primitive.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "astribot_s1_manipulation/dual_arm_planner.hpp"
 
@@ -174,6 +182,17 @@ DualArmPlannerParams loadParams(const rclcpp::Node::SharedPtr & node)
     loader.get<double>("metrics.limit_tolerance_ratio", p.metrics.limit_tolerance_ratio);
   p.metrics.allow_finite_difference =
     loader.get<bool>("metrics.allow_finite_difference", p.metrics.allow_finite_difference);
+
+  auto & ex = p.execution;
+  ex.settle_timeout = loader.get<double>("execution.settle_timeout", ex.settle_timeout);
+  ex.settle_poll_interval =
+    loader.get<double>("execution.settle_poll_interval", ex.settle_poll_interval);
+  ex.settle_velocity_threshold =
+    loader.get<double>("execution.settle_velocity_threshold", ex.settle_velocity_threshold);
+  ex.settle_position_epsilon =
+    loader.get<double>("execution.settle_position_epsilon", ex.settle_position_epsilon);
+  ex.settle_stable_samples = static_cast<int>(
+    loader.get<int64_t>("execution.settle_stable_samples", ex.settle_stable_samples));
 
   return p;
 }
@@ -334,7 +353,66 @@ moveit_msgs::msg::CollisionObject makeBoxObject(
   return obj;
 }
 
-/// 生成完整搬运序列。approach_height 是接近/离开时在抓取点上方留的高度。
+/// 量出「与 TCP 位置重合的那些连杆」的碰撞体外接半径。
+///
+/// 为什么需要这个函数（第2步"下降到A"失败的真正原因）：
+/// 本机 TCP 是个**纯坐标系**（tool_link 无碰撞几何），很容易误以为"TCP 贴着物体
+/// 顶面也没关系"。但 URDF 实测：
+///   astribot_arm_left_tool_joint  fixed  link_7 -> tool_link   xyz = 0 0 0
+///   astribot_arm_left_joint_7     revolute link_6 -> link_7    xyz = 0 0 0
+///   link_7 collision: sphere r=0.05 @ (0.006, 0, 0)
+///   link_6 collision: cylinder r=0.04 l=0.045 @ (0, 0, 0)
+/// 三个坐标系原点**完全重合** —— 也就是说 TCP 正坐在一个半径 5cm 的腕部球心上。
+/// TCP 离物体顶面只有 0.03m 时，腕部球已经嵌进物体 0.02m，目标状态必然碰撞，
+/// 规划器怎么重试都无解，只会报无信息量的 RETRIES_EXHAUSTED。
+///
+/// 半径从 RobotModel（即 URDF）现算，不写死数字：换夹具、改 URDF 后自动跟着变。
+/// 沿父链上溯的终止条件是"关节原点有平移"——有平移就说明那个连杆不再与 TCP 重合，
+/// 它的碰撞体不该算进这个半径里（纯旋转的 joint_7 不算平移，仍要计入）。
+double tcpCoincidentCollisionRadius(
+  const moveit::core::RobotModelConstPtr & model, const std::string & tcp_link,
+  std::string & detail)
+{
+  detail.clear();
+  if (!model) {
+    return 0.0;
+  }
+  // 判定"原点重合"的平移阈值。取 1e-6m：URDF 里写 0 就是精确 0，
+  // 这个阈值只用来吸收浮点表示误差，不是工程容差。
+  constexpr double kCoincidentEpsilon = 1.0e-6;
+
+  double radius = 0.0;
+  const moveit::core::LinkModel * link = model->getLinkModel(tcp_link);
+  if (link == nullptr) {
+    detail = "找不到 TCP link '" + tcp_link + "'";
+    return 0.0;
+  }
+  while (link != nullptr) {
+    if (!link->getShapes().empty()) {
+      // getShapeExtentsAtOrigin 是该连杆所有碰撞体的 AABB 尺寸，
+      // 其中心在 getCenteredBoundingBoxOffset()。外接半径取
+      // "中心偏移量 + 半个最长边"，对球/圆柱都是安全上界。
+      const double half_extent = 0.5 * link->getShapeExtentsAtOrigin().maxCoeff();
+      const double offset = link->getCenteredBoundingBoxOffset().norm();
+      const double link_radius = offset + half_extent;
+      if (link_radius > radius) {
+        radius = link_radius;
+      }
+      detail += (detail.empty() ? "" : ", ") + link->getName() + "=" +
+        std::to_string(link_radius);
+    }
+    const moveit::core::LinkModel * parent = link->getParentLinkModel();
+    if (parent == nullptr ||
+      link->getJointOriginTransform().translation().norm() > kCoincidentEpsilon)
+    {
+      break;
+    }
+    link = parent;
+  }
+  return radius;
+}
+
+
 std::vector<TransportStep> buildTransportSteps(
   const std::string & frame,
   const std::vector<double> & pick_xyz, const std::vector<double> & place_xyz,
@@ -373,6 +451,84 @@ void publishSceneDiff(
   scene.robot_state.is_diff = true;
   scene.world.collision_objects.push_back(obj);
   pub->publish(scene);
+}
+
+/// 单个候选 TCP 位姿的体检结论。
+struct ProbeVerdict
+{
+  bool ik_ok{false};
+  bool collision{false};
+  bool singular{false};
+  double sigma_min{0.0};
+  double condition_number{0.0};
+  std::string note;
+
+  bool good() const noexcept
+  {
+    return ik_ok && !collision && !singular;
+  }
+};
+
+/// 对一个候选 TCP 位姿做「IK + 碰撞 + 奇异」三项体检。
+///
+/// 为什么必须有这个函数（两轮实测教训）：
+///   第一轮 —— 用 /compute_ik 扫可达域时物体**不在**场景里，扫出来的"可达点"
+///             在物体入场之后照样碰撞，白扫。
+///   第二轮 —— 改用一个只看 IK 的外部 python 探针，它对 sigma_min 一无所知，
+///             于是选出的点被本工程自己的奇异监视器否掉（实测 sigma_min=0.0161
+///             < 阈值 0.02），探针说"可以"、真跑说"不行" —— 两边判据不是一套。
+/// 结论：探针必须与真跑**共用同一套判据**。所以它写在这里，直接复用
+/// CollisionValidator / SingularityMonitor 和同一份 yaml 参数，不再另起一套标准。
+///
+/// 局限（要如实知道）：这里的碰撞场景只含机器人自身 + 我们放进去的那个物体，
+/// 不含 Gazebo 里的环境。对本 demo 够用（物体是唯一环境障碍），
+/// 但不能当成"真跑一定不碰"的证明。
+ProbeVerdict probeTcpPose(
+  const moveit::core::RobotState & seed,
+  const moveit::core::JointModelGroup * jmg,
+  const std::string & tcp_link,
+  const geometry_msgs::msg::PoseStamped & pose,
+  double ik_timeout,
+  const CollisionValidator & collision,
+  const SingularityMonitor & singularity)
+{
+  ProbeVerdict verdict;
+  if (jmg == nullptr) {
+    verdict.note = "规划组为空";
+    return verdict;
+  }
+
+  moveit::core::RobotState state(seed);
+  // 位姿给的是 transport_frame，IK 要的是模型坐标系。用 getFrameTransform 换算，
+  // 不假设两者相同（本机恰好都是 astribot_torso_base，但换模型就未必）。
+  Eigen::Isometry3d target;
+  tf2::fromMsg(pose.pose, target);
+  const Eigen::Isometry3d frame_in_model = state.getFrameTransform(pose.header.frame_id);
+  const Eigen::Isometry3d target_in_model = frame_in_model * target;
+
+  if (!state.setFromIK(jmg, target_in_model, tcp_link, ik_timeout)) {
+    verdict.note = "IK 无解";
+    return verdict;
+  }
+  verdict.ik_ok = true;
+  state.update();
+
+  const CollisionReport col = collision.check(state, jmg->getName());
+  verdict.collision = col.collision;
+  if (col.collision) {
+    verdict.note = "碰撞: " + col.reason;
+  }
+
+  const SingularityReport sing = singularity.check(state, jmg, tcp_link);
+  if (sing.valid) {
+    verdict.sigma_min = sing.min_singular_value;
+    verdict.condition_number = sing.condition_number;
+  }
+  verdict.singular = sing.singular;
+  if (sing.singular) {
+    verdict.note += (verdict.note.empty() ? "" : "; ") + std::string("奇异: ") + sing.reason;
+  }
+  return verdict;
 }
 
 }  // namespace astribot_s1_manipulation
@@ -447,6 +603,17 @@ int main(int argc, char ** argv)
       loader.get<double>("demo.transport_grasp_z_offset", 0.0);
     const double transport_approach_height =
       loader.get<double>("demo.transport_approach_height", 0.15);
+    // 腕部碰撞体与物体顶面之间要留的净空。它**只是余量**，
+    // 腕部半径本身由 URDF 现算，不在这个数里。
+    const double transport_clearance_margin =
+      loader.get<double>("demo.transport_clearance_margin", 0.02);
+    // transport_probe 场景的扫描网格（TCP 抓取点坐标，不是物体中心）。
+    const std::vector<double> probe_x_list = loader.get<std::vector<double>>(
+      "demo.transport_probe_x_list", std::vector<double>{});
+    const std::vector<double> probe_y_list = loader.get<std::vector<double>>(
+      "demo.transport_probe_y_list", std::vector<double>{});
+    const std::vector<double> probe_z_list = loader.get<std::vector<double>>(
+      "demo.transport_probe_z_list", std::vector<double>{});
     const std::vector<double> transport_quat = loader.get<std::vector<double>>(
       "demo.transport_grasp_orientation_xyzw", std::vector<double>{});
     const bool move_to_ready = loader.get<bool>("demo.move_to_ready_first", true);
@@ -483,7 +650,137 @@ int main(int argc, char ** argv)
     }
 
     for (const std::string & scenario : scenarios) {
-      if (scenario == "transport") {
+      if (scenario == "transport_probe") {
+        // ---- 选点体检：扫一遍候选 A 点，报告 IK / 碰撞 / 奇异 ----
+        // 这个场景不动机器人，只出一张表，用来在配 transport_pick_xyz 之前
+        // 先知道哪些点是真能用的。判据与 transport 真跑完全一致（同一份 yaml、
+        // 同一个 CollisionValidator / SingularityMonitor）。
+        if (transport_size.size() != 3U) {
+          RCLCPP_ERROR(logger, "跳过 transport_probe: transport_object_size_xyz 必须是 3 个数");
+          exit_code = 1;
+          continue;
+        }
+        const moveit::core::RobotModelConstPtr model = planner.getRobotModel();
+        const moveit::core::JointModelGroup * jmg = model->getJointModelGroup(transport_group);
+        if (jmg == nullptr) {
+          RCLCPP_ERROR(
+            logger, "跳过 transport_probe: 规划组 '%s' 不存在", transport_group.c_str());
+          exit_code = 1;
+          continue;
+        }
+        const std::string probe_tcp_link = transport_tcp_link.empty() ?
+          (transport_group == params.closed_chain.leader_group ?
+          params.closed_chain.leader_tcp_link :
+          params.closed_chain.follower_tcp_link) :
+          transport_tcp_link;
+
+        moveit::core::RobotStatePtr seed;
+        std::string seed_error;
+        if (!planner.getCurrentState(seed, seed_error)) {
+          RCLCPP_ERROR(logger, "跳过 transport_probe: 取当前状态失败: %s", seed_error.c_str());
+          exit_code = 1;
+          continue;
+        }
+
+        SingularityMonitor probe_singularity;
+        std::string probe_error;
+        if (!probe_singularity.configure(params.singularity, probe_error)) {
+          RCLCPP_ERROR(logger, "跳过 transport_probe: 奇异监视器配置失败: %s", probe_error.c_str());
+          exit_code = 1;
+          continue;
+        }
+
+        RCLCPP_INFO(
+          logger,
+          "[probe] 组=%s TCP=%s 判据: sigma_min>=%.4f 条件数<=%.1f；"
+          "物体尺寸=(%.3f,%.3f,%.3f) grasp_z_offset=%.3f approach=%.3f",
+          transport_group.c_str(), probe_tcp_link.c_str(),
+          params.singularity.min_singular_value, params.singularity.max_condition_number,
+          transport_size[0], transport_size[1], transport_size[2],
+          transport_grasp_z_offset, transport_approach_height);
+        RCLCPP_INFO(
+          logger,
+          "[probe] 每个候选按「抓取点 + 接近点」成对判定，两点全过才算可用；"
+          "物体中心随候选放在 抓取z - grasp_z_offset");
+
+        std::size_t good_count = 0U;
+        double best_sigma = -1.0;
+        std::vector<double> best_xyz;
+        for (const double px : probe_x_list) {
+          for (const double py : probe_y_list) {
+            for (const double pz : probe_z_list) {
+              // 物体跟着候选点走：它的中心由抓取高度反推，这样每个候选测的都是
+              // 它自己那套几何关系，而不是拿固定物体位置去套所有候选。
+              const std::vector<double> object_center{px, py, pz - transport_grasp_z_offset};
+              auto probe_scene = std::make_shared<planning_scene::PlanningScene>(model);
+              const moveit_msgs::msg::CollisionObject probe_obj =
+                makeBoxObject("probe_target", transport_frame, object_center, transport_size);
+              if (!probe_scene->processCollisionObjectMsg(probe_obj)) {
+                RCLCPP_WARN(
+                  logger, "[probe] (%.3f,%.3f,%.3f) 物体注入局部场景失败，跳过", px, py, pz);
+                continue;
+              }
+              CollisionValidator probe_collision;
+              if (!probe_collision.configure(probe_scene, params.collision, probe_error)) {
+                RCLCPP_WARN(
+                  logger, "[probe] 碰撞校验器配置失败: %s", probe_error.c_str());
+                continue;
+              }
+
+              const ProbeVerdict grasp = probeTcpPose(
+                *seed, jmg, probe_tcp_link,
+                makeTransportPose(transport_frame, px, py, pz, transport_quat),
+                params.closed_chain.ik_timeout, probe_collision, probe_singularity);
+              const ProbeVerdict approach = probeTcpPose(
+                *seed, jmg, probe_tcp_link,
+                makeTransportPose(
+                  transport_frame, px, py, pz + transport_approach_height, transport_quat),
+                params.closed_chain.ik_timeout, probe_collision, probe_singularity);
+
+              const bool pair_ok = grasp.good() && approach.good();
+              const double pair_sigma = std::min(grasp.sigma_min, approach.sigma_min);
+              RCLCPP_INFO(
+                logger,
+                "[probe] (%.3f, %.3f, %.3f) %s | 抓取: ik=%d col=%d sing=%d σ=%.4f κ=%.1f%s%s"
+                " | 接近: ik=%d col=%d sing=%d σ=%.4f κ=%.1f%s%s",
+                px, py, pz, pair_ok ? "可用" : "不可用",
+                grasp.ik_ok ? 1 : 0, grasp.collision ? 1 : 0, grasp.singular ? 1 : 0,
+                grasp.sigma_min, grasp.condition_number,
+                grasp.note.empty() ? "" : " ", grasp.note.c_str(),
+                approach.ik_ok ? 1 : 0, approach.collision ? 1 : 0, approach.singular ? 1 : 0,
+                approach.sigma_min, approach.condition_number,
+                approach.note.empty() ? "" : " ", approach.note.c_str());
+
+              if (pair_ok) {
+                ++good_count;
+                if (pair_sigma > best_sigma) {
+                  best_sigma = pair_sigma;
+                  best_xyz = {px, py, pz};
+                }
+              }
+            }
+          }
+        }
+
+        const std::size_t total =
+          probe_x_list.size() * probe_y_list.size() * probe_z_list.size();
+        if (good_count == 0U) {
+          RCLCPP_ERROR(
+            logger,
+            "[probe] %zu 个候选全部不可用。请扩大 demo.transport_probe_* 的扫描范围，"
+            "或先确认 transport_grasp_orientation_xyzw 是该臂真能做到的姿态",
+            total);
+          exit_code = 1;
+        } else {
+          RCLCPP_INFO(
+            logger,
+            "[probe] %zu/%zu 个候选可用；最佳(σ 最大)= (%.3f, %.3f, %.3f) σ=%.4f。"
+            "把它填进 demo.transport_pick_xyz 时记得减去 grasp_z_offset=%.3f "
+            "（yaml 里给的是**物体中心**，探针报的是 TCP 高度）=> 物体中心 z=%.3f",
+            good_count, total, best_xyz[0], best_xyz[1], best_xyz[2], best_sigma,
+            transport_grasp_z_offset, best_xyz[2] - transport_grasp_z_offset);
+        }
+      } else if (scenario == "transport") {
         // ---- 搬运场景：物体从 A 到 B ----
         if (transport_pick.size() != 3U || transport_place.size() != 3U ||
           transport_size.size() != 3U)
@@ -498,6 +795,44 @@ int main(int argc, char ** argv)
         }
 
         const std::string object_id = "transport_target";
+
+        // ---- 抓取高度边界校验 ----
+        // 这道校验是拿实测教训换来的：TCP 只离物体顶面 0.03m 时，腕部那颗
+        // r=0.05 的碰撞球已经嵌进物体，目标状态非法，规划器只会报
+        // RETRIES_EXHAUSTED —— 一个完全看不出根因的错误。宁可在这里带着
+        // 具体数字直接拒绝，也不要让它在第2步失败后让人去猜。
+        // TCP link 的解析规则必须与 planSingleArm 内部**完全一致**，
+        // 否则这里量的是一个 link、规划器用的是另一个，校验就成了摆设。
+        const std::string resolved_tcp_link = transport_tcp_link.empty() ?
+          (transport_group == params.closed_chain.leader_group ?
+          params.closed_chain.leader_tcp_link :
+          params.closed_chain.follower_tcp_link) :
+          transport_tcp_link;
+        std::string radius_detail;
+        const double tcp_radius = tcpCoincidentCollisionRadius(
+          planner.getRobotModel(), resolved_tcp_link, radius_detail);
+        const double min_grasp_z_offset =
+          0.5 * transport_size[2] + tcp_radius + transport_clearance_margin;
+        RCLCPP_INFO(
+          logger,
+          "[transport] TCP link=%s 与其重合连杆的碰撞外接半径=%.4fm (%s)；"
+          "物体半高=%.4fm 余量=%.4fm => grasp_z_offset 下限=%.4fm，当前=%.4fm",
+          resolved_tcp_link.c_str(), tcp_radius, radius_detail.c_str(),
+          0.5 * transport_size[2], transport_clearance_margin,
+          min_grasp_z_offset, transport_grasp_z_offset);
+        if (transport_grasp_z_offset < min_grasp_z_offset) {
+          RCLCPP_ERROR(
+            logger,
+            "跳过 transport: demo.transport_grasp_z_offset=%.4f 小于下限 %.4f，"
+            "TCP 会与物体碰撞（腕部碰撞球半径 %.4f + 物体半高 %.4f + 余量 %.4f）。"
+            "请把 transport_grasp_z_offset 提到 %.4f 以上，"
+            "并把 transport_pick_xyz/place_xyz 的 z 相应下调以保持 TCP 落在可达高度。",
+            transport_grasp_z_offset, min_grasp_z_offset, tcp_radius,
+            0.5 * transport_size[2], transport_clearance_margin, min_grasp_z_offset);
+          exit_code = 1;
+          continue;
+        }
+
         // 场景差分用 transient_local：晚订阅的 PlanningSceneMonitor 也能收到，
         // 不然一发即丢，物体可能压根没进场景而我们毫不知情。
         auto scene_pub = node->create_publisher<moveit_msgs::msg::PlanningScene>(
@@ -525,6 +860,14 @@ int main(int argc, char ** argv)
           transport_grasp_z_offset, transport_approach_height, transport_quat);
 
         bool all_ok = true;
+        // 逐步量化指标。做求解器横向对比时，光有"6 步全过"是不够的 ——
+        // 必须能比出规划耗时、节拍、最差奇异值，否则"换个求解器也能过"
+        // 说明不了它到底更好还是更差。
+        double total_plan_wall = 0.0;
+        double total_traj_duration = 0.0;
+        double worst_sigma_all = std::numeric_limits<double>::infinity();
+        int total_attempts = 0;
+        std::size_t steps_done = 0U;
         for (std::size_t i = 0; i < steps.size(); ++i) {
           const TransportStep & step = steps[i];
           SingleArmPlanRequest request;
@@ -533,12 +876,31 @@ int main(int argc, char ** argv)
           request.pose_target = step.pose;
           request.tcp_link = transport_tcp_link;
 
+          const auto plan_begin = std::chrono::steady_clock::now();
           const PlanResult result = planner.planSingleArm(request);
+          const double plan_wall = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - plan_begin).count();
+          total_plan_wall += plan_wall;
+          total_attempts += result.attempts_used;
+          if (result.succeeded()) {
+            ++steps_done;
+            total_traj_duration += result.final_metrics.duration;
+            if (result.worst_singularity.valid) {
+              worst_sigma_all =
+                std::min(worst_sigma_all, result.worst_singularity.min_singular_value);
+            }
+          }
           RCLCPP_INFO(
-            logger, "[transport] 步骤 %zu/%zu %s -> 目标(%.3f, %.3f, %.3f): %s",
+            logger,
+            "[transport] 步骤 %zu/%zu %s -> 目标(%.3f, %.3f, %.3f): %s"
+            " | 规划耗时 %.3fs 尝试 %d 次 节拍 %.3fs 点数 %zu 最差σ %.4f",
             i + 1U, steps.size(), step.name.c_str(),
             step.pose.pose.position.x, step.pose.pose.position.y,
-            step.pose.pose.position.z, toString(result.code));
+            step.pose.pose.position.z, toString(result.code),
+            plan_wall, result.attempts_used, result.final_metrics.duration,
+            result.trajectory.joint_trajectory.points.size(),
+            result.worst_singularity.valid ?
+            result.worst_singularity.min_singular_value : -1.0);
 
           if (!result.succeeded() && !result.noActionNeeded()) {
             // 中间步失败就中止：继续做下一步会让机器人从一个错误的位姿出发，
@@ -588,6 +950,15 @@ int main(int argc, char ** argv)
         RCLCPP_INFO(
           logger, "[transport] 搬运序列%s，物体已从规划场景移除",
           all_ok ? "全部完成" : "中止");
+        // 一行汇总，专门给"换求解器再跑一遍"的横向对比用（grep 这一行即可）。
+        RCLCPP_INFO(
+          logger,
+          "[transport][summary] planner=%s 结果=%s 成功步数=%zu/%zu "
+          "规划总耗时=%.3fs 轨迹总节拍=%.3fs 总尝试=%d 全程最差σ=%.4f 执行=%s",
+          params.planner_id.c_str(), all_ok ? "PASS" : "FAIL",
+          steps_done, steps.size(), total_plan_wall, total_traj_duration, total_attempts,
+          std::isfinite(worst_sigma_all) ? worst_sigma_all : -1.0,
+          execute ? "true" : "false");
       } else if (scenario == "single_arm_named") {
         SingleArmPlanRequest request;
         request.group = single_arm_group;

@@ -182,6 +182,35 @@ planning_demo_node:
       limit_tolerance_ratio: 0.001
       allow_finite_difference: true
 
+    # ---------------- 执行后等静止 ----------------
+    # 执行完一条轨迹后，等手臂真正停下来再返回。
+    #
+    # !!! 多步动作序列必须有这一步 !!!（Gazebo 实测）
+    # JointTrajectoryController 在轨迹时长走完时就报 "successfully finished"，
+    # 但此时手臂**还在向最后一个设定点收敛**。于是"执行成功"返回后立刻规划下一步，
+    # 起点取的是一个仍在移动的瞬时构型；等这一步规划完（实测 0.53s）再下发，
+    # 真实关节已经又走了一截，move_group 的起点校验直接否掉：
+    #     Invalid Trajectory: start point deviates from current robot state more than 0.05
+    #     joint 'astribot_arm_left_joint_2': expected: -0.963636, current: -1.02968
+    # 偏差 0.066rad，刚好越过默认的 allowed_start_tolerance 0.05，
+    # 报出来的是 MoveItErrorCode=-4，看不出跟"没等静止"有任何关系。
+    #
+    # 不要用放大 allowed_start_tolerance 的办法绕开：那是把"从错误的起点出发"
+    # 合法化，轨迹前段会有一个真实的跳变。
+    execution:
+      # 等静止总超时(s)。超时**不算执行失败**（轨迹本身已经跑完了），
+      # 只打 WARN 并继续，否则一个抖动不停的关节会卡死整个序列。
+      settle_timeout: 2.0
+      settle_poll_interval: 0.02
+      # 关节速度上限(rad/s)。仅当当前状态带速度时启用。
+      settle_velocity_threshold: 0.02
+      # 相邻两次采样的位置变化上限(rad)。速度缺失时这是唯一判据。
+      # 0.002rad / 0.02s = 0.1rad/s，与上面的速度阈值同量级。
+      settle_position_epsilon: 0.002
+      # 连续几次采样都满足才算静止。取 >1 是为了滤掉换向瞬间速度穿过 0
+      # 造成的假静止。
+      settle_stable_samples: 3
+
     # ---------------- demo 场景 ----------------
     demo:
       # 依次跑哪些场景。可选：single_arm_joint / single_arm_named /
@@ -232,21 +261,63 @@ planning_demo_node:
       #   B=(0.249,0.234,0.861) B上方=(0.249,0.234,0.961)  均 IK OK
       # 选点方法：先 /compute_fk 量出已知位姿的 TCP，再用 /compute_ik
       # 在其邻域扫一遍网格，只取实测可达的点 —— 凭直觉取值实测失败过两轮。
-      # 物体中心放低到 0.771，让 TCP(中心 + grasp_z_offset) 正好落在实测可达的 0.861，
-      # 且高于物体顶面(0.771+0.06/2... 见下)——这样 TCP 不会插进物体里。
-      transport_pick_xyz: [0.249, 0.464, 0.771]
-      transport_place_xyz: [0.249, 0.234, 0.771]
+      # A/B 由 transport_probe 扫出来后挑的，不是拍脑袋取的（见下方"选点过程"）。
+      # 物体中心 z = TCP 抓取高度 0.911 - grasp_z_offset 0.15 = 0.761。
+      #
+      # ---- 选点过程（transport_probe 实测，80 个候选里 50 个可用）----
+      # 规律很清楚：z 越低、y 越大 = 手臂越伸展 = σ 越小，一路掉到奇异。
+      #   (0.249, 0.464, 0.861) 抓取 σ=0.0091 <0.02  -> 不可用（**这就是先前第2步失败的点**）
+      #   (0.249, 0.384, 0.811) 抓取 σ=0.0021 κ=876  -> 不可用（几乎精确奇异）
+      #   (0.149, 0.464, 0.911) 抓取 σ=0.1116        -> 可用，选作 A
+      #   (0.149, 0.284, 0.911) 抓取 σ=0.1598        -> 可用（全场最佳），选作 B
+      # 选 z=0.911 这一层的另一个好处：A->B 之间 y=0.464/0.434/0.384/0.334/0.284
+      # 五个点在抓取高度与接近高度上**全部**可用（σ 0.11~0.19），
+      # 也就是第4步平移经过的整条走廊都是健康的，不只是两个端点。
+      # 最小 σ=0.1116 是阈值 0.02 的 5.6 倍，留足了余量。
+      transport_pick_xyz: [0.149, 0.464, 0.761]
+      transport_place_xyz: [0.149, 0.284, 0.761]
       transport_object_size_xyz: [0.06, 0.06, 0.12]
       # TCP 相对物体中心的抓取高度偏移。没有夹爪，这里表示"TCP 该到达的位置"。
-      # !!! 不能为 0 !!! 0 会让 TCP 落在物体**中心**，也就是插进物体内部，
-      # 碰撞校验必然失败（实测：步骤1 直接 RETRIES_EXHAUSTED）。
-      # 本机没有夹爪，TCP 只能停在物体**上方**：
-      #   物体半高 0.06 + 余量 0.03 = 0.09
-      #   TCP z = 0.771 + 0.09 = 0.861  <- 实测 IK 可达
-      #   接近点 = 0.861 + 0.10 = 0.961 <- 实测 IK 可达
-      # 另外注意：我先前用 /compute_ik 扫可达域时物体**不在**场景里，
-      # 所以那轮 IK 通过并不能说明"带着物体也可达"，这一点坑过一轮。
-      transport_grasp_z_offset: 0.09
+      #
+      # !!! 这个值有一个由 URDF 决定的硬下限，给小了必然碰撞 !!!
+      # 本机 TCP(tool_link) 是纯坐标系、无碰撞几何，但它与腕部两个**有**碰撞几何的
+      # 连杆原点完全重合（URDF 实测）：
+      #     tool_joint fixed  link_7 -> tool_link  xyz = 0 0 0
+      #     joint_7 revolute  link_6 -> link_7     xyz = 0 0 0
+      #     link_7 collision: sphere  r=0.05  @ (0.006, 0, 0)   -> 外接半径 0.056
+      #     link_6 collision: cylinder r=0.04 l=0.045 @ 原点     -> 外接半径 0.040
+      # 也就是说 TCP 正坐在一个半径 5.6cm 的腕部球心上。
+      # 下限 = 物体半高 + 腕部外接半径 + clearance_margin
+      #      = 0.060    + 0.056       + 0.020 = 0.136
+      #
+      # 实测教训：曾取 0.09（TCP 离物体顶面 0.03m），腕部球嵌进物体 0.026m，
+      # 目标状态非法，规划器只报 RETRIES_EXHAUSTED —— 根因完全看不出来。
+      # 现在 planning_demo_node 会在跑之前用 RobotModel 现算这个下限并直接拒绝，
+      # 报错里带具体数字，不用再猜。
+      #
+      # 取 0.15（比下限 0.136 再留一点）：
+      #   TCP z    = 0.761 + 0.15 = 0.911  <- transport_probe 实测可用 σ=0.1116
+      #   接近点 z = 0.911 + 0.10 = 1.011  <- transport_probe 实测可用 σ=0.1544
+      transport_grasp_z_offset: 0.15
+      # 腕部碰撞体与物体顶面之间的净空余量。腕部半径不含在这个数里（URDF 现算）。
+      transport_clearance_margin: 0.02
+
+      # ---------------- transport_probe 选点体检 ----------------
+      # scenarios 里加 transport_probe 就只扫点、不动机器人，出一张
+      # 「IK / 碰撞 / 奇异」三合一的表。
+      #
+      # 为什么要有这个场景（两轮实测教训，都是"探针与真跑判据不一致"）：
+      #   1. 用 /compute_ik 扫可达域时物体**不在**场景里 —— 扫出的点物体入场后照样碰撞
+      #   2. 外部 python 探针只看 IK、不看 sigma_min —— 选出的点被本工程自己的
+      #      奇异监视器否掉（实测 σ=0.0161 < 阈值 0.02），探针说行、真跑说不行
+      # 现在这个场景与真跑共用同一份 yaml、同一个校验器，判据只有一套。
+      #
+      # 下面是 TCP **抓取点**坐标（不是物体中心；物体中心 = 抓取 z - grasp_z_offset）。
+      # 每个候选按「抓取点 + 接近点(z+approach_height)」成对判定，两点全过才算可用。
+      # 范围取在实测 ready 位姿 TCP=(0.149, 0.384, 0.861) 的邻域。
+      transport_probe_x_list: [0.149, 0.199, 0.249, 0.299]
+      transport_probe_y_list: [0.284, 0.334, 0.384, 0.434, 0.464]
+      transport_probe_z_list: [0.761, 0.811, 0.861, 0.911]
       # 接近/离开时在抓取点上方留的高度。太小会让下降段与物体碰撞校验冲突。
       transport_approach_height: 0.10
       # TCP 姿态四元数 (x,y,z,w)。

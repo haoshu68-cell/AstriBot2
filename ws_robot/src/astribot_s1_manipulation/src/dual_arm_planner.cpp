@@ -1159,12 +1159,85 @@ PlanErrorCode DualArmPlanner::executeTrajectory(
     }
     message = "trajectory executed successfully on group '" + group_name + "'";
     RCLCPP_INFO(rclcpp::get_logger(kLoggerName), "%s", message.c_str());
+    waitUntilSettled(group_name);
     return PlanErrorCode::kSuccess;
   } catch (const std::exception & e) {
     message = std::string("exception during execution: ") + e.what();
     RCLCPP_ERROR(rclcpp::get_logger(kLoggerName), "%s", message.c_str());
     return PlanErrorCode::kExceptionCaught;
   }
+}
+
+void DualArmPlanner::waitUntilSettled(const std::string & group_name)
+{
+  // 等手臂真正静止。存在的理由见 DualArmPlannerParams::ExecutionParams 的注释：
+  // 控制器报"执行完成"时手臂还在收敛，紧接着规划下一步会拿到一个移动中的起点。
+  const DualArmPlannerParams::ExecutionParams & cfg = params_.execution;
+  if (cfg.settle_timeout <= 0.0 || cfg.settle_stable_samples <= 0) {
+    return;   // 显式关闭
+  }
+  const moveit::core::JointModelGroup * jmg =
+    robot_model_ ? robot_model_->getJointModelGroup(group_name) : nullptr;
+  if (jmg == nullptr) {
+    RCLCPP_WARN(
+      rclcpp::get_logger(kLoggerName),
+      "等静止跳过：找不到组 '%s'", group_name.c_str());
+    return;
+  }
+
+  const std::vector<std::string> & joint_names = jmg->getVariableNames();
+  std::vector<double> previous;
+  int stable = 0;
+  const auto deadline = std::chrono::steady_clock::now() +
+    std::chrono::duration<double>(cfg.settle_timeout);
+  const auto poll = std::chrono::duration<double>(cfg.settle_poll_interval);
+
+  while (std::chrono::steady_clock::now() < deadline) {
+    moveit::core::RobotStatePtr state;
+    std::string error;
+    if (!getCurrentState(state, error) || !state) {
+      // 取不到状态就没法判静止。这不是执行失败，睡一轮再试。
+      std::this_thread::sleep_for(poll);
+      continue;
+    }
+
+    std::vector<double> current(joint_names.size(), 0.0);
+    double max_speed = 0.0;
+    bool has_velocity = state->hasVelocities();
+    for (std::size_t i = 0; i < joint_names.size(); ++i) {
+      current[i] = state->getVariablePosition(joint_names[i]);
+      if (has_velocity) {
+        max_speed = std::max(max_speed, std::abs(state->getVariableVelocity(joint_names[i])));
+      }
+    }
+
+    bool settled = false;
+    if (!previous.empty()) {
+      double max_delta = 0.0;
+      for (std::size_t i = 0; i < current.size(); ++i) {
+        max_delta = std::max(max_delta, std::abs(current[i] - previous[i]));
+      }
+      // 位置判据始终生效；速度判据只在状态里真有速度时叠加。
+      // 两者取"与"：位置差小而速度大意味着采样间隔太短，还不能算静止。
+      settled = max_delta < cfg.settle_position_epsilon &&
+        (!has_velocity || max_speed < cfg.settle_velocity_threshold);
+    }
+    previous = current;
+
+    stable = settled ? stable + 1 : 0;
+    if (stable >= cfg.settle_stable_samples) {
+      return;
+    }
+    std::this_thread::sleep_for(poll);
+  }
+
+  // 超时只警告不失败：轨迹本身已经执行完了，硬报失败会让一个抖动关节
+  // 卡死整个动作序列。但必须说出来 —— 下一步规划的起点可能不准。
+  RCLCPP_WARN(
+    rclcpp::get_logger(kLoggerName),
+    "组 '%s' 在 %.2fs 内没有稳定下来，继续执行后续步骤；"
+    "若下一步报 'start point deviates from current robot state'，就是这里的原因",
+    group_name.c_str(), cfg.settle_timeout);
 }
 
 }  // namespace astribot_s1_manipulation

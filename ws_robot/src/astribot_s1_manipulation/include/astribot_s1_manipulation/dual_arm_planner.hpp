@@ -93,6 +93,37 @@ struct DualArmPlannerParams
   CollisionParams collision;
   TimeOptimizerParams time_optimizer;
   MetricsParams metrics;
+
+  /// 执行完一条轨迹后，等机械臂真正静止下来的参数。
+  ///
+  /// 为什么必须有（Gazebo 实测，多步序列的必踩坑）：
+  /// JointTrajectoryController 在轨迹时长走完时就报 "successfully finished"，
+  /// 但此时手臂**还在向最后一个设定点收敛**。于是"执行成功"返回后立刻规划下一步，
+  /// 起点取的是一个仍在移动的瞬时构型；等这一步规划完（实测 0.53s）再下发，
+  /// 真实关节已经又走了一截，move_group 的起点校验直接否掉：
+  ///     Invalid Trajectory: start point deviates from current robot state more than 0.05
+  ///     joint 'astribot_arm_left_joint_2': expected: -0.963636, current: -1.02968
+  /// 偏差 0.066rad，正好越过默认的 allowed_start_tolerance 0.05。
+  ///
+  /// 注意这不该靠放大 allowed_start_tolerance 来"解决"：那是把
+  /// "从错误的起点出发"合法化，轨迹前段会有一个真实的跳变。
+  /// 正确做法是等静止 —— 让下一步的规划起点就是真实起点。
+  struct ExecutionParams
+  {
+    /// 等静止的总超时(s)。超时不算执行失败（轨迹本身已经执行完了），
+    /// 只打 WARN 并继续 —— 否则一个抖动不停的关节会让整个序列无法推进。
+    double settle_timeout{2.0};
+    /// 轮询间隔(s)。
+    double settle_poll_interval{0.02};
+    /// 判静止的关节速度上限(rad/s)。仅在当前状态带速度时启用。
+    double settle_velocity_threshold{0.02};
+    /// 判静止的相邻两次采样位置变化上限(rad)。速度缺失时这是唯一判据。
+    double settle_position_epsilon{0.002};
+    /// 连续多少次采样都满足才算静止。取 >1 是为了滤掉过零点的瞬时静止
+    /// （手臂换向时速度会瞬间穿过 0，单次采样会误判成已静止）。
+    int settle_stable_samples{3};
+  };
+  ExecutionParams execution;
 };
 
 /// 单臂规划请求。三种目标形式互斥，按 named_target -> joint_target -> pose_target
@@ -224,6 +255,10 @@ public:
   }
 
 private:
+  /// 阻塞等待某个组的关节静止。判据与超时行为见 ExecutionParams。
+  /// 只在 executeTrajectory 成功之后调用；超时不视为失败，只打 WARN。
+  void waitUntilSettled(const std::string & group_name);
+
   /// 实现细节全部放 cpp，头文件只暴露对外 API。
   class Impl;
   std::unique_ptr<Impl> impl_;

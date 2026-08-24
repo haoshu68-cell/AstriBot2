@@ -314,6 +314,93 @@ TOTG 会按这个上限压缩节拍。如果它偏大，生成的轨迹控制器
 
 ---
 
+## 实测结果：transport 搬运场景 + 四求解器横向验证（Gazebo 全链路执行，2026-08-20）
+
+先把 `transport` 场景在一个求解器上调通，再拿这个**已验证成功的基准**去跑其余
+自定义求解器。命令（只换 `planner_id`，其它全不动）：
+
+```bash
+ros2 launch astribot_s1_manipulation planning_demo.launch.py \
+    scenarios:=transport execute:=true planner_id:=<Config名>
+```
+
+四轮结果（每轮 6 步全部规划 + 真实下发执行，grep `[transport][summary]` 即得）：
+
+| planner | 注册来源 | 结果 | 规划总耗时 | 轨迹总节拍 | 全程最差 σ |
+|---|---|---|---|---|---|
+| `RRTConnectConfig` | MoveIt 官方 | PASS 6/6 | 0.220s | 2.179s | 0.1150 |
+| `BITstarConfig` | **本工程插件** | PASS 6/6 | 0.221s | 1.483s | 0.1119 |
+| `RRTstarConfig` | MoveIt 官方 | PASS 6/6 | 3.159s | 1.421s | 0.1110 |
+| `InformedRRTstarConfig` | **本工程插件** | PASS 6/6 | 3.196s | 1.552s | 0.1143 |
+
+每轮都核对过 move_group 打印的**实际**规划器名（`will use planner 'geometric::XXX'`），
+不是只看配置名 —— 名字写错时 MoveIt 会静默回退，见前面第 3 条。
+Informed RRT* 还额外确认了 `Using informed sampling.` 确实出现。
+
+### 这张表怎么读（不要读成"BIT* 比 RRT* 快 14 倍"）
+
+规划耗时的分档**是配置造成的，不是规划器能力差异**：
+
+- `RRTstarConfig` / `InformedRRTstarConfig` 配了 `optimization_budget_sec: 0.5`，
+  即首解之后再优化 0.5s。6 步 × 约 0.53s ≈ 3.16s，完全对得上。
+- `BITstarConfig` **刻意不配**这个键（理由见 `ompl_planning.yaml`：BIT* 有自己的
+  批次收敛判据，配 0.5s 窗口只会把 0.015s 拖成 0.5s）。所以它停在首解。
+
+所以横向可比的只有"同样停在首解"的那两个：
+
+- **RRTConnect 0.220s / 节拍 2.179s** vs **BIT\* 0.221s / 节拍 1.483s**
+  —— 规划开销一样，BIT\* 的**首解**节拍就好 32%。这是 BIT\* 真正的价值所在。
+- RRT\* 花 6×0.5s 的额外优化换到 1.421s，只比 BIT\* 的免费首解好 4%。
+  也就是说在这个任务上，那 0.5s/步的优化窗口性价比很低。
+
+### σ 几乎不随规划器变化
+
+四轮最差 σ 全落在 0.111~0.115，差异远小于选点造成的差异（见下）。
+说明在这个任务里**奇异余量由 A/B 选点决定，不由规划器决定** ——
+想要更大的奇异余量应该去调 `transport_pick_xyz`，调规划器没用。
+
+### A/B 两点是扫出来的，不是取出来的
+
+`transport_probe` 场景（`scenarios:=transport_probe`，不动机器人，只出表）
+用与真跑**同一套判据**扫了 80 个候选，50 个可用。关键几行：
+
+```
+(0.249, 0.464, 0.861) 抓取 σ=0.0091 κ=198  -> 不可用   <- 先前第2步失败的点
+(0.249, 0.384, 0.811) 抓取 σ=0.0021 κ=876  -> 不可用   <- 几乎精确奇异
+(0.149, 0.464, 0.911) 抓取 σ=0.1116        -> 可用，选作 A
+(0.149, 0.284, 0.911) 抓取 σ=0.1598        -> 可用（全场最佳），选作 B
+```
+
+规律：**z 越低、y 越大 = 手臂越伸展 = σ 越小**，一路掉进奇异。
+
+### 调通 transport 一共踩了三个独立的坑
+
+三个都不是"参数调不对"，而是三个不同层面的机制，且**每一个的报错都指不到根因**：
+
+1. **腕部碰撞球**：TCP(`tool_link`) 无碰撞几何，但它与 `link_7`(sphere r=0.05)、
+   `link_6`(cylinder r=0.04) 的原点**完全重合**（URDF 里两个关节 origin 都是 `0 0 0`）。
+   TCP 离物体顶面 0.03m 时腕部球已嵌入 0.02m。报错：`RETRIES_EXHAUSTED`。
+   现在 `planning_demo_node` 会用 `RobotModel` 现算这个下限并带数字拒绝。
+2. **奇异**：改对高度后 IK 有解、不碰撞，但被本工程的奇异监视器否掉
+   （`sigma_min=0.0161 < 0.02`）。报错还是 `RETRIES_EXHAUSTED` —— 与上一个坑
+   长得一模一样，这就是为什么必须有 `transport_probe` 把三项分开报。
+3. **没等静止**：控制器报 `successfully finished` 时手臂还在收敛，
+   紧接着规划下一步就拿到一个移动中的起点，0.53s 后下发时真实关节已经走远：
+   `Invalid Trajectory: start point deviates ... expected: -0.963636, current: -1.02968`
+   （0.066rad > 默认 `allowed_start_tolerance` 0.05），报出来是 `MoveItErrorCode=-4`。
+   修法是 `execution.settle_*` 一族参数（执行后等静止），
+   **不是**放大 `allowed_start_tolerance`（那等于把错误起点合法化）。
+
+### 边界（如实说明）
+
+- 本机**无夹爪关节**（两臂止于 `link_7`，之后只有无碰撞体的 `tool_link`，
+  SRDF 刻意不声明 `end_effector`）。所以这是**纯运动学演示**：
+  动作序列、碰撞校验、轨迹执行都是真的，物体是规划场景里的真实碰撞体并参与避障，
+  但物体不会在 Gazebo 里被夹住跟着走。
+- `transport_probe` 的碰撞场景只含机器人自身 + 那个物体，不含 Gazebo 环境。
+  对本 demo 够用（物体是唯一环境障碍），但不能当成"真跑一定不碰"的证明。
+
+
 ## 实测结果（Gazebo 仿真，全链路执行，2026-08-21）
 
 一次 `ros2 launch astribot_s1_manipulation planning_demo.launch.py execute:=true`
