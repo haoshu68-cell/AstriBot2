@@ -20,21 +20,32 @@
     · 如果以后要把躯干放开，直接用下面已经定义好的 dual_arm_with_torso 组，
       代码里不写死组名（从 yaml 读），不需要改 C++。
 
-  另一个实测事实：两个 tool_link 和 torso_end_effector 都**没有 collision 几何**，
-  是纯坐标系。正好适合当 TCP：既能做 IK/约束的参考系，又不会自己制造碰撞。
+  !!! TCP 的定义已改（2026-08-20）!!!
+  各臂组的 tip 从 tool_link 改成 tcp_link。原因：tool_link 与 link_7 原点完全
+  重合，它就是**法兰面**，不是夹持点；拿它当笛卡尔目标等价于"让法兰去到目标点"，
+  而真正该到位的是两指之间的位置 —— 差 0.15 m。
+  tcp_link 的偏置取自厂商 astribot_arm_{left,right}.yaml 的
+  effector_to_tool_pose: [0, -0.15, 0, 0,0,0,1]。
+  两个 tcp_link 与 torso_end_effector 一样**没有 collision 几何**，是纯坐标系：
+  既能当 IK/约束的参考系，又不会自己制造碰撞。
 -->
 <robot name="astribot_s1">
 
   <!-- ==================== 规划组 ==================== -->
 
   <!-- 单臂组：7 自由度。base_link/tip_link 用 chain 形式声明，
-       这样 MoveIt 自动取链上所有活动关节，避免手工枚举漏关节。 -->
+       这样 MoveIt 自动取链上所有活动关节，避免手工枚举漏关节。
+
+       tip 是 tcp_link（不是 tool_link，也不是 link_7）。chain 只收活动关节，
+       tool_joint/tcp_joint 都是 fixed，所以组仍然是 7 DOF —— 换 tip 只改变
+       "组的末端参考系"，不改变自由度。夹爪的那 1 个自由度不在臂组里，
+       在下面独立的 gripper_* 组里。 -->
   <group name="arm_left">
-    <chain base_link="astribot_arm_left_base_link" tip_link="astribot_arm_left_tool_link"/>
+    <chain base_link="astribot_arm_left_base_link" tip_link="astribot_arm_left_tcp_link"/>
   </group>
 
   <group name="arm_right">
-    <chain base_link="astribot_arm_right_base_link" tip_link="astribot_arm_right_tool_link"/>
+    <chain base_link="astribot_arm_right_base_link" tip_link="astribot_arm_right_tcp_link"/>
   </group>
 
   <!-- 双臂协同组：两条链的并集 = 14 DOF。
@@ -62,25 +73,62 @@
     <group name="arm_right"/>
   </group>
 
-  <!-- ==================== 末端执行器：刻意不声明 ====================
-       本机器人**没有夹爪关节**（实测：两臂止于 link_7，其后只有一个无碰撞体的
-       tool_link 纯坐标系），因此不存在可以独立成组的"手爪组"。
+  <!-- ==================== 夹爪组与末端执行器 ====================
+       本节此前写的是"本机器人没有夹爪关节，刻意不声明 end_effector"。
+       那个前提已经不成立：真机装的是平行夹爪，模型也已按厂商 MJCF/SDF 补齐
+       （每侧 7 个 link / 6 个关节，见 astribot_s1_description/urdf/astribot_s1_gripper.xacro）。
 
-       SRDF 的 <end_effector> 语义是「group = 手爪自己的关节组，
-       parent_group = 带着手爪走的手臂组」，两者**不能是同一个组**。
-       实测写成 group="arm_left" parent_group="arm_left" 会被 MoveIt 直接拒绝：
+       一具夹爪只有 **1 个活动自由度**：主动关节 joint_L1，其余 5 个是 mimic
+       （URDF mimic 关节不计入规划自由度，MoveIt 不会去搜它们）。
+       所以这里用 joint 形式而不是 chain：chain 会把从动关节所在的链一并收进来，
+       语义上容易误解成"夹爪有多个自由度"。
+
+       行程 0 ~ 0.93 rad，对应厂商抽象指令 0 ~ 100（0 = 张开）。
+       弧度与 0~100 的换算不在这里做，放在 astribot_trajectory_bridge，
+       作为整条链路唯一的单位换算点。 -->
+  <group name="gripper_left">
+    <joint name="astribot_gripper_left_joint_L1"/>
+  </group>
+
+  <group name="gripper_right">
+    <joint name="astribot_gripper_right_joint_L1"/>
+  </group>
+
+  <!-- end_effector 的语义是「group = 手爪自己的关节组，parent_group = 带着手爪
+       走的手臂组」，两者**不能是同一个组** —— 之前没有夹爪组时写成
+       group="arm_left" parent_group="arm_left" 会被 MoveIt 拒绝：
          [ERROR] Group 'arm_left' for end-effector 'eef_left' cannot be its own parent
-       而且这条只是 ERROR 日志、模型仍然加载，很容易被忽略过去。
+       而且那只是 ERROR 日志、模型仍会加载，很容易漏过去。现在有了真正独立的
+       夹爪组，这个声明才成立。
 
-       所以这里不声明 end_effector。TCP 坐标系由
-       astribot_s1_manipulation/config/manipulation_params.yaml 的
-       left_tcp_link / right_tcp_link 指定（默认两个 tool_link）——
-       这比依赖 SRDF 的 eef 声明更灵活：换夹具只改 yaml，不动 SRDF。
-       代价是 RViz 里没有自动生成的末端交互 marker，对本任务无影响。 -->
+       parent_link 取 tool_link（法兰）而不是 tcp_link：末端执行器是**装在法兰上**的，
+       这是物理安装关系；tcp_link 是法兰再往外 0.15 m 的一个参考系，不是安装面。 -->
+  <end_effector name="eef_left" group="gripper_left"
+                parent_group="arm_left" parent_link="astribot_arm_left_tool_link"/>
+  <end_effector name="eef_right" group="gripper_right"
+                parent_group="arm_right" parent_link="astribot_arm_right_tool_link"/>
+
+  <!-- 张开/闭合两个命名状态。数值与 SDK 的 open_effector/close_effector 对应：
+       0.0 rad <-> 下发 0（张开），0.93 rad <-> 下发 100（闭合）。
+       上层用名字而不是数字，换夹爪时只改这里。 -->
+  <group_state name="open" group="gripper_left">
+    <joint name="astribot_gripper_left_joint_L1" value="0.0"/>
+  </group_state>
+  <group_state name="closed" group="gripper_left">
+    <joint name="astribot_gripper_left_joint_L1" value="0.93"/>
+  </group_state>
+  <group_state name="open" group="gripper_right">
+    <joint name="astribot_gripper_right_joint_L1" value="0.0"/>
+  </group_state>
+  <group_state name="closed" group="gripper_right">
+    <joint name="astribot_gripper_right_joint_L1" value="0.93"/>
+  </group_state>
 
   <!-- ==================== 预定义姿态 ====================
-       取值全部落在 URDF 实测限位内（左右臂 joint_3 限位不对称：
-       左 [-3.0, 1.4]、右 [-1.4, 3.1]，所以 ready 姿态左右符号相反）。 -->
+       取值全部落在 URDF 实测限位内。注意 joint_3 的限位已在 2026-08-20 随
+       "限位切到厂商 per-part 模型"改成**两侧统一 ±3.1**（此前是左 [-3.0,1.4]、
+       右 [-1.4,3.1] 的镜像限制）。下面 ready 姿态左右 joint_3 仍取相反符号 ——
+       现在这不再是限位所迫，而是因为两条臂朝内对置，相反符号才是对称地向前屈肘。 -->
   <group_state name="home" group="arm_left">
     <joint name="astribot_arm_left_joint_1" value="0"/>
     <joint name="astribot_arm_left_joint_2" value="0"/>
@@ -229,5 +277,55 @@
   <disable_collisions link1="astribot_arm_right_link_1" link2="astribot_torso_link_4" reason="Default"/>
   <disable_collisions link1="astribot_arm_right_link_2" link2="astribot_torso_link_4" reason="Default"/>
   <disable_collisions link1="astribot_head_link_1" link2="astribot_torso_link_4" reason="Default"/>
+
+  <!-- ==================== 夹爪相关 10 对（每侧 5 对）====================
+       用 self_collision_pair_generator 采样 5000 个构型实测（2026-08-20，
+       加夹爪后重跑）。夹爪把有碰撞几何的 link 从 31 增到 41、对数从 465 增到 820。
+
+       前 4 对是 ALWAYS（实测碰撞率 100%），结构上必然重叠：
+         link_7 <-> gripper_base   夹爪基座就固连在法兰上
+         gripper_base <-> L2 / R2  两根连杆的根部铰接在基座上（父子相邻）
+
+       第 5 对 L11 <-> L2 是**唯一一处不按采样统计办**的：
+       实测左指 9.32% / 右指 9.24%（"有时碰撞"），而镜像位置的
+       R11 <-> R2 却是 100%。按本文件一贯的规矩，"有时碰撞"绝对不能关。
+       但这一对必须关，理由是机构：L2 的末端与 L11 **本来就用销轴铰在一起**
+       （四连杆的闭环那一处，URDF 是树、表达不了这个闭环，所以 L2 成了一根
+       末端悬空的杆）。物理上它们永远接触，"有时不接触"是模型假象。
+
+       为什么左右统计不对称 —— 查到根因了，不是我的模型也不是采样工具：
+       厂商这几个碰撞 mesh 是**各自独立简化**出来的，不是精确镜像。
+         L2  120 顶点 / 236 面      R2  121 顶点 / 238 面
+         L11 139 顶点 / 274 面      R11 122 顶点 / 240 面
+       包围盒看着是精确镜像（L2 x∈[-0.0232,+0.0410] / R2 x∈[-0.0410,+0.0232]），
+       但网格本身差了一成多。而运动学侧是**严格镜像**（实测相对变换
+       T_L2⁻¹·T_L11 与镜像后的 T_R2⁻¹·T_R11 在 q=0/0.2/0.5/0.93 上差值全为 0.000000）。
+       所以销轴处那种"刚好擦到"的接触，在一侧的简化网格上判成碰、另一侧判成不碰。
+       中间还错怪过两个东西：先以为是 L11 预压角两源不一致(MJCF 0 / SDF -0.03)，
+       改了只从 10.14% 动到 9.32%；又以为是 max_contacts=200 截断，
+       改成按对数现算后结果一字未变。都记在对应文件里了。
+
+       不关掉的后果：约 9% 的夹爪构型会被判自碰撞，而那是个销轴、
+       本该永远接触 —— 相当于凭空废掉一成的夹爪工作区间，
+       且症状是"某些开合角规划不出来"，极难定位。 -->
+  <disable_collisions link1="astribot_arm_left_link_7" link2="astribot_gripper_left_base" reason="Adjacent"/>
+  <disable_collisions link1="astribot_gripper_left_base" link2="astribot_gripper_left_Link_L2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_gripper_left_base" link2="astribot_gripper_left_Link_R2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_gripper_left_Link_R11" link2="astribot_gripper_left_Link_R2" reason="Default"/>
+  <disable_collisions link1="astribot_gripper_left_Link_L11" link2="astribot_gripper_left_Link_L2" reason="Default"/>
+
+  <disable_collisions link1="astribot_arm_right_link_7" link2="astribot_gripper_right_base" reason="Adjacent"/>
+  <disable_collisions link1="astribot_gripper_right_base" link2="astribot_gripper_right_Link_L2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_gripper_right_base" link2="astribot_gripper_right_Link_R2" reason="Adjacent"/>
+  <disable_collisions link1="astribot_gripper_right_Link_R11" link2="astribot_gripper_right_Link_R2" reason="Default"/>
+  <disable_collisions link1="astribot_gripper_right_Link_L11" link2="astribot_gripper_right_Link_L2" reason="Default"/>
+
+  <!-- 刻意**不**关掉的夹爪对（实测"有时碰撞"，必须留给运行时检测）：
+         gripper_* <-> torso_link_4   2.7~3.7%   夹爪真的能打到躯干
+         gripper_* <-> torso_link_3   1.2~1.8%
+         gripper_* <-> head_link_2    0.7~1.9%   也真的能打到头
+         gripper_base <-> L11/R11     <0.5%      厂商 MJCF 也是刻意不排除这一对
+       另有 117 对夹爪相关的 NEVER 对没写进来：本文件一贯只关
+       Adjacent/Default，NEVER 只是省开销，写进来会让列表膨胀一倍还难读。 -->
 
 </robot>

@@ -131,7 +131,26 @@ int main(int argc, char ** argv)
 
     collision_detection::CollisionRequest request;
     request.contacts = true;
-    request.max_contacts = 200U;
+    // max_contacts 必须 >= 所有可能的 link 对数，否则统计会被**截断**成噪音。
+    //
+    // !!! 实测踩坑（加夹爪后暴露）!!!
+    // 原来写死 200。加夹爪后有碰撞几何的 link 从 31 涨到 41，对数从 465 涨到 820，
+    // 200 这个上限开始咬人：单个样本里碰撞对一旦超过 200，FCL 就停止上报，
+    // 哪些对被记下来取决于内部遍历顺序。结果是**同一具夹爪上互为镜像的两对**
+    // 统计结果完全不同：
+    //     R11 <-> R2  碰撞率 100%
+    //     L11 <-> L2  碰撞率 9.32%
+    // 而这两对在几何上严格镜像对称（连碰撞 mesh 的包围盒都是精确镜像：
+    // L2 x∈[-0.0232,+0.0410] / R2 x∈[-0.0410,+0.0232]）。
+    // 一度以为是厂商两个源在 L11 预压角上不一致（MJCF 给 0、SDF 给 -0.03）导致的，
+    // 改成 SDF 的值后碰撞率只从 10.14% 动到 9.32% —— 不对称照旧，
+    // 说明根因不在模型而在**这台仪器**。
+    //
+    // 截断的危害方向：ALWAYS 的对被误判成"有时碰撞"，于是不进 disable 列表，
+    // 起始构型直接判自碰撞、规划根本跑不起来（症状见本工具 usage 里那段说明）。
+    // 所以上限按 link 数现算，不留魔法数字。
+    const std::size_t pair_count = links.size() * (links.size() - 1U) / 2U;
+    request.max_contacts = pair_count;
     request.max_contacts_per_pair = 1U;
     collision_detection::CollisionResult result;
     // 注意这里**不传** AllowedCollisionMatrix：本工具的目的就是统计

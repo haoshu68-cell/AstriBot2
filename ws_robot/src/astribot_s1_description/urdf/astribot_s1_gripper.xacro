@@ -1,0 +1,444 @@
+<?xml version="1.0"?>
+<!--
+  文件用途：Astribot S1 平行夹爪（左/右各一套）—— 从"法兰上一坨集中质量"改成真正带
+  关节的四连杆平行夹爪。
+
+  ================== 为什么必须做这件事（不是锦上添花） ==================
+  改造前本仓库的模型里，两条臂止于 link_7，其后只有一个 tool_link 纯坐标系，而
+  tool_link 挂着 0.64763 kg / 质心在 -y 0.107 m 的集中惯量。也就是说：夹爪的
+  **质量在模型里、体积不在模型里**。link_7 的唯一碰撞体是 sphere r=0.05，
+  在 link_7 系里只覆盖 y ∈ [-0.05, +0.05]。
+
+  厂商自己的碰撞模型（astribot_whole_body.sdf，link_7 的 <collision>）用的是
+  meshes/s1_gripper/obj/opened_gripper.obj，放在 link_7 系 pose
+  (0.006, -0.048, 0, rpy π 0 0)。实测该 mesh 局部包络
+      x ∈ [-0.0740, 0.0740]   y ∈ [0, 0.1517]   z ∈ [-0.0310, 0.0310]
+  绕 x 转 π 后落到 link_7 系
+      x ∈ [-0.068, 0.080]     y ∈ [-0.1997, -0.048]   z ∈ [-0.031, 0.031]
+
+  对照结论（这是本文件存在的理由）：
+      真实腕部包络伸到 y = -0.1997，张开时 x 方向宽 0.148 m；
+      改造前模型只有 y ∈ [-0.05, 0.05] 的一个球。
+      => 沿抓取方向 **少了约 0.15 m**，横向 **少了约 0.148 m**。
+  夹爪整体不在碰撞模型里。任何"末端离障碍物还有多少余量"的结论都建立在这个
+  缺了 150 mm 的模型上，因此**改造前测出来的抓取余量数字全部作废**
+  （方法可以留，数字不能留）。
+
+  ================== 三档厂商碰撞建模，为什么选第三档 ==================
+  厂商同一台机器发了三套互不相同的腕部碰撞模型：
+    ① astribot_whole_body_with_wheel.urdf（本仓库原先照抄的那份）
+         link_7 = sphere r=0.05，夹爪完全不建模。
+    ② astribot_whole_body.sdf
+         link_7 = 单个 opened_gripper.obj，夹爪当成一个刚性整体（张开时的包络）。
+    ③ astribot_whole_body_with_gripper.sdf
+         6 个关节 + 每个连杆各自的碰撞 mesh，夹爪是真正会动的机构。
+  这里选 ③，理由是 ② 有一个致命缺陷：opened_gripper.obj 的包络
+  y ∈ [-0.1997, -0.048] **把两指之间的空间也一起填实了**，而 TCP（法兰 -y 0.15）
+  恰好落在这个区间里。用 ② 建模，"被抓的物体位于两指之间"这个正常抓取状态
+  会被判成碰撞 —— 抓取规划从定义上就无法成立。③ 张开时两指分开约 105 mm，
+  指间是真的空的，物体可以进去。
+
+  这一点和已知的一条老坑是同一个病因的放大版：TCP 坐落在腕部碰撞体内部，
+  于是"TCP 贴着物体"必然报碰撞。② 把这个洞从 r=0.056 放大到 150 mm 深。
+
+  ================== 数值来源（逐项可追溯，不许手填） ==================
+  本文件混用两个厂商源，因为没有任何单一文件同时包含"几何"和"耦合关系"：
+
+  A. 关节原点 / 轴向 / 主动关节行程 / 6 个关节的耦合比例 —— 取自 MuJoCo 模型
+       astribot_simulation/astribot_descriptions/mjcf/astribot_s1_mjcf/
+         astribot_gripper/astribot_gripper_left/astribot_gripper_left_model.xml     (body pos / joint axis / range)
+         astribot_gripper/astribot_gripper_left/astribot_gripper_left_actuator.xml  (tendon / equality / actuator)
+     选它当几何源的原因：MJCF 里各 body 的 pos 本来就是**相对夹爪基座**给的，
+     和本文件把夹爪做成"挂在基座上的独立模块"这个结构完全对应，不需要我自己
+     做坐标变换；而且耦合关系只有这里有。
+
+  B. 连杆碰撞 mesh / 基座相对 link_7 的安装位姿 —— 取自
+       astribot_config/robot_config/astribot_s1/model/astribot_whole_body_with_gripper.sdf
+     基座安装位姿 = 该文件里 link_7 那个 lump 进来的 gripper base
+     visual/collision 的 pose：(0.006, -0.048, 0, rpy 1.5708 0 0)。
+
+  A、B 两源对不齐的量（已实测，见 test/test_gripper_model.py 里的交叉校验）：
+  1) 挂在基座上的 4 个关节（L1/L2/R1/R2）：把 MJCF 的 body pos 换算到 link_7 系，
+     与 SDF 的 joint pose 差最大 2.6 mm，且四个关节在 y 上一致偏 2.6 mm ——
+     系统性差异（来自基座安装位姿），不是抄错某一个数。测试按 3 mm 容差断言。
+  2) L11/R11 这处销轴：差 **7.0 mm**，比上面那档大一倍多。
+     MJCF (0.04125, 0, 0.036379) / SDF (0.036, 0, 0.031749)。
+     本文件取 MJCF。依据不强，如实记下：SDF 那个值与 MJCF 里被注释掉的
+     <connect body1=Link_L2 body2=Link_L11 anchor='0.036 0 0.031749'> 完全相同，
+     而 connect 的 anchor 是 L2 局部系下的点、说的是**另一处销轴**(L2–L11)，
+     所以怀疑 SDF 转换时把两处销轴搞混了 —— 但没有厂商文档能证实。
+     **这意味着指尖沿抓取方向有约 7 mm 的不确定度。** 抓取余量若小于这个数，
+     结论就不可信。测试里把这 7 mm 钉住，防止它悄悄漂掉。
+
+  另一件必须知道的事：厂商这批**碰撞 mesh 不是精确镜像**，是各自独立简化的。
+     L2  120 顶点/236 面     R2  121 顶点/238 面
+     L11 139 顶点/274 面     R11 122 顶点/240 面
+  包围盒看着精确镜像（L2 x∈[-0.0232,+0.0410] / R2 x∈[-0.0410,+0.0232]），
+  网格本身差了一成多。而运动学侧是严格镜像（实测 T_L2⁻¹·T_L11 与镜像后的
+  T_R2⁻¹·T_R11 在 q=0/0.2/0.5/0.93 上差值全为 0.000000）。
+  后果是销轴处"刚好擦到"的接触在两侧判定不同 —— 详见 SRDF 里夹爪那 10 对
+  disable_collisions 的说明（实测 L11<->L2 9.32% vs R11<->R2 100%）。
+
+  ================== 耦合关系（URDF mimic 在这里是精确的，不是近似） ==================
+  MJCF 的 <equality> 原文（left）：
+      R1 = L1                                  （默认 polycoef = 0 1 0 0 0）
+      R2 = R1
+      R11 = -R1        polycoef="0.00 -1 0 0 0"
+      L2  = -L1        polycoef="0 -1 0 0 0"
+      L11 = +L1        polycoef="0.00 1 0 0 0"
+  全部是 ±1 的线性关系，没有常数项、没有高次项 —— 所以用 URDF <mimic> 表达是
+  **精确的**，不是"拿线性去近似非线性"。这一点很重要：四连杆一般来说不能用
+  mimic 表达，能表达是因为这具夹爪是平行四边形机构。
+
+  本文件统一让 5 个从动关节都直接 mimic 主动关节 L1（而不是照 MJCF 那样
+  R11 去 mimic R1），是为了不依赖"mimic 链式引用"这个各家实现不一致的特性。
+  R11 = -R1 = -L1，代入即可，比例不变。
+
+  可验证的几何不变量（测试里断言的就是这条）：
+  L1 轴是 (0,-1,0)、L11 轴是 (0,1,0)、L11 = +L1，于是 L11 在基座系里的净姿态
+      R(-y, q) · R(+y, q) = I
+  也就是**指尖姿态恒定、始终与基座平行** —— 这正是"平行夹爪"的定义。右侧同理
+  （R1 轴 +y、R11 = -R1）。这条不变量对任意开合角都成立，是个比对比数值更强
+  的判据：mimic 比例写错符号，它立刻不成立。
+
+  另有一处厂商内部不一致：右夹爪的 astribot_gripper_right_contact.xml 用
+  <connect> 做真闭环（几何精确），左夹爪用 polycoef ±1（平行四边形理想化）。
+  两者对平行夹爪等价；URDF 只能表达后者，所以左右都按 polycoef 的比例建。
+
+  ================== 行程：0.93 还是 1.14 ==================
+  两个源给了两个数：
+      MJCF  joint L1/R1 range = 0 ~ 0.93
+      SDF   joint_L1 limit     = 0 ~ 1.14
+  这里取 **0.93**，因为它是"经厂商自己的控制接口真正能到的范围"：
+  MJCF 的 actuator 是 ctrlrange 0~100、gaintype=fixed(gainprm 4.65)、
+  biastype=affine(biasprm 0 -500 -10) 的位置伺服，平衡点
+      len = 4.65/500 · ctrl = 0.0093 · ctrl
+  而 len 是 tendon = 0.5·R1 + 0.5·L1，在 R1 = L1 下就等于 L1。所以
+      L1 = 0.0093 · cmd,  cmd ∈ [0, 100]  =>  L1 ∈ [0, 0.93]
+  1.14 是更宽的机械限位，经厂商接口下发不到。取 0.93 = 可达即可规划，
+  避免规划器往下发不出去的区间里找解。
+
+  从动关节的限位不抄任何一个源，而是按 **主动关节行程 × |比例|** 推出来的
+  （比例都是 ±1，所以是 ±0.93）—— 这样它和主动关节天然自洽。抄 MJCF 的
+  ±1.00 或 SDF 的 ±3.14 都会引入"从动关节限位与主动关节不匹配"的隐患：
+  主动关节走到 0.93 时从动关节若限位只有 ±0.5，URDF 层面就自相矛盾。
+
+  ================== 开合方向（0 = 张开） ==================
+  取自 SDK 实现 astribot_sdk/core/astribot_api/astribot_client.py：
+      open_effector()  -> joints_list = [[0.0],   [0.0]]
+      close_effector() -> joints_list = [[100.0], [100.0]]
+  配合上面的 L1 = 0.0093·cmd：**cmd 0 = L1 0 rad = 张开，cmd 100 = L1 0.93 rad = 闭合**。
+  即抽象指令值随"夹紧程度"单调递增。
+
+  抽象指令 0~100 与本文件的弧度之间的换算**不在 URDF 里做**，放在
+  astribot_trajectory_bridge（方案 Gate 2/3）里，作为整条链路上唯一的单位换算点：
+  上层业务只见 MoveIt 的弧度，厂商接口只见 0~100。比例从配置读，不写死在代码里。
+
+  ================== 惯量：厂商给的是占位值，这里照抄并标出来 ==================
+  MJCF/SDF 里 6 个连杆的惯量全部是 diaginertia = 0.001 0.001 0.001、质心
+  (0, 0, 0.02)，六个连杆一模一样。对 0.03 kg 的连杆，I = 0.001 意味着回转半径
+      sqrt(0.001 / 0.03) ≈ 0.18 m
+  而连杆本身只有 ~0.04 m —— 物理上不可能，这是厂商没填的占位值。
+
+  这里**照抄**而不是自己编一个"看起来合理"的值，原因有两条：
+    1. 规划/碰撞（本阶段的目标）完全不用惯量，抄与不抄对 MoveIt 无影响；
+    2. 自己算一个数会让模型偏离厂商两个仿真器共同使用的值，反而制造新的
+       仿真-实物差异 —— 而消除这种差异正是整件事的目的。
+  代价必须知道：**Gazebo 里这 6 个连杆的转动惯量被高估约 30 倍**，如果以后要在
+  Gazebo 里做夹爪动力学（抓取力、指尖接触），这个值不能用。当前不用，故不改。
+
+  ================== 本阶段（模型对齐）不做什么 ==================
+  · 不给夹爪配 Gazebo 侧的 mimic 执行。Humble 的 gz_ros2_control 对 URDF
+    <mimic> 的支持情况未实测，从动关节可能在 Gazebo 里受重力自由摆动。
+    本阶段目标是 MoveIt 的运动学/碰撞模型与厂商一致，mimic 在 MoveIt 侧
+    是可靠的（从动关节不计入活动自由度）。Gazebo 侧的表现留到需要时实测再定，
+    不在这里凭猜测加补丁。
+  · 不做夹持力。厂商的夹持力是另一条接口（set_effector_max_force，10~80 N，
+    随机器人模式变化），不是关节 effort 限位。URDF 里的 effort 沿用源里的 1.0
+    并明确它不是控制通路。
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ================= 全局常量：主动关节行程与耦合比例 =================
+       放成 property 而不是散落在各处的字面量，是为了让"改行程"只改一处，
+       且从动关节限位由它算出来、不可能与主动关节脱节。 -->
+
+  <!-- 主动关节行程上限(rad)。来源：MJCF joint range 上界 = 0.93，
+       与 actuator ctrlrange 0~100 经 0.0093 rad/unit 换算后的上界一致。 -->
+  <xacro:property name="gripper_drive_upper" value="0.93"/>
+
+  <!-- 关节 effort / velocity：取自 SDF 的 <limit>（effort=1, velocity=1）。
+       这两个是厂商源里的占位值，不是标定值；真实夹持力走
+       set_effector_max_force(10~80 N) 那条独立接口，不经这里。 -->
+  <xacro:property name="gripper_joint_effort" value="1.0"/>
+  <xacro:property name="gripper_joint_velocity" value="1.0"/>
+
+  <!-- 连杆质量：MJCF <inertial mass>。基座 0.4 kg 这个数有独立佐证 ——
+       SDF 里 lump 后的 link_7 质量 0.527722 = link_7 自身 0.12772019 + 0.4，
+       两个源在这一位上完全吻合，所以 0.4 不是孤证。 -->
+  <xacro:property name="gripper_base_mass" value="0.4"/>
+  <xacro:property name="gripper_link1_mass" value="0.03"/>
+  <xacro:property name="gripper_link11_mass" value="0.067"/>
+  <xacro:property name="gripper_link2_mass" value="0.03"/>
+
+  <!-- 厂商占位惯量，见文件头"惯量"一节。集中成一个 property，
+       将来标定出真值时只改这里，且一眼能看出这 7 个连杆共用同一个值
+       （共用本身就是"这是占位值"的证据）。 -->
+  <xacro:property name="gripper_placeholder_inertia" value="0.001"/>
+
+  <!-- mesh 路径前缀。运行时统一走 package:// ，不出现绝对路径；
+       实际文件由 CMakeLists.txt 从 astribot_config 装到本包 share 下。 -->
+  <xacro:property name="gripper_mesh_dir" value="package://astribot_s1_description/meshes/s1_gripper"/>
+
+  <!-- ================= 一个连杆的公共写法 =================
+       6 个连杆的 inertial 在厂商源里完全一致（质心 (0,0,0.02) + 占位惯量），
+       只有质量不同；把它收成宏，避免 6 份复制粘贴各自漂移。
+       collision_mesh 传空字符串表示该连杆没有碰撞几何 —— L1/R1 就是这种情况，
+       厂商 SDF 里它们确实没有 <collision>（被基座外壳挡住的内部连杆）。 -->
+  <xacro:macro name="astribot_s1_gripper_link" params="name mass visual_mesh collision_mesh">
+    <link name="${name}">
+      <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0.02"/>
+        <mass value="${mass}"/>
+        <inertia
+          ixx="${gripper_placeholder_inertia}" ixy="0" ixz="0"
+          iyy="${gripper_placeholder_inertia}" iyz="0"
+          izz="${gripper_placeholder_inertia}"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="${gripper_mesh_dir}/${visual_mesh}"/>
+        </geometry>
+        <material name="astribot_gripper_dark">
+          <color rgba="0.08 0.08 0.09 1"/>
+        </material>
+      </visual>
+      <xacro:unless value="${collision_mesh == ''}">
+        <collision>
+          <origin rpy="0 0 0" xyz="0 0 0"/>
+          <geometry>
+            <mesh filename="${gripper_mesh_dir}/obj/${collision_mesh}"/>
+          </geometry>
+        </collision>
+      </xacro:unless>
+    </link>
+  </xacro:macro>
+
+  <!-- ================= 从动关节的公共写法 =================
+       ratio 只会是 +1 或 -1（见文件头耦合关系）。限位由
+       主动关节行程 × ratio 算出，不手填：ratio=+1 -> [0, upper]，
+       ratio=-1 -> [-upper, 0]。这样"改 gripper_drive_upper"会同时且正确地
+       改掉全部 5 个从动关节的限位。
+
+       为什么用 (1±ratio)/2 这种写法而不是条件表达式：
+       XML 属性值里不能出现裸的 '<' / '>'（会被当成标签起止符，xacro 直接报
+       "XML parsing error: not well-formed"），所以 ${... if ratio < 0 else ...}
+       这类写法根本进不了 xacro。写成 &lt; 能过解析但很难读。
+       改用纯算术：ratio=+1 时 (1-ratio)/2=0、(1+ratio)/2=1；ratio=-1 时反过来。
+       这个恒等式**只在 ratio ∈ {+1, -1} 时成立** —— 本机构的耦合比例恰好全是
+       ±1（平行四边形），所以够用；如果将来遇到非 ±1 的比例，这里必须改写，
+       test_gripper_model.py 里有一条断言专门守住"比例只能是 ±1"。 -->
+  <xacro:macro name="astribot_s1_gripper_mimic_joint"
+               params="name parent child xyz rpy axis ratio master">
+    <joint name="${name}" type="revolute">
+      <origin rpy="${rpy}" xyz="${xyz}"/>
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+      <axis xyz="${axis}"/>
+      <limit
+        effort="${gripper_joint_effort}"
+        velocity="${gripper_joint_velocity}"
+        lower="${-gripper_drive_upper * (1 - ratio) / 2}"
+        upper="${gripper_drive_upper * (1 + ratio) / 2}"/>
+      <mimic joint="${master}" multiplier="${ratio}" offset="0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- ================= 夹爪本体 =================
+       params:
+         side   —— left / right，只参与命名。
+         parent —— 挂载的父 link，实际就是对应臂的 link_7。
+
+       !!! 左右两具夹爪的内部几何完全相同，不是镜像 !!!
+       实测依据：把 MJCF 的
+         astribot_gripper_left/astribot_gripper_left_model.xml
+         astribot_gripper_right/astribot_gripper_right_model.xml
+       两个文件里的 left/right 字样统一替换后 diff，唯一差异是左侧文件里一处
+       命名笔误（geom 名写成了 astribot_gripper_right_left_geom），几何数值
+       一处不差。SDF 侧也一致：左右 link_7 下的 6 个夹爪关节 pose/axis 逐项相同，
+       基座安装位姿都是 (0.006, -0.048, 0, rpy 1.5708 0 0)。
+       所以这里用同一个宏、同一套数值实例化两次，**不做任何镜像取反** ——
+       左右的差别完全来自两条臂本身的安装角度（见 astribot_s1_arm.xacro 的
+       base_fixed_rpy），夹爪相对各自法兰是一样的装法。 -->
+  <xacro:macro name="astribot_s1_gripper" params="side parent">
+
+    <!-- ========== 基座 ==========
+         安装位姿取自 SDF 里 link_7 那个 lump 进来的 gripper base 的 pose。
+         rpy 的 1.5708 是关键：它把夹爪基座的 +z（张合机构的伸出方向）
+         转到 link_7 的 -y，这就是为什么 TCP 要沿 -y 偏置（见 arm xacro 的 tcp_link）。
+
+         这里做成一个真实的独立 link 而不是像厂商 SDF 那样 lump 进 link_7，
+         有两个好处：
+           1. link_7 的惯量/碰撞体保持原样不动 —— 之前已验证本仓库 link_7 与
+              厂商 per-part 模型逐项一致，不希望为了加夹爪去改它；
+           2. MJCF 里各指连杆的 pos 本来就是相对基座给的，有了真实基座 link
+              就能直接抄，不需要我自己做绕 x 转 90° 的坐标变换（少一个出错点）。
+
+         基座碰撞用 SDF 的 collision mesh（obj）。注意 link_7 自己的
+         sphere r=0.05 **保留不动**：基座 mesh 换算到 link_7 系后覆盖
+         y ∈ [-0.1376, -0.048]，覆盖不到 y > -0.048 的腕部本体，两者互补。
+         碰撞建模宁可保守（多包一点）也不能漏，漏了就是撞了才知道。 -->
+    <xacro:astribot_s1_gripper_link
+      name="astribot_gripper_${side}_base"
+      mass="${gripper_base_mass}"
+      visual_mesh="astribot_gripper_base_link.stl"
+      collision_mesh="astribot_gripper_base_link_collision_mesh.obj"/>
+
+    <joint name="astribot_gripper_${side}_base_fixed_joint" type="fixed">
+      <origin rpy="1.5708 0 0" xyz="0.006 -0.048 0"/>
+      <parent link="${parent}"/>
+      <child link="astribot_gripper_${side}_base"/>
+    </joint>
+
+    <!-- ========== L 侧主动连杆（整具夹爪唯一的活动自由度） ==========
+         L1 是主动关节。选它当主动关节不是随意指定：MJCF 的 actuator 就叫
+         astribot_gripper_${side}_joint_L1，厂商自己把它当驱动关节。
+         axis (0,-1,0) 与 MJCF 一致。
+         L1/R1 在 MJCF 里还带 damping="5"（其余 4 个从动关节没有），
+         这也是"这两个是被驱动的"的旁证。 -->
+    <xacro:astribot_s1_gripper_link
+      name="astribot_gripper_${side}_Link_L1"
+      mass="${gripper_link1_mass}"
+      visual_mesh="astribot_gripper_L1_Link.stl"
+      collision_mesh=""/>
+
+    <joint name="astribot_gripper_${side}_joint_L1" type="revolute">
+      <origin rpy="0 0 0" xyz="0.0145 0 0.0511"/>
+      <parent link="astribot_gripper_${side}_base"/>
+      <child link="astribot_gripper_${side}_Link_L1"/>
+      <axis xyz="0 -1 0"/>
+      <limit
+        effort="${gripper_joint_effort}"
+        velocity="${gripper_joint_velocity}"
+        lower="0.0"
+        upper="${gripper_drive_upper}"/>
+    </joint>
+
+    <!-- L11：带指尖胶垫的那节。ratio = +1，配合 L1 的 -y 轴与本关节的 +y 轴，
+         净姿态恒为常量 —— 平行夹爪不变量（见文件头）。
+
+         !!! rpy 这里取 SDF 的 -0.03 而不是 MJCF 的 0，是被实测推翻后改的 !!!
+         两源在这一处不一致：MJCF 给 euler="0 0 0"，SDF 给 rpy="0 -0.03 0"。
+         最初按"几何取 MJCF"的规则取了 0，然后用 self_collision_pair_generator
+         采样 5000 个构型实测碰撞率，结果出现一个不该存在的左右不对称：
+             R11 <-> R2   碰撞率 100%（always）
+             L11 <-> L2   碰撞率 10.14%（sometimes）
+         这两对是同一具夹爪里两根手指上**互为镜像**的同一处铰接。四连杆的
+         L2/R2 末端本来就与 L11/R11 铰接在一起（闭环那一处），所以两侧都应该是
+         "永远接触"。一侧 100% 一侧 10%，只能是几何不对称造成的。
+
+         追下去就是这个 rpy：SDF 给的 -0.03/+0.03 是一对镜像值，自洽；
+         MJCF 给的 0/+0.03 不是镜像，**MJCF 这一处漏了左指的预压角**。
+         所以这里改用 SDF 的值，并把"几何一律取 MJCF"降级为"取 MJCF，
+         但两源不一致且 MJCF 自身不自洽时取 SDF"。 -->
+    <xacro:astribot_s1_gripper_link
+      name="astribot_gripper_${side}_Link_L11"
+      mass="${gripper_link11_mass}"
+      visual_mesh="astribot_gripper_L11_Link.stl"
+      collision_mesh="astribot_gripper_L11_Link_collision_mesh.obj"/>
+
+    <xacro:astribot_s1_gripper_mimic_joint
+      name="astribot_gripper_${side}_joint_L11"
+      parent="astribot_gripper_${side}_Link_L1"
+      child="astribot_gripper_${side}_Link_L11"
+      xyz="0.04125 0 0.036379080527138"
+      rpy="0 -0.03 0"
+      axis="0 1 0"
+      ratio="1"
+      master="astribot_gripper_${side}_joint_L1"/>
+
+    <!-- L2：平行四边形的另一根连杆。ratio = -1 配合 +y 轴 = 与 L1 在空间中同向转动，
+         这正是平行四边形两根连杆该有的关系。
+         注意 URDF 是树，四连杆的闭环（L2 末端与 L11 铰接）**无法表达**，
+         这里 L2 是一根末端悬空的杆。厂商 MJCF 里右夹爪用 <connect> 真闭环、
+         左夹爪用 polycoef 理想化；对平行夹爪两者等价，URDF 只能取后者。
+         代价：L2 只是"跟着动的可视/碰撞体"，不承载约束。这不影响运动学正确性
+         （指尖位姿由 L1/L11 完全确定），但要知道它不是真闭环。 -->
+    <xacro:astribot_s1_gripper_link
+      name="astribot_gripper_${side}_Link_L2"
+      mass="${gripper_link2_mass}"
+      visual_mesh="astribot_gripper_L2_Link.stl"
+      collision_mesh="astribot_gripper_L2_Link_collision_mesh.obj"/>
+
+    <xacro:astribot_s1_gripper_mimic_joint
+      name="astribot_gripper_${side}_joint_L2"
+      parent="astribot_gripper_${side}_base"
+      child="astribot_gripper_${side}_Link_L2"
+      xyz="0.0325 0 0.0511"
+      rpy="0 0 0"
+      axis="0 1 0"
+      ratio="-1"
+      master="astribot_gripper_${side}_joint_L1"/>
+
+    <!-- ========== R 侧：与 L 侧关于基座 x=0 对称，靠 x 取负 + 轴向取正实现 ==========
+         R1 轴是 (0,1,0)（L1 是 (0,-1,0)），ratio = +1，于是 R1 与 L1 数值相同
+         但在空间中反向转 —— 两指对开。这与 MJCF 的 equality "R1 = L1" 一致：
+         耦合是**数值相等**，方向差异由 axis 承担，不是靠 ratio 取负。
+         这一点容易搞错：若误写成 ratio=-1 + axis 同向，数值上也能对开，
+         但从动关节限位区间会跑到负半轴，与 MJCF 声明的 range 0~0.93 矛盾。 -->
+    <xacro:astribot_s1_gripper_link
+      name="astribot_gripper_${side}_Link_R1"
+      mass="${gripper_link1_mass}"
+      visual_mesh="astribot_gripper_R1_Link.stl"
+      collision_mesh=""/>
+
+    <xacro:astribot_s1_gripper_mimic_joint
+      name="astribot_gripper_${side}_joint_R1"
+      parent="astribot_gripper_${side}_base"
+      child="astribot_gripper_${side}_Link_R1"
+      xyz="-0.0145 0 0.0511"
+      rpy="0 0 0"
+      axis="0 1 0"
+      ratio="1"
+      master="astribot_gripper_${side}_joint_L1"/>
+
+    <!-- R11：ratio = -1（MJCF: R11 = -R1，而 R1 = L1，代入得 R11 = -L1）。
+         这里直接 mimic 主动关节 L1 而不是链式 mimic R1 —— 见文件头说明。
+         rpy 的 0.03 是 MJCF 与 SDF **一致**的那一处预压（左右两源都给 +0.03）。 -->
+    <xacro:astribot_s1_gripper_link
+      name="astribot_gripper_${side}_Link_R11"
+      mass="${gripper_link11_mass}"
+      visual_mesh="astribot_gripper_R11_Link.stl"
+      collision_mesh="astribot_gripper_R11_Link_collision_mesh.obj"/>
+
+    <xacro:astribot_s1_gripper_mimic_joint
+      name="astribot_gripper_${side}_joint_R11"
+      parent="astribot_gripper_${side}_Link_R1"
+      child="astribot_gripper_${side}_Link_R11"
+      xyz="-0.04125 0 0.036379080527138"
+      rpy="0 0.03 0"
+      axis="0 1 0"
+      ratio="-1"
+      master="astribot_gripper_${side}_joint_L1"/>
+
+    <!-- R2：MJCF equality "R1 = R2"，代入 R1 = L1 得 ratio = +1。 -->
+    <xacro:astribot_s1_gripper_link
+      name="astribot_gripper_${side}_Link_R2"
+      mass="${gripper_link2_mass}"
+      visual_mesh="astribot_gripper_R2_Link.stl"
+      collision_mesh="astribot_gripper_R2_Link_collision_mesh.obj"/>
+
+    <xacro:astribot_s1_gripper_mimic_joint
+      name="astribot_gripper_${side}_joint_R2"
+      parent="astribot_gripper_${side}_base"
+      child="astribot_gripper_${side}_Link_R2"
+      xyz="-0.0325 0 0.0511"
+      rpy="0 0 0"
+      axis="0 1 0"
+      ratio="1"
+      master="astribot_gripper_${side}_joint_L1"/>
+
+  </xacro:macro>
+
+</robot>

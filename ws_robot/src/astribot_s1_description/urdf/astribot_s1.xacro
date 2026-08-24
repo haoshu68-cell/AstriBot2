@@ -16,6 +16,18 @@
   <xacro:arg name="robot_name" default="astribot_s1"/>
   <xacro:arg name="use_lidar" default="true"/>
   <xacro:arg name="use_camera" default="true"/>
+  <!-- use_gripper：是否把平行夹爪作为真实关节模块建模。
+       true（默认，与真机一致）：加载 astribot_s1_gripper.xacro，两臂末端各挂
+         7 个 link / 6 个关节（1 主动 + 5 mimic），法兰 tool_link 的集中惯量清零。
+       false：夹爪不建模，退回厂商 per-part 模型的表示法（0.64763 kg 集中惯量
+         挂在法兰上，腕部碰撞只有 link_7 的 sphere r=0.05）。
+
+       !!! 不要为了"让规划快一点"而随手关掉它 !!!
+       关掉后腕部碰撞体沿抓取方向少 0.15 m、横向少 0.148 m，夹爪整体不在碰撞
+       模型里 —— 规划出来的轨迹在真机上会用夹爪去撞东西。这个开关存在的意义是
+       "与厂商那份集中惯量模型做对照实验"，不是性能旋钮。
+       详见 astribot_s1_gripper.xacro 文件头。 -->
+  <xacro:arg name="use_gripper" default="true"/>
   <!-- 双 Livox Mid-360 安装位姿：左前 + 右后对角布局（用户指定），扩大合并视场、
        减少互相遮挡的盲区（默认值，可外部覆盖）。
        xyz/rpy 用空格分隔的字符串（xacro origin 惯用写法），改这两个参数即可调整安装位置，
@@ -53,14 +65,30 @@
   <xacro:property name="use_lidar_prop" value="$(arg use_lidar)"/>
   <xacro:property name="use_camera_prop" value="$(arg use_camera)"/>
   <xacro:property name="robot_name_prop" value="$(arg robot_name)"/>
+  <!-- use_gripper 必须在 include 之前定义成 property：astribot_s1_arm.xacro 在它
+       自己文件末尾就地实例化左右两条臂，宏体里用 ${use_gripper} 决定法兰惯量的
+       归属（见该文件 tool_link 处）。property 在 include 之前定义，被包含的文件
+       才看得到。这里刻意不在 arm xacro 里重复声明同名 xacro:arg —— 同一个 arg
+       声明两次的行为在各版本 xacro 里并不一致，只留一处声明最稳。 -->
+  <xacro:property name="use_gripper" value="$(arg use_gripper)"/>
 
   <!-- ============ 载入各功能模块 ============ -->
   <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_torso_wheel.xacro"/>
   <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_head.xacro"/>
   <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_arm.xacro"/>
+  <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_gripper.xacro"/>
   <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_sensors.xacro"/>
   <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1_ros2_control.xacro"/>
   <xacro:include filename="$(find astribot_s1_description)/urdf/astribot_s1.gazebo.xacro"/>
+
+  <!-- ============ 平行夹爪（左右各一具，挂在各自 link_7 上） ============
+       夹爪相对法兰的装法左右完全相同（实测厂商 MJCF 左右两份模型除一处命名笔误
+       外数值一处不差，SDF 侧左右 6 个关节 pose/axis 也逐项相同），所以同一个宏
+       实例化两次、不做镜像取反。 -->
+  <xacro:if value="${use_gripper}">
+    <xacro:astribot_s1_gripper side="left"  parent="astribot_arm_left_link_7"/>
+    <xacro:astribot_s1_gripper side="right" parent="astribot_arm_right_link_7"/>
+  </xacro:if>
 
   <!-- ============ 传感器（按参数开关，默认都打开） ============ -->
   <!-- 双 Livox Mid-360：分别实例化 left/right，frame_id 各自独立

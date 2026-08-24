@@ -91,6 +91,23 @@
       <xacro:astribot_s1_effort_wheel_joint name="wheel_LF_Joint"/>
       <xacro:astribot_s1_effort_wheel_joint name="wheel_RR_Joint"/>
       <xacro:astribot_s1_effort_wheel_joint name="wheel_LR_Joint"/>
+
+      <!-- 夹爪：每侧只声明**主动关节** joint_L1。
+           另外 5 个是 URDF mimic 关节，它们的位置由 robot_state_publisher 从主动
+           关节算出，既不该有 command_interface，也不该进 /joint_states ——
+           声明了反而会出现"同一个自由度被下发两次"。
+
+           !!! 不声明会怎样（实测）!!!
+           只把夹爪加进 URDF、不加到这里，move_group 会一直刷：
+             The complete state of the robot is not yet known.
+             Missing astribot_gripper_left_joint_L1, astribot_gripper_right_joint_L1
+           **拿不到完整机器人状态 => 规划完全不可用**。也就是说加夹爪这件事一旦
+           只做了模型那一半，现有的所有手臂 demo 会全部停摆，且报错信息指向
+           "状态未知"而不是"你漏配了控制器"，很容易查错方向。 -->
+      <xacro:if value="${use_gripper}">
+        <xacro:astribot_s1_position_joint name="astribot_gripper_left_joint_L1"/>
+        <xacro:astribot_s1_position_joint name="astribot_gripper_right_joint_L1"/>
+      </xacro:if>
     </ros2_control>
 
     <gazebo>

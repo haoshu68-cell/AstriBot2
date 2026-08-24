@@ -46,6 +46,42 @@ install(DIRECTORY
 )
 
 # ---------------------------------------------------------------------------------------
+# 夹爪 mesh：源目录和上面那批不是同一个
+#
+# 上面的 meshes/ 目录只有 s1_arm / s1_head / s1_torso 三个子目录，**没有 s1_gripper**。
+# 夹爪的 mesh 只存在于 model/meshes/ 下（那是个超集：多了 s1_gripper 和各目录的 obj/ 子目录）。
+# 装夹爪 mesh 时必须从 model/meshes/s1_gripper 取，不能指望上面那条 install。
+#
+# 这里刻意**不**把上面的源目录整体换成 model/meshes（那样一条 install 就够了）：
+# model/meshes 里每个 STL 旁边还有一份 .obj，s1_arm 的 obj 单文件就上兆，
+# 全量装进 share 会让安装体积翻好几倍，而 obj 里本包只用夹爪那几个碰撞 mesh。
+# 所以按需只加一条 s1_gripper。
+#
+# 夹爪用到两类文件：
+#   *.stl                        —— visual
+#   obj/*_collision_mesh.obj     —— collision（厂商自己的碰撞简化网格）
+# 两类都在 s1_gripper 及其 obj/ 子目录下，一条 install 全部带上。
+# ---------------------------------------------------------------------------------------
+set(ASTRIBOT_S1_GRIPPER_MESH_SRC_DIR
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../../astribot_config/robot_config/astribot_s1/model/meshes/s1_gripper"
+)
+
+if(NOT EXISTS "${ASTRIBOT_S1_GRIPPER_MESH_SRC_DIR}")
+  # 同上：宁可在 build 阶段清晰报错，也不要让夹爪 mesh 静默缺失 ——
+  # 缺 visual 只是 RViz 里看不见，缺 collision 则是**碰撞检测悄悄少算一块体积**，
+  # 那是会撞机器的，必须让它在这里就停下。
+  message(FATAL_ERROR
+    "astribot_s1_description: 找不到夹爪 mesh 源目录: ${ASTRIBOT_S1_GRIPPER_MESH_SRC_DIR}\n"
+    "夹爪 mesh 在 model/meshes/s1_gripper（不是 meshes/），请确认 astribot_config 完整。"
+  )
+endif()
+
+install(DIRECTORY
+  ${ASTRIBOT_S1_GRIPPER_MESH_SRC_DIR}
+  DESTINATION share/${PROJECT_NAME}/meshes
+)
+
+# ---------------------------------------------------------------------------------------
 # 关节限位一致性测试
 #
 # 把"限位以厂商 per-part 模型为准"这条规则机器化。厂商 ship 了四份互不一致的模型，
@@ -60,6 +96,15 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_joint_limits_parity
     test/test_joint_limits_parity.py
+    TIMEOUT 300
+  )
+  # 夹爪模型一致性。厂商没有任何单一文件同时给出夹爪的几何和耦合关系，
+  # 本包混用 MJCF(几何/耦合) + whole_body_with_gripper.sdf(碰撞 mesh/基座装法)，
+  # 所以这里校验的是"能证明没抄错"的性质（TCP 偏置、平行夹爪不变量、两源交叉校验、
+  # 腕部质量守恒、夹爪确实进了碰撞模型），不是逐字节比对。
+  # 详见 test/test_gripper_model.py 与 urdf/astribot_s1_gripper.xacro 的文件头。
+  ament_add_pytest_test(test_gripper_model
+    test/test_gripper_model.py
     TIMEOUT 300
   )
 endif()

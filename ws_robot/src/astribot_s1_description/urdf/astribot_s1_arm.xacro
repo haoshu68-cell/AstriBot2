@@ -293,18 +293,68 @@
       <limit effort="20" lower="-1.53" upper="1.53" velocity="16.8"/>
     </joint>
 
-    <!-- 末端工具挂载点（法兰），预留给夹爪/工具，本方案未挂夹爪，保留 fixed link 便于后续扩展 -->
+    <!-- ===== 末端：法兰(tool_link) -> TCP(tcp_link) =====
+
+         !!! tool_link 不是 TCP，这是本次改动纠正的一个实质错误 !!!
+         tool_link 与 link_7 的 origin 完全重合（xyz 0 0 0），也就是说它就是**法兰面**。
+         之前把它当笛卡尔目标用，等价于"让法兰去到目标点"，而真正该到位的是
+         两指之间的夹持点 —— 两者相差 0.15 m。而且法兰正好坐在腕部碰撞体里，
+         导致"TCP 贴着物体"必然报碰撞（这条坑已单独记录过）。
+
+         TCP 偏置来源（厂商配置，不是我估的）：
+           astribot_config/robot_config/astribot_s1/astribot_arm_left.yaml
+             effector_to_tool_pose: [0.0, -0.15, 0.0,  0.0, 0.0, 0.0, 1.0]
+         即位置 (0, -0.15, 0)、姿态四元数 (0,0,0,1) = 不旋转。右臂 yaml 同值。
+
+         为什么是 -y 而不是别的方向：夹爪基座以 rpy(1.5708,0,0) 装在 link_7 上，
+         把基座的 +z（张合机构伸出方向）转到了 link_7 的 -y。见 astribot_s1_gripper.xacro。
+
+         0.15 这个数的独立几何佐证（不是只信 yaml 一处）：
+         按 MJCF 算指尖胶垫中心在基座系 z ≈ 0.0511+0.0364+0.036 = 0.1235，
+         基座原点在 link_7 系 y ≈ -0.0506，故胶垫中心在 link_7 系 y ≈ -0.174，
+         胶垫半高 0.03 => 胶垫沿 y 覆盖 [-0.144, -0.204]。
+         TCP 的 -0.15 正落在胶垫的近端 —— 是"指根附近的夹持参考点"，位置合理。
+         同时它落在 link_7 的 sphere r=0.05（覆盖 y ∈ [-0.05, 0.05]）之外、
+         也在夹爪基座碰撞 mesh（覆盖 y ∈ [-0.1376, -0.048]）之外，
+         张开时两指分开约 105 mm、指间是空的 —— 所以 TCP 处不再自带碰撞。 -->
     <link name="astribot_arm_${side}_tool_link">
-      <inertial>
-        <origin rpy="0 0 0" xyz="-0.00019766 -0.10719761 0.00190898"/>
-        <mass value="0.64762850"/>
-        <inertia ixx="0.00152446" ixy="0.00000144" ixz="-0.00000058" iyy="0.00033076" iyz="0.00004144" izz="0.00156453"/>
-      </inertial>
+      <!-- 法兰上那 0.64763 kg 集中惯量的归属，取决于夹爪是否作为独立模块建模：
+
+           use_gripper=false（厂商 per-part / whole_body 模型的表示法）：
+             夹爪不建模，它的质量以集中惯量的形式挂在法兰上。质心在 -y 0.107，
+             正是夹爪整体质心的位置。这是照抄厂商 per-part 模型的原值。
+
+           use_gripper=true（本工程默认，见 astribot_s1_gripper.xacro）：
+             夹爪已经是 7 个真实 link（基座 0.4 + 6 指连杆 0.254 = 0.654 kg），
+             法兰这里**必须清零**，否则夹爪质量被算两遍。
+             清零后总质量 0.12772019(link_7) + 0.654 = 0.78172，
+             对比清零前 0.12772019 + 0.64762850 = 0.77535，差 +0.0064 kg(+0.82%)。
+             这 0.82% 不是我引入的误差，是厂商"集中表示"与"分体表示"两份模型
+             本来就有的差异（whole_body.sdf 的 link_7 集中质量 0.775349
+             对 whole_body_with_gripper.sdf 的 0.527722+0.254=0.781722）。
+             test_gripper_model.py 按 1% 断言这条，差异变大会被测出来。 -->
+      <xacro:unless value="${use_gripper}">
+        <inertial>
+          <origin rpy="0 0 0" xyz="-0.00019766 -0.10719761 0.00190898"/>
+          <mass value="0.64762850"/>
+          <inertia ixx="0.00152446" ixy="0.00000144" ixz="-0.00000058" iyy="0.00033076" iyz="0.00004144" izz="0.00156453"/>
+        </inertial>
+      </xacro:unless>
     </link>
     <joint name="astribot_arm_${side}_tool_joint" type="fixed">
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="astribot_arm_${side}_link_7"/>
       <child link="astribot_arm_${side}_tool_link"/>
+    </joint>
+
+    <!-- TCP：纯坐标系，无 visual/无 collision/无惯量。
+         无碰撞几何是刻意的 —— 它是 IK 与笛卡尔约束的参考系，不该自己制造碰撞。
+         SRDF 各规划组的 tip 与 manipulation_params.yaml 的 TCP 都指向这里。 -->
+    <link name="astribot_arm_${side}_tcp_link"/>
+    <joint name="astribot_arm_${side}_tcp_joint" type="fixed">
+      <origin rpy="0 0 0" xyz="0 -0.15 0"/>
+      <parent link="astribot_arm_${side}_tool_link"/>
+      <child link="astribot_arm_${side}_tcp_link"/>
     </joint>
 
     <!-- 挂到躯干末端虚拟点，左右各自的安装角度/偏移不同 -->

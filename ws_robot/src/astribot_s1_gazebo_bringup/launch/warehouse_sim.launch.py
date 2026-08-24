@@ -324,6 +324,10 @@ def generate_launch_description():
             'arm_left_controller',
             'arm_right_controller',
             'wheel_effort_controller',
+            # 夹爪（每侧 1 个主动关节）。同一个 spawner 进程顺序拉起，
+            # 沿用上面那条"不要并行 spawn"的结论。
+            'gripper_left_controller',
+            'gripper_right_controller',
             '--controller-manager-timeout', '60',
         ],
     )

@@ -25,11 +25,13 @@
 
 moveit_simple_controller_manager:
 
-  # MoveIt 只管这三个：头部不参与操作任务，轮子不是 MoveIt 的规划对象。
+  # MoveIt 管这五个：头部不参与操作任务，轮子不是 MoveIt 的规划对象。
   controller_names:
     - arm_left_controller
     - arm_right_controller
     - torso_controller
+    - gripper_left_controller
+    - gripper_right_controller
 
   arm_left_controller:
     type: FollowJointTrajectory
@@ -66,6 +68,23 @@ moveit_simple_controller_manager:
       - astribot_torso_joint_2
       - astribot_torso_joint_3
       - astribot_torso_joint_4
+
+  # 夹爪：每侧只有 1 个主动关节（另 5 个是 URDF mimic，MoveIt 不当作自由度，
+  # 也不能出现在这里 —— 列进来 MoveIt 会去找不存在的控制器接口）。
+  # 同样走 FollowJointTrajectory，与手臂共用一条执行通路，上层不分叉。
+  gripper_left_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - astribot_gripper_left_joint_L1
+
+  gripper_right_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - astribot_gripper_right_joint_L1
 
 # =============================================================================
 # 轨迹执行监控

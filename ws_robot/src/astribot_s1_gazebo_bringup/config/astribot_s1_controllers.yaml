@@ -28,6 +28,20 @@ controller_manager:
     arm_right_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    # 夹爪：每侧一个 JointTrajectoryController，各只管 1 个主动关节。
+    # 用 JTC 而不是 GripperActionController 是有意的：
+    #   · 真机侧的开合是 move_to_joint_position(names, [[0.0]] / [[100.0]], duration)，
+    #     语义就是"在给定时长内走到某个位置"—— 与 JTC 一对一，与
+    #     GripperActionController 的"夹紧到力/停"语义并不对应；
+    #   · 上层通过 MoveIt 的 moveit_simple_controller_manager 统一走
+    #     FollowJointTrajectory，夹爪和手臂用同一条执行通路，业务代码不分叉。
+    # 夹持力是另一条接口（set_effector_max_force，10~80 N），不经轨迹控制器。
+    gripper_left_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    gripper_right_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
     # !!! 全向轮力控重构方案新增 !!!：不重新实现PID/摩擦前馈逆解逻辑，只用官方
     # ForwardCommandController把astribot_s1_chassis_effort_drive包算好的四轮
     # effort力矩原样转发给ros2_control——运动学解算/控制闭环(在那个包的
@@ -70,6 +84,14 @@ joint_state_broadcaster:
       - wheel_LF_Joint
       - wheel_RR_Joint
       - wheel_LR_Joint
+      # 夹爪主动关节（每侧 1 个）。这是同一个白名单坑的第二次：轮子那次漏了
+      # 导致底盘不动，夹爪这次漏了会导致 move_group 报
+      #   "The complete state of the robot is not yet known. Missing ..._joint_L1"
+      # 而**整个规划功能不可用**（不只是夹爪不可用）。
+      # 5 个 mimic 从动关节刻意不列：它们由 robot_state_publisher 从主动关节算出，
+      # 硬件层没有它们的 state_interface，列进来只会让 broadcaster 报找不到接口。
+      - astribot_gripper_left_joint_L1
+      - astribot_gripper_right_joint_L1
     interfaces:
       - position
       - velocity
@@ -154,6 +176,42 @@ arm_right_controller:
     constraints:
       stopped_velocity_tolerance: 0.05
       goal_time: 0.5
+
+# 夹爪控制器：每侧只有 1 个主动关节，5 个 mimic 从动关节不列 ——
+# 硬件层没有它们的接口，由 robot_state_publisher 从主动关节算出位置。
+# stopped_velocity_tolerance 比手臂松一档(0.1)：夹爪在夹住物体后是"堵转"状态，
+# 位置到不了目标、速度也不为零，用手臂那套 0.05 容差会把正常夹紧判成执行失败。
+gripper_left_controller:
+  ros__parameters:
+    joints:
+      - astribot_gripper_left_joint_L1
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    constraints:
+      stopped_velocity_tolerance: 0.1
+      goal_time: 1.0
+
+gripper_right_controller:
+  ros__parameters:
+    joints:
+      - astribot_gripper_right_joint_L1
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: true
+    constraints:
+      stopped_velocity_tolerance: 0.1
+      goal_time: 1.0
 
 # !!! 全向轮力控重构方案新增 !!!：joints 顺序 RF/LF/RR/LR 是"接口契约"——
 # astribot_s1_chassis_effort_drive 包的 omni_effort_drive_node 按这个

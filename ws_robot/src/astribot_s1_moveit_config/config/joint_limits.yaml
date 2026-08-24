@@ -168,3 +168,30 @@ joint_limits:
   wheel_LR_Joint:
     has_velocity_limits: false
     has_acceleration_limits: false
+
+  # ---- 夹爪主动关节（每侧 1 个）----
+  # max_velocity 不抄 URDF 的 1.0：URDF 里夹爪的 effort=1 / velocity=1 是厂商
+  # SDF 里的**占位值**，不是标定值（6 个连杆共用同一份占位惯量也是同一个证据）。
+  # 这里按厂商自己的控制接口反推一个有依据的数：
+  #   MJCF actuator 的位置伺服平衡点 L1 = 0.0093 · cmd，cmd ∈ [0, 100]；
+  #   夹爪部件 yaml 给 joint_max_velocities: [1000.0]（单位是抽象指令值/秒）
+  #   => 0.0093 × 1000 = 9.3 rad/s。
+  # 这是"接口允许的极限"，而全行程只有 0.93 rad，9.3 rad/s 意味着 0.1 s 走完全程 ——
+  # 与 SDK 示例里 open_effector/close_effector 默认 duration=1.0 s 对得上（用了 1/10）。
+  # 所以取 9.3 当红线、实际快慢由 duration/scaling 决定，与手臂那套"红线 vs 油门"
+  # 的分工一致。
+  #
+  # max_acceleration 沿用本文件统一的 a_max = max_velocity / 0.35 s 假设：
+  #   9.3 / 0.35 = 26.6 rad/s^2。同样是**未标定的估算值**。
+  # 夹爪这里还有一层特殊性：夹紧到物体后是堵转，速度/加速度都由接触决定而不是
+  # 由这个限位决定，所以这个数主要影响"空行程张合"的节拍。
+  astribot_gripper_left_joint_L1:
+    has_velocity_limits: true
+    max_velocity: 9.3
+    has_acceleration_limits: true
+    max_acceleration: 26.6
+  astribot_gripper_right_joint_L1:
+    has_velocity_limits: true
+    max_velocity: 9.3
+    has_acceleration_limits: true
+    max_acceleration: 26.6

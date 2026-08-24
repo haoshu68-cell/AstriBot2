@@ -83,10 +83,13 @@ planning_demo_node:
       leader_group: "arm_left"
       follower_group: "arm_right"
 
-      # TCP 坐标系。本机器人没有夹爪，实测这两个 link 是纯坐标系、无碰撞几何，
-      # 正好适合当 TCP。换夹具时只改这里，不动 SRDF。
-      leader_tcp_link: "astribot_arm_left_tool_link"
-      follower_tcp_link: "astribot_arm_right_tool_link"
+      # TCP 坐标系。指向 tcp_link（法兰再往 -y 0.15m，取自厂商
+      # astribot_arm_*.yaml 的 effector_to_tool_pose），**不是** tool_link ——
+      # tool_link 与 link_7 原点完全重合，它是法兰面而不是夹持点，两者差 0.15m。
+      # tcp_link 是纯坐标系、无碰撞几何，适合当 IK/约束的参考系。
+      # 换夹具时只改这里和 URDF 的 tcp_joint，不动 SRDF。
+      leader_tcp_link: "astribot_arm_left_tcp_link"
+      follower_tcp_link: "astribot_arm_right_tcp_link"
 
       # T_rel（两 TCP 的相对位姿）来源。
       # true  = 从当前状态捕获：先把两臂摆到夹持位姿再启动规划。
@@ -236,15 +239,24 @@ planning_demo_node:
       # ---------------- 搬运场景 transport ----------------
       # 把一个目标物体从 A 搬到 B。
       #
-      # !!! 纯运动学演示，边界要看清 !!!
-      # 本机没有夹爪关节（两臂止于 link_7，其后只有无碰撞体的 tool_link 纯坐标系，
-      # SRDF 刻意不声明 end_effector）。所以：
+      # !!! 边界（2026-08-20 更新：夹爪已建模，但仍未接执行）!!!
+      # 夹爪现在是真实关节了（每侧 1 主动 + 5 mimic，见
+      # astribot_s1_description/urdf/astribot_s1_gripper.xacro），SRDF 也有了
+      # gripper_left/right 组与 end_effector 声明。所以：
       #   真的   —— 动作序列(接近/下降/抬起/平移/下降/抬起)逐步笛卡尔规划、
       #             每步过碰撞与奇异点校验、每步真实下发执行
       #   真的   —— 物体是规划场景里的真实碰撞体，规划器必须绕开它
-      #   做不到 —— 物体在 Gazebo 里被夹住跟着走
+      #   真的   —— 碰撞模型里现在**包含夹爪本体**（此前整个夹爪不在碰撞模型里）
+      #   还没做 —— 本场景没有"张开/闭合夹爪 + attach 物体"这两步动作，
+      #             所以物体依然不会在 Gazebo 里被夹住跟着走
+      #
+      # !!! 下面这批实测坐标是在"夹爪不建模"的旧碰撞模型下扫出来的 !!!
+      # 旧模型腕部只有 link_7 的 sphere r=0.05；真实夹爪沿抓取方向还要再伸
+      # 0.15m、张开时横向宽 0.148m。也就是说这些点的**碰撞余量结论已经失效**，
+      # 必须用新模型重跑 transport_probe 再定 A/B 与 grasp_z_offset。
+      # 保留原记录是为了对照（选点方法仍然有效，具体数字不再可信）。
       transport_group: "arm_left"
-      # TCP link；空则用规划组默认 tip。默认即 astribot_arm_left_tool_link。
+      # TCP link；空则用规划组默认 tip。默认即 astribot_arm_left_tcp_link。
       transport_tcp_link: ""
       # 坐标系：本机没有 base_link，本体系是 astribot_torso_base。
       transport_frame: "astribot_torso_base"
@@ -277,29 +289,36 @@ planning_demo_node:
       transport_pick_xyz: [0.149, 0.464, 0.761]
       transport_place_xyz: [0.149, 0.284, 0.761]
       transport_object_size_xyz: [0.06, 0.06, 0.12]
-      # TCP 相对物体中心的抓取高度偏移。没有夹爪，这里表示"TCP 该到达的位置"。
+      # TCP 相对物体中心的抓取高度偏移。
       #
-      # !!! 这个值有一个由 URDF 决定的硬下限，给小了必然碰撞 !!!
-      # 本机 TCP(tool_link) 是纯坐标系、无碰撞几何，但它与腕部两个**有**碰撞几何的
-      # 连杆原点完全重合（URDF 实测）：
-      #     tool_joint fixed  link_7 -> tool_link  xyz = 0 0 0
-      #     joint_7 revolute  link_6 -> link_7     xyz = 0 0 0
-      #     link_7 collision: sphere  r=0.05  @ (0.006, 0, 0)   -> 外接半径 0.056
-      #     link_6 collision: cylinder r=0.04 l=0.045 @ 原点     -> 外接半径 0.040
-      # 也就是说 TCP 正坐在一个半径 5.6cm 的腕部球心上。
-      # 下限 = 物体半高 + 腕部外接半径 + clearance_margin
-      #      = 0.060    + 0.056       + 0.020 = 0.136
+      # !!! 这个值的下限依据在 2026-08-20 整体改变了，旧算法已失效 !!!
+      # 旧下限（夹爪不建模时）：TCP 坐在腕部碰撞球心上，所以
+      #     下限 = 物体半高 + 腕部外接半径 + clearance_margin
+      #          = 0.060    + 0.056       + 0.020 = 0.136
+      # 那时 TCP 用的是 tool_link（= 法兰，与 link_7 原点重合），腕部唯一的碰撞体
+      # 是 link_7 的 sphere r=0.05（外接半径 0.056）。
       #
-      # 实测教训：曾取 0.09（TCP 离物体顶面 0.03m），腕部球嵌进物体 0.026m，
-      # 目标状态非法，规划器只报 RETRIES_EXHAUSTED —— 根因完全看不出来。
-      # 现在 planning_demo_node 会在跑之前用 RobotModel 现算这个下限并直接拒绝，
-      # 报错里带具体数字，不用再猜。
+      # 现在两件事同时变了：
+      #   1. TCP 改成 tcp_link，在法兰 -y 0.15m 处 —— **不再坐在腕部碰撞体里**。
+      #      实测 tcp_link 落在 link_7 的球(y∈[-0.05,0.05])之外，也在夹爪基座
+      #      碰撞 mesh(y∈[-0.1376,-0.048])之外，张开时两指相距约 105mm、指间是空的。
+      #   2. 碰撞模型里多了整具夹爪，沿抓取方向伸到 y≈-0.20。
+      # 所以"TCP 到物体顶面的距离"不再等于"腕部球心到物体顶面的距离"，
+      # 旧的 0.136 下限既不成立也不再是正确的判据形式。
       #
-      # 取 0.15（比下限 0.136 再留一点）：
-      #   TCP z    = 0.761 + 0.15 = 0.911  <- transport_probe 实测可用 σ=0.1116
-      #   接近点 z = 0.911 + 0.10 = 1.011  <- transport_probe 实测可用 σ=0.1544
+      # 保留的教训（仍然有效）：曾取 0.09 时腕部球嵌进物体 0.026m，目标状态非法，
+      # 规划器只报 RETRIES_EXHAUSTED，根因完全看不出来 —— 所以
+      # planning_demo_node 里那道"跑之前用 RobotModel 现算下限并直接拒绝"的检查
+      # 必须保留，只是它算的量需要跟着新的 TCP/碰撞体重新推导（未完成）。
+      #
+      # 当前值 0.15 是旧模型下选的，配套的 σ 实测值同样出自旧模型：
+      #   TCP z    = 0.761 + 0.15 = 0.911  (旧模型 σ=0.1116)
+      #   接近点 z = 0.911 + 0.10 = 1.011  (旧模型 σ=0.1544)
+      # 奇异性(σ)只取决于手臂 7 个关节，加夹爪不影响，所以 σ 这部分仍可信；
+      # **碰撞部分必须用新模型重扫**。
       transport_grasp_z_offset: 0.15
-      # 腕部碰撞体与物体顶面之间的净空余量。腕部半径不含在这个数里（URDF 现算）。
+      # 净空余量。旧含义是"腕部碰撞球与物体顶面之间的净空"（腕部半径由 URDF 现算，
+      # 不含在这个数里）。新的 TCP/碰撞模型下这个量的定义待重新推导，见上。
       transport_clearance_margin: 0.02
 
       # ---------------- transport_probe 选点体检 ----------------
