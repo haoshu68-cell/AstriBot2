@@ -12,6 +12,7 @@
 // 所有参数从 yaml 读，节点内不写死任何数值。
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -21,6 +22,12 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+
+#include <nav2_msgs/action/compute_path_to_pose.hpp>
+#include <nav2_msgs/action/navigate_to_pose.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_model/link_model.h>
@@ -531,8 +538,206 @@ ProbeVerdict probeTcpPose(
   return verdict;
 }
 
-}  // namespace astribot_s1_manipulation
+// ============================================================================
+// mobile_transport 场景用的导航与 TF 辅助
+//
+// 为什么全部用「阻塞 + future.wait_for()」而不是 spin_until_future_complete：
+// 本节点已经由 main() 里的后台线程在 spin 执行器了。再调
+// spin_until_future_complete 会有两个执行器抢同一个节点，行为不可预期。
+// future.wait_for() 只是等，回调仍在 spin 线程上跑完并把 future 置就绪 ——
+// 这才是"节点已被别人 spin"时的正确等待方式。
+// ============================================================================
 
+using NavigateToPose = nav2_msgs::action::NavigateToPose;
+using ComputePathToPose = nav2_msgs::action::ComputePathToPose;
+
+/// 导航一段的结果。刻意不用异常：任务要求规划/执行接口返回明确状态码。
+struct NavOutcome
+{
+  bool succeeded{false};
+  std::string reason;
+  double elapsed_sec{0.0};
+};
+
+/// 造一个 map 系目标位姿。
+geometry_msgs::msg::PoseStamped makeNavGoal(
+  const std::string & frame, double x, double y, double yaw)
+{
+  geometry_msgs::msg::PoseStamped ps;
+  ps.header.frame_id = frame;
+  // stamp 刻意留 0（= "用最新可用的变换"）。
+  // 实测踩坑：仿真下用墙钟 now() 打时间戳，planner_server 会报
+  //   Could not transform the start or goal pose in the costmap frame
+  // 因为 tf 里全是 sim time，墙钟戳落在未来。
+  ps.pose.position.x = x;
+  ps.pose.position.y = y;
+  ps.pose.orientation.z = std::sin(0.5 * yaw);
+  ps.pose.orientation.w = std::cos(0.5 * yaw);
+  return ps;
+}
+
+/// 用 ComputePathToPose 预检目标可达性。
+///
+/// 为什么必须预检（实测教训）：不预检时，"目标本来就不可达"会表现成
+/// NavigateToPose 长时间挣扎后 ABORTED，很容易被误读成"局部规划器走不动"，
+/// 于是跑去调 MPPI 参数 —— 方向完全错。先问全局规划器一句最便宜。
+bool verifyGoalReachable(
+  const rclcpp::Node::SharedPtr & node, const std::string & action_name,
+  const geometry_msgs::msg::PoseStamped & goal, double timeout_sec, std::string & why)
+{
+  why.clear();
+  auto client = rclcpp_action::create_client<ComputePathToPose>(node, action_name);
+  const auto wait = std::chrono::duration<double>(std::min(timeout_sec, 10.0));
+  if (!client->wait_for_action_server(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(wait)))
+  {
+    why = "全局规划动作 " + action_name + " 未就绪（nav2 起了吗？）";
+    return false;
+  }
+
+  ComputePathToPose::Goal request;
+  request.goal = goal;
+  request.use_start = false;   // 用机器人当前位姿作起点
+
+  auto goal_future = client->async_send_goal(request);
+  const auto budget = std::chrono::duration<double>(timeout_sec);
+  if (goal_future.wait_for(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(budget)) !=
+    std::future_status::ready)
+  {
+    why = "全局规划目标下发超时";
+    return false;
+  }
+  auto handle = goal_future.get();
+  if (!handle) {
+    why = "全局规划目标被拒绝";
+    return false;
+  }
+  auto result_future = client->async_get_result(handle);
+  if (result_future.wait_for(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(budget)) !=
+    std::future_status::ready)
+  {
+    why = "全局规划结果等待超时";
+    return false;
+  }
+  const auto result = result_future.get();
+  if (result.code != rclcpp_action::ResultCode::SUCCEEDED || !result.result) {
+    why = "全局规划未成功（目标可能落在障碍/未知区，或与当前位置不连通）";
+    return false;
+  }
+  if (result.result->path.poses.size() < 2U) {
+    why = "全局路径只有 " + std::to_string(result.result->path.poses.size()) + " 个点";
+    return false;
+  }
+  return true;
+}
+
+/// 阻塞跑完一次 NavigateToPose。
+NavOutcome runNavigation(
+  const rclcpp::Node::SharedPtr & node, const std::string & action_name,
+  const geometry_msgs::msg::PoseStamped & goal, double timeout_sec)
+{
+  NavOutcome outcome;
+  const auto begin = std::chrono::steady_clock::now();
+  const auto stamp_elapsed = [&outcome, begin]() {
+      outcome.elapsed_sec =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count();
+    };
+
+  auto client = rclcpp_action::create_client<NavigateToPose>(node, action_name);
+  if (!client->wait_for_action_server(std::chrono::seconds(10))) {
+    outcome.reason = "导航动作 " + action_name + " 未就绪（nav2 起了吗？）";
+    stamp_elapsed();
+    return outcome;
+  }
+
+  NavigateToPose::Goal request;
+  request.pose = goal;
+
+  auto goal_future = client->async_send_goal(request);
+  if (goal_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
+    outcome.reason = "导航目标下发超时";
+    stamp_elapsed();
+    return outcome;
+  }
+  auto handle = goal_future.get();
+  if (!handle) {
+    outcome.reason = "导航目标被 bt_navigator 拒绝";
+    stamp_elapsed();
+    return outcome;
+  }
+
+  auto result_future = client->async_get_result(handle);
+  const auto budget = std::chrono::duration<double>(timeout_sec);
+  if (result_future.wait_for(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(budget)) !=
+    std::future_status::ready)
+  {
+    // 超时必须主动取消，否则机器人会在我们已经放弃之后继续往目标开 ——
+    // 而上层以为流程已经中止，接下来的机械臂动作就发生在一个意料之外的位置。
+    client->async_cancel_goal(handle);
+    outcome.reason = "导航超过 " + std::to_string(static_cast<int>(timeout_sec)) +
+      "s 未结束，已发取消";
+    stamp_elapsed();
+    return outcome;
+  }
+
+  const auto result = result_future.get();
+  stamp_elapsed();
+  switch (result.code) {
+    case rclcpp_action::ResultCode::SUCCEEDED:
+      outcome.succeeded = true;
+      outcome.reason = "SUCCEEDED";
+      return outcome;
+    case rclcpp_action::ResultCode::ABORTED:
+      // 状态码语义容易记错：4=SUCCEEDED / 5=CANCELED / 6=ABORTED。
+      // ABORTED 是 nav2 主动放弃（恢复行为也用尽了），不是我们取消的。
+      outcome.reason = "ABORTED（nav2 主动放弃，恢复行为已用尽）";
+      return outcome;
+    case rclcpp_action::ResultCode::CANCELED:
+      outcome.reason = "CANCELED";
+      return outcome;
+    default:
+      outcome.reason = "UNKNOWN 结果码";
+      return outcome;
+  }
+}
+
+/// 查 map -> 体系 的变换，把一个体系坐标点换算到 map 系。
+///
+/// 刻意用 TimePointZero + 重试循环，**不用**带 timeout 的 lookupTransform：
+/// 本函数在主线程（非执行器线程）里调，带 timeout 的版本对**动态 tf** 会失败，
+/// 而静态 tf 却正常 —— 于是看着像没问题，实际拿不到 map->odom->base 这条链。
+bool bodyPointToMap(
+  tf2_ros::Buffer & buffer, const std::string & map_frame, const std::string & body_frame,
+  const std::vector<double> & body_xyz, std::array<double, 3> & out, std::string & why)
+{
+  why.clear();
+  if (body_xyz.size() != 3U) {
+    why = "体系坐标不是 3 个数";
+    return false;
+  }
+  constexpr int kRetries = 40;                       // 40 × 50ms = 2s
+  for (int i = 0; i < kRetries; ++i) {
+    try {
+      const geometry_msgs::msg::TransformStamped tf =
+        buffer.lookupTransform(map_frame, body_frame, tf2::TimePointZero);
+      Eigen::Isometry3d body_in_map;
+      body_in_map = tf2::transformToEigen(tf);
+      const Eigen::Vector3d p =
+        body_in_map * Eigen::Vector3d(body_xyz[0], body_xyz[1], body_xyz[2]);
+      out = {p.x(), p.y(), p.z()};
+      return true;
+    } catch (const tf2::TransformException & e) {
+      why = e.what();
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+  }
+  return false;
+}
+
+}  // namespace astribot_s1_manipulation
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
@@ -614,6 +819,21 @@ int main(int argc, char ** argv)
       "demo.transport_probe_y_list", std::vector<double>{});
     const std::vector<double> probe_z_list = loader.get<std::vector<double>>(
       "demo.transport_probe_z_list", std::vector<double>{});
+    // mobile_transport（搬运 -> 导航 -> 搬运）的导航段参数。
+    const std::string mobile_map_frame = loader.get<std::string>(
+      "demo.mobile_transport_map_frame", std::string("map"));
+    const std::string mobile_nav_action = loader.get<std::string>(
+      "demo.mobile_transport_nav_action", std::string("/navigate_to_pose"));
+    const std::string mobile_plan_action = loader.get<std::string>(
+      "demo.mobile_transport_plan_action", std::string("/compute_path_to_pose"));
+    const std::vector<double> mobile_nav_goal_xy = loader.get<std::vector<double>>(
+      "demo.mobile_transport_nav_goal_xy", std::vector<double>{});
+    const double mobile_nav_goal_yaw =
+      loader.get<double>("demo.mobile_transport_nav_goal_yaw", 0.0);
+    const double mobile_nav_timeout =
+      loader.get<double>("demo.mobile_transport_nav_timeout", 180.0);
+    const bool mobile_verify_reachable =
+      loader.get<bool>("demo.mobile_transport_verify_reachable", true);
     const std::vector<double> transport_quat = loader.get<std::vector<double>>(
       "demo.transport_grasp_orientation_xyzw", std::vector<double>{});
     const bool move_to_ready = loader.get<bool>("demo.move_to_ready_first", true);
@@ -958,6 +1178,275 @@ int main(int argc, char ** argv)
           params.planner_id.c_str(), all_ok ? "PASS" : "FAIL",
           steps_done, steps.size(), total_plan_wall, total_traj_duration, total_attempts,
           std::isfinite(worst_sigma_all) ? worst_sigma_all : -1.0,
+          execute ? "true" : "false");
+      } else if (scenario == "mobile_transport") {
+        // ---- 移动作业：起始位置取货 -> 底盘导航 -> 目标位置放货 ----
+        //
+        // 关键设计：`buildTransportSteps()` 那六步**一行都不用改**。
+        // 第 4 步"移动到 B 上方"是体系内的横移，底盘挪没挪都成立，
+        // 所以整个流程就是 transport + 在第 3 步(抬起)之后插入一段导航。
+        //
+        // 物体坐标系为什么用体系 astribot_torso_base 就够（不需要
+        // AttachedCollisionObject）：导航途中机械臂**保持抬起姿态不动**，
+        // 物体与机器人的相对位姿恒定，体系坐标严格成立，物体自然跟着走。
+        // !!! 如果以后要在导航途中收臂，这个前提就破了，必须改成把物体
+        // 附着到 TCP link 上（AttachedCollisionObject + touch_links）。!!!
+        if (transport_pick.size() != 3U || transport_place.size() != 3U ||
+          transport_size.size() != 3U)
+        {
+          RCLCPP_ERROR(
+            logger,
+            "跳过 mobile_transport: transport_pick_xyz / transport_place_xyz / "
+            "transport_object_size_xyz 必须各是 3 个数");
+          exit_code = 1;
+          continue;
+        }
+        if (mobile_nav_goal_xy.size() != 2U) {
+          RCLCPP_ERROR(
+            logger,
+            "跳过 mobile_transport: demo.mobile_transport_nav_goal_xy 必须是 2 个数(map 系 x,y)，"
+            "当前是 %zu 个", mobile_nav_goal_xy.size());
+          exit_code = 1;
+          continue;
+        }
+
+        // 抓取高度下限校验：与 transport 用同一套判据，不另立标准。
+        const std::string mobile_tcp_link = transport_tcp_link.empty() ?
+          (transport_group == params.closed_chain.leader_group ?
+          params.closed_chain.leader_tcp_link :
+          params.closed_chain.follower_tcp_link) :
+          transport_tcp_link;
+        std::string mobile_radius_detail;
+        const double mobile_tcp_radius = tcpCoincidentCollisionRadius(
+          planner.getRobotModel(), mobile_tcp_link, mobile_radius_detail);
+        const double mobile_min_offset =
+          0.5 * transport_size[2] + mobile_tcp_radius + transport_clearance_margin;
+        if (transport_grasp_z_offset < mobile_min_offset) {
+          RCLCPP_ERROR(
+            logger,
+            "跳过 mobile_transport: transport_grasp_z_offset=%.4f 小于下限 %.4f"
+            "（腕部碰撞球 %.4f + 物体半高 %.4f + 余量 %.4f），TCP 会与物体碰撞",
+            transport_grasp_z_offset, mobile_min_offset, mobile_tcp_radius,
+            0.5 * transport_size[2], transport_clearance_margin);
+          exit_code = 1;
+          continue;
+        }
+
+        // TF：用来把物体的体系坐标换算到 map 系，证明它真的在世界里被搬走了。
+        tf2_ros::Buffer tf_buffer(node->get_clock());
+        tf2_ros::TransformListener tf_listener(tf_buffer, node);
+
+        const std::string object_id = "transport_target";
+        auto scene_pub = node->create_publisher<moveit_msgs::msg::PlanningScene>(
+          "/planning_scene", rclcpp::QoS(1).transient_local());
+        publishSceneDiff(
+          scene_pub, makeBoxObject(object_id, transport_frame, transport_pick, transport_size));
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        RCLCPP_INFO(
+          logger,
+          "[mobile] 物体入场景 A=(%.3f, %.3f, %.3f) frame=%s；"
+          "导航目标 map=(%.3f, %.3f) yaw=%.3f；放置点 B=(%.3f, %.3f, %.3f)",
+          transport_pick[0], transport_pick[1], transport_pick[2], transport_frame.c_str(),
+          mobile_nav_goal_xy[0], mobile_nav_goal_xy[1], mobile_nav_goal_yaw,
+          transport_place[0], transport_place[1], transport_place[2]);
+        RCLCPP_WARN(
+          logger,
+          "[mobile] 本机无夹爪，纯运动学演示；导航途中机械臂保持抬起姿态不收臂 —— "
+          "伸出的手臂与物体超出了代价地图那个 0.42m 外接足迹，nav2 看不到它");
+
+        const std::vector<TransportStep> steps = buildTransportSteps(
+          transport_frame, transport_pick, transport_place,
+          transport_grasp_z_offset, transport_approach_height, transport_quat);
+
+        double mobile_plan_wall = 0.0;
+        double mobile_worst_sigma = std::numeric_limits<double>::infinity();
+        std::size_t mobile_steps_done = 0U;
+        bool mobile_ok = true;
+
+        // 一步"规划 + 校验 + 执行"。失败返回 false，由调用处决定中止。
+        const auto run_arm_step = [&](std::size_t index) -> bool {
+            const TransportStep & step = steps[index];
+            SingleArmPlanRequest request;
+            request.group = transport_group;
+            request.use_pose_target = true;
+            request.pose_target = step.pose;
+            request.tcp_link = transport_tcp_link;
+
+            const auto begin = std::chrono::steady_clock::now();
+            const PlanResult result = planner.planSingleArm(request);
+            const double wall =
+              std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count();
+            mobile_plan_wall += wall;
+            RCLCPP_INFO(
+              logger,
+              "[mobile] 步骤 %zu/%zu %s -> 目标(%.3f, %.3f, %.3f): %s"
+              " | 规划 %.3fs 尝试 %d 次 节拍 %.3fs 最差σ %.4f",
+              index + 1U, steps.size(), step.name.c_str(),
+              step.pose.pose.position.x, step.pose.pose.position.y,
+              step.pose.pose.position.z, toString(result.code), wall,
+              result.attempts_used, result.final_metrics.duration,
+              result.worst_singularity.valid ?
+              result.worst_singularity.min_singular_value : -1.0);
+
+            if (!result.succeeded() && !result.noActionNeeded()) {
+              RCLCPP_ERROR(
+                logger, "[mobile] 步骤 %s 失败(%s)，中止流程",
+                step.name.c_str(), toString(result.code));
+              return false;
+            }
+            if (result.succeeded()) {
+              ++mobile_steps_done;
+              if (result.worst_singularity.valid) {
+                mobile_worst_sigma = std::min(
+                  mobile_worst_sigma, result.worst_singularity.min_singular_value);
+              }
+            }
+            if (result.succeeded() && execute) {
+              std::string exec_message;
+              const PlanErrorCode exec = planner.executeTrajectory(
+                transport_group, result.trajectory, exec_message);
+              if (exec != PlanErrorCode::kSuccess) {
+                RCLCPP_ERROR(
+                  logger, "[mobile] 步骤 %s 执行失败: %s (%s)",
+                  step.name.c_str(), toString(exec), exec_message.c_str());
+                return false;
+              }
+            }
+            return true;
+          };
+
+        // ---- 阶段 1：起始位置取货（步骤 1~3）----
+        RCLCPP_INFO(logger, "[mobile] ===== 阶段 1/3：起始位置取货 =====");
+        for (std::size_t i = 0; i < 3U && mobile_ok; ++i) {
+          mobile_ok = run_arm_step(i);
+        }
+
+        // 记录物体此刻的 map 系位置。查不到 TF 只降级为 WARN ——
+        // 它只影响"报告世界位移"这一件事，不是流程本身的一环。
+        std::array<double, 3> object_map_before{0.0, 0.0, 0.0};
+        std::array<double, 3> base_map_before{0.0, 0.0, 0.0};
+        bool have_before = false;
+        if (mobile_ok) {
+          std::string tf_why;
+          const bool a = bodyPointToMap(
+            tf_buffer, mobile_map_frame, transport_frame, transport_pick,
+            object_map_before, tf_why);
+          const bool b = bodyPointToMap(
+            tf_buffer, mobile_map_frame, transport_frame, std::vector<double>{0.0, 0.0, 0.0},
+            base_map_before, tf_why);
+          have_before = a && b;
+          if (have_before) {
+            RCLCPP_INFO(
+              logger,
+              "[mobile] 取货后：物体 map=(%.3f, %.3f, %.3f) 底盘 map=(%.3f, %.3f)",
+              object_map_before[0], object_map_before[1], object_map_before[2],
+              base_map_before[0], base_map_before[1]);
+          } else {
+            RCLCPP_WARN(logger, "[mobile] 取不到 map 系位置(%s)，世界位移无法报告", tf_why.c_str());
+          }
+        }
+
+        // ---- 阶段 2：底盘导航 ----
+        NavOutcome nav;
+        if (mobile_ok) {
+          RCLCPP_INFO(logger, "[mobile] ===== 阶段 2/3：底盘导航 =====");
+          const geometry_msgs::msg::PoseStamped nav_goal = makeNavGoal(
+            mobile_map_frame, mobile_nav_goal_xy[0], mobile_nav_goal_xy[1],
+            mobile_nav_goal_yaw);
+
+          if (mobile_verify_reachable) {
+            std::string why;
+            if (!verifyGoalReachable(node, mobile_plan_action, nav_goal, 30.0, why)) {
+              // 关键：不可达就**不发**导航目标。否则会表现成机器人挣扎很久后
+              // ABORTED，而那看着像"局部规划器走不动"，排查方向完全错。
+              RCLCPP_ERROR(
+                logger, "[mobile] 导航目标预检不通过: %s —— 不下发导航目标，中止流程",
+                why.c_str());
+              mobile_ok = false;
+            } else {
+              RCLCPP_INFO(logger, "[mobile] 导航目标预检通过（全局路径存在）");
+            }
+          }
+
+          if (mobile_ok) {
+            nav = runNavigation(node, mobile_nav_action, nav_goal, mobile_nav_timeout);
+            RCLCPP_INFO(
+              logger, "[mobile] 导航结果: %s，耗时 %.1fs",
+              nav.reason.c_str(), nav.elapsed_sec);
+            if (!nav.succeeded) {
+              // 导航失败绝不能继续放货：机器人不在预期的世界位置上，
+              // 后面那三步会把物体"放"在一个错误的地方，还报成功。
+              RCLCPP_ERROR(
+                logger, "[mobile] 导航未成功，中止流程（不在错误的世界位置放货）");
+              mobile_ok = false;
+            }
+          }
+        }
+
+        // ---- 阶段 3：目标位置放货（步骤 4~6）----
+        if (mobile_ok) {
+          RCLCPP_INFO(logger, "[mobile] ===== 阶段 3/3：目标位置放货 =====");
+          // 物体在场景里更新到 B。必须在放货前做：否则后面三步仍以为物体在 A。
+          publishSceneDiff(
+            scene_pub,
+            makeBoxObject(object_id, transport_frame, transport_place, transport_size));
+          std::this_thread::sleep_for(std::chrono::milliseconds(800));
+          for (std::size_t i = 3U; i < steps.size() && mobile_ok; ++i) {
+            mobile_ok = run_arm_step(i);
+          }
+        }
+
+        // ---- 世界位移报告：这才是"真的搬走了"的证据 ----
+        if (mobile_ok && have_before) {
+          std::array<double, 3> object_map_after{0.0, 0.0, 0.0};
+          std::array<double, 3> base_map_after{0.0, 0.0, 0.0};
+          std::string tf_why;
+          const bool a = bodyPointToMap(
+            tf_buffer, mobile_map_frame, transport_frame, transport_place,
+            object_map_after, tf_why);
+          const bool b = bodyPointToMap(
+            tf_buffer, mobile_map_frame, transport_frame, std::vector<double>{0.0, 0.0, 0.0},
+            base_map_after, tf_why);
+          if (a && b) {
+            const double obj_dx = object_map_after[0] - object_map_before[0];
+            const double obj_dy = object_map_after[1] - object_map_before[1];
+            const double base_dx = base_map_after[0] - base_map_before[0];
+            const double base_dy = base_map_after[1] - base_map_before[1];
+            RCLCPP_INFO(
+              logger,
+              "[mobile] 放货后：物体 map=(%.3f, %.3f, %.3f) 底盘 map=(%.3f, %.3f)",
+              object_map_after[0], object_map_after[1], object_map_after[2],
+              base_map_after[0], base_map_after[1]);
+            RCLCPP_INFO(
+              logger,
+              "[mobile] 世界位移：物体 (%.3f, %.3f) 距离 %.3fm | "
+              "底盘 (%.3f, %.3f) 距离 %.3fm",
+              obj_dx, obj_dy, std::hypot(obj_dx, obj_dy),
+              base_dx, base_dy, std::hypot(base_dx, base_dy));
+          } else {
+            RCLCPP_WARN(logger, "[mobile] 放货后取不到 map 系位置(%s)", tf_why.c_str());
+          }
+        }
+
+        // 收尾：把物体从场景里移掉，避免污染后续场景。
+        moveit_msgs::msg::CollisionObject mobile_remove;
+        mobile_remove.id = object_id;
+        mobile_remove.header.frame_id = transport_frame;
+        mobile_remove.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+        publishSceneDiff(scene_pub, mobile_remove);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+        if (!mobile_ok) {
+          exit_code = 1;
+        }
+        RCLCPP_INFO(
+          logger,
+          "[mobile_transport][summary] planner=%s 结果=%s 机械臂成功步数=%zu/%zu "
+          "导航=%s(%.1fs) 规划总耗时=%.3fs 全程最差σ=%.4f 执行=%s",
+          params.planner_id.c_str(), mobile_ok ? "PASS" : "FAIL",
+          mobile_steps_done, steps.size(), nav.reason.empty() ? "未执行" : nav.reason.c_str(),
+          nav.elapsed_sec, mobile_plan_wall,
+          std::isfinite(mobile_worst_sigma) ? mobile_worst_sigma : -1.0,
           execute ? "true" : "false");
       } else if (scenario == "single_arm_named") {
         SingleArmPlanRequest request;

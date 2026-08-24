@@ -318,6 +318,35 @@ planning_demo_node:
       transport_probe_x_list: [0.149, 0.199, 0.249, 0.299]
       transport_probe_y_list: [0.284, 0.334, 0.384, 0.434, 0.464]
       transport_probe_z_list: [0.761, 0.811, 0.861, 0.911]
+
+      # ---------------- mobile_transport：搬运 -> 导航 -> 搬运 ----------------
+      # 完整移动作业流程：起始位置取货(步骤1~3) -> 底盘导航 -> 目标位置放货(步骤4~6)。
+      #
+      # 六步序列与 transport 完全共用，一行都不改 —— 第 4 步"移动到 B 上方"
+      # 是体系内的横移，底盘挪没挪都成立，所以导航只是插在第 3 步之后。
+      # 取货点/放置点/物体尺寸/grasp_z_offset/姿态全部复用上面的 transport_*，
+      # 不另立一套（两处数值一旦漂移就再也对不上了）。
+      #
+      # 前置条件：nav2 必须已经在跑（定位模式或建图模式都行）。
+      #   终端1: ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py ...
+      #   终端2: ros2 launch astribot_s1_manipulation planning_demo.launch.py \
+      #             scenarios:=mobile_transport execute:=true
+      mobile_transport_map_frame: "map"
+      mobile_transport_nav_action: "/navigate_to_pose"
+      mobile_transport_plan_action: "/compute_path_to_pose"
+      # 导航目标（map 系）。这个点是实测挑的，不是随便取的：
+      #   净空 1.65m（distance_transform_edt 实测），在 MPPI 足迹代价饱和阈值
+      #   1.62m 之上 —— 刻意避开已知的"窄通道里代价恒为 253、零梯度"问题；
+      #   已用 ComputePathToPose 预检可达（SUCCEEDED）。
+      # 换点时务必重新确认这两件事，否则会得到一个"机器人走不动"的假结论。
+      mobile_transport_nav_goal_xy: [0.995, 1.712]
+      # 目标朝向(rad)。沿用起始朝向，省掉一次没有意义的原地转身。
+      mobile_transport_nav_goal_yaw: -1.673
+      mobile_transport_nav_timeout: 180.0
+      # 下发导航前先用 ComputePathToPose 预检可达性。
+      # !!! 正常运行别关 !!! 不预检时"目标本来就不可达"会表现成机器人挣扎很久后
+      # ABORTED，看着像局部规划器走不动，排查方向完全错。留这个开关只为做对照实验。
+      mobile_transport_verify_reachable: true
       # 接近/离开时在抓取点上方留的高度。太小会让下降段与物体碰撞校验冲突。
       transport_approach_height: 0.10
       # TCP 姿态四元数 (x,y,z,w)。

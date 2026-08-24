@@ -87,6 +87,20 @@ def _build_demo(context, *args, **kwargs):
         # 逗号分隔转列表，方便命令行只跑某一个场景
         overrides['demo.scenarios'] = [s for s in scenarios.split(',') if s]
 
+    nav_goal = LaunchConfiguration('nav_goal').perform(context)
+    if nav_goal:
+        parts = [p for p in nav_goal.split(',') if p.strip()]
+        if len(parts) not in (2, 3):
+            raise RuntimeError(
+                f'nav_goal 需要 "x,y" 或 "x,y,yaw"，收到: {nav_goal!r}')
+        try:
+            numbers = [float(p) for p in parts]
+        except ValueError as exc:
+            raise RuntimeError(f'nav_goal 里有非数字: {nav_goal!r}') from exc
+        overrides['demo.mobile_transport_nav_goal_xy'] = numbers[:2]
+        if len(numbers) == 3:
+            overrides['demo.mobile_transport_nav_goal_yaw'] = numbers[2]
+
     use_sim_time = _to_bool(LaunchConfiguration('use_sim_time').perform(context))
     overrides['use_sim_time'] = use_sim_time
 
@@ -210,7 +224,17 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'scenarios', default_value='',
             description='逗号分隔的场景列表，覆盖 yaml。可选：single_arm_named,'
-                        'single_arm_joint,closed_chain,planner_comparison'),
+                        'single_arm_joint,closed_chain,planner_comparison,'
+                        'transport,transport_probe,mobile_transport'),
+        DeclareLaunchArgument(
+            'nav_goal', default_value='',
+            description='mobile_transport 的导航目标，格式 "x,y" 或 "x,y,yaw"（map 系，'
+                        'yaw 单位 rad）。留空用 yaml 值。\n'
+                        '换目标点时务必先确认两件事，否则容易得到"机器人走不动"的假结论：\n'
+                        '  1) 该点净空 > 1.62m（MPPI 足迹代价在更窄处会饱和成零梯度）\n'
+                        '  2) ComputePathToPose 能出全局路径\n'
+                        '反复跑对比实验时用它在起点/终点之间来回换，'
+                        '否则第二轮起机器人已经在目标上、导航段等于没跑。'),
         DeclareLaunchArgument(
             'planning_attempts', default_value='',
             description='覆盖 OMPL 并行规划次数。留空用 yaml 值。\n'

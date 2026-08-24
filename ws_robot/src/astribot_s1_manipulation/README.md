@@ -314,6 +314,118 @@ TOTG 会按这个上限压缩节拍。如果它偏大，生成的轨迹控制器
 
 ---
 
+## 实测结果：mobile_transport 搬运 → 导航 → 搬运（Gazebo 全链路执行，2026-08-20）
+
+完整移动作业流程：起始位置取货 → 底盘导航 → 目标位置放货。
+
+```bash
+# 终端1：仿真 + nav2（定位模式）
+ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
+    slam_mode:=localization map_file_name:=<ws>/ws_robot/maps/warehouse_full
+
+# 终端2：move_group + 流程编排
+ros2 launch astribot_s1_manipulation planning_demo.launch.py \
+    scenarios:=mobile_transport execute:=true nav_goal:="0.995,1.712,-1.673"
+```
+
+### 六步序列一行都没改
+
+`buildTransportSteps()` 的六步天然可分成「取货 1~3 / 放货 4~6」，
+导航就插在第 3 步(抬起)之后。第 4 步"移动到 B 上方"是**体系内**的横移，
+底盘挪没挪都成立 —— 所以 `mobile_transport` = `transport` + 一段导航，
+步骤定义、取货点、物体尺寸、`grasp_z_offset`、姿态全部复用 `transport_*`。
+
+### 物体坐标系：体系就够，不需要 AttachedCollisionObject
+
+物体作为碰撞体发布在 `astribot_torso_base`（随机器人移动的体系）。
+导航途中机械臂**保持抬起姿态不动**，物体与机器人的相对位姿恒定，
+体系坐标严格成立，物体自然跟着走。
+**如果以后要在导航途中收臂，这个前提就破了**，必须改成把物体附着到 TCP link
+（`AttachedCollisionObject` + `touch_links`）。
+
+### 世界位移：物体真的被搬走了（数值自洽到 1mm）
+
+RRT\* 那一轮实测：
+
+```
+取货后：物体 map=(0.909, 5.397, 0.761)  底盘 map=(0.463, 5.594)
+放货后：物体 map=(1.136, 1.673, 0.761)  底盘 map=(0.918, 1.908)
+世界位移：物体 (0.227, -3.724) 距离 3.731m | 底盘 (0.455, -3.686) 距离 3.714m
+```
+
+自洽性验算（这一步是必要的 —— 否则"体系里换了个数"和"世界里真搬走了"分不清）：
+终点实测 yaw = −1.913 rad，把体系放置点 B=(0.149, 0.284) 按该 yaw 旋转：
+
+```
+x' = 0.149·cos(−1.913) − 0.284·sin(−1.913) = 0.217
+y' = 0.149·sin(−1.913) + 0.284·cos(−1.913) = −0.236
+```
+
+与实测的 (物体−底盘) = (0.218, −0.235) 吻合到 1mm。取货端同理（0.446, −0.197
+对 0.446, −0.195）。所以物体的世界位移确实 = 底盘位移 + 体系内 (B−A) 位移。
+
+### 三求解器在这个流程上的横向验证
+
+先用 RRT\* 调通，再在这个已验证基准上换求解器（导航目标在起点/终点之间来回换，
+否则第二轮起机器人已经在目标上、导航段等于没跑）：
+
+| planner | 结果 | 机械臂步数 | 导航 | 规划总耗时 | 全程最差 σ | 物体世界位移 |
+|---|---|---|---|---|---|---|
+| `RRTstarConfig` | PASS | 6/6 | SUCCEEDED 50.5s | 3.218s | 0.1113 | 3.731m |
+| `BITstarConfig` | PASS | 6/6 | SUCCEEDED 79.4s | 0.185s | 0.1143 | 3.928m |
+| `InformedRRTstarConfig` | PASS | 6/6 | SUCCEEDED 54.9s | 3.227s | 0.1111 | 3.727m |
+
+规划耗时的分档仍然是 `optimization_budget_sec` 配置造成的，不是规划器快慢
+（理由见上一节）。导航耗时差异与求解器无关 —— 那是底盘的事。
+
+### ⚠️ 实测发现：不收臂让底盘只能跑 15% 速度
+
+3.71m 走了 50.5s，平均 0.076m/s。路径跟踪诊断节点把原因定位得很干净：
+
+```
+正常 | 路径在(73点) | raw 21.0Hz/0.704 -> smooth 0.704 -> preCpl 0.704 -> cmd 0.106
+                   | 轮速峰值 1.099rad/s | 实速 0.104m/s
+```
+
+MPPI 输出 0.704m/s 一路原样传到 `preCpl`，在**臂-底盘耦合限速**这一级被砍到
+0.106 —— 比值 0.106/0.704 = **0.151**，正好是
+`arm_chassis_coupling_params.yaml` 里的 `min_speed_scale: 0.15`。
+整段导航 25 个采样全是"正常"，0 次卡滞，所以这不是走不动，是**按设计被限速**。
+
+限速公式（`arm_chassis_speed_coupling_node.py`）：
+
+```
+extension_ratio = max over 14 joints of min(1, |pos − folded_reference| / extension_full_rad)
+scale = 1 − activity · (1 − min_speed_scale)
+```
+
+搬运姿态下至少有一个关节偏离参考 ≥ `extension_full_rad`(1.2)，
+`extension_ratio` 饱和成 1.0，于是 scale 掉到下限 0.15。
+
+**顺带暴露一个跨包的设计不一致**（未修，记录在此）：
+`folded_reference_rad` 默认是 14 个 0，而本机器人的**全零构型就是奇异构型**
+（`joint_4=0` 即肘部完全伸直，实测 σ_min=0.0077，见本文开头第 1 条）。
+也就是说 `scale=1.0` 只在一个**永远不该使用的构型**上取得：
+连 SRDF 的 `ready` 姿态(`joint_4=1.0`)都会得到
+`ratio = 1.0/1.2 = 0.83`、`scale ≈ 0.29`。
+换句话说**任何可用的机械臂构型下底盘都在被限速**。
+要么把 `folded_reference_rad` 改成真实的收纳姿态，要么放大
+`extension_full_rad` —— 但两者都要重新做倾覆余量评估，所以这里只记录不动手。
+
+实用结论：追求节拍时应该在导航前把臂收到接近 `folded_reference_rad` 的姿态。
+本 demo 刻意不收臂，是为了让体系坐标严格成立（见上），代价就是 6.6 倍的时间。
+
+### 边界（如实说明）
+
+- 导航途中伸出的手臂 + 物体**超出了代价地图那个 0.42m 外接八边形足迹**，
+  nav2 看不到它们。所选目标点周边净空 1.65m、路径全程开阔，
+  所以实测没出问题，但这一点**没有被验证过**，换到窄环境要重新评估。
+- 导航目标点不是随便取的：净空 1.65m（`distance_transform_edt` 实测）在 MPPI
+  足迹代价饱和阈值 1.62m 之上，且下发前用 `ComputePathToPose` 预检过可达。
+  换点必须重做这两项检查，否则容易把"目标本来就不可达"误读成"局部规划器走不动"。
+- 仍然是**纯运动学演示**（本机无夹爪），物体不会在 Gazebo 里被夹住跟着走。
+
+
 ## 实测结果：transport 搬运场景 + 四求解器横向验证（Gazebo 全链路执行，2026-08-20）
 
 先把 `transport` 场景在一个求解器上调通，再拿这个**已验证成功的基准**去跑其余

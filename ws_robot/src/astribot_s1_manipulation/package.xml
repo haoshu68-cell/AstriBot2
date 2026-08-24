@@ -30,6 +30,10 @@
   <depend>moveit_msgs</depend>
   <depend>moveit_planners_ompl</depend>
 
+  <!-- mobile_transport 场景要下发 NavigateToPose / ComputePathToPose。
+       nav2_msgs 只是 action/msg 定义，不引入任何 nav2 运行库。 -->
+  <depend>nav2_msgs</depend>
+
   <depend>geometry_msgs</depend>
   <depend>trajectory_msgs</depend>
   <depend>sensor_msgs</depend>

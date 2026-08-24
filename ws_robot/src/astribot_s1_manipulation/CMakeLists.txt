@@ -33,6 +33,10 @@ find_package(Eigen3 REQUIRED)
 # ompl 本体提供 og::BITstar / og::InformedRRTstar 的实现。
 find_package(ompl REQUIRED)
 find_package(moveit_planners_ompl REQUIRED)
+# 只有 planning_demo_node 的 mobile_transport 场景用到（核心库不依赖它们）。
+find_package(rclcpp_action REQUIRED)
+find_package(nav2_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 set(ASTRIBOT_MANIPULATION_DEPS
   rclcpp
@@ -106,7 +110,18 @@ pluginlib_export_plugin_description_file(
 # ---------------------------------------------------------------------------
 add_executable(planning_demo_node src/planning_demo_node.cpp)
 target_link_libraries(planning_demo_node ${PROJECT_NAME}_core)
-ament_target_dependencies(planning_demo_node ${ASTRIBOT_MANIPULATION_DEPS})
+# mobile_transport 场景要下发 NavigateToPose / ComputePathToPose 并查 TF，
+# 所以 demo 节点比核心库多这三个依赖。
+# 刻意**不**把它们加进 ASTRIBOT_MANIPULATION_DEPS：核心库是单元测试链接的目标，
+# 保持它不依赖导航栈，才能在没有 nav2 的环境里直接跑测试。
+# nav2_msgs 只是 action/msg 定义，是很轻的依赖 —— 比让导航侧反过来依赖整个
+# MoveIt 轻得多，所以流程编排放在这一侧。
+ament_target_dependencies(planning_demo_node
+  ${ASTRIBOT_MANIPULATION_DEPS}
+  rclcpp_action
+  nav2_msgs
+  tf2_ros
+)
 
 # 自碰撞对生成工具：采样实测哪些 link 对"从不碰撞"或"总是碰撞"，
 # 输出可直接粘进 SRDF 的 disable_collisions 片段。
