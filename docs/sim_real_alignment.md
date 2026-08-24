@@ -6,7 +6,36 @@
 > （同一个 SDK、同一套 WBC，只有物理引擎不同）。
 > 移动作业能力（nav2 / SLAM / 探索 / mobile_transport 的导航段）退出范围。
 >
-> 被否方案与理由见附录 A。差异实测数据见附录 B（其中 3 项因本决策自动消失）。
+> **前提（已定）：以 `examples/` 为准。** 示例与其他材料冲突时一律以示例为准。
+> 末端为**夹爪**：1 DOF，0~100 无量纲，100=全闭 / 0=全开。
+>
+> 被否方案与理由见附录 A。差异实测数据见附录 B。
+
+---
+
+## 0 · 真值源规则（这一节必须先读）
+
+厂商 `astribot_config/` **内部就没有单一真值** —— 它 ship 了四份互不一致的模型。
+所以"以厂商配置为准"这句话不成立，必须先定"以哪一份为准"。
+
+规则很干净：**以各部件 yaml 的 `model:` 字段指向的东西为准。**
+这是 SDK 自己的解析入口，按定义就与真机一致。
+
+| 部件 yaml | `model:` 指向 |
+|---|---|
+| `astribot_arm_left.yaml` | `model/astribot_arm_left.urdf` |
+| `astribot_arm_right.yaml` | `model/astribot_arm_right.urdf` |
+| `astribot_torso.yaml` | `model/astribot_torso.urdf` |
+| `astribot_head.yaml` | `model/astribot_head.urdf` |
+| `astribot_chassis.yaml` | **内联** `model{}` 块 |
+| `astribot_gripper_left/right.yaml` | **内联** `model{}` 块 |
+
+**`model/astribot_whole_body*.urdf` 那几份一个都没被引用** —— 它们是给别的用途
+（可视化、动力学标定）准备的，不是 SDK 的运行模型。
+
+> ⚠️ 我的 `astribot_s1_description` 恰恰是从 `astribot_whole_body_with_wheel.urdf`
+> 抄的（xacro 头部注明了来源，且逐项核对**完全一致**，没有任何漂移）——
+> 抄得很忠实，但**抄的是一份 SDK 不使用的模型**。这是 Gate 1 要修的根本问题。
 
 ---
 
@@ -152,41 +181,90 @@ TOTG 时间最优参数化，以及已经验证过的三个求解器。
 > 现在这套代码的碰撞/奇异校验假设"下发的就是执行的"，
 > 开 WBC 会打破这个假设。主配置里写明 `use_vendor_wbc: false` 并注明原因。
 
-### D4 · 夹爪 —— ⚠️ 存在未解决的错位
+### D4 · 夹爪 —— ✅ 前提已定，风险已实测解除
 
-这一条因转投而**变得更关键**（定点作业里抓取就是核心），且**新增了一个问题**：
+**前提（用户已定）：以 `examples/` 为准，末端为夹爪，1 DOF，0~100，100=全闭。**
 
-| 来源 | 末端形态 |
+拉下 MuJoCo 仓库实测后，这条从"最大技术风险"变成"完全自洽"：
+
+| 来源 | 末端形态 | 结论 |
+|---|---|---|
+| SDK API（示例 103/107） | `effector_left_name: [50.0]`，1 值 | ✅ |
+| 示例 106 | 幅度 0~100（100 全闭），速度 0~1000 | ✅ |
+| `astribot_gripper_left.yaml` | 单关节 `astribot_gripper_joint`，限位 **0~100**，力矩 145，速度 1000 | ✅ |
+| `astribot_whole_body_with_gripper.sdf` | 每侧 6 物理关节 `L1/L11/L2/R1/R11/R2` | ✅ 仿真侧实现 |
+| **MuJoCo 仿真** | 同时提供 gripper 与 hand 两套模型，**按需选择** | ✅ 风险解除 |
+
+先前担心的"MuJoCo 只有 BrainCo 灵巧手"**不成立**：
+仓库里 `astribot_s1_with_gripper.xml` 与 `astribot_s1_with_hand.xml` 并存，
+灵巧手只是可选项。选 gripper 那套即与真机一致。
+
+**MuJoCo 的 1-DOF 抽象是怎么实现的**（`astribot_gripper_left_actuator.xml` 实测）——
+这正是我仿真侧要复刻的耦合关系：
+
+```xml
+<tendon><fixed name="gripper_left_split">
+  <joint joint="astribot_gripper_left_joint_R1" coef="0.5"/>
+  <joint joint="astribot_gripper_left_joint_L1" coef="0.5"/>
+</fixed></tendon>
+<actuator><general tendon="gripper_left_split" ctrlrange="0 100" forcerange="-200 200" .../></actuator>
+```
+
+`ctrlrange="0 100"` —— **与 SDK 的 0~100 逐字一致**。闭链由 `equality` 约束闭合：
+
+| 约束 | 关系 |
 |---|---|
-| SDK API | 1 DOF，0~100 无量纲，100=全闭；速度 0~1000 |
-| `astribot_gripper_left.yaml` | 单关节 `astribot_gripper_joint`，限位 0~100，力矩 145 |
-| `astribot_whole_body_with_gripper.sdf` | 每侧 **6 个物理关节** `joint_L1/L11/L2/R1/R11/R2`（连杆机构） |
-| **MuJoCo 仿真环境** | 文档写的是 **"BrainCo hand"（灵巧手）** |
-| 我的 ws_robot | **不存在** |
+| `R1 = L1` | 两指同步 |
+| `R1 = R2` | — |
+| `R11 = −R1` | `polycoef="0 -1 0 0 0"` |
+| `L2 = −L1` | `polycoef="0 -1 0 0 0"` |
+| `L11 = L1` | `polycoef="0 1 0 0 0"` |
 
-前三者自洽（6 关节机构对外抽象成 1 DOF），但**MuJoCo 那边可能装的是另一种末端**。
-如果仿真是灵巧手、真机是二指夹爪，那"由构造对齐"这个前提在末端上就不成立。
+物理关节行程 `range="0 0.93"` rad，对应控制量 0~100
+—— **所以 0~100 与关节角的映射是 `100 ↔ 0.93 rad`**，
+这顺带解决了原先"0~100 对应多少开口"这个未确认项（关节角层面已确定，
+毫米级开口还需要连杆几何换算）。
 
-> **这是本决策下最大的技术风险，必须在 Gate 0 实测确认。**
-> 确认方法：起 MuJoCo，`ros2 topic list` + `get_dof()` 看夹爪部件的 DOF 是 1 还是更多。
+**对外接口**：MoveIt SRDF 声明 `end_effector` + 一个 `gripper` 规划组，
+1 个抽象关节（0~100），`GripperCommand` 驱动。业务层写 `gripper: 100` 就是闭合。
+仿真侧用 mimic 按上表的比例展开到 6 个物理关节。
 
-对外接口仍按 SDK 的 1-DOF 抽象做（MoveIt SRDF 里声明 `end_effector` +
-`gripper` 组，`GripperCommand` 驱动），这一点不受上面影响。
 
-### D5 · 能力矩阵 —— ⚠️ 材料自相矛盾
+### D5 · 能力矩阵 —— ✅ 按"以 examples 为准"定案
 
-| 能力 | 真机 | SDK 示例说的"仿真" | MuJoCo 仓库说的 |
+| 能力 | 真机 | 仿真（**按示例定案**） | MuJoCo 仓库文档说的 |
 |---|---|---|---|
-| 位置控制 | 支持 | 支持 | 支持（7~14 维，前 7 位置 + 后 7 速度） |
-| 速度控制 | 支持 | ❌ "not supported in simulation and will not respond to commands"（示例 106） | 支持（后 7 维即速度，带速度/重力补偿） |
-| 力矩控制 | 支持 | ❌ 同上（示例 210） | 支持，但 **"does not guarantee sim-to-real accuracy, mainly for simulation purposes"** |
+| 位置控制 | 支持 | 支持 | 支持 |
+| 速度控制 | 支持 | ❌ **不支持** | 声称支持 |
+| 力矩控制 | 支持 | ❌ **不支持** | 声称支持，但另注 "does not guarantee sim-to-real accuracy" |
 
-**示例 106/210 与 MuJoCo 文档直接冲突。** 可能的解释：
-示例里的"simulation"指的是另一个更早的仿真后端，或者 MuJoCo 支持是后来加的。
+示例 106："Joints velocity control is **not supported in simulation and will not
+respond to commands**"；示例 210 对力矩控制同样表述。
+MuJoCo 仓库文档与之冲突 —— **按已定前提以示例为准，仿真侧一律按不支持处理**。
 
-> 不管哪种解释，结论都一样：**能力矩阵必须实测生成，不能抄文档。**
-> Gate 0 里逐个接口发指令、看机器人是否响应，把结果写进主配置。
-> 静默不响应是最坏的失败形态——代码正常跑、日志干净、机器人不动。
+即使采信 MuJoCo 文档也不改变结论：它自己给力矩控制标了
+"does not guarantee sim-to-real accuracy, mainly for simulation purposes"，
+对"对齐"这个目标本来就没有价值。
+
+**落地方式**：主配置里 `capabilities.sim` 把 velocity / effort 置 false；
+桥接在初始化阶段比对 —— 请求了当前 target 不支持的接口就**拒绝启动**
+并打出缺哪一项。静默不响应是最坏的失败形态（代码正常跑、日志干净、机器人不动），
+必须换成启动期的响亮失败。
+
+### D6 · `get_joints_position_limit()` 返回顺序 —— ✅ 定为 `(lower, upper)`
+
+三个官方示例表面自相矛盾，但按"以 examples 为准"是可以判定的：
+
+| 示例 | 解包方式 | 之后怎么用 |
+|---|---|---|
+| 100 | `upper_limit, lower_limit = ...` | **仅打印表头标签**，不做任何比较 |
+| 103 | `lower_limit, upper_limit = ...` | `all(cmd > lower)` 且 `all(upper > cmd)` ——语义正确 |
+| 210 | `lower_limit, upper_limit = ...` | `any(pos < lower)` 或 `any(pos > upper)` ——语义正确 |
+
+两处**功能性**用法一致且语义自洽，唯一的分歧在示例 100 的装饰性表头。
+判定：**返回 `(lower, upper)`，示例 100 的表头标签写错了。**
+（Gate 0 仍会顺带用真值复核一次，但不阻塞。）
+
 
 ---
 
@@ -210,7 +288,10 @@ backend:
 
 model:
   # 单一真值源，MoveIt 的 URDF 直接来自这里，不再手写一份
+  # 单一真值源 = 各部件 yaml 的 model: 字段指向的东西（见第 0 节）
+  # 绝不要指向 whole_body_*.urdf —— 那几份 SDK 一个都不加载
   source_dir: $(env ASTRIBOT_SDK_ROOT)/astribot_config/robot_config/astribot_s1
+  resolve_via: part_yaml_model_field
 
 frames:
   # TCP 必须显式：厂商 tool 是法兰再往 −y 0.15m，不是法兰原点
@@ -248,59 +329,75 @@ time:
 
 ### Gate 0 · 装环境 + 实测摸清后端（不写功能代码）
 
-这一步是本决策的**前提验证**。全部未确认项都在这里解决。
+这一步是本决策的**前提验证**。
 
-安装（前置已核实：RTX 4090 / 驱动 580 / Ubuntu 22.04 / Python 3.10.12 全部满足；
-GitHub 可达；磁盘 819G 可用。**缺 git-lfs，需先装**）：
+**已完成部分**（仓库已拉到 `/home/yjh/WorkSpace/astribot_simulation`，311 MB）：
+
+- ✅ 前置条件核实：RTX 4090 / 驱动 580 / Ubuntu 22.04 / Python 3.10.12
+  全部满足；磁盘 819 G；GitHub 可达。**仅缺 `git-lfs`**。
+- ✅ 夹爪形态实测确认（见 D4）：gripper 与 hand 两套模型并存，
+  gripper 侧 `ctrlrange="0 100"` 与 SDK 逐字一致，耦合关系已抄出。
+- ✅ 无 LiDAR **从源码确认**（不只是文档）：全仓库 `grep -i
+  "rangefinder|lidar|laser|livox|scan"` 在 xml/py/yaml 里零命中
+  （仅 `src/sim_assets_tools/process_mujoco_xml.py` 里的目录扫描函数误命中）。
+- ✅ 场景资产：只有 `simpleTable`（`simpleTable_asset.xml` + `_body.xml` + 贴图），
+  无 warehouse / 房间。**对定点抓取来说这张桌子刚好够用。**
+- ✅ 底盘：MuJoCo 里 **4 个轮关节 + 3 个虚拟关节**并存，
+  虚拟关节是 `position` 执行器（`kp` 20000/20000/5000），与 SDK 的
+  `[x, y, theta]` 位置指令对得上。
+
+**剩余待测**（需要先装 MuJoCo 运行时）：
 
 ```bash
 sudo apt install git-lfs && git lfs install
-git clone -b main https://github.com/Astribot-Dev/astribot_simulation.git
-cd astribot_simulation
-git submodule update --init --recursive
-git submodule foreach git lfs pull
-bash scripts/lite_install/install_mujoco.sh     # 只装 MuJoCo，不装四个后端
+cd /home/yjh/WorkSpace/astribot_simulation
+git submodule foreach git lfs pull          # 网格资产在 LFS 里
+bash scripts/lite_install/install_mujoco.sh # 只装 MuJoCo，不装四个后端
 ```
 
-要测出来的东西（每一项都是"文档说的不算，跑一遍才算"）：
-
-1. **MuJoCo 侧的 ROS 图**：`ros2 topic list` / `ros2 node list`，
-   与 SDK 期望的话题对照。文档给的是 `/astribot_arm_left/joint_space_command`，
-   而 `astribot_msgs` 里是 `AstribotControlCommand` ——
-   **这两者是不是同一套接口，决定 SDK 能否原样跑。**
-2. **SDK 原样跑通性**：直接跑 `examples/101`（读状态）、`103`（关节运动）、
-   `107`（笛卡尔）。跑通即证明"同一套 SDK"这个前提成立。
-3. **能力矩阵**（D5）：跑 `106`（速度）、`210`（力矩），看机器人是否真的动。
-4. **夹爪形态**（D4）：`get_dof()` 看夹爪部件维度；`ros2 topic list` 找末端话题。
-   是 1 DOF 二指夹爪还是 BrainCo 灵巧手，直接决定末端能否对齐。
-5. **FK 一致性**：同一组关节角，比 SDK `get_forward_kinematics()`（示例 204）
-   与 MoveIt FK。顺带定掉附录 B.5 那个基座 rpy 疑点。
-6. **`get_joints_position_limit()` 返回顺序**：示例 100 按 `upper, lower` 解包，
-   示例 103 / 210 按 `lower, upper` —— **三个官方示例自相矛盾**，
-   必须从源码或实测确认，否则所有限位校验方向都可能是反的。
-7. **速率**：各部件 yaml 写 `frequency: 100`，示例用 `Astribot(freq=250)`。
-   实测哪个是实际生效的控制周期（D2 选 streaming 时直接依赖这个）。
+1. **SDK 原样跑通性**（本决策的生死项）：跑 `examples/101`（读状态）、
+   `103`（关节运动）、`107`（笛卡尔）。文档给的话题是
+   `/astribot_arm_left/joint_space_command`，而 `astribot_msgs` 里是
+   `AstribotControlCommand` —— 这两者是不是同一套接口，文档**没有明确承诺**。
+2. **能力矩阵复核**：跑 `106` / `210`，确认速度/力矩确实不响应（D5 已按示例定案，
+   这一步只是取证）。
+3. **FK 一致性**：同一组关节角，比 SDK `get_forward_kinematics()`（示例 204）
+   与 MoveIt FK，顺带定掉 B.5 那个基座 rpy 疑点。
+4. **速率**：各部件 yaml 写 `frequency: 100`，示例用 `Astribot(freq=250)`，
+   实测哪个是实际生效的控制周期（D2 选 streaming 时直接依赖）。
+5. **关节命名核对**：MuJoCo 里是 `astribot_chassis_zrot`，
+   厂商 yaml 里是 `astribot_chassis_z_rot` —— **少一个下划线**。
+   虽然底盘已退出范围，但同类命名差异可能出现在别处，值得扫一遍全表。
 
 > **通过标准**：`examples/101/103/107` 在 MuJoCo 上跑通；
-> 能力矩阵三项有明确实测结论；夹爪 DOF 确定；
-> FK 位置偏差 < 1 mm、姿态偏差 < 0.001 rad；限位返回顺序有定论。
+> FK 位置偏差 < 1 mm、姿态偏差 < 0.001 rad；速率有定论。
 >
-> **若第 1、2 项不通过，本决策的前提就不成立**，必须回到附录 A 重选。
+> **若第 1 项不通过，本决策的前提就不成立**，必须回附录 A 重选。
+
 
 ### Gate 1 · 模型改为单一真值源
 
-- `astribot_s1_description` 改为引用
-  `astribot_config/robot_config/astribot_s1/model/` 下的厂商 URDF，
-  删掉我这边所有重复声明的关节限位与连杆几何。
-  这一步自动消灭附录 B 的 B.1（限位不一致）和 B.5（基座 rpy）。
-- 补夹爪（按 Gate 0 测出的真实形态），SRDF 加 `end_effector` + `gripper` 组。
-- 加 `*_tcp_link`（B.2），把 SRDF 各组 tip 与 `manipulation_params.yaml`
-  的 TCP 全部指向它——**不再用 `tool_link` 当笛卡尔目标**。
-- 加构建期一致性测试：逐关节比对厂商 yaml/URDF，任何一项不等就编译失败。
+- `astribot_s1_description` 改为引用**第 0 节规则指定的 per-part 模型**
+  （`model/astribot_arm_left.urdf` / `astribot_arm_right.urdf` /
+  `astribot_torso.urdf` / `astribot_head.urdf`），
+  **不再用 `astribot_whole_body_with_wheel.urdf`** —— 后者不被 SDK 加载。
+  这一步同时修掉 B.1 的两个实质风险：躯干速度 6.0 → **1.8**，
+  臂 joint_3 −3.0~1.4 → **±3.1**。
+- 补夹爪：6 物理关节 + 1 抽象关节（0~100），mimic 比例照 D4 表
+  （`R1=L1`、`R2=R1`、`R11=−R1`、`L2=−L1`、`L11=L1`，行程 `100 ↔ 0.93 rad`）。
+  SRDF 加 `end_effector` + `gripper` 组。
+- 加 `*_tcp_link`（B.2）：法兰再往 −y 0.15 m，
+  把 SRDF 各组 tip 与 `manipulation_params.yaml` 的 TCP 全部指向它
+  —— **不再用 `tool_link` 当笛卡尔目标**。
+- 加构建期一致性测试：逐关节比对 **per-part** 文件（这一点很关键——
+  之前我连比对基准都选错了，测的是不该作为真值的那一份）。
 
 > **通过标准**：一致性测试通过；重跑 `transport_probe`，
-> 可用候选数应**明显增加**（左臂 joint_3 放开 1.7 rad 之后必然如此）——
+> 可用候选数应**明显增加**（臂 joint_3 放开 1.7 rad 之后必然如此）——
 > 没变化说明真值源没真正生效。
+> 另需确认躯干速度收紧到 1.8 后，`TrajectoryTimeOptimizer` 输出的节拍
+> 相应变长（若没变长说明限位没读进去）。
+
 
 ### Gate 2 · 桥接骨架（只读）
 
@@ -337,13 +434,15 @@ bash scripts/lite_install/install_mujoco.sh     # 只装 MuJoCo，不装四个�
 | **保留 Gazebo + 为真机写 ros2_control 硬件接口** | 已否。可行性验证过（`astribot_msgs` 带 C++ typesupport，`AstribotControlCommand`/`RobotJointState` 可直接收发，无需 Python 进实时环），保留全部导航资产；但需逐条消除附录 B 的 5 处模型差异，且仿真-实物对齐需要人为维护而非由构造保证 |
 | **双仿真分工**（Gazebo 管导航、MuJoCo 管操作） | 已否。违反"一套主配置"，两套仿真会漂移 |
 
-MuJoCo 环境的实测能力（决定"全面转投"必然砍掉导航的依据）：
+MuJoCo 环境的实测能力（决定"全面转投"必然砍掉导航的依据；
+以下均为拉下仓库后**从源码确认**，不是只读文档）：
 
 | 我的导航栈依赖 | MuJoCo 环境 |
 |---|---|
-| Livox 点云 → 多层切片 → `/scan` | **无 LiDAR**（RGB/深度/点云/FT/IMU 都有，激光全文未提） |
-| warehouse 世界 + 货架 | **无任何场景**，资产只有机器人模型 + 地面 `worldbody` |
-| nav2 / SLAM / 代价地图 / 里程计 | **全文未提**；底盘仅 `chassis_kinematics.py` 纯运动学，多个配置直接锁死底盘 |
+| Livox 点云 → 多层切片 → `/scan` | **无 LiDAR**。全仓库 xml/py/yaml 内 `grep -i "rangefinder\|lidar\|laser\|livox\|scan"` 零命中（唯一命中是 `process_mujoco_xml.py` 里的目录扫描函数）。RGB/深度/点云/FT/IMU 都有 |
+| warehouse 世界 + 货架 | **只有 `simpleTable` 一张桌子**，无 warehouse / 房间 / 货架。（早期我说"只有机器人模型 + 地面"，略有低估——但对定点抓取来说这张桌子刚好够用） |
+| nav2 / SLAM / 代价地图 / 里程计 | **无**。底盘虽然在 MuJoCo 里有 4 轮 + 3 虚拟关节的完整建模，但没有任何导航/建图集成，`chassis_kinematics.py` 只做运动学，多个配置直接锁死底盘 |
+
 
 ---
 
@@ -352,35 +451,40 @@ MuJoCo 环境的实测能力（决定"全面转投"必然砍掉导航的依据�
 本决策下 **B.1 / B.4 / B.5 自动消失**（不再维护自有模型 / 无底盘），
 B.2 / B.3 仍需在 Gate 1 处理。保留全部数据备查。
 
-### B.1 关节限位不一致 —— ✅ 本决策下消失
+### B.1 关节限位：厂商 ship 了四份互不一致的模型
 
-左臂（我的 URDF vs 厂商 `model/astribot_arm_left.urdf`）：
+> **本节是对早期一处错误归因的更正。** 我最初拿 `ws_robot` 与
+> `model/astribot_arm_left.urdf` 比，得出"我的模型漂移了、躯干速度宽 3.3 倍不安全"。
+> 逐项核对后：**我的模型与 `astribot_whole_body_with_wheel.urdf` 完全一致，
+> 一个数都没改** —— xacro 头部那句"未改动任何数值"是真的。
+> 真实情况是厂商自己的四份模型互不一致。
 
-| 关节 | 我的位置限位 | 厂商位置限位 | 我的速度 | 厂商速度 |
+左臂与躯干，四份厂商模型 + 我的：
+
+| 关节 | per-part（SDK 实际加载） | whole_body ×3 | dynamic_calib | 我的 ws_robot |
 |---|---|---|---|---|
-| joint_1 | −3.0 ~ 3.0 | −3.1 ~ 3.1 | 8.4 | 8.4 |
-| joint_2 | −1.4 ~ 0.4 | −1.53 ~ 0.46 | 8.4 | 8.4 |
-| joint_3 | −3.0 ~ **1.4** | −3.1 ~ **3.1** | 8.4 | 8.4 |
-| joint_4 | **0.0** ~ 2.4 | **−0.06** ~ 2.61 | 15 | 15 |
-| joint_5 | −2.0 ~ 2.0 | −2.56 ~ 2.56 | **15** | **20** |
-| joint_6 | −0.6 ~ 0.6 | −0.76 ~ 0.76 | 16.8 | 16.8 |
-| joint_7 | −1.4 ~ 1.4 | −1.53 ~ 1.53 | 16.8 | 16.8 |
+| arm joint_1 | −3.1~3.1 v8.4 | −3.0~3.0 v8.4 | −3.1~3.1 **v20** | −3.0~3.0 v8.4 |
+| arm joint_2 | −1.53~0.46 v8.4 | −1.4~0.4 v8.4 | −1.5~0.5 v20 | −1.4~0.4 v8.4 |
+| arm joint_3 | **−3.1~3.1** v8.4 | **−3.0~1.4** v8.4 | −3.14~1.57 v20 | −3.0~1.4 v8.4 |
+| arm joint_4 | −0.06~2.61 v15 | 0.0~2.4 v15 | −0.02~2.55 v20 | 0.0~2.4 v15 |
+| arm joint_5 | −2.56~2.56 **v20** | −2.0~2.0 **v15** | −2.15~2.15 v20 | −2.0~2.0 v15 |
+| arm joint_6 | −0.76~0.76 v16.8 | −0.6~0.6 v16.8 | −0.78~0.78 v20 | −0.6~0.6 v16.8 |
+| arm joint_7 | −1.53~1.53 v16.8 | −1.4~1.4 v16.8 | −1.55~1.55 v20 | −1.4~1.4 v16.8 |
+| torso joint_1 | −0.04~1.5 **v1.8** | 0.0~1.4 **v6.0** | −0.06~1.5 **v20** | 0.0~1.4 v6.0 |
+| torso joint_2 | −2.3~0.06 v1.8 | −2.3~0.0 v6.0 | −2.4~0.03 v20 | −2.3~0.0 v6.0 |
+| torso joint_3 | −0.4~2.3 v1.8 | 0.0~2.3 v6.0 | −0.03~2.4 v20 | 0.0~2.3 v6.0 |
+| torso joint_4 | −1.2~1.2 v1.8 | −1.5~1.5 v6.0 | −1.6~1.6 v20 | −1.5~1.5 v6.0 |
 
-臂全部是我更保守——安全，但可达域被人为缩小。`joint_3` 丢 1.7 rad 尤其明显：
-`transport_probe` 那张"80 个候选 50 个可用"的可达域图在真机上偏悲观。
+`whole_body.urdf` / `whole_body_with_wheel.urdf` / `whole_body_with_head.urdf`
+三份**完全一致**；`dynamic_calib` 是第三套（所有速度一律 20，明显是标定用的占位值）。
+头部两关节在所有版本里都一致（±1.57 / ±1.22，v4.0）。
 
-躯干**相反，且不安全**：
+**风险的方向没变，只是原因变了。** 按第 0 节的规则，SDK 加载 per-part，
+所以真机控制栈认为躯干最大速度是 **1.8 rad/s**，而我的仿真按 **6.0** 执行 ——
+3.3 倍这个风险是真实的，起因是"我抄了一份 SDK 不使用的模型"，
+不是"我改错了数"。同理臂 joint_3 的真值是 **±3.1**，比我用的 −3.0~1.4 宽 1.7 rad，
+所以 `transport_probe` 那张可达域图确实偏悲观 —— 这条结论不变。
 
-| 关节 | 我的位置限位 | 厂商位置限位 | 我的速度 | 厂商速度 |
-|---|---|---|---|---|
-| torso_joint_1 | 0.0 ~ 1.4 | −0.04 ~ 1.5 | **6.0** | **1.8** |
-| torso_joint_2 | −2.3 ~ 0.0 | −2.3 ~ 0.06 | **6.0** | **1.8** |
-| torso_joint_3 | 0.0 ~ 2.3 | −0.4 ~ 2.3 | **6.0** | **1.8** |
-| torso_joint_4 | **−1.5 ~ 1.5** | **−1.2 ~ 1.2** | **6.0** | **1.8** |
-
-躯干速度宽 3.3 倍意味着 `optimized_velocity_scaling: 0.90` 跑满的"时间最优"轨迹，
-躯干段速度可达真机限位 3 倍，而 Gazebo 会老老实实按 URDF 执行、什么都不报。
-头部两关节完全一致（±1.57 / ±1.22，速度 4.0）。
 
 ### B.2 TCP 差 0.15 m —— ⚠️ Gate 1 仍需处理
 
@@ -397,26 +501,38 @@ SDK 的 tool 是法兰再往 **−y 0.15 m**。两个都没错，但不是同一
 顺带解释了之前那轮"TCP 嵌进腕部碰撞球"的排查：真机 TCP 离法兰 0.15 m，
 本来在球外面，**那个问题只存在于我的模型里**。
 
-### B.3 夹爪缺失 —— ⚠️ Gate 1 仍需处理，且风险升级
+### B.3 夹爪缺失 —— ⚠️ Gate 1 仍需处理（风险已解除）
 
-见决策 D4。本决策下新增了"MuJoCo 可能装的是 BrainCo 灵巧手"这一未确认项。
+见决策 D4：前提已定、MuJoCo 侧已实测自洽、耦合关系已抄出。
+剩下的纯粹是实现工作，不再有未知。
 
 ### B.4 底盘表示法不同 —— ✅ 本决策下消失
 
 我：4 个真实轮关节 + `/cmd_vel` Twist。
-厂商：3 个虚拟关节 `chassis_x/y/z_rot`，**位置**指令，SLAM 世界系，100 Hz，
-最大速度 `[1.0, 1.0, 2.0]`。导航退出范围后不再需要桥接。
+厂商 yaml：3 个虚拟关节 `astribot_chassis_x/y/z_rot`，**位置**指令，
+SLAM 世界系，100 Hz，最大速度 `[1.0, 1.0, 2.0]`。
+MuJoCo 里两套并存（4 轮 + 3 虚拟，虚拟侧是 `position` 执行器）。
+导航退出范围后不再需要桥接。
 
-### B.5 左臂基座姿态疑点 —— ✅ 本决策下消失（仍在 Gate 0 顺带定掉）
+> 顺带记一个命名差异：MuJoCo 里是 `astribot_chassis_zrot`，
+> 厂商 yaml 里是 `astribot_chassis_z_rot` —— **少一个下划线**。
+> 底盘已出范围，但同类差异可能出现在别处，Gate 0 应扫一遍全表。
+
+### B.5 左臂基座姿态疑点 —— 仍待 Gate 0 用 FK 定掉
 
 | 来源 | xyz | rpy |
 |---|---|---|
-| 我的 URDF | 0, 0.06449, 0.02348 | 0, **−1.22173, 0** 后接 −1.5707963 |
-| 厂商 yaml `weld_to_base_pose` | 0, 0.06449, 0.02348 | **−1.22173, 0**, −1.5707963 |
+| 我的 URDF `arm_left_base_fixed_joint` | 0, 0.06449, 0.02348 | 0, −1.22173, −1.5707963 |
+| 厂商 yaml `weld_to_base_pose` | 0, 0.06449, 0.02348 | −1.22173, 0, −1.5707963 |
 
 平移完全一致，rpy 前两位对调。`weld_to_base_pose` 后 3 位的旋转约定
-**未从源码确认**，只是按最常见约定读的。改用厂商模型后此项自动消失，
-但 Gate 0 的 FK 比对仍应顺带验证——它是"两套模型到底哪套可信"的直接证据。
+**未从源码确认**，只是按最常见约定读的。
+
+注意这一项**不会**因为 Gate 1 换成 per-part URDF 而自动消失：
+per-part 的 `astribot_arm_left.urdf` 是**单臂**模型，
+它的根就是臂基座，臂如何焊到躯干末端只写在 yaml 的 `weld_to_base_pose` 里。
+所以这个数必须单独核对 —— Gate 0 的 FK 比对是唯一可靠手段。
+
 
 ---
 
