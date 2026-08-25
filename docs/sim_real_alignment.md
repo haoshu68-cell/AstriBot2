@@ -507,13 +507,85 @@ D4 表里的耦合比例经 MJCF `<equality>` 原文核对，**完全正确**：
 Gazebo 侧右指比 MoveIt 认为的少闭合约 15%。当前 `transport` 没有夹取/attach 动作，
 不依赖 Gazebo 接触物理，所以不进入结论 —— 但要做夹持力/接触实验前必须先解决。
 
-### Gate 2 · 桥接骨架（只读）
+### Gate 2 · 桥接骨架（只读）—— 🟡 代码就绪，在线验证被依赖缺失卡住
 
 `astribot_trajectory_bridge` 先只做状态方向：SDK 读状态 → 发 `/joint_states`。
 暂不接受任何轨迹。
 
-> **通过标准**：`/joint_states` 与 SDK `get_current_joints_position()` 逐关节一致；
-> RViz 里模型姿态与 MuJoCo 画面一致。
+| 项目 | 状态 |
+|---|---|
+| `state_bridge_node` | ✅ 写完、能构建、无后端时按设计"响亮失败" |
+| `config/bridge.yaml` 映射表 | ✅ 6 个部件 / 22 个主动关节 |
+| 离线一致性测试（9 条） | ✅ 全过，经注入故障验证非空跑 |
+| `joint_map_probe`（顺序探针） | ✅ 写完，**未运行**（需后端）|
+| `/joint_states` 与 SDK 逐关节比对 | ⛔ **未做** |
+
+> **通过标准（不变）**：`/joint_states` 与 SDK `get_current_joints_position()`
+> 逐关节一致；RViz 里模型姿态与 MuJoCo 画面一致。
+
+**⛔ 阻塞点：SDK 缺 `tf_transformations`，且该模块不在 PyPI 上。**
+
+```
+File "astribot_function.py", line 12, in init astribot_function
+ModuleNotFoundError: No module named 'tf_transformations'
+```
+
+不是桥接的问题 —— 直接跑厂商 `examples/101-get_joint_states.py` 报同一个错。
+只能 `sudo apt install ros-humble-tf-transformations`，而本机 sudo 需要密码。
+
+**刻意没做的事**：没有自己写一个兼容模块糊上去。那涉及四元数/欧拉角的顺序约定，
+我的实现与真实实现只要有一处约定不同就会**静默**产出错误位姿，
+而这类错误在 `/joint_states` 层面完全看不出来。
+
+#### 设计要点（三条硬边界）
+
+1. **不申请控制权**（`sdk_high_control_rights: false`）—— 只读方向的物理边界：
+   没有控制权，即使桥接有 bug 也动不了机器人。配置层与代码层各一道检查。
+2. **只发 22 个主动关节**。夹爪每侧 6 个关节里只有 `joint_L1` 主动，
+   另外 5 个 mimic 从动关节由 `robot_state_publisher` 算。桥接也发就成了
+   同一自由度两个来源，两边算法一有出入就出现无法解释的姿态抖动
+   （Gazebo 侧那 7.8° 稳态误差正是这类出入）。
+3. **读不到状态就退出，绝不发陈旧值** —— 陈旧关节角会被 MoveIt 当规划起点。
+
+#### 顺序为什么必须"探"而不能"读"
+
+SDK 的 `get_current_joints_position(names)` 返回**按部件成组的裸数组**，
+第 i 个数对应哪个物理关节，SDK 没有任何地方声明；核心是编译好的
+`astribot_function.so`，**读代码得不到答案**。
+顺序错了的后果很隐蔽：话题格式完全正常、RViz 里机器人也在动，只是姿态是错的。
+
+`joint_map_probe` 的判据是**限位指纹**：臂 7 个关节限位互不相同
+（−3.1/3.1、−1.53/0.46、±3.1、−0.06/2.61、±2.56、±0.76、±1.53），
+所以"按 `bridge.yaml` 顺序从 URDF 取的限位向量"必须与"SDK 返回的限位向量"逐项相等。
+两边数据来源完全不同（URDF 展开 vs SDK 运行时）却本该指向同一台机器 ——
+判据不依赖我的假设。Gate 1 的 `test_joint_limits_parity.py` 保证"限位对"，
+本探针用"限位对"反推"顺序对"，两条测试是串起来的。
+
+判据边界（探针自己会报）：限位相同的关节之间区分不了。躯干四关节可判定；
+头部两关节若限位相同则报"不可判定"，而不是假装通过。
+
+#### 顺带修掉一个会吞掉所有日志的坑
+
+厂商 SDK 一被 import 就把**整个进程**的 fd 1/2 重定向到 `/dev/null`
+（`astribot_interface.py` 顶部 `quiet` 分支用 `os.dup2`）。本意是掩底层 C 库刷屏，
+但 `os.dup2` 是进程级的，连带吞掉本节点的 ERROR —— "响亮失败"这条设计彻底失效：
+失败了，但没人看得见。实测不设 `ASTRIBOT_LOG` 时节点连不上后端会静默退出
+（除 `Exited with failure 1` 一个字都没有）。
+桥接在 import SDK **之前**就置上 `ASTRIBOT_LOG=1`，不依赖运维记得 export。
+
+#### 环境：domain 号不一致
+
+厂商 `env.sh` 设 `ROS_DOMAIN_ID=25`，而本仓库 ROS2 栈其它部分用 **42**。
+桥接/后端/`robot_state_publisher`/RViz 必须同 domain，否则表现为
+"节点都在但话题一个都收不到"。
+
+#### 仿真后端依赖（最小增量，numpy 全程未动）
+
+厂商 `install_mujoco_noconda.sh` **不建议整个跑**：它会
+`pip install numpy==1.22.4` / `setuptools==64.0.0` 并往 `~/.bashrc` 追加两行。
+按最小增量实装：`mujoco==3.2.5` `glfw` `imageio` `gymnasium==1.1.1`
+`open3d`（`simu_common_tools.py:15` 模块级 import，躲不开）`tabulate`，
+numpy 全程保持 **1.21.5**。剩下的就是那个只能 apt 的 `tf_transformations`。
 
 ### Gate 3 · 桥接写通路（D2 + D3）
 

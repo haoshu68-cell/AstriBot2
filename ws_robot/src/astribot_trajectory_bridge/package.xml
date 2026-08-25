@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_trajectory_bridge</name>
+  <version>0.1.0</version>
+  <description>
+    厂商 SDK 与 ROS2 规划栈之间的唯一桥接层（仿真-实物对齐方案 Gate 2/3）。
+
+    Gate 2（本次）只做**状态方向、只读**：
+    用厂商 SDK 的 astribot_client.Astribot 按部件读关节状态，展开成逐关节的
+    sensor_msgs/JointState 发到 /joint_states，让 MoveIt/RViz 看到的机器人
+    就是 SDK 看到的机器人。不接受任何轨迹、不下发任何指令。
+
+    这一层同时是整条链路上**唯一的单位/命名换算点**：
+    厂商侧是按部件成组的浮点数组（夹爪还是 0~100 的抽象量），
+    ROS2 侧是逐关节命名的弧度值。上层业务只见 MoveIt 的关节名与弧度，
+    厂商接口只见部件名与它自己的量纲，两边都不需要知道对方的表示法。
+  </description>
+  <maintainer email="dev@astribot.local">astribot-dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
