@@ -10,6 +10,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <algorithm>
 #include <array>
@@ -71,6 +72,12 @@ PointcloudSliceScanNode::PointcloudSliceScanNode(const rclcpp::NodeOptions & opt
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, true);
   tf_buffer_->setUsingDedicatedThread(true);
 
+  const std::string filtered_topic = get_parameter("filtered_cloud_topic").as_string();
+  if (!filtered_topic.empty()) {
+    // QoS 与点云输入一致(BEST_EFFORT)：这是高频传感器数据，可靠传输只会堆积延迟。
+    filtered_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
+      filtered_topic, rclcpp::SensorDataQoS());
+  }
   scan_pub_ = create_publisher<sensor_msgs::msg::LaserScan>(
     output_scan_topic_, rclcpp::SensorDataQoS());
   if (publish_markers_) {
@@ -143,6 +150,13 @@ void PointcloudSliceScanNode::declareParameters()
     "invalid_input_policy", "hold_last",
     describe("输入无效时的策略: hold_last=重发上一帧, stop_output=停止输出"));
 
+  declare_parameter<std::string>(
+    "filtered_cloud_topic", "~/cloud_self_filtered",
+    describe(
+      "剔除自身点后的点云话题。空字符串=不发布。"
+      "存在的意义是让**其它**消费者(如给 SLAM 出单层 /scan 的 "
+      "pointcloud_to_laserscan)复用同一套自身点剔除，而不是各自再实现一遍 —— "
+      "自滤实现一分叉就会出现'一条链干净另一条脏'的情况，实测吃过这个亏"));
   declare_parameter<bool>("publish_markers", true, describe("是否发布调试 Marker"));
   declare_parameter<int>("marker_point_stride", 3, describe("Marker 点抽稀步长，1=全部发布"));
 
@@ -694,6 +708,7 @@ bool PointcloudSliceScanNode::processCloud(
 
   // ---- 7) 输出 ----
   publishScan(result, stamp);
+  publishFilteredCloud(kept, stamp);
   if (publish_markers_) {
     publishSliceMarkers(kept, self_points, capsules, stamp);
   }
@@ -735,6 +750,37 @@ void PointcloudSliceScanNode::publishScan(
     std::lock_guard<std::mutex> lock(last_scan_mutex_);
     last_valid_scan_ = scan;
   }
+}
+
+void PointcloudSliceScanNode::publishFilteredCloud(
+  const std::vector<SlicePoint> & kept, const rclcpp::Time & stamp)
+{
+  if (!filtered_cloud_pub_) {
+    return;
+  }
+  // 只搬 xyz：下游（pointcloud_to_laserscan）只用 xyz，多带强度/时间戳字段
+  // 除了增加带宽没有别的作用。
+  sensor_msgs::msg::PointCloud2 msg;
+  msg.header.stamp = stamp;
+  msg.header.frame_id = base_frame_;
+  msg.height = 1;
+  msg.width = static_cast<uint32_t>(kept.size());
+  msg.is_dense = true;
+  msg.is_bigendian = false;
+  sensor_msgs::PointCloud2Modifier modifier(msg);
+  modifier.setPointCloud2FieldsByString(1, "xyz");
+  sensor_msgs::PointCloud2Iterator<float> it_x(msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> it_y(msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> it_z(msg, "z");
+  for (const SlicePoint & p : kept) {
+    *it_x = static_cast<float>(p.x);
+    *it_y = static_cast<float>(p.y);
+    *it_z = static_cast<float>(p.z);
+    ++it_x;
+    ++it_y;
+    ++it_z;
+  }
+  filtered_cloud_pub_->publish(msg);
 }
 
 void PointcloudSliceScanNode::republishLastScan()

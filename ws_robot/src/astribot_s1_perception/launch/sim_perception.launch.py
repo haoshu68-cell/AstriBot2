@@ -82,7 +82,18 @@ def generate_launch_description():
         output='screen',
         parameters=[p2l_params, {'use_sim_time': use_sim_time}],
         remappings=[
-            ('cloud_in', '/livox/fused_points'),
+            # !!! 订阅**已剔除自身点**的点云，不要订阅 /livox/fused_points !!!
+            # p2l 自己没有任何形状级自滤能力，只有 range_min。吃未过滤点云时，
+            # 机器人伸进扫描带 z∈[0.05,0.6] 且距离 >range_min 的自身部件会被当成
+            # 障碍物 —— 装上夹爪后实测指尖在 0.415m 处，/scan 因此出现 0.414m 回波，
+            # SLAM 把它烙进 /map，最终每次全局规划都报
+            # "Starting point in lethal space!"，导航与探索彻底瘫掉。
+            # 自滤只在 pointcloud_slice_scan_node 里实现一次，这里复用它的输出，
+            # 避免两条链各自实现、各自漂移。
+            #
+            # 代价：多依赖一个节点。若 slice 节点没起来，这个话题就没有发布者，
+            # /scan 会静默地一帧都不出 —— 比"出脏数据"好，但要知道这个依赖存在。
+            ('cloud_in', '/livox/cloud_self_filtered'),
             ('scan', '/scan'),
         ],
     )

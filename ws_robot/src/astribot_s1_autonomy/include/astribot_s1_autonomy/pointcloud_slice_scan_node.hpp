@@ -95,6 +95,8 @@ private:
   // ---------------- 输出 ----------------
   void publishScan(const ProjectionResult & result, const rclcpp::Time & stamp);
   /// 重发上一帧（仅刷新时间戳），用于 kHoldLast 策略。
+  void publishFilteredCloud(
+    const std::vector<SlicePoint> & kept, const rclcpp::Time & stamp);
   void republishLastScan();
   void publishSliceMarkers(
     const std::vector<SlicePoint> & kept_points,
@@ -135,6 +137,9 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_sub_;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+  // 剔除自身点后的点云。让给 SLAM 出单层 /scan 的 pointcloud_to_laserscan
+  // 复用同一套自滤，而不是各自实现一遍（自滤一分叉就会一条链干净一条脏）。
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_cloud_pub_;
   rclcpp::TimerBase::SharedPtr watchdog_timer_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

@@ -25,6 +25,21 @@
     # 输入用双雷达融合后的点云（livox_fusion_node 的输出）
     input_cloud_topic: "/livox/fused_points"
     output_scan_topic: "/scan_from_cloud"
+    # 剔除自身点后的点云。给 SLAM 出单层 /scan 的 pointcloud_to_laserscan 订阅它，
+    # 而不是订阅未过滤的 /livox/fused_points。
+    #
+    # !!! 为什么必须共用同一份自滤输出（2026-08-20 实测出来的教训）!!!
+    # 自滤原来只在本节点内部做，/scan 那条链（pointcloud_to_laserscan）吃的是
+    # 未过滤的融合点云。Gate 1 装上夹爪后，夹爪成了**第一个**伸进 p2l 扫描带
+    # (z∈[0.05,0.6]) 且距离超过 range_min(0.35) 的机器人自身部件 ——
+    # 实测指尖在本体系 (0.062, 0.415, 0.618)，于是 /scan 在 ±90° 冒出 0.414m 回波。
+    # 手臂本身在 z=0.745、在带子上方，所以此前一直没暴露。
+    # 后果是 SLAM 把这个幻影障碍烙进 /map，全局代价地图的静态层再读进来，
+    # 机器人自己那格被膨胀成 INSCRIBED_INFLATED(99/253)，
+    # 每次全局规划都报 "Starting point in lethal space!"，
+    # 探索的前沿候选 5/5 全被"全局规划失败"丢弃，机器人一步不动。
+    # 只修本节点的自滤链**不够**：/scan_from_cloud 干净了，/map 还是脏的。
+    filtered_cloud_topic: "/livox/cloud_self_filtered"
     marker_topic: "~/debug_markers"
     base_frame: "astribot_torso_base"
 
@@ -161,7 +176,7 @@
         z_min: -0.20              # 盖到地面(-0.080)以下，确保轮子和底盘裙边都被剔掉
         z_max: 0.05               # 底盘上表面附近
 
-      chain_names: ["torso", "head", "arm_left", "arm_right"]
+      chain_names: ["torso", "head", "arm_left", "arm_right", "gripper_left", "gripper_right"]
 
       chains:
         # 躯干升降柱：从底盘原点一路到躯干末端
@@ -210,3 +225,50 @@
             - "astribot_arm_right_link_6"
             - "astribot_arm_right_link_7"
             - "astribot_arm_right_tool_link"
+
+        # ===== 夹爪（2026-08-20 新增，修一个实测出来的导航彻底瘫掉的回归）=====
+        #
+        # !!! 不加这两条链的后果：整个导航与自主探索完全不可用 !!!
+        # 上面两条臂链止于 *_tool_link，而 tool_link 与 link_7 **原点完全重合**
+        # （tool_joint 的 xyz 是 0 0 0），所以那条链实际上到 link_7 就结束了。
+        # Gate 1 给两臂装上真实夹爪之后，夹爪整体落在被剔除体积**之外**：
+        # 实测 astribot_gripper_left_Link_L11 在本体系 (0.062, 0.415, 0.618)，
+        # 而 /scan 与 /scan_from_cloud 在 ±90° 方向上出现 0.413m 的回波 ——
+        # 机器人把自己的指尖当成了障碍物。
+        #
+        # 连锁反应（现场看起来完全不像自滤问题）：
+        #   0.41m 处的障碍 -> 膨胀层把机器人**自己所在的格**标成
+        #   INSCRIBED_INFLATED(代价 99/253) -> 全局规划器每次都报
+        #     GridBased: failed to create plan, invalid use: Starting point in lethal space!
+        #   -> 探索协调器每一个前沿候选都被"全局规划失败"丢弃
+        #     （实测：原始前沿格 533、有效前沿块 2、候选 5 个，5/5 全丢）
+        #   -> 状态机在 GEN_NEXT_POINT <-> VALIDATING 之间空转，机器人一步不动。
+        # 症状指向"前沿点选得不好"，根因却在"点云自滤没跟上 URDF 的变化"。
+        #
+        # radius 0.10 是从几何算出来的，不是估的：逐个 link 量碰撞几何顶点到该 link
+        # 原点的最大距离（含 collision origin 偏移与旋转），实测
+        #   gripper_base 0.0911 / Link_L11 0.0676 / Link_R11 0.0676
+        #   Link_L2 0.0547 / Link_R2 0.0547 / arm_link_7 0.0560
+        # 取最大值 0.0911 再留约 1cm 余量 -> 0.10。
+        #
+        # frames 里同时列 L11 与 R11 两个指尖：两点之间的扫掠球会把**指缝**也一起
+        # 剔掉。这是有意的取舍 —— 导航时两臂是收起的，指缝里不会有需要看见的障碍；
+        # 而少剔一点的代价是整个规划瘫掉（就是上面这个回归）。
+        # 将来要做"边走边抓"时需要重新评估这一条。
+        gripper_left:
+          radius: 0.10
+          frames:
+            - "astribot_arm_left_link_7"
+            - "astribot_gripper_left_base"
+            - "astribot_gripper_left_Link_L11"
+            - "astribot_gripper_left_Link_R11"
+            - "astribot_arm_left_tcp_link"
+
+        gripper_right:
+          radius: 0.10
+          frames:
+            - "astribot_arm_right_link_7"
+            - "astribot_gripper_right_base"
+            - "astribot_gripper_right_Link_L11"
+            - "astribot_gripper_right_Link_R11"
+            - "astribot_arm_right_tcp_link"
