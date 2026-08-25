@@ -102,17 +102,35 @@ cmd_vel 常见的车体系语义。Nav2 的标准控制器（RPP/MPPI/DWB）全�
 工作，第一件事就是看机器人是不是真的在平移，不是原地打转**——如果只打转，先查这个
 转换节点是不是真的在跑（`ros2 node list | grep cmd_vel_body_to_world`）。
 
-### 4.3 不跑 map_server / amcl
+### 4.3 什么时候不跑 map_server / amcl（有条件，不是绝对）
 
-SLAM Toolbox 在 mapping（在线建图）和 localization（预加载 posegraph 定位）两种
-模式下都会自己发布 `/map` 和 `map -> odom` TF。再跑一套 `map_server`+`amcl`
-会跟它抢着发布/消费 `map -> odom`，产生冲突。Nav2 侧只启
+**这条规则的适用条件是"slam_toolbox 在跑"。** SLAM Toolbox 在 mapping（在线建图）和
+localization（预加载 posegraph 定位）两种模式下都会自己发布 `/map` 和
+`map -> odom` TF，这时再跑一套 `map_server`+`amcl` 会跟它抢着发布/消费
+`map -> odom`，产生冲突。Nav2 侧只启
 `controller_server`/`smoother_server`/`planner_server`/`behavior_server`/
 `bt_navigator`/`waypoint_follower`/`velocity_smoother`（照抄官方
 `nav2_bringup/launch/navigation_launch.py` 的节点结构，不用 `bringup_launch.py`），
 全局代价地图的 `static_layer` 直接订阅 `/map`。
 
-**已实测验证两种模式都能跑通**：模式1（`mode:=mapping`）建图+导航同时进行，
+**但地图来自外部时（`map_source=real_file` / `real_live`）slam_toolbox 不启动**，
+于是不存在抢发布权的问题，这时**就是**由 map_server 提供 `/map`：
+
+| `map_source` | `/map` 提供者 | `map -> odom` 提供者 |
+|---|---|---|
+| `sim_slam` | slam_toolbox（在线建图） | slam_toolbox（扫描匹配） |
+| `real_file` | `nav2_map_server`（+ lifecycle_manager） | 静态 TF（`localization: ground_truth`） |
+| `real_live` | `map_domain_relay`（跨机中继） | 静态 TF（同上） |
+
+三种组合里 `/map` 与 `map -> odom` **各自都只有一个发布者**，这是配置校验强制的
+（见 `astribot_s1_perception/config/map_source.yaml` 与
+`map_provider.launch.py`：非法组合在启动时就被拒绝，比如 `sim_slam + ground_truth`
+会让 slam_toolbox 和静态 TF 同时发 `map -> odom`）。
+
+代价地图侧一行都不用改：`static_layer` 本来就是 `map_subscribe_transient_local: True`，
+对 latched `/map` 的三种来源都适用。
+
+**已实测验证两种 slam_toolbox 模式都能跑通**：模式1（`mode:=mapping`）建图+导航同时进行，
 实测确认无 amcl/map_server 节点、Nav2 全部生命周期节点 active、`/scan`→
 costmap→规划链路正常。模式2（`mode:=localization`）先用模式1跑一段建好图、
 调用 `/slam_toolbox/serialize_map` 存盘，重启为 `mode:=localization
@@ -131,20 +149,44 @@ map_file_name:=<刚存的文件>` 后，日志确认 "Load From File...posegraph
 运动），用 `controller_plugin:=rpp|mppi` 一键切换。**推荐实际使用 mppi**。
 全局规划器统一用 `SmacPlanner2D`（栅格搜索，不强加非全向运动约束）。
 
-### 4.5 机械臂展开限速——启发式，不是精确碰撞检测
+### 4.5 机械臂展开限速——判据已换成水平伸展（C1 修正）
 
-`arm_speed_limiter_node` 检查双臂14个关节角相对"收纳姿态"参考值(`folded_reference_rad`
-参数，默认全0，**部署前需要按实际收纳姿态重新核对这组数值**)的最大偏差，超过阈值
-(默认0.5rad)就通过 Nav2 官方的 `/speed_limit`(`nav2_msgs/msg/SpeedLimit`) 机制把
-`velocity_smoother` 限速到50%。这是"关节明显偏离收纳姿态→保守降速"的粗粒度安全阀，
-**不知道机械臂末端在三维空间里到底伸到哪个位置、离最近障碍物多远**，不能替代真正的
-全身碰撞检测。更精确的方案是用 `nav2_collision_monitor` 订阅机械臂末端 TF 动态改变
-碰撞多边形，本方案没有做，留作后续可扩展点。
+`arm_speed_limiter_node` 通过 Nav2 官方的 `/speed_limit`(`nav2_msgs/msg/SpeedLimit`)
+机制把 `velocity_smoother` 限速到 50%。**判据在 C1 里换过一次，原来的判据是错的**：
 
-**已实测验证**：给 `arm_left_controller` 发一条把 joint_2 转到 -1.2rad 的轨迹后，
-`arm_speed_limiter_node` 日志打出"检测到机械臂展开(最大关节偏差 0.50 rad > 阈值)，
-限速到 50%"，轨迹执行完机械臂回到收纳姿态附近后又打出"机械臂已收纳，解除限速"——
-状态切换逻辑实测正确，不是只在纸面上写了逻辑没跑过。
+| | 修正前 | 修正后 |
+|---|---|---|
+| 判据 | 14 个关节角相对全 0 参考姿态的最大偏差 > 0.5 rad | 监控连杆相对 `astribot_torso_base` 的**水平伸展** > 0.64 m |
+| 参数 | `folded_reference_rad` / `extended_threshold_rad` | `extended_reach_m` / `extended_reach_hysteresis_m` |
+| 位姿来源 | `/joint_states` | TF（即 URDF/`robot_state_publisher`） |
+
+**为什么换**（实测取证，完整数据在 `astribot_s1_dynamics_coupling/README_DYNAMICS_COUPLING.md` §8）：
+旧判据与真实伸展**反相关**。全 0 姿态（原来当"收纳基准"）实际是肘部完全伸直、水平
+伸展 0.4205 m 的姿态，偏差为 0 → 判"已收纳"；而肘部折回的真实收纳姿态伸展只有
+0.3532 m，偏差 2.4 rad → 判"展开"、限速 50%。全工作空间采样 4000 次更直接：最大伸展
+0.8865 m 时偏差 3.062，最小伸展 0.1997 m 时偏差 3.079——**偏差几乎相同，伸展差
+4.4 倍**，说明旧判据基本不携带伸展信息。后果是任何作业姿态都被恒定砍到 50%，再叠乘
+耦合节点的系数（实测触底 0.15），合计 0.075，把 `desired_linear_vel: 0.5` 压到约
+0.037 m/s（实测导航平均 0.031 m/s，对得上）。
+
+**阈值 0.64 的来历**（可解释的物理判据，不是调出来的）：
+
+```
+ 0.42   costmap robot_radius —— 机械臂开始伸出规划足迹的位置
++0.2163 支撑多边形边中点到回转轴的距离 —— 底盘自己的倾覆力臂
+=0.6363 → 取 0.64
+```
+
+本节点定位是**粗粒度 backstop**（耦合节点被 `enable_arm_chassis_coupling:=false`
+关掉、或崩溃重启期间兜底）；0.42~0.64 这一段的连续精细调速由
+`astribot_s1_dynamics_coupling` 负责，两个节点串联叠乘，不该重复计算同一个判据。
+带 `extended_reach_hysteresis_m: 0.03` 迟滞（触发 0.64、解除 0.61），避免伸展压在
+阈值上时 `SpeedLimit` 在 50%/100% 之间反复跳。
+
+**仍然如实说明这不是什么**：这仍然是**保守的单点判据**，只看几个监控连杆原点离回转
+轴多远，不知道机械臂离最近障碍物多远，不能替代全身碰撞检测。换判据修掉的是"判据与
+物理量反相关"这个错误，不是把它升级成了完整解。另见 §4.7 关于**限速不缩小碰撞包络**
+的更正。
 
 ### 4.6 代价地图 obstacle_layer 复用 `/scan`，不重新做点云处理
 
@@ -152,11 +194,20 @@ map_file_name:=<刚存的文件>` 后，日志确认 "Load From File...posegraph
 机身自撞) + 体素降采样 → 时间同步融合 → 2D投影）产出的 `/scan` 已经满足"降采样+
 距离截断+2D投影"的要求，直接作为 obstacle_layer 的观测源，不重新实现一套。
 
-### 4.7 足迹用圆形，不用多边形
+### 4.7 足迹用圆形，不用多边形；以及碰撞包络缺口（C1b，未实现）
 
-`astribot_torso_base` 碰撞体是半径0.3m的圆柱，4个轮子中心距原点约0.306m，costmap
-用 `robot_radius: 0.35`（覆盖轮子凸出部分+安全余量）。这个值**不包含双臂/头部展开时
-的真实包络**，那部分风险靠第4.5节的限速机制缓解。
+`astribot_torso_base` 碰撞体是半径 0.3m 的圆柱，4 个轮子中心距原点约 0.306m，costmap
+用 `robot_radius: 0.42`（真实底盘外接半径 0.386m = 轮心离轴 0.306 + 轮球半径 0.080，
+取 0.42 留余量）。
+
+> **更正（C1，2026-08-25）**：这一节原来写"双臂/头部展开时的真实包络……那部分风险靠
+> 第4.5节的限速机制缓解"，**这句是错的——限速只降低速度，完全不缩小碰撞包络**。
+> `nav2_params_rpp.yaml` 里同样口径的注释也一并更正了。
+>
+> 实测（URDF 全工作空间采样）机械臂水平伸展**最大可达 0.8865 m，比 `robot_radius`
+> 0.42 多伸出 0.47 m**，这部分是规划器彻底看不见的真实碰撞风险，限速一点也没减少它。
+> 正确机制是姿态相关的动态足迹（`nav2_collision_monitor` 订阅机械臂 TF 实时改
+> footprint），**立项为 C1b，本次未实现**，如实标为未解决，不再声称已被限速缓解。
 
 ### 4.8 【实测踩坑记录，最终定位到真正根因】"Starting point in lethal space" ——
 不是出生点旁真有障碍物，是自身检测的一个新缺口

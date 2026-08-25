@@ -34,6 +34,8 @@ setup(
             'livox_preprocess_node = astribot_s1_perception.livox_preprocess_node:main',
             'livox_fusion_node = astribot_s1_perception.livox_fusion_node:main',
             'autonomous_patrol_node = astribot_s1_perception.autonomous_patrol_node:main',
+            'map_domain_relay = astribot_s1_perception.map_domain_relay:main',
+            'map_start_cell_check = astribot_s1_perception.map_start_cell_check:main',
         ],
     },
 )

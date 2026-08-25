@@ -4,21 +4,46 @@
 # (数值更大、更接近1.0)的一个作为最终活跃度，再换算成限速系数——宁可保守，不做
 # 加权平均掩盖掉某一个维度的剧烈运动。
 #
-# !!! 部署/调参提醒 !!!：folded_reference_rad 是双臂14个关节的"收纳姿态"参考角度
-# (跟 astribot_s1_navigation 包里静态限速节点用的是同一套关节命名规范，但两份
-# 参数完全独立维护，不共享)，默认全0，换了机器人的默认收纳姿态要重新核对。
-# extension_full_rad / velocity_full_rad_s 这两个"满量程"阈值也要结合实际机械臂
-# 尺寸/使用场景调整：调得太小会导致轻微动作就大幅限速(过度保守)，调得太大则起不到
-# 保护作用。
+# !!! C1 修正(2026-08-25)：展开度量已从"关节角偏差"换成"水平伸展(m)" !!!
+# 旧的 folded_reference_rad/extension_full_rad 只在 extension_metric 切回
+# joint_deviation 时才生效，保留它们纯粹是为了 A/B 回归对比和一键回退。
+# 换度量的实测依据(全部由活的 URDF 采样得到，不是估的)：
+#   * 全0姿态(原来当"收纳基准")实际水平伸展 0.4205m、肘部完全伸直，却因偏差=0 而
+#     完全不限速；肘部折回的真实收纳姿态伸展仅 0.3532m，反而被限到系数下限；
+#   * 全工作空间采样 4000 次：最大伸展 0.8865m 时关节偏差 3.062，最小伸展 0.1997m
+#     时关节偏差 3.079——偏差几乎相同，伸展差 4.4 倍，说明旧度量不携带伸展信息。
+# 倾覆余量重算(支撑多边形边中点 0.2163m、整机 78.595kg、质心 z=0.4321m)见本包 README。
 arm_chassis_speed_coupling_node:
   ros__parameters:
     input_topic: /cmd_vel_pre_arm_coupling
     output_topic: /cmd_vel
     joint_states_topic: /joint_states
+
+    # ---- 展开维度：水平伸展度量(默认) ----
+    extension_metric: "horizontal_reach"   # horizontal_reach | joint_deviation
+    chassis_base_frame: "astribot_torso_base"   # 底盘回转轴所在 frame，本机无 base_link
+    monitored_links:
+      - "astribot_arm_left_tcp_link"
+      - "astribot_arm_right_tcp_link"
+      - "astribot_gripper_left_Link_L11"
+      - "astribot_gripper_right_Link_R11"
+    # 低于此伸展量记 0 活跃度。取值 = Nav2 的 robot_radius(0.42)：机械臂还在底盘
+    # 足迹以内时规划器已经把它算进去了，不需要额外限速。
+    reach_folded_m: 0.42
+    # 达到此伸展量活跃度封顶 1.0。取值 = 实测全工作空间最大水平伸展 0.8865m，
+    # 让活跃度铺满真实动态范围。想更保守就往小调(越小越早开始限速)。
+    reach_full_m: 0.8865
+    reach_update_period_sec: 0.05   # TF 查询节流(20Hz)，机械臂运动远慢于此
+
+    # ---- 展开维度：旧的关节偏差度量，仅 extension_metric=joint_deviation 时生效 ----
     folded_reference_rad: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     extension_full_rad: 1.2
+
+    # ---- 运动速率维度：C1 没有改动这一维 ----
+    # 手臂高速运动时的反作用力矩是独立且合理的约束，跟"参考姿态"无关。
     velocity_full_rad_s: 2.0
+
     min_speed_scale: 0.15
     scale_smoothing_alpha: 0.25
     joint_state_timeout_sec: 0.5

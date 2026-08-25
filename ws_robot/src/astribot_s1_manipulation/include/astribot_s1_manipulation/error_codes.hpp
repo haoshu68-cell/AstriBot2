@@ -73,6 +73,26 @@ enum class PlanErrorCode : std::int32_t
   /// 轨迹突破关节速度/加速度硬限位。
   kJointLimitViolation = 31,
 
+  // ---- 夹爪动作类 ----
+  // 夹爪不走 OMPL，但失败同样必须带原因：调用方对"控制器根本不在"和
+  // "控制器在、但夹爪没合到位"要采取完全不同的动作（前者是配置/启动问题，
+  // 后者可能是夹到了东西或 PID 没收敛）。
+  /// 夹爪控制器的 FollowJointTrajectory action 服务端不存在或等待超时。
+  kGripperActionUnavailable = 40,
+  /// 夹爪目标被控制器拒绝（关节名不匹配、控制器未 active 等）。
+  kGripperGoalRejected = 41,
+  /// 等夹爪结果超时（控制器接了目标但没在时限内返回）。
+  kGripperTimeout = 42,
+  /// 控制器报完成，但实测关节值与目标偏差超阈值。
+  ///
+  /// 为什么必须单独判这一项：JTC 的 SUCCEEDED 只代表它自己的容差满足，
+  /// 实测过"控制器报完成时手臂还在收敛"。夹爪没合到位却继续往下走，
+  /// 会得到"attach 了但其实没夹住"的假成功。
+  kGripperNotConverged = 43,
+  /// 目标抓取宽度超出夹爪量程（张口最大值以上，或闭合极限以下）。
+  /// 这是确定性结论：重试无意义，必须改物体尺寸或换夹爪。
+  kGraspWidthUnreachable = 44,
+
   /// 捕获到第三方库抛出的异常（已记录日志，不再上抛）。
   kExceptionCaught = 90,
 };

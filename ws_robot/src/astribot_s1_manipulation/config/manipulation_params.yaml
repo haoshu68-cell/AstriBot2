@@ -337,9 +337,12 @@ planning_demo_node:
       # 物体顶面在 TCP 前方 0.09m 而指尖只伸出 0.08m，两指够不到，
       # 规划和执行都会"成功"然后在物体上方闭合到空气里。
       transport_grasp_z_offset: 0.10
-      # 净空余量。旧含义是"腕部碰撞球与物体顶面之间的净空"（腕部半径由 URDF 现算，
-      # 不含在这个数里）。新的 TCP/碰撞模型下这个量的定义待重新推导，见上。
-      transport_clearance_margin: 0.02
+      # !!! 已删除 transport_clearance_margin !!!（2026-08-25）
+      # 旧含义是"腕部碰撞球与物体顶面之间的净空"，属于**下限**概念。
+      # 下限现在整体交给逐点碰撞校验把关（比一个标量余量准确得多：物体自下往上顶时
+      # 真正先撞到的是横向与物体重叠的那块几何，不是"最远距离"能表达的），
+      # 于是这个参数变成了读进来却没人用的死旋钮 —— 留着只会让人误以为调它有效。
+      # 上限由 endEffectorSpan() 现算的指尖伸出量决定，也不需要这个余量。
 
       # ---------------- transport_probe 选点体检 ----------------
       # scenarios 里加 transport_probe 就只扫点、不动机器人，出一张
@@ -381,19 +384,49 @@ planning_demo_node:
       mobile_transport_map_frame: "map"
       mobile_transport_nav_action: "/navigate_to_pose"
       mobile_transport_plan_action: "/compute_path_to_pose"
-      # 导航目标（map 系）。这个点是实测挑的，不是随便取的：
-      #   净空 1.65m（distance_transform_edt 实测），在 MPPI 足迹代价饱和阈值
-      #   1.62m 之上 —— 刻意避开已知的"窄通道里代价恒为 253、零梯度"问题；
-      #   已用 ComputePathToPose 预检可达（SUCCEEDED）。
-      # 换点时务必重新确认这两件事，否则会得到一个"机器人走不动"的假结论。
-      mobile_transport_nav_goal_xy: [0.995, 1.712]
-      # 目标朝向(rad)。沿用起始朝向，省掉一次没有意义的原地转身。
-      mobile_transport_nav_goal_yaw: -1.673
+      # 导航目标（map 系）。这个点是实测挑的，不是随便取的。
+      #
+      # !!! 2026-08-25 重标定 !!! 旧值 [0.995, 1.712] yaw=-1.673 已作废。
+      # 旧值是在**旧地图**上挑的。现在这张图是自主探索跑出来的
+      # （ws_robot/maps/warehouse_explored_auto，探索自然终止于 80.1% 覆盖：
+      #  剩余 366 个前沿格产生的 23 个候选点全部因"净空半径 0.25m 内有占据栅格"
+      #  被淘汰，即剩下的都在货架缝隙里、机器人没有合法站位）。
+      # 换图不换点就是假前提 —— 目标点在新图上可能落在未知区或障碍里。
+      #
+      # 新值的两项实测依据（换点时这两件事都必须重做）：
+      #   1. 离线净空 3.75m —— 全图最开阔处，远高于 MPPI 足迹代价饱和阈值 1.62m，
+      #      刻意避开已知的"窄通道里代价恒 253、零梯度"问题。
+      #      判据与探索器的目标校验对齐：站位本身是已知自由格，且半径内无占据格。
+      #   2. ComputePathToPose 预检：状态码 4(SUCCEEDED)，路径 140 点 / 7.31m。
+      # yaw 取 0.0：定位模式下机器人从 map 原点、朝向 0 起步，沿用起始朝向，
+      # 省掉一次没有意义的原地转身。A/B 取放点是体系坐标，与底盘朝向无关。
+      mobile_transport_nav_goal_xy: [-0.995, -2.425]
+      mobile_transport_nav_goal_yaw: 0.0
       mobile_transport_nav_timeout: 180.0
       # 下发导航前先用 ComputePathToPose 预检可达性。
       # !!! 正常运行别关 !!! 不预检时"目标本来就不可达"会表现成机器人挣扎很久后
       # ABORTED，看着像局部规划器走不动，排查方向完全错。留这个开关只为做对照实验。
       mobile_transport_verify_reachable: true
+      # 导航途中把手臂收到这个命名姿态（SRDF 的 group_state 名）。空串 = 不收臂。
+      #
+      # 为什么必须收臂（2026-08-25 实测）：不收臂时导航段 **ABORTED**，
+      # 耗时 176.7s、controller_server 连报 7 次 `Failed to make progress`。
+      # 根因不在 nav2：臂-底盘耦合节点按"展开幅度"限速，抬着物体的姿态被判成
+      # 展开度 1.00，限速系数直接落到下限 **0.15**（min_speed_scale）。
+      # 那个速度下 10s 走不满进度检查器要求的 0.5m（required_movement_radius），
+      # 于是判定卡住 -> 恢复行为 -> 用尽 -> 放弃。
+      # 表面症状是"局部规划器走不动"，真正的瓶颈在另一个包的限速策略里。
+      #
+      # 为什么现在**可以**收臂：物体已经 attach 到 TCP 上，位姿由正解决定，
+      # 手臂怎么动物体都跟着对。这在改用 attach 之前是做不到的 —— 那时物体用的是
+      # 体系固定坐标，一收臂物体就留在原地不动了（旧代码里专门留了一条注释说明
+      # 这个前提，见 planning_demo_node.cpp 的 mobile_transport 段）。
+      #
+      # 用 ready 而不是 home：home 是全零构型，肘部完全伸直、实测 sigma_min=0.0077，
+      # 是奇异位形，规划从那儿起步第一个点就被判奇异。
+      # 注意 ready 的限速系数实测也只有约 0.29（耦合节点拿全零构型当收纳基准，
+      # 这个基准本身不合理）—— 那是另一个包的问题，不在这里绕过。
+      mobile_transport_carry_pose: "ready"
       # 接近/离开时在抓取点上方留的高度。太小会让下降段与物体碰撞校验冲突。
       transport_approach_height: 0.10
       # TCP 姿态四元数 (x,y,z,w)。
@@ -420,6 +453,43 @@ planning_demo_node:
       # 满足这两条的旋转就是绕 x 转 +90°，对应四元数 (0.7071, 0, 0, 0.7071)。
       # 回代验证：接近轴映射到 [0,0,-1]，与竖直夹角 0.0°。
       transport_grasp_orientation_xyzw: [0.70710678, 0.0, 0.0, 0.70710678]
+
+      # ---------------- 夹爪 ----------------
+      # transport / mobile_transport 会真的开合夹爪，并把物体 attach 到 TCP 上。
+      #
+      # 这一段替换掉了以前的做法。以前是「抬起之后把物体在场景里从 A 传送到 B」——
+      # 那是**没有夹爪时代**的替代品，物体并不跟着手走，中途的避障用的是一个
+      # 已经不在那儿的障碍。现在物体真的挂在 TCP 上，碰撞检测把它当机器人的一部分。
+      #
+      # 边界要说清楚（写进日志，不靠读者推断）：
+      #   真的   —— 夹爪按指令开合（Gazebo 里真在动，主动关节实测零稳态误差）；
+      #             物体在**规划场景**里被 attach 到 TCP，规划器必须带着它绕障。
+      #   不是真的 —— Gazebo 里没有这个物体的刚体，不产生夹持力。
+      #             物理夹持另有两个未解决项：mimic 从动关节 7.79° 稳态误差、
+      #             指尖摩擦未标定，属于独立课题。
+      gripper_group: "gripper_left"
+      gripper_action: "/gripper_left_controller/follow_joint_trajectory"
+      # 开合角从 SRDF 这两个 group_state 读，**不在这里写角度值**。
+      # 任务禁止硬编码关节极限，而 0.0/0.93 正是夹爪的关节极限。
+      gripper_open_state: "open"
+      gripper_closed_state: "closed"
+      # 量张口用的两个指垫 link。
+      # 选 L11/R11 而不是 L2/R2：它们是远端指垫，真正与物体接触的是这两个。
+      # 实测（写在上面 transport_grasp_orientation 的推导里）：默认张开时
+      # L11 占 x∈[+0.055,+0.087]、R11 占 x∈[-0.075,-0.043]，
+      # 相向面间距 ≈ 0.098 m —— 这就是最大张口，0.06 m 的物体夹得下。
+      gripper_left_pad_link: "astribot_gripper_left_Link_L11"
+      gripper_right_pad_link: "astribot_gripper_left_Link_R11"
+      # 两指张合方向（TCP 系单位向量）。与 transport_grasp_orientation 的推导同源。
+      # 填错方向会被 GripperCommander 在 configure 阶段拦下（张口行程几乎为 0）。
+      gripper_jaw_axis_in_tcp: [1.0, 0.0, 0.0]
+      gripper_move_time: 1.2
+      # 控制器报完成后额外驻留多久再读稳态值。
+      # 不是保守起见随手加的：实测过「控制器报完成时还在收敛」。
+      gripper_settle_time: 0.8
+      gripper_converge_tolerance: 0.02
+      # 抓取预紧：闭合到「物体宽度 − 预紧」，让指垫压进去一点而不是刚好贴上。
+      gripper_grasp_preload: 0.004
 
       # 是否把规划出的轨迹真的下发执行（Gazebo 仿真里机器人会动起来）。
       # 首次验证建议 false，先看规划指标；确认无误后再开 true。

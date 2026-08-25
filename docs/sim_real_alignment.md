@@ -4,7 +4,10 @@
 >
 > 仿真用厂商 MuJoCo 环境，控制走 astribot_sdk，仿真与实物**由构造对齐**
 > （同一个 SDK、同一套 WBC，只有物理引擎不同）。
-> 移动作业能力（nav2 / SLAM / 探索 / mobile_transport 的导航段）退出范围。
+> 移动作业能力（nav2 / SLAM / 探索 / `mobile_transport` 的导航段）
+> ~~退出范围~~ —— **2026-08-25 已推翻，导航回到范围内，方案见 §7。**
+> 依据：真机有两颗 Livox（SDK `activate_lidar()`），底盘是完整全向
+> （`joint_types: [2,2,1]`）。原判断只对 MuJoCo 后端成立，不对目标系统成立。
 >
 > **前提（已定）：以 `examples/` 为准。** 示例与其他材料冲突时一律以示例为准。
 > 末端为**夹爪**：1 DOF，0~100 无量纲，100=全闭 / 0=全开。
@@ -99,15 +102,23 @@ SDK 面向 ROS 图工作，**它连的是"当前图上有谁"**。仿真是一�
 
 ### 退出范围（不删代码，停止维护）
 
-| 包 / 能力 | 原因 |
-|---|---|
-| `astribot_s1_navigation`（nav2） | MuJoCo 无 LiDAR、无场景、无导航集成 |
-| `astribot_s1_perception`（slam_toolbox） | 同上，且 SLAM 依赖 `/scan` |
-| `astribot_s1_autonomy`（探索协调器 / 多层切片） | 依赖 Livox 点云 |
-| `astribot_s1_chassis_effort_drive` | 底盘不再由我驱动 |
-| `astribot_s1_dynamics_coupling` | 臂-底盘耦合限速，无底盘即无意义 |
-| `astribot_s1_gazebo_bringup` | Gazebo 退场 |
-| `mobile_transport` 场景的导航段 | 退化为 `transport`（定点） |
+> **⚠️ 本表已被 2026-08-25 的决策部分推翻，见 §7。**
+> 导航**回到范围内**。下面这 6 个包里，除 `gazebo_bringup` 外全部重新成为主线；
+> 依据是：真机**有**两颗 Livox 雷达（SDK `activate_lidar()` +
+> `/livox/lidar_front` `/livox/lidar_back`），且底盘是完整全向
+> （`joint_types: [2,2,1]`），与我们仿真侧同构。
+> 原判断"MuJoCo 无 LiDAR 所以导航没意义"只对 MuJoCo 成立，不对真机成立 ——
+> 这是把"仿真后端的能力"误当成了"目标系统的能力"。
+
+| 包 / 能力 | 原因（已过时，保留以便追溯） | 现状 |
+|---|---|---|
+| `astribot_s1_navigation`（nav2） | MuJoCo 无 LiDAR、无场景、无导航集成 | ↩ 回到主线（§7） |
+| `astribot_s1_perception`（slam_toolbox） | 同上，且 SLAM 依赖 `/scan` | ↩ 回到主线（§7.4） |
+| `astribot_s1_autonomy`（探索协调器 / 多层切片） | 依赖 Livox 点云 | ↩ 回到主线（真机就是 Livox） |
+| `astribot_s1_chassis_effort_drive` | 底盘不再由我驱动 | ⏸ 仍退出：真机底盘吃位置指令，力矩闭环只用于 Gazebo |
+| `astribot_s1_dynamics_coupling` | 臂-底盘耦合限速，无底盘即无意义 | ↩ 回到主线，且升级为**前置项**（§7.7 第 1 条） |
+| `astribot_s1_gazebo_bringup` | Gazebo 退场 | ⏸ 仍退出（但作为已验证资产保留） |
+| `mobile_transport` 场景的导航段 | 退化为 `transport`（定点） | ↩ 保留完整的搬运→导航→放货 |
 
 > **建议只标记不删除。** 这些是已经跑通并有实测记录的资产
 > （探索建图 77.5% 自由 / 230.78 m²、四求解器横向验证、路径跟踪诊断节点）。
@@ -346,14 +357,14 @@ time:
   虚拟关节是 `position` 执行器（`kp` 20000/20000/5000），与 SDK 的
   `[x, y, theta]` 位置指令对得上。
 
-**剩余待测**（需要先装 MuJoCo 运行时）：
+**剩余待测**（2026-08-25 复测了环境，情况比原来写的好一些）：
 
-```bash
-sudo apt install git-lfs && git lfs install
-cd /home/yjh/WorkSpace/astribot_simulation
-git submodule foreach git lfs pull          # 网格资产在 LFS 里
-bash scripts/lite_install/install_mujoco.sh # 只装 MuJoCo，不装四个后端
-```
+环境现状实测：`mujoco 3.2.5` ✅ 已装、`numpy` 仍是 **1.21.5** ✅ 未被动过、
+网格资产 ✅ **已解析**（`left_base_link.STL` 2.5 MB 等，不是 LFS 指针文本），
+所以原来写的"仅缺 git-lfs"这条已经不成立 —— `git-lfs` 未装但也**不需要**了。
+
+真正卡住的是 SDK 自己起不来，见 Gate 2 的"阻塞点已经换了一个"：
+少一条 PYTHONPATH + 缺 `libdmumps_seq-5.4.so`。下面 5 项全部依赖它先通。
 
 1. **SDK 原样跑通性**（本决策的生死项）：跑 `examples/101`（读状态）、
    `103`（关节运动）、`107`（笛卡尔）。文档给的话题是
@@ -507,7 +518,107 @@ D4 表里的耦合比例经 MJCF `<equality>` 原文核对，**完全正确**：
 Gazebo 侧右指比 MoveIt 认为的少闭合约 15%。当前 `transport` 没有夹取/attach 动作，
 不依赖 Gazebo 接触物理，所以不进入结论 —— 但要做夹持力/接触实验前必须先解决。
 
-### Gate 2 · 桥接骨架（只读）—— 🟡 代码就绪，在线验证被依赖缺失卡住
+### Gate 1 后续 · 在自主探索地图上跑真实夹爪搬运 —— ✅ 已完成
+
+把「纯运动学演示」升级成「真开合夹爪 + 物体真 attach」，并且跑在**自主探索
+自己产出的那张地图**上（定位模式，不再建图）。
+
+**地图来源可追溯。** 探索是自然终止的，不是崩溃：剩余 366 个前沿格产生 23 个候选点，
+全部被"目标点净空半径 0.25 m 内存在占据栅格"淘汰 —— 剩下的 20% 都在货架缝隙里，
+机器人没有合法站位。状态机 `PAUSED → 3 次自动恢复 → 停止重试`，
+符合"不做无限重试死循环"。覆盖 **243.2 m² / 80.1%**，落盘为
+`ws_robot/maps/warehouse_explored_auto.{posegraph,data}` +
+`warehouse_explored_auto_grid.{pgm,yaml}`。
+定位模式起栈后实测 `/map` 为 289×420、origin (−7.369, −10.464)、已知 80.1%
+—— 与落盘完全一致，证明用的是探索图而不是重新建的。
+
+**夹爪张口量程：两条独立路径互相印证。**
+
+| 来源 | 最大张口 |
+|---|---|
+| 早先按 L11/R11 的 x 区间手算（`[+0.055,+0.087]` / `[-0.075,-0.043]`） | 0.098 m |
+| `GripperCommander` 用 FK + 碰撞包络现算 | **0.0975 m** |
+
+两者差 0.5 mm。完全闭合时残留间隙 0.0060 m。
+0.06 m 的物体 → 抓取角 **0.4664 rad**（理论张口 0.056 m = 0.060 − 0.004 预紧），
+实测稳态角 0.4664 rad，偏差 0.0000。
+
+**开合角不写死**：从 SRDF 的 `open`/`closed` group_state 读。
+**抓取宽度不写死**：按抓取姿态四元数把张合轴转到物体系，取长方体在该方向的支撑宽度
+——直接取 `size[0]` 只在"张合轴刚好映射到本体系 x"时成立，姿态一改就静默错。
+
+**实测：不收臂导航必然失败；收臂后成功，但没有根治。** 这是本轮最有价值的发现。
+
+| 轮次 | 导航前姿态 | 限速系数(实测) | 导航结果 | 耗时 | 距离 | 臂步数 |
+|---|---|---|---|---|---|---|
+| 第 2 轮 | 抬着物体不收臂 | **0.15**(下限) | **ABORTED** | 176.7 s | — | 3/6 |
+| 第 3 轮 | 收臂到 `ready` | 0.29 | SUCCEEDED | 35.8 s | 2.76 m | **6/6** |
+| 第 5 轮 | 收臂到 `ready` | 0.29 | SUCCEEDED | 158.7 s | 2.17 m | **6/6** |
+| （复位用，臂未收） | 抬着不收臂 | 0.15 | **ABORTED**(码 6) | 180.6 s | 差 0.29 m 未收敛 | — |
+
+失败时 `controller_server` 连报 7 次 `Failed to make progress`。
+根因**不在 nav2**：臂-底盘耦合节点把"抬着物体"判成展开度 1.00，
+限速系数落到下限 `min_speed_scale = 0.15`，那个速度下 10 s 走不满进度检查器要求的
+`required_movement_radius = 0.5 m`，于是判卡住 → 恢复行为 → 用尽 → 放弃。
+表面症状是"局部规划器走不动"，真去调 nav2 参数方向完全错。
+
+**但收臂只是把它从"必然失败"变成"能成功"，没有根治**：第 5 轮虽然 SUCCEEDED，
+中途仍触发了 1 次 `Running backup` + 3 次 `Failed to make progress`，靠 nav2 的
+恢复行为兜过去，耗时是第 3 轮的 4.4 倍。因为 `ready` 的限速系数也只有 **0.29**
+—— 耦合节点拿全零构型（奇异位形，`sigma_min = 0.0077`）当"收纳姿态"基准，
+这个基准本身不合理。真正的修法在另一个包里，本轮刻意**没有**在这边绕过它
+（既没放宽进度检查器，也没抬高 `min_speed_scale`）。
+
+而**能收臂正是这次改用 attach 换来的**：旧代码物体用体系固定坐标，
+一收臂物体就留在原地不动，所以旧注释明确写着"如果以后要在导航途中收臂，
+这个前提就破了，必须改成 AttachedCollisionObject"。现在前提解除。
+
+**完整流程实测（第 5 轮，`execute:=true`，起点非目标点，真的走了一段）**：
+6/6 步全过，导航 SUCCEEDED 158.7 s，规划总耗时 3.461 s，
+全程最差 σ = 0.1156（远高于 0.02 阈值），物体世界位移 **2.194 m**、底盘 2.169 m。
+
+**attach 真的生效了，不是"发了消息就算"。** 从 `move_group` 自己发布的
+`/monitored_planning_scene` 旁听（这一步必要：demo 自己打的日志只证明它**发出了**
+那条差分，不证明 move_group 收下并挂上了，而这两者差的那一步会让规划器
+其实不知道手上有东西——然后照样规划成功）：
+
+```
+出现在 robot_state.attached_collision_objects 的消息数 = 5
+出现在 world.collision_objects 的消息数              = 3
+挂载到的 link = astribot_arm_left_tcp_link
+touch_links 数量 = 6
+```
+
+（旁听这个话题必须用 `VOLATILE` 订阅。第一次用 `TRANSIENT_LOCAL`，QoS 不兼容、
+**一条消息都收不到**，只有一行 WARN 提示 —— 很容易被当成"没有 attach 发生"。）
+
+**边界如实说清**（同时写进运行日志，不靠读者推断）：
+
+- **真的**：夹爪按指令开合（Gazebo 里真在动，主动关节稳态误差 0.0000 rad）；
+  物体被 attach 到 TCP，碰撞检测把它当机器人的一部分，规划器必须带着它绕障。
+- **不是真的**：Gazebo 里没有该物体的刚体，不产生夹持力。物理夹持受上面那条
+  mimic 7.79° 稳态误差与未标定指尖摩擦影响，是独立课题。
+- 导航途中伸出的手臂与手上的物体都超出代价地图那个 0.42 m 外接足迹，nav2 看不到它们
+  —— 这一条没有因为改用 attach 而改变。
+
+**顺带修掉/查清的三件事**：
+
+1. `setJointGroupPositions()` 只更新**组内** mimic 关节。SRDF 里夹爪组刻意只含主动
+   关节，于是 5 个从动关节一个都不动，FK 量出的张口变化率只有真实值的一半、
+   反解抓取角错一倍，且**全程零报错**。改用 `setJointPositions(master, ...)`
+   （走 `master->getMimicRequests()`）。抓住它的是合成夹爪单测——张口宽度可口算，
+   断言能写到 1e-9；拿真实 URDF 只能"跑出来多少断言多少"，这个错会照样绿。
+2. 对没挂东西的 link 发 detach **不是**无害空操作，MoveIt 会打
+   `[ERROR] Attached body 'xxx' not found`。日志里凭空多一条 ERROR 会误导下次排查，
+   改成按标记只在确实挂着时补发。
+3. `move_group` 退出时 SIGSEGV（`TrajectoryExecutionManager::~...` →
+   `Node::~Node()` → `CallbackGroup::~CallbackGroup()`），**与本次改动无关**：
+   两轮都出现，包括流程在导航段就中止、根本没走到收尾的那一轮。
+   发生在 SIGINT 之后、所有工作已完成，属 MoveIt 2.5.9 关停期问题。
+4. 删掉了死参数 `transport_clearance_margin`：它是下限概念，而下限已整体交给
+   逐点碰撞校验，读进来没人用 —— 留着只会让人以为调它有效。
+
+### Gate 2 · 桥接骨架（只读）—— 🟡 代码就绪，在线验证仍被后端起不来卡住
 
 `astribot_trajectory_bridge` 先只做状态方向：SDK 读状态 → 发 `/joint_states`。
 暂不接受任何轨迹。
@@ -523,19 +634,46 @@ Gazebo 侧右指比 MoveIt 认为的少闭合约 15%。当前 `transport` 没有
 > **通过标准（不变）**：`/joint_states` 与 SDK `get_current_joints_position()`
 > 逐关节一致；RViz 里模型姿态与 MuJoCo 画面一致。
 
-**⛔ 阻塞点：SDK 缺 `tf_transformations`，且该模块不在 PyPI 上。**
+#### ⛔ 阻塞点已经换了一个（2026-08-25 复测）
+
+原来的阻塞点 `tf_transformations` **已解除**（已装在
+`/opt/ros/humble/lib/python3.10/site-packages/tf_transformations/`）。
+把 SDK import 链往下推之后暴露出**两个新的、都在厂商侧**的问题：
+
+**① `env.sh` 少给一条 PYTHONPATH。**
+编译好的 `astribot_function.so` 里是**顶层** import：
 
 ```
-File "astribot_function.py", line 12, in init astribot_function
-ModuleNotFoundError: No module named 'tf_transformations'
+import robotics_library_py.robotics_library_base
 ```
 
-不是桥接的问题 —— 直接跑厂商 `examples/101-get_joint_states.py` 报同一个错。
-只能 `sudo apt install ros-humble-tf-transformations`，而本机 sudo 需要密码。
+而 `env.sh` 只把 `SDK_ROOT` 和 `third_party/astribot_ros_middleware_py`
+放进 PYTHONPATH，没有放 `astribot_sdk/core/common`。
+实测 `importlib.util.find_spec('robotics_library_py')` 返回 `None`。
+报错是 `'robotics_library_py' is not a package`，指向"包结构坏了"，
+而真实原因只是搜索路径少一条。补上 `astribot_sdk/core/common` 即可解析。
 
-**刻意没做的事**：没有自己写一个兼容模块糊上去。那涉及四元数/欧拉角的顺序约定，
-我的实现与真实实现只要有一处约定不同就会**静默**产出错误位姿，
-而这类错误在 `/joint_states` 层面完全看不出来。
+**② 缺一个原生库，仓库里和系统里都没有。**
+路径补好之后，`robotics_library_py/__init__.py` → `librobotics_library.so` 缺依赖：
+
+```
+ldd librobotics_library.so | grep "not found"
+    libdmumps_seq-5.4.so => not found
+```
+
+`third_party/drake/lib` 里没有，`/usr/lib` 里也没有，全仓 `find` 零命中。
+apt 有现成包（`libmumps-seq-5.4`，候选版本 5.4.1-2），
+**需要 sudo，得由你执行**：
+
+```bash
+sudo apt install libmumps-seq-5.4
+```
+
+这不是桥接的问题——厂商 `examples/101-get_joint_states.py` 在同一条链上失败。
+**在这两条解决之前，Gate 2 的在线验证、Gate 0 的 SDK 跑通性验证都无法开始。**
+
+（同样刻意没做：不自己写兼容层糊上去。缺的是数值求解器的原生实现，
+不是能用 Python 替代的东西。）
 
 #### 设计要点（三条硬边界）
 
@@ -604,6 +742,340 @@ numpy 全程保持 **1.21.5**。剩下的就是那个只能 apt 的 `tf_transfor
 > **通过标准**：6 步全 SUCCESS；两个 target 的轨迹节拍、最差 σ 在容差内一致；
 > **业务层代码 diff 为空**（这是"无感知"的唯一硬性证据）。
 > 夹爪就位后，`transport` 应从"纯运动学演示"升级为真实抓取。
+
+---
+
+## 6 · 剩余问题总表（2026-08-25 汇总）
+
+按"卡在谁手上"分组，因为这决定了能不能并行推进。
+
+### 6.1 卡在你手上（需要 sudo，我做不了）
+
+| # | 事项 | 命令 / 动作 | 卡住了什么 |
+|---|---|---|---|
+| A1 | 缺原生库 `libdmumps_seq-5.4.so` | `sudo apt install libmumps-seq-5.4` | ✅ **已解除**（2026-08-25 复测在位） |
+| A2 | `/opt/astribot_ros` 目录不存在，SDK 日志层建不出来就 `terminate` | `install.sh:92-100` 那三行（`mkdir -p log`、`mkdir -p robot_config`、`chown -R $USER`） | **Gate 0 全部 5 项 + Gate 2 在线验证 + Gate 3 + Gate 4**。现在的总闸 |
+
+`tf_transformations` 已装、`mujoco 3.2.5` 已装、`libmumps-seq-5.4` 已装、
+网格资产已解析、`numpy` 仍 1.21.5 —— 除 A2 之外没有别的装机需求。`git-lfs` 不需要了。
+
+> **注意 Gate 5（§7.6，底盘导航通路）不在这条链上**：它只依赖 SDK 能起来
+> （即 A2）和真机/MuJoCo 底盘，不依赖 Gate 3 的臂轨迹下发，可以并行推进。
+
+### 6.2 厂商侧问题（已定位，但要绕过或等厂商修）
+
+| # | 事项 | 现状 | 影响 |
+|---|---|---|---|
+| B1 | `env.sh` 少一条 PYTHONPATH（`astribot_sdk/core/common`） | 已定位，可在桥接侧补 | SDK import 失败，报错却指向"包结构坏了" |
+| B2 | Gazebo 的 mimic 有 7.79° 稳态误差 | 已实测量化 | **物理夹持无法做**；`/joint_states` 里看不见，只能反解从动关节 |
+| B3 | 指尖 7 mm 两源不确定度（MJCF vs SDF 的 L11 销位） | 用测试钉住，未解决 | 抓取余量的精度天花板 |
+| B4 | 手指惯量是占位值（0.03 kg 配 I=0.001，回转半径 0.18 m，物理上不可能） | 照抄厂商值并标注 | 动力学仿真不可信；纯运动学不受影响 |
+| B5 | 左臂基座 rpy 前两位对调（见附录 B.5） | 未定 | 只能靠 Gate 0 的 FK 比对定掉，依赖 A1 |
+| B6 | 速度/力矩控制"声称支持实则不支持"（D5） | 已按示例定案 | 需 Gate 0 第 2 项取证，依赖 A1 |
+
+### 6.3 我这边可以立刻做的（不依赖 A1）
+
+| # | 事项 | 为什么值得做 |
+|---|---|---|
+| C1 | 修臂-底盘耦合的 `folded_reference_rad` 基准 | **当前最痛的一条**：基准是全零奇异构型，任何可用臂姿都被限速；抬着物体导航必然 ABORTED，收臂到 `ready` 也只有 0.29、仍会触发恢复行为。改基准必须重做倾覆余量评估 |
+| C2 | 躯干速度收紧到 1.8 后确认 `TrajectoryTimeOptimizer` 节拍变长 | Gate 1 唯一遗留的 ⬜ 项，一次实测即可 |
+| C3 | `move_group` 退出时 SIGSEGV | 析构链问题（`TrajectoryExecutionManager::~...` → `CallbackGroup::~...`），与业务无关但每次都刷一屏，掩盖真实错误 |
+| C4 | 给已退出范围的包在 README 顶部加"⏸ 已退出范围"标记 | 决策已定但没落到文件上，新人会误读 |
+
+### 6.4 依赖 A1 的按序推进
+
+```
+A1 解除
+  └─ Gate 0（5 项：SDK 跑通 / 能力取证 / FK 一致性 / 速率 / 命名核对）
+       └─ Gate 2 在线验证（joint_map_probe 定顺序 → /joint_states 逐关节比对）
+            └─ Gate 3 桥接写通路（FollowJointTrajectory，velocity_scale 0.1 起）
+                 └─ Gate 4 全流程对齐（只换 target，业务层 diff 必须为空）
+```
+
+### 6.5 范围问题已定：导航回到范围内（2026-08-25）
+
+原来这里记着一个待拍的问题。**已拍：导航回来**，完整方案见 §7。
+
+连带的三处调整：
+
+- §2 的"退出范围"表已标注部分推翻（`navigation` / `perception` / `autonomy` /
+  `dynamics_coupling` 回归主线；`chassis_effort_drive` / `gazebo_bringup` 仍退出）。
+- **C1（修臂-底盘耦合的 `folded_reference_rad` 基准）从"可选优化"升级为前置项**：
+  真机 `joint_max_velocities` 只有 1.0 m/s，0.15 倍就是 0.15 m/s，
+  比仿真更容易触发进度检查器。
+- 新增 Gate 5（§7.6），可与 Gate 3 并行推进 —— 它只依赖底盘通路，不依赖臂轨迹下发。
+
+### 6.6 A1 已解除，但后面还有一层（2026-08-25 复测）
+
+`libmumps-seq-5.4` 已装（`/usr/lib/x86_64-linux-gnu/libdmumps_seq-5.4.so` 在位），
+`libdmumps_seq-5.4.so => not found` 这条消失。import 链继续往下走，撞到第三层：
+
+```
+[ast_log_base.cpp] create log config directory failed, path: /opt/astribot_ros/robot_config/log
+[ast_log_base.cpp] Failed to create directory: /opt/astribot_ros/log/python3 ... Permission denied
+terminate called after throwing an instance of 'spdlog::spdlog_ex'
+```
+
+SDK 的 C++ 日志层把路径写死在 `/opt/astribot_ros/`，该目录**根本不存在**，
+建不出来就直接 `terminate` 抛异常（不是降级到 stderr）。
+
+这一条**不是缺陷，是厂商安装步骤没跑**——`install.sh:92-100` 自己就写着：
+
+```bash
+sudo mkdir -p /opt/astribot_ros/log
+sudo mkdir -p /opt/astribot_ros/robot_config
+sudo chown -R "$USER:$USER" /opt/astribot_ros
+```
+
+所以还需要你执行这三行（或整段跑 `install.sh` 的那一节）。
+跑完之后 Gate 0 的 5 项才真正能开始。
+
+---
+
+## 7 · 导航回到范围：技术方案（2026-08-25 定，取代 §2 里"nav2 退出范围"）
+
+### 7.0 结论先行：不用发明，厂商例程里就是官方做法
+
+原来担心的"nav2 输出速度、真机底盘吃位置，中间怎么接"**厂商自己已经给了答案**。
+`examples/202-chassis_joy_control_local.py` 与 `203-..._global.py` 做的正是速度→位置积分：
+
+```python
+freq = 250.0
+astribot = Astribot(freq=freq)
+rate = ast_astribot_middleware.Rate(freq)
+pos_cmd = astribot.get_desired_joints_position([astribot.chassis_name])[0]
+while ok():
+    vel = joy_controller.get_vel()
+    # 203 版本：先按当前 theta 把体系速度旋到世界系，再积分
+    rot = [[cos(th), -sin(th), 0], [sin(th), cos(th), 0], [0, 0, 1]]
+    ...
+    pos_cmd[i] += vel_world[i] / freq
+    astribot.set_joints_position([astribot.chassis_name], [pos_cmd])
+    rate.sleep()
+```
+
+三个必须照抄的细节（都不是随手写的）：
+
+1. **积分的种子是 `get_desired_joints_position`，不是 `get_current_...`**。
+   在"期望值"上累加，跟踪误差就不会反馈进积分器；用"当前值"会随跟踪滞后一路蠕变。
+2. **`set_joints_position` 是流式接口**，按 client `freq` 每周期发一次绝对位置设定点。
+   与 `move_joints_position`（离线、带 duration、阻塞）是两套东西，导航只能用前者。
+3. **local 与 global 的区别就是有没有那个旋转矩阵**。nav2 的 `cmd_vel` 是**体系**的，
+   所以必须走 203 的路子。这和我们已有的 `cmd_vel_body_to_world_node` 是同一件事
+   （它现在旋转是 OFF，因为力矩底盘吃体系 twist；真机分支要打开）。
+
+### 7.1 底盘真值（`astribot_chassis.yaml`，按 §0 规则这就是真值源）
+
+| 项 | 值 | 对方案的含义 |
+|---|---|---|
+| `joint_names` | `astribot_chassis_x / _y / _z_rot` | 注意是 `z_rot`（MuJoCo 里是 `zrot`，少个下划线，Gate 0 第 5 项要扫的就是这类） |
+| `joint_types` | `[2, 2, 1]`（移动/移动/转动） | **完整全向**：x、y 独立 + 自转，与我们仿真侧的 X 型全向底盘同构，nav2 可以照常输出 `vy` |
+| `joint_max_velocities` | `[1.0, 1.0, 2.0]` | **硬钳位**：vx ≤ 1.0 m/s、vy ≤ 1.0 m/s、ω ≤ 2.0 rad/s。nav2 的 `max_vel_*` 必须收进这个盒子里 |
+| `joint_*_positions` | ±99999999 | 无位置限位 = 没有越界保护，跑飞了不会有人拦，靠 7.3 的 leash |
+| `frequency` | 100 | 与 client 默认 250 不一致，Gate 0 第 4 项要实测哪个生效 |
+| `weld_to_base_pose` 注释 | `world to chassis when slam pose is 0` | **关键**：SDK 的底盘 `[x, y, theta]` 是"SLAM 位姿"，即真机上**已经有一套自己的定位** |
+
+### 7.2 坐标系决策：SDK 的底盘位姿当 `odom`，**不**当 `map`
+
+这是整个方案里最容易做错的一步。SDK 那个位姿虽然注释写着 slam，但**不能**直接当
+`map` 用：
+
+- 我们的代价地图、前沿探索、`/map` 都建立在自己那套 slam_toolbox 上。
+  两套 SLAM 同时声明 `map`，TF 树里就有两个父节点，表现是位姿反复跳。
+- 厂商那套位姿的回环/重定位行为不可控也不可观测，它一跳，我们所有costmap 全部错位。
+
+所以：
+
+```
+map   ──(slam_toolbox，用融合点云)──▶ odom ──(SDK 底盘位姿)──▶ astribot_torso_base ──▶ ...
+```
+
+- **`odom` ← SDK**：`get_current_joints_position([chassis])` 给位姿，
+  `get_current_joints_velocity([chassis])` 给 twist，合成 `/odom` + TF `odom→torso_base`。
+  它只需要**局部连续**，不需要全局正确 —— 这正是 odom 的定义，也正是厂商位姿能保证的。
+- **`map` ← 我们自己的 slam_toolbox**：输入是融合后的点云切片 `/scan`，与仿真侧**完全同一套**。
+
+这样一来 `odom` 之上的所有东西（nav2、探索协调器、代价地图、路径诊断）
+**一行都不用改** —— 与 Gate 4 "业务层 diff 为空"是同一个判据。
+
+### 7.3 指令通路：新增 `chassis_cmd_bridge_node`
+
+`nav2 /cmd_vel（体系 Twist, 20Hz）` → 本节点 → `set_joints_position([chassis], [[x,y,θ]])（100~250Hz）`
+
+七个必须项，缺一个都会出事：
+
+| # | 机制 | 不做的后果 |
+|---|---|---|
+| 1 | **速率解耦**：nav2 20 Hz 发，本节点按 `freq` 高频积分，中间保持"最后一次速度" | 直接按 20 Hz 发位置设定点，底盘会一顿一顿走 |
+| 2 | **看门狗**：`cmd_vel` 超过 `cmd_timeout`（建议 0.25 s）未更新 → 速度**立刻归零**（不是保持） | nav2 崩了/网络断了，机器人带着最后一个速度一直跑 |
+| 3 | **体系→世界旋转**：用**当前 theta** 旋转（203 的做法） | 不旋转就只在 θ≈0 时正确，转过身之后机器人朝着错误方向走 |
+| 4 | **钳位到 yaml 限位**：`[1.0, 1.0, 2.0]`，且加速度/jerk 各自限幅 | 超限的位置设定点会让底层跟不上，直接进入第 5 项的失控场景 |
+| 5 | **位置牵引绳（leash）**：`\|cmd − current\|` 超过阈值（建议 0.15 m / 0.2 rad）就**停止积分** | **这是本方案最大的安全隐患**：位置积分是开环的，底盘被挡住/打滑时命令位置一路跑远，障碍一撤销机器人会猛冲过去追赶。厂商例程没有这一项，因为摇杆是人在闭环 |
+| 6 | **启动/恢复时重新播种**：每次使能（或 leash 触发恢复）都从 `get_desired_joints_position` 重取种子 | 复用旧的 `pos_cmd` 会让底盘瞬间跳到一个陈旧目标 |
+| 7 | **使能开关 + 控制权**：默认不申请控制权；导航使能是显式动作，且与急停互斥 | 桥接一起来就能动底盘，调试期风险太高 |
+
+关于第 5 项再补一句：leash 触发时**只停积分、不清零已有命令**，并往
+`/chassis_bridge/status` 报明确状态码（沿用 `PlanErrorCode` 那套风格），
+让上层能区分"nav2 让我走但我走不动"和"nav2 没让我走"。这两者在
+`Failed to make progress` 里长得一模一样 —— 我们已经在仿真侧被这个坑过一次。
+
+### 7.4 感知通路：真机雷达是两颗，与仿真侧同构
+
+`examples/301-get_lidar_scan.py` 给出确切接口：
+
+```python
+astribot.activate_lidar()                      # 必须先激活，否则没数据
+node.create_subscription(PointCloud2, '/livox/lidar_front', cb, qos)  # BEST_EFFORT
+node.create_subscription(PointCloud2, '/livox/lidar_back',  cb, qos)
+```
+
+我们现有链路本来就是"两颗 Livox 预处理 → 融合 → 多层切片 → `/scan`"
+（`livox_preprocess_node` ×2 + `livox_fusion_node` + `pointcloud_slice_scan_node`），
+所以真机分支**只需要改话题名 + 加一次 `activate_lidar()`**，
+`hardware_perception.launch.py` 已经预留了这个分支。
+
+两处必须核对，不能想当然：
+
+1. **外参**：两颗雷达的安装位姿必须从 URDF/yaml 取，不允许写死。
+   仿真里的 `livox_front/back` 外参是我们自己设的，真机的以厂商为准。
+2. **QoS 必须 BEST_EFFORT**。用 RELIABLE 订阅会 QoS 不兼容、**一条消息都收不到**，
+   只有一行 WARN —— 这个坑本轮刚踩过一次（旁听 `/monitored_planning_scene` 时）。
+
+另外 `/scan` 那条链的**自滤必须带上夹爪**，这一条已经在仿真侧修过：
+夹爪不在自滤链里会让机器人把自己的指尖当 0.41 m 处的障碍，
+SLAM 把幻影烙进地图，然后规划器报 `Starting point in lethal space!`、探索 0 次派发。
+真机上同一个坑会以同样方式出现。
+
+### 7.5 代码落点
+
+不新开包，全部落在已有的 `astribot_trajectory_bridge` 里（它已经有只读状态通路）：
+
+| 新增 | 职责 |
+|---|---|
+| `chassis_odom_node` | SDK 底盘位姿/速度 → `/odom` + TF `odom→astribot_torso_base` |
+| `chassis_cmd_bridge_node` | `/cmd_vel` → 7.3 的七道处理 → `set_joints_position` |
+| `config/chassis_bridge.yaml` | `freq` / `cmd_timeout` / 三轴限位（**从厂商 yaml 读，不复制数值**）/ leash 阈值 / 使能默认关 |
+| 单元测试 | 积分正确性、看门狗归零、钳位、leash 触发与恢复、旋转矩阵在 θ≠0 时的正确性（这条要故障注入：把旋转关掉必须让测试失败） |
+
+复用而不是重写：`cmd_vel_body_to_world_node` 的旋转逻辑、
+`path_tracking_diagnostics_node` 的分段量速度能力（用来验证 7.3 每一级的钳位是否真生效）。
+
+### 7.6 分阶段验收（Gate 5，可独立于 Gate 3 推进）
+
+| 阶段 | 内容 | 通过标准 |
+|---|---|---|
+| 5.1 只读 | `chassis_odom_node` 上线，机器人**手推**或用例程 202 移动 | `/odom` 与 `get_current_joints_position` 逐项一致；RViz 里 TF 连续无跳变 |
+| 5.2 开环钳位 | `chassis_cmd_bridge_node` 上线，但**不接 nav2**，手工发 `/cmd_vel` | 三轴钳位、看门狗归零、leash 触发全部可复现；`velocity_scale: 0.1` |
+| 5.3 接 nav2（空场地） | 完整栈，单点导航，有人守急停 | 到达 `xy_goal_tolerance` 内；leash 全程不触发；`preCpl→cmd` 比值符合预期 |
+| 5.4 全流程 | 定位模式 + `mobile_transport` | 与仿真侧同一份配置只换 `target`；**业务层 diff 为空** |
+
+### 7.7 已知会踩的坑（都是本仓库实测过的，别重新发现一次）
+
+1. **臂-底盘耦合会把底盘限到 15%**，抬着物体导航必然 ABORTED。
+   真机上这条同样成立，而且真机的 `joint_max_velocities` 只有 1.0 m/s，
+   0.15 倍就是 **0.15 m/s** —— 比仿真更容易触发进度检查器。
+   所以 §6.3 的 C1（修 `folded_reference_rad` 基准）从"可选优化"升级为**前置项**。
+2. **进度检查器**：`required_movement_radius: 0.5` / `movement_time_allowance: 10.0`
+   是按仿真速度定的，真机限速后必须重算，否则会得到"局部规划器走不动"的假结论。
+3. **`use_sim_time` 必须关**，真机没有 `/clock`。已经在 `hardware_perception.launch.py` 处理。
+4. **`ROS_DOMAIN_ID`**：厂商 `env.sh` 是 25，本仓库其余部分是 42。必须统一，
+   否则表现为"节点都在、话题一个都收不到"。
+5. **SDK 一 import 就把整个进程 fd 1/2 重定向到 `/dev/null`**，
+   桥接必须在 import **之前**置 `ASTRIBOT_LOG=1`，否则"响亮失败"完全失效。
+
+### 7.8 刻意不做
+
+- **不用 `set_joints_velocity` 走底盘**。API 里有这个函数，但 D5 已按厂商示例定案
+  "速度控制实际不响应"，Gate 0 第 2 项才是取证。若取证发现底盘速度**确实**可用，
+  那 7.3 立刻简化掉第 1、5、6 三项 —— 所以这条取证优先级很高，值得先做。
+- **不把厂商那套 SLAM 位姿当 `map`**（理由见 7.2）。
+- **不在桥接里做避障**。避障是 nav2 的职责，桥接只做"限幅 + 拒绝执行"，
+  不擅自改方向 —— 否则出事时无法归因。
+
+---
+
+## 7.9 · C1 已完成：臂-底盘耦合限速基准修正（2026-08-25 实测验收）
+
+C1 原定的任务是"`folded_reference_rad` 基准配错了，换个真实收纳姿态"。实测取证后
+**这个定性是错的**：不是基准配错，而是**度量本身与物理量反相关**，换基准解决不了。
+
+### 7.9.1 证伪旧度量（数据全部由活的 URDF 采样，不含硬编码几何）
+
+| 姿态 | 关节偏差(旧度量) | 水平伸展 | 臂质心水平偏移 |
+|---|---|---|---|
+| 全0（原"收纳基准"） | 0.0000 | **0.4205 m** | 0.0117 m |
+| `ready` | 1.0000 | 0.4790 m | 0.0226 m |
+| 实测（左臂作业中） | 2.1104 | 0.4698 m | 0.0202 m |
+| 候选收纳（肘部折回） | 2.4000 | **0.3532 m** | **0.0025 m** |
+
+全工作空间随机采样 4000 次：**最大伸展 0.8865 m 时关节偏差 3.062，最小伸展 0.1997 m
+时关节偏差 3.079**——偏差几乎相同，伸展差 4.4 倍。旧度量基本不携带伸展信息。
+
+### 7.9.2 倾覆余量重算（放松安全阈值前必须做的那一步）
+
+| 量 | 值 |
+|---|---|
+| 支撑多边形（4 轮） | xy = (±0.2163, ±0.2163)，临界方向取**边中点 0.2163 m** |
+| 整机质量 | 78.595 kg（双臂+夹爪 17.963 kg，占 22.9%） |
+| 整机质心（全0） | xy = (−0.0359, +0.0027)，z = **0.4321 m** |
+| 最差静态余量 | 质心已偏后 0.036 m → **向后 0.180 m** |
+| 倾覆所需加速度 | `a_tip = 9.81 × 0.180 / 0.4321 = 4.09 m/s²` |
+| Nav2 指令加速度上限 | `max_accel: 2.5 m/s²`（= 阈值的 61%，**余量只有 39%**） |
+
+**倾覆风险真实存在，C1 没有否掉它。** 但可归因于机械臂姿态的部分很小：整机质心偏移
+= 0.2285 × 臂质心偏移 → 全工作空间最差降 **11.0%** `a_tip`，实际用到的姿态只降
+**1.5~2.9%**。而修正前的方案为此把底盘速度砍到 **1/7~1/13**。这个不成比例才是 C1
+要修的问题。`min_speed_scale` 仍为 0.15（限到多少没放松），只修正了"什么时候该限速"。
+
+### 7.9.3 同一个坏基准在两个包里
+
+`astribot_s1_navigation/arm_speed_limiter_node`（Nav2 官方 `/speed_limit`、二值 50%）
+与 `astribot_s1_dynamics_coupling/arm_chassis_speed_coupling_node`（连续系数）**串联
+叠乘**：0.50 × 0.15 = 0.075，把 `desired_linear_vel: 0.5` 压到约 0.037 m/s。只改一个
+包无效，两个都改了。
+
+### 7.9.4 修正内容
+
+| | 修正前 | 修正后 |
+|---|---|---|
+| 度量 | 关节角相对全0参考的最大偏差 | 监控连杆相对 `astribot_torso_base` 的**水平伸展**（查 TF） |
+| 耦合节点阈值 | `extension_full_rad: 1.2` rad | `reach_folded_m: 0.42` / `reach_full_m: 0.8865` m |
+| 静态节点阈值 | `extended_threshold_rad: 0.5` rad | `extended_reach_m: 0.64` m + 0.03 m 迟滞 |
+| 旧路径 | — | 保留为 `extension_metric: joint_deviation`，供 A/B 回归与一键回退 |
+
+静态节点阈值 0.64 = 0.42（`robot_radius`）+ 0.2163（支撑多边形倾覆力臂），定位改为
+**粗粒度 backstop**；0.42~0.64 的连续调速交给耦合节点，不重复计算同一判据。
+（方案原定 0.42，实算发现 `ready`/作业姿态伸展都超过 0.42、50% 那一刀等于常开，
+故按上述物理判据抬到 0.64。这是一次额外的阈值放松，依据是 7.9.2 的算术。）
+
+### 7.9.5 实测验收（`real_file` + 完整 nav2 栈 + `mobile_transport execute:=true`）
+
+| 轮次 | 导航耗时 | 底盘位移 | 平均速度 | 恢复行为 | 机械臂 |
+|---|---|---|---|---|---|
+| 修正前-1 | 35.8 s | 2.76 m | 0.077 m/s | 0 | 6/6 |
+| 修正前-2 | 158.7 s | 2.17 m | 0.014 m/s | 4 | 6/6 |
+| 修正前-3 | 78.1 s | 2.409 m | 0.031 m/s | 3 | 6/6 |
+| **C1 后-1** | **14.0 s** | 2.721 m | **0.194 m/s** | **0** | 6/6 |
+| **C1 后-3** | **13.4 s** | 2.777 m | **0.207 m/s** | **0** | 6/6 |
+
+- 导航耗时从 35.8~158.7 s（方差极大、恢复行为频发）收敛到 **13.4~14.0 s（方差
+  0.6 s、零恢复）**，且位移更远。
+- 现场实测缩放比（直接量 `/cmd_vel_pre_arm_coupling → /cmd_vel` 幅值比，不看日志、
+  不信推算）：**138 个样本全部 = 0.909**，与预测的 0.91 一致；修正前该值为 0.150。
+- 离线 FK 预测伸展 0.4698 m vs 线上 TF 实测 0.4697 m —— **吻合到 0.1 mm**，取证脚本
+  与线上代码路径互相验证。
+- 单元测试 49 条（两个包各自独立），3 轮故障注入验证非空转。
+
+**其中第 2 轮不是有效数据点，如实记录**：那一轮起点就在目标点上（底盘位移 0.007 m、
+导航 0.1 s），是空操作，不计入。第 3 轮先用 `drive_to_pose.py` 复位到原点才跑。
+
+### 7.9.6 C1b 立项：限速不缩小碰撞包络（未实现）
+
+实测机械臂水平伸展**最大 0.8865 m，比 `robot_radius: 0.42` 多伸出 0.47 m**，这部分
+是规划器彻底看不见的真实碰撞风险。原来 `nav2_params_rpp.yaml` 和
+`README_NAVIGATION.md` §4.7 都声称这个风险"靠展开限速缓解"，**这句是错的——限速只
+降低速度，完全不缩小包络**，两处注释已更正为"未解决"。正确机制是姿态相关的动态足迹
+（`nav2_collision_monitor` 订阅机械臂 TF 实时改 footprint），立项 C1b，本次未做。
 
 ---
 

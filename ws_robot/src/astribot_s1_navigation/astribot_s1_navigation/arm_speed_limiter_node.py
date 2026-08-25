@@ -4,13 +4,26 @@
 文件用途：双臂展开时给 Nav2 的 velocity_smoother 发限速指令（任务书"检测机械臂处于伸展
 状态时限制最大运动速度"这一条安全逻辑的落地）。
 
-!!! 如实说明这是什么、不是什么 !!!：这里用的是**启发式判定**——检查左右臂各7个关节的
-当前角度和一个"收纳姿态"参考角度数组的最大偏差，超过阈值就认为"手臂展开了"，跟着降速。
-这不是精确的几何碰撞检测（不知道机械臂末端在三维空间里到底伸到哪个位置、离最近障碍物
-多远），只是一个"关节明显偏离收纳姿态 → 保守降速"的粗粒度安全阀，足够覆盖"双臂大幅张开
-时降速慢慢挪"这个基本需求，但不能替代真正的全身碰撞检测。任务书里这一条本身也是标注成
-"可选方案"，更精确的做法是用 `nav2_collision_monitor` 订阅机械臂末端 TF、动态改变机器人
-的碰撞多边形，这里没有做，作为后续可扩展点写在 README 里，不假装当前方案已经是完整解。
+!!! C1 修正(2026-08-25)：判据从"关节角偏差 > 0.5rad"换成"水平伸展 > 0.42m" !!!
+原判据是"双臂 14 个关节相对全 0 参考姿态的最大偏差超过阈值就算展开"。实测证明它与
+真实伸展**反相关**（详见 arm_reach_metric.py 头部的采样数据）：全 0 姿态其实是肘部
+完全伸直、水平伸展 0.4205m 的姿态，却因偏差为 0 被判"已收纳"；而真正收拢的姿态反倒
+被判"展开"。后果是任何作业姿态都被恒定砍到 50%，再叠乘耦合节点的系数，实测合计
+0.075，把 `desired_linear_vel: 0.5` 压到约 0.037 m/s。
+
+现在改成查 TF 求"监控连杆相对底盘回转轴的水平距离"，阈值 `extended_reach_m` 默认
+0.64 = 0.42(costmap 的 `robot_radius`) + 0.2163(支撑多边形倾覆力臂)：机械臂**伸出
+足迹之外的那一段**长到跟底盘自己的倾覆力臂相当时，才动用这个粗粒度二值保护。
+连续精细调速交给 `astribot_s1_dynamics_coupling` 的耦合节点（它从 0.42 就开始线性
+介入），本节点定位是**backstop**——耦合节点被关掉或崩溃重启期间兜住真正危险的姿态。
+
+!!! 如实说明这仍然是什么、不是什么 !!!：这仍然是**保守的单点判据**，只看几个监控
+连杆原点离回转轴多远，不知道机械臂离最近障碍物多远，也不是精确的全身碰撞检测。
+换度量修掉的是"判据与物理量反相关"这个错误，不是把它升级成了完整解。
+另外要明确一点：限速**不会缩小机器人的碰撞包络**。实测机械臂水平伸展最大可达
+0.8865m，比 `robot_radius: 0.42` 多伸出 0.47m，这部分是规划器完全看不见的真实碰撞
+风险，正确机制是姿态相关的动态足迹（`nav2_collision_monitor`），本节点不解决它，
+作为独立工作项（C1b）记录在 README，不假装已经覆盖。
 
 Nav2 侧的落地机制：`nav2_velocity_smoother` 支持订阅 `speed_limit_topic`
 （默认 `/speed_limit`，消息类型 `nav2_msgs/msg/SpeedLimit`，`percentage=true` 时
@@ -18,20 +31,44 @@ Nav2 侧的落地机制：`nav2_velocity_smoother` 支持订阅 `speed_limit_top
 velocity_smoother 的代码。
 """
 
-import math
-
 import rclpy
 from rclpy.node import Node
+from rclpy.time import Time
 from sensor_msgs.msg import JointState
 from nav2_msgs.msg import SpeedLimit
+from tf2_ros import Buffer, TransformListener, TransformException
+
+from astribot_s1_navigation.arm_reach_metric import (
+    METRIC_HORIZONTAL_REACH,
+    METRIC_JOINT_DEVIATION,
+    VALID_METRICS,
+    ReachMetricConfigError,
+    horizontal_reach,
+    is_extended_by_reach,
+    max_joint_deviation,
+    validate_extended_reach,
+)
 
 
 # 左右臂关节名，跟 astribot_s1_arm.xacro / arm_left_controller、arm_right_controller
 # 里的关节列表完全一致（astribot_arm_{left,right}_joint_{1..7}）。
+# 换成水平伸展判据后这个列表只有 joint_deviation 回退路径还用得到，但保留着——
+# joint_states 到达仍然是本节点的触发时钟。
 ARM_JOINT_NAMES = (
     [f'astribot_arm_left_joint_{i}' for i in range(1, 8)] +
     [f'astribot_arm_right_joint_{i}' for i in range(1, 8)]
 )
+
+# 实测(URDF 全工作空间采样)水平伸展最大值总是落在双臂 TCP 或夹爪指尖连杆上。
+DEFAULT_MONITORED_LINKS = [
+    'astribot_arm_left_tcp_link',
+    'astribot_arm_right_tcp_link',
+    'astribot_gripper_left_Link_L11',
+    'astribot_gripper_right_Link_R11',
+]
+
+# 本机器人根 frame 是 astribot_torso_base，不存在 base_link。
+DEFAULT_CHASSIS_BASE_FRAME = 'astribot_torso_base'
 
 
 class ArmSpeedLimiterNode(Node):
@@ -42,11 +79,37 @@ class ArmSpeedLimiterNode(Node):
         self.declare_parameter('joint_states_topic', '/joint_states')
         self.declare_parameter('speed_limit_topic', '/speed_limit')
         self.declare_parameter('check_period', 0.5)
-        # "收纳姿态"参考角度（rad），跟 ARM_JOINT_NAMES 一一对应，默认全 0——
-        # !!! 部署到真机/换了默认收纳姿态时必须重新核对这组数值，不要直接照抄 !!!
+
+        # ---- 展开判据(默认水平伸展) ----
+        self.declare_parameter('extension_metric', METRIC_HORIZONTAL_REACH)
+        self.declare_parameter('chassis_base_frame', DEFAULT_CHASSIS_BASE_FRAME)
+        self.declare_parameter('monitored_links', DEFAULT_MONITORED_LINKS)
+        # 监控连杆相对回转轴的水平距离超过这个值(m)判"展开"，二值砍到 50%。
+        #
+        # 默认 0.64 的来历(不是调出来的，是一条可解释的物理判据)：
+        #   0.42(costmap robot_radius，机械臂伸出规划足迹的起点)
+        # + 0.2163(支撑多边形边中点到回转轴的距离，即倾覆力臂)
+        # = 0.6363 → 取 0.64
+        # 含义：机械臂**伸出足迹之外的那一段**长到跟底盘自己的倾覆力臂相当时，
+        # 才值得动用这个粗粒度的二值保护。
+        #
+        # !!! 为什么不直接取 0.42 !!!：取 0.42 时 ready(伸展 0.479)、实测作业姿态
+        # (0.470)、甚至全 0 姿态(0.4205)全都判"展开"，50% 这一刀等于常开——那还是
+        # C1 要修的那个"限速与风险不成比例"的问题，只是换了个判据而已。真正的连续
+        # 精细调速由 astribot_s1_dynamics_coupling 的耦合节点负责(它在 0.42 以上就
+        # 开始线性介入)，本节点定位是**粗粒度backstop**：耦合节点被关掉
+        # (enable_arm_chassis_coupling:=false)或崩溃重启期间兜住真正危险的姿态。
+        # 两个节点串联叠乘，判据重复计算会把系数乘成 1/7~1/13，见耦合包 README §8。
+        self.declare_parameter('extended_reach_m', 0.64)
+        # 迟滞(m)：避免伸展压在阈值上时二值判据来回翻转、SpeedLimit 在 50%/100%
+        # 之间反复跳。见 arm_reach_metric.py 里 is_extended_by_reach 的说明。
+        self.declare_parameter('extended_reach_hysteresis_m', 0.03)
+
+        # ---- 旧判据的参数，仅 extension_metric=joint_deviation 时生效 ----
+        # !!! 已被实测证伪，保留只为 A/B 回归对比和一键回退 !!!
         self.declare_parameter('folded_reference_rad', [0.0] * len(ARM_JOINT_NAMES))
-        # 任意一个手臂关节偏离收纳姿态超过这个角度(rad)，判定为"展开状态"。
         self.declare_parameter('extended_threshold_rad', 0.5)
+
         # 判定为展开状态时的限速百分比(0~100)，100=不限速。
         self.declare_parameter('extended_speed_limit_pct', 50.0)
 
@@ -57,26 +120,113 @@ class ArmSpeedLimiterNode(Node):
             self.joint_state_callback, 10)
 
         self.last_extended = None  # 只在状态变化时发布+打日志，避免刷屏
+        self._metric = self._resolve_metric()
+        self._tf_buffer = None
+        self._tf_listener = None
+        self._tf_warned = False
+        if self._metric == METRIC_HORIZONTAL_REACH:
+            self._tf_buffer = Buffer()
+            self._tf_listener = TransformListener(self._tf_buffer, self)
+
+        if self._metric == METRIC_HORIZONTAL_REACH:
+            criterion = ('监控连杆相对 %s 的水平伸展 > %.3fm(迟滞 %.3fm)' % (
+                self.get_parameter('chassis_base_frame').value,
+                self.get_parameter('extended_reach_m').value,
+                self.get_parameter('extended_reach_hysteresis_m').value))
+        else:
+            criterion = ('关节偏差 > %.2frad(旧判据，已证伪)'
+                         % self.get_parameter('extended_threshold_rad').value)
         self.get_logger().info(
-            'arm_speed_limiter_node 已启动：监控双臂关节角相对收纳姿态的偏差，'
-            '超过 %.2f rad 判定为展开状态，限速到 %.0f%%（这是启发式判定，不是精确碰撞'
-            '检测，详见文件头部说明）。' % (
-                self.get_parameter('extended_threshold_rad').value,
-                self.get_parameter('extended_speed_limit_pct').value))
+            'arm_speed_limiter_node 已启动：判据为 %s，满足则限速到 %.0f%%'
+            '（这是保守的单点判据，不是精确碰撞检测，也不缩小碰撞包络，'
+            '详见文件头部说明）。' % (
+                criterion, self.get_parameter('extended_speed_limit_pct').value))
+
+    def _resolve_metric(self):
+        """确定实际使用的判据。配置非法时**退回更保守的旧判据**并大声报错，而不是
+        抛异常退出——限速节点退出会让 /speed_limit 永远不再更新，等于静默解除限速，
+        那比继续用一个偏保守的判据危险得多。"""
+        metric = self.get_parameter('extension_metric').value
+        if metric not in VALID_METRICS:
+            self.get_logger().error(
+                'extension_metric=%r 不是合法取值%s，退回保守的 %s 判据。'
+                % (metric, list(VALID_METRICS), METRIC_JOINT_DEVIATION))
+            return METRIC_JOINT_DEVIATION
+        if metric == METRIC_JOINT_DEVIATION:
+            self.get_logger().warn(
+                'extension_metric=joint_deviation：这是已被实测证伪的旧判据(与真实'
+                '水平伸展反相关，详见 arm_reach_metric.py 头部)，只应用于 A/B 回归'
+                '对比或临时回退，不要长期这么跑。')
+            return METRIC_JOINT_DEVIATION
+        try:
+            validate_extended_reach(
+                self.get_parameter('extended_reach_m').value,
+                self.get_parameter('extended_reach_hysteresis_m').value)
+        except ReachMetricConfigError as exc:
+            self.get_logger().error(
+                '展开判据阈值非法(%s)，退回保守的 %s 判据。请修正 extended_reach_m/'
+                'extended_reach_hysteresis_m 后重启。' % (exc, METRIC_JOINT_DEVIATION))
+            return METRIC_JOINT_DEVIATION
+        return METRIC_HORIZONTAL_REACH
+
+    def _max_horizontal_reach(self):
+        """查 TF 求监控连杆里相对底盘回转轴的最大水平伸展(m)，返回 (伸展, 连杆名)。
+
+        全部查不到返回 None，由调用方决定策略(本节点按最保守处理，判"展开")。
+
+        !!! lookup_transform 传 Time()(=最新可用)且不带 timeout !!!
+        项目笔记记过：带 timeout 的动态 TF 查询在非专用线程里必然失败，而 static TF
+        却能成功，看起来像正常。这里在执行器线程里跑，带 timeout 还会阻塞回调。
+        """
+        base_frame = self.get_parameter('chassis_base_frame').value
+        links = self.get_parameter('monitored_links').value
+        best = None
+        best_link = ''
+        failures = []
+        for link in links:
+            try:
+                tf = self._tf_buffer.lookup_transform(base_frame, link, Time())
+            except TransformException as exc:
+                failures.append('%s(%s)' % (link, type(exc).__name__))
+                continue
+            t = tf.transform.translation
+            reach = horizontal_reach(t.x, t.y)
+            if best is None or reach > best:
+                best, best_link = reach, link
+        if best is None:
+            if not self._tf_warned:
+                self._tf_warned = True
+                self.get_logger().warn(
+                    '监控连杆的 TF 全部查不到(%s)，按最保守处理(判为展开、限速)；'
+                    'TF 树建立后自动恢复，此告警只打一次。'
+                    % ('; '.join(failures) if failures else 'monitored_links 为空'))
+            return None
+        self._tf_warned = False
+        return best, best_link
 
     def joint_state_callback(self, msg: JointState):
-        name_to_pos = dict(zip(msg.name, msg.position))
-        reference = self.get_parameter('folded_reference_rad').value
-        threshold = self.get_parameter('extended_threshold_rad').value
+        if self._metric == METRIC_HORIZONTAL_REACH:
+            probed = self._max_horizontal_reach()
+            if probed is None:
+                # 拿不到机械臂位姿时假设"手臂完全伸出"，不能假设"手臂收着"。
+                is_extended = True
+                detail = 'TF 不可用，按最保守判定'
+            else:
+                reach, link = probed
+                is_extended = is_extended_by_reach(
+                    reach,
+                    self.get_parameter('extended_reach_m').value,
+                    self.get_parameter('extended_reach_hysteresis_m').value,
+                    was_extended=bool(self.last_extended))
+                detail = '最大水平伸展 %.3fm@%s' % (reach, link)
+        else:
+            name_to_pos = dict(zip(msg.name, msg.position))
+            max_dev = max_joint_deviation(
+                name_to_pos, ARM_JOINT_NAMES,
+                self.get_parameter('folded_reference_rad').value)
+            is_extended = max_dev > self.get_parameter('extended_threshold_rad').value
+            detail = '最大关节偏差 %.2frad' % max_dev
 
-        max_dev = 0.0
-        for joint_name, ref in zip(ARM_JOINT_NAMES, reference):
-            pos = name_to_pos.get(joint_name)
-            if pos is None:
-                continue  # 这一帧 joint_states 里没有这个关节(比如还没上线)，跳过
-            max_dev = max(max_dev, abs(pos - ref))
-
-        is_extended = max_dev > threshold
         if is_extended == self.last_extended:
             return  # 状态没变化，不重复发布(SpeedLimit 是"持续生效直到下一条"的语义)
 
@@ -87,11 +237,10 @@ class ArmSpeedLimiterNode(Node):
         if is_extended:
             limit.speed_limit = self.get_parameter('extended_speed_limit_pct').value
             self.get_logger().warn(
-                '检测到机械臂展开(最大关节偏差 %.2f rad > 阈值)，限速到 %.0f%%' %
-                (max_dev, limit.speed_limit))
+                '检测到机械臂展开(%s)，限速到 %.0f%%' % (detail, limit.speed_limit))
         else:
             limit.speed_limit = 0.0  # nav2约定：0.0 表示解除限速，恢复正常速度上限
-            self.get_logger().info('机械臂已收纳，解除限速')
+            self.get_logger().info('机械臂在足迹以内(%s)，解除限速' % detail)
         self.speed_pub.publish(limit)
 
 

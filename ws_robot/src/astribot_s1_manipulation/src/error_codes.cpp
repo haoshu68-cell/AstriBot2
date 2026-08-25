@@ -38,6 +38,16 @@ const char * toString(PlanErrorCode code) noexcept
       return "TIME_PARAMETERIZATION_FAILED";
     case PlanErrorCode::kJointLimitViolation:
       return "JOINT_LIMIT_VIOLATION";
+    case PlanErrorCode::kGripperActionUnavailable:
+      return "GRIPPER_ACTION_UNAVAILABLE";
+    case PlanErrorCode::kGripperGoalRejected:
+      return "GRIPPER_GOAL_REJECTED";
+    case PlanErrorCode::kGripperTimeout:
+      return "GRIPPER_TIMEOUT";
+    case PlanErrorCode::kGripperNotConverged:
+      return "GRIPPER_NOT_CONVERGED";
+    case PlanErrorCode::kGraspWidthUnreachable:
+      return "GRASP_WIDTH_UNREACHABLE";
     case PlanErrorCode::kExceptionCaught:
       return "EXCEPTION_CAUGHT";
   }
@@ -58,6 +68,12 @@ bool isRetryable(PlanErrorCode code) noexcept
     case PlanErrorCode::kEnvironmentCollision:
       return true;
 
+    // 夹爪没收敛：可能只是这一次 PID 差了一点，再发一次同样的目标有可能过。
+    // 其余三项夹爪失败都不值得重试：action 不在是启动/配置问题，
+    // 目标被拒是关节名或控制器状态问题，超时重试只会再等一遍。
+    case PlanErrorCode::kGripperNotConverged:
+      return true;
+
     // 输入/配置/后处理类：重试不会改变结果，重试只是浪费时间。
     // 特别是 kJointLimitViolation —— 轨迹本身超限，再规划多少次
     // 也得靠改 joint_limits.yaml 或 scaling 才能解决。
@@ -71,6 +87,11 @@ bool isRetryable(PlanErrorCode code) noexcept
     case PlanErrorCode::kRetriesExhausted:
     case PlanErrorCode::kTimeParameterizationFailed:
     case PlanErrorCode::kJointLimitViolation:
+    case PlanErrorCode::kGripperActionUnavailable:
+    case PlanErrorCode::kGripperGoalRejected:
+    case PlanErrorCode::kGripperTimeout:
+    // 宽度超量程是几何结论，重试一万次也还是超。
+    case PlanErrorCode::kGraspWidthUnreachable:
     case PlanErrorCode::kExceptionCaught:
       return false;
   }

@@ -33,11 +33,13 @@
 #include <moveit/robot_model/link_model.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
+#include <moveit_msgs/msg/attached_collision_object.hpp>
 #include <moveit_msgs/msg/planning_scene.hpp>
 #include <shape_msgs/msg/solid_primitive.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include "astribot_s1_manipulation/dual_arm_planner.hpp"
+#include "astribot_s1_manipulation/gripper_commander.hpp"
 
 namespace astribot_s1_manipulation
 {
@@ -360,6 +362,45 @@ moveit_msgs::msg::CollisionObject makeBoxObject(
   return obj;
 }
 
+/// 把世界里已有的物体挂到某个 link 上（真实抓取）。
+///
+/// 语义要点（MoveIt 的行为，不是我们自己实现的）：
+///   · operation=ADD 且该 id 已存在于 world 时，MoveIt 会把它从 world 移走、
+///     挂到 link_name 上，位姿保持不变。不需要我们自己算相对位姿。
+///   · 之后物体随该 link 一起动，并且碰撞检测把它当作**机器人的一部分** ——
+///     这正是"物体真的被夹住了"在规划层的准确表达。
+///
+/// touch_links 必须给：夹爪合上时指垫本来就贴着物体，不声明允许接触的话
+/// attach 完的瞬间就会报"夹爪与物体碰撞"，后续每一步规划都失败。
+moveit_msgs::msg::AttachedCollisionObject makeAttachObject(
+  const std::string & id, const std::string & link,
+  const std::vector<std::string> & touch_links)
+{
+  moveit_msgs::msg::AttachedCollisionObject attached;
+  attached.link_name = link;
+  attached.object.id = id;
+  // header.frame_id 留给 MoveIt 自己处理：ADD 一个已在 world 里的 id 时，
+  // 它取的是场景里那个物体的现有位姿，我们这里给的 pose 不参与。
+  attached.object.operation = moveit_msgs::msg::CollisionObject::ADD;
+  attached.touch_links = touch_links;
+  return attached;
+}
+
+/// 松爪：把物体摘下来放回世界。
+///
+/// MoveIt 在 REMOVE 一个 attached object 时，会按它**当前实际位姿**重新放进 world。
+/// 所以放置点是"手真的把它带到了哪儿"，而不是我们以为的 B —— 这是我们想要的：
+/// 若执行有偏差，物体就落在有偏差的地方，日志里能看出来。
+moveit_msgs::msg::AttachedCollisionObject makeDetachObject(
+  const std::string & id, const std::string & link)
+{
+  moveit_msgs::msg::AttachedCollisionObject attached;
+  attached.link_name = link;
+  attached.object.id = id;
+  attached.object.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+  return attached;
+}
+
 /// 末端在某个抓取方向上的几何包络（相对 TCP）。
 ///
 /// setback —— 从 TCP 沿"背离物体"方向走多远还有碰撞几何（正值）。
@@ -500,6 +541,115 @@ void publishSceneDiff(
   scene.robot_state.is_diff = true;
   scene.world.collision_objects.push_back(obj);
   pub->publish(scene);
+}
+
+/// attach / detach 同样走场景差分话题，理由与上面完全一致。
+///
+/// 注意 attached_collision_objects 挂在 robot_state 下面，不在 world 下面 ——
+/// 挂上之后它就是机器人状态的一部分了。robot_state.is_diff 必须是 true，
+/// 否则这条消息会被当成一个完整的机器人状态，把当前关节值也一并覆盖掉。
+void publishAttachDiff(
+  const rclcpp::Publisher<moveit_msgs::msg::PlanningScene>::SharedPtr & pub,
+  const moveit_msgs::msg::AttachedCollisionObject & attached)
+{
+  moveit_msgs::msg::PlanningScene scene;
+  scene.is_diff = true;
+  scene.robot_state.is_diff = true;
+  scene.robot_state.attached_collision_objects.push_back(attached);
+  pub->publish(scene);
+}
+
+/// 一个轴对齐长方体沿任意方向的支撑宽度。
+///
+/// 为什么要算这个而不是直接取 size_xyz[0]：夹爪张合方向由抓取姿态四元数决定，
+/// 直接取 x 尺寸只在"张合轴刚好映射到本体系 x"时才对。姿态一改就静默错，
+/// 而错了的表现是夹爪合到错误角度 —— 不会报任何错。
+double boxWidthAlongDirection(
+  const std::vector<double> & size_xyz, const Eigen::Vector3d & dir_in_object_frame)
+{
+  const Eigen::Vector3d d = dir_in_object_frame.cwiseAbs();
+  return d.x() * size_xyz[0] + d.y() * size_xyz[1] + d.z() * size_xyz[2];
+}
+
+/// 在取货点合爪并把物体挂到 TCP 上。
+///
+/// execute=false（纯规划模式）时不下发夹爪动作 —— 机器人本来就没动，
+/// 驱动真实夹爪没有意义。但 attach **照做**：接下来三步的规划必须知道
+/// 手上带着东西，否则规划出的轨迹在真跑时会拿物体去撞环境。
+/// 这种情况下 attach 是从"没动过的当前位姿"发生的，日志里必须说清楚，
+/// 不能让人以为干跑的搬运段几何是可信的。
+bool graspAndAttach(
+  const rclcpp::Logger & logger,
+  GripperCommander & gripper,
+  const rclcpp::Publisher<moveit_msgs::msg::PlanningScene>::SharedPtr & scene_pub,
+  const std::string & object_id, const std::string & tcp_link,
+  const std::vector<std::string> & touch_links,
+  double grasp_width, bool execute, const char * tag)
+{
+  if (execute) {
+    const GripperOutcome closing = gripper.closeToWidth(grasp_width);
+    RCLCPP_INFO(
+      logger,
+      "%s 合爪: 物体宽=%.4fm -> 目标角=%.4frad(理论张口 %.4fm) 实测角=%.4frad "
+      "耗时 %.2fs 结果=%s%s%s",
+      tag, grasp_width, closing.target_rad, closing.target_width_m, closing.measured_rad,
+      closing.elapsed_sec, toString(closing.code),
+      closing.detail.empty() ? "" : " | ", closing.detail.c_str());
+    if (!closing.ok()) {
+      RCLCPP_ERROR(
+        logger, "%s 合爪失败(%s)，不做 attach —— 否则会得到\"物体跟着走但其实没夹住\"的假成功",
+        tag, toString(closing.code));
+      return false;
+    }
+  } else {
+    RCLCPP_WARN(
+      logger,
+      "%s execute=false：不下发夹爪动作（机器人没动，驱动夹爪没意义）。"
+      "但仍然把物体 attach 到 %s，让后续规划知道手上带着东西 —— "
+      "注意此时 attach 是从未移动的当前位姿发生的，搬运段的几何不可当真",
+      tag, tcp_link.c_str());
+  }
+
+  publishAttachDiff(scene_pub, makeAttachObject(object_id, tcp_link, touch_links));
+  std::this_thread::sleep_for(std::chrono::milliseconds(800));
+  RCLCPP_INFO(
+    logger, "%s 物体已 attach 到 %s（碰撞检测起把它当机器人的一部分），touch_links %zu 个",
+    tag, tcp_link.c_str(), touch_links.size());
+  return true;
+}
+
+/// 在放置点松爪并把物体摘回世界。
+bool releaseAndDetach(
+  const rclcpp::Logger & logger,
+  GripperCommander & gripper,
+  const rclcpp::Publisher<moveit_msgs::msg::PlanningScene>::SharedPtr & scene_pub,
+  const std::string & object_id, const std::string & tcp_link,
+  bool execute, const char * tag)
+{
+  bool ok = true;
+  if (execute) {
+    const GripperOutcome opening = gripper.open();
+    RCLCPP_INFO(
+      logger, "%s 松爪: 目标角=%.4frad(理论张口 %.4fm) 实测角=%.4frad 耗时 %.2fs 结果=%s%s%s",
+      tag, opening.target_rad, opening.target_width_m, opening.measured_rad,
+      opening.elapsed_sec, toString(opening.code),
+      opening.detail.empty() ? "" : " | ", opening.detail.c_str());
+    if (!opening.ok()) {
+      // 松爪失败仍然要 detach：物体已经放下了，场景里继续挂着它会让
+      // 后续所有规划都以为手上带着东西。但结果要判失败，不能悄悄放过。
+      RCLCPP_ERROR(logger, "%s 松爪失败(%s)，仍执行 detach 以免污染场景", tag,
+        toString(opening.code));
+      ok = false;
+    }
+  } else {
+    RCLCPP_WARN(logger, "%s execute=false：不下发夹爪动作，仅在场景里 detach", tag);
+  }
+
+  publishAttachDiff(scene_pub, makeDetachObject(object_id, tcp_link));
+  std::this_thread::sleep_for(std::chrono::milliseconds(800));
+  RCLCPP_INFO(
+    logger, "%s 物体已 detach，MoveIt 按其**当前实际位姿**放回世界", tag);
+  return ok;
 }
 
 /// 单个候选 TCP 位姿的体检结论。
@@ -910,8 +1060,6 @@ int main(int argc, char ** argv)
       loader.get<double>("demo.transport_approach_height", 0.15);
     // 腕部碰撞体与物体顶面之间要留的净空。它**只是余量**，
     // 腕部半径本身由 URDF 现算，不在这个数里。
-    const double transport_clearance_margin =
-      loader.get<double>("demo.transport_clearance_margin", 0.02);
     // transport_probe 场景的扫描网格（TCP 抓取点坐标，不是物体中心）。
     const std::vector<double> probe_x_list = loader.get<std::vector<double>>(
       "demo.transport_probe_x_list", std::vector<double>{});
@@ -926,6 +1074,28 @@ int main(int argc, char ** argv)
       loader.get<double>("demo.transport_probe_ik_timeout", 0.05);
     const int probe_ik_attempts = static_cast<int>(
       loader.get<int64_t>("demo.transport_probe_ik_attempts", 20));
+    // 夹爪：开合角不在这里读，由 GripperCommander 从 SRDF 的 group_state 取。
+    // 这里只读"哪个组、哪个 action、拿哪两个 link 量张口"这类配置。
+    GripperConfig gripper_config;
+    gripper_config.group_name =
+      loader.get<std::string>("demo.gripper_group", std::string("gripper_left"));
+    gripper_config.action_name = loader.get<std::string>(
+      "demo.gripper_action", std::string("/gripper_left_controller/follow_joint_trajectory"));
+    gripper_config.open_state_name =
+      loader.get<std::string>("demo.gripper_open_state", std::string("open"));
+    gripper_config.closed_state_name =
+      loader.get<std::string>("demo.gripper_closed_state", std::string("closed"));
+    gripper_config.left_pad_link =
+      loader.get<std::string>("demo.gripper_left_pad_link", std::string(""));
+    gripper_config.right_pad_link =
+      loader.get<std::string>("demo.gripper_right_pad_link", std::string(""));
+    gripper_config.jaw_axis_in_tcp = loader.get<std::vector<double>>(
+      "demo.gripper_jaw_axis_in_tcp", std::vector<double>{1.0, 0.0, 0.0});
+    gripper_config.move_time_sec = loader.get<double>("demo.gripper_move_time", 1.2);
+    gripper_config.settle_time_sec = loader.get<double>("demo.gripper_settle_time", 0.8);
+    gripper_config.converge_tolerance_rad =
+      loader.get<double>("demo.gripper_converge_tolerance", 0.02);
+    gripper_config.grasp_preload_m = loader.get<double>("demo.gripper_grasp_preload", 0.004);
     // mobile_transport（搬运 -> 导航 -> 搬运）的导航段参数。
     const std::string mobile_map_frame = loader.get<std::string>(
       "demo.mobile_transport_map_frame", std::string("map"));
@@ -941,6 +1111,8 @@ int main(int argc, char ** argv)
       loader.get<double>("demo.mobile_transport_nav_timeout", 180.0);
     const bool mobile_verify_reachable =
       loader.get<bool>("demo.mobile_transport_verify_reachable", true);
+    const std::string mobile_carry_pose =
+      loader.get<std::string>("demo.mobile_transport_carry_pose", std::string("ready"));
     const std::vector<double> transport_quat = loader.get<std::vector<double>>(
       "demo.transport_grasp_orientation_xyzw", std::vector<double>{});
     const bool move_to_ready = loader.get<bool>("demo.move_to_ready_first", true);
@@ -975,6 +1147,33 @@ int main(int argc, char ** argv)
         }
       }
     }
+
+    // 夹爪动作器。transport / mobile_transport 都用它，所以建在场景循环外面。
+    // tcp_link 要等各场景解析出自己的 TCP 才知道，所以 configure 延后到用时。
+    GripperCommander gripper(node);
+    auto configure_gripper =
+      [&](const std::string & tcp_link, const char * tag) -> bool {
+        GripperConfig cfg = gripper_config;
+        cfg.tcp_link = tcp_link;
+        std::string detail;
+        const PlanErrorCode code = gripper.configure(planner.getRobotModel(), cfg, detail);
+        if (code != PlanErrorCode::kSuccess) {
+          RCLCPP_ERROR(
+            logger, "%s 夹爪配置失败(%s): %s", tag, toString(code), detail.c_str());
+          return false;
+        }
+        // 把张口量程打出来。这几个数是后面所有抓取判断的地基，
+        // 不打出来的话"夹不下"或"夹不住"就只能靠猜。
+        RCLCPP_INFO(
+          logger,
+          "%s 夹爪就绪: 组=%s 主动关节=%s 张开角=%.4frad(张口 %.4fm) "
+          "闭合角=%.4frad(张口 %.4fm) 预紧=%.4fm action=%s",
+          tag, cfg.group_name.c_str(), gripper.jointName().c_str(),
+          gripper.openAngle(), gripper.jawWidthAtAngle(gripper.openAngle()),
+          gripper.closedAngle(), gripper.jawWidthAtAngle(gripper.closedAngle()),
+          cfg.grasp_preload_m, cfg.action_name.c_str());
+        return true;
+      };
 
     for (const std::string & scenario : scenarios) {
       if (scenario == "transport_probe") {
@@ -1202,11 +1401,47 @@ int main(int argc, char ** argv)
         auto scene_pub = node->create_publisher<moveit_msgs::msg::PlanningScene>(
           "/planning_scene", rclcpp::QoS(1).transient_local());
 
+        if (!configure_gripper(resolved_tcp_link, "[transport]")) {
+          exit_code = 1;
+          continue;
+        }
+        // 张合方向上物体有多宽 —— 由抓取姿态决定，不能直接取 size[0]。
+        const Eigen::Vector3d jaw_axis_tcp(
+          gripper_config.jaw_axis_in_tcp.size() == 3U ?
+          gripper_config.jaw_axis_in_tcp[0] : 1.0,
+          gripper_config.jaw_axis_in_tcp.size() == 3U ?
+          gripper_config.jaw_axis_in_tcp[1] : 0.0,
+          gripper_config.jaw_axis_in_tcp.size() == 3U ?
+          gripper_config.jaw_axis_in_tcp[2] : 0.0);
+        const Eigen::Vector3d jaw_axis_in_frame = grasp_q.normalized() * jaw_axis_tcp;
+        const double grasp_width = boxWidthAlongDirection(transport_size, jaw_axis_in_frame);
+        // 先确认这个宽度真的夹得住，再开始动 —— 否则会走到第 2 步才发现夹不了，
+        // 那时手已经扎到物体上方了。
+        {
+          double probe_angle = 0.0;
+          std::string why;
+          const PlanErrorCode width_code =
+            gripper.graspAngleForWidth(grasp_width, probe_angle, why);
+          if (width_code != PlanErrorCode::kSuccess) {
+            RCLCPP_ERROR(
+              logger, "跳过 transport: 张合方向上物体宽 %.4fm 夹不了(%s): %s",
+              grasp_width, toString(width_code), why.c_str());
+            exit_code = 1;
+            continue;
+          }
+          RCLCPP_INFO(
+            logger, "[transport] 张合方向 frame=(%.3f, %.3f, %.3f) 上物体宽 %.4fm "
+            "-> 抓取角 %.4frad",
+            jaw_axis_in_frame.x(), jaw_axis_in_frame.y(), jaw_axis_in_frame.z(),
+            grasp_width, probe_angle);
+        }
+
         // 物体先放在 A。它是规划场景里的真实碰撞体，会参与后续每一步的避障。
         publishSceneDiff(
           scene_pub, makeBoxObject(object_id, transport_frame, transport_pick, transport_size));
         // 给 PlanningSceneMonitor 一点时间把差分吃进去，否则第一步规划时物体还不在场景里。
-        std::this_thread::sleep_for(std::chrono::milliseconds(800));        RCLCPP_INFO(
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        RCLCPP_INFO(
           logger,
           "[transport] 物体已加入规划场景: A=(%.3f, %.3f, %.3f) 尺寸=(%.3f, %.3f, %.3f) "
           "frame=%s；目标位置 B=(%.3f, %.3f, %.3f)",
@@ -1214,16 +1449,43 @@ int main(int argc, char ** argv)
           transport_size[0], transport_size[1], transport_size[2],
           transport_frame.c_str(),
           transport_place[0], transport_place[1], transport_place[2]);
+        // 边界如实说清，不含糊：
         RCLCPP_WARN(
           logger,
-          "[transport] 本机无夹爪关节，这是**纯运动学演示**："
-          "动作序列/碰撞校验/轨迹执行都是真的，物体不会真的被夹住跟着走");
+          "[transport] 抓取语义边界：夹爪**真的**按指令开合，物体**真的**被 attach 到 TCP "
+          "并参与碰撞检测（规划器必须带着它绕障）；但 Gazebo 里没有这个物体的刚体，"
+          "不产生夹持力 —— 物理夹持受 mimic 从动关节 7.79° 稳态误差与未标定摩擦影响，"
+          "是独立课题");
+
+        // 开始之前先张开夹爪。不张开就下扎，指垫会先撞到物体侧面。
+        if (execute) {
+          const GripperOutcome pre_open = gripper.open();
+          RCLCPP_INFO(
+            logger, "[transport] 预张开: 目标角=%.4frad 实测角=%.4frad 结果=%s%s%s",
+            pre_open.target_rad, pre_open.measured_rad, toString(pre_open.code),
+            pre_open.detail.empty() ? "" : " | ", pre_open.detail.c_str());
+          if (!pre_open.ok()) {
+            RCLCPP_ERROR(
+              logger, "[transport] 预张开失败(%s)，中止：合着爪去抓必然撞物体",
+              toString(pre_open.code));
+            exit_code = 1;
+            continue;
+          }
+        }
 
         const std::vector<TransportStep> steps = buildTransportSteps(
           transport_frame, transport_pick, transport_place,
           transport_grasp_z_offset, transport_approach_height, transport_quat);
 
         bool all_ok = true;
+        // 物体此刻是否挂在手上。收尾时要用它决定该不该发 detach。
+        //
+        // 为什么不能"无条件发一遍 detach 图省事"（实测）：对一个没挂东西的 link
+        // 发 detach，MoveIt 会打
+        //   [ERROR] [moveit_robot_state.robot_state]: Attached body 'xxx' not found
+        // 一条 ERROR。功能上没坏，但日志里凭空多一条 ERROR，
+        // 下次排查时会先去追这条假线索。
+        bool object_attached = false;
         // 逐步量化指标。做求解器横向对比时，光有"6 步全过"是不够的 ——
         // 必须能比出规划耗时、节拍、最差奇异值，否则"换个求解器也能过"
         // 说明不了它到底更好还是更差。
@@ -1290,21 +1552,46 @@ int main(int argc, char ** argv)
             }
           }
 
-          // 抬起之后把物体在规划场景里从 A 挪到 B。
-          // 必须在这一步做：否则后续规划仍以为物体在 A，会绕开一个已经不在那儿的
-          // 障碍，同时对 B 处的真实占用视而不见。
-          if (step.name == "3-抬起(带物体)") {
-            publishSceneDiff(
-              scene_pub,
-              makeBoxObject(object_id, transport_frame, transport_place, transport_size));
-            std::this_thread::sleep_for(std::chrono::milliseconds(800));
-            RCLCPP_INFO(
-              logger, "[transport] 规划场景中的物体位置已更新到 B=(%.3f, %.3f, %.3f)",
-              transport_place[0], transport_place[1], transport_place[2]);
+          // ---- 抓取与放置 ----
+          // 以前这里是「抬起之后把物体在场景里从 A 传送到 B」。那是**没有夹爪时代**
+          // 的替代品：物体并不跟着手走，第 4 步横移时避障用的是一个已经不在 A 的障碍，
+          // 同时对手上带着的物体完全无感。现在物体真的挂在 TCP 上，
+          // 位置由正解决定，第 3~5 步的避障自动是对的。
+          if (step.name == "2-下降到A") {
+            if (!graspAndAttach(
+                logger, gripper, scene_pub, object_id, resolved_tcp_link,
+                end_effector_links, grasp_width, execute, "[transport]"))
+            {
+              all_ok = false;
+              exit_code = 1;
+              break;
+            }
+            object_attached = true;
+          } else if (step.name == "5-下降到B") {
+            const bool released = releaseAndDetach(
+              logger, gripper, scene_pub, object_id, resolved_tcp_link,
+              execute, "[transport]");
+            // detach 已经发出去了（releaseAndDetach 里无论松爪成败都发），
+            // 所以无论如何都要清标记，否则收尾会再发一遍。
+            object_attached = false;
+            if (!released) {
+              all_ok = false;
+              exit_code = 1;
+              break;
+            }
           }
         }
 
         // 收尾：把物体从场景里移掉，避免污染后续场景的规划。
+        //
+        // 只在物体确实还挂着时才 detach。流程中止在"挂着"的时候必须补这一下：
+        // 那时物体属于 robot_state 而不属于 world，直接发 world 的 REMOVE 对它无效，
+        // 物体会一直挂在 TCP 上，污染后面所有场景的规划。
+        if (object_attached) {
+          publishAttachDiff(scene_pub, makeDetachObject(object_id, resolved_tcp_link));
+          std::this_thread::sleep_for(std::chrono::milliseconds(300));
+          RCLCPP_INFO(logger, "[transport] 收尾：物体仍挂在手上，已补一次 detach");
+        }
         moveit_msgs::msg::CollisionObject remove;
         remove.id = object_id;
         remove.header.frame_id = transport_frame;
@@ -1330,11 +1617,14 @@ int main(int argc, char ** argv)
         // 第 4 步"移动到 B 上方"是体系内的横移，底盘挪没挪都成立，
         // 所以整个流程就是 transport + 在第 3 步(抬起)之后插入一段导航。
         //
-        // 物体坐标系为什么用体系 astribot_torso_base 就够（不需要
-        // AttachedCollisionObject）：导航途中机械臂**保持抬起姿态不动**，
-        // 物体与机器人的相对位姿恒定，体系坐标严格成立，物体自然跟着走。
-        // !!! 如果以后要在导航途中收臂，这个前提就破了，必须改成把物体
-        // 附着到 TCP link 上（AttachedCollisionObject + touch_links）。!!!
+        // 物体如何跟着走（2026-08-25 改）：物体在第 2 步之后被 attach 到 TCP 上，
+        // 属于机器人状态的一部分，位姿由正解决定 —— 底盘怎么动、手臂收不收，
+        // 物体都跟着对。
+        //
+        // 这里以前依赖的是另一个前提："导航途中机械臂保持抬起姿态不动，
+        // 物体与机器人的相对位姿恒定，所以用体系坐标就够"，并留了一条注释说
+        // 「如果以后要在导航途中收臂，这个前提就破了，必须改成 AttachedCollisionObject」。
+        // 现在已经改成 attach，那个脆弱前提随之解除。
         if (transport_pick.size() != 3U || transport_place.size() != 3U ||
           transport_size.size() != 3U)
         {
@@ -1394,6 +1684,34 @@ int main(int argc, char ** argv)
         const std::string object_id = "transport_target";
         auto scene_pub = node->create_publisher<moveit_msgs::msg::PlanningScene>(
           "/planning_scene", rclcpp::QoS(1).transient_local());
+
+        if (!configure_gripper(mobile_tcp_link, "[mobile]")) {
+          exit_code = 1;
+          continue;
+        }
+        const Eigen::Vector3d mobile_jaw_axis_tcp(
+          gripper_config.jaw_axis_in_tcp.size() == 3U ?
+          gripper_config.jaw_axis_in_tcp[0] : 1.0,
+          gripper_config.jaw_axis_in_tcp.size() == 3U ?
+          gripper_config.jaw_axis_in_tcp[1] : 0.0,
+          gripper_config.jaw_axis_in_tcp.size() == 3U ?
+          gripper_config.jaw_axis_in_tcp[2] : 0.0);
+        const double mobile_grasp_width = boxWidthAlongDirection(
+          transport_size, mobile_grasp_q.normalized() * mobile_jaw_axis_tcp);
+        {
+          double probe_angle = 0.0;
+          std::string why;
+          const PlanErrorCode width_code =
+            gripper.graspAngleForWidth(mobile_grasp_width, probe_angle, why);
+          if (width_code != PlanErrorCode::kSuccess) {
+            RCLCPP_ERROR(
+              logger, "跳过 mobile_transport: 张合方向上物体宽 %.4fm 夹不了(%s): %s",
+              mobile_grasp_width, toString(width_code), why.c_str());
+            exit_code = 1;
+            continue;
+          }
+        }
+
         publishSceneDiff(
           scene_pub, makeBoxObject(object_id, transport_frame, transport_pick, transport_size));
         std::this_thread::sleep_for(std::chrono::milliseconds(800));
@@ -1406,8 +1724,24 @@ int main(int argc, char ** argv)
           transport_place[0], transport_place[1], transport_place[2]);
         RCLCPP_WARN(
           logger,
-          "[mobile] 本机无夹爪，纯运动学演示；导航途中机械臂保持抬起姿态不收臂 —— "
-          "伸出的手臂与物体超出了代价地图那个 0.42m 外接足迹，nav2 看不到它");
+          "[mobile] 抓取语义边界：夹爪真的开合、物体真的 attach 到 TCP 并参与碰撞检测；"
+          "但 Gazebo 里没有该物体的刚体，不产生夹持力。"
+          "另外导航途中伸出的手臂与手上的物体都超出了代价地图那个 0.42m 外接足迹，"
+          "nav2 看不到它们 —— 这一条没有因为改用 attach 而改变");
+
+        if (execute) {
+          const GripperOutcome pre_open = gripper.open();
+          RCLCPP_INFO(
+            logger, "[mobile] 预张开: 目标角=%.4frad 实测角=%.4frad 结果=%s%s%s",
+            pre_open.target_rad, pre_open.measured_rad, toString(pre_open.code),
+            pre_open.detail.empty() ? "" : " | ", pre_open.detail.c_str());
+          if (!pre_open.ok()) {
+            RCLCPP_ERROR(
+              logger, "[mobile] 预张开失败(%s)，中止", toString(pre_open.code));
+            exit_code = 1;
+            continue;
+          }
+        }
 
         const std::vector<TransportStep> steps = buildTransportSteps(
           transport_frame, transport_pick, transport_place,
@@ -1417,6 +1751,9 @@ int main(int argc, char ** argv)
         double mobile_worst_sigma = std::numeric_limits<double>::infinity();
         std::size_t mobile_steps_done = 0U;
         bool mobile_ok = true;
+        // 同 transport：只在真的挂着时才补 detach，避免日志里凭空多一条
+        // "Attached body not found" 的 ERROR 假线索。
+        bool mobile_object_attached = false;
 
         // 一步"规划 + 校验 + 执行"。失败返回 false，由调用处决定中止。
         const auto run_arm_step = [&](std::size_t index) -> bool {
@@ -1474,6 +1811,14 @@ int main(int argc, char ** argv)
         RCLCPP_INFO(logger, "[mobile] ===== 阶段 1/3：起始位置取货 =====");
         for (std::size_t i = 0; i < 3U && mobile_ok; ++i) {
           mobile_ok = run_arm_step(i);
+          // 第 2 步下降到 A 之后合爪并 attach，物体从此跟着 TCP 走。
+          // 必须在第 3 步（抬起）之前完成：抬起那一步的规划要知道手上带着东西。
+          if (mobile_ok && i == 1U) {
+            mobile_ok = graspAndAttach(
+              logger, gripper, scene_pub, object_id, mobile_tcp_link,
+              end_effector_links, mobile_grasp_width, execute, "[mobile]");
+            mobile_object_attached = mobile_ok;
+          }
         }
 
         // 记录物体此刻的 map 系位置。查不到 TF 只降级为 WARN ——
@@ -1505,6 +1850,55 @@ int main(int argc, char ** argv)
         NavOutcome nav;
         if (mobile_ok) {
           RCLCPP_INFO(logger, "[mobile] ===== 阶段 2/3：底盘导航 =====");
+
+          // ---- 导航前收臂 ----
+          // 不收臂的实测后果：导航 ABORTED，176.7s 里 controller_server 连报 7 次
+          // `Failed to make progress`。根因不是 nav2 —— 臂-底盘耦合节点把"抬着物体"
+          // 判成展开度 1.00，限速系数落到下限 0.15，那个速度 10s 走不满进度检查器
+          // 要求的 0.5m，于是判卡住、跑恢复行为、用尽、放弃。
+          //
+          // 之所以现在能收臂：物体已 attach 到 TCP，位姿由正解决定，手臂怎么动都对。
+          // 改用 attach 之前物体是体系固定坐标，一收臂物体就留在原地了。
+          if (!mobile_carry_pose.empty()) {
+            SingleArmPlanRequest carry_request;
+            carry_request.group = transport_group;
+            carry_request.named_target = mobile_carry_pose;
+            const PlanResult carry = planner.planSingleArm(carry_request);
+            RCLCPP_INFO(
+              logger, "[mobile] 导航前收臂到 '%s': %s | 节拍 %.3fs 最差σ %.4f",
+              mobile_carry_pose.c_str(), toString(carry.code),
+              carry.final_metrics.duration,
+              carry.worst_singularity.valid ?
+              carry.worst_singularity.min_singular_value : -1.0);
+            if (!carry.succeeded() && !carry.noActionNeeded()) {
+              // 收臂失败要中止，不能"那就伸着走"：已经实测过伸着走一定 ABORTED，
+              // 继续下去只是把 176s 再烧一遍。
+              RCLCPP_ERROR(
+                logger,
+                "[mobile] 收臂失败(%s)，中止 —— 伸着手臂导航实测必然 ABORTED。"
+                "若是手上物体与本体碰撞导致规划失败，说明这个搬运姿态不可行，"
+                "要换 carry_pose 或换抓取点",
+                toString(carry.code));
+              mobile_ok = false;
+            } else if (carry.succeeded() && execute) {
+              std::string carry_message;
+              const PlanErrorCode carry_exec = planner.executeTrajectory(
+                transport_group, carry.trajectory, carry_message);
+              if (carry_exec != PlanErrorCode::kSuccess) {
+                RCLCPP_ERROR(
+                  logger, "[mobile] 收臂执行失败: %s (%s)",
+                  toString(carry_exec), carry_message.c_str());
+                mobile_ok = false;
+              }
+            }
+          } else {
+            RCLCPP_WARN(
+              logger,
+              "[mobile] carry_pose 为空：导航途中不收臂。实测这样会因臂-底盘耦合"
+              "限速到 0.15 而走不满进度检查器阈值，导航大概率 ABORTED");
+          }
+        }
+        if (mobile_ok) {
           const geometry_msgs::msg::PoseStamped nav_goal = makeNavGoal(
             mobile_map_frame, mobile_nav_goal_xy[0], mobile_nav_goal_xy[1],
             mobile_nav_goal_yaw);
@@ -1541,13 +1935,18 @@ int main(int argc, char ** argv)
         // ---- 阶段 3：目标位置放货（步骤 4~6）----
         if (mobile_ok) {
           RCLCPP_INFO(logger, "[mobile] ===== 阶段 3/3：目标位置放货 =====");
-          // 物体在场景里更新到 B。必须在放货前做：否则后面三步仍以为物体在 A。
-          publishSceneDiff(
-            scene_pub,
-            makeBoxObject(object_id, transport_frame, transport_place, transport_size));
-          std::this_thread::sleep_for(std::chrono::milliseconds(800));
+          // 这里以前有一句「物体在场景里更新到 B」的传送。改成 attach 之后必须删掉：
+          // 物体此刻属于 robot_state，位姿由正解决定；再往 world 里发一个同 id 的
+          // ADD，会变成"手上挂着一个、世界里又躺着一个"，两份几何都参与碰撞检测。
           for (std::size_t i = 3U; i < steps.size() && mobile_ok; ++i) {
             mobile_ok = run_arm_step(i);
+            // 第 5 步下降到 B 之后松爪并 detach，MoveIt 按当前实际位姿把物体放回世界。
+            if (mobile_ok && i == 4U) {
+              mobile_ok = releaseAndDetach(
+                logger, gripper, scene_pub, object_id, mobile_tcp_link, execute, "[mobile]");
+              // detach 已发出（松爪成败都发），无论如何清标记。
+              mobile_object_attached = false;
+            }
           }
         }
 
@@ -1584,6 +1983,12 @@ int main(int argc, char ** argv)
         }
 
         // 收尾：把物体从场景里移掉，避免污染后续场景。
+        // 只在确实还挂着时才 detach，理由同 transport 场景。
+        if (mobile_object_attached) {
+          publishAttachDiff(scene_pub, makeDetachObject(object_id, mobile_tcp_link));
+          std::this_thread::sleep_for(std::chrono::milliseconds(300));
+          RCLCPP_INFO(logger, "[mobile] 收尾：物体仍挂在手上，已补一次 detach");
+        }
         moveit_msgs::msg::CollisionObject mobile_remove;
         mobile_remove.id = object_id;
         mobile_remove.header.frame_id = transport_frame;

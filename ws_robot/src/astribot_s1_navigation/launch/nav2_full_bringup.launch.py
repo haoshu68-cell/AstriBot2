@@ -55,6 +55,21 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'map_file_name', default_value='',
             description='mode:=localization 时要加载的 SLAM Toolbox 序列化地图基础文件名'),
+        DeclareLaunchArgument(
+            'map_source_file', default_value='',
+            description='地图来源配置文件，留空用 astribot_s1_perception/config/map_source.yaml'),
+        DeclareLaunchArgument(
+            'map_source', default_value='',
+            description='覆盖地图来源：sim_slam(仿真自建) | real_file(真机地图落盘) | '
+                        'real_live(跨机订阅真机 /map)。留空用配置文件的值'),
+        DeclareLaunchArgument(
+            'localization', default_value='',
+            description='覆盖定位方式：slam(扫描匹配) | ground_truth(静态 TF，仿真真值)。'
+                        '留空用配置文件的值'),
+        DeclareLaunchArgument(
+            'map_yaml_path', default_value='',
+            description='map_source:=real_file 时的地图 **yaml** 绝对路径'
+                        '（不是 pgm）。留空用配置文件的值'),
         DeclareLaunchArgument('use_rviz', default_value='true'),
         DeclareLaunchArgument('robot_name', default_value='astribot_s1'),
         DeclareLaunchArgument(
@@ -112,6 +127,13 @@ def generate_launch_description():
             'launch_gazebo': LaunchConfiguration('launch_gazebo'),
             'map_file_name': LaunchConfiguration('map_file_name'),
             'robot_name': LaunchConfiguration('robot_name'),
+            # 地图来源三个参数原样透传。留空时由 perception 侧读
+            # config/map_source.yaml 决定 —— 覆盖项必须显式传，
+            # 不能依赖共享 launch 上下文（那个坑见本文件上面 use_rviz 的记录）。
+            'map_source_file': LaunchConfiguration('map_source_file'),
+            'map_source': LaunchConfiguration('map_source'),
+            'localization': LaunchConfiguration('localization'),
+            'map_yaml_path': LaunchConfiguration('map_yaml_path'),
             'autonomous_patrol': 'false',
             'use_rviz': 'false',  # 用本文件自己整合了Nav2显示项的rviz，不重复开两个
         }.items(),

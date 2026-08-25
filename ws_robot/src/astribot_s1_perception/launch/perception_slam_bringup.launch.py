@@ -19,15 +19,61 @@
     # 实体机器人 + 建图
     ros2 launch astribot_s1_perception perception_slam_bringup.launch.py \
         env:=hardware mode:=mapping
+
+地图来源（map_source）与本文件 mode 的关系
+========================================
+新增的 `map_source` 决定 /map 由谁提供，见 config/map_source.yaml 与
+map_provider.launch.py 的文件头。它与这里的 `mode` 是这样对应的：
+
+    map_source=sim_slam    -> 走本文件的 slam_mapping / slam_localization 分支
+                              （即 mode 参数继续生效，语义不变）
+    map_source=real_file   -┐ 不启 slam_toolbox，改由 map_provider 提供 /map
+    map_source=real_live   -┘ 与 map→odom，此时 mode 参数被忽略
+
+`map_source` 留空时用 config/map_source.yaml 里的值；仓库默认是 sim_slam，
+所以**不传这个参数时行为与以前完全一致**。
 """
 
+import os
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetLaunchConfiguration
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+    SetLaunchConfiguration,
+)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
+from astribot_s1_perception.map_source_config import needs_slam_toolbox, resolve
+
+
+def _resolve_map_source(context, *args, **kwargs):
+    """把生效的 map_source 解析成一个 launch 变量，供下面的 IfCondition 用。
+
+    为什么要在这里再解析一次：`map_source` 可能来自 yaml 而不是命令行，
+    而 launch 的 IfCondition 只能对字符串求值，读不了 yaml。
+    解析逻辑本身在 map_source_config 里，两处共用同一份实现 ——
+    抄两份的话判定迟早漂移，而漂移的后果是 slam_toolbox 与静态 TF
+    同时发 map→odom，症状看起来像定位漂移，极难归因。
+    """
+    overrides = {
+        key: LaunchConfiguration(key).perform(context)
+        for key in ('map_source', 'localization')
+    }
+    config_file = LaunchConfiguration('map_source_file').perform(context) or None
+    _, _, map_source, localization = resolve(config_file, overrides)
+    print(f'[perception_slam_bringup] 生效的 map_source={map_source} '
+          f'localization={localization}')
+    return [
+        SetLaunchConfiguration('map_source_resolved', map_source),
+        SetLaunchConfiguration(
+            'use_slam_toolbox', 'true' if needs_slam_toolbox(map_source) else 'false'),
+    ]
 
 
 def generate_launch_description():
@@ -57,14 +103,34 @@ def generate_launch_description():
                         '让机器人边走边建图，而不是原地不动只靠雷达自转覆盖；'
                         '只想手动操控(遥操作/自己发cmd_vel)时设成 false 关掉它，'
                         '避免和手动指令打架。'),
+        DeclareLaunchArgument(
+            'map_source_file', default_value='',
+            description='地图来源配置文件路径，留空用包内 config/map_source.yaml'),
+        DeclareLaunchArgument(
+            'map_source', default_value='',
+            description='覆盖 map_source（sim_slam|real_file|real_live），留空用配置文件的值。'
+                        'real_* 时不启 slam_toolbox，改由 map_provider 提供 /map'),
+        DeclareLaunchArgument(
+            'localization', default_value='',
+            description='覆盖 localization（slam|ground_truth），留空用配置文件的值'),
+        DeclareLaunchArgument(
+            'map_yaml_path', default_value='',
+            description='map_source:=real_file 时的地图 yaml 绝对路径，留空用配置文件的值'),
     ]
 
     env = LaunchConfiguration('env')
     mode = LaunchConfiguration('mode')
     is_sim = PythonExpression(["'", env, "' == 'sim'"])
     is_hardware = PythonExpression(["'", env, "' == 'hardware'"])
-    is_mapping = PythonExpression(["'", mode, "' == 'mapping'"])
-    is_localization = PythonExpression(["'", mode, "' == 'localization'"])
+    # slam_toolbox 的两个分支现在多一个前置条件：只有 map_source 需要它时才起。
+    # 'use_slam_toolbox' 由 _resolve_map_source() 在 OpaqueFunction 里算出并写入。
+    use_slam_toolbox = LaunchConfiguration('use_slam_toolbox')
+    is_mapping = PythonExpression(
+        ["'", mode, "' == 'mapping' and '", use_slam_toolbox, "' == 'true'"])
+    is_localization = PythonExpression(
+        ["'", mode, "' == 'localization' and '", use_slam_toolbox, "' == 'true'"])
+    # real_file / real_live：地图由 map_provider 提供，不启 slam_toolbox。
+    is_external_map = PythonExpression(["'", use_slam_toolbox, "' == 'false'"])
 
     # !!! 实测踩坑记录 !!!：下面 include warehouse_sim.launch.py 时传了
     # launch_arguments={'use_rviz': 'false', ...}（不想重复开两个RViz），
@@ -130,6 +196,22 @@ def generate_launch_description():
         condition=IfCondition(is_localization),
     )
 
+    # 外部地图分支（map_source=real_file / real_live）。
+    # map_provider 自己会再读一次配置拿它需要的参数，这里只透传覆盖项 ——
+    # 覆盖项留空时它用配置文件的值，与本文件解析出的结果必然一致（同一份实现）。
+    map_provider = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([pkg_perception, 'launch', 'map_provider.launch.py'])),
+        launch_arguments={
+            'use_sim_time': use_sim_time_str,
+            'map_source_file': LaunchConfiguration('map_source_file'),
+            'map_source': LaunchConfiguration('map_source'),
+            'localization': LaunchConfiguration('localization'),
+            'map_yaml_path': LaunchConfiguration('map_yaml_path'),
+        }.items(),
+        condition=IfCondition(is_external_map),
+    )
+
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -152,6 +234,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription(declare_args + [
+        # 必须排在所有 IfCondition 之前：它写入 'use_slam_toolbox'，
+        # 下面几个分支的条件都依赖那个变量。
+        OpaqueFunction(function=_resolve_map_source),
         save_use_rviz,   # 必须排在 warehouse_sim 前面，抢在共享变量被覆盖之前先存一份快照
         warehouse_sim,
         sim_perception,
@@ -159,6 +244,7 @@ def generate_launch_description():
         hardware_perception,
         slam_mapping,
         slam_localization,
+        map_provider,
         rviz_node,
         autonomous_patrol_node,
     ])

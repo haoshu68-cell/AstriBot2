@@ -37,6 +37,9 @@ find_package(moveit_planners_ompl REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+# 夹爪库用到：JTC 的 action 定义 + 读实测关节值。
+find_package(control_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 set(ASTRIBOT_MANIPULATION_DEPS
   rclcpp
@@ -106,10 +109,40 @@ pluginlib_export_plugin_description_file(
   moveit_core ompl_planner_extension_plugin_description.xml)
 
 # ---------------------------------------------------------------------------
+# 夹爪动作库
+#
+# 为什么不并进 ${PROJECT_NAME}_core：核心库刻意不依赖任何 action / 节点级东西
+# （见上面 ASTRIBOT_MANIPULATION_DEPS 处的说明），这样单元测试能在没有
+# move_group、没有仿真的环境里跑。夹爪动作本质上要一个 action client，
+# 并进核心库就破了那个约定，所以单独一个很薄的库。
+#
+# 注意它仍然可以离线测：configure() 只建 client 与订阅、不等服务端，
+# 张口表是纯 FK 计算 —— 所以「读 SRDF 开合角」「按宽度反解抓取角」这两件
+# 最容易写错的事都能在没有仿真的环境里被测到。真正需要控制器在线的只有 moveTo()。
+# ---------------------------------------------------------------------------
+add_library(${PROJECT_NAME}_gripper SHARED
+  src/gripper_commander.cpp
+)
+target_include_directories(${PROJECT_NAME}_gripper PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_include_directories(${PROJECT_NAME}_gripper SYSTEM PUBLIC
+  ${EIGEN3_INCLUDE_DIRS}
+)
+target_link_libraries(${PROJECT_NAME}_gripper ${PROJECT_NAME}_core)
+ament_target_dependencies(${PROJECT_NAME}_gripper
+  ${ASTRIBOT_MANIPULATION_DEPS}
+  rclcpp_action
+  control_msgs
+  sensor_msgs
+)
+
+# ---------------------------------------------------------------------------
 # demo 与工具节点
 # ---------------------------------------------------------------------------
 add_executable(planning_demo_node src/planning_demo_node.cpp)
-target_link_libraries(planning_demo_node ${PROJECT_NAME}_core)
+target_link_libraries(planning_demo_node ${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
 # mobile_transport 场景要下发 NavigateToPose / ComputePathToPose 并查 TF，
 # 所以 demo 节点比核心库多这三个依赖。
 # 刻意**不**把它们加进 ASTRIBOT_MANIPULATION_DEPS：核心库是单元测试链接的目标，
@@ -121,6 +154,8 @@ ament_target_dependencies(planning_demo_node
   rclcpp_action
   nav2_msgs
   tf2_ros
+  control_msgs
+  sensor_msgs
 )
 
 # 自碰撞对生成工具：采样实测哪些 link 对"从不碰撞"或"总是碰撞"，
@@ -139,7 +174,7 @@ install(
 )
 
 install(
-  TARGETS ${PROJECT_NAME}_core ${PROJECT_NAME}_ompl_extension
+  TARGETS ${PROJECT_NAME}_core ${PROJECT_NAME}_ompl_extension ${PROJECT_NAME}_gripper
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -218,10 +253,20 @@ if(BUILD_TESTING)
     ${OMPL_INCLUDE_DIRS})
   target_link_libraries(test_optimizing_planner_wrapper ${OMPL_LIBRARIES})
   ament_target_dependencies(test_optimizing_planner_wrapper rclcpp)
+
+  # 夹爪：断言的是"开合角来自 SRDF"与"按物体宽度反解抓取角"。
+  # 用的是 test_gripper_commander.cpp 里自带的合成平行夹爪（张口宽度可以口算），
+  # 不需要控制器在线 —— configure() 只建 client 不等服务端，张口表是纯 FK。
+  ament_add_gtest(test_gripper_commander test/test_gripper_commander.cpp)
+  target_link_libraries(test_gripper_commander
+    ${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
+  target_include_directories(test_gripper_commander PRIVATE test)
+  ament_target_dependencies(test_gripper_commander
+    ${ASTRIBOT_MANIPULATION_DEPS} rclcpp_action control_msgs sensor_msgs urdf srdfdom)
 endif()
 
 ament_export_include_directories(include)
-ament_export_libraries(${PROJECT_NAME}_core)
+ament_export_libraries(${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
 ament_export_dependencies(${ASTRIBOT_MANIPULATION_DEPS})
 ament_export_targets(export_${PROJECT_NAME})
 
