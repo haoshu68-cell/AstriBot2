@@ -360,63 +360,105 @@ moveit_msgs::msg::CollisionObject makeBoxObject(
   return obj;
 }
 
-/// 量出「与 TCP 位置重合的那些连杆」的碰撞体外接半径。
+/// 末端在某个抓取方向上的几何包络（相对 TCP）。
 ///
-/// 为什么需要这个函数（第2步"下降到A"失败的真正原因）：
-/// 本机 TCP 是个**纯坐标系**（tool_link 无碰撞几何），很容易误以为"TCP 贴着物体
-/// 顶面也没关系"。但 URDF 实测：
-///   astribot_arm_left_tool_joint  fixed  link_7 -> tool_link   xyz = 0 0 0
-///   astribot_arm_left_joint_7     revolute link_6 -> link_7    xyz = 0 0 0
-///   link_7 collision: sphere r=0.05 @ (0.006, 0, 0)
-///   link_6 collision: cylinder r=0.04 l=0.045 @ (0, 0, 0)
-/// 三个坐标系原点**完全重合** —— 也就是说 TCP 正坐在一个半径 5cm 的腕部球心上。
-/// TCP 离物体顶面只有 0.03m 时，腕部球已经嵌进物体 0.02m，目标状态必然碰撞，
-/// 规划器怎么重试都无解，只会报无信息量的 RETRIES_EXHAUSTED。
+/// setback —— 从 TCP 沿"背离物体"方向走多远还有碰撞几何（正值）。
+///            **注意它量的是最远端**，不是"最近的那块几何"，所以不适合当净空判据：
+///            TCP 背后是整条手臂，实测 link_7 一项就到 0.21m。
+///            保留它只用于诊断输出（看末端几何整体占了多长一段）。
+/// reach   —— 从 TCP 沿"朝向物体"方向最远还有碰撞几何（正值，即指尖伸出量）。
+///            这个是真判据：物体顶面比它还远，两指就够不到。
+struct EndEffectorSpan
+{
+  double setback{0.0};
+  double reach{0.0};
+  bool valid{false};
+};
+
+/// 量出末端（腕部 + 夹爪）相对 TCP 的几何包络，投影到给定的抓取方向上。
 ///
-/// 半径从 RobotModel（即 URDF）现算，不写死数字：换夹具、改 URDF 后自动跟着变。
-/// 沿父链上溯的终止条件是"关节原点有平移"——有平移就说明那个连杆不再与 TCP 重合，
-/// 它的碰撞体不该算进这个半径里（纯旋转的 joint_7 不算平移，仍要计入）。
-double tcpCoincidentCollisionRadius(
+/// !!! 这个函数是替换掉 tcpCoincidentCollisionRadius 的，原因必须写清楚 !!!
+/// 原函数的算法是"从 TCP 沿父链上溯，只要关节原点没有平移就继续，取最大外接半径"。
+/// 它成立的前提是 **TCP 与腕部连杆原点重合**（当时 TCP = tool_link，而
+/// tool_joint 的 xyz 是 0 0 0，确实与 link_7 重合）。
+/// 2026-08-20 把 TCP 改到 tcp_link（法兰再往 -y 0.15m）之后，这个前提没了：
+/// 上溯第一步 tcp_joint 的平移是 0.15，循环立刻终止，函数**恒返回 0**。
+/// 于是 min_grasp_z_offset 退化成 0.5*size_z + margin，那道"跑之前就拒绝"的
+/// 检查变成永远通过 —— 它不再度量任何东西，却还在报告一个看起来合理的下限。
+/// 这是我把 TCP 挪走时引入的**静默失效**，不是原函数写错了。
+///
+/// 新算法直接量真实包络，不再依赖"原点重合"这个巧合：
+///   1. 取 TCP 与末端各连杆在同一个 RobotState 下的相对变换。
+///      这个相对关系与手臂 7 个关节无关 —— TCP 和夹爪都刚性挂在 link_7 上，
+///      只随夹爪开合角变化。所以随便取一个状态量都对，不需要先解 IK。
+///   2. 把每个连杆碰撞体的 AABB 8 个角点变换到 TCP 系。
+///   3. 投影到 grasp_dir_in_tcp（"朝向物体"的单位方向，在 TCP 系下表达），
+///      取 min/max 得到 setback / reach。
+///
+/// 为什么要投影而不是只看某个轴：抓取姿态由 yaml 里的四元数给定，夹爪的接近轴
+/// （TCP 系的 -y）与世界竖直方向**一般不重合**。实测当前配置差 28.6°，
+/// 直接拿 -y 方向的伸出量当竖直伸出量会高估 14%。
+EndEffectorSpan endEffectorSpan(
   const moveit::core::RobotModelConstPtr & model, const std::string & tcp_link,
+  const Eigen::Vector3d & grasp_dir_in_tcp, const std::vector<std::string> & links,
   std::string & detail)
 {
   detail.clear();
-  if (!model) {
-    return 0.0;
+  EndEffectorSpan span;
+  if (!model || grasp_dir_in_tcp.norm() < 1.0e-9) {
+    detail = "模型为空或抓取方向为零向量";
+    return span;
   }
-  // 判定"原点重合"的平移阈值。取 1e-6m：URDF 里写 0 就是精确 0，
-  // 这个阈值只用来吸收浮点表示误差，不是工程容差。
-  constexpr double kCoincidentEpsilon = 1.0e-6;
-
-  double radius = 0.0;
-  const moveit::core::LinkModel * link = model->getLinkModel(tcp_link);
-  if (link == nullptr) {
+  const moveit::core::LinkModel * tcp = model->getLinkModel(tcp_link);
+  if (tcp == nullptr) {
     detail = "找不到 TCP link '" + tcp_link + "'";
-    return 0.0;
+    return span;
   }
-  while (link != nullptr) {
-    if (!link->getShapes().empty()) {
-      // getShapeExtentsAtOrigin 是该连杆所有碰撞体的 AABB 尺寸，
-      // 其中心在 getCenteredBoundingBoxOffset()。外接半径取
-      // "中心偏移量 + 半个最长边"，对球/圆柱都是安全上界。
-      const double half_extent = 0.5 * link->getShapeExtentsAtOrigin().maxCoeff();
-      const double offset = link->getCenteredBoundingBoxOffset().norm();
-      const double link_radius = offset + half_extent;
-      if (link_radius > radius) {
-        radius = link_radius;
+  const Eigen::Vector3d dir = grasp_dir_in_tcp.normalized();
+
+  moveit::core::RobotState state(model);
+  state.setToDefaultValues();
+  state.update();
+  const Eigen::Isometry3d tcp_to_world = state.getGlobalLinkTransform(tcp).inverse();
+
+  double lo = std::numeric_limits<double>::max();
+  double hi = std::numeric_limits<double>::lowest();
+  for (const std::string & name : links) {
+    const moveit::core::LinkModel * link = model->getLinkModel(name);
+    if (link == nullptr || link->getShapes().empty()) {
+      continue;
+    }
+    const Eigen::Isometry3d link_in_tcp = tcp_to_world * state.getGlobalLinkTransform(link);
+    const Eigen::Vector3d half = 0.5 * link->getShapeExtentsAtOrigin();
+    const Eigen::Vector3d center = link->getCenteredBoundingBoxOffset();
+    double link_lo = std::numeric_limits<double>::max();
+    double link_hi = std::numeric_limits<double>::lowest();
+    // AABB 的 8 个角点：只看中心点会漏掉伸出最远的那个角。
+    for (int sx = -1; sx <= 1; sx += 2) {
+      for (int sy = -1; sy <= 1; sy += 2) {
+        for (int sz = -1; sz <= 1; sz += 2) {
+          const Eigen::Vector3d corner_local =
+            center + Eigen::Vector3d(sx * half.x(), sy * half.y(), sz * half.z());
+          const double proj = dir.dot(link_in_tcp * corner_local);
+          link_lo = std::min(link_lo, proj);
+          link_hi = std::max(link_hi, proj);
+        }
       }
-      detail += (detail.empty() ? "" : ", ") + link->getName() + "=" +
-        std::to_string(link_radius);
     }
-    const moveit::core::LinkModel * parent = link->getParentLinkModel();
-    if (parent == nullptr ||
-      link->getJointOriginTransform().translation().norm() > kCoincidentEpsilon)
-    {
-      break;
-    }
-    link = parent;
+    lo = std::min(lo, link_lo);
+    hi = std::max(hi, link_hi);
+    detail += (detail.empty() ? "" : ", ") + link->getName() + "=[" +
+      std::to_string(link_lo) + "," + std::to_string(link_hi) + "]";
   }
-  return radius;
+  if (hi < lo) {
+    detail = "末端连杆列表里没有任何带碰撞几何的连杆";
+    return span;
+  }
+  // lo 为负表示几何在 TCP 背后（朝腕部）；setback 取其绝对值。
+  span.setback = (lo < 0.0) ? -lo : 0.0;
+  span.reach = (hi > 0.0) ? hi : 0.0;
+  span.valid = true;
+  return span;
 }
 
 
@@ -825,6 +867,13 @@ int main(int argc, char ** argv)
     }
 
     ParameterLoader loader(node);
+    // 末端连杆清单：量"末端相对 TCP 的几何包络"时要遍历哪些连杆。
+    // 从 yaml 读而不是在代码里按名字前缀猜 —— 换夹具/换手（厂商还有一款
+    // brainco 五指手）只改配置。空列表会让 endEffectorSpan 明确报错，
+    // 而不是悄悄算出一个 0 包络然后放行任何 grasp_z_offset。
+    const std::vector<std::string> end_effector_links =
+      loader.get<std::vector<std::string>>(
+      "demo.end_effector_links", std::vector<std::string>{});
     const std::vector<std::string> scenarios = loader.get<std::vector<std::string>>(
       "demo.scenarios", std::vector<std::string>{"single_arm_named"});
     const std::string single_arm_group =
@@ -1088,27 +1137,62 @@ int main(int argc, char ** argv)
           params.closed_chain.leader_tcp_link :
           params.closed_chain.follower_tcp_link) :
           transport_tcp_link;
-        std::string radius_detail;
-        const double tcp_radius = tcpCoincidentCollisionRadius(
-          planner.getRobotModel(), resolved_tcp_link, radius_detail);
-        const double min_grasp_z_offset =
-          0.5 * transport_size[2] + tcp_radius + transport_clearance_margin;
+        std::string span_detail;
+        // 抓取方向：yaml 给的是 TCP 在本体系下的姿态四元数。"朝向物体"就是
+        // 本体系 -z（从上方接近），把它转到 TCP 系下才能和末端几何做投影。
+        const Eigen::Quaterniond grasp_q(
+          transport_quat[3], transport_quat[0], transport_quat[1], transport_quat[2]);
+        const Eigen::Vector3d grasp_dir_in_tcp =
+          grasp_q.normalized().conjugate() * Eigen::Vector3d(0.0, 0.0, -1.0);
+        const EndEffectorSpan span = endEffectorSpan(
+          planner.getRobotModel(), resolved_tcp_link, grasp_dir_in_tcp,
+          end_effector_links, span_detail);
+        if (!span.valid) {
+          RCLCPP_ERROR(
+            logger, "跳过 transport: 量不出末端包络（%s）。"
+            "demo.end_effector_links 是否配对了？", span_detail.c_str());
+          exit_code = 1;
+          continue;
+        }
+        // 下限交给碰撞校验，这里只查上限 —— 分工的依据是"碰撞检测查得出来吗"。
+        //
+        // 一开始这里也算了个下限（物体半高 - setback + 余量），实测发现它**恒为负**：
+        // setback 量的是"TCP 背后最远的几何"，而 TCP 背后是整条手臂，
+        // 实测 link_7 一项就到 0.2105m，于是下限算出 -0.1305m —— 永远不会触发。
+        // 根子上是把一个三维净空问题压成了一个标量：物体自下往上顶时，真正先撞到的是
+        // **离物体最近**且**横向与物体重叠**的那块几何（张开时两指之间是空的，
+        // 所以物体能一直上到夹爪基座下沿），这不是"最远距离"能表达的。
+        //
+        // 而三维净空正是碰撞检测的本职，夹爪现在已经完整进了碰撞模型，
+        // 每个路点都会真实校验。所以下限不再单独算 —— 它曾经存在只是因为
+        // TCP 坐在腕部球心里那个病（tool_link 与 link_7 原点重合），现在病没了。
+        //
+        // 上限则必须查，因为**碰撞检测查不出来**：夹爪够不到物体时不会发生任何碰撞，
+        // 规划会成功、执行会成功，然后夹爪在物体上方闭合到空气里。
+        // 这是个静默的错误结果，只能靠几何前置判断拦住。
+        const double max_grasp_z_offset = 0.5 * transport_size[2] + span.reach;
         RCLCPP_INFO(
           logger,
-          "[transport] TCP link=%s 与其重合连杆的碰撞外接半径=%.4fm (%s)；"
-          "物体半高=%.4fm 余量=%.4fm => grasp_z_offset 下限=%.4fm，当前=%.4fm",
-          resolved_tcp_link.c_str(), tcp_radius, radius_detail.c_str(),
-          0.5 * transport_size[2], transport_clearance_margin,
-          min_grasp_z_offset, transport_grasp_z_offset);
-        if (transport_grasp_z_offset < min_grasp_z_offset) {
+          "[transport] TCP=%s 抓取方向(TCP系)=[%.3f %.3f %.3f]（与竖直方向夹角 %.1f°）；"
+          "指尖沿该方向伸出 reach=%.4fm；物体半高=%.4fm "
+          "=> grasp_z_offset 上限=%.4fm，当前=%.4fm。"
+          "下限由碰撞校验逐点把关，不在这里算。末端各连杆投影区间: %s",
+          resolved_tcp_link.c_str(), grasp_dir_in_tcp.x(), grasp_dir_in_tcp.y(),
+          grasp_dir_in_tcp.z(),
+          std::acos(std::min(1.0, std::max(-1.0, grasp_dir_in_tcp.normalized().dot(
+              Eigen::Vector3d(0.0, -1.0, 0.0))))) * 180.0 / M_PI,
+          span.reach, 0.5 * transport_size[2], max_grasp_z_offset,
+          transport_grasp_z_offset, span_detail.c_str());
+        if (transport_grasp_z_offset > max_grasp_z_offset) {
           RCLCPP_ERROR(
             logger,
-            "跳过 transport: demo.transport_grasp_z_offset=%.4f 小于下限 %.4f，"
-            "TCP 会与物体碰撞（腕部碰撞球半径 %.4f + 物体半高 %.4f + 余量 %.4f）。"
-            "请把 transport_grasp_z_offset 提到 %.4f 以上，"
-            "并把 transport_pick_xyz/place_xyz 的 z 相应下调以保持 TCP 落在可达高度。",
-            transport_grasp_z_offset, min_grasp_z_offset, tcp_radius,
-            0.5 * transport_size[2], transport_clearance_margin, min_grasp_z_offset);
+            "跳过 transport: grasp_z_offset=%.4f 高于上限 %.4f —— "
+            "夹爪指尖沿抓取方向只伸出 %.4fm，而物体顶面在 TCP 前方 %.4fm 处，"
+            "两指够不到物体：规划和执行都会\"成功\"，但夹爪是在物体上方闭合到空气里。"
+            "请降到 %.4f 以下（越接近 %.4f 越是只夹到物体顶边，取窗口中段更稳）。",
+            transport_grasp_z_offset, max_grasp_z_offset, span.reach,
+            transport_grasp_z_offset - 0.5 * transport_size[2],
+            max_grasp_z_offset, max_grasp_z_offset);
           exit_code = 1;
           continue;
         }
@@ -1276,18 +1360,29 @@ int main(int argc, char ** argv)
           params.closed_chain.leader_tcp_link :
           params.closed_chain.follower_tcp_link) :
           transport_tcp_link;
-        std::string mobile_radius_detail;
-        const double mobile_tcp_radius = tcpCoincidentCollisionRadius(
-          planner.getRobotModel(), mobile_tcp_link, mobile_radius_detail);
-        const double mobile_min_offset =
-          0.5 * transport_size[2] + mobile_tcp_radius + transport_clearance_margin;
-        if (transport_grasp_z_offset < mobile_min_offset) {
+        std::string mobile_span_detail;
+        const Eigen::Quaterniond mobile_grasp_q(
+          transport_quat[3], transport_quat[0], transport_quat[1], transport_quat[2]);
+        const Eigen::Vector3d mobile_grasp_dir =
+          mobile_grasp_q.normalized().conjugate() * Eigen::Vector3d(0.0, 0.0, -1.0);
+        const EndEffectorSpan mobile_span = endEffectorSpan(
+          planner.getRobotModel(), mobile_tcp_link, mobile_grasp_dir,
+          end_effector_links, mobile_span_detail);
+        if (!mobile_span.valid) {
+          RCLCPP_ERROR(
+            logger, "跳过 mobile_transport: 量不出末端包络（%s）",
+            mobile_span_detail.c_str());
+          exit_code = 1;
+          continue;
+        }
+        const double mobile_max_offset = 0.5 * transport_size[2] + mobile_span.reach;
+        if (transport_grasp_z_offset > mobile_max_offset) {
           RCLCPP_ERROR(
             logger,
-            "跳过 mobile_transport: transport_grasp_z_offset=%.4f 小于下限 %.4f"
-            "（腕部碰撞球 %.4f + 物体半高 %.4f + 余量 %.4f），TCP 会与物体碰撞",
-            transport_grasp_z_offset, mobile_min_offset, mobile_tcp_radius,
-            0.5 * transport_size[2], transport_clearance_margin);
+            "跳过 mobile_transport: transport_grasp_z_offset=%.4f 高于上限 %.4f"
+            "（夹爪指尖沿抓取方向只伸出 %.4f），两指够不到物体 —— 会静默空抓。"
+            "下限由碰撞校验逐点把关，同 transport 场景。",
+            transport_grasp_z_offset, mobile_max_offset, mobile_span.reach);
           exit_code = 1;
           continue;
         }
