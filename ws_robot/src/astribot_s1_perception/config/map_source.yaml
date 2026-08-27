@@ -53,12 +53,19 @@ map_provider:
     # 保持 1 的话中继会"成功发布"到没人听的地方，而 nav2 一直等 /map —— 静默失败。
     # map_provider.launch.py 会在启动时检查并拒绝，不让它静默跑成那样。
     #
-    # 安全性不依赖那个开关，而是靠**两个 domain 不同**：
-    # 实测假真机在 domain 25 的私有话题在 domain 42 上不可见；而中继是唯一的
-    # 跨域参与者，且只单向搬 /map —— 本机 /cmd_vel 没有通路到真机。
-    # 所以这两个值**必须不同**，相同会被启动时拒绝。
+    # 关于这两个 domain：**相同即不起中继**（同域下真机 /map 本来就直接可见，
+    # 起中继反而会把同一张图回环发布给自己）。map_provider.launch.py 会在
+    # remote == local 时跳过中继节点并打印说明，而不是拒绝启动。
+    #
+    # !!! 相同的代价是跨域隔离没了 !!!
+    # 原来的隔离依据是实测的"假真机在 domain 25 的私有话题在 domain 42 上不可见，
+    # 而中继是唯一跨域参与者、只单向搬 /map，本机 /cmd_vel 没有通路到真机"。
+    # 两个 domain 相同后这条保护**不再成立** —— 本机的 /cmd_vel、
+    # /wheel_effort_controller/commands 都有通路打到真机上去。
+    # 想要那条网络层保护就把 local_domain_id 改回一个与真机不同的值
+    # （比如 42），并把整条栈也起在那个 domain 上。
     remote_domain_id: 25          # 真机侧 domain（厂商 env.sh 设的是 25）
-    local_domain_id: 42           # 本机栈的 domain
+    local_domain_id: 25           # 本机栈的 domain（全栈统一 25，与真机同域）
     remote_map_topic: "/map"
     local_map_topic: "/map"
     # 这么久收不到远端地图就打 ERROR 并非零退出，**不允许静默等待**：

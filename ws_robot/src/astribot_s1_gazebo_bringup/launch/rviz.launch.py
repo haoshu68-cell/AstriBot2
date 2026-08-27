@@ -23,7 +23,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_camera', default_value='true'),
         # 和 warehouse_sim.launch.py 用同一个默认值，避免 /robot_description 之类的默认话题名
         # 撞上同一台机器上其它无关 ROS2 图里的同名话题（实测遇到过这个问题，见该文件里的详细注释）。
-        DeclareLaunchArgument('ros_domain_id', default_value='42'),
+        DeclareLaunchArgument('ros_domain_id', default_value='25'),
     ]
 
     set_ros_domain_id = SetEnvironmentVariable(

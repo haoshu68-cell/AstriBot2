@@ -144,19 +144,25 @@ def check_live_transport_env(localhost_only_value):
     修正后的隔离依据（同一轮实测顺带验证过的）：**隔离来自 domain，不来自
     localhost_only**。实测中假真机在 domain 25 上的私有话题 `/fake_robot_only`
     在 domain 42 上**两种 localhost_only 取值下都不可见**。
-    所以 real_live 的安全性由两点保证：
-      1. 真机在 domain 25，本机栈在 domain 42，跨域不可见；
+    所以 real_live 的跨域形态靠两点保证安全：
+      1. 真机在 domain 25，本机栈在另一个 domain，跨域不可见；
       2. 中继是唯一的跨域参与者，而且只**单向**搬 /map ——
          本机的 /cmd_vel 之类没有任何通路能到真机。
+
+    **但当前默认配置不是那个形态**：全栈已统一到 domain 25（与厂商 env.sh 一致，
+    因为真机上 SDK 后端的 domain 改不动），remote 与 local 同域、中继被跳过，
+    上面第 1、2 条都不再成立。这条 ROS_LOCALHOST_ONLY 校验与 domain 无关，
+    同域跨机同样需要 =0，所以照旧生效。
     """
     if str(localhost_only_value) == '1':
         return ('map_source=real_live 需要 ROS_LOCALHOST_ONLY=0，当前是 1。\n'
                 '  原因：localhost_only=1 与 =0 的 DDS 参与者互相发现不了'
-                '（同机同域也不行，已实测）。保持 1 的后果是中继"成功发布"到'
-                '没人听的地方，而 nav2 一直等 /map —— 静默失败。\n'
-                '  安全性不依赖这个开关：真机在 remote_domain_id、本机栈在 '
-                'local_domain_id，跨域本来就互不可见（已实测），而且中继只单向搬 /map，'
-                '本机的 /cmd_vel 没有通路到真机。\n'
-                '  改法：整条栈用 ROS_LOCALHOST_ONLY=0 启动，并确认 '
-                'local_domain_id 与真机的 domain 不同。')
+                '（同机同域也不行，已实测）。跨机订阅真机 /map 必须 =0，'
+                '否则要么中继"成功发布"到没人听的地方、要么根本发现不了真机，'
+                '而 nav2 一直等 /map —— 静默失败。\n'
+                '  注意隔离：当前默认 remote_domain_id == local_domain_id == 25，'
+                '中继被跳过、跨域隔离不成立，本机 /cmd_vel 对真机可见。'
+                '要网络层隔离就把 local_domain_id 设成与真机不同的值，'
+                '并把整条栈起在那个 domain 上。\n'
+                '  改法：整条栈用 ROS_LOCALHOST_ONLY=0 启动。')
     return None

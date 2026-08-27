@@ -24,6 +24,14 @@ controller_server:
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
     progress_checker_plugin: "progress_checker"
+    # !!! 只能列一个 !!! Nav2 规则：goal_checker_plugins 只有一项时它自动成为默认；
+    # 列两项就必须由调用方通过 FollowPath 的 goal_checker_id 指定，而默认 BT 传的是
+    # 空字符串 -> controller_server 每次 FollowPath 直接 abort：
+    #   FollowPath called with goal_checker name "" ... which does not exist.
+    # 症状是「机器人完全不跟踪路径 + 反复 spin/backup」，而汇总日志里只看到
+    # 「Nav2 中止(无法规划或控制失败)」—— 真因只出现在
+    # ~/.ros/log/controller_server_*.log 里。
+    # 回退档 loose_goal_checker 定义保留在下面，但**不要**加进这个列表。
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
 
@@ -31,7 +39,20 @@ controller_server:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.5
       movement_time_allowance: 10.0
+    # !!! 2026-08-20 到位精度收紧：xy/yaw 0.25 -> 0.10 !!!
+    # 依据与联动约束同 nav2_params_mppi.yaml 的同名段，两份必须一起改，
+    # 否则切控制器时精度口径会不一致(而这种不一致只在切换那次才显形)。
     general_goal_checker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      # !!! 0.10 已被实测否决，不要再改回去 !!!
+      # 0.10 时实测：派发 10 次、ARRIVED **0** 次、恢复行为 30 次 —— Nav2 从不报成功，
+      # 因为滑行量(0.069~0.100m)与容差同量级，MPPI 无法在 0.10m 内稳住。
+      # 0.18 = 实测最大滑行 0.100 + 0.08 余量，是"比 0.25 紧一档且仍可收敛"的取值。
+      xy_goal_tolerance: 0.18
+      yaw_goal_tolerance: 0.20
+    # 收紧前的原值，保留作一键回退档。
+    loose_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.25

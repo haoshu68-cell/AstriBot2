@@ -54,10 +54,20 @@
     #
     # arrival_xy_tolerance 必须 >= Nav2 controller 的 xy_goal_tolerance，
     # 否则 Nav2 报成功而这里判超差，会陷入「成功即失败」的反复重试。
-    arrival_xy_tolerance: 0.30
-    arrival_yaw_tolerance: 0.40
+    #
+    # !!! 2026-08-20 精度收紧：0.30 -> 0.15，配 xy_goal_tolerance 0.10 !!!
+    # 0.15 >= 0.10 满足上面那条约束，且留了 0.05 给蠕行滑行（实测 0.069~0.100m，
+    # 见 P0 扫描）—— 注意余量小于最坏滑行量，接近段必须限速，否则这里会频繁判超差。
+    arrival_xy_tolerance: 0.25
+    arrival_yaw_tolerance: 0.25
     # 探索目标的朝向只是「让雷达看向未知区」的建议值，不是任务约束。
     # 卡朝向会让机器人在原地反复微调、浪费大量时间，所以默认不卡。
+    #
+    # !!! 必须与三段式跟踪的 align_goal_enabled 保持一致 !!!
+    # 探索场景刻意跳过终点原地旋转(FollowPathExplore: align_goal_enabled=false)，
+    # 因此这里**必须保持 false**：既然不对齐终点姿态，再去卡朝向偏差就是
+    # 让每个目标都必然判失败。搬运等需要卡姿态的场景用另一个控制器实例，
+    # 并在该场景自己的配置里把 check_yaw 打开。
     check_yaw: false
     # 稳定驻留 1.5s：足够让 MPPI 的末段振荡衰减掉，又不至于每个点白等太久。
     dwell_time_sec: 1.5
@@ -111,9 +121,22 @@
       # 自由空间被切成窄通道，这个效应格外明显。
       #
       # 所以正确取值是**控制器的收敛容差**，而不是 0、也不是足迹外接半径 0.42：
-      #   goal_clearance_radius >= nav2 controller 的 xy_goal_tolerance(本项目 0.25)
+      #   goal_clearance_radius >= nav2 controller 的 xy_goal_tolerance
       # 语义是「以目标为心、控制器容差为半径的球内，足迹处处不碰撞」——
       # 目标既合法、又真的收敛得进去。换控制器容差时这个值要跟着改。
+      #
+      # !!! 2026-08-20 随精度收紧同步改为 0.10（跟随 xy_goal_tolerance 0.25 -> 0.10）!!!
+      # 已知风险，在线验收必须盯：实测本底盘发零速后仍蠕行，滑行量 0.069~0.100m
+      # （@0.25m/s 0.0688 / @0.40m/s 0.1000，4s 窗口），与本半径 0.10 同量级。
+      # 也就是说「目标点周围 0.10m 无碰撞」不足以保证机器人**实际停住的位置**无碰撞。
+      # 回退值 0.25（= 0.10 容差 + 约 0.10 滑行 + 余量）见 git 历史。
+      # !!! 2026-08-20 实测回退到 0.25，并把"必须等于 xy_goal_tolerance"更正为**下界** !!!
+      # 把它降到 0.18/0.10 会引入一个新故障：robot_radius=0.42 意味着距障碍 0.42m 以内
+      # 的格子全是 253(inscribed lethal)，所以"只要求 0.18m 净空"的目标点**必然落在
+      # 致命膨胀带里**。机器人开过去后就再也规划不出来，报 Starting point in lethal space。
+      # 实测对比：clearance=0.25 -> lethal 0 次；clearance=0.18 -> lethal 2159 次(+67s 起)。
+      # 正确关系是 goal_clearance_radius >= xy_goal_tolerance（下界，不是等式），
+      # 且不能小到让目标点进入 inscribed 带。0.42 也不行(会把几乎所有候选判为不可站)。
       goal_clearance_radius: 0.25
       # 【未知】净空半径。必须为 0，而且刻意是独立参数。
       #

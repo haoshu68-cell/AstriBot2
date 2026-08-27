@@ -15,6 +15,10 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
         (os.path.join('share', package_name, 'rviz'), glob('rviz/*.rviz')),
+        # 探索专用行为树（把 FollowPath 的 controller_id 指向三段式控制器实例）。
+        # 不装的话 bt_navigator 会因为找不到 xml 而让每个目标直接失败。
+        (os.path.join('share', package_name, 'behavior_trees'),
+         glob('behavior_trees/*.xml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

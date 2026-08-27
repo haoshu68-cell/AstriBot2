@@ -31,6 +31,8 @@ setup(
             'astribot_trajectory_bridge.state_bridge_node:main',
             'joint_map_probe = '
             'astribot_trajectory_bridge.joint_map_probe:main',
+            'bridge_container = '
+            'astribot_trajectory_bridge.bridge_container:main',
         ],
     },
 )

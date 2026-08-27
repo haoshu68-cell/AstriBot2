@@ -1,0 +1,10 @@
+<library path="astribot_s1_path_tracking">
+  <class type="astribot_s1_path_tracking::ThreePhaseController"
+         base_class_type="nav2_core::Controller">
+    <description>
+      三段式路径跟踪：原地对齐路径起始方向 -> 沿路径行驶 -> 原地对齐目标姿态。
+      跟踪段委托给 inner_controller_plugin 指定的内层 nav2 控制器。
+      align_goal_enabled=false 时跳过终点对齐（探索场景）。
+    </description>
+  </class>
+</library>

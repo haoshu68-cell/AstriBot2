@@ -181,6 +181,9 @@ private:
   std::string complete_topic_;
   std::string current_goal_topic_;
   std::string nav_action_name_;
+  /// 下发目标时指定的行为树 xml 路径；空=用 bt_navigator 默认树。
+  /// 探索场景用它切到三段式控制器（终点不转朝向）。
+  std::string nav_behavior_tree_;
   std::string plan_action_name_;
   std::string map_frame_;
   std::string robot_base_frame_;

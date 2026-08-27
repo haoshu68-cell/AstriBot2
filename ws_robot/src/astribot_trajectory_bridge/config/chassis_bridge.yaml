@@ -1,0 +1,105 @@
+# 底盘控制桥接参数（Gate 5）。
+#
+# 接口事实来源：examples/202-chassis_joy_control_local.py 与
+# examples/203-chassis_joy_control_global.py 的源码，不来自任何文档。
+#   · 下发：set_joints_position([chassis_name], [[x, y, theta]])   202:50 / 203:66
+#   · 积分：pos_cmd[i] += v[i] / freq                              202:47-49
+#   · 种子：get_desired_joints_position([chassis_name])[0]         202:44 / 203:43
+#   · freq：250.0                                                  202:30 / 203:32
+#
+# !!! 底盘是位置指令开环积分 !!!
+# set_joints_position 收的是位置，若轮子打滑，指令位置会持续超前实际位置且
+# 没有任何反馈会阻止它 —— 误差单调累积，一旦恢复附着力，底盘会以最大能力冲向
+# 那个跑飞的位置。leash 是这条链路上唯一的硬保护，不允许关闭。
+
+chassis_cmd_bridge:
+  ros__parameters:
+    part_name: "astribot_chassis"      # astribot_base.py:11
+    freq: 250.0                        # 内环，examples 全部循环样例一致
+
+    # ---- 坐标口径 ----
+    # body(默认)：Nav2 的 /cmd_vel 本身就是本体系 → 走 202 模式直接积分，不旋转。
+    # world     ：上游给世界系速度时，先按 203:61 的 rot_mat.T 转回本体系。
+    # !!! 搞反的后果是底盘反向跑 !!! 203 第 61 行是 rot_mat.T @ vel，
+    # 注释写 "rotate global velocity command to local coordinate"，
+    # 方向是**世界系→本体系**，由此推断 pos_cmd 是本体系口径。
+    input_frame: "body"
+    theta_reference: "at_enable"        # 203:39-42，以使能时刻 theta 为零点
+
+    start_disabled: true               # 启动后不自动使能，需显式调 ~/enable
+
+    # ---- 看门狗 ----
+    cmd_vel_timeout_sec: 0.3           # 超时立即速度置零
+
+    # ---- 速度/加速度限幅 ----
+    # 对齐 astribot_chassis.yaml 的 joint_max_velocities: [1.0, 1.0, 2.0]
+    # 与 nav2 velocity_smoother 的 max_accel
+    max_vel_xy: 1.0
+    max_vel_theta: 2.0
+    max_accel_xy: 2.5
+    max_accel_theta: 3.2
+
+    # ---- leash 位置牵引绳（快环，判据 = SDK 实际位置）----
+    # 用 SDK 实际而不是 SLAM：leash 要快（250Hz 可读）且与下发量同源
+    # （同一 frame，不需要任何对齐）。<=0 会被显式拒绝启动。
+    leash_xy_m: 0.25
+    leash_theta_rad: 0.35
+    require_manual_reset: true         # true=必须调 ~/reset_leash 才恢复
+
+    # ---- 位姿反馈闭环（慢环）----
+    enable_slam_correction: true       # false=纯开环+leash，一键回归
+    # pose_source 必须显式声明，无默认推断：
+    #   slam         —— slam_toolbox，map->odom 动态，能纠正累积漂移
+    #   ground_truth —— 静态真值 TF，map->odom 恒等
+    # !!! ground_truth 下闭环退化 !!! map->odom 恒等、odom->base 又来自同一套
+    # 里程计，外环误差恒≈0、校正量恒≈0 —— 代码路径在跑但闭环没有作用。
+    # 此时会上报 CORRECTION_DEGENERATE，防止把漂亮数字误当成"闭环已验收"。
+    pose_source: "slam"
+    map_frame: "map"
+    base_frame: "astribot_torso_base"  # 本机根 frame，没有 base_link
+    outer_rate: 10.0
+    # 位姿源龄期上限。两种 pose_source 下都有效 —— 虽然 ground_truth 的
+    # map->odom 是静态的，但 odom->base 始终动态，合成变换的时间戳由动态那段决定。
+    slam_max_age_sec: 0.5
+    # 超过此距离判为重定位事件 → 重新对齐期望位姿，而不是把它当误差施加
+    # （扫描匹配一次修正可能几十厘米，当误差喂进去就是几十厘米的位置阶跃）。
+    # ground_truth 下自动置 inf。
+    slam_jump_threshold_m: 0.30
+    # 外环比例增益。硬上限 0.5：外环 10Hz 下增益 1.0 等于一个周期吃掉全部误差，
+    # 必然过冲。这是位置伺服套位置伺服的结构，宁可校正慢。
+    kp_xy: 0.35
+    kp_theta: 0.40
+    # ★ 校正**速度**上限：位姿源完全发疯时的最后防线 ——
+    #   它保证校正最多让底盘以 0.10 m/s 蠕动，不会猛冲。不允许关闭。
+    max_corr_vel_xy: 0.10
+    max_corr_vel_theta: 0.20
+
+    # ---- 使能门槛（分阶段）----
+    # 当前 false：无位姿源也允许使能，纯开环 + leash，上报
+    #             SLAM_UNAVAILABLE_OPEN_LOOP。
+    # 商业化改 true 时的行为变化（现在就固定，不是将来再设计）：
+    #   · ~/enable 在位姿不可用时直接拒绝
+    #   · 运行中丢位姿超 slam_loss_grace_sec → 主动停车（速度置零），
+    #     但不冻结 leash、不杀节点
+    require_slam_to_enable: false
+    slam_loss_grace_sec: 2.0
+
+    # ---- 打滑诊断（增量比对，frame 无关）----
+    # 算法：同一时间窗内 |‖SDK位移‖ − ‖SLAM位移‖|
+    # 位移模长是旋转不变量，所以**不需要** map<->SDK 的 frame 对齐 ——
+    # 这也是本模块没有 T_map_sdk 的原因。
+    # !!! 阈值口径已随算法变更 !!! 从"绝对位置差"（含 frame 失配，需大余量 0.50）
+    # 改成"2s 窗口内位移差"（纯打滑量），所以阈值降到 0.15。
+    # 换数据源必须同步换阈值口径，不能沿用旧数字。
+    odom_drift_window_sec: 2.0
+    odom_drift_warn_m: 0.15            # 待 G0-f 给出实测依据后复核
+    # ground_truth 下自动置 inf（两个位移源同源，差恒为 0）
+
+    # ---- 写通路准入（WriteGate）----
+    # D-1 统一 domain 下这是唯一阻止"仿真指令打到真机"的机制。
+    # 它是流程性准入检查，不是网络层隔离 —— 强度低于 D-2。
+    # 建议 G4 通过后、进入真机联调前切回 D-2。
+    declared_target: "sim"             # sim | real，由 launch 传入
+    allow_unsafe_mode: false           # 仅 safe 模式允许写
+    # allow_write_to_real 刻意**不写在这里** —— 必须命令行显式给，
+    # 避免被存进配置后忘记。

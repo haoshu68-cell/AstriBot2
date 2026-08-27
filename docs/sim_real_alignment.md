@@ -325,7 +325,7 @@ safety:
   acceleration_scale: {sim: 1.0, real: 0.3}   # 加速度限位是估算值，真机务必压低
 
 network:
-  domain_id: 25                   # 厂商 env.sh 固定 25（我原来的栈用 42）
+  domain_id: 25                   # 全栈统一 25，与厂商 env.sh 一致（本栈原来用 42）
 time:
   use_sim_time: {sim: true, real: false}
 ```
@@ -711,9 +711,10 @@ SDK 的 `get_current_joints_position(names)` 返回**按部件成组的裸数组
 （除 `Exited with failure 1` 一个字都没有）。
 桥接在 import SDK **之前**就置上 `ASTRIBOT_LOG=1`，不依赖运维记得 export。
 
-#### 环境：domain 号不一致
+#### 环境：domain 号（已统一 25）
 
-厂商 `env.sh` 设 `ROS_DOMAIN_ID=25`，而本仓库 ROS2 栈其它部分用 **42**。
+原先厂商 `env.sh` 设 `ROS_DOMAIN_ID=25`、本仓库 ROS2 栈其它部分用 42，两边互不可见。
+**现已全栈统一 25**（真机上 SDK 后端是既有进程、domain 改不动，只能本栈迁过去）。
 桥接/后端/`robot_state_publisher`/RViz 必须同 domain，否则表现为
 "节点都在但话题一个都收不到"。
 
@@ -978,8 +979,8 @@ SLAM 把幻影烙进地图，然后规划器报 `Starting point in lethal space!
 2. **进度检查器**：`required_movement_radius: 0.5` / `movement_time_allowance: 10.0`
    是按仿真速度定的，真机限速后必须重算，否则会得到"局部规划器走不动"的假结论。
 3. **`use_sim_time` 必须关**，真机没有 `/clock`。已经在 `hardware_perception.launch.py` 处理。
-4. **`ROS_DOMAIN_ID`**：厂商 `env.sh` 是 25，本仓库其余部分是 42。必须统一，
-   否则表现为"节点都在、话题一个都收不到"。
+4. **`ROS_DOMAIN_ID`**：已全栈统一 **25**（厂商 `env.sh` 就是 25，真机上 SDK 后端
+   改不动）。启动前确认查询 shell 也带上 25，否则表现为"节点都在、话题一个都收不到"。
 5. **SDK 一 import 就把整个进程 fd 1/2 重定向到 `/dev/null`**，
    桥接必须在 import **之前**置 `ASTRIBOT_LOG=1`，否则"响亮失败"完全失效。
 
@@ -1076,6 +1077,202 @@ C1 原定的任务是"`folded_reference_rad` 基准配错了，换个真实收�
 `README_NAVIGATION.md` §4.7 都声称这个风险"靠展开限速缓解"，**这句是错的——限速只
 降低速度，完全不缩小包络**，两处注释已更正为"未解决"。正确机制是姿态相关的动态足迹
 （`nav2_collision_monitor` 订阅机械臂 TF 实时改 footprint），立项 C1b，本次未做。
+
+---
+
+## 7.10 · 控制桥接已打通到 MuJoCo 后端（2026-08-27 实测取证）
+
+`astribot_trajectory_bridge`（底盘 / 手臂 / 夹爪三条通路）已在真实 MuJoCo 后端上
+建立会话并跑通。规模：17 个源文件 4709 行、12 个测试文件 3573 行、**425 条离线测试**、
+约 15 次故障注入。本节只记**实测取证**与**被证伪的旧判断**，设计理由见包内 README。
+
+### 7.10.1 结论先行：pinocchio 从来不是卡点
+
+文档与代码注释里曾有 5 处声称"libpinocchio 3.7.0 与系统 4.0.0 主版本 ABI 冲突，
+阻塞全部在线 Gate"。**这个结论是错的，一条 `ldd` 即可否证**：
+
+    ldd astribot_sdk/core/common/robotics_library_py/_robotics_library_py.so | grep pinocchio
+    libpinocchio_default.so.3.7.0 => .../third_party/third_pkg/pinocchio/lib/...   ← 零个 not found
+
+| | soname | 位置 |
+|---|---|---|
+| 仓库自带 | `libpinocchio_default.so.**3.7.0**` | `third_party/third_pkg/pinocchio/lib` |
+| 系统 apt | `libpinocchio_default.so.**4.0.0**` | `ros-humble-pinocchio` |
+
+soname 是**完整字符串精确匹配**，厂商 `.so` 的 `DT_NEEDED` 烧死了 3.7.0，永不加载 4.0.0；
+`env.sh` 里 `third_pkg/local_setup.bash` 早已把 3.7.0 挂进 `LD_LIBRARY_PATH`。
+"整机对齐到 4.0.0"是**死路**：厂商 `.so` 闭源无法重编；跨主版本 symlink 会让符号对上
+而行为静默错乱（3→4 改了模板签名与 `Data` 布局），比链接失败危险；卸系统 4.0.0 牵连 MoveIt。
+**正确姿势就是两版按 soname 共存。**
+
+真实卡点是一串打包/依赖问题：
+
+| 层 | 现象 | 真因 | 处置 |
+|---|---|---|---|
+| 1 | `No module named 'robotics_library_py.robotics_library_py'; 'robotics_library_py' is not a package` | 扩展模块 `robotics_library_py.so` 与同名包目录互相遮蔽 | `sdk_session.prewarm_robotics_library_py()` 先预热一次 |
+| 2 | `No module named 'meta'`（**完全误导的名字**） | 缺 pip 包 `filterpy` | `pip install --no-deps filterpy`（`--no-deps` 保护 numpy 1.21.5 钉版，有测试锁死） |
+| 3 | `env.sh:17` 指向的 middleware 目录不存在 | 该行**从来是错的**，真实位置在 `third_party/software/astribot_ros_middleware/lib/python3.10/site-packages`，由 `software/setup.bash` 自动挂载 | `env.sh` 改为变量 `ASTRIBOT_MIDDLEWARE_PY`，不存在时**显式报 ERROR**（原先静默忽略，所以这行错活了很久） |
+
+另：**`rclpy.init()` 必须在 `open_session()` 之前**。反了会抛
+`RuntimeError: Context.init() must only be called once` —— 报错指向 rclpy，
+真因是"SDK 自己已经初始化过了"。两个方向都实测过。
+
+### 7.10.2 厂商 SDK 接口事实（全部实测，不采信文档描述）
+
+| 项 | 实测结果 |
+|---|---|
+| `chassis_dof` | **3**（S1），`whole_body_dofs = [3,4,7,1,7,1,2]` 共 25 |
+| `get_joints_position_limit` | 顺序确认为 **(lower, upper)**，25 个关节全部 `lower ≤ upper`（`examples/100:49` 的解包顺序是反的，是样例 bug） |
+| 返回值嵌套 | list-of-lists，**每个部件一个内层 list** |
+| `get_robot_mode` | **挂在内层 `astribot_interface` 上，`Astribot` 上没有**；仿真返回 `'simulation'`；真机三模式 `safe`/`professional`/`extremity`，**其它任何值都表示仿真**（源码是 if/elif/elif/else） |
+| `get_current_cartesian_pose(frame=...)` | 参数是 **frame**（不是 names），返回**整机所有部件**，顺序同 `whole_body_names`；effector 那一项是 **1 维命令值**，不是位姿 |
+| `get_inverse_kinematics` | 返回 `(bool, dict)`，dict 含 **torso + 双臂**（整机 IK）；**`flag` 恒为 True**，包括解就是零位、FK 误差 0.80 m 时；**迭代式**，每次只走一小步；会**停在局部最优后极缓慢劣化**（某目标第 ~100 次触底 0.2634 m，600 次爬回 0.2737 m） |
+| `world` 坐标系 | **会话启动时以当前底盘位姿重置**。底盘在 x=+0.3237 时，新建会话里 `world` 与 `chassis` 读数差 **0.0000**，而移动前就存在的会话差 0.3958 m |
+| IK 目标坐标系 | **chassis 系**（底盘前移 0.32 m 后同一 world 坐标目标误差 0.3412→0.3419，几乎不变） |
+| QoS 告警 | 不兼容的那一对**两端都在 SDK 内部**（它自己 RELIABLE 的 WBC_SYNC 订阅 vs 自己 BEST_EFFORT 的发布）；仿真侧订阅是 BEST_EFFORT，**兼容**。指令实测跟随率 **100.0%、误差 0.0 mm** |
+| 仿真侧不提供 | `/tf`（实测 0 条）、弧度关节角 —— 没有第三方来源可交叉核对 |
+
+夹爪（`gripper_math` 已把这些钉成纯函数 + 37 条测试）：
+
+| 项 | 实测结果 |
+|---|---|
+| 极性 | **0 = 张开，100 = 闭合**，与直觉相反。`open_effector`→0.0（`astribot_client.py:813/817`），`close_effector`→100.0（`836/840`）。本文开头的前提"100=全闭 / 0=全开"与实测**一致**，且 `examples/107` 注释逐字写着 "100 means fully closed, and 0 means fully open" —— 三处独立来源互相印证 |
+| 换算 | `rad = 0.0093 × cmd`（= `gainprm 4.65 / -biasprm 500`），`cmd=100 → 0.93 rad` **正好等于关节上限** |
+| 线性度 / 回差 | 残差 **0.0005** / 滞环 **0.0000**；实测系数 0.009298 对理论 0.0093，**吻合 0.02%** |
+| 越界 −20 / 150 | **夹到边界**（0.0143 / 99.998），不乱走 |
+| `open/close_effector` | **阻塞**，尊重 `duration`（实测 0.5s→0.50s、2.0s→2.01s） |
+| `set_effector_max_force` | **仿真下是空操作**（`astribot_client.py:1139` `if __in_simulation: return`）→ 服务响应里 `force_applied` 恒为 false。**仿真里夹持力不可验收** |
+
+### 7.10.3 只有真后端才暴露的九个缺陷
+
+离线 296~425 条测试全绿时，下面每一条都**发现不了**。
+
+| # | 现象 | 真因 | 为何离线测不到 |
+|---|---|---|---|
+| 1 | `AttributeError: 'RosClock' object has no attribute 'handle'` | `self._clock` **遮蔽了 `rclpy.Node` 的内部时钟**（`node.py:210`）。报错指向时钟对象，真因是属性遮蔽 | 只有实例化节点才暴露 |
+| 2 | `Astribot` 上没有 `get_robot_mode` | 该方法在内层 `astribot_interface` 上 | `FakeSession` 实现了它 |
+| 3 | 写入闸门会**拒绝仿真写入** | 判据只认 `'safe'`，而仿真返回 `'simulation'`。使用者只能去开 `allow_unsafe_mode`，**而那个开关会连带放开真机的 professional/extremity** —— 仿真期的便利变成真机的安全缺口 | 替身默认 `robot_mode='safe'` |
+| 4 | 闸门②（声明与实际一致）**恒真** | `_discover_backends()` 返回 `declared_target`，即把"声明"当"发现结果" | 无真后端可发现 |
+| 5 | 取消轨迹后手臂继续漂 **0.045~0.37 rad** | 位置指令**单次下发抓不住正在运动的关节**。SDK 的 `desired` 明明已等于所发值 —— **看 desired 永远发现不了**。持续重发则漂移 **0.0000** | 替身"下发即生效"是我自己定义的语义 |
+| 6 | 上条的修复**等于没生效** | 节点执行循环写的是 `while phase in (STREAMING, SETTLING)` —— 新增 HOLDING 相位后**直接跳出循环且不报任何错**。改为排除终态 | 白名单在离线路径上恰好够用 |
+| 7 | 要求夹爪半开，实际**全夹紧**（cmd=50 → actual 99.998，0.1s 就到 91.5） | 同 #5，中间开度必须持续重发。真机上手指间有东西就是压碎 | 同 #5 |
+| 8 | 位姿源异常上报成 `SDK_CALL_FAILED` | 位姿查询**不是 SDK 调用**，报错指向错误子系统会把诊断引向机器人。新增 `POSE_PORT_FAILED = 28`，且**不折进** `SLAM_UNAVAILABLE_OPEN_LOOP`（那会把真 bug 伪装成正常降级） | 替身不会违约 |
+| 9 | 机器人越限后**对任何指令都不响应** | `start()` 对每个路点查限位，而**路点 0 就是当前位置** → 每条轨迹都被拒，连"开回来"也被拒。**保护把恢复通路一起堵死了** | 替身不会自己走到非法状态 |
+
+#5/#7 的对照组很关键：**正常完成（DONE）路径不暴露**，因为 `_step_settling` 本来就在
+持续重发末点、到 DONE 时关节已静止（停发只掉 0.0047 rad）。**同一个 SDK 特性在正常路径
+上无害、在安全路径（取消）上有害。**
+
+#9 的修法：路点 0 是"从哪儿出发"的**测量值**，不是我们挑的目标。放行需三条同时成立 ——
+等于当前实测位置（容差 `oob_start_tolerance_rad`）、其余路点合法、终点越限量不比起点更糟，
+且必须上报 `LIMIT_VIOLATION`。已在真的越限的机器人上验证（起点 j6=0.7674 越限 → 放行 → 回到合法区间）。
+
+### 7.10.4 新发现：底盘 → 手臂 的反向耦合（机制未定）
+
+§7.9 处理的是**手臂 → 底盘**（伸展时把底盘限到 15%）。搬运串联暴露了**反方向**的耦合。
+
+四因子对照，干净仿真、每组前都归零到同一起点、仿真自洽性检查通过：
+
+| 扰动 | 手臂峰值跟踪误差 | 相对基线 |
+|---|---|---|
+| 底盘不动（基线） | 0.0659 ~ 0.0799 | — |
+| **先移动底盘 0.16 m** | **0.1591 ~ 0.4180** | **+140% ~ +383%** |
+| 先闲置 2.5 s | 0.0691 | +5%（噪声） |
+| 先操作夹爪 | 0.0672 | +2%（噪声） |
+
+这解释了搬运串联里两段手臂都 ABORTED（峰值 0.3519 / 0.3570，阈值 0.35）。
+
+**机制未定，已排除两条**：
+
+* **不是移动余波** —— 发手臂前底盘残余速度 0.0000 m/s 的样本里照样出现 0.4162；
+* **不是 desired/actual 分叉** —— 该差值与峰值**完全不相关**（最差样本差 0.0020，
+  基线样本差 1.1037 反而峰值最低）。这个假设是我提的，数据否了它。
+
+数据是**双峰**的，同一底盘位置下两簇并存，所以"位置本身决定"也不成立：
+
+    ~0.16  @ 峰值进度 35%     （等 0 s、等 6 s）
+    ~0.42  @ 峰值进度 85%     （等 1 s / 3 s / 8 s + 重新归零）
+
+峰值进度（35% vs 85%）与幅度（2.6 倍）都截然不同，是**两个现象**而非强弱变化。
+
+**对配置的影响**：给手臂定 `max_tracking_error_rad` 必须用**底盘动过之后**的数据。
+当前 yaml 默认 **0.10 是按静止基线定的**（静止峰值 0.035~0.064，约 1.6 倍余量，在静止
+场景下是对的）。搬运场景实测上界 0.42，留余量需 ≥0.6 —— 但**机制查清前不改生产配置**，
+按未理解的现象定阈值与按坏基线定阈值是同一类错误。下一步：扫 0/0.05/0.10/0.20/0.30 m
+位移，看峰值-位移曲线是单调（指向静力/模型）还是有跳变。
+
+### 7.10.5 测量纪律（本阶段两次被数据反咬后加的）
+
+**A. 长跑的仿真进程会退化，整套数据都可能是假的。**
+
+| 现象 | 长跑进程（15 h+，期间一度两实例并存） | **重启后** |
+|---|---|---|
+| 手臂 j6 静止值 | **+0.98 ~ +1.15** | +0.0001 |
+| 跟踪误差峰值 | 双峰：0.058~0.072 + **3 次 0.327/0.327/0.328** | 0.0347 ~ 0.0639 |
+| 0.15 以上尖峰 | 3 / 16 次 | **0 / 12 次** |
+
+**一票否决的判据：j6 = 1.04 超出了 MuJoCo 自己的硬限位 ±0.78（`jnt_limited=1`）——
+物理上不可能。** 假尖峰极具欺骗性：幅度 0.327/0.327/0.328、持续 90/91/93 拍、进度全是 1%，
+高度可复现、看着就是确定的物理现象，我据此差点把 `max_tracking_error_rad` 改掉 ——
+**那就是把坏基线拟合进生产配置**。
+
+纪律：每轮实验前**重启仿真**、确认**只有一个进程**、数据旁记录仿真已运行时长；
+所有涉及机器人状态的脚本都加 `check_sim_sane()`（读数超出 MuJoCo `jnt_range` 即拒绝采数）。
+
+**B. 判据少一项，就在那一项上系统性假阳性。** 本阶段自己犯的四次：
+
+| 错误判据 | 后果 |
+|---|---|
+| e2e 只比 `dispatched_cmd`，不比 `actual_cmd` | "要求半开、实际 99.998（全夹紧）"被判成 **✔ 通过**，报告还打了"全部通过" |
+| 隔离实验不检查 `start()` 返回值 | 四组全报 `峰值=0.0000`（**零采样**），脚本据此打印"三组都没有明显恶化" |
+| 把"已收敛 + 同向"当惯性尾巴，漏掉**量级** | 0.354 rad 被判成无害滑行（0.167 rad/s 走 0.354 需 2 s 以上，实测 0.3 s 内到位 —— 是跳变） |
+| 端口契约用 `hasattr` | 基类为每个方法提供了 raise 实现，**`hasattr` 永远为真**；删掉 `close_effector` 后测试照样通过。改为判"是否覆盖基类同名函数"，并加**探测器自检** |
+
+由此定的两条：**故障注入后必须先确认注入真的生效**（改前后计数对比）；
+**e2e 成功路径必须比对机器人实测位置**，只验证自己算出的数字等于只验证了自己。
+
+**C. 不要在脚本里写自动判词。** 本阶段有三次脚本的结论比数据说得多
+（"惯性尾巴无害"、"三组都没恶化"、"机制是底盘位置本身"）。判词把"我预设的两种可能"
+当成了穷举，而它打印出来的语气与真结论无异。
+
+### 7.10.6 当前边界：已验证 / 未验证
+
+**已在真后端验证**：
+
+* SDK 会话建立、写入闸门（三条：声明与实测一致 / 反向一致性 / 真机模式）
+* 底盘：指令落地（跟随率 100.0%、误差 0.0 mm）、leash 触发与冻结、看门狗
+  （0.298 s 上报，阈值 0.30）、`reset_leash` 重取积分种子
+* 手臂：250 Hz 流式（静止底盘下跟踪误差峰值 0.0041）、越限拒绝、关节名顺序校验、
+  取消保持（修后 3 次全 0.0000 rad）、越限恢复
+* 夹爪：极性、换算、越界拒绝、未知夹爪拒绝、阻塞时长、`force_applied` 恒 false
+* **接缝**：手臂 Action 执行中并发调夹爪服务成功（cmd=70 → actual 69.593）；
+  12/12 组隔离实验证明并发**不恶化**跟踪（峰值 +0.7%/−7.9%/+0.4%，频率四组
+  全在 237.6~238.4 Hz）
+
+**未验证 / 做不到**：
+
+* **"真的把 box 夹起来"没有验证。** 笛卡尔抓取被 §7.10.2 两条堵住：IK 的 flag 会
+  对失败报成功，且 `world` 系随会话重置，无法把场景物体的全局坐标表达成 IK 目标。
+  正解是上层（MoveIt + TF）出关节轨迹、SDK 只执行 —— 与桥接的设计前提一致。
+* 夹持力（仿真下空操作）、双臂并发、方案 A `move_joints_waypoints`
+  （`enable_waypoints_service` 默认 false，从未真跑）
+* 底盘闭环（MuJoCo 无 SLAM，全程 `SLAM_UNAVAILABLE_OPEN_LOOP` 纯开环 + leash）
+* `WBC_SYNC` 的出处**未定位** —— 两个仓库、`/opt`、site-packages、所有 `.so`/`.pyc`
+  的 `strings` 全搜过零命中。如实记为未知，不编解释。
+
+### 7.10.7 环境侧改动（需要知会）
+
+* `env.sh`：middleware 路径改为变量 `ASTRIBOT_MIDDLEWARE_PY`；新增
+  `astribot_sdk/core/common` 到 `PYTHONPATH`（编译过的 `util.py` 用裸名导入，需要这一层）
+* 装了 pip 包 `filterpy`（`--no-deps`，numpy 仍为 1.21.5，有测试锁死）
+* **仿真仓 `astribot_simulation`（独立仓库）改了两处**，均已备份、可一键回退：
+  * 4 个 `.obj` 是未拉取的 git-lfs 指针 → 换成**已存在的 STL**。这 4 个 geom 全是
+    `contype=0 conaffinity=0 density=0`（纯视觉），**物理零影响**，只丢贴图。
+    装 `git-lfs` 后 `git lfs pull` 即可换回（需要 sudo）。备份 `*.lfs_orig`
+  * `simulation_mujoco_param.yaml` 切到 `astribot_s1_for_aloha_with_gripper.xml`
+    （带桌子 + `box_red` + 可动底盘）。备份 `*.orig_bak`
+* 复用 SDK 已编译的 `astribot_msgs` 供仿真使用：msg/srv 定义逐字节比对，25 个完全相同，
+  3 个差异中 2 个仅行尾换行、1 个是**未被使用**的常量（常量不参与序列化，线格式一致）
 
 ---
 

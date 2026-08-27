@@ -81,6 +81,11 @@ def generate_launch_description():
             description='是否接入臂-底盘动力学耦合动态调速节点(astribot_s1_dynamics_'
                         'coupling)，透传给 navigation.launch.py'),
         DeclareLaunchArgument(
+            'headless', default_value='false',
+            description='true 时 Gazebo 只起 server、不起 GUI（RViz 不受影响）。'
+                        'EGL 初始化失败的机器上必须用：GUI 会退化成软件渲染吃满 CPU，'
+                        '把 Gazebo server 挤到步不动物理，表现为所有话题有发布者但零消息。'),
+        DeclareLaunchArgument(
             'exploration', default_value='false',
             description='是否拉起探索协调器(严格时序调度 + 未知区禁行)。'
                         'true 时机器人会自主选点并调 Nav2 导航；'
@@ -123,6 +128,7 @@ def generate_launch_description():
             PathJoinSubstitution([pkg_perception, 'launch', 'perception_slam_bringup.launch.py'])),
         launch_arguments={
             'env': env,
+            'headless': LaunchConfiguration('headless'),
             'mode': mode,
             'launch_gazebo': LaunchConfiguration('launch_gazebo'),
             'map_file_name': LaunchConfiguration('map_file_name'),

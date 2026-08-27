@@ -1,39 +1,53 @@
 # astribot_trajectory_bridge
 
-厂商 SDK 与 ROS2 规划栈之间的唯一桥接层（仿真-实物对齐方案 Gate 2/3）。
+厂商 SDK 与 ROS2 规划栈之间的唯一桥接层。包含**状态桥接**（`/joint_states`）与
+**控制桥接**（底盘 / 手臂 / 夹爪）两部分。
 
-## 当前状态：Gate 2 代码就绪，**在线验证被依赖缺失卡住**
+## 当前状态（2026-08-27）
 
-| 项目 | 状态 |
+控制桥接已在真实 MuJoCo 后端上建立会话并跑通。取证细节见
+`docs/sim_real_alignment.md` §7.10，本文只讲**怎么用**和**已知会踩的坑**。
+
+| 通路 | 状态 |
 |---|---|
-| 状态桥接节点 `state_bridge_node` | ✅ 写完、能构建、无后端时按设计"响亮失败" |
-| 映射表 `config/bridge.yaml` | ✅ 22 个主动关节，6 个部件 |
-| 离线一致性测试（9 条） | ✅ 全过，且经注入故障验证非空跑 |
-| 关节顺序探针 `joint_map_probe` | ✅ 写完，**未运行**（需要 SDK 后端）|
-| `/joint_states` 与 SDK 逐关节比对 | ⛔ **未做**：SDK 起不来，见下 |
+| 底盘 `chassis_cmd_bridge_node` | ✅ 真后端验证：指令落地跟随率 100.0%（误差 0.0 mm）、leash 触发与冻结、看门狗 0.298 s（阈值 0.30）、`reset_leash` 重取积分种子 |
+| 手臂 `arm_traj_bridge_node`（`FollowJointTrajectory`） | ✅ 真后端验证：250 Hz 流式（静止底盘下跟踪误差峰值 0.0041）、越限拒绝、关节名顺序校验、取消保持、越限恢复 |
+| 夹爪 `~/set_gripper` 服务 | ✅ 真后端验证：极性、换算、越界拒绝、阻塞时长；**仿真下夹持力不可验收** |
+| 状态话题 `/astribot/bridge/status` | ✅ 29 个状态枚举，全程无意外故障位 |
+| 离线测试 | ✅ **425 条**，约 15 次故障注入验证非空跑 |
+| 底盘闭环（SLAM 校正） | ⛔ MuJoCo 无 SLAM，只跑过纯开环 + leash |
+| "真的把物体夹起来" | ⛔ **未验证**，原因见 §7.10.6（IK 的 flag 会对失败报成功 + `world` 系随会话重置） |
 
-### 阻塞点：SDK 缺 `tf_transformations`，且只能用 apt 装
+## ROS 接口
 
-```
-File "astribot_function.py", line 12, in init astribot_function
-ModuleNotFoundError: No module named 'tf_transformations'
-```
+| 类型 | 名称 | 说明 |
+|---|---|---|
+| Action | `<arm_group>/follow_joint_trajectory` | 方案 B：周期流式 `set_joints_position`，**可取消** |
+| Service | `~/set_gripper`（`SetGripper`） | 对外用 `opening_fraction`（**1.0 = 全张开**），厂商的 0-100 极性翻转关在桥接内部 |
+| Service | `~/dispatch_waypoints`（`DispatchWaypoints`） | 方案 A：`move_joints_waypoints`，**阻塞且不可取消**。默认关闭 |
+| Service | `chassis ~/enable` / `~/disable` / `~/reset_leash` | 底盘使能与 leash 复位 |
+| Topic | `/cmd_vel` → 底盘 | 位置积分开环 + leash |
+| Topic | `/astribot/bridge/status` | 结构化故障上报，**不要只看日志**（见下） |
+| Topic | `/astribot/chassis/odom_from_sdk` | `frame_id` 刻意是 `sdk_chassis` 而非 `odom` —— 漂移特性未取证前**不要接进 Nav2** |
 
-这不是本桥接的问题 —— 直接跑厂商自己的 `examples/101-get_joint_states.py`
-报的是同一个错。该模块**不在 PyPI 上**（`pip install tf-transformations` 报
-"No matching distribution found"），只能：
+## 用之前必须知道的六件事
 
-```bash
-sudo apt install ros-humble-tf-transformations
-```
-
-本机 sudo 需要密码，所以这一步得由你来执行。
-
-**刻意没有做的事**：没有自己写一个 `tf_transformations` 兼容模块糊上去。
-那个模块涉及四元数/欧拉角的顺序约定，我的实现与真实实现只要有一处约定不同，
-就会静默产出错误的位姿 —— 而这类错误在 `/joint_states` 层面完全看不出来。
-
-装好之后按下面「验证步骤」跑一遍即可。
+1. **夹爪极性与直觉相反：0 = 张开，100 = 闭合。** 服务接口只收 `opening_fraction`
+   （1.0 = 全张开）正是为了让上层不必记住这件事。换算 `rad = 0.0093 × cmd`，
+   `cmd=100 → 0.93 rad` 恰为关节上限。别直接把 0-100 当百分比或弧度用。
+2. **位置指令必须持续重发。** 单次下发抓不住正在运动的关节：取消轨迹时会继续漂
+   0.045~0.37 rad；夹爪要求半开（cmd=50）时会**冲到 99.998 全夹紧**。
+   桥接内部已按持续重发实现（HOLDING 相位 / `_stream_to`），但如果你绕过桥接
+   直接调 SDK，这个坑还在。
+3. **`max_tracking_error_rad: 0.10` 是按静止底盘定的。** 底盘动过之后手臂跟踪误差
+   涨 2~5 倍（实测上界 0.42），搬运场景下这个阈值会误触发 abort。机制未定，
+   见 §7.10.4 —— 用在搬运里请自行加大并记录依据。
+4. **仿真下 `set_effector_max_force` 是空操作**，服务响应的 `force_applied` 会如实
+   报 false。**别把仿真里的夹持行为当成力限已验收。**
+5. **`rclpy.init()` 必须在建立 SDK 会话之前**，反了会抛
+   `Context.init() must only be called once`（报错指向 rclpy，真因是 SDK 已初始化过）。
+6. **实验前重启仿真、确认只有一个仿真进程。** 长跑的仿真会退化到读数超出 MuJoCo
+   自己的硬限位（物理不可能），整套数据都会是假的 —— 本项目已被这件事骗过一次。
 
 ## 这一层在整条链路里的位置
 
@@ -43,12 +57,11 @@ sudo apt install ros-humble-tf-transformations
 
 **它是整条链路上唯一的单位/命名换算点。** 上层只见 MoveIt 的关节名与弧度，
 厂商接口只见部件名与它自己的量纲（夹爪还是 0~100 的抽象量），两边都不需要
-知道对方的表示法。换算规则全在 `config/bridge.yaml`，代码里没有数值常量。
+知道对方的表示法。
 
-## Gate 2 的三条硬边界
+## 状态桥接的三条硬边界
 
-1. **不申请控制权**（`sdk_high_control_rights: false`）。这是只读方向的物理边界：
-   没有控制权，即使桥接有 bug 也不可能让机器人动。配置层和代码层各有一道检查。
+1. **不申请高控制权**（`high_control_rights=False`，代码里固定传，不提供参数）。
 2. **只发主动关节**（22 个）。夹爪每侧 6 个关节里只有 `joint_L1` 是主动的，
    另外 5 个是 URDF mimic 从动关节，由 `robot_state_publisher` 算。
    桥接也发的话，同一自由度就有两个来源，一旦两边算法有出入就出现无法解释的
@@ -99,7 +112,8 @@ ERROR 日志一起吞了 —— "响亮失败"这条设计会彻底失效：失�
 
 ## 环境
 
-厂商 `env.sh` 会设 `ROS_DOMAIN_ID=25`（而本仓库 ROS2 栈其它部分用 42）。
+全栈统一 `ROS_DOMAIN_ID=25`（厂商 `env.sh` 设的就是 25，真机上 SDK 后端是既有
+进程、domain 改不动，所以是本栈迁过去）。
 桥接、后端、`robot_state_publisher`、RViz 必须在**同一个 domain**，
 否则表现为"节点都在但话题一个都收不到"。
 
@@ -109,7 +123,7 @@ source <repo>/env.sh                 # 设 PYTHONPATH / ROBOT_TYPE=S1 / DOMAIN=2
 source <repo>/ws_robot/install/setup.bash
 ```
 
-## 验证步骤（装好 tf_transformations 后）
+## 验证步骤
 
 ```bash
 # 0. 先确认没有别的 /joint_states 发布者。Gazebo 的 joint_state_broadcaster
@@ -146,4 +160,5 @@ rviz2                                      # 模型姿态应与 MuJoCo 画面一
 | `gymnasium==1.1.1` | `src/astribot_envs/__init__.py` 顶层 import |
 | `open3d` | `src/simu_utils/simu_common_tools.py:15` 顶层 import（只在深度图转点云那一个函数里用到，但模块级 import 躲不开）|
 | `tabulate` | 示例 101 用 |
-| **`tf_transformations`** | **SDK 核心 .so 的硬依赖，只能 apt，见上** |
+| `tf_transformations` | SDK 核心 .so 的硬依赖，**不在 PyPI**，只能 `sudo apt install ros-humble-tf-transformations`（已装） |
+| `filterpy` | SDK 的 `whole_body_control.py:3123` 硬依赖。缺它时报的是 `No module named 'meta'`（**完全误导的名字**）。装时必须 `--no-deps`，否则会顶掉本项目钉住的 numpy 1.21.5 |

@@ -123,34 +123,42 @@ def _build(context, *args, **kwargs):
             raise MapSourceConfigError(transport_reason)
 
         remote_domain = require(params, 'remote_domain_id', int, 25)
-        local_domain = require(params, 'local_domain_id', int, 42)
+        local_domain = require(params, 'local_domain_id', int, 25)
         if remote_domain == local_domain:
-            raise MapSourceConfigError(
-                f'remote_domain_id 与 local_domain_id 相同({remote_domain})。'
-                '跨域隔离正是靠这两个不同才成立的 —— 相同的话真机能看到本机栈的'
-                '全部话题，包括 /cmd_vel。')
-
-        relay = Node(
-            package='astribot_s1_perception',
-            executable='map_domain_relay',
-            name='map_domain_relay',
-            output='screen',
-            parameters=[{
-                'remote_domain_id': remote_domain,
-                'local_domain_id': local_domain,
-                'remote_map_topic': require(params, 'remote_map_topic', str, '/map'),
-                'local_map_topic': require(params, 'local_map_topic', str, '/map'),
-                'relay_timeout_sec': require(params, 'relay_timeout_sec', float, 30.0),
-            }],
-        )
-        actions.append(relay)
-        # 中继起不来（超时、domain 配错、网络不通）时整条链没有意义，
-        # 让它带着整个 launch 一起停，而不是留一个"等地图"的假活状态。
-        actions.append(RegisterEventHandler(OnProcessExit(
-            target_action=relay, on_exit=[EmitEvent(event=Shutdown(
-                reason='map_domain_relay 退出：跨机地图中继失败'))])))
-        print(f'[map_provider] /map 由 map_domain_relay 跨机中继提供: '
-              f'domain {remote_domain} -> {local_domain}')
+            # 同域：真机的 /map 在本机栈里本来就直接可见，不需要中继
+            # （起了反而是把同一张图回环发布给自己）。所以这里跳过节点，
+            # 而不是像以前那样拒绝启动。
+            #
+            # 但要把代价讲清楚：跨域隔离是原来那条"仿真 /cmd_vel 绝无到真机
+            # 的通路"的**唯一网络层保证**，同域后它不再成立。
+            print(f'[map_provider] /map 由真机直接提供（remote/local 同为 domain '
+                  f'{local_domain}，跳过 map_domain_relay）')
+            print('[map_provider] !!! 跨域隔离已关闭：本机的 /cmd_vel、'
+                  '/wheel_effort_controller/commands 对真机可见。'
+                  '要恢复网络层隔离就把 local_domain_id 改成与真机不同的值，'
+                  '并把整条栈起在那个 domain 上 !!!')
+        else:
+            relay = Node(
+                package='astribot_s1_perception',
+                executable='map_domain_relay',
+                name='map_domain_relay',
+                output='screen',
+                parameters=[{
+                    'remote_domain_id': remote_domain,
+                    'local_domain_id': local_domain,
+                    'remote_map_topic': require(params, 'remote_map_topic', str, '/map'),
+                    'local_map_topic': require(params, 'local_map_topic', str, '/map'),
+                    'relay_timeout_sec': require(params, 'relay_timeout_sec', float, 30.0),
+                }],
+            )
+            actions.append(relay)
+            # 中继起不来（超时、domain 配错、网络不通）时整条链没有意义，
+            # 让它带着整个 launch 一起停，而不是留一个"等地图"的假活状态。
+            actions.append(RegisterEventHandler(OnProcessExit(
+                target_action=relay, on_exit=[EmitEvent(event=Shutdown(
+                    reason='map_domain_relay 退出：跨机地图中继失败'))])))
+            print(f'[map_provider] /map 由 map_domain_relay 跨机中继提供: '
+                  f'domain {remote_domain} -> {local_domain}')
 
     # ---------------- map→odom 的提供者 ----------------
     if localization == 'ground_truth':

@@ -2,13 +2,22 @@
 # -*- coding: utf-8 -*-
 """跨机地图中继：把真机 domain 上的 /map 单向搬到本机 domain。
 
+!!! 当前默认配置下本节点不启动 !!!
+全栈已统一到 domain 25（与厂商 env.sh 一致），`map_source.yaml` 里
+remote_domain_id == local_domain_id == 25，map_provider.launch.py 在同域时
+**跳过**本节点 —— 同域下真机 /map 直接可见，中继只会回环。
+本文件保留下来是因为它是"要回到跨域隔离"时唯一可用的实现，下面这段隔离依据
+和实测记录都仍然有效，别删。
+
 ==================== 隔离靠 domain，不靠 ROS_LOCALHOST_ONLY ====================
-最省事的做法是两台机器用同一个 domain 直连。**不能这么做**：我们本机图里有
+最省事的做法是两台机器用同一个 domain 直连。**代价要清楚**：我们本机图里有
 `/cmd_vel`、`/wheel_effort_controller/commands`、
 `/gripper_{left,right}_controller/follow_joint_trajectory` —— 同域直连意味着
-仿真里的控制指令有通路打到真机上去。
+仿真里的控制指令有通路打到真机上去。当前统一 domain 就是接受了这个代价，
+换来的是桥接能与 SDK 互相看见（真机上 SDK 后端的 domain 改不动）。
 
-所以用**一个进程、两个 rclpy Context、各自不同 domain、只搬一个话题、单向**：
+要恢复网络层隔离，就用**一个进程、两个 rclpy Context、各自不同 domain、
+只搬一个话题、单向**，也就是本文件：
 
     真机 domain(remote)                          本机 domain(local)
      /map (slam_toolbox on real robot)
@@ -104,7 +113,7 @@ class _ParamReader(Node):
     def __init__(self, context):
         super().__init__('map_domain_relay_params', context=context)
         self.declare_parameter('remote_domain_id', 25)
-        self.declare_parameter('local_domain_id', 42)
+        self.declare_parameter('local_domain_id', 25)
         self.declare_parameter('remote_map_topic', '/map')
         self.declare_parameter('local_map_topic', '/map')
         self.declare_parameter('relay_timeout_sec', 30.0)
@@ -127,8 +136,10 @@ def main(argv=None):
     if remote_domain == local_domain:
         logger.error(
             f'remote_domain_id 与 local_domain_id 相同({remote_domain})。'
-            '那就不需要中继了 —— 直接订阅即可。'
-            '相同 domain 下起中继会把同一张地图回环发布给自己。')
+            '同域下不需要中继 —— 真机的 /map 直接可见，直接订阅即可；'
+            '起中继只会把同一张地图回环发布给自己。\n'
+            '  注意：map_provider.launch.py 在同域时会**跳过**本节点，'
+            '所以看到这条错误说明是直接 ros2 run 起的，或者 params 传错了。')
         reader.destroy_node()
         rclpy.shutdown(context=local_ctx)
         return 1

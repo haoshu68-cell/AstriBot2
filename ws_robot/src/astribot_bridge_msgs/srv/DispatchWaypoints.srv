@@ -1,0 +1,73 @@
+# 整段轨迹下发（方案 A · move_joints_waypoints）。
+#
+# 为什么这条通路是 Service 而不是挂在 FollowJointTrajectory Action 上
+# ================================================================
+# examples/206-move_joints_waypoints.py 的 move_joints_waypoints() 是**阻塞**调用，
+# 期间无法取消、也拿不到中途进度。而 MoveIt 的 FollowJointTrajectory 语义要求
+# 支持 cancel 与 feedback（本工程的抢占式重规划依赖它）。
+# 把不可取消的实现挂到 Action 上会让上层"以为能取消，实际取消不了"。
+#
+# 所以方案 A 被关进这个独立 Service，并在此明确声明：**调用期间不可取消**。
+# 用途：离线示教回放、点到点标定、G0 阶段的最小连通性验证。
+# 在线执行走方案 B（周期流式 set_joints_position），见 arm_traj_bridge。
+
+# SDK 部件名，例如 "astribot_arm_left"。必须是 whole_body_names 里的成员。
+string part
+
+# 路点，按行优先展平：flat_waypoints[i*dof + j] 是第 i 个路点的第 j 个关节值。
+# 展平而不用嵌套数组，是因为 ROS2 IDL 不支持变长嵌套序列。
+float64[] flat_waypoints
+
+# 每个路点的关节数。必须与 part 的自由度一致，桥接会用 get_dof() 校验。
+int32 dof
+
+# 每个路点的**绝对**时刻（秒），长度必须 == len(flat_waypoints)/dof。
+# !!! 不要给 t=0 的点 !!! examples/206 头部明确："No need to give a point at
+# time 0, the default time is 0 at the current position"。
+# 桥接会主动丢弃 t<=0 的点并在响应里报告丢弃了几个。
+float64[] time_list
+
+---
+
+# 是否成功
+bool ok
+
+# 错误码，取值见下方常量
+uint8 error_code
+
+# 人类可读说明。失败时必须非空。
+string detail
+
+# 实际下发的路点数（丢弃 t<=0 之后的数量）
+int32 dispatched_points
+
+# 被丢弃的 t<=0 路点数量
+int32 dropped_points
+
+uint8 SUCCESS = 0
+
+# 本 Service 未在配置里启用（arm.enable_waypoints_service 默认 false）。
+# 显式拒绝，不静默成功——静默成功会让调用方以为机器人动了。
+uint8 DISABLED_BY_CONFIG = 1
+
+# part 不是合法部件名
+uint8 UNKNOWN_PART = 2
+
+# dof 与 part 实际自由度不符，或 flat_waypoints 长度不是 dof 的整数倍，
+# 或 time_list 长度与路点数不匹配
+uint8 SHAPE_MISMATCH = 3
+
+# time_list 非单调递增
+uint8 TIME_NOT_MONOTONIC = 4
+
+# 某个路点越关节限位
+uint8 LIMIT_VIOLATION = 5
+
+# SDK 调用抛异常
+uint8 SDK_CALL_FAILED = 6
+
+# 写通路准入未通过（WriteGate 拒绝）
+uint8 WRITE_GATE_DENIED = 7
+
+# 丢弃 t<=0 之后没有任何路点剩下
+uint8 NO_POINTS_AFTER_DROP = 8

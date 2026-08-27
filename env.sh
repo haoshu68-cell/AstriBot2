@@ -13,8 +13,39 @@ echo "[env.sh] SDK_ROOT = $SDK_ROOT"
 # 2. 设置 PYTHONPATH（全部从 SDK_ROOT 自动推算）
 # -----------------------------------------------------
 
-# astribot_ros_middleware_py
-export PYTHONPATH="${SDK_ROOT}/third_party/astribot_ros_middleware_py:$PYTHONPATH"
+# astribot_ros_middleware
+#
+# 这个包**在开发机和真机上位置不同**，所以走变量而不是写死路径：
+#   · 开发机：随 SDK 发布在 third_party/software/astribot_ros_middleware/...，
+#     由下面第 3 节的 third_party/software/setup.bash 自动挂上（无需本节处理）；
+#   · 真机：由真机自己的环境提供，部署到真机后 ASTRIBOT_MIDDLEWARE_PY
+#     指向真机上的实际位置即可，本脚本不需要改。
+#
+# 覆盖方式：ASTRIBOT_MIDDLEWARE_PY=/robot/path/to/site-packages source env.sh
+#
+# 历史坑：这里原先写死 "${SDK_ROOT}/third_party/astribot_ros_middleware_py"，
+# 而该目录**从来不存在**（发布包里就没有）。不存在的路径挂在 PYTHONPATH 上
+# 不报错、静默被忽略，所以这行错误存活了很久，还一度被误当成"厂商发包缺件"。
+_ASTRIBOT_MIDDLEWARE_DEFAULT="${SDK_ROOT}/third_party/software/astribot_ros_middleware/lib/python3.10/site-packages"
+ASTRIBOT_MIDDLEWARE_PY="${ASTRIBOT_MIDDLEWARE_PY:-$_ASTRIBOT_MIDDLEWARE_DEFAULT}"
+
+if [ -d "$ASTRIBOT_MIDDLEWARE_PY" ]; then
+    export PYTHONPATH="${ASTRIBOT_MIDDLEWARE_PY}:$PYTHONPATH"
+    export ASTRIBOT_MIDDLEWARE_PY
+    echo "[env.sh] middleware       = $ASTRIBOT_MIDDLEWARE_PY"
+else
+    # 显式报错而不是静默忽略：middleware 缺失会让 250Hz 内环依赖的
+    # Rate/ok/spin 拿不到，必须在启动阶段就看见。
+    echo "[env.sh][ERROR] ASTRIBOT_MIDDLEWARE_PY 不存在: $ASTRIBOT_MIDDLEWARE_PY"
+    echo "[env.sh][ERROR]   开发机应随 SDK 自带；真机请显式设置该变量后重新 source。"
+fi
+
+# astribot_sdk/core/common
+#
+# 必须在 PYTHONPATH 上：编译过的 util.py:26 用的是**裸名**
+# `import robotics_library_py.robotics_library_py`，需要 common 这一层可见。
+# 光有 SDK_ROOT（能走 astribot_sdk.core.common.* 的点分路径）是不够的。
+export PYTHONPATH="${SDK_ROOT}/astribot_sdk/core/common:$PYTHONPATH"
 
 # astribot_sdk 本体
 export PYTHONPATH="${SDK_ROOT}:$PYTHONPATH"

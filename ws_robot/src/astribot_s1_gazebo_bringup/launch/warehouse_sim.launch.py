@@ -31,6 +31,7 @@ from launch.substitutions import (
     Command,
     LaunchConfiguration,
     PathJoinSubstitution,
+    PythonExpression,
     TextSubstitution,
 )
 from launch_ros.actions import Node
@@ -52,6 +53,17 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_name', default_value='astribot_s1',
             description='生成的机器人实体名，多机器人/防止重名冲突时修改此参数'),
+        DeclareLaunchArgument(
+            'headless', default_value='false',
+            description='true 时只起 Gazebo server(-s)，不起 GUI。\n'
+                        '!!! 什么时候必须用它(实测踩过) !!!：本机 EGL 初始化失败时'
+                        '（日志里 "libEGL warning: egl: failed to create dri2 screen"），'
+                        'Gazebo GUI 会退化成软件渲染并把 CPU 吃满(实测 188%)，'
+                        '把 server 挤到 2% 上不去、物理根本步不动 —— 表现是 /clock 不推进、'
+                        '/joint_states 与所有传感器话题都有发布者但零消息，'
+                        '上层 nav2/SLAM/探索全部卡在等一个永远不来的仿真时间。'
+                        '这种情况下用 headless:=true + RViz 可视化即可正常跑，'
+                        '不需要 GUI（RViz 用的是独立的 OpenGL 上下文，不受影响）。'),
         DeclareLaunchArgument('spawn_x', default_value='0.0', description='出生点 X (m)'),
         DeclareLaunchArgument('spawn_y', default_value='0.0', description='出生点 Y (m)'),
         DeclareLaunchArgument(
@@ -100,8 +112,10 @@ def generate_launch_description():
                         'VelocityControl/MecanumDrive已整体移除，关掉这个底盘就完全没有'
                         '驱动力——仅用于调试阶段单独核对ros2_control/SDF是否加载正确的场景'),
         DeclareLaunchArgument(
-            'ros_domain_id', default_value='42',
+            'ros_domain_id', default_value='25',
             description='本次仿真独占的 ROS_DOMAIN_ID。'
+                        '取 25 是为了与厂商 env.sh:115 写死的值一致 —— 桥接要与 SDK '
+                        '同域才能互相看见，而真机上 SDK 后端是既有进程、改不动。'
                         '同一台机器上如果还跑着别的 ROS2 图（哪怕是完全无关的项目），'
                         '只要都用默认 domain 0，/robot_description、'
                         '/controller_manager/... 这类未加命名空间的话题/服务就会被 DDS '
@@ -243,7 +257,14 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py'])),
         launch_arguments={
-            'gz_args': [TextSubstitution(text='-r '), world_file],
+            # headless:=true 时加 "-s"(只跑 server，不起 GUI)。见该参数的声明处说明：
+            # EGL 失败的机器上 GUI 会把 CPU 吃满、把 server 挤到步不动仿真。
+            'gz_args': [
+                TextSubstitution(text='-r '),
+                PythonExpression([
+                    "'-s ' if '", LaunchConfiguration('headless'), "' == 'true' else ''"]),
+                world_file,
+            ],
         }.items(),
     )
 

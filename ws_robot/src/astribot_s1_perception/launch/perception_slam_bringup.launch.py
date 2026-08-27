@@ -96,6 +96,10 @@ def generate_launch_description():
             description='mode:=localization 时要加载的地图基础文件名，见 '
                         'slam_localization.launch.py 里的详细说明'),
         DeclareLaunchArgument('use_rviz', default_value='true'),
+        DeclareLaunchArgument(
+            'headless', default_value='false',
+            description='true 时 Gazebo 只起 server、不起 GUI，透传给 '
+                        'warehouse_sim.launch.py（EGL 失败的机器上必须用，见该文件说明）'),
         DeclareLaunchArgument('robot_name', default_value='astribot_s1'),
         DeclareLaunchArgument(
             'autonomous_patrol', default_value='true',
@@ -153,6 +157,7 @@ def generate_launch_description():
         launch_arguments={
             'robot_name': LaunchConfiguration('robot_name'),
             'use_rviz': 'false',  # 用本文件统一的感知+SLAM RViz配置，不重复开两个RViz
+            'headless': LaunchConfiguration('headless'),
         }.items(),
         condition=IfCondition(PythonExpression(
             ["'", env, "' == 'sim' and '", LaunchConfiguration('launch_gazebo'), "' == 'true'"])),

@@ -212,6 +212,12 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<std::string>(
     "nav_action_name", "navigate_to_pose", describe("Nav2 导航动作名"));
   declare_parameter<std::string>(
+    "nav_behavior_tree", "",
+    describe(
+      "下发目标时指定的行为树 xml 绝对路径。留空=用 bt_navigator 的默认树。"
+      "探索场景填 astribot_s1_navigation 的 navigate_to_pose_explore_three_phase.xml，"
+      "它把 FollowPath 的 controller_id 指向三段式控制器(终点不转朝向)"));
+  declare_parameter<std::string>(
     "plan_action_name", "compute_path_to_pose", describe("Nav2 全局规划动作名(仅用于校验)"));
   declare_parameter<std::string>("map_frame", "map", describe("地图坐标系"));
   declare_parameter<std::string>("robot_base_frame", "base_link", describe("机器人本体坐标系"));
@@ -320,6 +326,7 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   complete_topic_ = get_parameter("complete_topic").as_string();
   current_goal_topic_ = get_parameter("current_goal_topic").as_string();
   nav_action_name_ = get_parameter("nav_action_name").as_string();
+  nav_behavior_tree_ = get_parameter("nav_behavior_tree").as_string();
   plan_action_name_ = get_parameter("plan_action_name").as_string();
   map_frame_ = get_parameter("map_frame").as_string();
   robot_base_frame_ = get_parameter("robot_base_frame").as_string();
@@ -1454,6 +1461,10 @@ void ExplorationCoordinatorNode::dispatchNavGoal(const GoalCandidatePose & goal)
   nav_goal.pose.pose.orientation.y = q.y();
   nav_goal.pose.pose.orientation.z = q.z();
   nav_goal.pose.pose.orientation.w = q.w();
+  // 指定行为树：探索场景用把 controller_id 指向 FollowPathExplore 的那一份，
+  // 从而启用三段式跟踪（起步对齐 -> 跟踪 -> **不**对齐终点姿态）。
+  // 留空则走 bt_navigator 默认树，行为与接入前完全一致（一键回退）。
+  nav_goal.behavior_tree = nav_behavior_tree_;
 
   rclcpp_action::Client<NavigateToPose>::SendGoalOptions opts;
   opts.goal_response_callback =

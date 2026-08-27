@@ -1,0 +1,49 @@
+<!--
+  探索场景专用行为树：与 nav2 自带的
+  navigate_to_pose_w_replanning_and_recovery.xml **逐节点一致**，
+  唯一差别是 FollowPath 的 controller_id 指向三段式控制器实例。
+
+  为什么用「换一份 BT」而不是「改协调器去发 FollowPath」：
+    · 保留 nav2 的 1Hz 重规划（RateController）与整套恢复行为
+      （清代价地图 / Spin / Wait / BackUp）。协调器直发 FollowPath 会把这些全丢掉，
+      而它自己只有「失败就换下一个候选点」这一种恢复手段。
+    · 只需在 NavigateToPose 目标里填 behavior_tree 字段，改动面极小。
+
+  controller_id 指向 FollowPathExplore —— 该实例 align_goal_enabled=false，
+  即「到位后不再原地转朝向」，与 exploration_coordinator_params.yaml 的
+  check_yaw: false 是同一个决定的两半，必须同时改。
+
+  需要终点对齐的场景（如搬运）用 FollowPathThreePhase，
+  不要改这份文件 —— 另起一份，避免两个场景共用一份而互相牵制。
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="6" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithReplanning">
+        <RateController hz="1.0">
+          <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+            <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </RecoveryNode>
+        </RateController>
+        <RecoveryNode number_of_retries="1" name="FollowPath">
+          <!-- 与默认 BT 的唯一差别就是下面这个 controller_id -->
+          <FollowPath path="{path}" controller_id="FollowPathExplore"/>
+          <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+        </RecoveryNode>
+      </PipelineSequence>
+      <ReactiveFallback name="RecoveryFallback">
+        <GoalUpdated/>
+        <RoundRobin name="RecoveryActions">
+          <Sequence name="ClearingActions">
+            <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <ClearEntireCostmap name="ClearGlobalCostmap-Subtree" service_name="global_costmap/clear_entirely_global_costmap"/>
+          </Sequence>
+          <Spin spin_dist="1.57"/>
+          <Wait wait_duration="5"/>
+          <BackUp backup_dist="0.30" backup_speed="0.05"/>
+        </RoundRobin>
+      </ReactiveFallback>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

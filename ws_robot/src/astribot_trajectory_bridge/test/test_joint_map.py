@@ -49,6 +49,20 @@ def urdf_joints():
         ['xacro', _TOP_XACRO, 'robot_name:=astribot_s1'],
         capture_output=True, text=True)
     if result.returncode != 0:
+        # !!! 区分"环境没准备好"与"URDF 真的有问题" !!!
+        # 顶层 xacro 内部用 $(find astribot_s1_description) 解析 mesh 路径，
+        # 所以展开它**要求工作区已 build 且 install/setup.bash 已 source**。
+        # 在裸 colcon test（只 source 了 /opt/ros/humble）下必然失败。
+        #
+        # 这种情况必须 skip 而不是 error：否则整个包的 colcon test 恒为红，
+        # 把同包内其它测试的真实状态一起掩盖掉（实测就掩盖过一次）。
+        # 判据取 PackageNotFoundError —— 只有"包找不到"才算环境问题，
+        # 其它任何 xacro 错误仍然当失败报出来，不放过真正的 URDF 问题。
+        if 'PackageNotFoundError' in result.stderr:
+            pytest.skip(
+                '需要先 build 工作区并 source install/setup.bash 才能展开 xacro'
+                '（顶层 xacro 用 $(find astribot_s1_description) 解析路径）。'
+                '本条不是失败，是环境未就绪。')
         raise AssertionError('xacro 展开失败:\n%s' % result.stderr)
     import xml.etree.ElementTree as ET
     root = ET.fromstring(result.stdout)

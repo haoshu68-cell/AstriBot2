@@ -17,14 +17,44 @@ controller_server:
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
     progress_checker_plugin: "progress_checker"
+    # !!! 只能列一个 !!! Nav2 规则：goal_checker_plugins 只有一项时它自动成为默认；
+    # 列两项就必须由调用方通过 FollowPath 的 goal_checker_id 指定，而默认 BT 传的是
+    # 空字符串 -> controller_server 每次 FollowPath 直接 abort：
+    #   FollowPath called with goal_checker name "" ... which does not exist.
+    # 症状是「机器人完全不跟踪路径 + 反复 spin/backup」，而汇总日志里只看到
+    # 「Nav2 中止(无法规划或控制失败)」—— 真因只出现在
+    # ~/.ros/log/controller_server_*.log 里。
+    # 回退档 loose_goal_checker 定义保留在下面，但**不要**加进这个列表。
     goal_checker_plugins: ["general_goal_checker"]
-    controller_plugins: ["FollowPath"]
+    # FollowPath 必须留在列表里且保持这个名字：FollowPath 行为树节点的
+    # controller_id 端口默认就是 "FollowPath"，默认 BT 会用它。
+    # 另两个是三段式实例，定义在本节末尾，由调用方通过 controller_id 选择。
+    controller_plugins: ["FollowPath", "FollowPathThreePhase", "FollowPathExplore"]
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.5
       movement_time_allowance: 10.0
+    # !!! 2026-08-20 到位精度收紧：xy/yaw 0.25 -> 0.10 !!!
+    # 实测依据(干净总线上直发 /cmd_vel，见 docs 中 P0 扫描)：本底盘发零速后不刹停，
+    # 而是缓慢蠕行，滑行量 @0.25m/s = 0.0688m、@0.40m/s = 0.1000m(4s 窗口)，
+    # 4s 时残速仍有 0.0045~0.0118m/s。滑行量与 0.10 容差**同量级**，所以：
+    #   · 单纯收紧容差不会让机器人停得更准，只会让判据更容易不达标；
+    #   · 要真的做到 0.10m，接近段速度必须压到 0.10~0.15m/s(滑行 0.034~0.049m)。
+    # 联动：astribot_s1_autonomy 的 validator.goal_clearance_radius 必须跟着改(已改 0.10)，
+    #       协调器 arrival_xy_tolerance 必须 >= 本值(已改 0.15)。
     general_goal_checker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      # !!! 0.10 已被实测否决，不要再改回去 !!!
+      # 0.10 时实测：派发 10 次、ARRIVED **0** 次、恢复行为 30 次 —— Nav2 从不报成功，
+      # 因为滑行量(0.069~0.100m)与容差同量级，MPPI 无法在 0.10m 内稳住。
+      # 0.18 = 实测最大滑行 0.100 + 0.08 余量，是"比 0.25 紧一档且仍可收敛"的取值。
+      xy_goal_tolerance: 0.18
+      yaw_goal_tolerance: 0.20
+    # 收紧前的原值，保留作一键回退档(仓库规范：旧逻辑留开关，不直接删)。
+    # 用法：FollowPath action 的 goal_checker_id 填 "loose_goal_checker"。
+    loose_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.25
@@ -157,6 +187,93 @@ controller_server:
         # 单独立项要做的事见文件末尾「待评估：collision_margin_distance」。
         collision_margin_distance: 0.05
         near_goal_distance: 0.5
+
+    # ================== 三段式路径跟踪（astribot_s1_path_tracking）==================
+    # 相位：原地对齐路径起始方向 -> 沿路径行驶 -> 原地对齐目标姿态。
+    # 跟踪段委托给内层控制器（这里用上面同一套 MPPI），本插件只加相位调度与原地旋转。
+    #
+    # !!! 为什么可以安全地列多个 controller_plugins !!!
+    # 这与 goal_checker_plugins 不同：FollowPath 行为树节点的 controller_id 端口
+    # **有默认值 "FollowPath"**，而 goal_checker_id 端口**没有默认值**（传空字符串）。
+    # 所以多控制器共存不会像多 goal checker 那样导致 abort —— 只要其中一个叫 FollowPath。
+    #
+    # 两个实例的区别只有 align_goal_enabled：
+    #   FollowPathThreePhase  终点对齐**开** —— 搬运等需要卡姿态的场景
+    #   FollowPathExplore     终点对齐**关** —— 自主探索（按需求：到位后不再转朝向）
+    # 选择方式：FollowPath action 的 controller_id，不在代码里 if 场景。
+    FollowPathThreePhase:
+      plugin: "astribot_s1_path_tracking::ThreePhaseController"
+      inner_controller_plugin: "nav2_mppi_controller::MPPIController"
+      align_start_enabled: true
+      align_goal_enabled: true
+      # 内层是 MPPI Omni，会主动规划横移；这里若掐掉 vy，内层的预测与实际下发
+      # 就不一致（它以为能横移）。所以配 MPPI 时保持 false。
+      # 要"前向为主(差速风格)"应把 inner 换成 RPP 并置 true。
+      zero_vy_in_follow: false
+      align_kp: 1.0
+      # 实测原地旋转跟踪比 0.73~0.92，且发零速后仍余转 0.006(慢)~0.033(快) rad，
+      # 所以上限不取满 wz_max(2.0)，留出减速余量。
+      align_max_vel: 0.6
+      # 实测 0.05 rad/s 就能转动（不存在静摩擦地板），所以下限取 0.05 足够；
+      # 它只在比例律算出更小值时生效，且永远不会超过 align_max_vel。
+      align_floor_vel: 0.05
+      align_tolerance: 0.05
+      # 必须 >= align_tolerance，否则该段进去就立刻满足、形同虚设（代码里会拒绝启动）。
+      start_min_angle: 0.20
+      start_heading_lookahead: 0.5
+      align_timeout: 15.0
+      follow_timeout: 0.0        # 0 = 交给 nav2 的 progress_checker
+      # 只在取不到 GoalChecker 容差时兜底；正常路径下容差**取自 GoalChecker**，
+      # 不在这里维护第二份（两处各存一份必然漂开）。
+      fallback_xy_tolerance: 0.18
+      fallback_yaw_tolerance: 0.20
+      inner:
+        # 内层 MPPI 的参数命名空间是 <本实例名>.inner，与上面的 FollowPath 互不影响。
+        plugin: "nav2_mppi_controller::MPPIController"
+        time_steps: 56
+        model_dt: 0.05
+        batch_size: 2000
+        vx_std: 0.2
+        vy_std: 0.2
+        wz_std: 0.4
+        vx_max: 0.5
+        vx_min: -0.35
+        vy_max: 0.5
+        wz_max: 1.9
+        motion_model: "Omni"
+
+    FollowPathExplore:
+      plugin: "astribot_s1_path_tracking::ThreePhaseController"
+      inner_controller_plugin: "nav2_mppi_controller::MPPIController"
+      align_start_enabled: true
+      # !!! 探索场景刻意为 false !!! 与 exploration_coordinator_params.yaml 的
+      # check_yaw: false 必须保持一致 —— 既然不对齐终点姿态，再去卡朝向偏差
+      # 就是让每个探索目标都必然判失败。
+      align_goal_enabled: false
+      zero_vy_in_follow: false
+      align_kp: 1.0
+      align_max_vel: 0.6
+      align_floor_vel: 0.05
+      align_tolerance: 0.05
+      start_min_angle: 0.20
+      start_heading_lookahead: 0.5
+      align_timeout: 15.0
+      follow_timeout: 0.0
+      fallback_xy_tolerance: 0.18
+      fallback_yaw_tolerance: 0.20
+      inner:
+        plugin: "nav2_mppi_controller::MPPIController"
+        time_steps: 56
+        model_dt: 0.05
+        batch_size: 2000
+        vx_std: 0.2
+        vy_std: 0.2
+        wz_std: 0.4
+        vx_max: 0.5
+        vx_min: -0.35
+        vy_max: 0.5
+        wz_max: 1.9
+        motion_model: "Omni"
 
 smoother_server:
   ros__parameters:

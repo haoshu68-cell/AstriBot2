@@ -1,0 +1,91 @@
+# 夹爪开合。**用"张开程度"表达，不用厂商的裸命令值。**
+#
+# 为什么请求字段是 opening_fraction 而不是 0-100 的 cmd
+# ==================================================
+# 厂商命令空间的极性**与直觉相反**（源码逐字确认）：
+#   open_effector()  -> 下发 0.0     astribot_client.py:813 / 817
+#   close_effector() -> 下发 100.0   astribot_client.py:836 / 840
+# 即 0 = 张开、100 = 闭合。若把 0-100 直接暴露在服务接口上，调用方几乎必然
+# 会把 100 当成"全开"——而反过来用的后果是抓取时张开、放置时闭合，
+# **两边都不报错**。本项目已经在夹爪上吃过一次这种静默错误
+# （SRDF 夹爪组只含主动关节 -> 张口静默算成一半、抓取角错一倍且零报错）。
+#
+# 所以对外只暴露 opening_fraction：**1.0 = 全张开，0.0 = 全闭合**，
+# 极性翻转关在桥接内部（gripper_math.opening_fraction_to_cmd）。
+# 需要裸命令值的诊断场景走 cmd 字段，但必须显式置 use_raw_cmd。
+
+# 夹爪部件名。空字符串 = 两只都动（对齐 SDK：names=None 时作用于 effector_names）。
+# 单只时取 "astribot_gripper_left" / "astribot_gripper_right"。
+string name
+
+# 张开程度，[0.0, 1.0]。**1.0 = 全张开，0.0 = 全闭合。**
+# 越界会被显式拒绝（不静默夹）——越界往往正是极性搞错的症状。
+float64 opening_fraction
+
+# 到位时间（秒）。SDK 的 open/close_effector 尊重这个参数，
+# 且**调用期间阻塞**（实测 duration=1.0 阻塞满 1.0s 才返回）。
+# <=0 时用配置里的默认值。
+float64 duration
+
+# 诊断用：直接给厂商的 0-100 裸命令值，绕过 opening_fraction。
+# !!! 必须同时置 use_raw_cmd=true 才生效 !!! 否则本字段被忽略。
+# 两个都不置时按 opening_fraction 走。
+bool use_raw_cmd
+float64 raw_cmd
+
+# 夹持力上限（N）。<=0 表示不设置，沿用 SDK 默认 48N
+# （109-effector_open_close.py:23）。
+#
+# !!! 仿真下设力是空操作 !!! astribot_client.py:1139 第一行就是
+# `if self.__in_simulation: return`（实测返回 None）。所以响应里的
+# force_applied 会如实告诉你这次到底设上了没有——不能默认它生效。
+float64 max_force
+
+---
+
+# 是否成功
+bool ok
+
+# 错误码，取值见下方常量
+uint8 error_code
+
+# 人类可读说明。失败时必须非空。
+# 成功时带上 describe_cmd() 的文字（例如"闭合（cmd=100.0，0.9300 rad）"），
+# 因为日志里看到裸的 100 极容易被误读成"全开"。
+string detail
+
+# 实际下发给 SDK 的裸命令值（0-100）。用于核对极性翻转是否如预期。
+float64 dispatched_cmd
+
+# dispatched_cmd 对应的驱动关节弧度（rad = 0.0093 * cmd）。
+# 注意它是**闭合角**：越闭合越大，cmd=100 -> 0.93 rad（关节上限）。
+float64 dispatched_rad
+
+# 调用返回后读到的实际位置（仍在 0-100 命令空间——仿真既不发 /tf 也不发弧度关节角）
+float64 actual_cmd
+
+# 力限是否真的设上了。**仿真下恒为 false**，即使 max_force 传了合法值。
+# 存在的唯一目的：防止把仿真里的夹持行为误当成"力限已验收"。
+bool force_applied
+
+uint8 SUCCESS = 0
+
+# 本服务未在配置里启用。显式拒绝，不静默成功。
+uint8 DISABLED_BY_CONFIG = 1
+
+# name 不是合法夹爪名（不在 effector_names 里）
+uint8 UNKNOWN_GRIPPER = 2
+
+# opening_fraction 越出 [0,1]，或 use_raw_cmd 下 raw_cmd 越出 [0,100]，
+# 或数值是 NaN。越界不静默夹——"我要求 150"不该变成"实际 100"而无人知晓。
+uint8 VALUE_OUT_OF_RANGE = 3
+
+# SDK 调用抛异常
+uint8 SDK_CALL_FAILED = 4
+
+# 写通路准入未通过（WriteGate 拒绝）
+uint8 WRITE_GATE_DENIED = 5
+
+# 已有一次夹爪操作在进行中。open/close_effector 是阻塞调用，
+# 并发调用同一只夹爪会让两次动作互相覆盖，所以显式拒绝而不排队。
+uint8 BUSY = 6
