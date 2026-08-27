@@ -276,8 +276,32 @@ find $D/ws_robot -maxdepth 2 \( -name build -o -name install -o -name log \) -ty
 
 ### 3.1 `env_robot.sh`
 
-放在 SDK 根目录，**与目标端 `env.sh` 并存**。它先 source 厂商 `env.sh` 拿到正确的
-domain/RMW/LD_LIBRARY_PATH，再补上 §0.4 那两处缺陷，最后挂上我们的工作空间。
+放在 SDK 根目录，**与目标端 `env.sh` 并存**。
+
+> **已在实机落地并验证通过**（2026-08-27）。两处是实测才发现、光看代码想不到的：
+>
+> 1. **厂商 `env.sh` 不 source `/opt/ros/humble`** —— 它只 source SDK 内部三个
+>    setup.bash（`third_party/software`、`astribot_msgs`、`third_pkg`）。
+>    不先 source ROS 的话 `astribot_interface.py:17` 的 `import rclpy` 直接
+>    `ModuleNotFoundError`，SDK 整个起不来。**顺序也重要**：
+>    `astribot_msgs/local_setup.bash` 是 ROS overlay，要 ROS 在前。
+> 2. **厂商 `env.sh` 自己就设了 Fast DDS 白名单**（`env.sh:101-102`，实测生成
+>    `config/fastdds_whitelist_192.xml`、绑 `192.168.0.11`）。所以 §3.2 那句
+>    "不要再叠白名单"要这样理解：**用它这一份，不要再加第三种机制**。
+>
+> 实机验证输出：
+>
+> ```
+> ROS_DOMAIN_ID      = 25       ROS_LOCALHOST_ONLY = 0
+> RMW                = rmw_fastrtps_cpp        ROS_DISTRO = humble
+> ROBOT_TYPE         = S1
+> FASTRTPS profile   = .../config/fastdds_whitelist_192.xml
+> middleware 在 PYTHONPATH : 3   core/common 在 PYTHONPATH: 1
+> SDK import OK                 ← 只 import，未建会话，机器人未动
+> ```
+
+它先 source ROS，再 source 厂商 `env.sh` 拿到正确的 domain/RMW/白名单，
+然后补 §0.4 那两处缺陷，最后挂我们的工作空间。
 
 ```bash
 # 【机器人端执行】
@@ -341,31 +365,45 @@ from astribot_sdk.core.astribot_api.astribot_client import Astribot
 print('SDK import OK')"    # 只 import，不建会话，不会让机器人动
 ```
 
-### 3.2 Fast DDS：先读厂商已有的，不要叠加
+### 3.2 Fast DDS：用厂商已有的两层，不要加第三层
 
 ⚠️ **对我在 [`real_robot_deployment.md` §3.2](real_robot_deployment.md) 的方案做修正。**
-实机上厂商**已经**解决了双网卡 DDS 隔离，用的是路由 + 防火墙，不是 `interfaceWhiteList`：
+实机上 DDS 隔离**已经有两层**，都不需要我们再做：
+
+**第一层 —— 厂商启动脚本的路由 + 防火墙**（`/home/astribot/astribot_orin_startup.sh` 实测）：
 
 ```bash
-# /home/astribot/astribot_orin_startup.sh 实测内容
 sudo /sbin/route add -net 224.0.0.0 netmask 224.0.0.0 dev eno1   # 多播整段钉到 eno1
 sudo iptables -I INPUT  -i wlP1p1s0 -d 239.255.0.1 -j DROP       # WiFi 上的 DDS 多播丢掉
 sudo iptables -I OUTPUT -o wlP1p1s0 -d 239.255.0.1 -j DROP
 ```
 
-且厂商栈用的是 `FASTRTPS_DEFAULT_PROFILES_FILE=/opt/astribot_ros/robot_system_ctrl/fastdds_udp.xml`。
+这一层管的是厂商栈那些进程（它们用
+`FASTRTPS_DEFAULT_PROFILES_FILE=/opt/astribot_ros/robot_system_ctrl/fastdds_udp.xml`）。
+它恰好绕开了 `interfaceWhiteList` 只过滤单播、挡不住 SPDP 多播那个已知缺陷。
 
-这个做法恰好绕开了 `interfaceWhiteList` 只过滤单播、挡不住 SPDP 多播那个已知缺陷——
-它直接在路由层和防火墙层解决。**所以不要再叠一层白名单**：
+**第二层 —— SDK 自己 `env.sh` 的接口白名单**（`env.sh:101-102`，实测生效）：
 
-```bash
-# 【机器人端执行】先看厂商配了什么，再决定要不要动
-cat /opt/astribot_ros/robot_system_ctrl/fastdds_udp.xml
-sudo iptables -L INPUT -n | grep 239.255 ; sudo iptables -L OUTPUT -n | grep 239.255
-ip route show | grep 224.0.0.0
+```
+[env.sh] Fast DDS whitelist = 192.168.0.11 (只用 192.168.0.x 网段)
+FASTRTPS_DEFAULT_PROFILES_FILE=.../config/fastdds_whitelist_192.xml
 ```
 
-我们同步过去的 `config/fastdds_*.xml*` 属于本地开发机用的，**实机不要 export 它**。
+这一层管的是**我们**这条链路上的进程（因为 `env_robot.sh` 会 source 它）。
+
+> **所以我们什么都不用配。** 不要另外 export 自己的 profile——
+> 三份 profile 互相覆盖时，`is_default_profile` 谁最后生效很难说清，
+> 而症状是"话题可见但零消息"，排查成本极高。
+>
+> 现场只需确认这两层都在：
+>
+> ```bash
+> # 【机器人端执行】
+> sudo iptables -L INPUT  -n | grep 239.255
+> sudo iptables -L OUTPUT -n | grep 239.255
+> ip route show | grep 224.0.0.0
+> echo "$FASTRTPS_DEFAULT_PROFILES_FILE"      # source env_robot.sh 之后
+> ```
 
 ---
 
