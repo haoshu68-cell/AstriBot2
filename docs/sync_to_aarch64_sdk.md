@@ -180,9 +180,9 @@ DST=orin:/home/astribot/Downloads/astribot_sdk_aarch64
 
 rsync -avhn --delete \
   --exclude='build/' --exclude='install/' --exclude='log/' \
-  --exclude='__pycache__/' --exclude='*.pyc' --exclude='.coverage' \
+  --exclude='__pycache__/' --exclude='*.pyc' --exclude='.coverage' --exclude='.pytest_cache/' \
   --exclude='.git/' \
-  --exclude='maps/' \
+  --exclude='/maps/' --exclude='/ws_robot/maps/' \
   --exclude='aws-robomaker-small-warehouse-world/' \
   "$SRC/ws_robot" "$DST/"
 ```
@@ -193,9 +193,9 @@ rsync -avhn --delete \
 # 【本地工作站执行】② 真正同步 ws_robot
 rsync -avh --delete \
   --exclude='build/' --exclude='install/' --exclude='log/' \
-  --exclude='__pycache__/' --exclude='*.pyc' --exclude='.coverage' \
+  --exclude='__pycache__/' --exclude='*.pyc' --exclude='.coverage' --exclude='.pytest_cache/' \
   --exclude='.git/' \
-  --exclude='maps/' \
+  --exclude='/maps/' --exclude='/ws_robot/maps/' \
   --exclude='aws-robomaker-small-warehouse-world/' \
   "$SRC/ws_robot" "$DST/"
 
@@ -208,10 +208,10 @@ rsync -avh "$SRC/docs" "$DST/"
 | 排除项 | 理由 |
 |---|---|
 | `build/` `install/` `log/` | 无锚定模式，同时命中仓库根与 `ws_robot/src/*/` 下的**嵌套残留**（本地实测 `astribot_s1_autonomy` 里有 103 MB、`astribot_s1_manipulation` 18 MB）。这些是 **x86-64 产物**，在 aarch64 上完全无用 |
-| `maps/` | 本地 `ws_robot/maps` 122 MB + 仓库根 `maps/`，都是仿真跑出来的地图。实机要用的是 Voxel-SLAM 的 `sessions/1floor` |
+| `/maps/` `/ws_robot/maps/` | **必须带前导斜线锚定**。仓库根 `maps/` 122 MB + `ws_robot/maps/` 都是仿真跑出来的地图。⚠️ 早先写成无锚定的 `maps/`，**误伤了 `astribot_s1_perception/maps/.gitkeep`**——那是包自己的入库目录。实测发现后已改为锚定形式 |
 | `.git/` | 目标端有自己的 git 仓库，把我们的 `.git` 传过去会造成两个仓库嵌套 |
 | `aws-robomaker-...` | 15.64 MB 纯仿真世界，且是唯一的构建阻塞包（`find_package(gazebo_ros REQUIRED)`，Gazebo Classic） |
-| `.coverage` | 本地测试产物 |
+| `.coverage` `.pytest_cache/` | 本地测试产物 |
 
 > **`--delete` 的作用范围**：只作用于 `$DST/ws_robot/`（rsync 的 `--delete` 限于被同步的目录树），
 > 不会碰 `astribot_sdk/` `third_party/` 等同级目录。首次同步仍建议先看 `-n` 输出。
@@ -223,8 +223,8 @@ rsync -avh "$SRC/docs" "$DST/"
 cd /home/yjh/WorkSpace/astribot_sdk_ros2
 tar czf - \
   --exclude='build' --exclude='install' --exclude='log' \
-  --exclude='__pycache__' --exclude='*.pyc' --exclude='.coverage' \
-  --exclude='.git' --exclude='maps' \
+  --exclude='__pycache__' --exclude='*.pyc' --exclude='.coverage' --exclude='.pytest_cache/' \
+  --exclude='.git' --exclude='/maps' --exclude='/ws_robot/maps' \
   --exclude='aws-robomaker-small-warehouse-world' \
   ws_robot docs \
 | ssh orin 'cd /home/astribot/Downloads/astribot_sdk_aarch64 && tar xzf - && echo "解包完成"'
@@ -567,8 +567,8 @@ DRY="-n"
 
 EXCLUDES=(
   --exclude='build/'   --exclude='install/'  --exclude='log/'
-  --exclude='__pycache__/' --exclude='*.pyc' --exclude='.coverage'
-  --exclude='.git/'    --exclude='maps/'
+  --exclude='__pycache__/' --exclude='*.pyc' --exclude='.coverage' --exclude='.pytest_cache/'
+  --exclude='.git/'    --exclude='/maps/' --exclude='/ws_robot/maps/'
   --exclude='aws-robomaker-small-warehouse-world/'
 )
 
