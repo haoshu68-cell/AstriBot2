@@ -35,6 +35,8 @@ class SessionPort:
     对齐依据：
       * ``get_desired_joints_position(names)`` —— 101:46 / 202:44 / 203:43
       * ``get_current_joints_position(names)`` —— 101:45 / 106:45
+      * ``get_current_joints_velocity(names)`` —— 签名 astribot_client.py:217，
+        examples/101:47。只读，chassis_odom_node 用它填 Odometry.twist
       * ``set_joints_position(names, position, control_way, use_wbc,
         add_default_torso)`` —— 105:53、签名 astribot_client.py:704
       * ``move_joints_waypoints(names, waypoints, time_list, use_wbc,
@@ -56,6 +58,9 @@ class SessionPort:
         raise NotImplementedError
 
     def get_current_joints_position(self, names):
+        raise NotImplementedError
+
+    def get_current_joints_velocity(self, names):
         raise NotImplementedError
 
     def set_joints_position(self, names, position, control_way='filter',
@@ -183,9 +188,10 @@ class FakeSession(SessionPort):
 
     def __init__(self, desired=None, current=None, limits=None,
                  robot_mode='safe', dofs=None, follow_ratio=1.0,
-                 in_simulation=True):
+                 in_simulation=True, velocity=None):
         self._desired = dict(desired or {})
         self._current = dict(current or {})
+        self._velocity = dict(velocity or {})
         self._limits = dict(limits or {})
         self._robot_mode = robot_mode
         self._dofs = dict(dofs or {})
@@ -248,6 +254,11 @@ class FakeSession(SessionPort):
     def get_current_joints_position(self, names):
         self._maybe_fail('get_current_joints_position')
         return [list(self._current.get(n, [0.0, 0.0, 0.0])) for n in names]
+
+    def get_current_joints_velocity(self, names):
+        # 默认全零：静止是最安全的假读数。要测速度就往 self._velocity 里塞。
+        self._maybe_fail('get_current_joints_velocity')
+        return [list(self._velocity.get(n, [0.0, 0.0, 0.0])) for n in names]
 
     def set_joints_position(self, names, position, control_way='filter',
                             use_wbc=False, add_default_torso=True):

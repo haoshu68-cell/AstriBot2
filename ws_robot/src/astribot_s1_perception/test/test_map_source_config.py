@@ -14,7 +14,9 @@ from astribot_s1_perception.map_source_config import (
     MapSourceConfigError,
     check_live_transport_env,
     load_config,
+    needs_slam_adapter,
     needs_slam_toolbox,
+    publishes_static_map_to_odom,
     require,
     resolve,
     validate_combination,
@@ -51,9 +53,20 @@ def write_config(**params):
     ('sim_slam', 'slam'),
     ('real_file', 'ground_truth'),
     ('real_live', 'ground_truth'),
+    ('real_file', 'external'),
+    ('real_live', 'external'),
 ])
 def test_valid_combinations_accepted(map_source, localization):
     assert validate_combination(map_source, localization) is None
+
+
+def test_sim_slam_with_external_rejected():
+    """与 sim_slam + ground_truth 同一个坑：slam_toolbox 与 adapter 都会发 map→odom。"""
+    reason = validate_combination('sim_slam', 'external')
+    assert reason is not None
+    assert '两个父源' in reason
+    # 必须给出可执行的下一步
+    assert 'localization:=slam' in reason
 
 
 def test_sim_slam_with_ground_truth_rejected():
@@ -86,6 +99,39 @@ def test_needs_slam_toolbox_only_for_sim_slam():
     assert needs_slam_toolbox('sim_slam') is True
     assert needs_slam_toolbox('real_file') is False
     assert needs_slam_toolbox('real_live') is False
+
+
+def test_needs_slam_adapter_only_for_external():
+    assert needs_slam_adapter('external') is True
+    assert needs_slam_adapter('slam') is False
+    assert needs_slam_adapter('ground_truth') is False
+
+
+def test_external_never_publishes_static_map_to_odom():
+    """external 下这条必须是 False —— 否则 map→odom 有两个父源，位姿反复跳。"""
+    assert publishes_static_map_to_odom('external') is False
+    assert publishes_static_map_to_odom('slam') is False
+    assert publishes_static_map_to_odom('ground_truth') is True
+
+
+def test_exactly_one_source_of_map_to_odom_per_valid_combination():
+    """对每个合法组合，map→odom 的发布方必须**恰好一个**。
+
+    这条是矩阵级不变量，比逐个组合断言更能拦住"新增取值时漏改一处"：
+    加 external 时如果忘了让 publishes_static_map_to_odom 排除它，
+    real_live + external 就会数出 2 个发布方，这里立刻红。
+    """
+    for map_source in ('sim_slam', 'real_file', 'real_live'):
+        for localization in ('slam', 'ground_truth', 'external'):
+            if validate_combination(map_source, localization) is not None:
+                continue
+            publishers = sum((
+                needs_slam_toolbox(map_source),          # slam_toolbox 发
+                publishes_static_map_to_odom(localization),  # 静态 TF 发
+                needs_slam_adapter(localization),        # adapter 转发外部的
+            ))
+            assert publishers == 1, (
+                f'{map_source} + {localization} 有 {publishers} 个 map→odom 发布方')
 
 
 # ---------------------------------------------------------------------------

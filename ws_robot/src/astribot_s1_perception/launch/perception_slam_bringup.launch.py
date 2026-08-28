@@ -116,7 +116,7 @@ def generate_launch_description():
                         'real_* 时不启 slam_toolbox，改由 map_provider 提供 /map'),
         DeclareLaunchArgument(
             'localization', default_value='',
-            description='覆盖 localization（slam|ground_truth），留空用配置文件的值'),
+            description='覆盖 localization（slam|ground_truth|external），留空用配置文件的值'),
         DeclareLaunchArgument(
             'map_yaml_path', default_value='',
             description='map_source:=real_file 时的地图 yaml 绝对路径，留空用配置文件的值'),

@@ -171,6 +171,15 @@ class AstribotSession(SessionPort):
     def get_current_joints_position(self, names):
         return self._bot.get_current_joints_position(names)
 
+    def get_current_joints_velocity(self, names):
+        """只读速度。签名见 astribot_client.py:217。
+
+        `chassis_odom_node` 要它来填 Odometry.twist。虽然 `__getattr__` 已经能
+        透传，但显式列在这里是刻意的：这份 SessionPort 是"我们允许自己调用什么"
+        的清单，靠透传拿到的接口不会出现在清单上，读代码时看不出边界在哪。
+        """
+        return self._bot.get_current_joints_velocity(names)
+
     def set_joints_position(self, names, position, control_way='filter',
                             use_wbc=False, add_default_torso=True):
         return self._bot.set_joints_position(

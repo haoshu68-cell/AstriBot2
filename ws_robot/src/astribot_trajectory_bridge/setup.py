@@ -33,6 +33,8 @@ setup(
             'astribot_trajectory_bridge.joint_map_probe:main',
             'bridge_container = '
             'astribot_trajectory_bridge.bridge_container:main',
+            'chassis_odom_node = '
+            'astribot_trajectory_bridge.chassis_odom_node:main',
         ],
     },
 )

@@ -48,9 +48,13 @@ from launch.events import Shutdown
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+from ament_index_python.packages import get_package_share_directory
+
 from astribot_s1_perception.map_source_config import (
     MapSourceConfigError,
     check_live_transport_env,
+    needs_slam_adapter,
+    publishes_static_map_to_odom,
     require,
     resolve,
 )
@@ -161,7 +165,7 @@ def _build(context, *args, **kwargs):
                   f'domain {remote_domain} -> {local_domain}')
 
     # ---------------- map→odom 的提供者 ----------------
-    if localization == 'ground_truth':
+    if publishes_static_map_to_odom(localization):
         pose = params.get('map_to_odom_xyz_yaw') or [0.0, 0.0, 0.0, 0.0]
         if len(pose) != 4:
             raise MapSourceConfigError(
@@ -206,6 +210,34 @@ def _build(context, *args, **kwargs):
                     [EmitEvent(event=Shutdown(
                         reason='出生点栅格校验未通过（见上面的 ERROR）'))]
                     if event.returncode != 0 else []))))
+    elif needs_slam_adapter(localization):
+        # 外部 SLAM（Voxel-SLAM 等）提供 /map 与 map→odom，经适配层归一化。
+        # 这里**不发**静态 TF：那会让 odom 有两个父源，位姿反复跳，
+        # 症状看起来像"定位漂移"（与 sim_slam + ground_truth 同一个坑）。
+        adapter_params = os.path.join(
+            get_package_share_directory('astribot_s1_perception'),
+            'config', 'slam_adapter_params.yaml')
+        adapter = Node(
+            package='astribot_s1_perception',
+            executable='slam_adapter_node',
+            # 刻意不设 name=：节点名 remap 是进程级的，remap 后 yaml 键匹配不上、
+            # 整份参数文件静默失效并回落到代码默认值，且没有任何报错。
+            output='screen',
+            parameters=[
+                adapter_params,
+                # 只有这两项由配置轴决定，其余全部来自 yaml
+                {'use_sim_time': use_sim_time == 'true',
+                 'map_topic': require(params, 'local_map_topic', str, '/map')},
+            ],
+        )
+        actions.append(adapter)
+        # 适配层退出（源超时、契约违规）意味着 /map 和 map→odom 都没了，
+        # 下游只会表现成"nav2 卡在启动"。让它带着整个 launch 一起停。
+        actions.append(RegisterEventHandler(OnProcessExit(
+            target_action=adapter, on_exit=[EmitEvent(event=Shutdown(
+                reason='slam_adapter_node 退出：外部 SLAM 接入失败（见上面的 ERROR）'))])))
+        print(f'[map_provider] /map 与 map→odom 由外部 SLAM 提供，'
+              f'经 slam_adapter_node 归一化（参数 {adapter_params}）')
     else:
         print('[map_provider] map→odom 由 slam_toolbox 提供（扫描匹配）')
 
@@ -223,7 +255,7 @@ def generate_launch_description():
                         '留空则用配置文件的值'),
         DeclareLaunchArgument(
             'localization', default_value='',
-            description='覆盖配置里的 localization（slam|ground_truth）。留空同上'),
+            description='覆盖配置里的 localization（slam|ground_truth|external）。留空同上'),
         DeclareLaunchArgument(
             'map_yaml_path', default_value='',
             description='覆盖配置里的 map_yaml_path。留空同上'),

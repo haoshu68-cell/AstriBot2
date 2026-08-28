@@ -17,10 +17,15 @@ import yaml
 
 
 VALID_MAP_SOURCES = ('sim_slam', 'real_file', 'real_live')
-VALID_LOCALIZATION = ('slam', 'ground_truth')
+VALID_LOCALIZATION = ('slam', 'ground_truth', 'external')
 
 #: 需要 slam_toolbox 在线建图的地图来源
 SLAM_TOOLBOX_SOURCES = ('sim_slam',)
+
+#: 由外部 SLAM 提供 map→odom 的 localization 取值。
+#: 单独拎出来是因为"谁发 map→odom"这个判断在 launch 里要用三次，
+#: 而写成 `localization == 'external'` 的字面比较迟早会漏掉一处。
+EXTERNAL_LOCALIZATION = 'external'
 
 
 class MapSourceConfigError(RuntimeError):
@@ -77,10 +82,12 @@ def require(params, key, cast, default=None):
 def validate_combination(map_source, localization):
     """校验两个轴的组合。合法返回 None，否则返回拒绝原因字符串。
 
-    合法组合只有三个：
+    合法组合有五个：
         sim_slam  + slam          （今天的行为；探索算法只能在这个组合下开发）
         real_file + ground_truth  （默认；在真机地图上验证规划/导航/搬运）
         real_live + ground_truth  （同上，地图跟着真机实时更新）
+        real_live + external      （外部 SLAM 在线建图并提供 map→odom）
+        real_file + external      （外部 SLAM 存下来的图 + 它的定位）
     """
     if map_source not in VALID_MAP_SOURCES:
         return f'map_source={map_source!r} 非法，只能是 {VALID_MAP_SOURCES}'
@@ -92,6 +99,13 @@ def validate_combination(map_source, localization):
                 'slam_toolbox 发布；再加一条静态 TF 会让同一个子帧有两个父源，'
                 '位姿反复跳，而症状看起来像"定位漂移"，极难归因。'
                 '要用真值定位就把地图源改成 real_file / real_live。')
+
+    if map_source == 'sim_slam' and localization == EXTERNAL_LOCALIZATION:
+        return ('sim_slam + external 无意义：仿真里没有外部 SLAM 进程，'
+                'slam_adapter_node 会等到 source_timeout_sec 后非零退出；'
+                '而且 slam_toolbox 已经在发 map→odom，适配层再发一遍就是'
+                '同一子帧两个父源（与 sim_slam + ground_truth 同一个坑）。'
+                '仿真里请用 localization:=slam。')
 
     if map_source in ('real_file', 'real_live') and localization == 'slam':
         return ('real_* + slam 是路线 A，暂未开放：扫描匹配要求**仿真几何与地图一致**，'
@@ -125,6 +139,27 @@ def resolve(path=None, overrides=None):
 def needs_slam_toolbox(map_source):
     """这个地图来源是否需要 slam_toolbox 在线建图。"""
     return map_source in SLAM_TOOLBOX_SOURCES
+
+
+def needs_slam_adapter(localization):
+    """是否需要起 `slam_adapter_node`（外部 SLAM 的接入层）。
+
+    与 `needs_slam_toolbox` 刻意分开：前者看**地图来源**轴，后者看**定位**轴。
+    两个 launch 都要用到这个判断，而"起了 slam_toolbox 又起 adapter"正是
+    `validate_combination` 拒绝 sim_slam + external 要防的那件事，
+    所以这里不再重复防一遍 —— 组合校验已经在 `resolve` 里把它挡住了。
+    """
+    return localization == EXTERNAL_LOCALIZATION
+
+
+def publishes_static_map_to_odom(localization):
+    """是否由我们自己发 `map→odom` 静态 TF（即 ground_truth 那条分支）。
+
+    写成函数是因为"谁发 map→odom"决定了 TF 树会不会出现同一子帧两个父源，
+    而这个判断散落在两个 launch 里。`external` 时**必须**返回 False：
+    map→odom 由外部 SLAM（经 adapter）提供。
+    """
+    return localization == 'ground_truth'
 
 
 def check_live_transport_env(localhost_only_value):

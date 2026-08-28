@@ -21,7 +21,15 @@
 | 只有两处 `static_transform_publisher` | `map_provider.launch.py:172`（`map→odom`）与 `warehouse_sim.launch.py:490`（三个仿真传感器别名）。**都不是** `odom→base` |
 | 唯一的 `odom→base` 产出者 | `astribot_s1.gazebo.xacro:71-78` 的 `gz-sim-odometry-publisher-system`，**只能通过 Gazebo** |
 | 桥接刻意不承担这个角色 | `chassis_cmd_bridge_node.py:267` `frame_id='sdk_chassis'  # 刻意不写 odom：它不是 odom`，且**只发 Odometry 消息、不广播 TF** |
-| `chassis_odom_node` | 只存在于 `sim_real_alignment.md:956` 的计划里。**无源文件**，`setup.py:29-36` 只有 `state_bridge_node` / `joint_map_probe` / `bridge_container` |
+| `chassis_odom_node` | ~~只存在于计划里，无源文件~~ → **2026-08-27 已实现**：`chassis_odom_node.py` + 纯逻辑 `chassis_odom_source.py`（30 项离线测试），已注册进 `setup.py`。⚠️ 仍**未在真机上取证**，见下方两项前提 |
+
+> **`chassis_odom_node` 落地后仍未验证的两个前提**（都只能在真机上取证，机器人当前离线）：
+> 1. **SDK 位姿不跳变** —— odom 的契约是允许漂、不允许跳。节点已把跳变做成
+>    WARN + 计数 + `jump_ratio`，**不静默平滑**。上线后先看这个比例：不为 0
+>    就说明"把 SDK 位姿当 odom"这个方案不成立，要改用外部 SLAM 的里程计或自积分轮速。
+> 2. **`velocity_frame` 到底是 body 还是 world** —— SDK 给的 `[vx, vy]` 在哪个系里没有文档依据。
+>    默认按 `body`。核对办法：手推机器人沿机体 +x 走，看 `vx` 是否为正且 `vy≈0`；
+>    再原地转 90° 重复一次。搞反不报错，只让 nav2 的速度前瞻在转向时偏一个旋转。
 
 **这一条边缺失会让下面全部同时失效**（都是同一个根因，但症状分散在四个地方，极易误判成四个独立 bug）：
 
@@ -366,6 +374,36 @@ ros2 launch astribot_trajectory_bridge bridge_bringup.launch.py \
 ---
 
 ## 2 · 接入 `/home/astribot/SLAM`
+
+> ### 实现状态（2026-08-27 更新）
+>
+> §2.4 / §2.5 的设计已落成可运行代码。**判定逻辑一律与 ROS 解耦**，照本包
+> `cloud_to_grid.py` 的做法 —— 契约违规在线要靠运气才碰上一次，离线才能穷举。
+>
+> | 组件 | 文件 | 离线测试 | 状态 |
+> |---|---|---|---|
+> | 契约 + 心跳（纯逻辑） | `astribot_s1_perception/slam_contract.py` | 31 项 | ✅ 全绿 |
+> | 接入节点 | `astribot_s1_perception/slam_adapter_node.py` | — | ✅ 已注册 entry point |
+> | 参数 | `config/slam_adapter_params.yaml` | — | ✅ 随 `config/*.yaml` 安装 |
+> | `localization: external` | `map_source_config.py` + `map_provider.launch.py` | 37 项 | ✅ 含"每个合法组合恰好一个 map→odom 发布方"的矩阵级不变量 |
+> | odom 数学（纯逻辑） | `astribot_trajectory_bridge/chassis_odom_source.py` | 30 项 | ✅ 全绿 |
+> | odom 节点 | `astribot_trajectory_bridge/chassis_odom_node.py` | — | ✅ 只读，已注册 entry point |
+> | 参数 | `config/chassis_odom.yaml` | — | ✅ |
+>
+> **顺带修掉的一处缺口**：`AstribotSession` 之前没有 `get_current_joints_velocity`
+> 包装（厂商侧 `astribot_client.py:217` 有）。靠 `__getattr__` 透传虽然能用，但那样
+> 接口就不出现在 `SessionPort` 这份"我们允许自己调用什么"的清单上，读代码时看不出
+> 只读边界在哪。已显式补进 `sdk_session.py` / `ports.py` / `FakeSession`，
+> 桥接包 430 项测试无回归。
+>
+> **仍然阻塞在真机上的三件事**（机器人当前离线，ARP 无响应）：
+> 1. `slam_adapter_node` 的 `source_map_topic` 默认 `/slam/map` 是**猜的**，要用 §2.2 探测填实。
+> 2. `_publish_map_to_odom` 当前发**单位变换**，只在"开机即建图"（odom 与 map 同时
+>    从当前位置起算）时成立。正确分解需要同时拿到 `chassis_odom_node` 的 `odom→base`
+>    才能算 `map→odom = (SLAM 的 map→base) × (odom→base)⁻¹`。
+> 3. Voxel-SLAM 是 LIO 型，**只出点云不出 OccupancyGrid** —— 那种情况下要先接
+>    `cloud_to_grid` 投影，而不是直接接 `slam_adapter_node`。节点的超时报错里已写明这条。
+
 
 ### 2.1 先分类，再设计——三种可能对应三种架构
 

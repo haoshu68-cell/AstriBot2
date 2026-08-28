@@ -36,6 +36,7 @@ setup(
             'autonomous_patrol_node = astribot_s1_perception.autonomous_patrol_node:main',
             'map_domain_relay = astribot_s1_perception.map_domain_relay:main',
             'map_start_cell_check = astribot_s1_perception.map_start_cell_check:main',
+            'slam_adapter_node = astribot_s1_perception.slam_adapter_node:main',
         ],
     },
 )
