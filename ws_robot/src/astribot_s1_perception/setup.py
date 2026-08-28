@@ -38,6 +38,7 @@ setup(
             'map_start_cell_check = astribot_s1_perception.map_start_cell_check:main',
             'slam_adapter_node = astribot_s1_perception.slam_adapter_node:main',
             'cloud_to_grid_node = astribot_s1_perception.cloud_to_grid_node:main',
+            'map_odom_tf_node = astribot_s1_perception.map_odom_tf_node:main',
         ],
     },
 )

@@ -35,10 +35,10 @@
     # 症状是"探索偶发停住"而 /map 一直有数据。构造期会校验这一条。
     republish_period_sec: 5.0
 
-    # 上游若自己已经在发 map→odom，**必须**置 false。
-    # 同一子帧两个父源不报错，只让位姿反复跳，看起来像"定位漂移"。
-    # 判据：ros2 topic echo /tf --once | grep child_frame_id | sort | uniq -d
-    publish_map_to_odom_tf: true
+    # 注：本节点**不再发任何 TF**。map→odom 改由 map_odom_tf_node 负责，
+    # 它做 REP-105 分解 map→odom = (SLAM 的 map→base) ∘ (odom→base)⁻¹。
+    # 旧的 publish_map_to_odom_tf 参数已删除 —— 它发的是**单位变换**，
+    # 等于宣称"odom 原点就是 map 原点"，只在开机即建图那一种情形下成立。
 
     # true = 契约违规则非零退出，不转发坏数据。
     # 只在"先看看上游到底发了什么"时才临时置 false（那时也只 WARN、仍不转发）。
@@ -64,6 +64,5 @@ slam_adapter:
     source_map_topic: "/slam/map"
     source_map_qos: "auto"
     republish_period_sec: 5.0
-    publish_map_to_odom_tf: true
     strict_contract: true
     source_timeout_sec: 30.0

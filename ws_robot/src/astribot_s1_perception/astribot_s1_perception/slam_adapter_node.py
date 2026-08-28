@@ -22,8 +22,10 @@
 LIO 型、带 Loop closure + GBA，它的位姿是 **map 级**、会被全局优化修正而跳变；
 odom 要求局部连续不跳变，两者不是同一个量，不能拿一个冒充另一个。
 
-⚠️ **`publish_map_to_odom_tf` 若上游自己已发 `map→odom`，必须置 false**。
-同一子帧两个父源不会报错，只会让位姿反复跳，症状看起来像"定位漂移"，极难归因。
+⚠️ **本节点不发布任何 TF。** `map→odom` 由 `map_odom_tf_node` 负责，
+它做的是 REP-105 分解 `map→odom = (SLAM 的 map→base) ∘ (odom→base)⁻¹`。
+本节点曾经在这里发一个**单位变换**占位，那等于宣称"odom 原点就是 map 原点" ——
+只在开机即建图那一种情形下成立，不成立时地图与激光整体错位且零报错。已删除。
 """
 
 import sys
@@ -37,9 +39,7 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
-from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import OccupancyGrid
-from tf2_ros import TransformBroadcaster
 
 from astribot_s1_perception.slam_contract import ContractViolation, MapContract, SlamAdapter
 
@@ -87,7 +87,6 @@ class SlamAdapterNode(Node):
         self.declare_parameter('odom_frame', 'odom')
         # -- 行为 --
         self.declare_parameter('republish_period_sec', 5.0)
-        self.declare_parameter('publish_map_to_odom_tf', True)
         self.declare_parameter('strict_contract', True)
         self.declare_parameter('source_timeout_sec', 30.0)
         self.declare_parameter('resolution_expected', 0.05)
@@ -100,7 +99,6 @@ class SlamAdapterNode(Node):
         self.map_topic = self._str('map_topic')
         self.map_frame = self._str('map_frame')
         self.odom_frame = self._str('odom_frame')
-        self.publish_tf = bool(self.get_parameter('publish_map_to_odom_tf').value)
         self.strict = bool(self.get_parameter('strict_contract').value)
         self.source_timeout_sec = float(self.get_parameter('source_timeout_sec').value)
 
@@ -137,7 +135,6 @@ class SlamAdapterNode(Node):
     def _setup_io(self):
         self.map_pub = self.create_publisher(
             OccupancyGrid, self.map_topic, latched_qos())
-        self.tf_broadcaster = TransformBroadcaster(self) if self.publish_tf else None
 
         self._subs = []
         first_qos = (volatile_qos() if self.source_map_qos == 'volatile'
@@ -160,14 +157,13 @@ class SlamAdapterNode(Node):
             f'  源  {self.source_map_topic} (qos={self.source_map_qos}) '
             f'frame={self.source_map_frame}\n'
             f'  出  {self.map_topic} (transient_local+reliable) frame={self.map_frame}\n'
-            f'  心跳 {self.contract.republish_period_sec}s  '
-            f'map→odom TF={"发" if self.publish_tf else "不发"}\n'
+            f'  心跳 {self.contract.republish_period_sec}s\n'
             f'  strict_contract={self.strict}  超时 {self.source_timeout_sec}s')
-        if not self.publish_tf:
-            self.get_logger().info(
-                'publish_map_to_odom_tf=false：map→odom 由上游自己发。'
-                '请确认它**真的**在发，否则 TF 树断在这一环，'
-                'nav2 表现为 "Could not transform" 而 /map 一切正常。')
+        self.get_logger().info(
+            '本节点**不发任何 TF**。map→odom 由 map_odom_tf_node 负责'
+            '（它做 REP-105 分解，需要 SLAM 的 map→base 与 chassis_odom_node '
+            '的 odom→base 两者都在）。若 TF 树断在 map→odom，查那个节点，'
+            '不要在这里找。')
 
     # -- 源地图回调 -------------------------------------------------------
     def _on_source_map(self, msg):
@@ -200,26 +196,7 @@ class SlamAdapterNode(Node):
         """
         grid.header.frame_id = self.map_frame
         self.map_pub.publish(grid)
-        if self.tf_broadcaster is not None:
-            self._publish_map_to_odom(grid.header.stamp)
 
-    def _publish_map_to_odom(self, stamp):
-        """发 `map→odom`。
-
-        ⚠️ 当前是**单位变换**，不是从外部 SLAM 位姿算出来的。
-        原因：Voxel-SLAM 的位姿是 map 级、带 GBA 修正会跳，而 odom 要求局部连续；
-        正确的分解是 `map→odom = (SLAM 的 map→base) × (odom→base)⁻¹`，
-        需要同时拿到 `chassis_odom_node` 的 odom→base 才能算。
-        在两者都跑起来并实测过之前，这里发单位变换等于宣称"odom 原点就是 map 原点" ——
-        它在**开机即建图**（odom 与 map 同时从当前位置起算）这一种情形下成立，
-        也正是 §N0 要验证的那个前提。不成立时表现为地图与激光整体错位。
-        """
-        transform = TransformStamped()
-        transform.header.stamp = stamp
-        transform.header.frame_id = self.map_frame
-        transform.child_frame_id = self.odom_frame
-        transform.transform.rotation.w = 1.0
-        self.tf_broadcaster.sendTransform(transform)
 
     # -- 定时器 -----------------------------------------------------------
     def _tick_heartbeat(self):
