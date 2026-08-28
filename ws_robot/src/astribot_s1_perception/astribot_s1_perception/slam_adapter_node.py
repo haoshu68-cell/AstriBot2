@@ -29,6 +29,7 @@ odom 要求局部连续不跳变，两者不是同一个量，不能拿一个冒
 import sys
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (
     DurabilityPolicy,
@@ -280,6 +281,11 @@ def main(argv=None):
         code = 2
     except SystemExit as exc:
         code = int(exc.code or 0)
+    except ExternalShutdownException:
+        # SIGTERM（launch 关停 / systemd stop）的正常表现，不是故障。
+        # 不接住的话 rclpy 会把它抛成一串栈回溯，看起来像崩溃 ——
+        # 而那会掩盖真正的错误，也让 launch 的退出处理器难以区分正常与异常。
+        pass
     except KeyboardInterrupt:
         pass
     finally:

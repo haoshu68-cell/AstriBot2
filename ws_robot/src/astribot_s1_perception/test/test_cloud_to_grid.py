@@ -448,3 +448,78 @@ def test_carve_cost_independent_of_occupied_count():
     thick = timed(10)
     # 允许一定放大（占据格集合变大、set 查询稍慢），但不能是数量级
     assert thick < thin * 5 + 2.0, f'thin={thin:.2f}s thick={thick:.2f}s，疑似又回到 O(占据格) 复杂度'
+
+
+# ---------------------------------------------------------------------------
+# 与 Voxel-SLAM 的接口对齐：上游已过滤，我们不能再切一刀
+#
+# /map_scan_filtered 在 SLAM 侧已按 [nav_scan_z_min, nav_scan_z_max]=[0.05, 1.63]
+# 过滤过（voxelslam.cpp:63 + mid360.yaml:26-27）。本节点若再切一刀，就是
+# **两层过滤串联取交集** —— 丢掉的障碍在地图上看不出来。
+#
+# 本仓库踩过同形态的坑：两个包各一层限速，0.50×0.15=0.075，
+# 只改一个看不到效果，根因在另一个包里。
+# ---------------------------------------------------------------------------
+UPSTREAM_Z_MIN, UPSTREAM_Z_MAX = 0.05, 1.63
+
+#: 覆盖上游区间的障碍样本：地面附近、腰高、桌面、人体躯干、接近上界
+FILTERED_SAMPLE = [
+    (1.0, 0.00, 0.10),
+    (1.0, 0.05, 0.55),
+    (1.2, 0.00, 0.95),
+    (1.4, 0.00, 1.55),
+    (1.4, 0.02, 1.60),
+]
+
+
+def test_infinite_slab_passes_everything_from_upstream():
+    """放通（-inf, inf）必须一个点都不丢——这是本节点的默认行为。"""
+    kept, dropped = slab_filter(FILTERED_SAMPLE, float('-inf'), float('inf'))
+    assert dropped == 0
+    assert len(kept) == len(FILTERED_SAMPLE)
+
+
+def test_narrow_slab_silently_drops_tall_obstacles():
+    """量化旧默认 [-0.05, 0.60] 的危害：丢掉 60% 的障碍点。
+
+    丢的是 0.95 / 1.55 / 1.60m 那三个——人体躯干、桌面、台面高度。
+    这条测试存在的意义不是"验证 slab_filter 能过滤"（上面已有），
+    而是把**这个具体的数字**钉住：任何人想把默认值改回收紧的区间，
+    都会先在这里看到 60% 这个数。
+    """
+    kept, dropped = slab_filter(FILTERED_SAMPLE, -0.05, 0.60)
+    assert dropped == 3
+    assert len(kept) == 2
+    assert dropped / len(FILTERED_SAMPLE) == pytest.approx(0.6)
+    # slab_filter 只返回 (x, y)（z 已被丢弃，见 test_slab_discards_z），
+    # 所以按 xy 核对活下来的是哪两个：只有 0.10m 和 0.55m 那两个矮障碍。
+    assert set(kept) == {(1.0, 0.00), (1.0, 0.05)}
+
+
+def test_slab_equal_to_upstream_is_lossless():
+    """与上游完全一致的区间不该丢点——边界是闭区间。"""
+    kept, dropped = slab_filter(FILTERED_SAMPLE, UPSTREAM_Z_MIN, UPSTREAM_Z_MAX)
+    assert dropped == 0
+    assert len(kept) == len(FILTERED_SAMPLE)
+
+
+def test_infinite_slab_still_drops_nan():
+    """放通不等于放弃校验：NaN/Inf 必须照旧丢掉。
+
+    否则后面的 min/max 全变 NaN，症状是"地图尺寸算出来是 0 或天文数字"，
+    离根因很远。
+    """
+    pts = FILTERED_SAMPLE + [(float('nan'), 0.0, 0.5), (1.0, float('inf'), 0.5)]
+    kept, dropped = slab_filter(pts, float('-inf'), float('inf'))
+    assert dropped == 2
+    assert len(kept) == len(FILTERED_SAMPLE)
+
+
+def test_projection_works_with_infinite_slab():
+    """放通后投影链路仍然正常，且能雕出空闲空间。"""
+    config = GridConfig(z_min=float('-inf'), z_max=float('inf'))
+    grid = project(FILTERED_SAMPLE, config, sensor_xy=[(0.0, 0.0)])
+    assert grid.points_used == len(FILTERED_SAMPLE)
+    assert grid.points_out_of_slab == 0
+    assert grid.occupied_cells > 0
+    assert grid.free_cells > 0          # 雕刻生效

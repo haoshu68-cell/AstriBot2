@@ -33,6 +33,7 @@
 import sys
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (
     DurabilityPolicy,
@@ -79,25 +80,46 @@ class CloudToGridNode(Node):
         super().__init__('cloud_to_grid')
 
         # -- 入 --
-        # Voxel-SLAM 的候选话题。/map_cmap 是"当前地图"（cmap = current map），
-        # 是最合理的默认；/map_pmap 是历史/持久地图，会包含已加载的旧会话。
-        # ⚠️ 上线前用 `ros2 topic hz` 逐个核对哪个真有数据、点数多少。
-        self.declare_parameter('cloud_topic', '/map_cmap')
+        # Voxel-SLAM 的 /map_scan_filtered 是**给导航用的实时障碍点云**：
+        #   · 已在 SLAM 侧做过高度 ROI（nav_scan_z_min=0.05 / max=1.63，
+        #     见 voxelslam.cpp:63 与 mid360.yaml:26-27）
+        #   · frame_id = camera_init，坐标已是**世界系**
+        #   · 点类型 pcl::PointXYZINormal 经 pcl::toROSMsg 直转，
+        #     除 x/y/z 外的 intensity/normal_*/curvature **均未赋值**，忽略
+        #
+        # ⚠️ 不要用 /map_cmap：那是全量地图（含 previous_map 加载的旧会话），
+        #    不是实时障碍，而且**没有**做高度过滤。
+        self.declare_parameter('cloud_topic', '/map_scan_filtered')
         self.declare_parameter('cloud_frame_override', '')   # 空 = 用消息自带 frame_id
 
         # -- 出 --
         self.declare_parameter('publish_directly', True)
         self.declare_parameter('map_topic', '/map')
         self.declare_parameter('intermediate_map_topic', '/slam/map')
-        self.declare_parameter('map_frame', 'map')
+        # camera_init 是 Voxel-SLAM 的世界系（原点 = 底盘启动位姿），
+        # 而 aft_mapped 是**底盘中心**（SLAM 内部已用 chassis_extrinsic_* 从
+        # IMU 位姿换算过，见 voxelslam.cpp:38-42 + mid360.yaml:19-20）。
+        # 默认直接用 camera_init 当 map，省掉一条恒等静态 TF；
+        # 若上层要求 frame 名必须叫 map，就把这里设成 map 并补一条
+        # map→camera_init 的静态 TF —— 但**不能只改这里**，否则查不到变换。
+        self.declare_parameter('map_frame', 'camera_init')
 
         # -- 投影参数（逐项对应 GridConfig）--
         self.declare_parameter('resolution', 0.05)
-        # z 切片：默认 [-0.05, 0.60]。下界略低于地面是刻意的 —— 地面在
-        # z≈-0.095（相对 astribot_torso_base），但点云的 z 原点取决于 SLAM 的
-        # camera_init，两者不是同一个基准，所以这个区间**必须在实机上核对**。
-        self.declare_parameter('z_min', -0.05)
-        self.declare_parameter('z_max', 0.60)
+        # ⚠️⚠️ z 切片默认**放通**（-inf, +inf），刻意如此。
+        #
+        # /map_scan_filtered 已经在 SLAM 侧按 [0.05, 1.63] 过滤过。我们再切一刀
+        # 就是**两层过滤串联取交集**：本仓库踩过同形态的坑（两个包各一层限速，
+        # 0.50×0.15=0.075，只改一个看不到效果）。
+        #
+        # 具体危害：若这里保留旧默认 [-0.05, 0.60]，交集变成 [0.05, 0.60]，
+        # **0.60~1.63m 的障碍全部被静默丢掉** —— 那正是人体躯干、桌面、
+        # 台面高度的障碍。地图上看不出来，机器人会直接撞过去。
+        #
+        # 什么时候才该收紧：只有当你订阅的是**未过滤**的话题（如 /map_scan），
+        # 或者需要比 SLAM 更严的区间时。改之前先确认 SLAM 侧的 nav_scan_z_* 值。
+        self.declare_parameter('z_min', float('-inf'))
+        self.declare_parameter('z_max', float('inf'))
         self.declare_parameter('min_points_per_cell', 2)
         self.declare_parameter('padding_m', 1.0)
         self.declare_parameter('max_cells', 4_000_000)
@@ -178,6 +200,38 @@ class CloudToGridNode(Node):
             f'  雕刻空闲={"开" if self.do_carve else "关"} '
             f'(传感器 frame={self.sensor_frame}, 半径 {self.config.carve_max_range_m}m)\n'
             f'  最小投影间隔 {self.min_interval}s  心跳 {period}s')
+        self._warn_if_double_filtering()
+
+    def _warn_if_double_filtering(self):
+        """本节点的 z 切片若比上游更严，响亮警告。
+
+        为什么单列一个方法：**串联过滤取交集是静默的**。上游
+        /map_scan_filtered 已按 [nav_scan_z_min, nav_scan_z_max] = [0.05, 1.63]
+        过滤，我们再切一刀，交集会悄悄砍掉一段高度 —— 地图上看不出来，
+        代价是漏掉那一段的障碍。本仓库踩过同形态的坑（两个包各一层限速，
+        0.50×0.15=0.075，只改一个看不到效果，根因在另一个包里）。
+        """
+        # 上游的过滤区间（Voxel-SLAM 的默认值，见 voxelslam.cpp:902 / mid360.yaml:26-27）
+        upstream_min, upstream_max = 0.05, 1.63
+        if 'scan_filtered' not in self.cloud_topic:
+            return          # 订阅的不是已过滤话题，我们自己切是应该的
+        problems = []
+        if self.config.z_min > upstream_min:
+            problems.append(
+                f'z_min={self.config.z_min} > 上游 {upstream_min}')
+        if self.config.z_max < upstream_max:
+            problems.append(
+                f'z_max={self.config.z_max} < 上游 {upstream_max}，'
+                f'会丢掉 {self.config.z_max}~{upstream_max}m 的障碍'
+                f'（人体躯干/桌面/台面高度）')
+        if problems:
+            self.get_logger().warning(
+                f'⚠️ 双层高度过滤：{self.cloud_topic} 已在 SLAM 侧按 '
+                f'[{upstream_min}, {upstream_max}] 过滤过，而本节点又切了 '
+                f'[{self.config.z_min}, {self.config.z_max}]。\n'
+                + '\n'.join(f'  · {p}' for p in problems)
+                + '\n  两层串联取交集，**丢掉的障碍在地图上看不出来**。'
+                  '确认这是你要的；否则把 z_min/z_max 设为 -inf/inf 放通。')
 
     def _now(self):
         return self.get_clock().now().nanoseconds * 1e-9
@@ -238,10 +292,14 @@ class CloudToGridNode(Node):
                         f'[{self.config.z_min}, {self.config.z_max}] 是否覆盖了地面。'))
 
     def _read_points(self, msg):
-        """从 PointCloud2 取 (x, y, z)。
+        """从 PointCloud2 取 (x, y, z)。坐标**已是世界系**(camera_init),无需变换。
 
-        用 `read_points` 而不是手工解 buffer：Livox 的布局是 PointXYZRTL
-        （多出 reflectivity/tag/line 三个字段），手工按 x/y/z 连续假设去解会错位。
+        上游是 `pcl::PointXYZINormal` 经 `pcl::toROSMsg` 直转，字段顺序为
+        x/y/z/intensity/normal_x/normal_y/curvature —— 除 x/y/z 外**均未赋值**。
+        所以必须用 `field_names=('x','y','z')` 按名字取，不能按偏移假设连续。
+
+        `is_dense` 上游未显式设置，因此 `skip_nans=True` 是必需的：
+        NaN 会让后面的 min/max 全变 NaN，症状是"地图尺寸算出来是 0 或天文数字"。
         """
         try:
             return [(float(p[0]), float(p[1]), float(p[2]))
@@ -249,7 +307,10 @@ class CloudToGridNode(Node):
                         msg, field_names=('x', 'y', 'z'), skip_nans=True)]
         except Exception as exc:      # noqa: BLE001
             self.get_logger().error(
-                f'解析点云失败: {exc}。字段: {[f.name for f in msg.fields]}')
+                f'解析点云失败: {exc}\n'
+                f'  实际字段: {[f.name for f in msg.fields]}\n'
+                f'  期望含 x/y/z（FLOAT32）。上游是 PointXYZINormal，'
+                f'字段应为 x/y/z/intensity/normal_x/normal_y/normal_z/curvature。')
             return []
 
     def _lookup_sensor_xy(self, header):
@@ -273,10 +334,14 @@ class CloudToGridNode(Node):
                 self.get_logger().warning(
                     f'取不到 {target}→{source} 的变换（第 '
                     f'{self._stats["carve_failed"]} 次），本帧不雕刻空闲空间：{exc}\n'
-                    f'  后果：地图只有"占据"和"未知"，没有"空闲" → nav2 无法规划。\n'
-                    f'  Voxel-SLAM 发的是 camera_init→aft_mapped，'
-                    f'若 map_frame 不是 camera_init，需要一条 '
-                    f'{target}→camera_init 的静态 TF 把两者接起来。')
+                    f'  后果：地图只有"占据"和"未知"，没有"空闲" → nav2 无法规划，'
+                    f'探索会把每个前沿都判为不可站。\n'
+                    f'  Voxel-SLAM 只发 camera_init→aft_mapped 这一条边'
+                    f'（aft_mapped 是**底盘中心**，不是 IMU 系）。\n'
+                    f'  · map_frame={target} 若不是 camera_init，需要一条 '
+                    f'{target}→camera_init 的静态 TF，光改 map_frame 不够。\n'
+                    f'  · 也确认 SLAM 真的在发 TF：'
+                    f'ros2 topic echo /tf --once | grep -A2 aft_mapped')
             return None
 
     # -- 发布 -------------------------------------------------------------
@@ -330,9 +395,10 @@ class CloudToGridNode(Node):
             f'  ① Voxel-SLAM 是否在跑（ros2 node list | grep -i voxel）\n'
             f'  ② 话题名是否真是 {self.cloud_topic}'
             f'（候选：/map_cmap /map_pmap /map_scan /map_true）\n'
-            f'  ③ **Voxel-SLAM 现在很可能收不到雷达数据**：config/mid360.yaml 里\n'
+            f'  ③ **Voxel-SLAM 很可能收不到雷达数据**：mid360.yaml 的\n'
             f'     lidar_type=0(LIVOX) 意味着它订阅 livox_ros_driver2/CustomMsg，\n'
-            f'     而厂商驱动 xfer_format=0 发的是 PointCloud2 —— 类型不匹配，零数据。\n'
+            f'     而厂商驱动 xfer_format=0 发 PointCloud2 —— 类型不匹配，零数据。\n'
+            f'     先确认厂商雷达驱动在跑：ros2 topic hz /livox/lidar_front\n'
             f'  ④ ROS_DOMAIN_ID 是否一致（实机是 25，不是 42）')
         self.exit_code = 1
         raise SystemExit(1)
@@ -356,6 +422,11 @@ def main(argv=None):
         code = 2
     except SystemExit as exc:
         code = int(exc.code or 0)
+    except ExternalShutdownException:
+        # SIGTERM（launch 关停 / systemd stop）的正常表现，不是故障。
+        # 不接住的话 rclpy 会把它抛成一串栈回溯，看起来像崩溃 ——
+        # 而那会掩盖真正的错误，也让 launch 的退出处理器难以区分正常与异常。
+        pass
     except KeyboardInterrupt:
         pass
     finally:

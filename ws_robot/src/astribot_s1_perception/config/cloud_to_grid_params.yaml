@@ -6,56 +6,76 @@
 #
 # ⚠️ 每个 IncludeLaunchDescription 都必须显式传 params_file，否则共享上下文里的
 # 名字会被第一个 include 抢占，后面的节点静默加载错的 yaml。
+#
+# ============ Voxel-SLAM 实际提供的接口（已与源码核对） ============
+# 位姿：只走 TF，**没有** nav_msgs/Odometry 话题
+#   /tf   geometry_msgs/TransformStamped
+#         header.frame_id = "camera_init"   世界系，原点 = 底盘启动位姿
+#         child_frame_id  = "aft_mapped"    **底盘中心**
+#         （SLAM 内部已用 chassis_extrinsic_tran/rota 从 IMU 位姿换算，
+#           见 voxelslam.cpp:38-42 + mid360.yaml:19-20，实机已配置故真实生效）
+#         ⚠️ stamp 用 rclcpp::Clock().now()，是**发布时刻**而非扫描时刻，
+#           且忽略 use_sim_time
+# 点云：
+#   /map_scan_filtered   sensor_msgs/PointCloud2   frame_id = camera_init
+#         有效字段 x/y/z（float32，**世界系**，已按 0.05~1.63m 过滤）
+#         无效字段 intensity/normal_x/normal_y/normal_z/curvature（未赋值）
+#         无序：height=1，width=点数，is_dense 未显式设置
 
 /**:
   ros__parameters:
-    # ================= 入：Voxel-SLAM 那一侧 =================
-    # Voxel-SLAM 实测发布的话题（全部 sensor_msgs/PointCloud2）：
-    #   /map_cmap  当前地图（cmap = current map）—— 默认选它
-    #   /map_pmap  持久/历史地图，含已加载的旧会话（previous_map: "1floor: 0.5"）
-    #   /map_scan  当前帧扫描
-    #   /map_true /map_init /map_test /map_path
+    # ================= 入 =================
+    # /map_scan_filtered 是**给导航用的实时障碍点云**，已在 SLAM 侧做过高度 ROI。
     #
-    # ⚠️ 上线前必须逐个核对哪个真有数据：
-    #     ros2 topic hz /map_cmap
-    #     ros2 topic echo /map_cmap --once | head -20
-    cloud_topic: "/map_cmap"
+    # ⚠️ 不要用 /map_cmap：那是全量地图（含 previous_map 加载的 1floor 旧会话），
+    #    不是实时障碍，而且**没有**做高度过滤。
+    cloud_topic: "/map_scan_filtered"
 
-    # 空 = 用消息自带的 frame_id
     cloud_frame_override: ""
 
     # ================= 出 =================
-    # true  = 直接发 /map（少一跳，少一处静默故障源）——本节点自带心跳，不缺
-    # false = 发到 intermediate_map_topic，由 slam_adapter_node 再做契约校验
     publish_directly: true
     map_topic: "/map"
     intermediate_map_topic: "/slam/map"
-    map_frame: "map"
+
+    # 默认直接用 camera_init 当地图系，省掉一条恒等静态 TF。
+    # ⚠️ 若上层要求 frame 名必须叫 map，改这里**不够** —— 还要补一条
+    #    map→camera_init 的静态 TF，否则查 map→aft_mapped 必然失败
+    #    → 不雕刻 → free_cells=0 → nav2 无法规划。
+    map_frame: "camera_init"
 
     # ================= 投影 =================
     # 必须与 nav2_params_rpp.yaml 的 global_costmap resolution 一致。
-    # 本仓库多处距离阈值按 0.05 定过口径（前沿的 goal_unknown_clearance_radius
-    # 必须为 0 就是其一），改这个值那些阈值全部失去意义。
     resolution: 0.05
 
-    # z 切片：只有落在 [z_min, z_max] 的点算障碍。
-    # ⚠️ **这两个值必须在实机上核对。** 地面相对 astribot_torso_base 在 z≈-0.095，
-    #    但点云的 z 原点取决于 Voxel-SLAM 的 camera_init（初始化时刻的 IMU 位姿），
-    #    两者不是同一个基准。切片错了的表现：
-    #      · 切得太低 → 地面被当成障碍，整张图全是占据
-    #      · 切得太高 → 矮障碍漏掉，机器人撞上去
-    #    核对法：ros2 topic echo /map_cmap --once，看 z 的实际分布区间。
-    z_min: -0.05
-    z_max: 0.60
+    # ⚠️⚠️ z 切片默认**放通**（-inf, +inf），刻意如此，改之前请读完这段。
+    #
+    # /map_scan_filtered 已在 SLAM 侧按 [nav_scan_z_min, nav_scan_z_max]
+    # = [0.05, 1.63] 过滤过。我们再切一刀就是**两层过滤串联取交集**。
+    #
+    # 已量化的危害（离线实测，5 个覆盖 0.10~1.60m 的障碍点）：
+    #     放通 (-inf, inf)     保留 5 / 丢弃 0
+    #     旧默认 [-0.05, 0.60] 保留 2 / 丢弃 3   → **丢掉 60% 的障碍点**
+    # 丢掉的是 0.95 / 1.55 / 1.60m 那三个 —— 人体躯干、桌面、台面高度。
+    # 这些障碍在地图上**看不出来**，机器人会直接撞过去。
+    #
+    # 本仓库踩过同形态的坑：两个包各一层限速，0.50×0.15=0.075，
+    # 只改一个看不到效果，根因在另一个包里。
+    #
+    # 节点启动时会主动检查：若订阅的是 *scan_filtered 话题而这里又收紧了，
+    # 会打一条明确的 WARNING 并说出丢掉的区间。
+    #
+    # 什么时候才该收紧：订阅未过滤的话题（如 /map_scan），
+    # 或确实需要比 SLAM 更严的区间。改之前先核对 SLAM 侧的 nav_scan_z_* 值。
+    z_min: -.inf
+    z_max: .inf
 
     # 一个格子里至少几个点才算占据。1 会让单个噪点变成障碍。
     min_points_per_cell: 2
 
-    # 地图边界外扩，给 costmap 的膨胀留余量
     padding_m: 1.0
 
-    # 栅格总数上限。撑爆会抛 GridConfigError 并以退出码 2 结束 ——
-    # 那通常说明 z 切片把天花板或地面也算进来了，导致点云范围远超预期。
+    # 栅格总数上限。撑爆会抛 GridConfigError 并以退出码 2 结束。
     max_cells: 4000000
 
     # ================= 空闲空间雕刻 =================
@@ -64,35 +84,32 @@
     #      给了 sensor_xy → free=4711 occupied=2  unknown=167
     #    free_cells=0 时 nav2 无法规划，且探索协调器会把每个前沿候选都判为
     #    不可站（前沿必须在自由空间边上）。症状会表现成
-    #    "Starting point in lethal space" 之类，离根因好几层。
+    #    "Starting point in lethal space"，离根因好几层。
     carve_free_space: true
 
-    # 雕刻半径。应与雷达有效量程相称，过大会把未探测区误标成空闲。
     carve_max_range_m: 8.0
 
-    # 固定角射线数。360 = 每度一条。这个实现的代价与占据格数**无关**
+    # 固定角射线数。360 = 每度一条。代价与占据格数**无关**
     # （旧的 O(位姿×占据格) 实现在真实规模下跑不完，已重写并加了回归测试）。
     carve_n_rays: 360
 
-    # 传感器在地图系的位置从 TF 取。Voxel-SLAM 发的是 camera_init→aft_mapped，
-    # 所以默认取 aft_mapped。
-    # ⚠️ 若 map_frame 不是 camera_init，需要一条 map→camera_init 的静态 TF
-    #    把两者接起来，否则查不到变换 → 不雕刻 → 没有空闲格。
+    # 传感器（=底盘中心）在地图系的位置从 TF 取。
+    # Voxel-SLAM 发的是 camera_init→aft_mapped，所以取 aft_mapped。
     sensor_frame: "aft_mapped"
+
+    # ⚠️ SLAM 的 TF stamp 是**发布时刻**而非扫描时刻，与点云 stamp 未必对齐，
+    #    所以这个超时不能太小，否则会频繁 ExtrapolationException → 不雕刻。
     tf_timeout_sec: 0.5
 
     # ================= 行为 =================
     # 必须 < 协调器(autonomous_patrol_node) 的 map_timeout_sec=10.0。
-    # 协调器按**本地到达时间**判超时，场景静止时 Voxel-SLAM 可能长时间不发新点云
-    # （那是它的正常行为），没有心跳就会被判成"地图断了"。
+    # 协调器按**本地到达时间**判超时，场景静止时 SLAM 可能长时间不发新点云。
     republish_period_sec: 5.0
 
-    # 这么久没成功投影任何一帧就非零退出，不静默等待 ——
-    # 静默等待会让 nav2 一直等 /map，症状是"导航卡在启动"而原因在这一层。
-    # 比 slam_adapter 的 30s 长，因为要等 SLAM 先攒出地图。
+    # 这么久没成功投影任何一帧就非零退出，不静默等待。
     source_timeout_sec: 60.0
 
-    # 两次投影的最小间隔。投影一帧真实规模的图是秒级的（实测 4.84s / 3367 位姿），
+    # 两次投影的最小间隔。投影真实规模的图是秒级（实测 4.84s / 3367 位姿），
     # 不限流回调会堆积，越拖越久最后完全跟不上。
     min_interval_sec: 2.0
 
@@ -100,11 +117,12 @@
 
 cloud_to_grid:
   ros__parameters:
-    cloud_topic: "/map_cmap"
+    cloud_topic: "/map_scan_filtered"
+    map_frame: "camera_init"
     publish_directly: true
     resolution: 0.05
-    z_min: -0.05
-    z_max: 0.60
+    z_min: -.inf
+    z_max: .inf
     carve_free_space: true
     sensor_frame: "aft_mapped"
     republish_period_sec: 5.0
