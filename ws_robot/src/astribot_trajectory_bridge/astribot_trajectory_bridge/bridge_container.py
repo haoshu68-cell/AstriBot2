@@ -90,14 +90,23 @@ def main(args=None):
         rclpy.try_shutdown()
         return 2
 
-    # 线程数 = 节点数 * 2（内外环/Action+服务）+ 2 余量。
+    # 线程数 = 节点数 * 4 + 2 余量。
+    #
+    # !!! 为什么是 4 而不是 2 !!!
+    # 每个桥接节点的互斥回调组数量是线程数的下限：底盘有 4 个
+    # (cmd_vel / 内环 / 外环 / 服务)，机械臂有 3 个。互斥组之间必须能并发，
+    # 否则组再分开也没用 —— 抢不到线程照样串行。
+    # 原公式 len*2+2 在底盘拆出 cmd_group 之后变成 6 线程 / 7 个组，
+    # 正好卡在不够用的边界上（见 chassis_cmd_bridge_node.py 里 cmd_group 的说明：
+    # 内环把组占满会让 cmd_vel 回调一次都执行不到，机器人静止且毫无告警）。
     # 给足线程是必要的：不够时 cancel 回调会排在 execute 后面，取消就失效了。
-    executor = MultiThreadedExecutor(num_threads=len(nodes) * 2 + 2)
+    num_threads = len(nodes) * 4 + 2
+    executor = MultiThreadedExecutor(num_threads=num_threads)
     for n in nodes:
         executor.add_node(n)
 
     _BootLogger.info('桥接容器就绪：%d 个节点，%d 个执行线程'
-                     % (len(nodes), len(nodes) * 2 + 2))
+                     % (len(nodes), num_threads))
     try:
         executor.spin()
     except KeyboardInterrupt:

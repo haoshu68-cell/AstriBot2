@@ -65,10 +65,28 @@ class ChassisCmdBridgeNode(Node):
         inner_group = MutuallyExclusiveCallbackGroup()
         outer_group = MutuallyExclusiveCallbackGroup()
         srv_group = MutuallyExclusiveCallbackGroup()
+        # !!! cmd_vel 订阅必须独立成组，绝不能和内环定时器共用 !!!
+        #
+        # 2026-08-31 实机实测出来的：原来两者共用 inner_group，而
+        # MutuallyExclusiveCallbackGroup 保证组内**串行**。内环每拍要做两次跨进程
+        # SDK 往返（get_current_joints_position 判 leash + set_joints_position 下发），
+        # Python+GIL 下实测一拍 ~10ms，而定时器按 freq=250 每 4ms 就排一个 ——
+        # 定时器回调永久积压、把组占满，`_on_cmd_vel` **一次都拿不到执行机会**。
+        #
+        # 后果极其隐蔽，因为每一层看起来都正常：
+        #   · /cmd_vel 实测 26.8Hz、2708 帧非零 —— 消息确实到了订阅端
+        #   · `_last_twist` 恒为初始值 (0,0,0) -> 积分零速度 -> pos_cmd 不变
+        #   · SDK 的 desired 与 actual 6 秒内一个数位都不变
+        #   · leash **不会** trip（指令与实测都不动，偏差恒 0）
+        #   · 看门狗也不报，因为 `_last_twist_time` 是 None，走的是"无输入置零"
+        #     那条不发事件的分支
+        #   · 唯一的可观测量是 LOOP_OVERRUN（实测累计 23195 次）
+        # 表现就是"nav2 一切正常、路径也规划出来了、机器人一动不动"。
+        cmd_group = MutuallyExclusiveCallbackGroup()
 
         self.create_subscription(
             Twist, self.get_parameter('cmd_vel_topic').value,
-            self._on_cmd_vel, 10, callback_group=inner_group)
+            self._on_cmd_vel, 10, callback_group=cmd_group)
         self._odom_pub = self.create_publisher(
             Odometry, self.get_parameter('odom_topic').value, 10)
 
