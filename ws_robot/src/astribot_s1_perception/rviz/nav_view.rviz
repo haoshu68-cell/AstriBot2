@@ -1,0 +1,182 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+    Tree Height: 640
+  - Class: rviz_common/Views
+    Name: Views
+  - Class: nav2_rviz_plugins/Navigation 2
+    Name: Navigation 2
+Visualization Manager:
+  Class: ""
+  Name: root
+  Global Options:
+    Background Color: 48; 48; 48
+    # 本机器人没有 base_link，根 frame 是 astribot_torso_base
+    Fixed Frame: map
+    Frame Rate: 15
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+      Show Names: true
+      Show Axes: true
+      Marker Scale: 0.4
+      # 默认关掉：连杆 TF 全出来之后（robot_state_publisher 在跑）会糊成一团
+      Frames:
+        All Enabled: false
+        map: {Value: true}
+        odom: {Value: true}
+        astribot_torso_base: {Value: true}
+        camera_init: {Value: true}
+        aft_mapped: {Value: true}
+    - Class: rviz_default_plugins/RobotModel
+      # 需要 /robot_description + /joint_states，两者都由 state_bridge.launch.py 提供。
+      # 注意四个轮子关节不在 /joint_states 里（底盘在 SDK 侧只暴露 3-DOF
+      # [x,y,theta]，厂商不给单轮转角），所以车体完整但轮子不会转。
+      Name: RobotModel
+      Enabled: true
+      Description Topic:
+        Value: /robot_description
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Alpha: 0.9
+    - Class: rviz_default_plugins/Map
+      Name: Map (/map)
+      Enabled: true
+      Topic:
+        Value: /map
+        # ⚠️ 必须 Transient Local：发布方是 TRANSIENT_LOCAL+RELIABLE，
+        # 设成 Volatile 收不到已 latch 的历史帧，表现为一片空白且无报错
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+        History Policy: Keep Last
+        Depth: 1
+      Color Scheme: map
+      Draw Behind: true
+      Alpha: 0.5
+    - Class: rviz_default_plugins/Map
+      Name: Global Costmap
+      Enabled: true
+      Topic:
+        Value: /global_costmap/costmap
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Color Scheme: costmap
+      Alpha: 0.4
+    - Class: rviz_default_plugins/Map
+      # 这个只有 controller_server 起着才有发布者。纯规划模式下它是空的 ——
+      # 实测踩过：以为看到了局部代价地图，其实 pub=0。
+      Name: Local Costmap
+      Enabled: true
+      Topic:
+        Value: /local_costmap/costmap
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Color Scheme: costmap
+      Alpha: 0.6
+    - Class: rviz_default_plugins/PointCloud2
+      Name: SLAM Scan (/map_scan_filtered)
+      Enabled: true
+      Topic:
+        Value: /map_scan_filtered
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 2
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: false
+      # SLAM 侧已按 [0.05, 1.63] 做过高度 ROI，按同一区间上色
+      Min Value: 0.05
+      Max Value: 1.63
+    - Class: rviz_default_plugins/Path
+      Name: Global Plan (/plan)
+      Enabled: true
+      Topic:
+        Value: /plan
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+      Color: 25; 255; 25
+      Line Style: Lines
+    - Class: rviz_default_plugins/Path
+      # RegulatedPurePursuitController 发的局部路径 —— 看路径跟踪就看这条
+      Name: Local Plan (/local_plan)
+      Enabled: true
+      Topic:
+        Value: /local_plan
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+      Color: 255; 25; 255
+      Line Style: Lines
+      Line Width: 0.05
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometry (/odom)
+      Enabled: false
+      Topic:
+        Value: /odom
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+      Keep: 50
+      Shape:
+        Shaft Length: 0.3
+        Head Length: 0.1
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Frontier Debug Markers
+      Enabled: false
+      Topic:
+        Value: /frontier_explorer_node/debug_markers
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Distance: 14
+      Focal Point: {X: 0, Y: 0, Z: 0}
+      Pitch: 1.05
+      Yaw: 0.79
+  # ==========================================================================
+  # ⚠️⚠️ 本配置含 SetGoal —— 点一下工具栏机器人就会走 ⚠️⚠️
+  #
+  # 这是**导航验证专用**配置，与只读的 chain_view.rviz 刻意分成两份文件：
+  #   · chain_view.rviz  只读，Tools 里没有任何会发布话题的工具
+  #   · nav_view.rviz    本文件，含 2D Goal Pose / 2D Pose Estimate
+  #
+  # 不要把本文件当默认配置用。view_chain.sh 需要显式 --allow-goal-tool 才放行。
+  #
+  # 用之前确认：机器人周围有空间、手放在物理急停上。
+  # 底盘是**位置指令开环积分**（examples/202），轮子打滑时指令位置会持续超前，
+  # 唯一硬保护是桥接的 leash（leash_xy_m: 0.25 / leash_theta_rad: 0.35）。
+  # ==========================================================================
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+    - Class: rviz_default_plugins/SetInitialPose
+      # 我们不用 AMCL（定位来自 Voxel-SLAM），这个工具对本系统**没有作用**。
+      # 留着只是因为 nav2 面板会找它；点它不会有任何效果。
+      Topic:
+        Value: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      # ⚠️ 这个会往 /goal_pose 发目标 → bt_navigator → controller_server → cmd_vel
+      Topic:
+        Value: /goal_pose
+Window Geometry:
+  Height: 900
+  Width: 1500
+  Displays:
+    collapsed: false
+  Navigation 2:
+    collapsed: false

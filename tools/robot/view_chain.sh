@@ -16,9 +16,36 @@ set -euo pipefail
 
 RVIZ_PKG=astribot_s1_perception
 RVIZ_CFG_NAME=chain_view.rviz
+ALLOW_GOAL_TOOL=0
 
 die() { echo "[view_chain][ERROR] $*" >&2; exit 1; }
 ok()  { echo -e "\033[32m[view_chain][OK]\033[0m $*"; }
+
+usage() {
+    cat <<'EOF'
+用法: view_chain.sh [选项] [-- rviz 额外参数...]
+
+  (无选项)              用只读配置 chain_view.rviz —— 工具栏没有任何会发布话题的工具
+  --allow-goal-tool     放行含 2D Goal Pose 的配置（默认切到 nav_view.rviz）
+  --config <名字.rviz>  指定包内 rviz/ 目录下的配置文件名
+  -h | --help           本帮助
+
+⚠️ --allow-goal-tool 之后 rviz 工具栏会有 "2D Goal Pose"，点一下就往 /goal_pose
+   发目标。nav2 的 bt_navigator + controller_server 起着时，机器人会真的移动。
+   用之前确认：周围有空间、手放在物理急停上。
+EOF
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --allow-goal-tool) ALLOW_GOAL_TOOL=1; RVIZ_CFG_NAME=nav_view.rviz; shift ;;
+        --config)          [ $# -ge 2 ] || die "--config 后面要跟文件名"
+                           RVIZ_CFG_NAME="$2"; shift 2 ;;
+        -h|--help)         usage; exit 0 ;;
+        --)                shift; break ;;
+        *)                 die "未知选项 $1（-h 看用法）" ;;
+    esac
+done
 
 # ---- 1. 找 env_robot.sh ----------------------------------------------------
 # 仓库里它在 tools/robot/ 下；下发到机器人后被放在 SDK 根目录。两处都找。
@@ -90,9 +117,27 @@ if ! grep -q "^  Tools:" <<<"$CFG_CODE"; then
     die "配置里没有 Tools 段 —— rviz2 会装载默认工具集，其中含 2D Goal Pose（发 /goal_pose）。拒绝启动。"
 fi
 if grep -qE "rviz_default_plugins/(SetGoal|SetInitialPose)" <<<"$CFG_CODE"; then
-    die "配置里含 SetGoal / SetInitialPose —— 点一下就会发目标/重定位。拒绝启动。"
+    if [ "$ALLOW_GOAL_TOOL" -ne 1 ]; then
+        die "配置 ${RVIZ_CFG_NAME} 含 SetGoal / SetInitialPose —— 点一下就会发目标。
+拒绝启动。确实要用请显式加 --allow-goal-tool。"
+    fi
+    cat >&2 <<'EOF'
+
+  ############################################################
+  ##  ⚠️  工具栏含 2D Goal Pose —— 机器人会真的移动  ⚠️     ##
+  ############################################################
+  · 点一下就往 /goal_pose 发目标 → bt_navigator → controller_server → cmd_vel
+  · 底盘是**位置指令开环积分**（examples/202）：轮子打滑时指令位置持续超前，
+    唯一硬保护是桥接的 leash（leash_xy_m 0.25 / leash_theta_rad 0.35）
+  · 确认：周围有空间、手放在物理急停上
+  · 停止写通路： pgrep -a -f bridge_container   拿到 pid 后 kill <pid>
+    （**不要** pkill -f "bridge_container" —— 模式串会命中你自己的命令行，
+      把当前 shell 一起杀掉。本项目已栽三次。）
+
+EOF
+else
+    ok "工具栏只读（无 SetGoal / SetInitialPose）"
 fi
-ok "工具栏只读（无 SetGoal / SetInitialPose）"
 
 # ---- 6. 起 rviz -----------------------------------------------------------
 echo "===== rviz2 启动（Ctrl-C 退出）====="
