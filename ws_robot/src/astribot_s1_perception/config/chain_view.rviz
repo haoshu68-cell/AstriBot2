@@ -1,0 +1,139 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+    Tree Height: 700
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Name: root
+  Global Options:
+    Background Color: 48; 48; 48
+    # 本机器人没有 base_link，根 frame 是 astribot_torso_base；可视化固定在 map
+    Fixed Frame: map
+    Frame Rate: 15
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: true
+      Show Axes: true
+      Marker Scale: 0.4
+      # 只显示这几个，全开会因为机器人连杆很多而糊成一团
+      Frames:
+        All Enabled: false
+        map: {Value: true}
+        odom: {Value: true}
+        astribot_torso_base: {Value: true}
+        camera_init: {Value: true}
+        aft_mapped: {Value: true}
+    - Class: rviz_default_plugins/Map
+      Name: Map (/map)
+      Enabled: true
+      Topic:
+        Value: /map
+        # ⚠️ 必须 Transient Local：我们的节点按 TRANSIENT_LOCAL+RELIABLE 发布，
+        # 设成 Volatile 收不到已 latch 的历史帧，表现为一片空白且无报错
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+        History Policy: Keep Last
+        Depth: 1
+      Color Scheme: map
+      Draw Behind: true
+      Alpha: 0.7
+    - Class: rviz_default_plugins/Map
+      Name: Global Costmap
+      Enabled: false
+      Topic:
+        Value: /global_costmap/costmap
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Color Scheme: costmap
+      Alpha: 0.5
+    - Class: rviz_default_plugins/Map
+      Name: Local Costmap
+      Enabled: false
+      Topic:
+        Value: /local_costmap/costmap
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Color Scheme: costmap
+      Alpha: 0.6
+    - Class: rviz_default_plugins/PointCloud2
+      Name: SLAM Scan (/map_scan_filtered)
+      Enabled: true
+      Topic:
+        Value: /map_scan_filtered
+        # 点云用 Best Effort：SLAM 侧是默认 QoS，订阅方要求更弱是兼容的；
+        # 而且点云丢一帧无所谓，堆积比丢帧更糟
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 2
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: false
+      # SLAM 侧已按 [0.05, 1.63] 做过高度 ROI，这里按同一区间上色
+      Min Value: 0.05
+      Max Value: 1.63
+    - Class: rviz_default_plugins/Path
+      Name: Global Plan (/plan)
+      Enabled: true
+      Topic:
+        Value: /plan
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+      Color: 25; 255; 25
+      Line Style: Lines
+    - Class: rviz_default_plugins/MarkerArray
+      # 话题名来自 frontier_explorer_params.yaml:21 的 marker_topic: "~/debug_markers"
+      # （~ 展开为节点名）。publish_markers 必须为 true（yaml:42 已是）。
+      Name: Frontier Debug Markers
+      Enabled: true
+      Topic:
+        Value: /frontier_explorer_node/debug_markers
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+    - Class: rviz_default_plugins/Pose
+      # frontier_explorer_params.yaml:18  goal_topic: /explore/goal_pose
+      Name: Exploration Goal
+      Enabled: true
+      Topic:
+        Value: /explore/goal_pose
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+      Shape: Arrow
+      Color: 255; 170; 0
+      Alpha: 1
+    - Class: rviz_default_plugins/RobotModel
+      # 默认关闭：需要 /robot_description + /joint_states，而 joint_states 要 SDK
+      # 读关节角，依赖厂商本体运动服务（当前未启动）。开了只会一直报错。
+      Name: RobotModel (需 joint_states)
+      Enabled: false
+      Description Topic:
+        Value: /robot_description
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Distance: 18
+      Focal Point: {X: 0, Y: 0, Z: 0}
+      Pitch: 1.05
+      Yaw: 0.79
+Window Geometry:
+  Height: 900
+  Width: 1400
+  Displays:
+    collapsed: false
