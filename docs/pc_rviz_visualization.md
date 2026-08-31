@@ -35,6 +35,8 @@ PC        10.249.22.160/24   eno1        （只在 WiFi 网段）
 
 ## 方案 A · NoMachine 远程桌面(零改动,今天可用)
 
+> **状态:机器人侧已全部实测通过(2026-08-31)。剩下唯一一步是 PC 装客户端。**
+
 ### A.0 可行性已实测
 
 你提到"机器人没有图形界面",实测**与此不符**:
@@ -43,38 +45,118 @@ PC        10.249.22.160/24   eno1        （只在 WiFi 网段）
 |---|---|---|
 | 默认启动目标 | `graphical.target` | `systemctl get-default` |
 | 显示管理器 | **gdm3 active** | `systemctl is-active gdm3` |
-| X server | Xorg PID 2517 @ vt2 | `ps` |
-| 你的图形会话 | **`X1001` 已存在**(属 astribot) | `/tmp/.X11-unix/` |
-| NX 服务 | **active,`0.0.0.0:4000` 监听** | `ss -ltnp` |
-| rviz2 | **两套 ROS 里都有** | `middle_ware/lib/rviz2/` 与 `humble/lib/rviz2/` |
-| GPU | `/dev/nvidia0` + `nvidia-modeset` | Orin 集成 GPU |
+| 物理桌面 | **`:0` 活着**,X.Org 1.21.1.4 | `DISPLAY=:0 xdpyinfo` 成功 |
+| X server | Xorg PID 2517 @ vt2,auth 用 gdm 的 | `ps` |
+| NX 服务 | **active,`0.0.0.0:4000` + `[::]:4000`** | `ss -tln` |
+| NX 版本 | **NoMachine 8.13.1 (arm64, deb 安装)** | `nxserver --version` / `dpkg -l` |
+| 认证方式 | 系统账号(PAM);`EnablePasswordDB 0` | `server.cfg` |
+| 连接方式 | `ClientConnectionMethods NX,SSH` | `server.cfg` |
+| 会话类型 | 含 `physical-desktop` | `server.cfg: AvailableSessionTypes` |
+| rviz2 | 两套 ROS 里都有,运行期取 `middle_ware` 那份 | `which rviz2` |
+| **rviz2 实跑** | **存活 25s 无异常退出,OpenGl 4.6 (GLSL 4.6)** | 见 A.1 |
+| PC→机器人:4000 | **TCP 可连** | `/dev/tcp/10.249.22.137/4000` |
 
 `0.0.0.0:4000` 是关键 —— NoMachine 在**所有网卡**上监听,包括 WiFi。
 
-### A.1 为什么这条路一定通
+### A.1 已实测:rviz2 在机器人上跑得起来,且有 GPU 加速
 
-rviz2 与话题**同机**,DDS 走 `127.0.0.1` —— 而厂商白名单里**恰好有** `127.0.0.1`。
-不碰 DDS 配置、不接线、不违反"业务走 eno1"。NX 传的是画面,与 DDS 无关。
+在 `:0` 上真起了 25 秒:
+
+```
+exit_code=124   ← timeout 杀掉的,即全程存活,没崩
+[INFO] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)     ← 走的是 Orin 的 GPU
+[INFO] [rclcpp]: signal_handler(signum=15)          ← 干净退出
+```
+
+**为什么这条路必通**:rviz2 与话题**同机**,DDS 走 `127.0.0.1` —— 而厂商白名单里
+**恰好有** `127.0.0.1`。不碰 DDS 配置、不接线、不违反"业务走 eno1"。
+NX 传的是画面,与 DDS 无关。
+
+> ❌ **`ssh -X` / `ssh -Y` 不能替代 NoMachine —— 已实测失败,别浪费时间。**
+> X 转发本身是通的(远端 `DISPLAY=localhost:10.0` 正确),卡的是 GL:
+> ```
+> InvalidParametersException: Window with name 'OgreWindow(0)' already exists
+>   in GLRenderSystem::_createRenderWindow
+> Unable to create the rendering window after 100 tries  → core dump
+> ```
+> 根因:现代 Xorg 默认关闭 indirect GLX(要 `+iglx` 才开),而 rviz 的 Ogre
+> 必须拿到直接 GLX 上下文。
+>
+> ⚠️ 同理 `QT_QPA_PLATFORM=offscreen` **也救不了** —— Ogre 绕过 Qt 直接开 GLX,
+> 无显示时报的是 `Couldn't open X display in GLXGLSupport::getGLDisplay` 并
+> core dump。看到这个报错不要往 Qt/配置方向查,就是没有 DISPLAY。
 
 ### A.2 PC 端步骤
 
-1. 装 NoMachine 客户端(免费版够用):<https://www.nomachine.com/download>
-2. 新建连接:主机 `10.249.22.137`,端口 `4000`,协议 NX
-3. 用 `astribot` 账号登录 → 会接到已存在的 `X1001` 会话
+PC 环境已确认:Ubuntu 22.04.5 LTS / x86_64 / **NoMachine 未安装**。
 
-### A.3 机器人端:启动可视化(在 NX 桌面的终端里)
+1. **下载客户端**。⚠️ 不要用形如
+   `https://download.nomachine.com/download/8.13/Linux/nomachine_8.13.1_1_amd64.deb`
+   的带版本号链接 —— 我逐个探过 8.13/8.16/8.19/8.20 各种 build 后缀,
+   **全部返回 `Content-Type: text/html`(一个 HTML 页面,不是 deb)**。
+   官方论坛也确认:版本一旦被取代,该路径就 302 到首页,`wget` 会静默存下一个
+   HTML 文件,之后 `dpkg -i` 报 `not a Debian format archive`。
+   `https://download.nomachine.com/free/linux/64/deb` 这个"永远最新"的链接
+   现在也是 **404**。
 
-⚠️ **rviz2 有两份,必须用与话题匹配的那套**,否则撞上"两个 ROS"问题
-(重叠 184 个包、其中 150 个版本不同)。
+   所以:在浏览器里打开 <https://downloads.nomachine.com/> ,选
+   **Linux → DEB amd64** 手动下载。下载后先验:
+   ```bash
+   dpkg-deb -I ~/Downloads/nomachine_*_amd64.deb   # 认不出来就是抓到 HTML 了
+   sudo dpkg -i ~/Downloads/nomachine_*_amd64.deb
+   ```
+   服务端是 **8.13.1**;NoMachine 同一大版本(8.x)客户端与服务端兼容,
+   拿当前最新的 8.x 客户端即可。
+
+2. 新建连接:主机 `10.249.22.137`,端口 `4000`,协议 **NX**
+3. 用 **`astribot`** 账号 + 系统密码登录(服务端 `EnablePasswordDB 0`,走 PAM)
+4. 选 **physical desktop(`:0`)** —— 那是 astribot 自己的 GNOME 会话
+
+> 注:`/tmp/.X11-unix/X1001` 也存在(属 astribot,有 `nxnode.bin` 在跑),
+> 那是一个已有的 NX 会话,用我们的 cookie 打不开(`Invalid MIT-MAGIC-COOKIE-1`)。
+> 直接连物理桌面 `:0` 就好,不用管它。
+
+### A.3 机器人端:一条命令起可视化
+
+已下发脚本 **`view_chain.sh`**(仓库里在 `tools/robot/`,机器人上在 SDK 根目录):
 
 ```bash
-source /opt/astribot_ros/robot_system_ctrl/robot_env.sh
-source /home/astribot/Downloads/astribot_sdk_aarch64/ws_robot/install/setup.bash
-rviz2 -d /home/astribot/astribot_chain.rviz      # 配置见 A.5
+/home/astribot/Downloads/astribot_sdk_aarch64/view_chain.sh
 ```
 
-这会用到 `middle_ware` 那份 rviz2(它在 AMENT 路径前面),而厂商栈与 SLAM
-都在那套上 —— 一致。
+它做四件事,每件都对应一个踩过的坑:
+
+| 步骤 | 防的坑 |
+|---|---|
+| 先查 `DISPLAY`,没有就给出 A/B/C 三种拿显示的方式 | 否则 rviz 报 Ogre GLX core dump,报错完全不指向"没显示" |
+| `set +u` 包住 `source env_robot.sh` | ROS `setup.bash` 引用未定义的 `AMENT_TRACE_SETUP_FILES`,与 `set -u` 冲突 |
+| 用 `ros2 pkg prefix` 找配置,找不到就明确报错 | `setup.py` 只 glob `rviz/*.rviz`,放 `config/` 下**不会被安装**(这个坑我就踩了) |
+| 校验 `Tools:` 段存在且**不含** `SetGoal`/`SetInitialPose` | 见 A.3.1 —— 防误触发运动 |
+
+手动等价命令(要自己保证上面四点):
+
+```bash
+source /home/astribot/Downloads/astribot_sdk_aarch64/env_robot.sh
+rviz2 -d "$(ros2 pkg prefix astribot_s1_perception)/share/astribot_s1_perception/rviz/chain_view.rviz"
+```
+
+运行期用的是 `middle_ware` 那份 rviz2(`/opt/astribot_ros/middle_ware/bin/rviz2`,
+它在 AMENT 路径前面),而厂商栈与 SLAM 都在那套上 —— 一致。
+构建仍然用 `/opt/ros/humble`,这两个环境**刻意不同**。
+
+### A.3.1 ⚠️ rviz 的工具栏默认能让机器人动起来
+
+**rviz2 的配置里没有 `Tools:` 段时,会装载默认工具集,其中包含
+`rviz_default_plugins/SetGoal`(工具栏上的 "2D Goal Pose")—— 它往 `/goal_pose`
+发目标。nav2 起着的话,点一下机器人就走了。**
+
+所以 `chain_view.rviz` 显式声明了 `Tools:`,只留四个不发布任何话题的工具:
+`MoveCamera` / `Select` / `FocusCamera` / `Measure`。
+2D Goal Pose 与 2D Pose Estimate 从工具栏上彻底消失。
+`view_chain.sh` 每次启动都校验这一点,不满足就拒绝启动。
+
+这是 **UI 层面的防误触,不是硬联锁** —— 命令行照样能发目标。
+真正的运动闸门仍然是"不启动 `cmd_vel` 那一端 + 厂商本体服务未起"。
 
 ### A.4 先把数据链路起来(三层环境,缺一不可)
 

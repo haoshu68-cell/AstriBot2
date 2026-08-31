@@ -132,6 +132,20 @@ Visualization Manager:
       Focal Point: {X: 0, Y: 0, Z: 0}
       Pitch: 1.05
       Yaw: 0.79
+  # ==========================================================================
+  # ⚠️ Tools 必须显式声明。rviz2 在配置里**没有** Tools 段时会装载默认工具集，
+  #    其中 rviz_default_plugins/SetGoal 会往 /goal_pose 发目标 —— nav2 起着的话
+  #    点一下工具栏机器人就走了。本项目明确要求"只看不动"，所以这里只留
+  #    不发布任何话题的相机/选择/测量工具，把 2D Goal Pose 与 2D Pose Estimate
+  #    从工具栏里彻底去掉。
+  #    这是 UI 层面的防误触，**不是硬联锁** —— 命令行仍可发目标。
+  # ==========================================================================
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
 Window Geometry:
   Height: 900
   Width: 1400
