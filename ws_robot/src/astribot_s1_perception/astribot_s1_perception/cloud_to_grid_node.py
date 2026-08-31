@@ -253,7 +253,7 @@ class CloudToGridNode(Node):
             self.get_logger().warning(
                 f'{self.cloud_topic} 收到 {msg.width}x{msg.height} 的点云但解析出 0 个点。'
                 f'字段: {[f.name for f in msg.fields]}。'
-                f'Livox 的 PointCloud2 是 PointXYZRTL 布局，'
+                f'上游是 pcl::PointXYZINormal 经 toROSMsg 直转，'
                 f'必须含 x/y/z 三个 FLOAT32 字段。')
             return
 
@@ -318,12 +318,25 @@ class CloudToGridNode(Node):
 
         取不到就返回 None → 不雕刻 + WARN。**不静默**：没有雕刻的图没有空闲格，
         而那个后果（nav2 不能规划）离"TF 查不到"这个原因隔了好几层。
+
+        ⚠️ 用 `Time()`（= 最新可用）而不是 `header.stamp`，这是实机实测逼出来的：
+        Voxel-SLAM 的 TF stamp 取 `rclcpp::Clock().now()`（**发布时刻**，
+        见 voxelslam.cpp:26），而点云 stamp 略晚于它。拿点云 stamp 去查 TF
+        就成了"查未来"，实测差 **0.0003 秒**就抛
+        `Lookup would require extrapolation into the future`。
+
+        而 `timeout` 对这种情况**无效** —— 它只能等"还没到的数据"，
+        不能等"已经过去但被判为需要外推"的时刻。所以加大 timeout 没有用，
+        必须改查询时刻。
+
+        用最新变换的代价：雕刻用的位姿与点云可能差最多一个 TF 周期（50ms）。
+        底盘速度上限 0.5m/s 时误差 ≤2.5cm，小于一个栅格（5cm），可接受。
         """
         target = self.map_frame
         source = self.sensor_frame
         try:
             tf = self.tf_buffer.lookup_transform(
-                target, source, header.stamp,
+                target, source, rclpy.time.Time(),
                 timeout=rclpy.duration.Duration(seconds=self.tf_timeout))
             t = tf.transform.translation
             return [(float(t.x), float(t.y))]
