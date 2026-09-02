@@ -24,6 +24,18 @@ struct PlanarPoint
   double y{0.0};
 };
 
+/// 判断两条路径是否指向「同一个目标」。
+///
+/// 为什么需要它：nav2 的默认行为树**每秒重规划一次**，每次都会调 setPlan()。
+/// 若把每次 setPlan 都当成新目标而重置到 ALIGN_START，机器人就会每秒掉回
+/// 起步对齐段 —— 实测 86 次重规划里有 12 次真的停下来原地转，最长 6.76s，
+/// 把连续行驶切成一段段。所以只有**终点真的换了**才算新目标。
+///
+/// @param prev_end  上一条路径的终点
+/// @param cur_end   当前路径的终点
+/// @param eps_m     判定阈值（m），必须 > 0
+bool isSameGoal(const PlanarPoint & prev_end, const PlanarPoint & cur_end, double eps_m);
+
 /// 三段式的相位。kDone 只表示「本控制器认为没有更多主动动作」，
 /// 是否真的算到达仍由 nav2 的 GoalChecker 判定 —— 两者刻意分开。
 enum class Phase
@@ -96,6 +108,19 @@ Phase advancePhase(
   double align_tol_rad,
   double start_min_rad,
   bool align_goal_enabled);
+
+/// 相位计时器是否应当重置。
+///
+/// 这是一条曾经被写错、且后果是**永久锁死整套导航**的不变式，所以单独抽成
+/// 纯函数并配测试：原实现是"相位值没变就直接 return"，于是当上一个目标恰好在
+/// ALIGN_START 段被中止、而新目标又要求进 ALIGN_START 时，计时器保持上一次的值
+/// —— 新目标第一拍就判"对齐超时"并抛异常，之后每个目标都瞬间失败且永不恢复。
+/// 实测证据：日志读到 "ALIGN_START 段超时 1108.297s > 15.0s"（约等于开机总时长），
+/// 恢复探索后 12 个目标 12 个失败、0 次进度停滞（机器人根本没开始动）。
+///
+/// 规则：相位变了要重置；**相位没变但这是一个新目标，也必须重置**；
+/// 同一目标的周期性重规划刻意不重置（否则对齐段永远等不到超时，保护形同虚设）。
+bool shouldRestartPhaseTimer(Phase before, Phase requested, bool is_new_goal);
 
 }  // namespace astribot_s1_path_tracking
 

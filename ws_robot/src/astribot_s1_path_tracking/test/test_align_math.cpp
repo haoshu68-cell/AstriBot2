@@ -279,6 +279,31 @@ TEST(AdvancePhase, ToleranceComesFromCaller)
     Phase::kAlignGoal);  // 0.15 <= 0.25 -> 位置已到
 }
 
+// ---------------- 同一目标判定（1Hz 重规划抖动的修复）----------------
+
+TEST(IsSameGoal, SameEndpointWithinEpsilon)
+{
+  EXPECT_TRUE(astribot_s1_path_tracking::isSameGoal({1.0, 2.0}, {1.05, 2.05}, 0.25));
+}
+
+TEST(IsSameGoal, DifferentEndpointBeyondEpsilon)
+{
+  EXPECT_FALSE(astribot_s1_path_tracking::isSameGoal({1.0, 2.0}, {1.0, 3.0}, 0.25));
+}
+
+TEST(IsSameGoal, BoundaryIsSame)
+{
+  EXPECT_TRUE(astribot_s1_path_tracking::isSameGoal({0.0, 0.0}, {0.25, 0.0}, 0.25));
+}
+
+TEST(IsSameGoal, InvalidEpsilonIsConservativelyDifferent)
+{
+  // 哨兵：阈值非法时必须判「不同目标」。判成"同一目标"会跳过起步对齐，
+  // 而那正是需求 3(a) 要的行为 —— 静默跳过比多转一次危险得多。
+  EXPECT_FALSE(astribot_s1_path_tracking::isSameGoal({1.0, 1.0}, {1.0, 1.0}, 0.0));
+  EXPECT_FALSE(astribot_s1_path_tracking::isSameGoal({1.0, 1.0}, {1.0, 1.0}, -1.0));
+}
+
 TEST(PhaseName, AllPhasesHaveNames)
 {
   EXPECT_STREQ(toString(Phase::kAlignStart), "ALIGN_START");
@@ -286,3 +311,42 @@ TEST(PhaseName, AllPhasesHaveNames)
   EXPECT_STREQ(toString(Phase::kAlignGoal), "ALIGN_GOAL");
   EXPECT_STREQ(toString(Phase::kDone), "DONE");
 }
+// ============ 相位计时器重置（曾经永久锁死整套导航的那条不变式）============
+//
+// 实测缺陷：enterPhase 里"相位值没变就 return"，于是上一个目标在 ALIGN_START
+// 段被中止、新目标又要求进 ALIGN_START 时，计时器继承旧值 ——
+// 新目标第一拍就判超时(日志读到 1108.297s > 15s)、抛异常、abort，
+// 之后每个目标都瞬间失败且永不恢复。恢复探索后实测 12 个目标 12 个失败、
+// 0 次进度停滞（机器人根本没开始动）。
+
+TEST(PhaseTimer, PhaseChangeAlwaysRestarts) {
+  // 相位真的变了，无论是不是新目标都要重置
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kAlignStart, Phase::kFollow, false));
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kFollow, Phase::kAlignGoal, false));
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kAlignStart, Phase::kFollow, true));
+}
+
+TEST(PhaseTimer, NewGoalRestartsEvenWhenPhaseUnchanged) {
+  // !!! 这条就是那个 bug 的哨兵 !!!
+  // 新目标要求进的相位与当前相位相同（上一个目标死在 ALIGN_START 里），
+  // 必须重置 —— 否则新目标继承旧计时器，第一拍即超时。
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kAlignStart, Phase::kAlignStart, true));
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kFollow, Phase::kFollow, true));
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kAlignGoal, Phase::kAlignGoal, true));
+}
+
+TEST(PhaseTimer, SameGoalReplanDoesNotRestart) {
+  // 反向对照：同一目标的周期性重规划**不能**重置，
+  // 否则对齐段永远等不到超时，align_timeout 保护形同虚设。
+  EXPECT_FALSE(shouldRestartPhaseTimer(Phase::kAlignStart, Phase::kAlignStart, false));
+  EXPECT_FALSE(shouldRestartPhaseTimer(Phase::kFollow, Phase::kFollow, false));
+}
+
+TEST(PhaseTimer, DoneIsNotSpecialCased) {
+  // kDone 也走同一套规则，不要给它开后门
+  EXPECT_FALSE(shouldRestartPhaseTimer(Phase::kDone, Phase::kDone, false));
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kDone, Phase::kDone, true));
+  EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kDone, Phase::kAlignStart, false));
+}
+
+

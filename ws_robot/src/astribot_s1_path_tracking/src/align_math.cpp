@@ -61,6 +61,16 @@ bool pathStartHeading(
   return true;
 }
 
+bool isSameGoal(const PlanarPoint & prev_end, const PlanarPoint & cur_end, double eps_m)
+{
+  if (!(eps_m > 0.0)) {
+    // 阈值非法时保守判「不同目标」：宁可多做一次起步对齐，
+    // 也不要把新目标误当成旧目标而跳过对齐。
+    return false;
+  }
+  return std::hypot(cur_end.x - prev_end.x, cur_end.y - prev_end.y) <= eps_m;
+}
+
 bool needsStartAlign(double heading_error_rad, double min_angle_rad)
 {
   return std::fabs(heading_error_rad) > min_angle_rad;
@@ -123,6 +133,15 @@ Phase advancePhase(
       return Phase::kDone;
   }
   return Phase::kDone;
+}
+
+bool shouldRestartPhaseTimer(Phase before, Phase requested, bool is_new_goal)
+{
+  if (before != requested) {
+    return true;                 // 相位变了，计时器天然要从头算
+  }
+  // 相位没变：只有"这是一个新目标"才重置。
+  return is_new_goal;
 }
 
 }  // namespace astribot_s1_path_tracking
