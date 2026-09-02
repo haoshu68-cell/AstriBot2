@@ -131,7 +131,10 @@ void PointcloudSliceScanNode::declareParameters()
   declare_parameter<std::string>(
     "output_scan_topic", "/scan_from_cloud", describe("输出 LaserScan 话题"));
   declare_parameter<std::string>("marker_topic", "~/debug_markers", describe("调试 Marker 话题"));
-  declare_parameter<std::string>("base_frame", "base_link", describe("投影所在的本体坐标系"));
+  declare_parameter<std::string>(
+    "base_frame", "astribot_torso_base",
+    describe("投影所在的本体坐标系。**本机器人没有 base_link** —— "
+             "默认值原为 base_link，yaml 静默失效时会回落到它并让 TF 查询全失败。"));
 
   declare_parameter<double>("tf_timeout_sec", 0.05, describe("TF 查询超时(s)"));
   declare_parameter<double>("max_cloud_age_sec", 0.30, describe("点云时间戳与当前时间的最大偏差(s)，超出则丢帧"));

@@ -323,5 +323,92 @@ TEST(PathValidator, MaxSamplesCapsWorkWithoutFalseAccept) {
   EXPECT_FALSE(v.validatePath(m, path, {m.worldX(395), y}).valid);
 }
 
+// ============ 跟踪期几何辅助（「未到位不换路径」判据的算法核心）============
+//
+// 这一组测试守的是这个已实测的缺陷：跟踪期无条件周期重规划，
+// 36 个目标下发了 393 次 FollowPath，平均每个目标换 10.9 条路径、
+// 每条只被跟踪约 1.5s 就被下一条抢占。修法是「只有当前路径失效才换」，
+// 而失效判据完全建立在下面这三个函数上，所以它们必须逐条钉死。
+
+TEST(TrackingHelpers, NearestIndexPicksClosestVertex) {
+  const std::vector<PlanarPoint> path{{0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}, {3.0, 0.0}};
+  EXPECT_EQ(nearestPathIndex(path, {0.1, 0.0}), 0U);
+  EXPECT_EQ(nearestPathIndex(path, {1.4, 0.2}), 1U);
+  EXPECT_EQ(nearestPathIndex(path, {2.6, -0.1}), 3U);
+  EXPECT_EQ(nearestPathIndex(path, {99.0, 99.0}), 3U);   // 远处也要落在末点，不是越界
+}
+
+TEST(TrackingHelpers, DeviationOfEmptyPathIsNegativeNotZero) {
+  // !!! 这是本组最关键的一条 !!!
+  // 空路径返回 0 会让「根本没有路径」被读成「完美贴合路径」，
+  // 于是永远不触发重规划 —— 与「没收到 scan 当成前方无障碍」是同一类错误。
+  EXPECT_LT(pathDeviation({}, {0.0, 0.0}), 0.0);
+}
+
+TEST(TrackingHelpers, DeviationMeasuresDistanceToNearestVertex) {
+  const std::vector<PlanarPoint> path{{0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}};
+  EXPECT_NEAR(pathDeviation(path, {1.0, 0.5}), 0.5, 1e-9);
+  EXPECT_NEAR(pathDeviation(path, {1.0, 0.0}), 0.0, 1e-9);
+}
+
+TEST(TrackingHelpers, RemainingPathStartsAtNearestVertexAndKeepsEndpoint) {
+  const std::vector<PlanarPoint> path{{0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}, {3.0, 0.0}};
+  const auto rest = remainingPath(path, {1.9, 0.1});
+  ASSERT_EQ(rest.size(), 2U);
+  EXPECT_NEAR(rest.front().x, 2.0, 1e-9);
+  // 终点必须保留：validatePath 要靠它做「规划终点没被截断」检查。
+  EXPECT_NEAR(rest.back().x, 3.0, 1e-9);
+}
+
+TEST(TrackingHelpers, RemainingPathOfEmptyIsEmpty) {
+  EXPECT_TRUE(remainingPath({}, {0.0, 0.0}).empty());
+}
+
+TEST(TrackingHelpers, RemainingPathNearGoalShrinksToSinglePoint) {
+  // 快到终点时剩余段只剩 1 个点。调用方必须把这种情况当成「快到了」，
+  // 而不是丢给 validatePath —— 后者对 <2 点的路径一律判不合法（这是对的），
+  // 若直接拿它的结论去决定要不要换路径，每个目标的收尾阶段都会被打断一次。
+  const std::vector<PlanarPoint> path{{0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}};
+  const auto rest = remainingPath(path, {2.01, 0.0});
+  EXPECT_EQ(rest.size(), 1U);
+
+  const PathValidator v = makeValidator(0.05);
+  const GridMap m = makeMap(80, 40, kFree);
+  EXPECT_FALSE(v.validatePath(m, rest, {2.0, 0.0}).valid);
+}
+
+TEST(TrackingHelpers, RemainingPathIgnoresObstacleBehindRobot) {
+  // 只校验剩余段的理由：身后新观测到的障碍与「还能不能继续往前跟」无关。
+  // 拿整条路径去校验会因为走过的那一段变成障碍而反复误判需要重规划。
+  GridMap m = makeMap(120, 40, kFree);
+  const double y = m.worldY(20);
+  const std::vector<PlanarPoint> path{
+    {m.worldX(10), y}, {m.worldX(40), y}, {m.worldX(70), y}, {m.worldX(110), y}};
+  // 在第一段上（机器人身后）放一堵墙
+  fillRect(m, 20, 0, 22, 39, kOccupied);
+
+  const PathValidator v = makeValidator(0.05);
+  const PlanarPoint goal{m.worldX(110), y};
+  const PlanarPoint robot{m.worldX(70), y};
+
+  EXPECT_FALSE(v.validatePath(m, path, goal).valid);          // 整条：被身后的墙否掉
+  const auto rest = remainingPath(path, robot);
+  EXPECT_TRUE(v.validatePath(m, rest, goal).valid);           // 剩余段：仍然可通行
+}
+
+TEST(TrackingHelpers, RemainingPathStillCatchesObstacleAhead) {
+  // 反向对照：前方新出现障碍时，剩余段校验必须报不合法 ——
+  // 否则「未失效不换路径」就变成了「永远不换路径」，机器人会往障碍里开。
+  GridMap m = makeMap(120, 40, kFree);
+  const double y = m.worldY(20);
+  const std::vector<PlanarPoint> path{
+    {m.worldX(10), y}, {m.worldX(40), y}, {m.worldX(70), y}, {m.worldX(110), y}};
+  fillRect(m, 90, 0, 92, 39, kOccupied);                      // 障碍在机器人前方
+
+  const PathValidator v = makeValidator(0.05);
+  const auto rest = remainingPath(path, {m.worldX(70), y});
+  EXPECT_FALSE(v.validatePath(m, rest, {m.worldX(110), y}).valid);
+}
+
 }  // namespace
 }  // namespace astribot_s1_autonomy

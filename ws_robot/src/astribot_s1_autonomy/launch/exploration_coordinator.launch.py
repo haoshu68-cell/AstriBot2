@@ -21,6 +21,9 @@ SLAM 必须已经在发 /map。协调器起得比 Nav2 早没问题，它会等�
     ros2 launch astribot_s1_autonomy exploration_coordinator.launch.py params_file:=/path/my.yaml
 """
 
+import os
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -67,7 +70,25 @@ def _build_nodes(context, *args, **kwargs):
     use_sim_time = _to_bool(LaunchConfiguration('use_sim_time').perform(context))
     log_level = LaunchConfiguration('log_level').perform(context)
 
-    parameters = [params_file, {'use_sim_time': use_sim_time}]
+    # 行为树路径必须在 launch 期算：它依赖 install 位置，写死进 yaml 会绑死机器。
+    # 所以这一项刻意不走 yaml —— 这与「阈值都放 yaml」不矛盾，它不是阈值而是路径。
+    bt_arg = LaunchConfiguration('nav_behavior_tree').perform(context)
+    if bt_arg == 'default':
+        bt_path = os.path.join(
+            get_package_share_directory('astribot_s1_navigation'),
+            'behavior_trees', 'navigate_to_pose_explore_three_phase.xml')
+        if not os.path.isfile(bt_path):
+            # 不静默回落到默认树：那会让「三段式没生效」表现为「朝向还是不准」，
+            # 而根因是一个装漏的文件，两者从现象上完全区分不开。
+            raise RuntimeError(
+                f'探索行为树不存在: {bt_path}\n'
+                '请先 colcon build astribot_s1_navigation（它负责安装 behavior_trees/）。'
+                '若确实要用 bt_navigator 默认树，显式传 nav_behavior_tree:=""')
+    else:
+        bt_path = bt_arg          # 空字符串 = 用 bt_navigator 默认树（一键回退）
+
+    parameters = [params_file, {'use_sim_time': use_sim_time,
+                                'nav_behavior_tree': bt_path}]
     if overrides:
         parameters.append(overrides)
 
@@ -121,6 +142,14 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'check_yaw', default_value='',
             description='覆盖是否把朝向纳入抵达判定 (true/false)。'),
+        DeclareLaunchArgument(
+            'nav_behavior_tree', default_value='default',
+            description='下发目标用的行为树 xml。'
+                        'default = astribot_s1_navigation 的 '
+                        'navigate_to_pose_explore_three_phase.xml（启用三段式跟踪，'
+                        '终点不转朝向）；'
+                        '空字符串 "" = 用 bt_navigator 默认树（一键回退到接入前行为）；'
+                        '也可直接给自定义 xml 的绝对路径。'),
     ]
 
     return LaunchDescription(declare_args + [OpaqueFunction(function=_build_nodes)])

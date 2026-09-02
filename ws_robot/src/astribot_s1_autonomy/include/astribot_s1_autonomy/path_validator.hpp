@@ -109,6 +109,38 @@ private:
   bool configured_{false};
 };
 
+// ============ 跟踪期的纯几何辅助（同样无 ROS 依赖，可离线测） ============
+//
+// 这三个函数是「未跟踪到位不换路径」判据的算法核心。
+//
+// 为什么需要它们：原先跟踪期是**无条件**周期重规划（replan_period_sec=1.0），
+// 实测 36 个目标共下发 393 次 FollowPath —— 平均每个目标换 10.9 条路径、
+// 节拍约 1.5s。也就是说没有任何一条路径被跟踪到位过，每条都在 1.5s 后
+// 被下一条抢占。正确判据是「只有当前路径已经不能用了才换」，而
+// 「能不能用」需要两个量：机器人是否已偏离这条路径，剩余段是否还可通行。
+//
+// 注意都用**顶点**距离而不是「点到线段」的垂距：Nav2 全局路径的顶点间距是
+// 栅格量级（0.05m），顶点距离与垂距的差别远小于判据阈值（0.6m），
+// 而顶点法没有线段退化（零长段）这一类边界情况。
+
+/// 路径上距 robot 最近的顶点下标。路径为空时返回 0（调用方必须自己先判空）。
+std::size_t nearestPathIndex(const std::vector<PlanarPoint> & path, const PlanarPoint & robot);
+
+/// robot 到路径最近顶点的距离(m)。
+///
+/// 路径为空时返回 **-1.0**，不是 0.0：返回 0 会让「根本没有路径」被读成
+/// 「完美贴合路径」，从而永远不触发重规划 —— 这正是「无数据当成安全」那一类
+/// 错误（本项目已在探针脚本上踩过一次：没收到 scan 被当成前方无障碍）。
+double pathDeviation(const std::vector<PlanarPoint> & path, const PlanarPoint & robot);
+
+/// 剩余段：从距 robot 最近的顶点一直到路径终点。路径为空返回空 vector。
+///
+/// 只校验剩余段而不是整条路径：已经走过的那一段是否仍可通行与「还能不能继续
+/// 跟踪」无关，拿整条路径去校验会因为身后新出现的障碍（比如刚被观测到的墙）
+/// 而反复误判成需要重规划。
+std::vector<PlanarPoint> remainingPath(
+  const std::vector<PlanarPoint> & path, const PlanarPoint & robot);
+
 }  // namespace astribot_s1_autonomy
 
 #endif  // ASTRIBOT_S1_AUTONOMY__PATH_VALIDATOR_HPP_

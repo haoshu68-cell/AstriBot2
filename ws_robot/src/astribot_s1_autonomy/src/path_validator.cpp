@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <sstream>
 
 namespace astribot_s1_autonomy
@@ -296,6 +297,47 @@ ValidationResult PathValidator::validatePath(
   oss << "路径合法(检查 " << r.samples_checked << " 个采样点, 步长 " << step << "m)";
   r.reason = oss.str();
   return r;
+}
+
+// ============ 跟踪期的纯几何辅助 ============
+
+std::size_t nearestPathIndex(const std::vector<PlanarPoint> & path, const PlanarPoint & robot)
+{
+  if (path.empty()) {
+    return 0U;
+  }
+  std::size_t best = 0U;
+  // 比较平方距离即可，省掉每个顶点一次 sqrt（几百个顶点 × 2Hz，不是热点但没必要浪费）。
+  double best_d2 = std::numeric_limits<double>::max();
+  for (std::size_t i = 0; i < path.size(); ++i) {
+    const double dx = path[i].x - robot.x;
+    const double dy = path[i].y - robot.y;
+    const double d2 = (dx * dx) + (dy * dy);
+    if (d2 < best_d2) {
+      best_d2 = d2;
+      best = i;
+    }
+  }
+  return best;
+}
+
+double pathDeviation(const std::vector<PlanarPoint> & path, const PlanarPoint & robot)
+{
+  if (path.empty()) {
+    return -1.0;              // 见头文件：绝不能返回 0
+  }
+  const std::size_t i = nearestPathIndex(path, robot);
+  return std::hypot(path[i].x - robot.x, path[i].y - robot.y);
+}
+
+std::vector<PlanarPoint> remainingPath(
+  const std::vector<PlanarPoint> & path, const PlanarPoint & robot)
+{
+  if (path.empty()) {
+    return {};
+  }
+  const std::size_t i = nearestPathIndex(path, robot);
+  return std::vector<PlanarPoint>(path.begin() + static_cast<std::ptrdiff_t>(i), path.end());
 }
 
 }  // namespace astribot_s1_autonomy

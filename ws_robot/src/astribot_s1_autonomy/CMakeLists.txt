@@ -110,6 +110,8 @@ add_library(${PROJECT_NAME}_components SHARED
   src/frontier_search.cpp
   src/path_validator.cpp
   src/costmap_adapter.cpp
+  src/escape_logic.cpp
+  src/failure_budget.cpp
   src/pointcloud_slice_scan_node.cpp
   src/frontier_explorer_node.cpp
   src/exploration_coordinator_node.cpp
@@ -279,6 +281,14 @@ if(BUILD_TESTING)
   ament_add_gtest(test_costmap_adapter test/test_costmap_adapter.cpp)
   target_link_libraries(test_costmap_adapter ${PROJECT_NAME}_components)
   ament_target_dependencies(test_costmap_adapter ${ASTRIBOT_AUTONOMY_DEPS})
+
+  ament_add_gtest(test_failure_budget test/test_failure_budget.cpp)
+  target_link_libraries(test_failure_budget ${PROJECT_NAME}_components)
+  ament_target_dependencies(test_failure_budget ${ASTRIBOT_AUTONOMY_DEPS})
+
+  ament_add_gtest(test_escape_logic test/test_escape_logic.cpp)
+  target_link_libraries(test_escape_logic ${PROJECT_NAME}_components)
+  ament_target_dependencies(test_escape_logic ${ASTRIBOT_AUTONOMY_DEPS})
 
   # 转换逻辑的单测**不链** components 库、也不依赖 livox_ros_driver2：
   # 直接把纯逻辑那一个 .cpp 编进来。这样即使没有 livox 驱动包（纯仿真环境），

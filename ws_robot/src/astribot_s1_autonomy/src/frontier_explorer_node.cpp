@@ -97,7 +97,13 @@ void FrontierExplorerNode::declareParameters()
   declare_parameter<std::string>("complete_topic", "/explore/complete", describe("探索完成标志话题"));
   declare_parameter<std::string>("marker_topic", "~/debug_markers", describe("调试 Marker 话题"));
   declare_parameter<std::string>("map_frame", "map", describe("地图坐标系"));
-  declare_parameter<std::string>("robot_base_frame", "base_link", describe("机器人本体坐标系"));
+  declare_parameter<std::string>(
+    "robot_base_frame", "astribot_torso_base",
+    describe("机器人本体坐标系。**本机器人没有 base_link**，根 frame 是 "
+             "astribot_torso_base（Nav2 六处 robot_base_frame 也是它）。"
+             "默认值原为 base_link，靠 yaml 覆盖才对 —— 而本仓库踩过 "
+             "\"params_file 泄漏 / 节点名 remap 导致整份 yaml 静默失效\" 的坑，"
+             "那时会回落到这个默认值，TF 查询全部失败且难以归因。"));
 
   declare_parameter<double>("tf_timeout_sec", 0.2, describe("TF 查询超时(s)"));
   declare_parameter<double>("planning_period_sec", 2.0, describe("探索规划周期(s)"));
