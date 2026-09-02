@@ -1,0 +1,53 @@
+# CustomMsg → PointCloud2 转换节点参数。
+#
+# 顶层键必须与节点自己的名字一致（节点构造时用的是 "livox_custom_to_pc2"）。
+# 本仓库踩过一次：launch 里用 name= 覆盖节点名是进程级 remap，会让这里的键
+# 匹配不上，于是**所有参数静默回落到代码默认值**、而且不报任何错。
+# 所以 launch 里刻意不写 name=。
+livox_custom_to_pc2:
+  ros__parameters:
+
+    # ── 周期上报 ──────────────────────────────────────────────────────
+    # 上报里包含「无效点剔除比例」，那是判断 null_point 有没有配对的关键信号：
+    # 实测 front≈33%、back≈34%，明显偏离就说明配错了。
+    report_period_sec: 10.0
+    # 一路多久没新帧就告警。驱动是 10Hz，2 秒等于丢了 20 帧。
+    stale_warn_sec: 2.0
+
+    # ── front（IP 192.168.0.12，标定基准）────────────────────────────
+    front:
+      input_topic: "/livox/lidar_front"
+      output_topic: "/livox/lidar_front_pc2"
+      null_point:
+        # 这一路外参全零，无回波点落在原点。
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        # 实测那一团是精确同一坐标；5mm 给固件浮点换算留余量。
+        radius: 0.005
+      # 距离过滤刻意留 0（不启用）：那是 livox_preprocess_node 的职责。
+      # 两处各设一个门限、只改一处，是本项目吃过的亏（两层限速串联叠乘 0.5×0.15）。
+      min_range: 0.0
+      max_range: 0.0
+      # Livox tag 的 bit0-1 是空间置信度（0 最好）。4 = 不按置信度丢弃。
+      # 暂不启用：还没有实测数据说明各档位的占比，贸然过滤会丢真实障碍物。
+      max_spatial_noise: 4
+
+    # ── back（IP 192.168.0.13）───────────────────────────────────────
+    back:
+      input_topic: "/livox/lidar_back"
+      output_topic: "/livox/lidar_back_pc2"
+      null_point:
+        # !!! 这三个数不是估计值 !!!
+        # 取自厂商标定文件
+        #   /opt/astribot_ros/software/livox_ros_driver2/share/config/MID360_config.json
+        # 的 lidar[1].extrinsic_parameter：x=1mm, y=-496mm, z=84mm。
+        # 驱动把它写进雷达设备，所以无回波点被一起变换到这里，实测占 34.0%。
+        # 距原点 0.4968m > range_min 0.35 —— 球面距离门限滤不掉它。
+        x: 0.001
+        y: -0.496
+        z: 0.084
+        radius: 0.005
+      min_range: 0.0
+      max_range: 0.0
+      max_spatial_noise: 4

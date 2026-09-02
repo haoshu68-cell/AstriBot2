@@ -34,6 +34,13 @@
   <depend>std_srvs</depend>
   <depend>libpcl-all-dev</depend>
 
+  <!-- livox_ros_driver2 提供 CustomMsg，只被 livox_custom_to_pc2_node 用到。
+       用 <exec_depend> 而非 <depend>：CMakeLists 里刻意**不** find_package 它
+       （厂商 /opt 那份 install 把可执行文件导出成 library，find_package 会硬报错，
+        QUIET 也压不住），改用 find_path/find_library 只取消息头与 typesupport。
+       运行时仍需要它的 typesupport 库在场，所以保留 exec_depend。 -->
+  <exec_depend>livox_ros_driver2</exec_depend>
+
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>rclpy</exec_depend>

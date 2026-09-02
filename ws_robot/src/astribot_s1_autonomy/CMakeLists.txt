@@ -50,6 +50,39 @@ find_package(std_srvs REQUIRED)
 # 点云的 TF 变换由我们自己用 Eigen 仿射变换完成，避免多引一层依赖。
 find_package(PCL REQUIRED COMPONENTS common filters)
 
+# livox_ros_driver2 的 CustomMsg 只被转换节点用到，且**故意做成可选**：
+# 它不是 ROS 官方包，某些检出（纯仿真环境、CI）里可能没有。
+# 缺它时只跳过那一个可执行文件，不让整包构建失败 —— 那样连仿真都编不了。
+#
+# !!! 不能用 find_package(livox_ros_driver2) !!!
+# 厂商在实机 /opt 的那份 install 把 `livox_ros_driver2_node` 导出成了 **library**，
+# 而它实际上是个可执行文件，于是 find_package 会抛
+#   "Package 'livox_ros_driver2' exports the library 'livox_ros_driver2_node'
+#    which couldn't be found"
+# 这是 **CMake Error 而不是 not found**，加 QUIET 也压不住，整个 configure 直接失败。
+# 那是厂商打包的缺陷，我们不改 /opt，也不去 shadow 他们的包
+#（包名必须叫 livox_ros_driver2 才能匹配 DDS 上的类型名 livox_ros_driver2/msg/CustomMsg，
+# 自建同名包会顶掉厂商那份，而厂商驱动是用 `ros2 launch livox_ros_driver2 ...` 起的）。
+#
+# 改成只取我们真正需要的东西：消息头 + typesupport 库。
+# 用 find_path/find_library 而不是写死 /opt —— CMAKE_PREFIX_PATH 里已有全部 ament 前缀。
+find_path(LIVOX_MSG_INCLUDE_DIR
+  NAMES livox_ros_driver2/msg/custom_msg.hpp
+  PATH_SUFFIXES include/livox_ros_driver2 include)
+find_library(LIVOX_MSG_TYPESUPPORT_CPP
+  NAMES livox_ros_driver2__rosidl_typesupport_cpp)
+find_library(LIVOX_MSG_GENERATOR_C
+  NAMES livox_ros_driver2__rosidl_generator_c)
+
+if(LIVOX_MSG_INCLUDE_DIR AND LIVOX_MSG_TYPESUPPORT_CPP AND LIVOX_MSG_GENERATOR_C)
+  set(LIVOX_MSG_AVAILABLE TRUE)
+  message(STATUS "找到 livox CustomMsg：将构建 livox_custom_to_pc2_node")
+  message(STATUS "  头文件 ${LIVOX_MSG_INCLUDE_DIR}")
+else()
+  set(LIVOX_MSG_AVAILABLE FALSE)
+  message(STATUS "未找到 livox CustomMsg：跳过 livox_custom_to_pc2_node（实机上缺它意味着没有 /scan，也就没有动态避障）")
+endif()
+
 set(ASTRIBOT_AUTONOMY_DEPS
   rclcpp
   rclcpp_components
@@ -118,6 +151,25 @@ add_executable(exploration_coordinator_node src/exploration_coordinator_main.cpp
 target_link_libraries(exploration_coordinator_node ${PROJECT_NAME}_components)
 ament_target_dependencies(exploration_coordinator_node ${ASTRIBOT_AUTONOMY_DEPS})
 
+# CustomMsg→PointCloud2 转换：只在找得到 livox_ros_driver2 时构建（见上面的 find_package）。
+# 纯逻辑 livox_custom_convert.cpp **不**依赖它，所以单测总是能编、总是能跑。
+if(LIVOX_MSG_AVAILABLE)
+  add_executable(livox_custom_to_pc2_node
+    src/livox_custom_to_pc2_main.cpp
+    src/livox_custom_to_pc2_node.cpp
+    src/livox_custom_convert.cpp)
+  # 必须显式给 include 路径：其余可执行文件是靠
+  # target_link_libraries(... ${PROJECT_NAME}_components) 间接继承到的，
+  # 而本目标刻意**不链** components 库（它只需要自己那两个 .cpp），
+  # 于是不会继承那份 INTERFACE include 目录。漏了就是
+  # "fatal error: astribot_s1_autonomy/livox_custom_to_pc2_node.hpp 没有那个文件"。
+  target_include_directories(livox_custom_to_pc2_node
+    PRIVATE include ${LIVOX_MSG_INCLUDE_DIR})
+  ament_target_dependencies(livox_custom_to_pc2_node ${ASTRIBOT_AUTONOMY_DEPS})
+  target_link_libraries(livox_custom_to_pc2_node
+    ${LIVOX_MSG_TYPESUPPORT_CPP} ${LIVOX_MSG_GENERATOR_C})
+endif()
+
 # ---------------------------------------------------------------------------
 # 安装
 # ---------------------------------------------------------------------------
@@ -138,6 +190,13 @@ install(
   TARGETS pointcloud_slice_scan_node frontier_explorer_node exploration_coordinator_node
   DESTINATION lib/${PROJECT_NAME}
 )
+
+if(LIVOX_MSG_AVAILABLE)
+  install(
+    TARGETS livox_custom_to_pc2_node
+    DESTINATION lib/${PROJECT_NAME}
+  )
+endif()
 
 install(
   DIRECTORY config launch rviz
@@ -220,6 +279,15 @@ if(BUILD_TESTING)
   ament_add_gtest(test_costmap_adapter test/test_costmap_adapter.cpp)
   target_link_libraries(test_costmap_adapter ${PROJECT_NAME}_components)
   ament_target_dependencies(test_costmap_adapter ${ASTRIBOT_AUTONOMY_DEPS})
+
+  # 转换逻辑的单测**不链** components 库、也不依赖 livox_ros_driver2：
+  # 直接把纯逻辑那一个 .cpp 编进来。这样即使没有 livox 驱动包（纯仿真环境），
+  # 这组测试照样能编能跑 —— 无效点剔除是防「假点团进 costmap」的那道闸，
+  # 不该因为缺一个可选依赖就失去测试覆盖。
+  ament_add_gtest(test_livox_custom_convert
+    test/test_livox_custom_convert.cpp
+    src/livox_custom_convert.cpp)
+  target_include_directories(test_livox_custom_convert PRIVATE include)
 endif()
 
 ament_export_include_directories(include)
