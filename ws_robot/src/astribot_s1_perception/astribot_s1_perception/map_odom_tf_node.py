@@ -39,14 +39,17 @@ from tf2_ros import (
     ConnectivityException,
     ExtrapolationException,
     LookupException,
+    StaticTransformBroadcaster,
     TransformBroadcaster,
     TransformListener,
 )
 
 from astribot_s1_perception.map_odom_decompose import (
+    DEFAULT_MAX_SOURCE_AGE_SEC,
     DecompositionError,
     MapOdomDecomposer,
     Pose2D,
+    check_source_age,
     quaternion_from_yaw,
     yaw_from_quaternion,
 )
@@ -76,6 +79,9 @@ class MapOdomTfNode(Node):
         self.declare_parameter('publish_map_to_slam_world', True)
         self.declare_parameter('source_timeout_sec', 60.0)
         self.declare_parameter('report_period_sec', 10.0)
+        # 源变换的最大龄期。tf2 会永久返回一个停更 frame pair 的最后一条记录，
+        # 且不报错 —— 详见 check_source_age 的说明。置 0 关闭检查。
+        self.declare_parameter('max_source_age_sec', DEFAULT_MAX_SOURCE_AGE_SEC)
 
         self.slam_world = str(self.get_parameter('slam_world_frame').value)
         self.slam_base = str(self.get_parameter('slam_base_frame').value)
@@ -84,6 +90,7 @@ class MapOdomTfNode(Node):
         self.base_frame = str(self.get_parameter('base_frame').value)
         self.tf_timeout = float(self.get_parameter('tf_timeout_sec').value)
         self.source_timeout = float(self.get_parameter('source_timeout_sec').value)
+        self.max_source_age = float(self.get_parameter('max_source_age_sec').value)
 
         rate = float(self.get_parameter('publish_rate').value)
         if not rate > 0.0:
@@ -96,11 +103,23 @@ class MapOdomTfNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.tf_broadcaster = TransformBroadcaster(self)
+        self.static_broadcaster = StaticTransformBroadcaster(self)
 
-        self._static_sent = False
         self._miss = {'slam': 0, 'odom': 0}
+        self._stale = {'slam': 0, 'odom': 0}
         self.exit_code = 0
         self._start_sec = self._now()
+
+        # !!! map→camera_init 必须在这里发，不能等第一次 _tick 成功 !!!
+        # 原来它挂在 _tick 里、而 _tick 在拿不到 odom 时提前 return，
+        # 于是"阶段④底盘里程计还没起"这一整段时间里这条边根本不存在，
+        # 而 /map 的 frame_id 就是 camera_init —— rviz 以 map 为全局系时
+        # 地图整个显示不出来，看起来像 SLAM 没出图。
+        # 而且原来用的是**动态**广播器且只发一次：晚于那一刻启动的消费者
+        # （nav2、rviz、cloud_to_grid）永远收不到，因为 /tf 不是 latched。
+        # 静态广播器是 TRANSIENT_LOCAL，后来者会补收到。
+        if bool(self.get_parameter('publish_map_to_slam_world').value):
+            self._send_map_to_slam_world()
 
         self.create_timer(1.0 / rate, self._tick)
         self.create_timer(2.0, self._tick_watchdog)
@@ -133,11 +152,6 @@ class MapOdomTfNode(Node):
 
         map_to_odom, jumped, jump_m = self.decomposer.update(slam, odom)
         stamp = self.get_clock().now().to_msg()
-
-        if not self._static_sent and bool(
-                self.get_parameter('publish_map_to_slam_world').value):
-            self._send_map_to_slam_world(stamp)
-            self._static_sent = True
 
         self._send(map_to_odom, stamp)
 
@@ -174,6 +188,26 @@ class MapOdomTfNode(Node):
                        f'否则 SDK 报 "No simulation or real robot is started" 并非零退出。'))
             return None
 
+        # !!! 取到了不代表是新的 !!!
+        # rclpy.time.Time() 的语义是"最新可用的"，而 tf2 只在某个 frame pair
+        # 有新数据进来时才修剪它 —— 停更的 pair 会把最后一条记录永久保留，
+        # 于是这行 lookup 会一直成功、一直返回陈旧值、一直不报错。
+        # 对本节点尤其恶劣：SLAM 挂掉后 map→odom 会被算成
+        # "冻结的全局位姿 ∘ 活着的里程计的逆"，随机器人移动反向漂移。
+        stamp = tf.header.stamp
+        age = check_source_age(
+            self._now(), stamp.sec + stamp.nanosec * 1e-9,
+            self.max_source_age, f'{target}→{source}')
+        if age.stale:
+            self._stale[kind] += 1
+            n = self._stale[kind]
+            if n <= 3 or n % 100 == 0:
+                self.get_logger().warning(f'（第 {n} 次陈旧）{age.reason}')
+            # 宁可不发，也不发一个错的：本模块的契约是"不允许发凑合能用的变换"。
+            # 下游会看到"no transform from map to odom"，那是个诚实、可查的失败；
+            # 而发出去的错变换是个静默的错定位。
+            return None
+
         t = tf.transform.translation
         q = tf.transform.rotation
         tilt = self.decomposer.check_planar(q.x, q.y, f'{target}→{source}')
@@ -203,25 +237,33 @@ class MapOdomTfNode(Node):
         tf.transform.rotation.w = w
         self.tf_broadcaster.sendTransform(tf)
 
-    def _send_map_to_slam_world(self, stamp):
+    def _send_map_to_slam_world(self):
         """`map → camera_init` 恒等变换，把两套命名接起来。
 
-        用普通 TF 而不是 static_transform_publisher：这样本节点是这条边的
-        唯一发布者，不会出现"静态和动态两个源"。恒等意味着
-        map 与 camera_init 在数值上同一个系，只是名字不同 ——
-        camera_init 的原点是**底盘启动位姿**，所以这等于宣称"开机点即地图原点"。
+        走 **static** 广播器（`/tf_static`，TRANSIENT_LOCAL 即 latched）：
+        这条边永远不变，且必须让**晚启动的**消费者也能拿到。
+        早先这里用动态广播器且只发一次，后果是 nav2 / rviz / cloud_to_grid
+        只要启动得比这一刻晚，就永远看不到这条边。
+
+        仍然由本节点独占这条边（不用 static_transform_publisher），
+        以免出现"静态和动态两个源"。恒等意味着 map 与 camera_init 数值上
+        同一个系，只是名字不同 —— camera_init 的原点是**底盘启动位姿**，
+        所以这等于宣称"开机点即地图原点"。
         """
         if self.map_frame == self.slam_world:
             return          # 同名就不用接
         tf = TransformStamped()
-        tf.header.stamp = stamp
+        tf.header.stamp = self.get_clock().now().to_msg()
         tf.header.frame_id = self.map_frame
         tf.child_frame_id = self.slam_world
         tf.transform.rotation.w = 1.0
-        self.tf_broadcaster.sendTransform(tf)
+        self.static_broadcaster.sendTransform(tf)
         self.get_logger().info(
-            f'已发 {self.map_frame}→{self.slam_world} 恒等变换。'
-            f'含义：开机点即地图原点（{self.slam_world} 的原点是底盘启动位姿）。')
+            f'已发 {self.map_frame}→{self.slam_world} 恒等静态变换。'
+            f'含义：开机点即地图原点（{self.slam_world} 的原点是底盘启动位姿）。\n'
+            f'  这条边**不等**里程计就绪就发 —— /map 的 frame_id 是 '
+            f'{self.slam_world}，缺这条边时以 {self.map_frame} 为全局系的'
+            f'消费者会整个显示不出地图。')
 
     # -- 看门狗 / 上报 ----------------------------------------------------
     def _tick_watchdog(self):
@@ -233,7 +275,10 @@ class MapOdomTfNode(Node):
             f'{self.source_timeout}s 内一次都没算出 map→odom，退出。\n'
             f'  缺失次数：SLAM 侧 {self._miss["slam"]}，'
             f'里程计侧 {self._miss["odom"]}。\n'
-            f'  哪边次数多就先查那边（上面的 WARNING 里有具体指引）。\n'
+            f'  陈旧次数：SLAM 侧 {self._stale["slam"]}，'
+            f'里程计侧 {self._stale["odom"]}。\n'
+            f'  **先分清是哪一类**：缺失=那条边根本没有；'
+            f'陈旧=有但已停更（发布进程死了或卡住），查的地方完全不同。\n'
             f'  不静默等待是刻意的：静默等待会让 nav2 一直等 TF，'
             f'症状是"导航卡在启动"而原因在这一层。')
         self.exit_code = 1
@@ -247,7 +292,8 @@ class MapOdomTfNode(Node):
         self.get_logger().info(
             f'map→odom={pose} 更新={s.updates} 跳变={s.jumps}'
             f'(最大 {s.max_jump_m:.3f}m) 倾角超限={s.rejected_tilt} '
-            f'缺失 slam={self._miss["slam"]} odom={self._miss["odom"]}')
+            f'缺失 slam={self._miss["slam"]} odom={self._miss["odom"]} '
+            f'陈旧 slam={self._stale["slam"]} odom={self._stale["odom"]}')
 
 
 def main(argv=None):

@@ -21,6 +21,7 @@ namespace 分别用于左右两台雷达（见 launch/sim_perception.launch.py �
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
 
@@ -41,8 +42,23 @@ class LivoxPreprocessNode(Node):
         # 再手动 declare 一遍，否则会抛 ParameterAlreadyDeclaredException——
         # 通过 launch 的 parameters=[{'use_sim_time': ...}] 传入即可自动生效。
 
+        # !!! 订阅端必须用 BEST_EFFORT（SensorDataQoS）!!!
+        # 原来这里写 `create_subscription(..., 10)`，depth=10 走的是**默认 QoS**，
+        # 而默认 QoS 是 RELIABLE。仿真里恰好能用（ros_gz_bridge 发 RELIABLE），
+        # 但实机上游（livox_custom_to_pc2_node）按点云惯例发 BEST_EFFORT，于是：
+        #   BEST_EFFORT 发布者 + RELIABLE 订阅者 = **不兼容，一帧都收不到**
+        # rclpy 会打一条 WARNING（"offering incompatible QoS ... RELIABILITY"），
+        # 但节点照常活着、`cloud_out` 的发布者也照常存在 —— 于是下游看到
+        # "pub=1 但 0 Hz"，整条链静默断在这里。实测就是这么断的。
+        #
+        # 反向是兼容的：BEST_EFFORT 订阅者可以收 RELIABLE 发布者。
+        # 所以改成 BEST_EFFORT 同时满足仿真与实机，不需要分支。
+        #
+        # 发布端**刻意保持默认 RELIABLE 不动**：下游 livox_fusion_node 用
+        # message_filters.Subscriber（默认 RELIABLE），改发布端会把断点挪到那里。
         self.sub = self.create_subscription(
-            PointCloud2, 'cloud_in', self.cloud_callback, 10)
+            PointCloud2, 'cloud_in', self.cloud_callback,
+            qos_profile_sensor_data)
         self.pub = self.create_publisher(PointCloud2, 'cloud_out', 10)
 
         self.get_logger().info(

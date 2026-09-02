@@ -33,6 +33,7 @@ TF 要求每个子帧**恰好一个**父源。而我们有两个独立的位姿�
 表现成地图轻微摇摆，而那是假的。
 """
 
+import collections
 import math
 from dataclasses import dataclass
 
@@ -99,6 +100,76 @@ class Pose2D:
 #: 分解的目的：让跳变留在 map→odom，odom→base 保持连续）。但要**上报**，
 #: 因为它会让 global_costmap 整体平移，而这对上层是可见事件。
 DEFAULT_JUMP_REPORT_M = 0.30
+
+#: 源变换的最大可接受龄期（秒）。见 `check_source_age` 的说明。
+DEFAULT_MAX_SOURCE_AGE_SEC = 1.0
+
+#: 允许的负龄期（秒）。PTP 同步下两台机器的时钟差、以及"发布者按采集时刻
+#: 打戳而我们在它到达前就查"都会让龄期略负。超过这个量级才当时钟异常。
+CLOCK_SKEW_TOLERANCE_SEC = 0.05
+
+#: `check_source_age` 的返回。stale=True 时调用方必须丢弃这条变换。
+SourceAge = collections.namedtuple('SourceAge', 'age_sec stale reason')
+
+
+def check_source_age(now_sec, stamp_sec, max_age_sec, label=''):
+    """判断一条源变换是不是已经不再更新了。
+
+    ════════════════ 为什么必须显式查龄期 ════════════════
+    tf2 的 Buffer **只在某个 frame pair 有新数据进来时才修剪它**。一个停止
+    更新的 frame pair 会把最后一条记录**永久保留**，而
+    `lookup_transform(target, source, Time())` 的语义是"最新可用的"——
+    于是它会一直、成功地、无警告地返回那条陈旧记录。
+
+    对本节点的后果特别恶劣：若 SLAM 挂了，`camera_init→aft_mapped` 冻结在
+    最后一帧，而 `odom→base` 仍在更新，于是 map→odom 会被算成
+    "冻结的全局位姿 ∘ 活着的里程计的逆" —— 一个随机器人移动而**反向漂移**的
+    变换。TF 链完好、没有任何报错、nav2 也照常规划，只是定位是错的。
+
+    本仓库已在这个机制上吃过多次亏（陈旧 TF、冻结拍率、脉冲当速率），
+    结论是：**读数必须自带龄期，不能只看"取到了"。**
+
+    ════════════════ 参数 ════════════════
+    now_sec / stamp_sec 都用同一个时钟的秒。max_age_sec <= 0 表示**不检查**
+    （刻意留的逃生口，但默认开着）。
+
+    返回 SourceAge。stale=True 时 reason 非空且已写明该查哪一边。
+    """
+    now_sec = float(now_sec)
+    stamp_sec = float(stamp_sec)
+    if not math.isfinite(now_sec) or not math.isfinite(stamp_sec):
+        raise DecompositionError(
+            f'龄期检查拿到非有限数 now={now_sec!r} stamp={stamp_sec!r}')
+    max_age_sec = float(max_age_sec)
+    if max_age_sec <= 0.0:
+        return SourceAge(0.0, False, '')
+
+    if stamp_sec <= 0.0:
+        # 戳没填。既不能判新也不能判旧 —— 当成不可信，因为"未填戳"这件事
+        # 本身就说明发布方有问题，而放过它等于把龄期检查整个绕过去。
+        return SourceAge(
+            float('inf'), True,
+            f'{label} 的时间戳是 {stamp_sec:g}（未填）。无法判断新旧，按不可信丢弃。'
+            f'\n  发布方没给 header.stamp 打戳；这也会让任何按时刻查询的'
+            f'消费者失败，不只是本节点。')
+
+    age = now_sec - stamp_sec
+    if age < -CLOCK_SKEW_TOLERANCE_SEC:
+        return SourceAge(
+            age, True,
+            f'{label} 的时间戳比当前时刻晚 {-age:.3f}s（超过容差 '
+            f'{CLOCK_SKEW_TOLERANCE_SEC:g}s）。这是时钟不一致，不是数据新。'
+            f'\n  本机开机时钟是 1970、靠 PTP 追上来；若 PTP 还没收敛，'
+            f'发布方与本节点就不在同一时间轴上。先查 ptp_sync_time。')
+    if age > max_age_sec:
+        return SourceAge(
+            age, True,
+            f'{label} 已经 {age:.2f}s 没更新（上限 {max_age_sec:.2f}s）。'
+            f'\n  ⚠️ tf2 只在有新数据时才修剪缓冲，所以 lookup_transform(..., Time()) '
+            f'会一直"成功"返回这条陈旧记录、不报任何错。'
+            f'\n  → 发布这条边的进程很可能已经死了或卡住了。查它，'
+            f'不要查本节点。')
+    return SourceAge(age, False, '')
 
 
 @dataclass

@@ -38,8 +38,25 @@ def generate_launch_description():
     declare_args = [
         DeclareLaunchArgument('use_sim_time', default_value='true',
                               description='仿真分支固定用仿真时钟'),
+        # ── 输入话题名做成参数，而不是写死 ──────────────────────────────
+        # 仿真里 gz 直接出 PointCloud2，话题叫 /livox/lidar_{left,right}。
+        # 实机不一样：厂商驱动以 xfer_format=1 发 **CustomMsg**，话题叫
+        # /livox/lidar_{front,back}，两路的 frame_id 都是 livox_frame。
+        # 所以实机要先经 astribot_s1_autonomy 的 livox_custom_to_pc2_node
+        # 转成 PointCloud2（话题后缀 _pc2），再进本文件这条链。
+        # 之前 hardware_perception.launch.py 只改了 use_sim_time 就直接 include 本文件，
+        # 于是在实机上订阅了两个**根本不存在**的话题 —— 表现是整条链静默无输出，
+        # /scan 一帧都不出，而每个节点看着都活得好好的。
+        DeclareLaunchArgument(
+            'left_input_topic', default_value='/livox/lidar_left',
+            description='左/前雷达的 PointCloud2 输入；实机传 /livox/lidar_front_pc2'),
+        DeclareLaunchArgument(
+            'right_input_topic', default_value='/livox/lidar_right',
+            description='右/后雷达的 PointCloud2 输入；实机传 /livox/lidar_back_pc2'),
     ]
     use_sim_time = LaunchConfiguration('use_sim_time')
+    left_input = LaunchConfiguration('left_input_topic')
+    right_input = LaunchConfiguration('right_input_topic')
 
     preprocess_left = Node(
         package='astribot_s1_perception',
@@ -48,7 +65,7 @@ def generate_launch_description():
         output='screen',
         parameters=[filter_params, {'use_sim_time': use_sim_time}],
         remappings=[
-            ('cloud_in', '/livox/lidar_left'),
+            ('cloud_in', left_input),
             ('cloud_out', '/livox/left/cloud_filtered'),
         ],
     )
@@ -59,7 +76,7 @@ def generate_launch_description():
         output='screen',
         parameters=[filter_params, {'use_sim_time': use_sim_time}],
         remappings=[
-            ('cloud_in', '/livox/lidar_right'),
+            ('cloud_in', right_input),
             ('cloud_out', '/livox/right/cloud_filtered'),
         ],
     )

@@ -28,15 +28,33 @@
        "与厂商那份集中惯量模型做对照实验"，不是性能旋钮。
        详见 astribot_s1_gripper.xacro 文件头。 -->
   <xacro:arg name="use_gripper" default="true"/>
-  <!-- 双 Livox Mid-360 安装位姿：左前 + 右后对角布局（用户指定），扩大合并视场、
-       减少互相遮挡的盲区（默认值，可外部覆盖）。
-       xyz/rpy 用空格分隔的字符串（xacro origin 惯用写法），改这两个参数即可调整安装位置，
-       不需要碰 astribot_s1_sensors.xacro 里的宏定义本身。
-       坐标约定：torso_base 局部系 +x 朝前、+y 朝左（沿用现有 lidar/camera 挂载点惯例）。 -->
-  <xacro:arg name="livox_left_xyz" default="0.28 0.18 0.10"/>
-  <xacro:arg name="livox_left_rpy" default="0 0 0.4"/>
-  <xacro:arg name="livox_right_xyz" default="-0.28 -0.18 0.10"/>
-  <xacro:arg name="livox_right_rpy" default="0 0 2.74"/>
+  <!-- 双 Livox Mid-360 安装位姿：对角背靠背布局，两台相距约 0.50m、偏航差约 180°，
+       底盘中心恰在两者连线中点。
+       ⚠️ 以下数值是 **2026-09-01 实测/标定推出的**，不是估计值。原来那组
+       （left 0.28 0.18 0.10 / rpy 0 0 0.4，right -0.28 -0.18 0.10 / rpy 0 0 2.74）
+       是 astribot_s1_sensors.xacro 宏的**占位默认值**，与实机差 0.108m / 68.8°。
+
+       数据来源与交叉校验（三条独立证据一致）：
+       1. 厂商 `/opt/astribot_ros/software/livox_ros_driver2/share/config/MID360_config.json`
+          给出 back(IP .13) 相对 front(IP .12) 的外参：
+          xyz=(1, -496, 84)mm、rpy=(0.0669°, -0.5368°, -178.195°)。
+          注意驱动通过 `SetLivoxLidarInstallAttitude` 把它**写进雷达设备**，
+          所以 `/livox/lidar_back` 发出的点已经在 front 系里了。
+       2. SLAM `mid360.yaml` 的 `chassis_extrinsic_*` 给出 front→chassis：
+          T=(0.17393, 0.16893, 0.082)、R=Rz(-0.800058)。
+       3. 实测地面拟合验证了上面这个 chassis 就是 astribot_torso_base：
+          front 雷达离地实测 0.1745m，由 (1)(2) 推出的预期是 0.1770m，差 2.5mm；
+          两路点云报出的地面高度差 0.0006m；雷达倾角实测 0.43°（外参是纯 Rz，预期 0）。
+          另：两雷达连线中点算出来是 (-0.0036, -0.0042)，即底盘中心确在正中。
+
+       命名注意：URDF 沿用 left/right，实机话题叫 front/back，对应关系是
+       **left = front = IP 192.168.0.12**，**right = back = IP 192.168.0.13**。
+       改名会牵动自滤配置、gazebo 传感器名与 livox_fusion_node，故本次只改数值。
+       坐标约定：torso_base 局部系 +x 朝前、+y 朝左。 -->
+  <xacro:arg name="livox_left_xyz" default="0.17393 0.16893 0.082"/>
+  <xacro:arg name="livox_left_rpy" default="0 0 -0.800058"/>
+  <xacro:arg name="livox_right_xyz" default="-0.18120 -0.17733 0.166"/>
+  <xacro:arg name="livox_right_rpy" default="0.001168 -0.009370 2.373036"/>
   <!-- controllers_config：ros2_control 控制器 yaml 的绝对路径字符串，
        由调用方（launch.py）用 FindPackageShare + PathJoinSubstitution 拼出后传入，
        本文件内部不出现任何硬编码路径。 -->

@@ -106,13 +106,39 @@ astribot_s1_perception/
 
 ## 4. 双 Mid-360 安装位姿
 
-**左前 + 右后**对角安装在 `astribot_torso_base` 上（用户指定，对角布局扩大合并视场、
-减少互相遮挡的盲区）：
+**左前 + 右后**对角背靠背安装在 `astribot_torso_base` 上（两台相距约 0.50m、
+偏航差约 180°，底盘中心恰在两者连线中点）：
 
 | | 挂载位置 | xyz (m) | rpy (rad) |
 |---|---|---|---|
-| `livox_mid360_left` | 左前 | 0.28, 0.18, 0.10 | 0, 0, 0.4 |
-| `livox_mid360_right` | 右后 | -0.28, -0.18, 0.10 | 0, 0, 2.74 |
+| `livox_mid360_left` | 左前（= `/livox/lidar_front`，IP .12，标定基准） | 0.17393, 0.16893, 0.082 | 0, 0, -0.800058 |
+| `livox_mid360_right` | 右后（= `/livox/lidar_back`，IP .13） | -0.18120, -0.17733, 0.166 | 0.001168, -0.009370, 2.373036 |
+
+> **2026-09-01 按实机标定修正。** 原表里那组（`0.28, 0.18, 0.10 / 0,0,0.4` 与
+> `-0.28,-0.18,0.10 / 0,0,2.74`）是 xacro 宏的**占位默认值**，从未按实机量过，
+> 与实测差 **0.108 m / 68.8°**。
+>
+> 来源与三条交叉校验：
+> 1. 厂商标定文件 `MID360_config.json`（由 `livox_lidar_calib` 写入）给出
+>    back 相对 front：`xyz=(1,-496,84)mm`、`rpy=(0.0669°,-0.5368°,-178.195°)`。
+>    ⚠️ 驱动通过 `SetLivoxLidarInstallAttitude` 把它**写进雷达设备本身**，
+>    所以 `/livox/lidar_back` 的点**已经在 front 系里**，上层不要再变换一次。
+> 2. SLAM `mid360.yaml` 的 `chassis_extrinsic_*`：front→chassis 为
+>    `T=(0.17393,0.16893,0.082)`、`R=Rz(-45.84°)`。
+> 3. 实测点云地面拟合，验证 (2) 的 chassis 就是 `astribot_torso_base`：
+>
+> | 校验项 | 预期 | 实测 | 差 |
+> |---|---|---|---|
+> | front 雷达离地 | 0.1770 m | 0.1745 m | 2.5 mm |
+> | 两路报出的地面高度差 | 0 | 0.0006 m | 0.6 mm |
+> | 雷达倾角（外参是纯 Rz） | 0° | 0.43° | — |
+> | 两雷达间距 | 0.496 m（厂商） | 0.5031 m（推算） | 7.1 mm |
+> | 两雷达高度差 | 0.084 m（厂商） | 0.0840 m（推算） | 一致 |
+> | 连线中点 | (0, 0) | (-0.0036, -0.0042) | 5.5 mm |
+>
+> **命名两套并存**：URDF 用 left/right，实机话题用 front/back，
+> 对应关系是 left=front=IP 192.168.0.12、right=back=IP 192.168.0.13。
+> 改名会牵动自滤配置、gazebo 传感器名与 `livox_fusion_node`，故只改了数值。
 
 权威数据源是 `astribot_s1_description/urdf/astribot_s1.xacro` 里的 4 个 xacro:arg
 （`livox_left_xyz`/`livox_left_rpy`/`livox_right_xyz`/`livox_right_rpy`），

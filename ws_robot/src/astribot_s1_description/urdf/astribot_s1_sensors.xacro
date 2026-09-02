@@ -17,9 +17,13 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!-- ================= Livox Mid-360 宏：左右各实例化一次 ================= -->
+  <!-- 宏默认值 = 实机 front(IP .12) 的实测安装位姿。调用方（astribot_s1.xacro）
+       一律显式传 xyz/rpy，所以这里的默认值只在"有人漏传"时兜底 ——
+       原来兜底的是 0.28 0.18 0.10 / 0 0 0.4 那组占位值，与实机差 0.108m/68.8°，
+       漏传时会静默生效，故一并改成实测值。推导与校验见 astribot_s1.xacro 的注释。 -->
   <xacro:macro name="astribot_s1_livox_mid360"
                params="side parent:=astribot_torso_base robot_name:=astribot_s1
-                       xyz:='0.28 0.18 0.10' rpy:='0 0 0.4'">
+                       xyz:='0.17393 0.16893 0.082' rpy:='0 0 -0.800058'">
 
     <link name="livox_mid360_${side}">
       <inertial>
@@ -47,6 +51,33 @@
       <child link="livox_mid360_${side}"/>
       <origin xyz="${xyz}" rpy="${rpy}"/>
     </joint>
+
+    <!-- ══════════ livox_frame：实机点云真正携带的 frame_id ══════════
+         厂商驱动 launch 里 `frame_id = 'livox_frame'` 是**一个全局值**，
+         于是 /livox/lidar_front 与 /livox/lidar_back 两路点云的 header.frame_id
+         **都是** `livox_frame`（实测，直接解 CDR 取的）。而 TF 树里从来没有
+         这个 frame —— 结果是任何靠 TF 摆放点云的消费者
+         （pointcloud_slice_scan_node 的自滤、livox_fusion_node）在实机上
+         直接查不到变换，而不是"位置略有偏差"。
+
+         两路共用一个 frame_id 并**不是**厂商的疏漏：驱动通过
+         SetLivoxLidarInstallAttitude 把外参写进雷达设备本身，
+         所以 back 发出的点已经在 front 的坐标系里了（见 MID360_config.json
+         与 livox_extrinsics.yaml 的说明）。也就是说
+             livox_frame ≡ front 雷达坐标系 ≡ livox_mid360_left
+         这条恒等边只是把"实机的命名"接到"URDF 的命名"上。
+
+         为什么放在 URDF 而不是单独起 static_transform_publisher：
+         RSP 已经在发 /tf_static，多一条边不用多一个进程，也不会出现
+         "同一条边两个源"。只在 side == 左侧那次实例化时发，避免两个父。 -->
+    <xacro:if value="${side == 'left'}">
+      <link name="livox_frame"/>
+      <joint name="livox_frame_joint" type="fixed">
+        <parent link="livox_mid360_${side}"/>
+        <child link="livox_frame"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </joint>
+    </xacro:if>
 
     <gazebo reference="livox_mid360_${side}">
       <sensor name="livox_mid360_${side}_sensor" type="gpu_lidar">
