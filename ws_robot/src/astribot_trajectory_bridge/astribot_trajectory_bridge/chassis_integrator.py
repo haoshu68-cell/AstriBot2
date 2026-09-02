@@ -36,6 +36,7 @@ local coordinate" —— 方向是**世界系 → 本体系**。由此推断 ``s
 可离线复现、可故障注入，所以积分/限幅/leash/校正全部剥离成无副作用函数。
 """
 
+import collections
 import math
 
 # 三个自由度的下标（ROBOT_TYPE=S1 时 chassis_dof=3，见 astribot_base.py:36-38）
@@ -158,8 +159,99 @@ def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt):
     return tuple(out)
 
 
+#: :func:`measure_tick_dt` 的返回值。
+#:
+#: - ``dt``：本拍实际该用的积分步长（秒），已钳位。
+#: - ``clamped``：是否被钳位。钳位说明调度出了状况，必须上报而不是静默吞掉。
+#: - ``reason``：钳位原因，空串表示未钳位。
+#: - ``raw``：钳位前的原始测量值，用于诊断（首拍为 ``None``）。
+TickDt = collections.namedtuple('TickDt', 'dt clamped reason raw')
+
+
+def measure_tick_dt(now, prev, nominal_dt, max_dt):
+    """由相邻两拍的时间戳算积分步长，并做钳位。
+
+    ════════════════ 为什么不能直接用 1/freq ════════════════
+    底盘是**位置**接口：``pos_cmd`` 推进多快决定物理速度，而"推进多快"是
+    每拍增量 × **墙钟**拍率。若每拍加 ``v/250`` 而实际只跑到 157Hz，
+    底盘就只有指令速度的 157/250 = 63%。用实测 dt 后拍率快慢不再影响速度。
+
+    ════════════════ 为什么必须钳位 ════════════════
+    dt 直接乘在速度上，所以一次调度停顿会变成一次**位置阶跃**：
+    1 m/s 下停顿 100ms 就是 0.1m 的跳变，底盘会以最大能力冲向那个位置。
+    钳位把单拍位移的上界锁死在 ``max_vel * max_dt``，这个上界必须远小于
+    leash 阈值，否则一次停顿就能把 leash 撞开。
+
+    Args:
+        now: 本拍时间戳（秒，单调）。
+        prev: 上一拍时间戳（秒）；首拍传 ``None``。
+        nominal_dt: 标称步长（``1/freq``），首拍与时钟异常时的兜底值。
+        max_dt: 步长上限（秒）。
+
+    Returns:
+        :class:`TickDt`。
+
+    Raises:
+        ChassisConfigError: ``nominal_dt`` 或 ``max_dt`` 非正，或
+            ``max_dt < nominal_dt``（那样连正常拍都会被钳，等于没修）。
+    """
+    if nominal_dt <= 0.0:
+        raise ChassisConfigError('nominal_dt=%r 必须为正' % (nominal_dt,))
+    if max_dt <= 0.0:
+        raise ChassisConfigError('max_dt=%r 必须为正' % (max_dt,))
+    if max_dt < nominal_dt:
+        raise ChassisConfigError(
+            'max_dt=%r 小于 nominal_dt=%r —— 那样连按标称频率跑的拍都会被钳位，'
+            '积分恒等于钳位值，等于没修这个缺陷' % (max_dt, nominal_dt))
+
+    if prev is None:
+        # 首拍没有参照，用标称值。不算钳位（不是异常）。
+        return TickDt(nominal_dt, False, '', None)
+
+    raw = now - prev
+    if raw <= 0.0:
+        # 时钟没前进或倒退。rclpy 定时器积压时会背靠背触发，dt≈0；
+        # 用 0 积分等于这一拍白丢，用标称值至少保持速度连续。
+        return TickDt(nominal_dt, True,
+                      '时钟未前进（raw=%.6fs），退回标称步长' % raw, raw)
+    if raw > max_dt:
+        return TickDt(max_dt, True,
+                      '实测步长 %.4fs 超过上限 %.4fs，已钳位。'
+                      '未钳位的话本拍会积出一次位置阶跃' % (raw, max_dt), raw)
+    return TickDt(raw, False, '', raw)
+
+
+def integrate_step_dt(pos_cmd, local_velocity, dt):
+    """按**实测**步长积分一步：``pos_cmd[i] += v[i] * dt``。
+
+    Args:
+        pos_cmd: 当前指令位置 [x, y, theta]（会被复制，不原地修改）。
+        local_velocity: 本体系速度 (vx, vy, wz)。
+        dt: 步长（秒），必须为正。调用方应已用 :func:`measure_tick_dt` 钳位。
+
+    Returns:
+        新的 [x, y, theta]，theta 已归一。
+    """
+    if dt <= 0.0:
+        raise ChassisConfigError('dt=%r 必须为正' % (dt,))
+    if len(pos_cmd) != CHASSIS_DOF_S1:
+        raise ChassisConfigError(
+            'pos_cmd 长度=%d，期望 %d。注意 chassis_dof 由 ROBOT_TYPE 决定，'
+            '未设置为 S1 时是 2（见 astribot_base.py:36-38）'
+            % (len(pos_cmd), CHASSIS_DOF_S1))
+    return [
+        pos_cmd[IDX_X] + local_velocity[0] * dt,
+        pos_cmd[IDX_Y] + local_velocity[1] * dt,
+        wrap_angle(pos_cmd[IDX_THETA] + local_velocity[2] * dt),
+    ]
+
+
 def integrate_step(pos_cmd, local_velocity, freq):
     """一个积分步：``pos_cmd[i] += v[i] / freq``（202:47-49 / 203:63-65）。
+
+    这是**标称频率**口径，等价于 ``integrate_step_dt(..., 1/freq)``。
+    内环已改用 :func:`integrate_step_dt` + 实测 dt；本函数保留给
+    "确知拍率就是标称值"的场合（examples 对齐、离线推演）。
 
     Args:
         pos_cmd: 当前指令位置 [x, y, theta]（会被复制，不原地修改）。
@@ -171,17 +263,7 @@ def integrate_step(pos_cmd, local_velocity, freq):
     """
     if freq <= 0.0:
         raise ChassisConfigError('freq=%r 必须为正' % (freq,))
-    if len(pos_cmd) != CHASSIS_DOF_S1:
-        raise ChassisConfigError(
-            'pos_cmd 长度=%d，期望 %d。注意 chassis_dof 由 ROBOT_TYPE 决定，'
-            '未设置为 S1 时是 2（见 astribot_base.py:36-38）'
-            % (len(pos_cmd), CHASSIS_DOF_S1))
-    dt = 1.0 / freq
-    return [
-        pos_cmd[IDX_X] + local_velocity[0] * dt,
-        pos_cmd[IDX_Y] + local_velocity[1] * dt,
-        wrap_angle(pos_cmd[IDX_THETA] + local_velocity[2] * dt),
-    ]
+    return integrate_step_dt(pos_cmd, local_velocity, 1.0 / freq)
 
 
 def pose_error(pos_a, pos_b):

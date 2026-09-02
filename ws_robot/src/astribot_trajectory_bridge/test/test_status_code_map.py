@@ -11,17 +11,38 @@
 
 所以这里把"核心层用到的每一个状态名都能映射"变成一条离线可跑的断言。
 本测试需要 msgs 已编译；未编译时 skip 而不是 error（否则会掩盖同包其它测试）。
+
+!!! 不要把 pytest.importorskip 放回模块级 !!!
+────────────────────────────────────────────
+pytest 6.2.5（Humble 自带版本）下，**模块级**的 importorskip 抛出的 Skipped
+会中止整个 collection —— 不是只跳过本文件，而是让 `pytest test/` 一条测试都收不到：
+
+    pytest test/                                    → 1 skipped
+    pytest test/ --ignore=test_status_code_map.py    → 430 passed, 4 skipped
+
+这正是本文件原本想避免的"掩盖同包其它测试"，选的机制却干了同一件事。
+而且症状伪装得很好：输出是干净的 `1 skipped`，看不出 430 条测试消失了。
+（我据此错判过一次"桥接单测全 skip、修复没有回归覆盖"。）
+
+正确写法是模块级 try/except 置标志 + `pytestmark = skipif`（见下），
+或者像 test_chassis_bridge_core.py:573 那样把 importorskip 放进**函数体**。
 """
 
 import pytest
 
-# msgs 需要 rosidl 产物；没编译时整条 skip
-pytest.importorskip(
-    'astribot_bridge_msgs.msg',
-    reason='需要先 colcon build astribot_bridge_msgs 并 source install/setup.bash')
+# 模块级只做 try/except 置标志，**绝不**在这里 skip —— 见上方说明。
+try:
+    from astribot_bridge_msgs.msg import BridgeStatus
+    from astribot_bridge_msgs.srv import DispatchWaypoints
+    _MSGS_AVAILABLE = True
+except ImportError:                                  # pragma: no cover
+    BridgeStatus = None
+    DispatchWaypoints = None
+    _MSGS_AVAILABLE = False
 
-from astribot_bridge_msgs.msg import BridgeStatus            # noqa: E402
-from astribot_bridge_msgs.srv import DispatchWaypoints        # noqa: E402
+pytestmark = pytest.mark.skipif(
+    not _MSGS_AVAILABLE,
+    reason='需要先 colcon build astribot_bridge_msgs 并 source install/setup.bash')
 
 from astribot_trajectory_bridge import arm_bridge_core as arm  # noqa: E402
 from astribot_trajectory_bridge import chassis_bridge_core as ch  # noqa: E402

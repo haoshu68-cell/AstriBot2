@@ -24,6 +24,7 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from std_srvs.srv import SetBool, Trigger
 
+from astribot_trajectory_bridge.callback_layout import CHASSIS_GROUPS, make_groups
 from astribot_trajectory_bridge.chassis_bridge_core import (
     ChassisBridgeConfig,
     ChassisBridgeCore,
@@ -45,6 +46,9 @@ from astribot_trajectory_bridge.write_gate import (
 
 class ChassisCmdBridgeNode(Node):
 
+    #: 本节点的回调组，容器据此算线程数。加组只改 callback_layout。
+    CALLBACK_GROUPS = CHASSIS_GROUPS
+
     def __init__(self, session, node_name='chassis_cmd_bridge'):
         super().__init__(node_name)
         self._declare_params()
@@ -62,16 +66,29 @@ class ChassisCmdBridgeNode(Node):
         # ---- 写通路准入。D-1 统一 domain 下这是唯一阻止"仿真指令打到真机"的机制 ----
         self._write_allowed = self._check_write_gate(session, cfg)
 
-        inner_group = MutuallyExclusiveCallbackGroup()
-        outer_group = MutuallyExclusiveCallbackGroup()
-        srv_group = MutuallyExclusiveCallbackGroup()
+        # 回调组按 callback_layout.CHASSIS_GROUPS 声明式建立 —— 组数与容器的
+        # 线程数由同一份声明推出，不会再出现"组分开了但线程不够"（见下）。
+        groups = make_groups(CHASSIS_GROUPS, MutuallyExclusiveCallbackGroup,
+                             'chassis_cmd_bridge')
+        inner_group = groups['inner']
+        outer_group = groups['outer']
+        srv_group = groups['srv']
         # !!! cmd_vel 订阅必须独立成组，绝不能和内环定时器共用 !!!
         #
         # 2026-08-31 实机实测出来的：原来两者共用 inner_group，而
         # MutuallyExclusiveCallbackGroup 保证组内**串行**。内环每拍要做两次跨进程
         # SDK 往返（get_current_joints_position 判 leash + set_joints_position 下发），
-        # Python+GIL 下实测一拍 ~10ms，而定时器按 freq=250 每 4ms 就排一个 ——
-        # 定时器回调永久积压、把组占满，`_on_cmd_vel` **一次都拿不到执行机会**。
+        # Python+GIL 下一拍撑不到 4ms（LOOP_OVERRUN 实测周期 6.0~14.9ms），而定时器
+        # 按 freq=250 每 4ms 就排一个 —— 只要**平均**周期 > 4ms，定时器回调就永久积压、
+        # 把组占满，`_on_cmd_vel` **一次都拿不到执行机会**。
+        #
+        # 注：这里只需要"平均周期 > 4ms"这一个条件，不需要知道确切拍率。
+        # 曾在此处写过"一拍 ~10ms"，那是 LOOP_OVERRUN 尾部样本的均值 ——
+        # 该事件只在周期 > 6ms 时上报，天然截尾，不能当平均周期用。
+        # 实际拍率的无偏值至今**未测**，只有下界 ≥157Hz（见 docs/ 复盘）。
+        #
+        # !!! 只拆组是不够的 !!! 互斥组只保证组内串行，不保证组间能并发 ——
+        # 线程不足时组照样排队。所以组数与线程数必须同源，见 callback_layout。
         #
         # 后果极其隐蔽，因为每一层看起来都正常：
         #   · /cmd_vel 实测 26.8Hz、2708 帧非零 —— 消息确实到了订阅端
@@ -82,7 +99,7 @@ class ChassisCmdBridgeNode(Node):
         #     那条不发事件的分支
         #   · 唯一的可观测量是 LOOP_OVERRUN（实测累计 23195 次）
         # 表现就是"nav2 一切正常、路径也规划出来了、机器人一动不动"。
-        cmd_group = MutuallyExclusiveCallbackGroup()
+        cmd_group = groups['cmd']
 
         self.create_subscription(
             Twist, self.get_parameter('cmd_vel_topic').value,
@@ -101,6 +118,10 @@ class ChassisCmdBridgeNode(Node):
                             callback_group=srv_group)
         self.create_service(Trigger, '~/reset_leash', self._srv_reset_leash,
                             callback_group=srv_group)
+
+        # 内环拍率日志：每 10 秒一次（外环 cfg.outer_rate 拍一次）
+        self._rate_report_period_ticks = max(1, int(round(cfg.outer_rate * 10.0)))
+        self._rate_report_countdown = self._rate_report_period_ticks
 
         # 周期抖动监控
         self._last_inner_time = None
@@ -132,6 +153,10 @@ class ChassisCmdBridgeNode(Node):
         d('max_vel_theta', 2.0)
         d('max_accel_xy', 2.5)
         d('max_accel_theta', 3.2)
+        # 内环步长上限（秒）。默认 0.04 = 标称 4ms 的 10 倍。
+        # 单拍最大位移 = max_vel_xy * 该值，必须远小于 leash_xy_m，
+        # 构造 ChassisBridgeConfig 时会硬校验，不满足直接拒绝启动。
+        d('max_tick_dt_sec', 0.04)
         d('leash_xy_m', 0.25)
         d('leash_theta_rad', 0.35)
         d('require_manual_reset', True)
@@ -165,6 +190,7 @@ class ChassisCmdBridgeNode(Node):
             cmd_vel_timeout_sec=g('cmd_vel_timeout_sec'),
             max_vel_xy=g('max_vel_xy'), max_vel_theta=g('max_vel_theta'),
             max_accel_xy=g('max_accel_xy'), max_accel_theta=g('max_accel_theta'),
+            max_tick_dt_sec=g('max_tick_dt_sec'),
             leash_xy_m=g('leash_xy_m'), leash_theta_rad=g('leash_theta_rad'),
             require_manual_reset=g('require_manual_reset'),
             enable_slam_correction=g('enable_slam_correction'),
@@ -265,6 +291,44 @@ class ChassisCmdBridgeNode(Node):
             self.status.publish('SDK_CALL_FAILED', '外环异常：%s' % exc)
         self.status.publish_events(self.core.drain_events())
         self._publish_odom()
+        self._report_tick_rate()
+
+    def _report_tick_rate(self):
+        """周期性打印内环**实测**拍率。
+
+        为什么值得专门打一行日志：在这行之前，唯一能看到拍率的东西是
+        LOOP_OVERRUN，而它只在周期超阈时上报（截尾样本）。据它的周期均值反推
+        出的"内环 91Hz、速度只剩 36%"是错的 —— 时间账反解的下界是 ≥157Hz。
+        这里出的是 count / 墙钟时长，不需要任何推断。
+
+        挂在外环上而不是新开定时器：新开定时器就要新增回调组，回调组数量是
+        执行线程数的下限（见 callback_layout），不值得为一行日志动那套。
+        """
+        self._rate_report_countdown -= 1
+        if self._rate_report_countdown > 0:
+            return
+        self._rate_report_countdown = self._rate_report_period_ticks
+        st = self.core.tick_stats()
+        if st.count == 0:
+            return
+        if not st.live:
+            # !!! 停用期间**绝不能**把上一段的速率再打一遍 !!!
+            # inner_tick 在 ST_DISABLED 提前返回，count/rate 会冻在上一段使能的
+            # 值上。原来这里照打，我因此误判过两次（"内环停了" / "桥接仍是
+            # enabled"）。陈旧读数与当前读数长得一样，是最难查的一类。
+            self.get_logger().info(
+                '内环已停用；上一段使能期间实测拍率 %.1fHz（%d 拍，'
+                '钳位 %d 次）。**这是历史值，不是当前拍率。**'
+                % (st.rate_hz, st.count, st.clamp_count))
+            return
+        self.get_logger().info(
+            '内环实测拍率 %.1fHz（标称 %.1f，比例 %.2f）平均步长 %.4fs '
+            '本段累计 %d 拍，钳位 %d 次(%.2f%%)。'
+            '★ 拍率只反映调度 —— 积分已改用实测 dt，拍率低不再等于速度损失。'
+            '★ 统计窗口在每次 enable 时重开，所以这是**本段**均值。'
+            % (st.rate_hz, self.core.cfg.freq,
+               st.rate_hz / self.core.cfg.freq if self.core.cfg.freq else 0.0,
+               st.mean_dt, st.count, st.clamp_count, 100.0 * st.clamp_ratio))
 
     def _publish_odom(self):
         """把 SDK 的底盘位姿发成 Odometry。

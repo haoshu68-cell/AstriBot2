@@ -26,6 +26,7 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
 from astribot_trajectory_bridge.arm_traj_bridge_node import ArmTrajBridgeNode
+from astribot_trajectory_bridge.callback_layout import executor_thread_count
 from astribot_trajectory_bridge.chassis_cmd_bridge_node import ChassisCmdBridgeNode
 from astribot_trajectory_bridge.sdk_session import SdkSessionError, open_session
 
@@ -90,23 +91,25 @@ def main(args=None):
         rclpy.try_shutdown()
         return 2
 
-    # 线程数 = 节点数 * 4 + 2 余量。
+    # 线程数不再硬编码，由每个节点声明的回调组数推出（callback_layout）。
     #
-    # !!! 为什么是 4 而不是 2 !!!
-    # 每个桥接节点的互斥回调组数量是线程数的下限：底盘有 4 个
-    # (cmd_vel / 内环 / 外环 / 服务)，机械臂有 3 个。互斥组之间必须能并发，
-    # 否则组再分开也没用 —— 抢不到线程照样串行。
-    # 原公式 len*2+2 在底盘拆出 cmd_group 之后变成 6 线程 / 7 个组，
-    # 正好卡在不够用的边界上（见 chassis_cmd_bridge_node.py 里 cmd_group 的说明：
-    # 内环把组占满会让 cmd_vel 回调一次都执行不到，机器人静止且毫无告警）。
-    # 给足线程是必要的：不够时 cancel 回调会排在 execute 后面，取消就失效了。
-    num_threads = len(nodes) * 4 + 2
+    # !!! 为什么不能写 len(nodes) * 常数 !!!
+    # 互斥回调组只保证**组内**串行，不保证组间能并发 —— 线程不够时组照样排队，
+    # 拆组等于没拆。原公式 `len(nodes) * 2 + 2` 在底盘拆出 cmd_group 之后是
+    # 6 线程 / 7 个组，正好卡在不够用的边界上：内环把组占满，`cmd_vel` 回调
+    # 一次都执行不到，机器人静止且**毫无告警**（见 chassis_cmd_bridge_node.py
+    # 里 cmd_group 那段）。改成 `* 4` 只是把数字调大，下次谁加第 5 个组还会再犯。
+    # 现在组数与线程数出自同一份声明，加组会自动加线程。
+    num_threads = executor_thread_count(
+        [type(n).CALLBACK_GROUPS for n in nodes])
     executor = MultiThreadedExecutor(num_threads=num_threads)
     for n in nodes:
         executor.add_node(n)
 
-    _BootLogger.info('桥接容器就绪：%d 个节点，%d 个执行线程'
-                     % (len(nodes), num_threads))
+    _BootLogger.info('桥接容器就绪：%d 个节点，%d 个回调组，%d 个执行线程'
+                     % (len(nodes),
+                        sum(len(type(n).CALLBACK_GROUPS) for n in nodes),
+                        num_threads))
     try:
         executor.spin()
     except KeyboardInterrupt:

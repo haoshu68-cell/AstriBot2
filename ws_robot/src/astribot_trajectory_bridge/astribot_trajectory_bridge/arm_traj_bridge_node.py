@@ -32,6 +32,7 @@ from astribot_trajectory_bridge.arm_bridge_core import (
     WaypointDispatcher,
 )
 from astribot_trajectory_bridge.arm_traj_math import reshape_waypoints
+from astribot_trajectory_bridge.callback_layout import ARM_GROUPS, make_groups
 from astribot_trajectory_bridge.gripper_core import (
     GripperConfig,
     GripperController,
@@ -71,6 +72,10 @@ def _srv_code(name):
 
 class ArmTrajBridgeNode(Node):
 
+    #: 本节点的回调组，容器据此算线程数。加组只改 callback_layout。
+    #: 'exec' 是可重入组，其余互斥 —— 可重入组不串行，但仍要占线程才能并发。
+    CALLBACK_GROUPS = ARM_GROUPS
+
     def __init__(self, session, node_name='arm_traj_bridge'):
         super().__init__(node_name)
         self._declare_params()
@@ -88,9 +93,14 @@ class ArmTrajBridgeNode(Node):
 
         groups = self.get_parameter('groups').value
         name_map = self._parse_name_map()
-        # Action 执行必须可重入：cancel 回调要在 execute 还在跑的时候被处理
+        # 回调组按 callback_layout.ARM_GROUPS 声明式建立。'exec' 必须**可重入**：
+        # cancel 回调要在 execute 还在跑的时候被处理，所以它单独用 Reentrant 建，
+        # 不走 make_groups（后者统一用调用方给的一种 factory）。
+        cb_groups = make_groups(
+            [g for g in ARM_GROUPS if g != 'exec'],
+            MutuallyExclusiveCallbackGroup, 'arm_traj_bridge')
         exec_group = ReentrantCallbackGroup()
-        srv_group = MutuallyExclusiveCallbackGroup()
+        srv_group = cb_groups['srv']
 
         for grp in groups:
             part = name_map.get(grp)
@@ -137,7 +147,7 @@ class ArmTrajBridgeNode(Node):
         #
         # 与手臂 Action 的 exec_group 也是分开的，所以"手臂还在走、同时开夹爪"
         # 在 MultiThreadedExecutor 下可以真正并发。
-        grip_group = MutuallyExclusiveCallbackGroup()
+        grip_group = cb_groups['grip']
         self._gripper = self._build_gripper(session)
         if self._gripper is not None:
             self.create_service(SetGripper, '~/set_gripper',

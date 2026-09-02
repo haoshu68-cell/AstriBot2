@@ -53,6 +53,16 @@ uint8 CONFIG_FALLBACK = 5
 # 控制循环周期超限。metric_1=实测周期 P99(s)，metric_2=目标周期(s)。
 uint8 LOOP_OVERRUN = 6
 
+# 内环步长被钳位（实测 dt 超过 max_tick_dt_sec，或时钟未前进）。
+# metric_1=钳位前的实测步长(s)，metric_2=上限(s)。
+#
+# 为什么要单独一个枚举而不复用 LOOP_OVERRUN
+# ----------------------------------------
+# LOOP_OVERRUN 只说"这一拍慢了"，是**观测**；TICK_DT_CLAMPED 说的是
+# "我改了积分步长"，是**动作**。步长直接乘在速度上，被钳位就意味着底盘这一拍
+# 的位移被人为压小了 —— 静默钳位等于静默改变底盘速度，必须单独可见。
+uint8 TICK_DT_CLAMPED = 7
+
 # --- 底盘专用 ---
 
 # /cmd_vel 看门狗触发，速度已置零。metric_1=距上一条指令的秒数。

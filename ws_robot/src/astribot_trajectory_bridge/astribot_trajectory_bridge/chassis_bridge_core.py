@@ -30,11 +30,14 @@
   就不发了），不该因此进入故障态。
 """
 
+import collections
+
 from astribot_trajectory_bridge.chassis_integrator import (
     ChassisConfigError,
     IDX_THETA,
     clamp_velocity,
-    integrate_step,
+    integrate_step_dt,
+    measure_tick_dt,
     slew_limit_velocity,
     to_local_velocity,
     wrap_angle,
@@ -73,6 +76,18 @@ S_ODOM_DRIFT_HIGH = 'ODOM_DRIFT_HIGH'
 S_CORRECTION_DEGENERATE = 'CORRECTION_DEGENERATE'
 S_SLAM_LOST_STOPPED = 'SLAM_LOST_STOPPED'
 S_POSE_PORT_FAILED = 'POSE_PORT_FAILED'
+#: 内环步长被钳位。metric_1=钳位前的实测步长(s)，metric_2=上限(s)。
+#: 偶发说明调度抖动，持续出现说明内环真的跟不上，两种都必须可见 ——
+#: 步长直接乘在速度上，静默钳位等于静默改变底盘速度。
+S_TICK_DT_CLAMPED = 'TICK_DT_CLAMPED'
+
+#: :meth:`ChassisBridgeCore.tick_stats` 的返回值。
+#: ``rate_hz`` 是 count / 墙钟时长，**无偏** —— 与只在超阈时上报的
+#: LOOP_OVERRUN 不同，后者的周期均值是截尾样本，不能当平均周期用。
+#: ``live``：统计窗口是否**正在累积**（核心处于使能态）。停用后 count/rate 会
+#: 停在上一段使能期间的值上，若不带这个标志，陈旧读数与当前读数长得一模一样。
+TickStats = collections.namedtuple(
+    'TickStats', 'count mean_dt rate_hz clamp_count clamp_ratio live')
 
 
 class StatusEvent:
@@ -106,7 +121,8 @@ class ChassisBridgeConfig:
                  kp_xy=0.35, kp_theta=0.40,
                  max_corr_vel_xy=0.10, max_corr_vel_theta=0.20,
                  require_slam_to_enable=False, slam_loss_grace_sec=2.0,
-                 odom_drift_window_sec=2.0, odom_drift_warn_m=0.15):
+                 odom_drift_window_sec=2.0, odom_drift_warn_m=0.15,
+                 max_tick_dt_sec=0.04):
         self.part_name = part_name
         self.freq = float(freq)
         self.input_frame = input_frame
@@ -116,6 +132,13 @@ class ChassisBridgeConfig:
         self.max_vel_theta = float(max_vel_theta)
         self.max_accel_xy = float(max_accel_xy)
         self.max_accel_theta = float(max_accel_theta)
+        # 内环步长上限。默认 0.04s = 标称 4ms 的 10 倍。
+        #
+        # 怎么定的：实测超时周期最大 14.9ms（≈3.7 倍），取 10 倍留足余量，
+        # 正常抖动不会被钳（钳了就等于没修这个缺陷）。上界的物理含义是
+        # **单拍最大位移** = max_vel_xy * max_tick_dt_sec = 1.0 * 0.04 = 0.04m，
+        # 必须远小于 leash_xy_m=0.25 —— 否则一次调度停顿就能把 leash 撞开。
+        self.max_tick_dt_sec = float(max_tick_dt_sec)
         self.leash_xy_m = float(leash_xy_m)
         self.leash_theta_rad = float(leash_theta_rad)
         self.require_manual_reset = bool(require_manual_reset)
@@ -138,6 +161,24 @@ class ChassisBridgeConfig:
             raise ChassisConfigError(
                 'cmd_vel_timeout_sec=%r 必须为正：看门狗是 cmd_vel 断流时的'
                 '唯一止损，不允许关闭。' % (self.cmd_vel_timeout_sec,))
+        # 步长上限的两条硬约束，任一不满足都直接拒绝启动：
+        #   ① 不能小于标称步长 —— 否则连正常拍都被钳，积分恒等于钳位值；
+        #   ② 单拍最大位移必须远小于 leash —— 否则一次停顿就能把 leash 撞开，
+        #      而 leash 是这条开环位置链路上唯一的硬保护。
+        nominal_dt = 1.0 / self.freq if self.freq > 0.0 else float('inf')
+        if self.max_tick_dt_sec < nominal_dt:
+            raise ChassisConfigError(
+                'max_tick_dt_sec=%r 小于标称步长 1/freq=%r：那样每一拍都会被钳位，'
+                '积分恒等于钳位值，等于没修"按标称频率积分"这个缺陷。'
+                % (self.max_tick_dt_sec, nominal_dt))
+        max_tick_disp = self.max_vel_xy * self.max_tick_dt_sec
+        if max_tick_disp >= self.leash_xy_m:
+            raise ChassisConfigError(
+                'max_vel_xy=%r × max_tick_dt_sec=%r = %.4fm，已达到 leash_xy_m=%r。'
+                '单拍位移必须远小于 leash，否则一次调度停顿就能把 leash 撞开 —— '
+                'leash 是开环位置链路上唯一的硬保护。请减小 max_tick_dt_sec。'
+                % (self.max_vel_xy, self.max_tick_dt_sec, max_tick_disp,
+                   self.leash_xy_m))
         validate_leash_config(self.leash_xy_m, self.leash_theta_rad)
         validate_correction_config(self.kp_xy, self.kp_theta,
                                    self.max_corr_vel_xy, self.max_corr_vel_theta,
@@ -167,6 +208,17 @@ class ChassisBridgeCore:
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
         self._prev_vel_out = (0.0, 0.0, 0.0)
+
+        # ---- 内环步长与拍率统计 ----
+        # `_tick_count` / `_tick_dt_sum` 是**无偏**计数：每一拍都计，不像
+        # LOOP_OVERRUN 只在超阈时才报。LOOP_OVERRUN 的周期均值是截尾样本的均值，
+        # 拿它反推拍率会算出 91Hz，而时间账反解的下界是 ≥157Hz —— 差 1.7 倍。
+        # 真实拍率至今没有无偏测量值，这两个字段就是为了补上它。
+        self._prev_tick_time = None
+        self._tick_first_time = None
+        self._tick_count = 0
+        self._tick_dt_sum = 0.0
+        self._tick_clamp_count = 0
 
         self._p_des_map = None
         self._p_slam_prev = None
@@ -220,6 +272,17 @@ class ChassisBridgeCore:
         self._prev_vel_out = (0.0, 0.0, 0.0)
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
+        # !!! 必须清掉上一次使能留下的时间戳 !!!
+        # 不清的话，disable 停了一段时间再 enable，第一拍算出来的 dt 就是那整段
+        # 停机时长；乘上速度就是一次巨大的位置阶跃。虽然会被 max_tick_dt_sec
+        # 钳住，但那属于"靠钳位兜住逻辑错误"，不是设计意图。置 None 走首拍分支。
+        self._prev_tick_time = None
+        # 拍率统计窗口也必须一起重开 —— 2026-09-01 实机踩到的：
+        # 原来只清 _prev_tick_time 而留着 _tick_first_time，于是
+        # rate = count / (_prev_tick_time - _tick_first_time) 的**分母**把
+        # disabled 的那段时长也算进去了。实测表现是 65 拍报成 165.4Hz
+        # （真值 ~238Hz），停得越久报得越低，而且看不出异常。
+        self._reset_tick_window()
         self.corr_per_tick = (0.0, 0.0, 0.0)
         self._p_slam_prev = None
         self._pose_lost_since = None
@@ -302,6 +365,26 @@ class ChassisBridgeCore:
         if self.state in (ST_DISABLED, ST_LEASH_TRIPPED, ST_STOPPED_NO_POSE):
             return False
 
+        # ---- 步长用**实测**值，不用 1/freq ----
+        # 底盘是位置接口：物理速度 = 每拍增量 × 墙钟拍率。按 1/freq 积分而实际
+        # 拍率更低时，底盘只有指令速度的 (实际拍率/freq)。实测拍率下界 ≥157Hz，
+        # 即最多只跑到指令的 63%。改用实测 dt 后拍率快慢不再影响速度。
+        # 钳位是必需的：dt 直接乘在速度上，一次停顿就是一次位置阶跃。
+        tick = measure_tick_dt(self.clock.now(), self._prev_tick_time,
+                               1.0 / self.cfg.freq, self.cfg.max_tick_dt_sec)
+        now_tick = self.clock.now()
+        if self._tick_first_time is None:
+            self._tick_first_time = now_tick
+        self._prev_tick_time = now_tick
+        dt = tick.dt
+        self._tick_count += 1
+        self._tick_dt_sum += dt
+        if tick.clamped:
+            self._tick_clamp_count += 1
+            self._emit(S_TICK_DT_CLAMPED, tick.reason,
+                       tick.raw if tick.raw is not None else 0.0,
+                       self.cfg.max_tick_dt_sec)
+
         # 看门狗：只把速度置零，不改状态（cmd_vel 短暂中断是正常工况）
         vel_in = self._last_twist
         if self._last_twist_time is None:
@@ -315,14 +398,17 @@ class ChassisBridgeCore:
                            idle, self.cfg.cmd_vel_timeout_sec)
 
         vel = clamp_velocity(vel_in, self.cfg.max_vel_xy, self.cfg.max_vel_theta)
-        dt = 1.0 / self.cfg.freq
+        # !!! 行为变化 !!! 用实测 dt 后，加速度限幅按 a*dt 放行，每秒允许的
+        # 速度变化回到配置的 max_accel；此前按 1/250 计算，实际只放行了
+        # (实际拍率/250) 倍，也就是一直比配置**更保守**。这是有意修正，
+        # 但它会让加速更快 —— 属运动行为变化，必须上机验。
         vel = slew_limit_velocity(vel, self._prev_vel_out,
                                   self.cfg.max_accel_xy, self.cfg.max_accel_theta, dt)
         self._prev_vel_out = vel
 
         v_local = to_local_velocity(vel, self.cfg.input_frame,
                                     self.pos_cmd[IDX_THETA] - self.theta_ref)
-        self.pos_cmd = integrate_step(self.pos_cmd, v_local, self.cfg.freq)
+        self.pos_cmd = integrate_step_dt(self.pos_cmd, v_local, dt)
 
         # 供外环推进 p_des_map 用的本体位移累积
         self._body_disp_accum[0] += v_local[0] * dt
@@ -361,6 +447,59 @@ class ChassisBridgeCore:
             self._emit(S_SDK_CALL_FAILED, '下发位置失败：%s' % exc)
             return False
         return True
+
+    def tick_stats(self):
+        """内环拍率的**无偏**统计。
+
+        ════════════════ 为什么必须是无偏的 ════════════════
+        此前唯一能看到拍率的东西是 `LOOP_OVERRUN`，而它**只在周期 > 阈值时上报** ——
+        是截尾样本。拿它的周期均值（9.26ms）反推拍率会得到 91Hz，而由超时**发生率**
+        （11.4~18.0 次/秒）做时间账反解，下界是 **≥157Hz** —— 差 1.7 倍。
+        据前者算出的"底盘只有指令速度的 36%"是错的。
+
+        这里每一拍都计入，所以 `count / 墙钟时长` 就是真实平均拍率，无需推断。
+
+        ════════════════ live 字段：为什么读数必须自带有效性 ════════════════
+        `inner_tick` 在 `ST_DISABLED` 下提前返回，所以停用期间计数**不再增长**
+        —— 这是对的。但那意味着停用后再读到的 count/rate 全是**上一段使能期间的
+        陈旧值**。2026-09-01 我就被这个骗了两次：先据此断言"内环停了"，
+        又据此断言"桥接仍是 enabled"，两次都错。
+
+        这与 map_odom_tf 那个"陈旧 TF 被 lookup_transform(Time()) 当成最新返回"
+        是**同一类缺陷**：一个不再更新的量，被下游当成当前值。
+        所以这里把"窗口是否还在累积"做成返回值的一部分，调用方拿不到一个
+        看起来正常、实则过期的数字。
+
+        Returns:
+            :class:`TickStats`，含 ``live``：True 表示统计窗口正在累积
+            （核心处于使能态），False 表示读到的是陈旧值。
+            未跑过任何一拍时全 0 且 ``live=False``。
+        """
+        live = self.state == ST_ENABLED
+        if self._tick_count == 0 or self._tick_first_time is None:
+            return TickStats(0, 0.0, 0.0, self._tick_clamp_count, 0.0, live)
+        elapsed = self._prev_tick_time - self._tick_first_time
+        # 只有一拍时 elapsed=0，此时算不出速率，报 0 而不是除零。
+        rate = (self._tick_count / elapsed) if elapsed > 0.0 else 0.0
+        return TickStats(
+            self._tick_count,
+            self._tick_dt_sum / self._tick_count,
+            rate,
+            self._tick_clamp_count,
+            self._tick_clamp_count / self._tick_count,
+            live)
+
+    def _reset_tick_window(self):
+        """重开拍率统计窗口。``enable()`` 必须调 —— 否则速率分母会含停机时长。"""
+        self._prev_tick_time = None
+        self._tick_first_time = None
+        self._tick_count = 0
+        self._tick_dt_sum = 0.0
+        self._tick_clamp_count = 0
+
+    def reset_tick_stats(self):
+        """重置拍率统计窗口。诊断时想看"当前"拍率而非整段使能的均值时用。"""
+        self._reset_tick_window()
 
     # ---------------- 外环 ----------------
 

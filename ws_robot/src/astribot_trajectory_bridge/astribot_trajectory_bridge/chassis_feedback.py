@@ -239,6 +239,20 @@ def slice_correction(correction, inner_freq, outer_rate):
 
     外环 10 Hz 算出的校正量若在一个内环周期（4 ms）内一次性加上，就是一个位置
     阶跃；摊到 25 个内环周期上则是平滑的。
+
+    ════════════════ 已知遗留：这里仍用**标称**频率 ════════════════
+    切片份数按 ``inner_freq / outer_rate`` = 25 算，但内环实测拍率只有下界
+    ≥157Hz —— 两次外环之间真实只跑了 15.7~25 拍，所以校正量最多只施加了 63%。
+    内环积分已于本次改用实测 dt（见 chassis_integrator.measure_tick_dt），
+    **这里刻意没有一起改**，理由：
+
+    · 少施加校正是**保守**方向（收敛慢），多施加才会过冲；
+    · 一次改两条控制通路会让上机验证分不清是哪条的效果；
+    · 正确的修法是把校正表达成**速度**、和位移用同一个 dt 积分，
+      那是更大的重构，不该混在这次里。
+
+    改它之前先想清楚：拍率估计偏高会让校正过冲，而这条链路上
+    ``max_corr_vel_xy`` 是唯一的兜底。
     """
     ticks = max(1, int(round(inner_freq / outer_rate)))
     return (correction[0] / ticks, correction[1] / ticks, correction[2] / ticks)
