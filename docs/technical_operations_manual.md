@@ -1,6 +1,13 @@
 # Astribot S1 双臂轮式机器人 —— 完整技术操作手册
 
-> 归档版本：2026-08-20 · 分支 `chassis-effort-drive` · 基线提交 `8a3c3a9`
+> 归档版本：2026-08-28 · 分支 `chassis-effort-drive` · 基线提交 `34806ed`
+>
+> 本次修订：新增三段式路径跟踪(§3.3.1)、跟踪期重规划策略与冷启动自举(§2.3)、
+> 状态与诊断回流(§2.7)、Gazebo 栈运行(§6.2)；配置耦合项 9 → 20 条（其中 13 条已有
+> 跨包自动化测试）；测试计数与就绪判据按 2026-08-28 实跑更新。
+> 2026-08-31 追加：起点落在致命区的分类与排查(§8.5 专条)、相位计时器锁死、
+> `sem.fastrtps_*` 残留(§6.7)、清场必须先杀 `ros2` 父进程(§6.7)。
+> **§2.5/2.6/2.8、§3.5/3.8/3.9、§4、§6.3/6.6 仍为待补** —— 见文末待补清单。
 >
 > 本手册是**全栈总入口**：架构、数据流、算法与参数、部署、配置、运行、就绪校验、故障定位。
 > 深水区细节不在本手册内重复，而是逐处给出定位链接（见 §0.2 文档地图）。
@@ -33,8 +40,10 @@
 
 | 你的问题 | 查这里 |
 |---|---|
+| **第一次上手：一条命令把仿真跑起来** | [`ws_robot/README.md`](../ws_robot/README.md) §7.3（自主探索+建图，含四个必踩坑）|
 | 全栈怎么跑起来、坏了怎么查 | **本手册** |
 | 某个设计为什么是这样、某个方案为什么被否 | [`sim_real_alignment.md`](sim_real_alignment.md) |
+| 起点落在致命区 / 开阔区却走不动，怎么脱困 | [`lethal_start_and_controller_stall_recovery.md`](lethal_start_and_controller_stall_recovery.md)（**设计稿，未实现**）|
 | 实机（Orin / aarch64）怎么部署 | [`real_robot_deployment.md`](real_robot_deployment.md) |
 | 多层切片 / SLAM / Nav2 参数逐项 | [`astribot_s1_perception/README_PERCEPTION.md`](../ws_robot/src/astribot_s1_perception/README_PERCEPTION.md)、[`README_NAVIGATION.md`](../ws_robot/src/astribot_s1_navigation/README_NAVIGATION.md) |
 | 探索协调器状态机与验收 | [`astribot_s1_autonomy/README.md`](../ws_robot/src/astribot_s1_autonomy/README.md) |
@@ -159,10 +168,19 @@
 
 ### 2.1 感知链：两颗雷达 → 多层切片 → `/scan`
 
+> ⚠️ **2026-09-01：实机上这条链一个进程都没在跑**，`/scan` 与
+> `/livox/cloud_self_filtered` 发布者数均为 0，所以**实机当前没有动态避障**。
+> 卡点是消息类型：厂商驱动发 `livox_ros_driver2/msg/CustomMsg`（`xfer_format=1`，
+> SLAM 需要它），而 `livox_fusion_node` 与切片链订阅的是 `PointCloud2`。
+> 中间缺一个转换环节。下图描述的是**设计**，不是实机现状。
+>
+> 另：实机两路点云的 `frame_id` 都是 `livox_frame`（不是 `lidar_left/right`），
+> 且外参已由驱动写进雷达设备，back 的点已在 front 系里。
+
 ```
-[sim]  /livox_mid360_left/points ─┐        [hw]  /livox/lidar_left ─┐
-       /livox_mid360_right/points ┘              /livox/lidar_right ┘
-                    │
+[sim]  /livox_mid360_left/points ─┐        [hw]  /livox/lidar_front ─┐
+       /livox_mid360_right/points ┘              /livox/lidar_back  ┘
+                    │                            (均为 CustomMsg，frame_id=livox_frame)
                     ▼  livox_preprocess_node ×2
        range_min 0.35（**3D 球面距离** √(x²+y²+z²)）、ground_z_min -0.18
                     │
@@ -225,6 +243,59 @@ global_costmap ─────────────────────�
 换数据源时距离阈值也要跟着换口径 —— 实测过的三个错值：`0.42`（重复计足迹）、
 `0.0`（导航超时）、`0.25`（= `xy_goal_tolerance`，正确）。
 
+**下发方式有两条，默认走 `follow_path`（`nav_dispatch_mode`）：**
+
+| 模式 | 交给 Nav2 的东西 | 得到什么 | 失去什么 |
+|---|---|---|---|
+| `follow_path`（默认）| **刚刚通过双层校验的那条路径** | 跟踪的就是被校验过的路径，省一次重规划 | BT 的重规划与全套恢复行为，必须由协调器自己补 |
+| `navigate_to_pose` | 只发目标点 | BT 的 1Hz 重规划 + 恢复行为 | bt_navigator 会**另规划一条没被校验过的**路径 |
+
+`follow_path` 模式下 `bt_navigator` 不在链路上，所以 BT xml 里的 `controller_id`
+不再生效 —— 实际用哪个控制器由协调器的 `follow_controller_id` 决定（默认 `FollowPathExplore`）。
+这一项写错的现象是**每次 FollowPath 直接 abort、机器人从头到尾不跟踪任何路径**，
+真因只在 `~/.ros/log/controller_server_*.log` 里。
+
+**跟踪期什么时候才换路径（`replan_policy`，默认 `on_invalid`）** ✅ 实测（Gazebo）
+
+`follow_path` 模式必须自己补重规划，但**不能无条件周期重规划**。实测代价：
+
+> 36 个目标共下发 **393 次** `FollowPath`，平均每个目标换 **10.9 条路径**，
+> 新路径节拍约 1.5s —— **没有任何一条路径被跟踪到位过**。
+
+改成"只有当前路径失效才换"之后：换路径倍率 **10.92 → 1.40**
+（这一项是策略的直接后果，不是统计波动）。同时观察到到位偏差均值 0.096 → 0.063 m，
+但两轮跑的是地图的不同部分、样本量也不同（n=26 vs n=25），
+**不足以把精度改善归因到这个改动**，只作为"没有变差"的记录。
+`Failed to make progress` 里"协调器攥着无效路径"这一类为 2 次
+（其余 12 次是控制器侧既有问题，见 §3.3）。
+
+| 触发条件 | 判据 | 说明 |
+|---|---|---|
+| 控制器已中止 | `replan_forced_` | 当前路径事实上已作废 |
+| 剩余段不可通行 | 只校验**剩余段** | 身后新观测到的障碍与"还能不能继续往前"无关 |
+| 偏离当前路径 | `> path_deviation_limit_m` | 这条路径不再描述机器人的处境 |
+| 路径超龄 | `> path_max_age_sec`（0=不启用）| 纯兜底；设小值等于退回周期重规划 |
+
+⚠️ **不得沿用已判死的路径。** "剩余段不可通行 → 重规划 → 新路径也不合法 → 沿用当前路径"
+这条兜底等于明知走不通还往里顶，实测顶了 **17.0 秒**才被 progress checker 救回来。
+现在连续 `max_invalid_replan_attempts`（默认 3）次拿不到合法替代就撤目标另选前沿，
+实测 **17.0s → 4.00s**，且不再依赖 progress checker 兜底。
+
+**冷启动自举（`BOOTSTRAP` 状态）** ✅ 实测（Gazebo，强制触发）
+
+`slam_toolbox` 只在机器人移动超过 `minimum_travel_heading`(本项目 0.2 rad) 之后才插入新扫描，
+于是形成闭环死锁：**地图空 → 协调器不下发目标 → 机器人不动 → 地图空**。
+以前每次冷启动都要人工发 `cmd_vel` 推一把（实测地图 0 → 26 m²）。
+
+这里还藏着一个**假 COMPLETED**：`mapReady()` 查的是消息层（收到了、自洽、不超时），
+冷启动时它全部通过，而地图一个已知格都没有 —— 前沿格数也是 0，
+只看前沿格数会把"还没开始"判成"探索完成"。所以判据必须加一条已知格数下限
+（`min_known_cells_for_decision`）。
+
+自举本身只做**原地旋转**，实测每次转出 1.35~1.48 rad（名义 0.40×4.0=1.6，
+即下游总缩放约 0.85，远好于按最坏耦合限速估的 0.15）。设计约束逐条见
+[`astribot_s1_autonomy/README.md`](../ws_robot/src/astribot_s1_autonomy/README.md)。
+
 ### 2.4 导航链：Nav2 → 两级限速 → 底盘执行
 
 这条链的话题名经过多次重映射，**不看 launch 无法还原**，而中间任何一环缺失都表现为"机器人不动"：
@@ -267,6 +338,44 @@ controller_server（内部 cmd_vel，车体系）
 ### 2.6 夹爪链
 
 ### 2.7 状态与诊断回流
+
+**设计规则（需求硬性要求）：状态输出走专用 status 话题，枚举所有故障状态，禁止静默失败。**
+排查时应当**先读状态话题再读日志** —— 状态话题是单行字段化的，一眼能看完；
+日志要在几万行里翻。
+
+| 话题 | 类型 | QoS | 内容 |
+|---|---|---|---|
+| `/exploration/state` | `std_msgs/String` | volatile(1) | 状态机对外**唯一**状态出口，单行字段化 |
+| `/exploration/complete` | `std_msgs/Bool` | **transient_local**(1) | 探索完成标志；只在跳变时发，晚订阅也能收到 |
+| `/exploration/current_goal` | `geometry_msgs/PoseStamped` | volatile(1) | 已下发的目标，仅供 RViz 观察 |
+| `/explore/status` | `std_msgs/String` | volatile | 前沿搜索节点（候选建议流）自己的状态 |
+
+`/exploration/state` 的字段含义（✅ 实测取自活的系统）：
+
+```
+state=PAUSED goal_in_flight=0 candidate=0/0 dispatched=35 succeeded=25 rejected=2012
+nav_fail=0/3 sample_fail=5/4 auto_resume=3/3
+bootstrap=3/6 bootstrap_result=成功转出 1.445655rad path_pts=0 replan_policy=on_invalid
+```
+
+| 字段 | 读法 |
+|---|---|
+| `state` | 状态机枚举名，见 §3.2 |
+| `goal_in_flight` | 严格单点推进的硬保险；`state=NAVIGATING` 而此处为 0 = 结果回调丢了 |
+| `candidate=i/n` | 本轮候选队列进度 |
+| `dispatched` / `succeeded` / `rejected` | 累计下发 / 收敛 / 候选被拒 |
+| `nav_fail=a/b` `sample_fail=a/b` `auto_resume=a/b` | 三个失败计数器，`a` 到 `b` 即转 PAUSED / 停止重试 |
+| `bootstrap=a/b` | 自举次数 / 上限；成功下发目标后清零 |
+| `bootstrap_result` | 最近一次自举结论。**被安全门拦下也在这里**，不用翻日志 |
+| `path_pts` | 当前在跟踪的路径顶点数；`NAVIGATING` 而此处为 0 = 路径记录丢了 |
+| `replan_policy` | 当前生效的重规划策略，确认没有误用回退配置 |
+
+⚠️ 上面这份真实输出里 `sample_fail=5/4` 已超上限、`auto_resume=3/3` 已用尽 ——
+这是探索**自然结束**的样子（地图里只剩零散前沿格、无有效前沿块），不是故障。
+区分方法见 §3.2 的「三种终止情形」。
+
+**除此之外，本栈没有统一的 `/diagnostics` 聚合**。其余节点的健康状况只能从各自
+`RCLCPP_WARN/ERROR` 日志观察，属于已知缺口（附录 B）。
 
 ### 2.8 全局时序与时钟
 
@@ -335,6 +444,55 @@ controller_server（内部 cmd_vel，车体系）
 ⚠️ **`goal_unknown_clearance_radius` ≥ 地图分辨率会按定义否掉每一个前沿候选**（实测 6775/6784），
 `dispatched` 恒为 0，机器人永远不动。这个症状离根因有三层远。
 
+⚠️ `arrival_xy_tolerance` 当前实际值是 **0.25**（上表 0.30 是旧值，以
+[`exploration_coordinator_params.yaml`](../ws_robot/src/astribot_s1_autonomy/config/exploration_coordinator_params.yaml) 为准）。
+
+**状态机（8 个状态）**
+
+```
+IDLE → GEN_NEXT_POINT → VALIDATING → NAVIGATING → ARRIVED → GEN_NEXT_POINT → …
+  ↑         ↓                                                      ↓
+  └── BOOTSTRAP（原地旋转，一律回 IDLE）          PAUSED / COMPLETED
+```
+
+除需求点名的四状态主闭环外，另四个状态各有不可省略的理由：
+
+| 状态 | 为什么必须有 |
+|---|---|
+| `VALIDATING` | 路径校验要调 `ComputePathToPose`（**异步 action**），不能在回调线程里阻塞等结果 —— 会把执行器卡死，TF 和地图全收不到。它是 `GEN_NEXT_POINT` 的子步骤 |
+| `PAUSED` | 需要一个「冻结但未结束」的表达，用来区分"暂时走不动"和"探索完成" |
+| `COMPLETED` | 对应"探索边界无合法已知区域可前进 → 自动停止" |
+| `BOOTSTRAP` | 破 SLAM 冷启动死锁，见 §2.3 |
+
+**三种终止情形（判反了会让上层提前停止探索）**
+
+| 观察到的 | 真实含义 | 应进入 |
+|---|---|---|
+| 前沿格 0 **且**已知格 ≥ `min_known_cells_for_decision` | 真的探索完了 | `COMPLETED` |
+| 前沿格 0 **但**地图几乎全是未知 | 还**没开始** | `BOOTSTRAP` |
+| 有前沿格但候选点全不合法 | 暂时找不到合法通路 | `PAUSED` |
+
+第二条是实测踩出来的：`mapReady()` 查的是**消息层**（收到了、自洽、不超时），
+冷启动时它全部通过而地图一个已知格都没有 —— 只看前沿格数会把空地图判成"探索完成"。
+
+第三条也是探索**自然结束**的样子：✅ 实测一轮跑到 35 次下发 / 25 次收敛后，
+地图里剩 71 个零散前沿格但 0 个有效前沿块（都小于 `min_frontier_cells`），
+于是 `sample_fail` 到上限 → `PAUSED` → 自动恢复 3 次用尽 → 等人工。
+**这不是故障**，与"被困"的区别是 `nav_fail=0/3`（没有任何一次导航失败）。
+
+**三道时序锁（缺一道就可能重复下发）**
+
+| 锁 | 机制 |
+|---|---|
+| 状态锁 | 所有 tick / action 回调 / 服务回调在**入口**统一取 `state_mutex_`，一次 tick 就是一次原子推进 |
+| 在途锁 | `nav_goal_in_flight_` 原子量，下发前 `compare_exchange` |
+| 唯一下发点 | `dispatchNavGoal` / `dispatchFollowPath` 只允许从 `VALIDATING` 调用 |
+
+⚠️ **不变式：持有 `state_mutex_` 时不得发 action goal。** 违反它会死锁：
+被同步拒绝的 goal 会在同一个 `MutuallyExclusive` 回调组上重新进入响应回调、
+二次取同一把非递归锁 —— 实测现象是**节点整体静默 283 秒**（连 0.5s 的 tick 日志都没有，
+因为 tick 也要取这把锁）。
+
 ### 3.3 导航：代价地图与控制器
 
 | 参数 | 值 | 依据 |
@@ -350,6 +508,68 @@ controller_server（内部 cmd_vel，车体系）
 ⚠️ **MPPI 足迹代价在窄通道里饱和**：`consider_footprint: true` 时窄于 1.62 m 的通道内代价恒为 253、
 零梯度（实测占可行域 35%）。改 `false` 无收益已回退 —— **这张地图上根本测不出差别**，
 不要据此结论推广到别的场地。
+
+这条限制现在是链路上**唯一的实质瓶颈** ✅ 实测：一轮 35 次下发里 10 次导航失败，
+其中 8 次的直接原因就是它 —— 表现为"路径合法但机器人原地一动不动十几秒"，
+且**空间上高度聚集**（14 次 `Failed to make progress` 分布在 4 个点，其中 8 次在同一点）。
+恢复链条本身是好的：进度检查器 10s 检出 → 重试 1 次 → 判失败 → 另选点，约 24s 一轮。
+区分它与"协调器攥着无效路径"的方法：看同一目标周期内有没有出现过 `已判不可通行`。
+
+**足迹表示法两份配置不同（读参数时容易错）：**
+
+| 配置 | 表示法 | 外接半径 |
+|---|---|---|
+| `nav2_params_rpp.yaml` | `robot_radius: 0.42`（标量）| 0.42 |
+| `nav2_params_mppi.yaml` | `footprint`（正八边形多边形）| 0.420021（顶点 `(0.297,0.297)` 的模）|
+
+那 21 μm 是 yaml 里写坐标时的取整残差，不是安全裕度差异 —— 跨两份配置做数值比较时
+容差要留到 1 mm 量级，否则测试会变成噪声。内切半径 = 0.42·cos(22.5°) = **0.388**，
+所以原地旋转只扫过约 **3.2 cm** 的环带（这是 §2.3 自举只允许旋转的几何依据）。
+
+**goal checker 的三个陷阱**（每一个都实测过，现象都是"机器人完全不跟踪路径"）：
+
+1. `goal_checker_plugins` 列了**多项**时，`FollowPath` 的 `goal_checker_id` 端口**无默认值**，
+   传空字符串会让每次 FollowPath 直接 abort。所以列表保持**单项**，
+   `loose_goal_checker` 留在文件里但**不入列表**，仅作回退。
+2. `SimpleGoalChecker` **同时**卡位置和朝向。探索场景刻意跳过终点旋转，
+   实测位置 0.165 m 已达标而朝向差 **94.2°** → checker 永不满足。
+   解法是 `yaw_goal_tolerance: 3.15`（≈±180°，等于不约束），朝向约束改由控制器与协调器承担。
+3. `stateful: True` 会**锁存**位置判定。所以实测最终偏差可以略大于 `xy_goal_tolerance`：
+   机器人在某一瞬间进过容差球、判定锁存，然后蠕行滑出一点。
+   实测最大 0.20 m ≈ 0.18 锁存 + 0.02 滑行 —— 这不是超差 bug，
+   上限由 `arrival_xy_tolerance`(0.25) 兜住。
+
+### 3.3.1 路径跟踪：三段式控制器
+
+`astribot_s1_path_tracking::ThreePhaseController` 是本仓自研的 `nav2_core::Controller`
+插件，把跟踪拆成三段：
+
+```
+ALIGN_START（原地转向路径起始方向）→ FOLLOW（沿路径行驶）→ ALIGN_GOAL（原地转到目标朝向）
+```
+
+它内部**嵌套**一个真正的控制器（`inner:`，本项目是 MPPI）来做 FOLLOW 段。
+两个实例的差别只在最后一段：
+
+| 实例 | `align_goal_enabled` | 用于 |
+|---|---|---|
+| `FollowPathThreePhase` | true | 需要卡终点姿态的场景（如搬运）|
+| `FollowPathExplore` | **false** | 自主探索 —— 探索目标的朝向只是"让雷达看向未知区"的建议值 |
+
+⚠️ **`inner:` 块必须是完整的 MPPI 配置。** 实测手抄 15 行、漏掉 10 个 critics 的后果：
+MPPI 的代价函数**全部**来自 critics，漏掉 `PathFollowCritic`/`PathAlignCritic` 就没有东西
+把机器人往路径上拉 —— 现象是"起步对齐正常、机器人贴在路径上，但指令 vx 均值 −0.021（往后）、
+剩余距离来回晃、`Failed to make progress`"。这一条有跨包配置测试守着。
+
+⚠️ **纯旋转段与 progress checker 冲突。** `SimpleProgressChecker` 只量平移，
+而 ALIGN 段平移恒为 0、计时器照走 —— 实测 5.55s 旋转 + 4.50s 行驶 = 10.05s > 10s 必然失败。
+必须用 `nav2_controller::PoseProgressChecker`（旋转也算进展），
+且 `required_movement_angle` 必须**小于** `start_min_angle`，否则短对齐触发不了计时重置。
+
+⚠️ **周期重规划会重置相位。** 1 Hz 重规划下实测每个目标出现 **87 次**相位跃迁、
+12 次真实旋转（最长 6.76s）。解法是 `setPlan` 里用路径终点比对判"还是同一个目标"
+（`isSameGoal` / `new_goal_epsilon`），同一目标就保持相位。
+配合 §2.3 的 `on_invalid` 策略后，实测相位跃迁降到每目标约 2 次。
 
 ### 3.4 臂-底盘耦合限速
 
@@ -471,6 +691,8 @@ MJCF（几何/耦合）+ `whole_body_with_gripper.sdf`（碰撞 mesh/基座装�
 `astribot_s1_moveit_config/config/*.yaml` | SRDF、OMPL、kinematics、`joint_limits.yaml` |
 `astribot_s1_manipulation/config/manipulation_params.yaml` | 规划器选择、场景坐标 |
 `astribot_trajectory_bridge/config/arm_bridge.yaml` | 桥接状态机阈值、夹爪 |
+`astribot_s1_chassis_effort_drive/config/omni_effort_drive_params.yaml` | 底盘力矩闭环、`cmd_vel` 超时、leash |
+`astribot_s1_navigation/behavior_trees/*.xml` | 行为树（仅 `navigate_to_pose` 模式生效）|
 
 ### 5.2 高频修改场景
 
@@ -483,6 +705,9 @@ MJCF（几何/耦合）+ `whole_body_with_gripper.sdf`（碰撞 mesh/基座装�
 | 臂展开时更早限速 | `reach_full_m` 往小调 | —— |
 | 换 OMPL 规划器 | `planner_id` | `planning_attempts` 必须为 1；**核对注册行** |
 | 换地图来源 | `map_source.yaml` | 只有三种合法组合；`real_live` 需 `ROS_LOCALHOST_ONLY=0` |
+| 改跟踪期换路径的激进程度 | `replan_policy` / `path_deviation_limit_m` | 偏离阈值必须 **>** `arrival_xy_tolerance`，否则节点拒绝启动 |
+| 关掉/调整冷启动自举 | `bootstrap_*` | `bootstrap_min_yaw_delta` 必须 ≥ slam `minimum_travel_heading`；时长要按**最坏**耦合限速算 |
+| 换探索用的控制器实例 | `follow_controller_id` | 必须在某份 `controller_plugins` 里；跳过终点旋转时 `check_yaw` 必须为 false |
 
 在线改（大部分阈值支持，切片节点会在下一帧**原子地**整套换上，失败则保留上一份有效配置）：
 ```bash
@@ -493,11 +718,15 @@ ros2 param set /frontier_explorer_node search.weight_gain 10.0
 
 ### 5.3 改配置时必须同步的耦合项
 
-这九条违反了会让系统坏掉，且**症状离根因很远**：
+这些违反了会让系统坏掉，且**症状离根因很远**。
+标 🔒 的已有**跨包自动化测试**守着（`astribot_s1_navigation/test/test_config_consistency.py`，
+19 条，全部做过故障注入），其余靠这份清单和 yaml 注释。
 
 1. **`astribot_torso_base` 是全栈根 frame。** 写 `base_link` 会让 TF 永久失败，只有 WARN。
-2. `validator.goal_clearance_radius` **必须等于** controller 的 `xy_goal_tolerance`（0.25）。
-3. `arrival_xy_tolerance`（0.30）**必须 ≥** `xy_goal_tolerance`（0.25）。
+2. 🔒 `validator.goal_clearance_radius` 的下界是 controller 的 `xy_goal_tolerance`（0.25），
+   上界是 `robot_radius`（0.42）。**它是区间约束，不是等式** ——
+   早先按"必须等于"往下调到 0.18/0.10，实测 lethal 从 0 次涨到 **2159 次**。
+3. 🔒 `arrival_xy_tolerance`（0.25）**必须 ≥** `xy_goal_tolerance`（0.18）。
 4. 地图分辨率 0.05 时 `goal_unknown_clearance_radius` **必须为 0.0**。
 5. `validation.use_costmap: true` 与 `allow_unknown: false` **必须同向**。
 6. **`/map` 找前沿，`global_costmap` 判可站** —— 绝不互换。
@@ -505,6 +734,29 @@ ros2 param set /frontier_explorer_node search.weight_gain 10.0
    且 **SLAM 地图有记忆**，旧幽灵点要重新建图碾掉。
 8. 每个 `IncludeLaunchDescription` **必须显式传 `params_file`** 并包 `GroupAction(scoped=True)`。
 9. `scan_source` 是**一个**开关：改了 Nav2 话题却没起切片节点 = 代价地图零障碍。
+10. 🔒 `goal_checker_plugins` 保持**单项**。列多项时 `follow_goal_checker_id` 必须填，
+    否则每次 FollowPath 直接 abort（该 BT 端口无默认值）。
+11. 🔒 跳过终点旋转（`align_goal_enabled: false`）时，协调器 `check_yaw` **必须** false，
+    且 Nav2 `yaw_goal_tolerance` 必须放宽到 ≈不约束 —— 三处不同向就必然每个目标都判失败。
+12. 🔒 三段式的 `inner:` 块必须是**完整**的 MPPI 配置（含全部 10 个 critics）。
+13. 🔒 用了 `PoseProgressChecker` 时 `required_movement_angle` 必须 **<** `start_min_angle`。
+14. 🔒 `path_deviation_limit_m` 必须 **>** `arrival_xy_tolerance`，也必须 > `xy_goal_tolerance`。
+    否则收尾阶段的正常贴合误差被判成"已偏离"，每次快到目标时都换一条新路径。
+15. 🔒 `bootstrap_min_yaw_delta` 必须 **≥** slam_toolbox 的 `minimum_travel_heading`(0.2)，
+    否则自举会报"转够了"而 SLAM 并不插入新扫描 —— 一个看起来成功的空操作。
+16. 🔒 `bootstrap_angular_vel × bootstrap_duration_sec` 要按**最坏**下游限速
+    （耦合节点 `min_speed_scale`）算，不是按名义角速度。按名义算够、按最坏算不够，
+    表现为"有时能自举、有时静默转不动"——最难查的那类间歇故障。
+17. 🔒 `bootstrap_cmd_vel_topic` 不得是 `/cmd_vel`：直发会一次绕过 smoother、
+    倾倒监控、耦合限速、力矩闭环 leash 四层保护。
+18. 🔒 `bootstrap_cmd_rate_hz` 必须 ≥ 2/底盘 `cmd_vel_timeout_sec` —— 发得比超时慢会被反复归零。
+19. 🔒 `max_invalid_replan_attempts` ≥ 1 且不能大：0 等于允许无限期跟踪一条已判死的路径。
+20. **改 `wheel_radius` 会连带改地面高度。** 轮碰撞球半径就是 `wheel_radius`
+    （`astribot_s1_torso_wheel.xacro:29`），地面 z = 轮关节 z 偏移 `−0.015` − `wheel_radius`。
+    默认 0.08 → 地面 −0.095。所以改轮径要同步四处：`spawn_z`、`wheel_effort_limit`、
+    切片层的 `z_min/z_max`、以及附录 C 里记的地面 z。**✅ 实测已验算**：
+    现在贴地层 `z_min: -0.03` 离地 **0.065 m**，而注释声称 0.05 —— 差 1.5 cm，
+    所以 5~6.5 cm 高的矮障碍看不到（§5.4 第 3 条）。
 
 ### 5.4 禁止修改项与已知不一致
 
@@ -521,7 +773,7 @@ ros2 param set /frontier_explorer_node search.weight_gain 10.0
 | # | 位置 | 不一致 | 影响 |
 |---|---|---|---|
 | **1** | `moveit_config/config/joint_limits.yaml:46-65` vs `astribot_s1_torso_wheel.xacro:270-362` | 躯干 `max_velocity: 6.0` vs URDF `velocity="1.8"` = **3.33 倍** | ⚠️ **有行为影响且在不安全方向**。该 yaml 挂在 `robot_description_planning` 下（`move_group.launch.py:100`），**覆盖** URDF。哨兵测试只守 URDF，没守这份 yaml |
-| 2 | `frontier_explorer_params.yaml:10` | 声明 `robot_radius = 0.35`，实际 Nav2 是 0.42 | 第 55/70 行的 `0.35` 是**活值**，比真实底盘包络松 0.07 m |
+| 2 | `frontier_explorer_params.yaml:10,55,70` | 声明 `robot_radius = 0.35`，实际 Nav2 是 0.42 | 第 55/70 行的 `0.35` 是**活值**，比真实底盘包络松 0.07 m。**但只影响独立的 `frontier_explorer_node`（候选建议流）**：真正下发目标的协调器用自己的 `search.*`（`obstacle_inflation_radius: 0.45` ≥ 0.42、`required_clearance_radius: 0.05`，两者刻意不重复计足迹）。所以**默认探索路径上没有行为影响**，只有单独跑 `frontier_explore.launch.py` / `autonomy_bringup.launch.py` 时才吃到这个松值 |
 | 3 | `pointcloud_slice_scan_params.yaml:118` | 注释称"地面在 −0.080"，而权威推导是 **−0.095**（`−0.015 − 0.08`）| 贴地层下沿比设计意图高 1.5 cm，5~6.5 cm 高的矮障碍看不到 |
 | 4 | `collision_overrides.yaml` | 记 `default_spawn_z: 0.10`，launch 实际默认 **0.15**；记轮子碰撞是 `cylinder`，xacro 已是 `sphere` | 记录失真 |
 | 5 | `manipulation_params.yaml` | 关节限位清单仍是旧 `whole_body` 那套 | 注释误导 |
@@ -563,7 +815,61 @@ ros2 param set /frontier_explorer_node search.weight_gain 10.0
 
 ### 6.2 仿真：Gazebo 栈
 
+这是本栈**唯一有在线实测数据**的后端（§0.3）。
+
+```bash
+# 只要 Gazebo（世界 + 机器人 + ros2_control + ros_gz 桥）
+ros2 launch astribot_s1_gazebo_bringup warehouse_sim.launch.py
+
+# 换世界（两个：small_warehouse / no_roof_small_warehouse，来自 aws-robomaker 仓）
+ros2 launch astribot_s1_gazebo_bringup warehouse_sim.launch.py \
+  world_name:=no_roof_small_warehouse
+
+# 起第二台机器人（必须换 robot_name 和出生点，否则和第一台重叠）
+ros2 launch astribot_s1_gazebo_bringup warehouse_sim.launch.py \
+  world_name:=no_roof_small_warehouse robot_name:=astribot_s1_2 spawn_x:=1.0
+```
+
+**常用参数**（默认值取自 `warehouse_sim.launch.py`）：
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `world_name` | `small_warehouse` | 拼 `<world_name>.world` |
+| `spawn_x/y/z/yaw` | `0/0/0.15/0` | **`spawn_z` 不是随便取的**：静止高度 ≈ `wheel_radius + 0.049`（实测 z≈0.1292），出生点要比它高约 2 cm 才能自然落到轮子上而不初始穿透。历史根因是躯干碰撞圆柱只比轮子高 1.7 mm、**整机其实坐在肚皮上**，力矩驱动因此完全失效 |
+| `headless` | `false` | ⚠️ **不要改成 true**，见下 |
+| `enable_effort_drive` | `true` | 力矩闭环底盘（false 则用 gz `VelocityControl` 插件）|
+| `wheel_radius` / `wheel_effort_limit` | `0.08` / `15.0` | **改轮径必须同步放大力矩上限**：同样摩擦力的反抗力矩 τ=F·r 按比例变大，实测 r=0.30 时需要 >20 N·m，否则轮子被憋死转不动。同时 `spawn_z` 要跟着调（见上）|
+| `ros_domain_id` | **`25`** | ⚠️ 这个默认值会**覆盖 shell 里的 export**，见下 |
+| `localhost_only` | `true` | 对应 `ROS_LOCALHOST_ONLY=1` |
+| `use_rviz` | `true` | —— |
+
+七个 `ros2_control` 控制器：`torso` / `head` / `arm_left` / `arm_right` /
+`gripper_left` / `gripper_right` / `wheel_effort`（配置在
+`astribot_s1_gazebo_bringup/config/astribot_s1_controllers.yaml`）。
+
+⚠️ **`headless:=true` 会死锁，不是"省资源的选项"。** `gz_ros2_control` 在加载期取
+`robot_description` 时死锁，物理**一步都不走**。这与直觉相反（headless 本该更稳）。
+最快判据：数 `[ign gazebo-1]` 日志行数 —— 卡住时停在 **4 行**左右且 ign 话题只有 5 个，
+正常是 **265+ 行**。
+
+⚠️ **`ros_domain_id` 默认 25 会覆盖 shell 里的 export。** 症状是查询侧
+"节点全都 Node not found"，看着像系统没起来。而 `nav2_full_bringup.launch.py`
+**不暴露**这个参数，所以查询时统一用 25。确认实际值：
+```bash
+tr '\0' '\n' < /proc/$(pgrep -f exploration_coordinator_node | head -1)/environ | grep DOMAIN
+```
+
 ### 6.3 仿真：厂商 MuJoCo 栈
+
+🟡 本节内容待补 —— 该栈的在线行为尚未系统性验证过，只有零散记录：
+
+- 长时间运行会**退化并污染测量**：读数漂出 MuJoCo 自己的硬限位（实测 `j6=1.04`
+  而 `range=±0.78`，物理上不可能）、跟踪误差出现 0.327 的高度可复现假尖峰；
+  **重启后全部消失**。据此差点把坏基线拟合进生产配置 —— 所以长跑数据必须先做重启复现。
+- 与 Gazebo 栈**不能同时跑**（抢 `/joint_states`、抢 domain）。
+- 不要整套执行厂商的 `scripts/lite_install/install_mujoco_noconda.sh`（会动 numpy 版本，见 §4.2）。
+
+在补齐之前，**不要把 MuJoCo 侧的观测当作判据**。
 
 ### 6.4 建图 / 导航 / 自主探索
 
@@ -606,6 +912,35 @@ ros2 service call /exploration_coordinator_node/resume std_srvs/srv/Trigger
 ⚠️ `autonomous_patrol_node` 与 Nav2 **都发 `/cmd_vel`**，
 所以 `nav2_full_bringup` 始终强制 `autonomous_patrol:='false'`。别手工同时起。
 
+**判断一轮探索跑得好不好（把整段日志重定向到文件后跑）：**
+```bash
+LOG=/tmp/run.log
+# ① 先对齐两侧计数 —— 这一步永远第一（量级不匹配就是自激循环，别急着查失败原因）
+#    ⚠️ 必须限定 [follow_path]：光 grep "Aborting handle" 会把 compute_path_to_pose 的
+#    规划失败也算进来。实测同一份日志 441 = 427(规划) + 14(跟踪)，
+#    不限定就会把"一切正常"读成"自激循环极其严重"。
+echo "协调器终止结果:   $(grep -ac '导航失败(\|目标收敛完成' $LOG)"
+echo "跟踪 abort:       $(grep -ac '\[follow_path\] \[ActionServer\] Aborting handle' $LOG)"
+echo "规划 abort(另一回事): $(grep -ac '\[compute_path_to_pose\] \[ActionServer\] Aborting handle' $LOG)"
+
+# ② 换路径倍率（>2 说明在无条件周期重规划，见 §2.3）
+python3 -c "d=$(grep -ac '已校验路径已交给控制器' $LOG); a=$(grep -ac 'FollowPath 已被接受' $LOG); print(f'{a}/{d} = {a/max(d,1):.2f}')"
+
+# ③ 每次换路径的原因（不该出现"周期"）。grep -v 掉启动横幅那一行
+grep -a '跟踪期重规划:' $LOG | grep -av '策略=' | sed 's/.*跟踪期重规划: //' | sort | uniq -c
+
+# ④ 到位偏差分布
+grep -ao '目标收敛完成(偏差 [0-9.]*m' $LOG | grep -o '[0-9.]*m$'
+
+# ⑤ 进度停滞要按成因分类，不是数总数（见 §7.4 的告警）
+grep -ac '已判不可通行' $LOG        # 协调器侧：应该都在 4s 内出现 放弃当前目标
+grep -ac 'Failed to make progress' $LOG
+
+# ⑥ 崩溃统计必须截断到关机点，否则 SIGINT 导致的 process-died 会被算成运行期崩溃
+awk '/SIGINT/{exit} /Traceback|FATAL|process has died/{n++} END{print "运行期崩溃:", n+0}' $LOG
+```
+⚠️ 第 ⑥ 条是实测踩过的坑：不截断会把关机噪声读成"本轮 15 次崩溃"，真实值是 0。
+
 **RViz 调试（`rviz/autonomy_debug.rviz`，Fixed Frame 必须是 `map`）：**
 `slice_<layer>` ×4 逐层确认有点、`self_filtered` 灰点须始终贴在 `self_filter_capsule` 橙线上、
 两个预置 LaserScan（红 `/scan_from_cloud` vs 蓝 `/scan`，后者默认关）用于并排比对层覆盖。
@@ -637,14 +972,67 @@ ros2 run astribot_s1_manipulation self_collision_pair_generator 10000
 
 ### 6.7 停机与清场
 
+**首选：在跑 launch 的那个终端按 `Ctrl-C`。** 它会有序停掉全部子进程，
+不需要任何模式匹配，也就没有下面这些坑。
+
+**只有确认有残留时才用命令清。** 两个都实测踩过的坑：
+
+1. **按工作空间路径 kill 会漏掉 `/opt/ros/humble` 下的二进制**
+   （`nav2_*`、`slam_toolbox`、`parameter_bridge`、`static_transform_publisher`），
+   留下的僵尸会污染下一轮测试结果。
+2. **`pkill -f '<你自己也敲在命令行里的模式>'` 会杀掉发起它的那个 shell。**
+   ✅ 实测证据：同一时刻 `pgrep -x ruby` 数到 **3** 个（真的 ruby 进程），
+   而 `pgrep -f ruby` 数到 **4** 个 —— 多出来的那个就是"命令行里恰好提到了 ruby"
+   的 shell 自己。写本文档期间我用 `pkill -f 'ros2 launch|…'` 误杀过一个
+   正在验证的仿真实例，现象是"验证跑到一半整栈 finished cleanly"。
+
+所以清场**只用 `-x`（精确匹配可执行文件名 `comm`）**，它不看 cmdline，
+从原理上不可能匹配到任何 shell。注意 Linux 的 `comm` 截断到 15 字符，
+下面这些名字是实测 `ps -eo comm=` 采出来的，**不要按直觉补全**：
+
 ```bash
-# ⚠️ 不要用 pkill -f <本命令里出现过的模式>——会杀掉自己的 shell（exit 144）
-pkill -x gz; pkill -x ruby
-pkill -f 'ros2 launch' ; sleep 1
-# ⚠️ 按工作空间路径 kill 会漏掉 /opt/ros/humble 下的二进制，僵尸会污染测试
-pgrep -af 'parameter_bridge|nav2_|slam_toolbox|move_group|robot_state_publisher'
+# !!! 顺序不能颠倒：必须先杀 launch 父进程 !!!
+# 它的 comm 是 `ros2`（不是 python3），所以 -x 就能精确杀掉。
+# 先杀子进程会让父进程把带 respawn 的节点**重新拉起来** —— ✅ 实测踩过：
+# 只杀子进程之后 3 分钟，旧 launch 父进程仍在，并已重新拉起
+# omni_effort_drive 和 arm_chassis_coupling 各一份，与新起的那一套凑成两份，
+# 最终把 controller_manager 的 load_controller 响应挤到超时（见 §8.2）。
+pkill -INT -x ros2 2>/dev/null; sleep 3
+
+for exe in ruby rviz2 async_slam_tool parameter_bridg \
+           controller_serv planner_server bt_navigator behavior_server \
+           smoother_server waypoint_follow velocity_smooth lifecycle_manag \
+           robot_state_pub static_transfor \
+           exploration_coo pointcloud_slic pointcloud_to_l \
+           omni_effort_dri livox_fusion_no livox_preproces \
+           arm_chassis_spe arm_speed_limit; do
+  pkill -INT -x "$exe" 2>/dev/null
+done
+sleep 4
+
+# 复查（必须都是 0）。ruby 是 ign gazebo 的启动器，它没了就代表 Gazebo 没了。
+for c in ros2 ruby controller_serv exploration_coo omni_effort_dri arm_chassis_spe; do
+  printf '%-18s %s\n' "$c" "$(pgrep -c -x $c)"
+done
 ```
-清场后必须复查：`pgrep -af 'gz sim|mujoco'` 为空、`/joint_states` 无发布者。
+
+⚠️ **不要漏掉重复实例的检查。** 上面复查表里任何一项 **> 1** 都意味着有两套栈在跑，
+症状是"话题都在、但机器人不动"或者"controller spawner FATAL"，而两边都不报"重复"。
+✅ 实测：`omni_effort_dri` 和 `arm_chassis_spe` 各 2 份时，
+12 个导航目标 **12 个全失败、0 个收敛**。
+
+清场后还要做两件（否则下一轮会出现"看着像没起来"）：
+
+```bash
+# ⚠️ 两种前缀都要删。只删 fastrtps_* 会漏掉信号量文件 —— ✅ 实测漏删时还剩 73 个
+#    sem.fastrtps_*，症状是 RTPS_TRANSPORT_SHM Error ... open_and_lock_file failed，
+#    随后 SLAM 不出图、map frame 不存在、协调器一直"等待地图就绪"。
+#    而且必须**等进程全死之后**再删：删在启动前后都会破坏正在用的段。
+rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_*
+ls /dev/shm | grep -c fastrtps          # 必须是 0
+
+ros2 daemon stop                        # 清掉陈旧的节点图缓存（§8.3）
+```
 
 ---
 
@@ -652,22 +1040,29 @@ pgrep -af 'parameter_bridge|nav2_|slam_toolbox|move_group|robot_state_publisher'
 
 ### 7.1 离线校验：测试套件
 
-**全部 683 条，✅ 于 2026-08-20 实跑全绿。**
+**功能测试 978 条，✅ 于 2026-08-28 实跑 0 失败**（不含 lint；连 lint 共 1021 项）。
 
 ```bash
 source /opt/ros/humble/setup.bash
 source ws_robot/install/setup.bash          # ← 必须，否则少 20 条且报「no tests collected」
+colcon test && colcon test-result           # 全仓
 ```
 
 | 包 | 数量 | 覆盖 |
 |---|---|---|
-| `astribot_trajectory_bridge` | **425** | 桥接状态机、写入闸门、夹爪数学/控制、底盘积分、SDK 环境 |
-| `astribot_s1_autonomy`（gtest）| **84** | 切片投影 16、自滤 11、前沿搜索 17、路径校验 18、代价地图适配 22 |
-| `astribot_s1_manipulation`（gtest）| **51** | 闭链 8、夹爪 16、优化型规划器 9、奇异监视 10、轨迹优化 8 |
-| `astribot_s1_perception` | 43 | 起点栅格校验等 |
-| `astribot_s1_description` | 31 | **限位/原点与厂商 per-part 模型一致性** + 夹爪模型 14 |
-| `astribot_s1_dynamics_coupling` | 27 | 伸展度量、C1 回归哨兵 |
-| `astribot_s1_navigation` | 22 | —— |
+| `astribot_trajectory_bridge` | **455** | 桥接状态机、写入闸门、夹爪数学/控制、底盘积分、SDK 环境 |
+| `astribot_s1_perception` | **128** | 起点栅格校验、地图来源组合等 |
+| `astribot_s1_autonomy`（gtest）| **92** | 路径校验 26、代价地图适配 22、前沿搜索 17、切片投影 16、自滤 11 |
+| `astribot_s1_navigation` | **71** | 其中 **19 条跨包配置一致性**（见下）|
+| `astribot_s1_manipulation`（gtest）| **63** | 闭链 8、夹爪 16、优化型规划器 9、奇异监视 10、轨迹优化 8 |
+| `astribot_s1_path_tracking`（gtest）| **36** | 三段式跟踪的纯函数层（相位机、对齐数学、同目标判定）|
+| `astribot_s1_description` | **33** | **限位/原点与厂商 per-part 模型一致性** + 夹爪模型 |
+| `astribot_s1_dynamics_coupling` | **27** | 伸展度量、C1 回归哨兵 |
+| `astribot_s1_chassis_effort_drive` | **0** | ⬜ 无测试，是已知缺口（附录 B）|
+
+⚠️ `colcon test` 会连**厂商未跟踪包** `livox_ros_driver2` 一起跑，它有 843 条 **lint**
+失败（cpplint 569 / flake8 198 / copyright 58 / …）。那是厂商代码不符合本仓 lint 风格，
+**与本仓 13 个自研包无关**，不要把它算进"全绿"的分母 —— 只看上表这 8 个包。
 
 ⚠️ **`pytest test/` 在桥接包里会报 `no tests collected`，而不是报错。**
 真因：`test_status_code_map.py` 用了模块级 `pytest.importorskip`，在 pytest 6.2.5 下
@@ -688,6 +1083,12 @@ colcon test-result --test-result-base build/astribot_s1_autonomy --verbose
 | `test_old_metric_was_anti_correlated_on_measured_poses` | 把耦合度量改回关节偏差 |
 | `TwoGridDeadlock_*` / `ClearanceCaliber_*` | 探索双图校验的死锁与口径错误 |
 | `test_l11_cross_source_delta_is_pinned` | 夹爪 7 mm 两源不确定度被悄悄"修好" |
+| `test_config_consistency.py`（19 条）| **配置层**的七类历史错误：内层 MPPI 漏 critics、跳过终点旋转但没放宽 yaw 容差、`goal_checker_id` 空串、净空半径区间搞成等式、进度检查器不认旋转、偏离阈值小于抵达容差、自举转角低于 SLAM 插入阈值 |
+| `TrackingHelpers.*`（8 条）| 「未到位不换路径」的判据：空路径偏离度必须返回负值而不是 0、只校验剩余段、剩余段退化成 1 点时不得打断收尾 |
+
+**关于配置层测试的一条经验：** 本轮实测踩到的坑**全部在配置层**，而那里此前没有任何
+自动校验 —— 纯函数层再多测试也拦不住。这 19 条都做过**故障注入验证**（把 yaml 改坏、
+确认对应那条测试真的失败），未做故障注入的测试不能算"守住了"。
 
 ### 7.2 环境校验
 
@@ -738,13 +1139,29 @@ ros2 topic hz /cmd_vel_nav_body_raw /cmd_vel_nav_body /cmd_vel_pre_arm_coupling 
 ros2 topic echo /cmd_vel_pre_arm_coupling   # 与 /cmd_vel 比对
 # L6 探索时序
 ros2 topic echo /exploration/state | grep -o 'state=[A-Z_]*' | uniq
+# L7 跟踪层：一行看全（路径顶点数、重规划策略、自举结论）
+ros2 topic echo /exploration/state --once --field data
 ```
+
+⚠️ **查询前先确认 `ros2` daemon 不是陈旧的**，否则上面每一条都会假阴性 ——
+实测同一时刻带 daemon 只能看到 2 个话题、`ros2 daemon stop` 之后是 80 个（§8.3）。
+
+**L7 的读法（配合 §2.7 字段表）：**
+
+| 观察到 | 说明 |
+|---|---|
+| `state=NAVIGATING` 但 `path_pts=0` | 路径记录丢了，`on_invalid` 判据会退化成"每轮都重规划" |
+| `replan_policy=periodic` | 用了回退配置，会无条件换路径（§2.3）|
+| `bootstrap_result` 显示被安全门拦下 | 按那条原因处理，不用翻日志 |
+| `state=PAUSED` 且 `nav_fail=0/3` | 是探索**自然结束**，不是被困（§3.2 三种终止情形）|
 
 ### 7.4 就绪判据总表
 
+查询前先确认 `ros2` daemon 不是陈旧的（见 §8.3），否则下面每一条都会假阴性。
+
 | # | 判据 | 通过标准 |
 |---|---|---|
-| 1 | 离线测试 | 683 全绿 |
+| 1 | 离线测试 | 978 条功能测试 0 失败（不含厂商 `livox_ros_driver2` 的 lint）|
 | 2 | 单仿真实例、单 `/joint_states` 发布者 | 各为 1 |
 | 3 | `/clock` 在走 | 非零频率（恒 0 见 §8.2）|
 | 4 | 三条感知话题 | `/livox/fused_points` 约 9.5~10 Hz；`/scan_from_cloud`、`/scan` 有输出 |
@@ -754,6 +1171,17 @@ ros2 topic echo /exploration/state | grep -o 'state=[A-Z_]*' | uniq
 | 8 | 导航链四段 | 四个话题都有流量 |
 | 9 | 探索时序 | 相邻 `NAVIGATING` 之间必有 `ARRIVED`；每次派发前必有 `双层校验通过` |
 | 10 | 关节顺序探针 | 通过（**未通过禁止继续**）|
+| 11 | 换路径倍率 | `FollowPath 已被接受` / `已校验路径已交给控制器` **≤ 2**（无条件周期重规划时是 10.9）|
+| 12 | 重规划都有具体原因 | 日志里每条 `跟踪期重规划:` 后面都是四种失效原因之一，**不含"周期"** |
+| 13 | 到位精度 | 偏差均值 ≤ 0.12 m、最大 ≤ `arrival_xy_tolerance`（实测均 0.063 / 最大 0.150）|
+| 14 | 自激循环未回归 | 协调器看到的终止结果数与 `controller_server` 的 abort 数**量级匹配**（曾经是 66 : 2）|
+| 15 | 无假 COMPLETED | 地图未长起来时不出现 `探索完成` |
+| 16 | 自举真的转动了 | 若触发，日志里 `实测转出 X rad` 且 X ≥ `bootstrap_min_yaw_delta`（实测 1.35~1.48）|
+
+⚠️ **进度停滞（`Failed to make progress`）不是 0/非 0 判据。** 它是控制器卡死的
+设计内检测器，只要 MPPI 落进窄通道零梯度区（§3.3）就会响。正确判法是**按成因分类**：
+同一目标周期内出现过 `已判不可通行` 的那些才是协调器的问题（应 ≈0），
+其余属于控制器侧既有限制。实测一轮 14 次里 2 : 12。
 
 ---
 
@@ -794,6 +1222,7 @@ e2e 检查只比对 `dispatched_cmd` 等于只验证了自己。曾因此让"要
 | 设了 `ROS_LOCALHOST_ONLY=1` 但流量还在网卡上 | Fast DDS 的 `interfaceWhiteList` XML **会静默击败它**；Gazebo 的 `ign-transport` 要另设 `IGN_IP` | `tcpdump` 看业务网卡 |
 | `incompatible QoS` 告警（`joint_space_command`）| **两端都在厂商 SDK 内部**：SDK 自己的 RELIABLE 订阅收不到自己的 BEST_EFFORT 发布。仿真侧兼容，指令实测 100% 落地、误差 0.0 mm | 无需处理；不要去改本栈 QoS |
 | `tf2_buffer: Detected jump back in time` | 两个仿真实例抢同一个 `ROS_DOMAIN_ID` | 数进程 |
+| **`ros2 topic list` 只有 2 个话题，看着像"系统整个没起来"，但节点明明在打日志** | **`ros2` 守护进程（daemon）缓存陈旧**。它是按 domain 缓存图的；换过 domain、或上一轮仿真被强杀之后，daemon 会一直返回一份几乎空的图。这与 DDS、与 `ROS_LOCALHOST_ONLY` 都无关 | `ros2 topic list --no-daemon` 若能看到话题即确诊。修法：`ros2 daemon stop`（下次调用自动重启）。✅ 实测同一时刻：带 daemon **2** 个话题 → `--no-daemon` 4 个 → 重启 daemon 后 **80** 个 |
 
 ### 8.4 感知与建图类
 
@@ -815,6 +1244,43 @@ e2e 检查只比对 `dispatched_cmd` 等于只验证了自己。曾因此让"要
 | Nav2 以约 0.085 m/s 下发但底盘不动，最终 `Failed to make progress` | 力矩驱动全向底盘的**静摩擦地板**。协调器把它当普通导航失败处理 | 属底盘控制层问题，见附录 B-3 |
 | 限速改了没效果 | **两级限速串联叠乘**（`0.50 × 0.15 = 0.075`），两个包各一层 | §2.4 |
 | 导航特别慢（实测曾 78.1 s）| 臂-底盘耦合用了已证伪的关节偏差度量，`ready` 都只有 scale ≈ 0.29 | §3.4；C1 修正后 13.4 s |
+| **机器人从头到尾不跟踪任何路径 + 反复 spin/backup** | `goal_checker_plugins` 列了多项，而 `FollowPath` 的 `goal_checker_id` 端口**无默认值** → 每次 FollowPath 直接 abort | 真因只在 `~/.ros/log/controller_server_*.log` 里；查 `does not exist` |
+| 起步对齐正常、机器人贴在路径上，但**一直漂移不前进**（指令 vx 均值为负）| 三段式的 `inner:` MPPI 配置漏了 critics。MPPI 的代价函数**全部**来自 critics，漏掉 `PathFollowCritic`/`PathAlignCritic` 就没有东西把机器人往路径上拉 | 数 `inner:` 块里的 critic 数量（应为 10）|
+| 每个目标终点朝向差很多（实测 94.2°）| 探索场景刻意跳过终点旋转，但 Nav2 的 `SimpleGoalChecker` **同时**卡位置和朝向 —— 三处（控制器 `align_goal_enabled`、Nav2 `yaw_goal_tolerance`、协调器 `check_yaw`）必须同向 | §3.3 陷阱 2 |
+| 一个目标下发了十几次 `FollowPath`，RViz 里路径不停变 | 无条件周期重规划（`replan_policy: periodic`）。实测 36 个目标换 393 条路径 | `grep -c 'FollowPath 已被接受'` 除以 `grep -c '已校验路径已交给控制器'`，>2 即确诊 |
+| 协调器报了几十次导航失败，但 `controller_server` 只 abort 了两三次 | **自激循环**：周期重规划重发 FollowPath → nav2 单目标语义 terminate 掉旧目标 → 旧目标以 ABORTED 回来 → 被当成控制器失败 → 重试 → 再重发。实测 66 : 2 | **排查第一步永远是对齐两侧计数**，量级不匹配就是自激 |
+| 机器人在原地顶着不动十几秒，然后 `Failed to make progress` | 若同一目标周期内出现过 `已判不可通行`：协调器攥着一条已判死的路径不放（实测顶 17.0 s）。否则是 MPPI 窄通道零梯度（§3.3）| `grep 已判不可通行`。前者修好后应在 4 s 内出现 `放弃当前目标` |
+| **冷启动后机器人永远不动，地图一直是空的** | SLAM 冷启动死锁：`slam_toolbox` 要等机器人先移动 0.2 rad 才插入扫描，而协调器要等地图有内容才下发目标 | `state=IDLE` 且 `/map` 已知格为 0。应由 `BOOTSTRAP` 自动破环（`bootstrap=a/b` 字段）；若 `bootstrap_result` 显示被安全门拦下，按那条原因处理 |
+| 探索"刚启动就完成了"（`state=COMPLETED`）| 地图收到了但全是未知 → 前沿格数也是 0 → 被误判成探索完成。`mapReady()` 只查消息层 | 查 `min_known_cells_for_decision` 是否被设成 0/很小 |
+| 自举日志说转了，但地图还是不长 | 实测转角低于 `slam_toolbox` 的 `minimum_travel_heading` → 转了也不插入扫描 | 看日志里的 `实测转出 X rad`；若 X 明显小于名义值，是下游耦合限速吃掉了，加长 `bootstrap_duration_sec` |
+| **`planner_server: Starting point in lethal space`，探索永久零派发** | 机器人自己站进了代价地图的致命带（253 = 中心在此则足迹必然碰撞）。✅ 实测一轮 **356 次**、连续 **177 秒**未自行恢复。`follow_path` 模式绕开了 bt_navigator，**BT 的 clear/backup 恢复全部拿不到**，协调器只会拒候选、重采样 | 分类判据见下方专条。设计方案见 [`lethal_start_and_controller_stall_recovery.md`](lethal_start_and_controller_stall_recovery.md)（⬜ 未实现）|
+| 每个目标都瞬间失败、且**永不恢复**；`FollowPath 中止` 很多而 `Failed to make progress` **是 0** | 三段式控制器的相位计时器没被重置。`enterPhase` 早先"相位值没变就 return"，于是上一个目标在 `ALIGN_START` 被中止后，新目标继承旧计时器、第一拍即判超时 | **看超时读数**：`ALIGN_START 段超时 1108.297s > 15.0s` —— 读数≈开机总时长就是它。不要去调 `align_timeout`。已修（`shouldRestartPhaseTimer`，4 条哨兵测试）|
+| 机器人以 1~2 cm/s 蠕行，最后判进度停滞 | 控制器**自己**只发 0.019 m/s（✅ 实测 mean）。**不是**机械臂限速：✅ 实测 `/speed_limit` 20 s 内零消息，`cmd_vel_nav_body_raw` 在源头就是低值 | 先量"开阔度"再下结论 —— 我曾把一次卡死误判成窄通道零梯度，实测该点代价 0、可通行 2.55 m × 3.75 m，**假设被推翻** |
+| `state=PAUSED` 且 `auto_resume` 已用尽，但机器人看起来一切正常 | 可能是探索**自然结束**：地图里只剩零散前沿格、无有效前沿块 | 看 `nav_fail`：为 `0/3` 说明从没导航失败，是自然结束不是被困；`sample_fail` 到上限则确认 |
+
+**专条：起点落在致命区时，先分类再动作（分错比不做更糟）**
+
+253 的语义是"距任一致命格 < `robot_radius`(0.42) 的格"，所以自身格
+**本身可能是空闲的**。判据是**同时**读两张图、比同一世界坐标：
+
+| 类别 | 自身格 costmap | `inflation_radius` 内 SLAM `/map` | 含义 | 动作 |
+|---|---|---|---|---|
+| A1 真实贴障 | ≥ 253 | **有**占据格 | 真的贴着墙/货架 | **必须移动**。清代价地图无效 —— static_layer 来自 SLAM 地图，下一周期原样回来 |
+| A2 幻影障碍 | ≥ 253 | 全空闲/未知 | obstacle_layer 被一帧误观测污染 | `clear_around_*` 即可，不要贸然移动 |
+| A3 未知区 | == 255 | —— | 处在没扫过的区域 | 等 SLAM 出图。`allow_unknown: false` 下规划必然失败，这不是故障 |
+
+✅ 实测那一次是 **A1**：自身格 SLAM 值 **0**（空闲）而 costmap **253**，
+但 0.65 m 内 SLAM 占据格 **54/517** —— 机器人真的贴到了一面已建图的墙上。
+**所以当时清代价地图不会有任何帮助**，这也是"清一下试试"这种直觉会浪费时间的原因。
+
+现场判定命令（两张图一起读）：
+```bash
+# 自身格的 costmap 代价与 SLAM 占据值；两者不一致才说明是幻影障碍
+ros2 topic echo /global_costmap/costmap_raw --once > /tmp/cm.yaml
+ros2 topic echo /map --once > /tmp/map.yaml
+ros2 run tf2_ros tf2_echo map astribot_torso_base      # 取位姿后换算格坐标
+```
+（换算与两图分工见 `costmap_adapter.hpp` 文件头；`clear_*` 服务**不会**清 static_layer。）
 
 ### 8.6 运动规划类
 
@@ -840,7 +1306,8 @@ e2e 检查只比对 `dispatched_cmd` 等于只验证了自己。曾因此让"要
 | 夹爪方向反了 | **`0` = 张开、`100` = 闭合**（与直觉相反，三处独立来源印证）| §3.9 |
 | `set_effector_max_force` 没效果 | 仿真下是**空操作** | 力控在仿真中不可验证 |
 | IK 报成功但姿态不对 | `get_inverse_kinematics` **恒返回 `flag=True`**（连零位解都报成功）、只迭代一小步、会停在局部最优后缓慢劣化 | **唯一判据是 FK 回验** |
-| 场景物体的全局坐标对不上 | SDK 的 `world` 系在**会话启动时以当前底盘位姿重置**，无法表达全局坐标 | IK 目标用 `chassis` 系 |
+| 场景物体的全局坐标对不上 | SDK 的 `world` 系是**底盘轮式里程计**，原点在底盘驱动起来时归零，既会漂也没有全局意义 | IK 目标用 `chassis` 系 |
+| ↳ 它到底何时重置 | **仿真已证、真机未证。** MuJoCo 后端实测确有"每会话重锚"：同一底盘位置（关节 x=+0.3237）下，移动后新建的会话 `world` 与 `chassis` 读数差 **0.0000**，而移动前就存在的会话差 **0.3958 m**。厂商 `examples/203-chassis_joy_control_global.py:17` 的说法则含糊——"chassis driver starts **or** program starts"，并把 "driver's initial theta" 单列 | 真机三次会话（第三次实测 `control_rights=True`，即 `restart_robot()` 确实触发过）读数全部 ≲0.4mm、未归零；但**底盘从未离开原点，这组数据区分不了两种假说**。判据：先把底盘挪 20~30cm，再开新会话看是否归零 |
 | 底盘停车距离比预期远一倍 | 分两段：积分器只走"惯性 + 减速尾巴"，SDK 的 `control_way='filter'` 还会再收敛约等量一段 | 判据只能压在积分器上；三个量混一起会误判 |
 
 ### 8.8 测量可信度类
@@ -866,8 +1333,10 @@ Python stdout 缓冲在超时时丢输出；两个仿真实例同时在跑。
 
 ## 附录 A · 测试清单
 
-见 §7.1。总计 **683 条，2026-08-20 实跑全绿**：
-桥接 425、自主 84、操作 51、感知 43、描述 31、耦合 27、导航 22。
+见 §7.1。功能测试总计 **978 条，2026-08-28 实跑 0 失败**：
+桥接 455、感知 128、自主 92、导航 71（含 19 条跨包配置一致性）、操作 63、
+跟踪 36、描述 33、耦合 27。底盘力矩驱动包 **0 条**（已知缺口，附录 B-16）。
+不含厂商未跟踪包 `livox_ros_driver2` 的 843 条 lint 失败（与本仓无关）。
 
 ## 附录 B · 已知边界与未验证项
 
@@ -889,6 +1358,12 @@ Python stdout 缓冲在超时时丢输出；两个仿真实例同时在跑。
 | 12 | 双臂并发、plan A `move_joints_waypoints` | ⬜ 从未运行 |
 | 13 | **Gazebo 的 mimic 有 7.8° 稳态误差** | 支持但不精确（从动关节到 0.794 而非 0.93）。看 `/joint_states` **永远发现不了**，须反解从动关节角度 |
 | 14 | 厂商 SDK **没有任何地图接口** | 25 个 msg + 7 个 srv 里没有 `OccupancyGrid`、没有 `GetMap`。真机对外只给两颗雷达点云 + 底盘 `[x, y, theta]`。所谓"真机地图"是我们自己的 slam_toolbox 跑在真机雷达上 |
+| 15 | **MPPI 窄通道零梯度是链路上唯一的实质瓶颈** | ✅ 实测一轮 35 次下发里 10 次导航失败，**8 次直接由它造成**，且空间上高度聚集（14 次进度停滞落在 4 个点、其中 8 次同一点）。恢复链条工作正常（约 24 s 一轮），但代价是收敛率被压到 71%。未验证的候选修法：调 inflation 参数 / 给 MPPI 配 fallback 控制器 —— **两者都没测过** |
+| 16 | `astribot_s1_chassis_effort_drive` **零测试** | 该包有 leash 保护、力矩闭环、积分器种子等关键逻辑，但没有任何单元测试。§3.5 的参数说明来自代码阅读，属 ⬜ |
+| 17 | 冷启动死锁**不是每次都复现** | 自举机制本身 ✅ 实测有效（强制触发 6/6 达标，转出 1.35~1.48 rad），但两轮自然冷启动里地图都在约 0.5 s 内就可用、**死锁一次都没复现**。所以"自举能救冷启动"这条是**由故障注入验证的**，不是由自然复现验证的 |
+| 18 | 本栈**没有统一的 `/diagnostics` 聚合** | 只有探索链有专用状态话题（§2.7）。其余节点的健康状况只能翻各自日志 |
+| 19 | **起点落在致命区无任何恢复** | ✅ 实测 356 次、连续 177 s 零派发且不自愈。根因是 `follow_path` 模式绕开 bt_navigator，BT 的 `ClearCostmap`/`BackUp`/`Spin` 恢复全部拿不到（`follow_max_retries` 只补回了重试次数）。脱困设计见 [`lethal_start_and_controller_stall_recovery.md`](lethal_start_and_controller_stall_recovery.md)，⬜ 未实现 |
+| 20 | **机器人为什么会走进致命区，未定位** | ⬜ 只做过脱困设计，没查成因。两个待验证猜想：(a) 新观测把机器人当前所在格刷成障碍；(b) 贴地层 `z_min` 比设计高 1.5 cm、5~6.5 cm 矮障碍看不见（§5.4 第 3 条），撞上后被旁边可见障碍的膨胀圈困住 |
 
 ## 附录 C · 术语与坐标系约定
 
@@ -901,3 +1376,26 @@ Python stdout 缓冲在超时时丢输出；两个仿真实例同时在跑。
 | 夹爪命令空间 | **`0` = 张开，`100` = 闭合**（与直觉相反）。`rad = 0.0093 × cmd`，实测残差 0.0005 / 回差 0.0000 / 系数吻合 0.02% |
 | `map_source` / `localization` | 两条正交轴：谁提供 `/map` / 谁提供 `map→odom`。仅三种合法组合 |
 | 位姿图 vs 栅格图 | `slam_toolbox` 存的是 `.data` + `.posegraph`，**不是** `.pgm` + `.yaml` |
+
+---
+
+## 附录 D · 本手册待补清单
+
+下列小节**目前为空**，标注在此以免读者误以为"没写就是没有"。
+未补齐之前，这些主题请直接查对应包的 README（§0.2 文档地图）。
+
+| 小节 | 待补内容 | 依赖 |
+|---|---|---|
+| §2.5 | 操作链：MoveIt2 → 桥接 → SDK 的完整话题/动作链 | 需逐跳核对桥接源码 |
+| §2.6 | 夹爪链 | 同上 |
+| §2.8 | 全局时序与时钟：各链路频率总表 | 需汇总七八处 yaml |
+| §3.5 | 底盘力矩驱动与运动学（含 leash 判据、积分器种子）| 该包零测试（附录 B-16），只能靠代码阅读 |
+| §3.8 | 轨迹桥接：状态机与写入闸门 | —— |
+| §3.9 | 夹爪：命令空间与标定 | 部分结论已在附录 C |
+| §4.1~4.5 | 环境部署（前置条件、版本钉子、`env.sh`、编译、实机差异）| 实机部分见 `real_robot_deployment.md` |
+| §6.3 | 厂商 MuJoCo 栈运行 | 该栈在线行为未系统验证，见 §6.3 现有告警 |
+| §6.6 | 桥接层运行 | —— |
+
+**补写时必须遵守的两条**（与 §0.1 / §0.3 同）：
+1. 数字只在一处维护 —— 其余地方给链接，复制过的数字一定会漂。
+2. 每条结论都要带 ✅实测 / 🟡仅离线 / ⬜未验证 标记，并写清后端（本栈真机数据为零）。
