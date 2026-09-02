@@ -36,12 +36,45 @@ controller_server:
     controller_plugins: ["FollowPath"]
 
     progress_checker:
-      plugin: "nav2_controller::SimpleProgressChecker"
+      # !!! 必须用 PoseProgressChecker 而不是 SimpleProgressChecker !!!
+      # SimpleProgressChecker 只量**平移**：要求 10s 内移动 0.5m。
+      # 而三段式跟踪的 ALIGN 段是纯旋转(vx=vy 严格为 0)，那段时间平移恒为 0，
+      # 时钟却在走 —— 于是旋转时间直接从 10s 预算里扣掉。
+      # 实测算术：ALIGN 最长 5.55s(零平移) + FOLLOW 段均速 0.111m/s 走完 0.5m 需 4.50s
+      #           = 10.05s > 10s，必然报 Failed to make progress。
+      # 注意失败**发生在 FOLLOW 相位**(实测 2/2)，所以只看"失败时在哪个相位"会误判成
+      # 与旋转无关 —— 真正的因果是前一段旋转已经把时钟耗掉了。
+      #
+      # PoseProgressChecker 把**旋转也算作进展**(位移达标 OR 转角达标 任一即重置计时)，
+      # 等价于"旋转期间不追究平移"，而真正的全停(既不平移也不转)仍会在 10s 内被抓到。
+      # 这比放大 movement_time_allowance 好：那样做会让真卡死也要多等一倍时间。
+      plugin: "nav2_controller::PoseProgressChecker"
       required_movement_radius: 0.5
+      # 转过这个角度即算有进展。取 0.10rad(5.7°)，依据是两条硬边界：
+      #   上界：必须 < start_min_angle(0.20rad)。ALIGN 段只在朝向误差超过
+      #         start_min_angle 时才进入，所以一次对齐最小可能只转 0.20rad；
+      #         阈值若 >= 0.20，短对齐就触发不了计时重置，等于没启用。
+      #         （这条是本仓库的配置测试抓出来的：我最初写 0.35 就踩了。）
+      #   下界：必须 >> 里程计角度噪声。P0 实测原地旋转停后余转仅 0.006~0.033rad，
+      #         噪声远小于 0.10，不会把原地抖动误判成进展。
+      required_movement_angle: 0.10
       movement_time_allowance: 10.0
     # !!! 2026-08-20 到位精度收紧：xy/yaw 0.25 -> 0.10 !!!
     # 依据与联动约束同 nav2_params_mppi.yaml 的同名段，两份必须一起改，
     # 否则切控制器时精度口径会不一致(而这种不一致只在切换那次才显形)。
+    # !!! yaw_goal_tolerance 放宽到 3.15(≈±180°，等于不约束朝向) !!!
+    # 原因：SimpleGoalChecker **同时**检查位置和朝向，而探索场景按需求刻意
+    # 跳过终点原地旋转(FollowPathExplore: align_goal_enabled=false)。
+    # 实测：位置偏差 0.165m 已满足 0.18，但朝向偏差 94.2° 远超 11.5° ->
+    # goal checker 永不满足 -> FollowPath 不成功 -> Failed to make progress ->
+    # 恢复行为 -> 超时。现象就是「转完之后不跟路径、原地漂移」。
+    #
+    # 朝向约束并没有消失，只是移到了知道场景的那两层：
+    #   · 三段式控制器 align_goal_enabled=true(FollowPathThreePhase) 负责转到位
+    #   · 协调器 check_yaw + arrival_yaw_tolerance 负责复核
+    # 需要在 Nav2 层也严格卡朝向时，正解是加第二个 goal checker 并让**每个**行为树
+    # 都显式传 goal_checker_id —— 注意不能只是把它加进 goal_checker_plugins 列表：
+    # 该端口无默认值，列表里有两项而调用方传空字符串会让每次 FollowPath 直接 abort。
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -50,7 +83,7 @@ controller_server:
       # 因为滑行量(0.069~0.100m)与容差同量级，MPPI 无法在 0.10m 内稳住。
       # 0.18 = 实测最大滑行 0.100 + 0.08 余量，是"比 0.25 紧一档且仍可收敛"的取值。
       xy_goal_tolerance: 0.18
-      yaw_goal_tolerance: 0.20
+      yaw_goal_tolerance: 3.15   # ≈±180°，等于不约束朝向（理由见上）
     # 收紧前的原值，保留作一键回退档。
     loose_goal_checker:
       stateful: True
@@ -117,7 +150,10 @@ planner_server:
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 2.0
-      cost_travel_multiplier: 2.0
+      # 「代价」相对「路径长度」的权重。仅有梯度不够 —— 权重太低时规划器仍会
+      # 为了抄近道而贴边。配合 global inflation_radius 0.75 一起才构成「居中」。
+      # 待实测标定项；验收看路径点到墙的实测距离，不是这个数字本身。
+      cost_travel_multiplier: 8.0
       use_final_approach_orientation: false
 
 behavior_server:
@@ -296,13 +332,47 @@ global_costmap:
         # 后果是膨胀层连机器人自身轮廓都覆盖不住，规划器拿不到"离墙远一点"的代价梯度，
         # 路径会紧贴障碍物走。inflation_radius 必须大于 robot_radius(0.42)。
         #
-        # 取 0.65 后的代价梯度（圆形足迹内切=外接=0.42、cost_scaling_factor 3.0）：
-        #   离障碍 0.42m -> 229   (刚好轮缘擦到，重罚)
-        #   离障碍 0.50m -> 180
-        #   离障碍 0.60m -> 133
-        #   离障碍 >0.65m -> 0    (自由通行)
-        # 注意膨胀代价只在机器人半径以内才是致死值，所以放大 inflation_radius
-        # 不会把窄通道变成不可通行，只是让规划器更偏向走通道中间。
+        # ======================================================================
+        # 需求：(1) 全局路径尽可能居中；(2) **不要为抄近道去钻窄通道**，
+        #      宁可绕远走宽阔大路。
+        #
+        # 规划器怎么算（nav2 humble node_2d.cpp 源码逐字确认，非推测）：
+        #     getTraversalCost = 步长 x (1.0 + cost_travel_multiplier * cost/252)
+        #     getHeuristicCost = 纯欧氏距离，**不含代价项**
+        # 所以它最小化「几何长度 x 代价惩罚因子」，
+        # 窄通道被选中的条件是：窄路长 x 惩罚因子 < 宽路长。
+        #
+        # !!! 根因：宽于 2 x inflation_radius 的通道，中心代价恒为 0 !!!
+        # inflation_radius 0.75 时 2m 通道中心距墙 1.0m > 0.75m ⇒ 代价 0
+        # ⇒ 惩罚因子 1.000 ⇒ 那条 2m 窄道在规划器眼里和 4m 大路**一样便宜**，
+        # A* 只剩「谁短走谁」，于是必走窄通道。
+        # 这不是权重不够大，是**信息不存在** —— cost_travel_multiplier 再大，
+        # 乘的都是 0。（与 MPPI 那个「足迹代价饱和 253、梯度为 0」是同一类错误
+        # 的镜像：一边饱和到顶、一边饱和到底，两边都没梯度。）
+        #
+        # 判据：inflation_radius >= (想惩罚的最窄通道宽度) / 2。
+        # 需求口径 2m ⇒ 取 1.0；cost_travel_multiplier 取 8.0
+        # （2m 通道原始代价 40.2 只有 1.5m 通道 85.1 的一半，权重要跟上才有区分度）。
+        #
+        # 取 1.0 + 8.0 后（本文件几何：圆形 robot_radius 半径 0.42）：
+        #    1.5m 通道 -> 中心代价  93.6 -> 惩罚因子 3.973 -> 容忍绕路 3.97x
+        #    2.0m 通道 -> 中心代价  44.2 -> 惩罚因子 2.404 -> 容忍绕路 2.40x
+        #    2.5m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
+        #    3.0m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
+        #    4.0m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
+        #   「容忍绕路 Nx」= 宽路必须比窄路长 N 倍，规划器才肯放弃窄路。
+        #
+        # 取值含义要说清楚：inflation_radius 取多大，就等于宣告
+        # 「比这更宽的通道我一律视为同等优良」。取 1.0 时 2.5m 与 4m 大路
+        # 无法区分（都是 0）。若要连 2.5m 也轻微惩罚需取 1.25。
+        #
+        # 253(不可通行) 那一档由内切半径 0.42 决定、与 inflation_radius 无关，
+        # 所以本改动**不缩小可行域**，只塑造梯度形状。
+        #
+        # 只改**全局**这一份：局部代价地图维持 0.65 不变。局部图被 MPPI 的
+        # ObstaclesCritic/CostCritic 读取，抬高它会改变已验证的跟踪行为。
+        # 判据固化在 test_config_consistency.py::TestGlobalPathCentering。
+        # ======================================================================
         cost_scaling_factor: 3.0
-        inflation_radius: 0.65
+        inflation_radius: 1.0
       always_send_full_costmap: True
