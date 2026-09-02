@@ -33,11 +33,22 @@ from astribot_trajectory_bridge.ports import FakeClock, FakePose, FakeSession
 PART = 'astribot_chassis'
 
 
-def build(follow_ratio=1.0, **overrides):
+def build(follow_ratio=1.0, feed_scan=True, **overrides):
     """搭一套 (core, session, pose, clock)。默认：位姿可用、闭环开、slam 源、
     实际位置理想跟随指令（follow_ratio=1.0，无打滑）。
 
     follow_ratio=0.0 模拟完全打滑（用来测 leash），0<r<1 模拟部分打滑。
+
+    feed_scan=True 时把 /scan 标成"刚收到"。**这不是为了让测试通过而放水**：
+    /scan 时效性联锁默认开启（require_fresh_scan=True），不喂就会在
+    scan_max_age_sec 后置零、在 scan_loss_grace_sec 后闩锁停车 —— 本文件里
+    9 条与感知无关的测试会因此失败。联锁本身的正/反测试在
+    test_chassis_scan_interlock.py，那里显式用 feed_scan=False。
+
+    ⚠️ 时钟推进超过 scan_max_age_sec 的测试要在循环里重新调
+    ``core.submit_scan_seen()``，否则 /scan 会在测试中途变旧 —— 这正是联锁该有的
+    行为，但会让"测的其实是别的东西"的测试莫名失败。
+    （本文件现有测试的时钟推进都远小于 0.5s，所以只在这里喂一次就够。）
     """
     clock = FakeClock(100.0)
     session = FakeSession(desired={PART: [0.0, 0.0, 0.0]},
@@ -45,7 +56,10 @@ def build(follow_ratio=1.0, **overrides):
                           follow_ratio=follow_ratio)
     pose = FakePose(clock, pose=[0.0, 0.0, 0.0])
     cfg = ChassisBridgeConfig(**overrides)
-    return (ChassisBridgeCore(cfg, session, pose, clock), session, pose, clock)
+    core = ChassisBridgeCore(cfg, session, pose, clock)
+    if feed_scan:
+        core.submit_scan_seen()
+    return (core, session, pose, clock)
 
 
 def codes(core):

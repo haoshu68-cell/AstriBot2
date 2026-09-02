@@ -62,6 +62,12 @@ ST_DISABLED = 'DISABLED'
 ST_ENABLED = 'ENABLED'
 ST_LEASH_TRIPPED = 'LEASH_TRIPPED'
 ST_STOPPED_NO_POSE = 'STOPPED_NO_POSE'
+#: 因 /scan 持续陈旧而闩锁停车。
+#: 刻意**不复用** ST_STOPPED_NO_POSE：本文件里已有一条同样的教训 ——
+#: 位姿查询失败报 POSE_PORT_FAILED 而不是 SDK_CALL_FAILED，因为"报错类别错了
+#: 会把诊断引向错的子系统"。感知瞎了和定位丢了是两个不同的子系统，混成一个
+#: 状态就等于在最需要分辨的时候丢掉了分辨能力。
+ST_STOPPED_STALE_SCAN = 'STOPPED_STALE_SCAN'
 
 # 上报用的状态位名（与 BridgeStatus.msg 的枚举同名，由节点层映射成数字）
 S_OK = 'OK'
@@ -76,6 +82,15 @@ S_ODOM_DRIFT_HIGH = 'ODOM_DRIFT_HIGH'
 S_CORRECTION_DEGENERATE = 'CORRECTION_DEGENERATE'
 S_SLAM_LOST_STOPPED = 'SLAM_LOST_STOPPED'
 S_POSE_PORT_FAILED = 'POSE_PORT_FAILED'
+#: /scan 陈旧，本拍速度已置零（可自动恢复）。metric_1=龄期(s)，metric_2=阈值(s)。
+S_SCAN_STALE = 'SCAN_STALE'
+#: /scan 持续陈旧超过宽限期，已闩锁停车（要人介入）。
+S_SCAN_LOST_STOPPED = 'SCAN_LOST_STOPPED'
+#: 从未收到过 /scan。与"收到过但变旧了"分开报 —— 前者通常是话题名/QoS 配错，
+#: 后者是上游故障，两者的排查方向完全不同。本项目已因 QoS 单向不兼容
+#: （BEST_EFFORT 发布 + RELIABLE 订阅，一帧都收不到、只有一条 WARNING）
+#: 浪费过一轮排查，这个区分是为那个场景留的。
+S_SCAN_NEVER_RECEIVED = 'SCAN_NEVER_RECEIVED'
 #: 内环步长被钳位。metric_1=钳位前的实测步长(s)，metric_2=上限(s)。
 #: 偶发说明调度抖动，持续出现说明内环真的跟不上，两种都必须可见 ——
 #: 步长直接乘在速度上，静默钳位等于静默改变底盘速度。
@@ -122,7 +137,9 @@ class ChassisBridgeConfig:
                  max_corr_vel_xy=0.10, max_corr_vel_theta=0.20,
                  require_slam_to_enable=False, slam_loss_grace_sec=2.0,
                  odom_drift_window_sec=2.0, odom_drift_warn_m=0.15,
-                 max_tick_dt_sec=0.04):
+                 max_tick_dt_sec=0.04,
+                 require_fresh_scan=True, scan_max_age_sec=0.5,
+                 scan_loss_grace_sec=2.0):
         self.part_name = part_name
         self.freq = float(freq)
         self.input_frame = input_frame
@@ -156,6 +173,42 @@ class ChassisBridgeConfig:
         self.require_slam_to_enable = bool(require_slam_to_enable)
         self.slam_loss_grace_sec = float(slam_loss_grace_sec)
         self.odom_drift_window_sec = float(odom_drift_window_sec)
+
+        # ═══════════════ /scan 时效性联锁 ═══════════════
+        # 为什么必须加在这里，而不是靠 nav2：
+        # nav2 的 obstacle_layer 设了 expected_update_rate 之后**只会告警**。
+        # 实测 controller_server 二进制里没有任何检查 costmap currency 的字符串，
+        # 陈旧时它照样继续发 /cmd_vel。所以"拿着陈旧障碍数据继续走"这件事，
+        # 只有写通路自己能拒绝 —— 这一层是链路上最后一个能说不的地方。
+        #
+        # 为什么现有的两个机制都盖不住这个场景（都实测过）：
+        #   · leash：指令与实测都在动、偏差正常，**不会** trip
+        #   · cmd_vel 看门狗：nav2 一直在发指令，`_last_twist_time` 不为 None，
+        #     走不到"无输入置零"那条分支
+        # 也就是说：上游感知已经瞎了，而这两道保护看到的一切都正常。
+        #
+        # scan_max_age_sec=0.5 的依据（不是拍的）：
+        #   · 健康态实测 /scan 是 9.88~10.04Hz，周期 ~0.1s
+        #   · 上游 pointcloud_slice_scan_node 的 hold_last_max_frames=5，
+        #     也就是它**保证**最多连续重发 5 帧(=0.5s)后就停止输出
+        #   · 两者取同一个值不是巧合：0.5s 正是上游自己放弃的时刻，
+        #     也就是"最长可能隐身时间"。设得比它小会在上游正常保持时误触发，
+        #     设得比它大则这段时间内谁都不管
+        # scan_loss_grace_sec=2.0 与 slam_loss_grace_sec 对齐：短暂陈旧只置零
+        # （可自动恢复），持续陈旧才闩锁停车（要人介入）。
+        self.require_fresh_scan = bool(require_fresh_scan)
+        self.scan_max_age_sec = float(scan_max_age_sec)
+        self.scan_loss_grace_sec = float(scan_loss_grace_sec)
+        if self.require_fresh_scan and self.scan_max_age_sec <= 0.0:
+            raise ChassisConfigError(
+                'scan_max_age_sec=%r 必须为正。要关闭这道联锁请显式设 '
+                'require_fresh_scan=False —— 用非正阈值"顺便"关掉它，'
+                '会让配置读起来像开着。' % (self.scan_max_age_sec,))
+        if self.require_fresh_scan and self.scan_loss_grace_sec < self.scan_max_age_sec:
+            raise ChassisConfigError(
+                'scan_loss_grace_sec=%r 小于 scan_max_age_sec=%r：宽限期比判陈旧的'
+                '阈值还短，等于跳过"置零"直接闩锁，短暂抖动就要人工复位。'
+                % (self.scan_loss_grace_sec, self.scan_max_age_sec))
 
         if self.cmd_vel_timeout_sec <= 0.0:
             raise ChassisConfigError(
@@ -208,6 +261,12 @@ class ChassisBridgeCore:
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
         self._prev_vel_out = (0.0, 0.0, 0.0)
+        #: 最近一次收到 /scan 的时刻。None = 从未收到过。
+        #: **刻意不在 enable() 里清空** —— /scan 是外部持续流，与使能周期无关。
+        #: 清了会导致每次 enable 后头 0.5s 都被判成"从未收到"而拒绝下发。
+        self._last_scan_time = None
+        #: /scan 连续陈旧的起始时刻，用于判宽限期。恢复新鲜时归零。
+        self._scan_stale_since = None
 
         # ---- 内环步长与拍率统计 ----
         # `_tick_count` / `_tick_dt_sum` 是**无偏**计数：每一拍都计，不像
@@ -286,6 +345,11 @@ class ChassisBridgeCore:
         self.corr_per_tick = (0.0, 0.0, 0.0)
         self._p_slam_prev = None
         self._pose_lost_since = None
+        # /scan 陈旧计时也要重开，否则 disable 那段时长会被算进"已持续陈旧"，
+        # 报出来的数字跨越了停机期，与上面 _tick_first_time 那个坑同型。
+        # 清它是安全的：真正阻止运动的是"龄期超阈 → vel_in 置零"那一步，它每拍
+        # 独立判定、与本计时器无关；这个计时器只决定**何时闩锁**。
+        self._scan_stale_since = None
         self._body_disp_accum = [0.0, 0.0]
         self._dtheta_accum = 0.0
         self._drift_window = []
@@ -329,6 +393,29 @@ class ChassisBridgeCore:
         self._last_twist = (float(vx), float(vy), float(wz))
         self._last_twist_time = self.clock.now()
 
+    def submit_scan_seen(self, stamp=None):
+        """上报"刚收到一帧 /scan"。节点层在 /scan 订阅回调里调用。
+
+        :param stamp: 该帧的 header 时间戳（秒）。None 表示用当前时刻。
+
+        !!! 为什么默认用**接收时刻**而不是 header.stamp !!!
+        上游 pointcloud_slice_scan_node 的 hold_last 策略会把上一帧的几何
+        **配上 now() 的新时间戳**重发。也就是说 header.stamp 在保持期间是"新"的，
+        拿它判龄期会被骗过去 —— 这正是这道联锁要防的那件事。
+        接收时刻至少能反映"话题还在动"，配合上游的 hold_last_max_frames=5
+        上限（超过就真的停止输出），两者合起来才封住整个窗口：
+            · 上游保持 <=0.5s：header 是新的、接收也在动 → 本联锁不触发（有意）
+            · 上游超过上限停发：接收时刻不再更新 → 本联锁在 0.5s 后触发
+        传 stamp 的用法留给"就是要按 header 判"的场景，但要清楚它可以被骗。
+        """
+        self._last_scan_time = self.clock.now() if stamp is None else float(stamp)
+
+    def _scan_age(self):
+        """返回 (龄期秒, 是否从未收到过)。"""
+        if self._last_scan_time is None:
+            return (float('inf'), True)
+        return (self.clock.now() - self._last_scan_time, False)
+
     # ---------------- 位姿 ----------------
 
     def _lookup_pose_checked(self):
@@ -362,7 +449,8 @@ class ChassisBridgeCore:
 
     def inner_tick(self):
         """内环一拍（按 cfg.freq 调用）。返回本拍是否真的下发了指令。"""
-        if self.state in (ST_DISABLED, ST_LEASH_TRIPPED, ST_STOPPED_NO_POSE):
+        if self.state in (ST_DISABLED, ST_LEASH_TRIPPED, ST_STOPPED_NO_POSE,
+                          ST_STOPPED_STALE_SCAN):
             return False
 
         # ---- 步长用**实测**值，不用 1/freq ----
@@ -396,6 +484,43 @@ class ChassisBridgeCore:
                 self._emit(S_CMD_VEL_TIMEOUT,
                            '/cmd_vel 已 %.3fs 无输入，速度置零' % idle,
                            idle, self.cfg.cmd_vel_timeout_sec)
+
+        # ---- /scan 时效性联锁 ----
+        # 放在看门狗**之后、限幅之前**：置零要能覆盖 cmd_vel 给的值，
+        # 又要让后面的 slew_limit 把这个零按加速度限幅平滑收下去
+        # （直接把 _prev_vel_out 打成 0 会变成速度阶跃）。
+        if self.cfg.require_fresh_scan:
+            age, never = self._scan_age()
+            if age > self.cfg.scan_max_age_sec:
+                vel_in = (0.0, 0.0, 0.0)
+                if self._scan_stale_since is None:
+                    self._scan_stale_since = self.clock.now()
+                stale_for = self.clock.now() - self._scan_stale_since
+                if never:
+                    self._emit(S_SCAN_NEVER_RECEIVED,
+                               '从未收到 /scan（已等 %.2fs），速度置零。'
+                               '先查话题名与 QoS —— BEST_EFFORT 发布配 RELIABLE '
+                               '订阅会一帧都收不到且只有一条 WARNING'
+                               % stale_for,
+                               stale_for, self.cfg.scan_max_age_sec)
+                else:
+                    self._emit(S_SCAN_STALE,
+                               '/scan 龄期 %.3fs 超过 %.3fs，速度置零'
+                               % (age, self.cfg.scan_max_age_sec),
+                               age, self.cfg.scan_max_age_sec)
+                # 持续陈旧超过宽限期 → 闩锁停车，要人介入。
+                # 与 SLAM 丢失那条同构：短暂异常自动恢复，持续异常必须有人看到。
+                if stale_for > self.cfg.scan_loss_grace_sec:
+                    self.state = ST_STOPPED_STALE_SCAN
+                    self._prev_vel_out = (0.0, 0.0, 0.0)
+                    self._emit(S_SCAN_LOST_STOPPED,
+                               '/scan 已持续陈旧 %.2fs 超过宽限 %.2fs，已停车。'
+                               '感知失效期间继续行走等于拿旧障碍图开车'
+                               % (stale_for, self.cfg.scan_loss_grace_sec),
+                               stale_for, self.cfg.scan_loss_grace_sec)
+                    return False
+            else:
+                self._scan_stale_since = None
 
         vel = clamp_velocity(vel_in, self.cfg.max_vel_xy, self.cfg.max_vel_theta)
         # !!! 行为变化 !!! 用实测 dt 后，加速度限幅按 a*dt 放行，每秒允许的

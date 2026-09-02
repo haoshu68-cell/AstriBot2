@@ -290,6 +290,12 @@ if(BUILD_TESTING)
   target_link_libraries(test_escape_logic ${PROJECT_NAME}_components)
   ament_target_dependencies(test_escape_logic ${ASTRIBOT_AUTONOMY_DEPS})
 
+  # scan 时效性守护策略：**纯头文件、零依赖**，所以既不链 components 也不
+  # ament_target_dependencies。理由同 test_livox_custom_convert —— 这是防
+  # 「陈旧数据戴着新时间戳流进 costmap」的那道闸，不该因为环境缺件而失去覆盖。
+  ament_add_gtest(test_scan_guard_policy test/test_scan_guard_policy.cpp)
+  target_include_directories(test_scan_guard_policy PRIVATE include)
+
   # 转换逻辑的单测**不链** components 库、也不依赖 livox_ros_driver2：
   # 直接把纯逻辑那一个 .cpp 编进来。这样即使没有 livox 驱动包（纯仿真环境），
   # 这组测试照样能编能跑 —— 无效点剔除是防「假点团进 costmap」的那道闸，

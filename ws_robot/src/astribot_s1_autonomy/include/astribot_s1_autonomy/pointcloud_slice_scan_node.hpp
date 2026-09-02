@@ -98,6 +98,13 @@ private:
   void publishFilteredCloud(
     const std::vector<SlicePoint> & kept, const rclcpp::Time & stamp);
   void republishLastScan();
+  /// 无效帧的**统一**出口。所有"这一帧不能当有效帧发"的分支都要走这里，
+  /// 而不是各自调 republishLastScan() —— 分散调用就没法给 hold_last 上限计数，
+  /// 而没有上限的 hold_last 会让陈旧对所有时效性判据隐身（见 hold_last_max_frames_）。
+  ///
+  /// \param reason 供日志用的原因短语。
+  /// \return 恒为 false，方便调用处直接 `return handleInvalidFrame(...)`。
+  bool handleInvalidFrame(const char * reason);
   void publishSliceMarkers(
     const std::vector<SlicePoint> & kept_points,
     const std::vector<SlicePoint> & self_points,
@@ -111,6 +118,21 @@ private:
   std::string marker_topic_;
   std::string base_frame_;
   double tf_timeout_sec_{0.0};
+  /// **单帧**所有连杆 TF 查询的总等待预算(s)。
+  ///
+  /// 为什么需要它（实测数据，2026-09-01 21:26 那次急停）：原来只有 tf_timeout_sec_
+  /// 这一个"每次查询"的超时，而 resolveSelfFilterCapsules 是**逐连杆串联**查的。
+  /// 一旦 robot_state_publisher 停发（上游 /joint_states 断），36 个连杆**全部**
+  /// 查不到，于是每个都把 50ms 等满：
+  ///     36 × 50ms = 1800ms   ← 实测自滤级增量 1910ms，其中 94.2% 是纯等待
+  ///     单帧 1.91s → 吞吐 1/1.91 = 0.52Hz（实测 /scan 0.56Hz，吻合）
+  /// 也就是说这个超时会被连杆数**线性放大**成秒级，退化成 N × timeout 而不是 timeout。
+  /// 后果不是掉帧，是 /scan 变成"2 秒前的世界"，而下游无人察觉。
+  ///
+  /// 预算用法：每次查询的实际超时 = min(tf_timeout_sec_, 剩余预算)。预算耗尽后剩下的
+  /// 连杆用 0 超时查（命中缓存就用，否则立即失败），所以**单个连杆偶发丢失时其余
+  /// 连杆仍然正常剔除**这个原有行为被保留 —— 只有整体不可用时才快速失败。
+  double tf_total_budget_sec_{0.0};
   double max_cloud_age_sec_{0.0};
   double tf_time_tolerance_sec_{0.0};
   bool enable_voxel_filter_{true};
@@ -124,6 +146,25 @@ private:
   bool publish_markers_{true};
   int marker_point_stride_{1};
   InvalidInputPolicy invalid_input_policy_{InvalidInputPolicy::kHoldLast};
+  /// hold_last 最多连续重发多少帧，超过就转成停止输出。
+  ///
+  /// !!! 这个上限不是可选的加固，是 hold_last 能安全存在的前提 !!!
+  /// republishLastScan() 会把上一帧的几何**配上 now() 的新时间戳**发出去
+  /// （见其实现里那句"只刷新时间戳，内容保持上一帧"）。它的原意是对的：
+  /// 单帧抖动时别让 costmap 因为"传感器超时"把已知障碍物清空。
+  ///
+  /// 但没有上限时，这个行为会让陈旧**对所有时效性判据隐身**：
+  ///   · 探针量 header.stamp 龄期 → 恒为 ~0ms，看不出问题
+  ///   · costmap 的 expected_update_rate → 缓冲一直在更新，不会告警
+  ///   · 任何下游"数据多久没变"的检查 → 全部通过
+  /// 也就是说：真实故障下它比"不发"更危险 —— 不发是能被发现的，
+  /// 发一份戴着新时间戳的旧数据是不能被发现的。
+  ///
+  /// 上限之后的语义：抖动(1~几帧)照旧保持；系统性故障必然在 N 帧后转为停止输出，
+  /// 于是下游的超时判据能真正生效。
+  int hold_last_max_frames_{0};
+  /// 已连续重发的帧数。归零时机：任意一帧成功发布。
+  int hold_last_streak_{0};
 
   std::vector<SelfFilterChainConfig> self_filter_chains_;
 

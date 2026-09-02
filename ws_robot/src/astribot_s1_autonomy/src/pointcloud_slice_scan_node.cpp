@@ -1,6 +1,5 @@
 // Copyright 2026 Astribot.
 #include "astribot_s1_autonomy/pointcloud_slice_scan_node.hpp"
-
 // cpplint 把 Eigen/PCL 的头当作 "C system header"，要求排在 C++ 标准库之前，
 // 因此这里刻意先放它们，再放 <algorithm> 等标准库头。
 #include <Eigen/Geometry>
@@ -14,6 +13,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cinttypes>
 #include <cmath>
 #include <limits>
@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
+#include "astribot_s1_autonomy/scan_guard_policy.hpp"
 #include "tf2/exceptions.h"
 
 namespace astribot_s1_autonomy
@@ -137,6 +138,14 @@ void PointcloudSliceScanNode::declareParameters()
              "默认值原为 base_link，yaml 静默失效时会回落到它并让 TF 查询全失败。"));
 
   declare_parameter<double>("tf_timeout_sec", 0.05, describe("TF 查询超时(s)"));
+  // 0.06 = 略大于一次 tf_timeout_sec(0.05)。取这个值的含义：
+  // 允许"第一个连杆查失败、等满一次超时"，但**不允许**第二个再等一次。
+  // 于是 TF 整体不可用时，自滤这一级的开销从实测的 1800ms 压到 ~60ms，
+  // 单帧总耗时回到 100ms 量级，/scan 不再产生秒级陈旧。
+  // 上限依据：雷达帧周期 100ms，TF 阶段吃掉超过一半就必然掉帧。
+  declare_parameter<double>(
+    "tf_total_budget_sec", 0.06,
+    describe("单帧所有连杆 TF 查询的总等待预算(s)，防止 N 个连杆把超时线性放大成秒级"));
   declare_parameter<double>("max_cloud_age_sec", 0.30, describe("点云时间戳与当前时间的最大偏差(s)，超出则丢帧"));
   declare_parameter<double>("tf_time_tolerance_sec", 0.10, describe("点云时间戳与 TF 时间戳的最大偏差(s)，超出则丢帧"));
 
@@ -152,6 +161,15 @@ void PointcloudSliceScanNode::declareParameters()
   declare_parameter<std::string>(
     "invalid_input_policy", "hold_last",
     describe("输入无效时的策略: hold_last=重发上一帧, stop_output=停止输出"));
+  // 5 帧 @10Hz = 0.5s。取这个值的依据：
+  //   · 下限：要能盖住真实的单帧抖动。实测空点云/时间戳越界都是 1~2 帧的事。
+  //   · 上限：必须小于下游的陈旧判据，否则上限形同虚设。costmap 侧建议
+  //     expected_update_rate=0.2s，而重发期间 costmap **看不出**陈旧
+  //     (时间戳是新的)，所以这里的 0.5s 是真正的"最长隐身时间"。
+  // 超过之后转停止输出 —— 那时 /scan 才真的停，下游超时判据才会响。
+  declare_parameter<int>(
+    "hold_last_max_frames", 5,
+    describe("hold_last 最多连续重发多少帧，超过转为停止输出；<=0 表示不限制(不推荐)"));
 
   declare_parameter<std::string>(
     "filtered_cloud_topic", "~/cloud_self_filtered",
@@ -207,10 +225,23 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
   }
 
   tf_timeout_sec_ = get_parameter("tf_timeout_sec").as_double();
+  tf_total_budget_sec_ = get_parameter("tf_total_budget_sec").as_double();
   max_cloud_age_sec_ = get_parameter("max_cloud_age_sec").as_double();
   tf_time_tolerance_sec_ = get_parameter("tf_time_tolerance_sec").as_double();
   if (tf_timeout_sec_ < 0.0 || max_cloud_age_sec_ <= 0.0 || tf_time_tolerance_sec_ <= 0.0) {
     error = "tf_timeout_sec 需 >=0，max_cloud_age_sec / tf_time_tolerance_sec 需 >0";
+    return false;
+  }
+  if (tf_total_budget_sec_ < 0.0) {
+    error = "tf_total_budget_sec 需 >=0（0 表示所有查询都用 0 超时，只吃缓存）";
+    return false;
+  }
+  // 预算比单次超时还小是配置矛盾：那等于把 tf_timeout_sec 悄悄改小了。
+  // 不静默纠正，直接报错 —— 静默纠正会让人以为 tf_timeout_sec 生效了。
+  if (tf_total_budget_sec_ > 0.0 && tf_total_budget_sec_ < tf_timeout_sec_) {
+    error = "tf_total_budget_sec(" + std::to_string(tf_total_budget_sec_) +
+      ") 小于 tf_timeout_sec(" + std::to_string(tf_timeout_sec_) +
+      ")，单次查询永远等不满，等于静默改小了后者";
     return false;
   }
 
@@ -241,6 +272,7 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
   }
 
   const std::string policy = get_parameter("invalid_input_policy").as_string();
+  hold_last_max_frames_ = static_cast<int>(get_parameter("hold_last_max_frames").as_int());
   if (policy == "hold_last") {
     invalid_input_policy_ = InvalidInputPolicy::kHoldLast;
   } else if (policy == "stop_output") {
@@ -416,9 +448,7 @@ void PointcloudSliceScanNode::cloudCallback(
       get_logger(), *get_clock(), kLogThrottleMs,
       "收到空点云(width=%u height=%u)，按策略处理，不生成脏 scan",
       msg->width, msg->height);
-    if (invalid_input_policy_ == InvalidInputPolicy::kHoldLast) {
-      republishLastScan();
-    }
+    handleInvalidFrame("空点云");
     return;
   }
 
@@ -531,6 +561,13 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
   }
 
   std::size_t missing = 0U;
+  std::size_t resolved = 0U;
+  // 单帧 TF 总预算的截止时刻。用**稳态时钟**而不是 ROS 时钟：这里量的是
+  // "本函数已经等了多久"，属于真实墙钟耗时，与 use_sim_time / 时钟跳变无关。
+  // 用 now() 的话仿真时钟暂停时预算永远花不完，退化回原来的 N × timeout。
+  const auto budget_start = std::chrono::steady_clock::now();
+  bool budget_exhausted = false;
+
   for (const SelfFilterChainConfig & chain : self_filter_chains_) {
     // 先把链上每个 frame 在 base_frame 下的原点位置查出来。
     // 查不到的 frame 标成无效，后面连线时跳过——机械臂某个连杆的 TF
@@ -543,13 +580,24 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
     for (const std::string & frame : chain.frames) {
       std::array<float, 3> p{{0.0F, 0.0F, 0.0F}};
       bool ok = false;
+      // 本次查询能等多久 = min(单次超时, 剩余总预算)。
+      // 预算耗尽后是 0 —— 不是"跳过不查"，而是**仍然查、只是不等**：
+      // 命中 tf 缓存的连杆照样解析成功，所以健康态下这条路径完全不改变行为
+      // （健康态每次查询立即返回，预算根本花不到）。
+      const double elapsed = std::chrono::duration<double>(
+        std::chrono::steady_clock::now() - budget_start).count();
+      const double wait = tfLookupWait(tf_timeout_sec_, tf_total_budget_sec_, elapsed);
+      if (wait <= 0.0 && tf_timeout_sec_ > 0.0) {
+        budget_exhausted = true;
+      }
       try {
         const geometry_msgs::msg::TransformStamped tf = tf_buffer_->lookupTransform(
-          base_frame_, frame, stamp, tf2::durationFromSec(tf_timeout_sec_));
+          base_frame_, frame, stamp, tf2::durationFromSec(wait));
         p[0] = static_cast<float>(tf.transform.translation.x);
         p[1] = static_cast<float>(tf.transform.translation.y);
         p[2] = static_cast<float>(tf.transform.translation.z);
         ok = true;
+        ++resolved;
       } catch (const tf2::TransformException &) {
         ++missing;
       }
@@ -592,6 +640,19 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "本帧有 %zu 个连杆 TF 查询失败，对应胶囊体已跳过(其余部分仍生效)", missing);
+  }
+  // 一个连杆都没解析出来 = TF 整体不可用（RSP 停发 / 上游 /joint_states 断），
+  // 这与"某个连杆偶发丢失"是**性质不同**的两件事，必须让调用方能区分：
+  //   · 偶发丢失：其余胶囊体照常剔除，这一帧仍然可信
+  //   · 整体不可用：自滤等于没做，机器人自己的手臂/夹爪会留在点云里当障碍物
+  // 后者绝不能当成正常帧发出去（实测那次急停：保留 9298 点、自身剔除 0）。
+  if (resolved == 0U && !self_filter_chains_.empty()) {
+    RCLCPP_ERROR_THROTTLE(
+      get_logger(), *get_clock(), kLogThrottleMs,
+      "连杆 TF **全部**不可用(%zu 个)，自滤无法进行；预算%s。"
+      "本帧不作为有效帧发布 —— 自滤失效时点云里含机器人自身结构，"
+      "发出去等于把自己的手臂当障碍物",
+      missing, budget_exhausted ? "已用尽(说明是持续故障，不是抖动)" : "未用尽");
   }
   return capsules;
 }
@@ -647,11 +708,8 @@ bool PointcloudSliceScanNode::processCloud(
   // ---- 4) 变换到 base_frame ----
   geometry_msgs::msg::TransformStamped tf_msg;
   if (!lookupCloudTransform(msg->header.frame_id, stamp, tf_msg)) {
-    if (invalid_input_policy_ == InvalidInputPolicy::kHoldLast) {
-      republishLastScan();
-    }
     dropped_frame_count_.fetch_add(1U);
-    return false;
+    return handleInvalidFrame("点云自身 frame 的 TF 查询失败");
   }
 
   Eigen::Affine3f transform = Eigen::Affine3f::Identity();
@@ -676,6 +734,12 @@ bool PointcloudSliceScanNode::processCloud(
   {
     std::lock_guard<std::mutex> lock(config_mutex_);
     capsules = resolveSelfFilterCapsules(stamp);
+    // 自滤链配了、却一个胶囊体都没解析出来 → TF 整体不可用 → 本帧无效。
+    // 走与 min_valid_points 相同的无效帧路径（含 hold_last 上限），
+    // 不要在这里另起一套策略。
+    if (capsules.empty() && !self_filter_chains_.empty()) {
+      return handleInvalidFrame("连杆 TF 全部不可用，自滤未生效");
+    }
     self_filter_.setCapsules(capsules);
 
     kept.reserve(cloud_base->size());
@@ -699,10 +763,7 @@ bool PointcloudSliceScanNode::processCloud(
       RCLCPP_WARN_THROTTLE(
         get_logger(), *get_clock(), kLogThrottleMs,
         "剔除自身点后仅剩 %zu 点(阈值 %d)，本帧视为无效", kept.size(), min_valid_points_);
-      if (invalid_input_policy_ == InvalidInputPolicy::kHoldLast) {
-        republishLastScan();
-      }
-      return false;
+      return handleInvalidFrame("剔除后有效点不足");
     }
 
     // ---- 6) 多层切片投影融合 ----
@@ -710,6 +771,11 @@ bool PointcloudSliceScanNode::processCloud(
   }
 
   // ---- 7) 输出 ----
+  // 有效帧发布成功 → 重发连击归零。
+  // !!! 必须是"连续"计数而不是"累计" !!! 累计的话，机器人一天里偶发抖动 5 次
+  // 之后上限就永久跳闸，之后每一次真实抖动都变成停止输出。本项目在重试上限
+  // 那条上已经犯过同一个错（把成功也计入，误杀了完全走得通的长路径）。
+  hold_last_streak_ = 0;
   publishScan(result, stamp);
   publishFilteredCloud(kept, stamp);
   if (publish_markers_) {
@@ -786,6 +852,37 @@ void PointcloudSliceScanNode::publishFilteredCloud(
   filtered_cloud_pub_->publish(msg);
 }
 
+bool PointcloudSliceScanNode::handleInvalidFrame(const char * reason)
+{
+  const bool hold = invalid_input_policy_ == InvalidInputPolicy::kHoldLast;
+  const HoldLastAction action =
+    holdLastDecision(hold, hold_last_streak_, hold_last_max_frames_);
+
+  if (action == HoldLastAction::kStopOutput) {
+    if (!hold) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), kLogThrottleMs,
+        "本帧无效(%s)，按 stop_output 策略不发布", reason);
+    } else {
+      RCLCPP_ERROR_THROTTLE(
+        get_logger(), *get_clock(), kLogThrottleMs,
+        "本帧无效(%s)，且已连续重发 %d 帧(上限 %d)。"
+        "**停止输出** —— 继续重发会让旧数据一直戴着新时间戳，"
+        "下游任何时效性判据都发现不了",
+        reason, hold_last_streak_, hold_last_max_frames_);
+    }
+    return false;
+  }
+
+  ++hold_last_streak_;
+  RCLCPP_WARN_THROTTLE(
+    get_logger(), *get_clock(), kLogThrottleMs,
+    "本帧无效(%s)，重发上一帧(连续第 %d 帧，上限 %d；上限<=0 表示不限制)",
+    reason, hold_last_streak_, hold_last_max_frames_);
+  republishLastScan();
+  return false;
+}
+
 void PointcloudSliceScanNode::republishLastScan()
 {
   if (!scan_pub_) {
@@ -837,7 +934,9 @@ void PointcloudSliceScanNode::watchdogCallback()
     input_timeout_warned_ = true;
   }
   if (invalid_input_policy_ == InvalidInputPolicy::kHoldLast) {
-    republishLastScan();
+    // 走统一出口，让"没有输入"也受 hold_last 上限约束 ——
+    // 这是最容易永久隐身的一条路径：上游整个停了，而我们一直发新时间戳。
+    handleInvalidFrame("输入超时");
   }
 }
 

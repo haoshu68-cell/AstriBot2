@@ -223,11 +223,23 @@ def _build(**overrides):
 
 
 def _run(core, clock, vx, period, ticks):
-    """以固定周期 period 跑 ticks 拍，返回 x 方向总位移。"""
+    """以固定周期 period 跑 ticks 拍，返回 x 方向总位移。
+
+    每拍都调 ``submit_scan_seen()``：/scan 时效性联锁默认开启，不喂就会在
+    0.5s 后把速度置零，本文件测的 dt 结论就全被它压成 0 了。
+    联锁自身的测试在 test_chassis_scan_interlock.py。
+
+    !!! 这里有一条值得记住的观测 !!!
+    加联锁后，本文件的 test_halved_tick_rate_still_travels_the_same_distance
+    **依然通过** —— 因为它比较 A、B 两个位移是否相等，而两者都被压成了 0.0，
+    0 == 0 成立。真正抓到问题的是 test_displacement_tracks_wall_clock_at_any_rate
+    （它比的是绝对值）。相等性断言在"两边同时失效"时会假通过。
+    """
     core.enable()
     x0 = core.pos_cmd[0]
     for _ in range(ticks):
         core.submit_twist(vx, 0.0, 0.0)
+        core.submit_scan_seen()
         clock.advance(period)
         core.inner_tick()
     return core.pos_cmd[0] - x0

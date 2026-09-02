@@ -288,6 +288,28 @@ local_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 5.5
           obstacle_min_range: 0.0
+          # ═══════ expected_update_rate：不设它等于关掉陈旧检测 ═══════
+          # nav2 默认值是 0.0，含义是 ObservationBuffer::isCurrent() **永远返回 true**，
+          # 也就是说 /scan 无论多旧，costmap 都认为数据是新的、一条告警都不打。
+          #
+          # 这不是理论担心，是实测过的事故(2026-09-01 21:26 那次急停)：
+          #   /joint_states 断 → RSP 停发连杆 TF → 自滤逐连杆等满超时
+          #   → /scan 掉到 0.56Hz、数据龄期 2.03s
+          #   → nav2 全程照常规划、照常发速度，**零告警**
+          # 设上之后至少会打：
+          #   "The scan observation buffer has not been updated for X seconds,
+          #    and it should be updated every Y seconds."
+          #  (已在 libnav2_costmap_2d_core.so 里确认该字符串存在)
+          #
+          # !!! 必须知道它的边界 !!!：这是**告警，不是联锁**。
+          # 实测 controller_server 二进制里没有任何检查 costmap currency 的字符串，
+          # 所以陈旧时它**仍然会继续发速度**。真正的拒绝下发必须放在我们自己的
+          # 写通路(chassis_cmd_bridge)里，别指望这一条。
+          #
+          # 0.2s = 两个雷达帧周期(10Hz)。取这个值而不是 0.1 的原因：健康态实测
+          # /scan 是 9.9~10.04Hz，抖一帧就会超过 0.1 而误报。0.2 能容一帧抖动，
+          # 又远小于会造成危险的秒级陈旧。
+          expected_update_rate: 0.2
       always_send_full_costmap: True
 
 global_costmap:
@@ -319,6 +341,10 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 5.5
           obstacle_min_range: 0.0
+          # 理由与 local_costmap 那份相同（见上方长注释）。
+          # 全局侧 update_frequency 是 1.0Hz，但陈旧判据跟的是**数据源**的到达间隔，
+          # 与 costmap 自己的更新频率无关 —— 所以这里同样用 0.2。
+          expected_update_rate: 0.2
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         # SLAM Toolbox 在 mapping/localization 两种模式下都会发布 /map，这里直接订阅，

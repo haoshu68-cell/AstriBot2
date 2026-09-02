@@ -22,6 +22,8 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import LaserScan
 from std_srvs.srv import SetBool, Trigger
 
 from astribot_trajectory_bridge.callback_layout import CHASSIS_GROUPS, make_groups
@@ -104,6 +106,30 @@ class ChassisCmdBridgeNode(Node):
         self.create_subscription(
             Twist, self.get_parameter('cmd_vel_topic').value,
             self._on_cmd_vel, 10, callback_group=cmd_group)
+
+        # ---- /scan 时效性联锁的输入 ----
+        # !!! QoS 必须用 sensor_data，不能用深度整数 !!!
+        # `create_subscription(..., 10)` 里那个 10 是**深度**，可靠性走默认的
+        # RELIABLE。而 /scan 发布端是 BEST_EFFORT（实测 pointcloud_to_laserscan
+        # 就是 BEST_EFFORT），单向不兼容 = 一帧都收不到，全程只有一条 WARNING。
+        # 本项目已经因为这个组合断过一整条感知链（livox_preprocess_node）。
+        #
+        # 在这里配错的后果**特别隐蔽且危险方向相反**：收不到 /scan 会让本联锁
+        # 判成"从未收到"→ 永久拒绝下发 → 表现为"机器人怎么都不动"，
+        # 而真因是订阅端 QoS 写错了。所以这一行宁可啰嗦也要写清。
+        #
+        # 同时刻意与内环**不共用**回调组：cmd_group 是互斥组，250Hz 内环已经
+        # 饿死过 cmd_vel 回调一次（那次表现是"nav2 正常、机器人一动不动、无告警"）。
+        # 这个订阅只更新一个时间戳，但它一旦被饿死，联锁就会误判成陈旧而拒绝下发。
+        if cfg.require_fresh_scan:
+            self.create_subscription(
+                LaserScan, self.get_parameter('scan_topic').value,
+                self._on_scan, qos_profile_sensor_data,
+                callback_group=cmd_group)
+        else:
+            self.get_logger().warning(
+                'require_fresh_scan=False：/scan 时效性联锁**已关闭**。'
+                '感知失效时底盘不会自动停 —— 只应在无感知的台架测试里这样配')
         self._odom_pub = self.create_publisher(
             Odometry, self.get_parameter('odom_topic').value, 10)
 
@@ -176,6 +202,14 @@ class ChassisCmdBridgeNode(Node):
         d('odom_drift_window_sec', 2.0)
         d('odom_drift_warn_m', 0.15)
         d('loop_overrun_factor', 1.5)
+        # ---- /scan 时效性联锁 ----
+        # nav2 的 expected_update_rate 只会**告警**（实测 controller_server 里
+        # 没有任何检查 costmap currency 的字符串），所以"感知瞎了还继续走"
+        # 只有写通路能拒绝。参数含义与取值依据见 ChassisBridgeConfig 里的长注释。
+        d('scan_topic', '/scan')
+        d('require_fresh_scan', True)
+        d('scan_max_age_sec', 0.5)
+        d('scan_loss_grace_sec', 2.0)
         # 写通路准入
         d('declared_target', 'sim')
         d('allow_write_to_real', False)
@@ -204,7 +238,10 @@ class ChassisCmdBridgeNode(Node):
             require_slam_to_enable=g('require_slam_to_enable'),
             slam_loss_grace_sec=g('slam_loss_grace_sec'),
             odom_drift_window_sec=g('odom_drift_window_sec'),
-            odom_drift_warn_m=g('odom_drift_warn_m'))
+            odom_drift_warn_m=g('odom_drift_warn_m'),
+            require_fresh_scan=g('require_fresh_scan'),
+            scan_max_age_sec=g('scan_max_age_sec'),
+            scan_loss_grace_sec=g('scan_loss_grace_sec'))
 
     # -------------------------------------------------------------- WriteGate
 
@@ -257,6 +294,12 @@ class ChassisCmdBridgeNode(Node):
 
     def _on_cmd_vel(self, msg):
         self.core.submit_twist(msg.linear.x, msg.linear.y, msg.angular.z)
+
+    def _on_scan(self, msg):      # noqa: ARG002 —— 只关心"来了一帧"，不看内容
+        # 刻意**不**传 msg.header.stamp：上游 hold_last 策略会把旧几何配上
+        # now() 的新时间戳重发，按 header 判龄期正好被它骗过去。
+        # 详见 ChassisBridgeCore.submit_scan_seen 的文档。
+        self.core.submit_scan_seen()
 
     def _inner_tick(self):
         if not self._write_allowed:
