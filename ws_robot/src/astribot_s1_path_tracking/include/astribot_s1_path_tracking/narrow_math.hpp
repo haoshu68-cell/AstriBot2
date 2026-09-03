@@ -60,11 +60,47 @@ namespace astribot_s1_path_tracking
 
 /// nav2 代价语义。刻意写成常量而不是散在判断里 —— 253/254 的区别就是
 /// 「可以贴」和「不可以撞」的区别，混淆一次就是安全事故。
+///
+/// ============ 🔴 一条铁律：两种查询，两个阈值，绝不混用 ============
+///
+/// 依据来自 nav2 自己的 InflationLayer::computeCost（逐字）：
+/// ```
+///   if (distance == 0)                           cost = LETHAL_OBSTACLE;          // 254
+///   else if (distance*resolution <= inscribed_radius_) cost = INSCRIBED_INFLATED; // 253
+///   else                                         cost = 指数衰减(<=252);
+/// ```
+/// 也就是说 **253 的含义是「这一格离障碍不超过内切半径」= 底盘中心放在这里必然碰撞**。
+/// 内切半径**就是底盘的半宽**，膨胀层已经把底盘尺寸算进去了。
+///
+/// 所以：
+///   · **中心格查询**（Costmap2D::getCost(mx,my)）用 **253**。
+///     膨胀带此时正好代表底盘尺寸，这是它设计出来要回答的问题。
+///     nav2 的 SmacPlanner2D 判「Starting point in lethal space」用的就是这个。
+///   · **足迹多边形查询**（FootprintCollisionChecker::footprintCostAtPose）用 **254**。
+///     多边形**已经**表达了底盘尺寸；再要求多边形外轮廓避开 253 带，
+///     等于把底盘半宽算了两遍。
+///
+/// 重复计的代价可以算出来（这不是洁癖，是量级问题）：
+///   足迹外轮廓上一点离中心 lateral，要让它躲开 253 带就必须
+///     通道半宽 > lateral + inscribed_radius ≈ 2*lateral
+///   ⇒ 需要通道宽 > 4*lateral。代入本机实测：
+///     八边形 lateral 0.3894 / inscribed(含 padding) 0.3992 ⇒ 通道需 > 1.577m
+///     正方形 lateral 0.3100 / inscribed(含 padding) 0.3200 ⇒ 通道需 > 1.260m
+///   而本仿真环境最窄通道 0.65m 量级 ⇒ **恒为 253、零梯度**。
+///   这正是本项目早先记下的那条症状「consider_footprint:true 时窄于 1.62m 的
+///   通道里恒为 253（实测占可行域 35%）」—— 1.577 与实测 1.62 在一个栅格之内，
+///   当时只记了症状没推出成因。
+///
+/// 实测证据（2 轮共 969+709s）：足迹代价读数 **51 次 253、仅 2 次 254**，
+/// 其中 26 次同时 **中心代价=0**（中心完全自由）。若足迹真的装不进去，
+/// 读数应当是 254。所以那 909 次「连小足迹转正也过不去」全是重复计的产物，
+/// 不是地图真的比 0.65m 还窄。
 struct NarrowCostValues
 {
-  /// 膨胀层写的「中心在此⇒足迹必然碰撞」。可以贴，不算真碰撞。
+  /// 膨胀层写的「中心在此⇒足迹必然碰撞」。**只用于中心格查询。**
+  /// 拿它当足迹多边形的阈值就是重复计底盘半宽（见上面的算术）。
   static constexpr double kInscribedInflated = 253.0;
-  /// 真障碍。红线，绝不穿越。
+  /// 真障碍本体（distance==0）。**足迹多边形查询的唯一正确阈值。**
   static constexpr double kLethal = 254.0;
   /// 未知。
   static constexpr double kNoInformation = 255.0;
@@ -91,9 +127,13 @@ const char * toString(NarrowVerdict v);
 /// 触发判定配置。
 struct NarrowTriggerConfig
 {
-  /// 足迹代价达到多少算「碰致命带」。默认 253，与 MPPI 的饱和阈值一致。
-  double footprint_lethal_threshold{NarrowCostValues::kInscribedInflated};
-  /// 中心格代价达到多少算「中心已致命」。默认 253，与 SmacPlanner2D 判起点一致。
+  /// 足迹**多边形**代价达到多少算「过不去」。
+  /// 🔴 必须是 254(kLethal)：多边形已经表达了底盘尺寸，用 253 就是重复计
+  ///    底盘半宽，后果是任何窄于 4*半宽(本机 ~1.58m)的通道里恒为 253、零梯度。
+  ///    详见 NarrowCostValues 顶部那段算术与实测证据。
+  double footprint_lethal_threshold{NarrowCostValues::kLethal};
+  /// 中心格代价达到多少算「中心已致命」。253，与 SmacPlanner2D 判起点一致。
+  /// 这一处**必须**是 253：膨胀带在中心格判据里正好代表底盘尺寸。
   double center_lethal_threshold{NarrowCostValues::kInscribedInflated};
   /// 连续多少拍满足条件才接管。避免边界抖动导致反复切换控制律。
   int trigger_ticks{3};
@@ -257,6 +297,199 @@ bool corridorHeadingFromPath(
   const PlanarPoint & robot,
   double lookahead_m,
   double & heading);
+
+// ==================== 进入窄通道**之前**的朝向预对齐 ====================
+//
+// 为什么需要它：本层原来只在「足迹已经碰到致命带」之后才接管并转朝向，
+// 也就是说机器人总是**先以不利朝向撞进窄处**，再在里面原地转。
+// 本文件上面第 118 行记录的实测时序就是这个：
+//   中心代价 0 -> 218 -> 229 -> 致命，机器人被一路推进膨胀带深处，
+//   最后自己变成了 ESCAPE 的对象。
+// 当时的修法（红线改用最有利朝向判）只让本层不再自我否决，
+// **没有改变"以不利朝向进入"这件事本身**。预对齐补的就是这一条：
+// 趁还在开阔处（足迹未碰致命带、原地转零风险）就把车转到有利朝向。
+//
+// ⚠️ 这一步**不影响全局规划器**。SmacPlanner2D 的起点判据读栅格代价值，
+//    而膨胀层只用内切半径算 253 —— 整条链旋转无关。转正后重新求解拿到的是
+//    逐字相同的 "Starting point in lethal space"。预对齐的收益全部在
+//    MPPI 侧（footprintCostAtPose 是带位姿的）与"不被推进膨胀带深处"这条链上。
+
+/// 预对齐的判定结果。**逐项枚举**而不是一个 bool ——
+/// 「不需要预对齐」和「前方根本过不去」是完全不同的两件事，
+/// 合成一个 false 会让"预对齐从不触发"这种故障看起来像"前方一直很开阔"。
+enum class PrealignVerdict
+{
+  /// 前方存在「当前朝向过不去、转到有利朝向就过得去」的窄处 ⇒ 应当预对齐。
+  kNeeded,
+  /// 前视范围内足迹都不碰致命带 ⇒ 开阔，不需要。
+  kClearAhead,
+  /// 前方窄处**即使转到有利朝向也过不去** ⇒ 不是预对齐能解决的，
+  /// 该由红线(kPhysicallyBlocked)或协调器 ESCAPE 处理。
+  kBlockedEvenFavorable,
+  /// 路径短于一个采样步长，前视无从下手（缺数据，不等于开阔）。
+  kPathTooShort,
+  /// 参数非法。
+  kInvalidConfig,
+};
+
+/// 预对齐参数。阈值全部由调用方从 yaml 注入，本层不带默认判据。
+struct PrealignConfig
+{
+  /// 沿路径前视距离(m)，必须 > 0。
+  double preview_m{1.00};
+  /// 前视采样间距(m)，必须 > 0 且 <= preview_m。
+  double sample_step_m{0.10};
+  /// 求每个采样点的通道方向(切向)时用的前视弧长(m)。
+  /// 与 narrow_heading_lookahead 同一个量，**共用一个值**，不另设阈值。
+  double tangent_lookahead_m{0.40};
+  /// 有利朝向周期(rad)。正八边形 = pi/4。
+  double favorable_period_rad{0.7853981634};
+  /// 足迹**多边形**过不去的阈值。与 narrow_footprint_lethal_threshold 同值。
+  /// 🔴 必须 254：本结构里所有查询都是 footprintCostAtPose（多边形），
+  ///    用 253 会重复计底盘半宽（见 NarrowCostValues 顶部）。
+  double footprint_lethal_threshold{NarrowCostValues::kLethal};
+};
+
+/// 预对齐的观测量。计数逐项分开——判据零改动，纯观测。
+struct PrealignPreview
+{
+  PrealignVerdict verdict{PrealignVerdict::kClearAhead};
+  /// 应当转到的目标朝向(rad)，仅 kNeeded 时有意义。
+  double target_yaw{0.0};
+  /// 触发点距机器人的弧长(m)，仅 kNeeded 时有意义（诊断/滞回用）。
+  double at_distance_m{0.0};
+  /// 实际扫过的采样点数。
+  ///
+  /// 必须显式返回：否则「扫了 0 个点」与「扫遍全程都很开阔」都报 kClearAhead，
+  /// 而前者是故障。本项目已经在别处栽过这个跟头（前沿候选恒被否却报 0 前沿）。
+  std::size_t samples{0U};
+  /// 取不到切向而被跳过的采样点数（路径退化）。
+  std::size_t skipped_no_tangent{0U};
+};
+
+/// 沿全局路径前视，判断是否存在「只有转正才过得去」的窄处。
+///
+/// 判据**完全复用** evaluateNarrowTrigger 的那一条，只把求值点从机器人当前位置
+/// 换成前方路径点：
+///   cost(p_i, 当前朝向) >= 253  且  cost(p_i, p_i 处的有利朝向) < 253
+///
+/// ⚠️ 「当前朝向」这一侧是**假设机器人保持现在的朝向到达 p_i**。
+///    这是启发式（真实到达朝向由 MPPI 决定），但方向上是保守的：
+///    只有"照现在这个姿态走过去会压致命带"时才触发转向。
+///
+/// @param path       全局路径（costmap 系）
+/// @param robot      机器人当前位置
+/// @param robot_yaw  机器人当前朝向
+/// @param cost_fn    足迹代价查询（上线注入 footprintCostAtPose，测试注入解析函数）
+PrealignPreview previewFavorableAlignment(
+  const std::vector<PlanarPoint> & path,
+  const PlanarPoint & robot,
+  double robot_yaw,
+  const PrealignConfig & cfg,
+  const FootprintCostFn & cost_fn);
+
+/// 原地旋转的**扫掠通路校验**。承诺转向之前必须过这一关。
+///
+/// 为什么不能省：开阔处 footprint_cost < 253 只保证**当前这一个朝向**不碰带。
+/// 正八边形顶点比边中点多伸出 0.034m，原地转会把顶点扫进膨胀带甚至真障碍。
+/// 所以要对 from_yaw -> to_yaw 之间的中间朝向逐个求足迹代价，全程低于阈值才放行。
+/// 取"最近方向"旋转（|Δ| <= pi），与 favorableYawError 的同余类语义一致。
+///
+/// @param at              旋转发生的位置（机器人当前位置）
+/// @param lethal_threshold 上限(含即拒绝)。传 253 = 连膨胀带都不许扫进
+/// @param worst_cost      输出：扫掠过程中的最大足迹代价（诊断用，失败时也填）
+/// @return 全程低于阈值才 true。false 时调用方**必须放弃预对齐**，不得硬转。
+bool sweepClearForRotation(
+  const PlanarPoint & at,
+  double from_yaw,
+  double to_yaw,
+  double step_rad,
+  double lethal_threshold,
+  const FootprintCostFn & cost_fn,
+  double & worst_cost);
+
+// ==================== 窄通道内临时缩小足迹（八边形 -> 正方形）====================
+//
+// 为什么需要它：预对齐（上一节）实测**主判据没有改善**——
+//   基线 on 侧 起点致命 1.08/min，预对齐轮 1.48/min（1 轮 365s）
+// 日志给出了原因：18 次前视里 12 次是「转正也过不去」，
+// 接管日志原文 `足迹代价=253(有利朝向 253)` —— 两个朝向的足迹代价**完全相同**。
+// 因为八边形各向异性只有 0.032m、小于栅格 0.05m，取足迹最大值时两个朝向都饱和。
+// ⇒ **朝向对齐在八边形下没有可用余量。**
+//
+// 正方形把可用余量放大 4 倍（数字全部来自 nav2 自己的 calculateMinAndMaxDistances
+// + padFootprint，不是本文件的算术）：
+//
+//   足迹            膨胀层用的内切   外接      朝向盲区(外接-内切)   最窄通道(2*内切)
+//   八边形          0.399155        0.434164   0.035               0.798m
+//   正方形 a=0.31   0.320000        0.452548   0.133  (4 倍)       0.640m
+//
+// 🔴 代价：膨胀层只用内切半径、**旋转无关**，所以「外接−内切」就是代价地图对朝向的
+//    盲区。正方形把它从 0.035 放大到 0.133。正方形本身是**诚实包络**（随车体旋转，
+//    任何朝向都包住底盘：躯干 0.30 余量 10mm、轮球包围盒 0.2963 余量 13.7mm），
+//    不诚实的只有膨胀层那一刀。所以**正方形生效期间必须把朝向锁在有利同余类附近**，
+//    这就是为什么顺序只能是「先对齐、后换足迹」，不能颠倒。
+//
+// 🔴 而且：碰撞保护不依赖膨胀层。MPPI 两个 critic 都是 consider_footprint:true、
+//    用真实多边形在真实位姿求值，254 红线不动。所以膨胀层的乐观导致的是
+//    **规划器乐观 ⇒ 卡住**，不是碰撞。
+
+/// 前方窄处该用哪种策略。**逐项枚举**：把「开阔」「转正就行」「要缩足迹」
+/// 「怎么都不行」合并成 bool 会让"从不触发"与"一路开阔"无法区分。
+enum class NarrowStrategy
+{
+  /// 前视范围内足迹都不碰致命带 ⇒ 开阔，什么都不用做。
+  kNone,
+  /// 当前朝向过不去、**转到有利朝向就过得去** ⇒ 只需预对齐（不缩足迹）。
+  kAlignOnly,
+  /// 转正仍过不去、但**换成小足迹后转正过得去** ⇒ 先对齐再缩足迹。
+  kAlignThenShrink,
+  /// 两种足迹转正都过不去 ⇒ 不是本层能解决的，交红线/ESCAPE。
+  kBlocked,
+  /// 路径短于一个采样步长（缺数据，**不等于开阔**）。
+  kPathTooShort,
+  /// 参数非法。
+  kInvalidConfig,
+};
+
+/// 策略前视的结果 + 观测量。
+struct StrategyPreview
+{
+  NarrowStrategy strategy{NarrowStrategy::kNone};
+  /// 应当转到的目标朝向(rad)。kAlignOnly / kAlignThenShrink 时有意义。
+  double target_yaw{0.0};
+  /// 触发点距机器人的弧长(m)。
+  double at_distance_m{0.0};
+  /// 实际扫过的采样点数。报 kNone 时必须 > 0，否则与故障无法区分。
+  std::size_t samples{0U};
+  /// 取不到切向而跳过的点数（路径退化）。
+  std::size_t skipped_no_tangent{0U};
+};
+
+/// 沿全局路径前视，判定该用哪种窄通道策略。
+///
+/// 对前方每个采样点 p_i（切向 θ_i）依次问三个问题，判据与
+/// evaluateNarrowTrigger 完全一致，只是求值点换成前方路径点：
+///   ① 默认足迹 @ 当前朝向  < 阈值 ⇒ 这一点照现在的姿态就过得去，跳过
+///   ② 默认足迹 @ 有利朝向  < 阈值 ⇒ kAlignOnly
+///   ③ 小足迹   @ 有利朝向  < 阈值 ⇒ kAlignThenShrink
+///   否则                          ⇒ kBlocked
+///
+/// 🔴 保守性论证（安全论证的承重点）：求值时栅格还是按**默认足迹**的内切半径
+///    膨胀的（0.399），而换成小足迹后 253 带收窄到 0.320、253 格只会变少。
+///    所以小足迹切换后的真实代价 <= 这里求得的代价。
+///    ⇒ 本判据不会出现「求值说通、切完实际不通」，只会反向保守。
+///
+/// @param cost_default 默认(大)足迹的代价查询
+/// @param cost_narrow  小足迹的代价查询。**传空**则退化为只判 ①②，
+///                     永远不会返回 kAlignThenShrink（用于一键回退）。
+StrategyPreview previewNarrowStrategy(
+  const std::vector<PlanarPoint> & path,
+  const PlanarPoint & robot,
+  double robot_yaw,
+  const PrealignConfig & cfg,
+  const FootprintCostFn & cost_default,
+  const FootprintCostFn & cost_narrow);
 
 /// 退出判据：连续 need 拍足迹代价低于阈值才算脱离窄通道。
 ///

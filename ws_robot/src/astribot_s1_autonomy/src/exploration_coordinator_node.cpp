@@ -6,9 +6,13 @@
 #include <cinttypes>
 #include <cmath>
 #include <cstdio>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "nav2_costmap_2d/footprint.hpp"
 
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
 #include "tf2/exceptions.h"
@@ -210,6 +214,8 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
     std::chrono::duration_cast<std::chrono::nanoseconds>(period),
     [this]() {controlTick();}, timer_cb_group_);
 
+  setupFootprintWatchdog();
+
   publishComplete(false);
 
   RCLCPP_INFO(
@@ -309,6 +315,41 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<std::string>("odom_topic", "/odom", describe("里程计话题，用于速度收敛判定"));
   declare_parameter<std::string>(
     "state_topic", "/exploration/state", describe("状态机状态话题(String)"));
+  // ---- 足迹锁存看门狗 ----
+  // 控制器可以在窄通道里临时缩小代价地图的足迹；设它的进程一旦死掉/卡住，
+  // 代价地图会一直按小足迹算，机器人从此被系统性低估而日志毫无异常。
+  // 本看门狗按"续租"判活：写话题上持续有非默认足迹请求 = 设它的人还活着。
+  declare_parameter<bool>(
+    "footprint_watchdog.enabled", false,
+    describe("是否启用足迹锁存看门狗。控制器开了 narrow_square_enabled 时必须一起开"));
+  declare_parameter<std::string>(
+    "footprint_watchdog.write_topic", "/global_costmap/footprint",
+    describe("代价地图的足迹**写入**话题(Polygon)。既订阅它判续租，也用它复原"));
+  declare_parameter<std::string>(
+    "footprint_watchdog.readback_topic", "/global_costmap/published_footprint",
+    describe("代价地图的足迹**回读**话题(PolygonStamped)，判当前到底是什么足迹"));
+  declare_parameter<std::string>(
+    "footprint_watchdog.default_footprint",
+    "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], "
+    "[-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]",
+    describe("默认(大)足迹。必须与控制器的 narrow_footprint_default 一致"));
+  declare_parameter<double>(
+    "footprint_watchdog.lease_timeout_sec", 4.0,
+    describe("续租超时(s)。回读到非默认足迹且这么久没有新请求 ⇒ 强制复原。"
+      "必须大于控制器的 narrow_square_lease_period，也必须 >= "
+      "readback_period_sec*(consecutive_reads+1)，否则会在读数还凑不齐时就动手"));
+  declare_parameter<double>(
+    "footprint_watchdog.readback_period_sec", 1.0,
+    describe("回读话题的周期(s)，必须与 global costmap 的 publish_frequency 一致。"
+      "只用于启动守卫的算术，不参与运行期判定"));
+  declare_parameter<double>(
+    "footprint_watchdog.readback_stale_sec", 3.0,
+    describe("回读龄期上限(s)。最新回读比这还老 ⇒ 读数不是当前值，看门狗**不动手**"
+      "并计数上报（不能拿冻结的读数当当前状态）"));
+  declare_parameter<int>(
+    "footprint_watchdog.consecutive_reads", 3,
+    describe("需要连续多少次**回读**都是非默认足迹才允许动手。"
+      "在回读回调里数，不在 tick 里数 —— 后者会把同一个 1Hz 采样重复计两次"));
   declare_parameter<std::string>(
     "complete_topic", "/exploration/complete", describe("探索完成标志话题(Bool)"));
   declare_parameter<std::string>(
@@ -623,6 +664,19 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   costmap_topic_ = get_parameter("costmap_topic").as_string();
   odom_topic_ = get_parameter("odom_topic").as_string();
   state_topic_ = get_parameter("state_topic").as_string();
+  fp_watchdog_enabled_ = get_parameter("footprint_watchdog.enabled").as_bool();
+  fp_watchdog_write_topic_ = get_parameter("footprint_watchdog.write_topic").as_string();
+  fp_watchdog_readback_topic_ = get_parameter("footprint_watchdog.readback_topic").as_string();
+  fp_watchdog_default_footprint_ =
+    get_parameter("footprint_watchdog.default_footprint").as_string();
+  fp_watchdog_lease_timeout_sec_ =
+    get_parameter("footprint_watchdog.lease_timeout_sec").as_double();
+  fp_watchdog_readback_period_sec_ =
+    get_parameter("footprint_watchdog.readback_period_sec").as_double();
+  fp_watchdog_readback_stale_sec_ =
+    get_parameter("footprint_watchdog.readback_stale_sec").as_double();
+  fp_watchdog_consecutive_reads_ =
+    static_cast<int>(get_parameter("footprint_watchdog.consecutive_reads").as_int());
   complete_topic_ = get_parameter("complete_topic").as_string();
   current_goal_topic_ = get_parameter("current_goal_topic").as_string();
   nav_action_name_ = get_parameter("nav_action_name").as_string();
@@ -1353,7 +1407,189 @@ void ExplorationCoordinatorNode::transitionTo(ExplorationState next, const std::
   state_entered_time_ = now();
 }
 
+void ExplorationCoordinatorNode::setupFootprintWatchdog()
+{
+  if (!fp_watchdog_enabled_) {
+    RCLCPP_INFO(
+      get_logger(),
+      "足迹锁存看门狗未启用(footprint_watchdog.enabled=false)。"
+      "只有在控制器开了 narrow_square_enabled 时才需要它。");
+    return;
+  }
+
+  std::vector<geometry_msgs::msg::Point> default_fp;
+  if (!nav2_costmap_2d::makeFootprintFromString(fp_watchdog_default_footprint_, default_fp) ||
+    default_fp.size() < 3U)
+  {
+    // 🔴 看门狗自己配错了绝不能静默降级 —— 那等于"以为有兜底其实没有"，
+    //    比明确没有兜底更危险。
+    throw std::runtime_error(
+      "footprint_watchdog.default_footprint 解析失败或少于 3 点: '" +
+      fp_watchdog_default_footprint_ + "' —— 看门狗无法复原，拒绝启动");
+  }
+  fp_watchdog_default_vertices_ = default_fp.size();
+  if (!(fp_watchdog_lease_timeout_sec_ > 0.0)) {
+    throw std::runtime_error("footprint_watchdog.lease_timeout_sec 必须 > 0");
+  }
+  if (fp_watchdog_consecutive_reads_ < 1) {
+    throw std::runtime_error("footprint_watchdog.consecutive_reads 必须 >= 1");
+  }
+  if (!(fp_watchdog_readback_period_sec_ > 0.0)) {
+    throw std::runtime_error("footprint_watchdog.readback_period_sec 必须 > 0");
+  }
+  // 🔴 算术守卫：凑齐 N 次连续回读**至少**需要 N 个回读周期。租约超时若比这还短，
+  //    看门狗就可能在读数根本还凑不齐时动手 —— 那正是第一轮实测里
+  //    2.0s 超时 vs 1.0s 回读周期造成误判的病因。留 1 个周期的抖动余量。
+  const double min_lease =
+    fp_watchdog_readback_period_sec_ * (fp_watchdog_consecutive_reads_ + 1);
+  if (fp_watchdog_lease_timeout_sec_ < min_lease) {
+    throw std::runtime_error(
+      "footprint_watchdog.lease_timeout_sec(" +
+      std::to_string(fp_watchdog_lease_timeout_sec_) + ") < readback_period_sec*(" +
+      std::to_string(fp_watchdog_consecutive_reads_) + "+1)=" + std::to_string(min_lease) +
+      " —— 连续读数还凑不齐就可能动手，拒绝启动");
+  }
+  // 🔴 陈旧阈值必须容得下至少 2 个回读周期，否则正常抖动就会让看门狗
+  //    永远处于"读数太老、不敢动手"的瞎眼状态，等于没有兜底。
+  if (fp_watchdog_readback_stale_sec_ < 2.0 * fp_watchdog_readback_period_sec_) {
+    throw std::runtime_error(
+      "footprint_watchdog.readback_stale_sec(" +
+      std::to_string(fp_watchdog_readback_stale_sec_) + ") < 2*readback_period_sec(" +
+      std::to_string(2.0 * fp_watchdog_readback_period_sec_) +
+      ") —— 正常抖动就会让看门狗永久瞎眼，拒绝启动");
+  }
+
+  // ⚠️ 独立回调组：与 controlTick 共用互斥组会把这两个订阅饿死
+  //    （本项目实测过订阅回调一次都执行不到、且全程无任何告警）。
+  fp_watchdog_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  rclcpp::SubscriptionOptions opts;
+  opts.callback_group = fp_watchdog_cb_group_;
+
+  // 写话题：谁在请求换足迹。请求非默认足迹即视为一次"续租"。
+  fp_write_sub_ = create_subscription<geometry_msgs::msg::Polygon>(
+    fp_watchdog_write_topic_, rclcpp::QoS(5),
+    [this](geometry_msgs::msg::Polygon::SharedPtr msg) {
+      if (msg->points.size() != fp_watchdog_default_vertices_) {
+        fp_last_request_ns_.store(now().nanoseconds());
+      }
+    }, opts);
+
+  // 回读话题：代价地图**当前**是什么足迹。只看顶点数 —— published_footprint
+  // 是变换到机器人当前位姿的，坐标随位姿变而顶点数不变。
+  // 连续计数在**这里**累加，不在 tick 里 —— tick 是 2Hz、回读是 1Hz，
+  // 在 tick 里数会把同一个采样重复计两次（采样别名）。
+  fp_readback_sub_ = create_subscription<geometry_msgs::msg::PolygonStamped>(
+    fp_watchdog_readback_topic_, rclcpp::QoS(1),
+    [this](geometry_msgs::msg::PolygonStamped::SharedPtr msg) {
+      const int n = static_cast<int>(msg->polygon.points.size());
+      fp_current_vertices_.store(n);
+      fp_last_readback_ns_.store(now().nanoseconds());
+      if (n == static_cast<int>(fp_watchdog_default_vertices_)) {
+        fp_nondefault_streak_.store(0);
+      } else {
+        fp_nondefault_streak_.fetch_add(1);
+      }
+    }, opts);
+
+  fp_revert_pub_ = create_publisher<geometry_msgs::msg::Polygon>(
+    fp_watchdog_write_topic_, rclcpp::QoS(5));
+
+  fp_watchdog_timer_ = create_wall_timer(
+    std::chrono::milliseconds(500), [this]() {footprintWatchdogTick();}, fp_watchdog_cb_group_);
+
+  RCLCPP_INFO(
+    get_logger(),
+    "足迹锁存看门狗已启用: 写话题='%s' 回读='%s' 默认足迹 %zu 点。"
+    "动手需三条同时成立: ①回读龄期<=%.1fs(活的) ②连续 %d 次回读均为非默认 "
+    "③租约龄期>%.1fs。回读周期按 %.1fs 计，连续读数下限 %.1fs < 租约超时 ✓",
+    fp_watchdog_write_topic_.c_str(), fp_watchdog_readback_topic_.c_str(),
+    fp_watchdog_default_vertices_, fp_watchdog_readback_stale_sec_,
+    fp_watchdog_consecutive_reads_, fp_watchdog_lease_timeout_sec_,
+    fp_watchdog_readback_period_sec_,
+    fp_watchdog_readback_period_sec_ * fp_watchdog_consecutive_reads_);
+}
+
+void ExplorationCoordinatorNode::footprintWatchdogTick()
+{
+  if (!fp_watchdog_enabled_ || !fp_revert_pub_) {
+    return;
+  }
+  const int cur = fp_current_vertices_.load();
+  if (cur == 0) {
+    return;                 // 还没回读到，什么都不判（缺数据不等于异常）
+  }
+  if (cur == static_cast<int>(fp_watchdog_default_vertices_)) {
+    return;                 // 已经是默认足迹，正常
+  }
+
+  // ---- 条件①：读数必须是**活的** ----
+  // 🔴 冻结的读数不能当当前值用。回读停更时 cur 会永远停在最后那个非默认值，
+  //    据此动手等于凭一张过期快照判定现状（本项目已犯过三次同类错）。
+  const int64_t last_read = fp_last_readback_ns_.load();
+  const double read_age = (last_read == 0) ?
+    std::numeric_limits<double>::infinity() :
+    static_cast<double>(now().nanoseconds() - last_read) / 1e9;
+  if (read_age > fp_watchdog_readback_stale_sec_) {
+    ++fp_watchdog_stale_skips_;
+    // 必须显式上报：否则"看门狗没动手"会被读成"一切正常"，
+    // 而真相是它已经瞎了、根本没有兜底。
+    RCLCPP_ERROR_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "🔴 足迹看门狗**瞎眼**: 最新回读已 %.1fs 未更新(>%.1fs)，"
+      "最后读到的是 %d 顶点的非默认足迹。无法判定代价地图现状 ⇒ 本拍不动手。"
+      "请查 '%s' 是否还在发布(global costmap 是否存活) | 累计放弃判定=%d 次",
+      read_age, fp_watchdog_readback_stale_sec_, cur,
+      fp_watchdog_readback_topic_.c_str(), fp_watchdog_stale_skips_);
+    return;
+  }
+
+  // ---- 条件②：连续 N 次回读都是非默认 ----
+  // 单次读数不足以动手：控制器侧切换本身有 ~1Hz 量级的节拍，
+  // 单次命中可能只是"正在正常切换"的中间态。
+  const int streak = fp_nondefault_streak_.load();
+  if (streak < fp_watchdog_consecutive_reads_) {
+    return;
+  }
+
+  // ---- 条件③：租约过期 ----
+  const int64_t last = fp_last_request_ns_.load();
+  const double age = (last == 0) ?
+    std::numeric_limits<double>::infinity() :
+    static_cast<double>(now().nanoseconds() - last) / 1e9;
+  if (age <= fp_watchdog_lease_timeout_sec_) {
+    return;                 // 有人还在续租，说明设它的进程活着
+  }
+
+  // 🔴 三条全成立：设小足迹的那个进程要么死了、要么卡住了。强制复原。
+  std::vector<geometry_msgs::msg::Point> default_fp;
+  (void)nav2_costmap_2d::makeFootprintFromString(fp_watchdog_default_footprint_, default_fp);
+  geometry_msgs::msg::Polygon msg;
+  msg.points.reserve(default_fp.size());
+  for (const auto & pt : default_fp) {
+    geometry_msgs::msg::Point32 p32;
+    p32.x = static_cast<float>(pt.x);
+    p32.y = static_cast<float>(pt.y);
+    p32.z = 0.0F;
+    msg.points.push_back(p32);
+  }
+  fp_revert_pub_->publish(msg);
+  ++fp_watchdog_reverts_;
+  // 复原后重置连续计数：下一次动手必须重新凑齐 N 次读数，
+  // 否则同一批陈旧 streak 会让它连发好几拍。
+  fp_nondefault_streak_.store(0);
+  RCLCPP_ERROR(
+    get_logger(),
+    "🔴 足迹锁存看门狗介入(第 %d 次): 代价地图挂着 %d 顶点的非默认足迹"
+    "(连续 %d 次回读确认，最新读数龄期 %.1fs)，而续租已停了 %.1fs(>%.1fs) "
+    "⇒ 已强制发回 %zu 顶点的默认足迹。"
+    "这说明设小足迹的进程死了或卡住了 —— 请查 controller_server 是否存活。"
+    "在此之前规划器一直在用被低估的机器人尺寸做可通行判定。",
+    fp_watchdog_reverts_, cur, streak, read_age, age, fp_watchdog_lease_timeout_sec_,
+    fp_watchdog_default_vertices_);
+}
+
 void ExplorationCoordinatorNode::controlTick()
+
 {
   // 整个 tick 在一把锁里完成：状态判断和状态修改之间不留缝隙，
   // 这是「禁止多线程重复下发」的第一道保险（第二道是 nav_goal_in_flight_）。

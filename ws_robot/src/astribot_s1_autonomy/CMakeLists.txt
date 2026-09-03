@@ -44,6 +44,7 @@ find_package(pcl_conversions REQUIRED)
 # 探索协调器要用 Nav2 的 NavigateToPose / ComputePathToPose 动作，
 # 以及 Trigger 服务做人工暂停/恢复。只用官方接口，不依赖 Nav2 内部头文件。
 find_package(nav2_msgs REQUIRED)
+find_package(nav2_costmap_2d REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(std_srvs REQUIRED)
 # 只用 common/filters：本包不需要 pcl_ros（该包在本机未安装），
@@ -97,6 +98,10 @@ set(ASTRIBOT_AUTONOMY_DEPS
   tf2_geometry_msgs
   pcl_conversions
   nav2_msgs
+  # 足迹锁存看门狗要用 nav2_costmap_2d::makeFootprintFromString 解析默认足迹。
+  # 刻意复用 nav2 自己的 parser 而不是手写：手写的那份必然与 costmap 读同一个
+  # 字符串的方式漂开，而漂开的表现是"看门狗以为自己在兜底、其实发的是别的形状"。
+  nav2_costmap_2d
   rclcpp_action
   std_srvs
 )

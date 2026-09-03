@@ -33,6 +33,8 @@
 
 #include "astribot_s1_autonomy/escape_logic.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/polygon.hpp"
+#include "geometry_msgs/msg/polygon_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav2_msgs/action/compute_path_to_pose.hpp"
 #include "nav2_msgs/action/follow_path.hpp"
@@ -390,6 +392,69 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pause_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_srv_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+
+  // ---------------- 足迹锁存看门狗 ----------------
+  //
+  // 要防的是什么：控制器可以在窄通道里临时把代价地图的足迹缩小
+  //（见 three_phase_controller.hpp 那一节）。**设了小足迹的进程一旦挂掉/卡住，
+  // 代价地图会一直按小足迹算**，机器人从此被系统性低估，而日志上一切正常。
+  // 控制器自己负责 deactivate/cleanup/换目标时复原，但它死了就没人复原了。
+  //
+  // 机制：控制器按周期把小足迹重发到写话题（续租）。本看门狗同时订阅
+  //   · 写话题   —— 知道"设它的人还活着"（最后一次请求的时刻）
+  //   · 回读话题 —— 知道代价地图**当前**到底是什么足迹
+  // 回读到非默认足迹、且租约已过期 ⇒ 把默认足迹发回去。
+  //
+  // ⚠️ 用独立的回调组：与 controlTick 共用互斥组会让这两个订阅被饿死
+  //    （本项目实测过 cmd_vel 订阅一次都执行不到、且全程无告警）。
+  //
+  // 🔴 判据必须带**龄期**，不能只看"最后一次读到的顶点数"。第一轮实测的教训：
+  //    · 回读来自 global costmap 的 publish_frequency = 1.0Hz（周期 1.0s），
+  //      而本看门狗 tick 是 0.5s、控制器侧切换一度快到 ~1.7Hz。
+  //    · 旧租约超时 2.0s < 连续 3 次回读所需的 3.0s ——
+  //      也就是说它可能在"3 次连续读数还凑不齐"时就已经动手了。
+  //    · 更根本的：回读一旦停更（costmap 挂了/话题断了），旧读数会被当成
+  //      **当前值**继续用（本项目一天内犯过三次同类错）。
+  //   所以现在三条同时成立才动手：
+  //      ① 最新回读的龄期 <= readback_stale_sec（读数是活的）
+  //      ② 连续 consecutive_reads 次**回读**都是非默认足迹
+  //         （在回读回调里数，不在 tick 里数 —— 在 tick 里数会把同一个 1Hz
+  //          采样重复计两次，是典型的采样别名）
+  //      ③ 租约龄期 > lease_timeout_sec
+  bool fp_watchdog_enabled_{false};
+  std::string fp_watchdog_write_topic_;
+  std::string fp_watchdog_readback_topic_;
+  std::string fp_watchdog_default_footprint_;
+  double fp_watchdog_lease_timeout_sec_{4.0};
+  /// 回读周期(s)，仅用于启动守卫的算术（必须与 costmap 的 publish_frequency 一致）。
+  double fp_watchdog_readback_period_sec_{1.0};
+  /// 回读龄期上限(s)：超过这个就认为"读数不是当前值"，本看门狗**不动手**。
+  double fp_watchdog_readback_stale_sec_{3.0};
+  /// 需要连续多少次回读都是非默认足迹才允许动手。
+  int fp_watchdog_consecutive_reads_{3};
+  std::size_t fp_watchdog_default_vertices_{0U};
+  /// 代价地图当前足迹的顶点数（回读）。0 = 还没收到。
+  std::atomic<int> fp_current_vertices_{0};
+  /// 最近一次回读到达的时刻。0 = 从没收到过。
+  std::atomic<int64_t> fp_last_readback_ns_{0};
+  /// 连续读到"非默认足迹"的**回读次数**（在回读回调里累加，读到默认即归零）。
+  std::atomic<int> fp_nondefault_streak_{0};
+  /// 最后一次在写话题上看到"非默认足迹"请求的时刻（= 续租时刻）。
+  std::atomic<int64_t> fp_last_request_ns_{0};
+  int fp_watchdog_reverts_{0};
+  /// 因回读陈旧而**放弃判定**的次数。必须上报 —— 否则"看门狗没动手"会被
+  /// 误读成"一切正常"，而真相可能是它已经瞎了。
+  int fp_watchdog_stale_skips_{0};
+  rclcpp::CallbackGroup::SharedPtr fp_watchdog_cb_group_;
+  rclcpp::Subscription<geometry_msgs::msg::Polygon>::SharedPtr fp_write_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr fp_readback_sub_;
+  rclcpp::Publisher<geometry_msgs::msg::Polygon>::SharedPtr fp_revert_pub_;
+  rclcpp::TimerBase::SharedPtr fp_watchdog_timer_;
+
+  /// 建立看门狗的订阅/发布/定时器。未启用时什么都不做。
+  void setupFootprintWatchdog();
+  /// 一拍看门狗检查。
+  void footprintWatchdogTick();
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   /// 定时器单独一个互斥回调组：前沿搜索有几十毫秒级开销，

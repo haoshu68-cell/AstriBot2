@@ -52,6 +52,12 @@ NAV_BRINGUP_LAUNCH = os.path.join(
 COUPLING_NODE = os.path.join(
     _SRC, 'astribot_s1_dynamics_coupling', 'astribot_s1_dynamics_coupling',
     'arm_chassis_speed_coupling_node.py')
+# 写通路的 /scan 联锁在另一个包里。costmap 的告警阈值必须比它宽松，
+# 否则会出现"底盘已停车而 costmap 零告警"的组合，见
+# TestObservationStalenessDetection.test_rate_slower_than_bridge_interlock。
+BRIDGE_NODE = os.path.join(
+    _SRC, 'astribot_trajectory_bridge', 'astribot_trajectory_bridge',
+    'chassis_cmd_bridge_node.py')
 
 NAV_PARAM_FILES = sorted(glob.glob(os.path.join(NAV_CFG_DIR, 'nav2_params_*.yaml')))
 
@@ -168,6 +174,31 @@ def _coupling_min_speed_scale():
                     return float(head[start + 1:end].strip())
                 except ValueError:
                     return None
+    return None
+
+
+def _bridge_scan_max_age():
+    """写通路 /scan 联锁的龄期阈值(s)。
+
+    刻意从 chassis_cmd_bridge_node.py 的 declare_parameter 读，不在测试里抄常数：
+    抄常数意味着那个包改了默认值后，这条耦合会**静默失效**，
+    而失效表现是"底盘停车了但 costmap 一声不响"——最难查的那一类。
+    """
+    if not os.path.isfile(BRIDGE_NODE):
+        return None
+    with open(BRIDGE_NODE, encoding='utf-8') as fh:
+        for line in fh:
+            head = line.split('#')[0]
+            if "'scan_max_age_sec'" not in head or 'd(' not in head:
+                continue
+            start = head.find(',')
+            end = head.rfind(')')
+            if start < 0 or end < 0:
+                continue
+            try:
+                return float(head[start + 1:end].strip())
+            except ValueError:
+                return None
     return None
 
 
@@ -546,18 +577,36 @@ class TestNarrowPassageParams:
                         f'{os.path.basename(f)} {name}: narrow_favorable_period={period} '
                         f'与 {n_vertices} 边形足迹的对称周期 {expected:.6f} 不符')
 
-    def test_threshold_is_inflation_not_real_obstacle(self):
-        """触发阈值必须 < 254。>= 254 等于把「真障碍」当触发条件，
-        那是红线区、不是本层的目标域 —— 本层只许穿膨胀带。"""
+    def test_footprint_threshold_must_be_lethal_not_inflation(self):
+        """足迹**多边形**的阈值必须是 254，不能是 253。
+
+        ⚠️ 本条推翻了它的上一版。上一版断言 `thr < 254`，理由写的是
+           "254 是真障碍，把它当触发条件就是让脱困逻辑去穿真障碍" ——
+           **那个理由是错的**，而且这条测试当时正在把 bug 锁死。
+
+        错在哪：253 的语义是"这一格离障碍不超过内切半径"（nav2
+        InflationLayer::computeCost 逐字），而内切半径**就是底盘半宽**。
+        足迹多边形已经把底盘尺寸表达了一遍，再要求外轮廓躲开 253 带，
+        就是把底盘半宽算两遍。用 254 并不会"去穿真障碍" —— 恰恰相反，
+        254 才是"轮廓压到障碍本体"这一唯一真实的碰撞条件。
+
+        重复计的量级（实测数据）：需要 通道宽 > 4*侧向半宽
+            八边形 侧向 0.3894 + 内切(含padding) 0.3992 -> 需 > 1.577m
+        而本仿真环境最窄通道 0.65m 量级 ⇒ 恒为 253、零梯度。
+        实测 2 轮共 1678s：足迹代价读数 51 次 253、仅 2 次 254，
+        其中 26 次同时中心代价=0。909 次"连小足迹也过不去"全是假的。
+        """
         for f in NAV_PARAM_FILES:
             for name, b in _three_phase_instances(_controller_params(f)).items():
                 if not b.get('narrow_enabled', True):
                     continue
-                thr = b.get('narrow_footprint_lethal_threshold', 253.0)
-                assert 0.0 < thr < 254.0, (
+                thr = b.get('narrow_footprint_lethal_threshold', 254.0)
+                assert 253.0 < thr <= 255.0, (
                     f'{os.path.basename(f)} {name}: '
-                    f'narrow_footprint_lethal_threshold={thr} 必须在 (0, 254)。'
-                    f'254 是真障碍，把它当触发条件就是让脱困逻辑去穿真障碍')
+                    f'narrow_footprint_lethal_threshold={thr} 必须 > 253。'
+                    f'足迹多边形已经表达了底盘尺寸，用 253(膨胀内切带)当碰撞阈值'
+                    f'等于重复计底盘半宽 —— 后果是窄于约 1.58m 的通道里恒为 253、'
+                    f'零梯度。中心格查询才用 253。')
 
     def test_red_line_guards_are_all_armed(self):
         """用户明确的三条红线各自对应一个参数，任何一个 <= 0 都会让该红线失守：
@@ -1279,3 +1328,717 @@ class TestProgressCheckerIsRotationAware:
                     f'>= start_min_angle({start_min})。'
                     f'对齐段只在误差超过 start_min_angle 时才进入，'
                     f'阈值若不小于它，短对齐就触发不了计时重置')
+
+
+# ==================================== 坑 9：陈旧检测只加在一份配置里
+
+class TestObservationStalenessDetection:
+    """两份 nav2_params_*.yaml 的 obstacle_layer 都必须开陈旧检测。
+
+    起因：expected_update_rate 原先只加在 nav2_params_rpp.yaml 里。
+    controller_plugin 是个 launch 参数，切到 mppi 就换了整份 yaml ——
+    于是陈旧检测**静默消失**，而 costmap 照发、日志无异常、判据全过。
+    2026-09-02 在实机上用探针读活节点的参数，才看到两个 costmap 都是 0.0。
+
+    这类"一份文件加了、另一份忘了"的分叉，靠人工 review 是抓不住的：
+    两份文件各 800+ 行、共 4 处 scan 块。所以必须由测试强制。
+
+    !!! 边界要写清楚 !!!：这个参数只让 costmap **打告警**。
+    实测 controller_server 二进制里没有任何检查 costmap currency 的字符串，
+    陈旧时它照样发速度。真正的拒绝下发在 chassis_cmd_bridge 的 /scan 联锁。
+    这条测试保的是"可观测性不会静默丢失"，不是"安全性有兜底"。
+    """
+
+    #: 两个雷达帧周期。健康态实测 /scan 9.9~10.04Hz —— 取 0.1 会因抖一帧误报。
+    MIN_RATE = 0.11
+    #: 秒级陈旧就是危险的（实测事故那次龄期 2.03s），所以上限压在 1s 内。
+    MAX_RATE = 1.0
+
+    def _scan_blocks(self, path):
+        """返回 [(which, scan 块), ...]，覆盖 local 与 global 两个 costmap。"""
+        out = []
+        for which in ('local_costmap', 'global_costmap'):
+            p = _costmap_params(path, which)
+            ob = p.get('obstacle_layer')
+            if not isinstance(ob, dict):
+                continue
+            for src in str(ob.get('observation_sources', 'scan')).split():
+                blk = ob.get(src)
+                if isinstance(blk, dict):
+                    out.append(('%s/%s' % (which, src), blk))
+        return out
+
+    def test_found_scan_blocks(self):
+        """哨兵：一个 scan 块都找不到时，下面的测试会空转而"通过"。"""
+        total = sum(len(self._scan_blocks(f)) for f in NAV_PARAM_FILES)
+        assert total >= 2 * len(NAV_PARAM_FILES), (
+            '每份 nav2_params_*.yaml 都应至少有 local+global 两个 obstacle_layer '
+            'scan 块，实际只找到 %d 个（文件数 %d）。'
+            '若确实改了结构，请同时改这条哨兵，不要留空转的测试。'
+            % (total, len(NAV_PARAM_FILES)))
+
+    def test_expected_update_rate_set_everywhere(self):
+        missing = []
+        for f in NAV_PARAM_FILES:
+            for label, blk in self._scan_blocks(f):
+                if blk.get('expected_update_rate') is None:
+                    missing.append('%s %s' % (os.path.basename(f), label))
+        assert not missing, (
+            '这些 obstacle_layer 没设 expected_update_rate，等于**关掉**陈旧检测'
+            '（nav2 默认 0.0 使 isCurrent() 恒为 true，/scan 多旧都不告警）：\n  '
+            + '\n  '.join(missing))
+
+    def test_expected_update_rate_in_sane_band(self):
+        for f in NAV_PARAM_FILES:
+            for label, blk in self._scan_blocks(f):
+                v = blk.get('expected_update_rate')
+                if v is None:
+                    continue        # 由上一条测试负责报错
+                v = float(v)
+                assert self.MIN_RATE <= v <= self.MAX_RATE, (
+                    '%s %s 的 expected_update_rate=%r 不在 [%.2f, %.2f]。'
+                    '太小(如 0.1)会因 /scan 抖一帧就误报——健康态实测 9.9~10.04Hz；'
+                    '太大则秒级陈旧也不告警，而实测事故那次龄期就是 2.03s。'
+                    % (os.path.basename(f), label, v,
+                       self.MIN_RATE, self.MAX_RATE))
+
+    def test_all_files_agree(self):
+        """两份文件必须取同一个值。
+
+        分开取值没有任何正当理由：数据源是同一个 /scan、同一台雷达。
+        值不同只可能是改了一份忘了另一份，而那正是本类要防的事。
+        """
+        seen = {}
+        for f in NAV_PARAM_FILES:
+            for label, blk in self._scan_blocks(f):
+                v = blk.get('expected_update_rate')
+                if v is not None:
+                    seen.setdefault(float(v), []).append(
+                        '%s %s' % (os.path.basename(f), label))
+        assert len(seen) <= 1, (
+            'expected_update_rate 在不同文件/图层间取值不一致：%s。'
+            '数据源是同一个 /scan，没有理由分开取值。' % (
+                {k: v for k, v in seen.items()},))
+
+    def test_rate_slower_than_bridge_interlock(self):
+        """costmap 的告警阈值必须比写通路联锁**宽**。
+
+        联锁(scan_max_age_sec)才是真正会拒绝下发的那一层。若 costmap 的阈值
+        反而更宽松，就会出现"底盘已经因陈旧停车，而 costmap 一声不响"的组合，
+        排查时看不到任何线索指向 /scan。
+        """
+        interlock = _bridge_scan_max_age()
+        if interlock is None:
+            pytest.skip('读不到 chassis_bridge 的 scan_max_age_sec 默认值')
+        for f in NAV_PARAM_FILES:
+            for label, blk in self._scan_blocks(f):
+                v = blk.get('expected_update_rate')
+                if v is None:
+                    continue
+                assert float(v) <= interlock, (
+                    '%s %s 的 expected_update_rate=%r 比写通路联锁的 '
+                    'scan_max_age_sec=%r 还宽松 —— 会出现"底盘已停车而 costmap '
+                    '零告警"的组合，排查时没有任何线索指向 /scan。'
+                    % (os.path.basename(f), label, v, interlock))
+
+
+# ================================ 坑 10：限速覆盖的默认值会静默抬高 yaml 的限速
+
+class TestSpeedCapOverride:
+    """navigation.launch.py 的 max_linear_speed 一键限速。
+
+    这个机制的**唯一隐患**是它的默认值：RewrittenYaml 的 param_rewrites 是
+    无条件生效的，所以 launch 的默认值会**覆盖** yaml 里写的 vx_max。
+    如果哪天有人把 yaml 的 vx_max 从 1.0 调低到 0.5 以求安全，
+    而 launch 默认值还是 1.0，那么这个"安全"改动会被静默抬回 1.0 ——
+    改的人看着 yaml 说"我限到 0.5 了"，实跑却是 1.0。
+
+    所以这里强制两者相等。
+    """
+
+    NAV_LAUNCH = os.path.join(
+        _SRC, 'astribot_s1_navigation', 'launch', 'navigation.launch.py')
+
+    def _launch_default(self):
+        with open(self.NAV_LAUNCH, encoding='utf-8') as fh:
+            src = fh.read()
+        m = re.search(r"'max_linear_speed'\s*,\s*default_value='([0-9.]+)'", src)
+        return float(m.group(1)) if m else None
+
+    def test_launch_arg_exists(self):
+        assert os.path.isfile(self.NAV_LAUNCH), self.NAV_LAUNCH
+        assert self._launch_default() is not None, (
+            'navigation.launch.py 里找不到 max_linear_speed 的 '
+            'DeclareLaunchArgument 默认值')
+
+    def test_launch_default_matches_yaml(self):
+        """**本类的核心断言。**"""
+        default = self._launch_default()
+        if default is None:
+            pytest.skip('launch 参数不存在，由上一条测试报错')
+        for f in NAV_PARAM_FILES:
+            cp = _controller_params(f)
+            fp = cp.get('FollowPath', {})
+            vx = fp.get('vx_max')
+            if vx is None:
+                continue
+            assert abs(float(vx) - default) < 1e-9, (
+                '%s 的 FollowPath.vx_max=%s，而 navigation.launch.py 的 '
+                'max_linear_speed 默认值是 %s。两者必须相等 —— '
+                'RewrittenYaml 无条件生效，不相等时这个"默认"会静默把 yaml 里的'
+                '限速**抬高**到 launch 的值，改 yaml 的人完全看不出来。'
+                % (os.path.basename(f), vx, default))
+
+    def test_linear_caps_are_rewritten(self):
+        """只压 vx_max 是个漏洞：vx_min 仍是负的满量程，可以全速倒车。"""
+        with open(self.NAV_LAUNCH, encoding='utf-8') as fh:
+            src = fh.read()
+        block = src[src.find('param_substitutions.update('):]
+        block = block[:block.find('})') + 2]
+        for key in ('vx_max', 'vy_max', 'vx_min'):
+            assert ("'%s':" % key) in block, (
+                'param_substitutions 里没有重写 %r —— 少压一个量就是一个漏洞。'
+                '尤其 vx_min：只压 vx_max 时 MPPI 仍可全速倒车。' % key)
+
+    def test_array_params_are_not_rewritten(self):
+        """velocity_smoother 的 max_velocity/min_velocity **不得**在这里重写。
+
+        它们是 double 数组，而 RewrittenYaml.convert() 只尝试 int/float/bool
+        （已读 /opt/ros/humble 下的实现确认：三种都不匹配就原样返回字符串）。
+        写进去的后果是 velocity_smoother 配置期抛
+          parameter 'max_velocity' has invalid type: ... is of type {string}
+        然后 lifecycle_manager "Aborting bringup" —— 整套 nav2 从未 activate，
+        而 9 个进程全都活着、进程数判据照过。实测踩过一次。
+
+        这条测试刻意断言"**不存在**"，是为了防止有人看到
+        "第二层限速没压住"就把它加回来。要压第二层得换机制
+        （例如直接改 yaml，或给 velocity_smoother 单独传 parameters）。
+        """
+        with open(self.NAV_LAUNCH, encoding='utf-8') as fh:
+            src = fh.read()
+        block = src[src.find('param_substitutions.update('):]
+        block = block[:block.find('})') + 2]
+        for key in ('max_velocity', 'min_velocity'):
+            assert ("'%s':" % key) not in block, (
+                'param_substitutions 重写了 %r —— 它是 double 数组，'
+                'RewrittenYaml 会把它写成字符串，velocity_smoother 配置失败、'
+                'nav2 整套无法 activate（而进程数判据完全看不出来）。' % key)
+
+    def test_reverse_cap_is_negative(self):
+        """vx_min 的重写必须产出**负值**。
+
+        写成正数的后果很隐蔽：vx_min > 0 意味着 MPPI 被强制只能前进，
+        它连倒车退让这个恢复行为都做不出来，而报出来的只是"规划不出轨迹"。
+        """
+        with open(self.NAV_LAUNCH, encoding='utf-8') as fh:
+            src = fh.read()
+        m = re.search(r"def _neg\(expr\):\s*\n\s*return PythonExpression\("
+                      r"\[([^\]]+)\]\)", src)
+        assert m, '找不到 _neg 的实现'
+        assert '-abs(' in m.group(1), (
+            '_neg 里必须是 -abs(...)：单纯写 -float(...) 时，'
+            '调用方传了负数就会被翻成正数，vx_min 变正会让 MPPI 无法倒车退让')
+
+    def test_angular_is_not_silently_capped(self):
+        """角速度刻意不压 —— 这条测试防的是"顺手也把 wz 压了"。
+
+        静默改角速度会让原地对齐段和 Spin 恢复行为跟着变，
+        而那不是"限线速度"这个请求的一部分。
+        """
+        with open(self.NAV_LAUNCH, encoding='utf-8') as fh:
+            src = fh.read()
+        block = src[src.find('param_substitutions.update('):]
+        block = block[:block.find('})') + 2]
+        assert "'wz_max'" not in block, (
+            'max_linear_speed 把 wz_max 也压了 —— 调用方只要求限线速度')
+
+
+# =============================================================================
+# max_linear_speed 的**转发**：白名单漏项会让整轮限速扫描变成假数据
+#
+# navigation.launch.py 有了 max_linear_speed 并不等于外层能用上它。
+# IncludeLaunchDescription 的 launch_arguments 是白名单：没列进去的名字不会
+# 传进子 launch，而子 launch 里 DeclareLaunchArgument 的 default_value 照常生效。
+#
+# 实际发生过的漏项（2026-08-27 发现）：nav2_full_bringup.launch.py 只转发了
+# use_sim_time / controller_plugin / enable_arm_chassis_coupling / scan_topic，
+# 于是 `nav2_full_bringup.launch.py ... max_linear_speed:=0.2`
+#   · 不报错
+#   · 不告警
+#   · vx_max 仍然是 1.0
+# 后果不是"限速没生效"这么轻——它会让「不同限速档位下的到位精度」这类扫描
+# 产出若干档位数字**完全相同**的表，而每张表单独看都完全正常。
+# 这类静默失败必须由测试钉住，不能靠读 launch 代码发现。
+# =============================================================================
+
+
+class TestSpeedCapForwarding:
+    """外层 launch 必须把 max_linear_speed 显式转发给 navigation.launch.py。
+
+    连带钉住 enable_posture_monitor —— 同一个漏项、但后果更重：
+    实机上那个监控会**永久**把 /cmd_vel 归零且无复位路径，而在补上转发之前
+    根本没有办法从这个入口关掉它（runbook 要求实机必须关）。
+    """
+
+    NAV_LAUNCH = os.path.join(
+        _SRC, 'astribot_s1_navigation', 'launch', 'navigation.launch.py')
+
+    # 必须逐一转发的参数。加新参数时把名字加进来即可。
+    FORWARDED = ('max_linear_speed', 'enable_posture_monitor')
+
+    @staticmethod
+    def _src(path):
+        with open(path, encoding='utf-8') as fh:
+            return fh.read()
+
+    @staticmethod
+    def _default_of(src, name='max_linear_speed'):
+        m = re.search(r"'%s'\s*,\s*default_value='([0-9.]+)'" % name, src)
+        return float(m.group(1)) if m else None
+
+    @classmethod
+    def _declares(cls, src, name):
+        """该 launch 是否声明了这个参数（默认值可以是表达式，不限于字面量）。"""
+        return re.search(r"DeclareLaunchArgument\(\s*\n?\s*'%s'" % name,
+                         src) is not None
+
+    def _navigation_include_block(self):
+        """截出 nav2_full_bringup 里 include navigation.launch.py 的那段。
+
+        必须**只在这一段里**找，不能全文 grep：全文里 DeclareLaunchArgument
+        本身就含有参数名字样，全文 grep 会在漏转发时照样通过 ——
+        这正是这个缺陷能藏住的原因，测试不能重复同一个错误。
+        """
+        src = self._src(NAV_BRINGUP_LAUNCH)
+        anchor = src.find("'navigation.launch.py'")
+        assert anchor > 0, "nav2_full_bringup.launch.py 里找不到 navigation.launch.py 的 include"
+        start = src.find('launch_arguments={', anchor)
+        assert start > 0, 'navigation include 后面找不到 launch_arguments'
+        end = src.find('}.items()', start)
+        assert end > start, 'launch_arguments 块没有闭合'
+        return src[start:end]
+
+    @pytest.mark.parametrize('name', FORWARDED)
+    def test_declared_in_outer_launch(self, name):
+        assert self._declares(self._src(NAV_BRINGUP_LAUNCH), name), (
+            'nav2_full_bringup.launch.py 里没有 %s 的 DeclareLaunchArgument —— '
+            '不声明就没法从命令行给这一层传值' % name)
+
+    @pytest.mark.parametrize('name', FORWARDED)
+    def test_forwarded_to_navigation_launch(self, name):
+        """**本类的核心断言。**"""
+        block = self._navigation_include_block()
+        assert ("'%s'" % name) in block, (
+            'nav2_full_bringup.launch.py 的 navigation include 的 launch_arguments '
+            '里没有 %s。launch_arguments 是白名单，漏项不报错也不告警，'
+            '子 launch 会安静地用自己的默认值 —— '
+            '限速扫描会产出若干档位数字完全相同的表；'
+            '而漏掉 enable_posture_monitor 时实机的 /cmd_vel 会被永久归零。'
+            % name)
+
+    @pytest.mark.parametrize('name', FORWARDED)
+    def test_forwarded_value_is_the_launch_configuration(self, name):
+        """转发的必须是 LaunchConfiguration，不能是写死的字面量。
+
+        写成 'max_linear_speed': '1.0' 同样能通过上一条测试，
+        但命令行传值依旧无效 —— 而且更难发现，因为白名单里"有这一项"。
+        """
+        block = self._navigation_include_block()
+        m = re.search(r"'%s'\s*:\s*([^,\n]+)" % name, block)
+        assert m, '上一条测试已覆盖缺失情形'
+        value = m.group(1).strip()
+        assert 'LaunchConfiguration' in value, (
+            "%s 转发的是 %r，不是 LaunchConfiguration('%s')。"
+            '写死字面量时白名单里"有这一项"，但命令行传值仍然无效，比漏项更难发现。'
+            % (name, value, name))
+
+    def test_outer_default_matches_inner_default(self):
+        """max_linear_speed 的两层默认值必须一致。
+
+        外层默认值一旦与内层不同，它会**无条件覆盖**内层：
+        外层 1.0 / 内层 0.5 时，只读 navigation.launch.py 的人会以为限到了 0.5。
+        这与 TestSpeedCapOverride.test_launch_default_matches_yaml 是同一个隐患
+        的第二段（yaml → 内层 launch → 外层 launch，三段都得对齐）。
+        """
+        outer = self._default_of(self._src(NAV_BRINGUP_LAUNCH))
+        inner = self._default_of(self._src(self.NAV_LAUNCH))
+        if outer is None or inner is None:
+            pytest.skip('默认值缺失，由其它测试报错')
+        assert abs(outer - inner) < 1e-9, (
+            'nav2_full_bringup.launch.py 的 max_linear_speed 默认值是 %s，'
+            'navigation.launch.py 是 %s。外层无条件覆盖内层，不一致时'
+            '只读内层 launch 的人会看到一个从未生效的限速值。' % (outer, inner))
+
+    def test_posture_monitor_default_follows_env(self):
+        """姿态监控的默认值必须**跟着 env 走**，实机侧为 false。
+
+        这一项刻意不照抄内层的 true：
+        实机 /odom 是 3-DOF 轮式里程计，z/roll/pitch 恒等于 0（实测 509 帧
+        min=max=0.0000），而判据是 |z-normal_height|>max_height_deviation，
+        normal_height=0.134 是**仿真**值 -> |0-0.134|=0.134 > 0.06 ->
+        一上电就判异常姿态 -> **永久**把 /cmd_vel 归零，且没有复位路径。
+
+        所以外层默认值必须是一个含 env 的表达式，且 real 侧取 false。
+        """
+        src = self._src(NAV_BRINGUP_LAUNCH)
+        m = re.search(
+            r"DeclareLaunchArgument\(\s*\n\s*'enable_posture_monitor'\s*,\s*\n"
+            r"\s*default_value=(.{0,400}?)\n\s*description=", src, re.S)
+        assert m, "找不到 enable_posture_monitor 的 default_value"
+        default = m.group(1)
+        assert 'PythonExpression' in default, (
+            'enable_posture_monitor 的默认值是写死的字面量 %r。'
+            '写死 true 时实机会被永久归零 /cmd_vel；写死 false 时仿真里'
+            '倾倒检测被静默关掉。必须跟着 env 走。' % default.strip())
+        assert "'real'" in default, (
+            '默认值表达式里没有出现 real —— 它没有按环境分支')
+        real_branch = default.split("'real'")[0]
+        assert "'false'" in real_branch, (
+            "实机分支必须取 false。当前表达式: %s" % default.strip())
+
+
+
+# =============================================================================
+# 窄通道缩足迹：跨两个包的配置自洽性
+#
+# 这一节防的是**同一个几何量被抄在两个包里然后漂开**。
+# 足迹字符串现在出现在三处：
+#   nav2_params_mppi.yaml  的两个 ThreePhaseController 实例(narrow_footprint_*)
+#   exploration_coordinator_params.yaml 的 footprint_watchdog.default_footprint
+# 看门狗若"复原"成另一个形状，比不复原更糟 —— 它会一边报"已复原"一边把
+# 机器人建成错的尺寸，而两边日志都正常。
+# =============================================================================
+
+
+def _square_cfg():
+    """mppi 的两个 ThreePhaseController 实例的缩足迹配置。"""
+    cp = _controller_params(os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'))
+    return _three_phase_instances(cp)
+
+
+def _poly_inscribed(fp_str):
+    """多边形内切半径。与 nav2 的 calculateMinAndMaxDistances 同一定义：
+    取所有**顶点距离**与**边距离**里的最小值。
+    实测核对：八边形 0.388039、正方形 a=0.31 -> 0.310000（与 nav2 逐位一致）。
+    """
+    fp = yaml.safe_load(fp_str)
+    assert len(fp) >= 3, f'足迹少于 3 点: {fp_str}'
+
+    def edge_dist(a, b):
+        ax, ay = a
+        bx, by = b
+        ex, ey = bx - ax, by - ay
+        l2 = ex * ex + ey * ey
+        t = 0.0 if l2 == 0 else max(0.0, min(1.0, -(ax * ex + ay * ey) / l2))
+        return math.hypot(ax + t * ex, ay + t * ey)
+
+    best = min(math.hypot(x, y) for x, y in fp)
+    for i in range(len(fp)):
+        best = min(best, edge_dist(fp[i], fp[(i + 1) % len(fp)]))
+    return best
+
+
+class TestNarrowSquareFootprint:
+    """缩足迹的三处配置必须自洽，且守卫必须真的能拦住不安全的值。"""
+
+    def test_watchdog_default_matches_controller_default(self):
+        """看门狗复原用的足迹必须与控制器的默认足迹**几何一致**。
+
+        比几何而不是比字符串：空格/小数写法不同不该算失败，
+        但形状不同必须算失败。
+        """
+        coord = _coordinator_params()
+        wd = coord.get('footprint_watchdog')
+        assert wd, 'exploration_coordinator_params.yaml 缺 footprint_watchdog 段'
+        wd_fp = yaml.safe_load(wd['default_footprint'])
+        for name, inst in _square_cfg().items():
+            ctrl_fp = yaml.safe_load(inst['narrow_footprint_default'])
+            assert len(wd_fp) == len(ctrl_fp), (
+                f'{name}: 看门狗默认足迹 {len(wd_fp)} 点 != 控制器 {len(ctrl_fp)} 点 —— '
+                f'看门狗会"复原"成另一个形状，比不复原更糟')
+            for (wx, wy), (cx, cy) in zip(wd_fp, ctrl_fp):
+                assert math.isclose(wx, cx, abs_tol=1e-9) and \
+                       math.isclose(wy, cy, abs_tol=1e-9), (
+                    f'{name}: 看门狗与控制器的默认足迹顶点不一致')
+
+    def test_narrow_footprint_is_actually_smaller(self):
+        """小足迹的内切半径必须真的更小，否则切换毫无收益还白付风险。"""
+        for name, inst in _square_cfg().items():
+            big = _poly_inscribed(inst['narrow_footprint_default'])
+            small = _poly_inscribed(inst['narrow_footprint_narrow'])
+            assert small < big, (
+                f'{name}: 窄通道足迹内切 {small:.4f} 不小于默认 {big:.4f}')
+
+    def test_narrow_footprint_not_smaller_than_chassis(self):
+        """🔴 小足迹不得小于底盘物理包络。
+
+        数据源 astribot_s1_torso_wheel.xacro：躯干碰撞圆柱 radius 0.30、
+        轮球 radius 0.08 且轮心 (±0.21635, ±0.21635)。
+        轴向真实伸出 = max(0.30, 0.21635+0.08) = 0.30。
+        把机器人建模成比这更小，在仿真里的表现是"通过率提高"——非常危险。
+        """
+        for name, inst in _square_cfg().items():
+            small = _poly_inscribed(inst['narrow_footprint_narrow'])
+            guard = float(inst['chassis_min_envelope_radius'])
+            assert guard >= 0.30 - 1e-9, (
+                f'{name}: chassis_min_envelope_radius={guard} 低于 URDF 躯干半径 0.30')
+            assert small >= guard, (
+                f'{name}: 窄通道足迹内切 {small:.4f} < 底盘包络下限 {guard:.4f}')
+
+    def test_lease_timeout_exceeds_lease_period(self):
+        """租约超时必须大于续租周期，否则看门狗会在正常工作时误判复原。"""
+        coord = _coordinator_params()
+        timeout = float(coord['footprint_watchdog']['lease_timeout_sec'])
+        for name, inst in _square_cfg().items():
+            period = float(inst['narrow_square_lease_period'])
+            assert timeout > period, (
+                f'{name}: 看门狗租约超时 {timeout}s 不大于续租周期 {period}s —— '
+                f'会在控制器正常续租时误判进程已死')
+
+    def test_square_and_watchdog_enabled_together(self):
+        """缩足迹与看门狗必须同开同关。
+
+        只开缩足迹 = 没有防锁存兜底；只开看门狗 = 无害但说明配置在漂。
+        """
+        coord = _coordinator_params()
+        wd_on = bool(coord['footprint_watchdog']['enabled'])
+        for name, inst in _square_cfg().items():
+            sq_on = bool(inst['narrow_square_enabled'])
+            assert sq_on == wd_on, (
+                f'{name}: narrow_square_enabled={sq_on} 而 '
+                f'footprint_watchdog.enabled={wd_on} —— 两者必须同开同关，'
+                f'只开前者等于没有防锁存兜底')
+
+    def test_both_instances_agree(self):
+        """两个控制器实例(导航用/探索用)的缩足迹配置必须一致。
+
+        漂开的话，A/B 只切一个实例，测出来的差异归因不到任何一处。
+        """
+        insts = _square_cfg()
+        assert len(insts) >= 2, f'预期至少 2 个 ThreePhaseController 实例，实际 {len(insts)}'
+        keys = ['narrow_square_enabled', 'narrow_footprint_default',
+                'narrow_footprint_narrow', 'chassis_min_envelope_radius',
+                'narrow_square_hard_timeout', 'narrow_square_lease_period',
+                'narrow_square_verify_timeout']
+        ref_name, ref = next(iter(insts.items()))
+        for name, inst in insts.items():
+            for k in keys:
+                assert inst[k] == ref[k], (
+                    f'{name}.{k}={inst[k]} != {ref_name}.{k}={ref[k]}')
+
+    def test_exit_window_not_shorter_than_entry(self):
+        """🔴 切出窗口必须 >= 切入窗口，否则**保证**切换振荡。
+
+        算术：切入看 preview 内有麻烦、切出看 exit_preview 内没麻烦。
+        若 exit < entry，则机器人处在 [exit, entry] 之间时两个判据同时成立
+        ⇒ 切入、复原、切入…（第一轮实测 123 次切换的同类病因）。
+        控制器侧有启动守卫会拒绝启动，这里在配置层再拦一道。
+        """
+        for name, inst in _square_cfg().items():
+            entry = inst['narrow_prealign_preview']
+            exit_w = inst['narrow_square_exit_preview']
+            assert exit_w >= entry, (
+                f'{name}: narrow_square_exit_preview={exit_w} < '
+                f'narrow_prealign_preview={entry} —— 保证振荡')
+
+    def test_hysteresis_band_exceeds_costmap_resolution(self):
+        """迟滞带必须大于代价地图分辨率，否则它表达不出来。
+
+        这条不是洁癖：八边形各向异性 0.032m < 分辨率 0.05m，正是纯预对齐
+        在这张图上测不出任何效果的原因。迟滞带若也小于一格，就是同一个错。
+        """
+        res = _costmap_params(
+            os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'), 'local_costmap')['resolution']
+        for name, inst in _square_cfg().items():
+            band = inst['narrow_square_exit_preview'] - inst['narrow_prealign_preview']
+            assert band > res, (
+                f'{name}: 迟滞带 {band:.3f}m <= 栅格 {res}m —— '
+                f'代价地图表达不出这个差异，等于没有迟滞')
+
+    def test_min_dwell_below_hard_timeout(self):
+        """最短驻留必须显著小于硬超时。
+
+        反了的话「最短驻留」会吃掉整条正常复原路径，让每次都走硬超时那条
+        异常分支 —— 表面上"复原了"，实际每次都是异常收尾。
+        """
+        for name, inst in _square_cfg().items():
+            dwell = inst['narrow_square_min_dwell']
+            hard = inst['narrow_square_hard_timeout']
+            assert 0.0 <= dwell < hard, (
+                f'{name}: narrow_square_min_dwell={dwell} 必须在 [0, {hard}) 内')
+
+    def test_switch_ceiling_arithmetic_is_stated(self):
+        """单次切换周期下限必须 > 实测的中位驻留 0.15s，且给出切换次数上限。
+
+        0.15s = narrow_clear_ticks(3) / controller_frequency(20Hz)，是第一轮
+        A/B 里 121/123 次复原的实际触发时刻。新配置的周期下限
+        = min_dwell + cooldown，必须比它高一个量级，否则改了等于没改。
+        """
+        freq = _controller_params(
+            os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'))['controller_frequency']
+        for name, inst in _square_cfg().items():
+            old_dwell = inst['narrow_clear_ticks'] / freq
+            new_floor = inst['narrow_square_min_dwell'] + inst['narrow_square_cooldown']
+            assert new_floor > 10.0 * old_dwell, (
+                f'{name}: 新的单次切换周期下限 {new_floor}s 不足旧中位驻留 '
+                f'{old_dwell:.3f}s 的 10 倍 —— 改动量级不够')
+
+    def test_lease_period_below_verify_timeout(self):
+        """续租周期必须 < 回读验证超时，否则"等确认"期间可能一次都没续租。"""
+        for name, inst in _square_cfg().items():
+            assert inst['narrow_square_lease_period'] < inst['narrow_square_verify_timeout'], (
+                f'{name}: narrow_square_lease_period 必须 < narrow_square_verify_timeout')
+
+    def test_watchdog_lease_timeout_allows_consecutive_reads(self):
+        """🔴 看门狗租约超时必须容得下"凑齐 N 次连续回读"所需的时间。
+
+        算术：N 次连续回读**至少**需要 N 个回读周期。租约超时若比这还短，
+        看门狗就可能在读数根本还凑不齐时动手 —— 那正是旧配置
+        (2.0s 超时 vs 1.0s 回读周期 vs 需要 3 次) 造成 2.1s 误判的病因。
+        留 1 个周期的抖动余量。
+        """
+        wd = _coordinator_params()['footprint_watchdog']
+        period = wd['readback_period_sec']
+        n = wd['consecutive_reads']
+        assert period > 0 and n >= 1
+        need = period * (n + 1)
+        assert wd['lease_timeout_sec'] >= need, (
+            f"lease_timeout_sec={wd['lease_timeout_sec']} < "
+            f'readback_period_sec*(consecutive_reads+1)={need} —— '
+            f'读数还凑不齐就可能动手')
+
+    def test_watchdog_stale_threshold_allows_normal_jitter(self):
+        """陈旧阈值必须容得下至少 2 个回读周期。
+
+        太紧的话正常抖动就会让看门狗永远处于"读数太老、不敢动手"的瞎眼状态，
+        而它瞎眼时**不会报"故障"**、只会安静地不动手 —— 等于没有兜底却看不出来。
+        """
+        wd = _coordinator_params()['footprint_watchdog']
+        assert wd['readback_stale_sec'] >= 2.0 * wd['readback_period_sec'], (
+            f"readback_stale_sec={wd['readback_stale_sec']} < "
+            f"2*readback_period_sec={2.0 * wd['readback_period_sec']}")
+
+    def test_watchdog_timeout_dwarfs_controller_lease_period(self):
+        """看门狗租约超时必须远大于控制器续租周期（>= 4 倍）。
+
+        这两个数在不同的包、不同的 yaml 里，最容易各改一个而漂开。
+        余量不足时一次调度抖动就会让看门狗误判"设它的进程死了"。
+        """
+        wd_timeout = _coordinator_params()['footprint_watchdog']['lease_timeout_sec']
+        for name, inst in _square_cfg().items():
+            lease = inst['narrow_square_lease_period']
+            assert wd_timeout >= 4.0 * lease, (
+                f'{name}: 看门狗 lease_timeout_sec={wd_timeout} < '
+                f'4*narrow_square_lease_period={4.0 * lease}')
+
+    def test_watchdog_readback_period_matches_global_costmap(self):
+        """看门狗的 readback_period_sec 必须等于 global costmap 的 publish_frequency。
+
+        它只用于启动守卫的算术 —— 但算术的输入写错，守卫算出来的下限就是错的，
+        而守卫会照样"通过"。这是本项目反复吃过的那类错：判据本身错了。
+        """
+        pf = _costmap_params(
+            os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'),
+            'global_costmap')['publish_frequency']
+        wd_period = _coordinator_params()['footprint_watchdog']['readback_period_sec']
+        assert abs(wd_period - 1.0 / pf) < 1e-9, (
+            f'footprint_watchdog.readback_period_sec={wd_period} != '
+            f'1/global_costmap.publish_frequency={1.0 / pf}')
+
+    def test_square_requires_prealign(self):
+        """🔴 缩足迹依赖预对齐：开了前者却关了后者 = 静默无效。
+
+        唯一的切入通路是预对齐的前视判定（顺序不可颠倒：先对齐后换足迹），
+        所以 narrow_prealign_enabled=false 时缩足迹**永远进不去**，
+        表现是切换 0 次、零告警 —— A/B 会得出"这机制没用"，真相是它一次没跑。
+        控制器侧有启动守卫直接拒绝启动，这里在配置层再拦一道。
+        """
+        for name, inst in _square_cfg().items():
+            if inst['narrow_square_enabled']:
+                assert inst['narrow_prealign_enabled'], (
+                    f'{name}: narrow_square_enabled=true 但 '
+                    f'narrow_prealign_enabled=false —— 缩足迹会静默永不生效')
+
+
+class TestCostThresholdSemantics:
+    """🔴 两种代价查询、两个阈值，绝不混用。
+
+    依据是 nav2 自己的 InflationLayer::computeCost：
+        distance == 0                      -> 254 (LETHAL，障碍本体)
+        distance*res <= inscribed_radius   -> 253 (INSCRIBED_INFLATED)
+    253 的含义是"离障碍不超过内切半径"= **底盘中心放这里必然碰撞**，
+    而内切半径就是底盘半宽 —— 膨胀层已经把底盘尺寸算进去了。
+
+    · 足迹**多边形**查询(footprintCostAtPose) -> 254
+      多边形已经表达了底盘尺寸，再要求外轮廓躲开 253 带 = 算两遍
+    · **中心格**查询(getCost) -> 253
+      那里膨胀带正好代表底盘尺寸
+
+    上一版把多边形阈值写成 253，后果是窄于 4*侧向半宽(本机 ~1.58m)的通道里
+    足迹代价恒为 253、零梯度，实测 909 次"连小足迹也过不去"全是假的。
+    """
+
+    def test_footprint_threshold_is_lethal_not_inscribed(self):
+        for name, inst in _square_cfg().items():
+            v = inst['narrow_footprint_lethal_threshold']
+            assert v > 253.0, (
+                f'{name}: narrow_footprint_lethal_threshold={v} <= 253 —— '
+                f'足迹多边形用 253 会重复计底盘半宽；正确值 254')
+
+    def test_center_threshold_stays_inscribed(self):
+        for name, inst in _square_cfg().items():
+            v = inst['narrow_center_lethal_threshold']
+            assert 0.0 < v <= 253.0, (
+                f'{name}: narrow_center_lethal_threshold={v} 必须在 (0,253] —— '
+                f'中心格判据里膨胀带就代表底盘尺寸，设 254 会把放不进去的位置判成可站')
+
+    def test_two_thresholds_must_differ(self):
+        """两个阈值方向相反，"统一成一个数"会破坏其中一半。"""
+        for name, inst in _square_cfg().items():
+            fp = inst['narrow_footprint_lethal_threshold']
+            ce = inst['narrow_center_lethal_threshold']
+            assert fp > ce, f'{name}: 足迹阈值({fp}) 必须 > 中心格阈值({ce})'
+
+    def test_square_actually_fits_the_narrowest_corridor(self):
+        """缩足迹必须真的能过本环境最窄的通道，否则这个机制没有意义。
+
+        场景事实：本仿真环境没有低于 0.65m 的通道。
+        判据分两层，都要过：
+          · 规划器的**中心格**判据：内切半径(含 padding) < 通道半宽
+          · 足迹**多边形**判据：侧向半宽 < 通道半宽
+        """
+        import math
+        NARROWEST = 0.65
+        half = NARROWEST / 2.0
+        for name, inst in _square_cfg().items():
+            poly = yaml.safe_load(inst['narrow_footprint_narrow'])
+            pad = _costmap_params(
+                os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'),
+                'global_costmap').get('footprint_padding', 0.01)
+            # 侧向半宽取所有朝向里最小的那个（= 对齐到最有利朝向）
+            lateral = min(
+                max(abs(-x * math.sin(t) + y * math.cos(t)) for x, y in poly)
+                for t in [math.radians(d) for d in range(0, 91)])
+            inscribed = _poly_inscribed(inst['narrow_footprint_narrow']) + pad
+            assert lateral + pad < half, (
+                f'{name}: 小足迹侧向半宽(含 padding) {lateral + pad:.4f} '
+                f'>= 通道半宽 {half:.4f} —— 缩了也过不去，机制无意义')
+            assert inscribed < half, (
+                f'{name}: 小足迹内切半径(含 padding) {inscribed:.4f} >= 通道半宽 '
+                f'{half:.4f} —— 规划器仍会报 Starting point in lethal space')
+
+    def test_octagon_genuinely_cannot_fit_narrowest_corridor(self):
+        """反面：默认八边形必须**真的**过不去，否则根本不需要缩足迹。
+
+        这条是防"两个足迹其实都能过/都不能过"——那样 A/B 测不出任何东西。
+        """
+        NARROWEST = 0.65
+        half = NARROWEST / 2.0
+        for name, inst in _square_cfg().items():
+            pad = _costmap_params(
+                os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'),
+                'global_costmap').get('footprint_padding', 0.01)
+            inscribed = _poly_inscribed(inst['narrow_footprint_default']) + pad
+            assert inscribed > half, (
+                f'{name}: 默认足迹内切半径 {inscribed:.4f} < 通道半宽 {half:.4f} —— '
+                f'它本来就过得去，那缩足迹解决的是什么问题？')

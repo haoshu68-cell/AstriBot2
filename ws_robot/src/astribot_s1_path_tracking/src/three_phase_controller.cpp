@@ -2,6 +2,8 @@
 
 #include "astribot_s1_path_tracking/three_phase_controller.hpp"
 
+#include "nav2_costmap_2d/footprint.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -53,6 +55,29 @@ void ThreePhaseController::configure(
   declareAndLoadParams();
   loadInnerController(parent_, tf_, costmap_ros_);
 
+  // 缩足迹功能的话题与足迹解析。只有开着才付这些开销，也只有开着才跑启动守卫。
+  if (narrow_square_enabled_) {
+    std::string fp_topic;
+    std::string fp_pub_topic;
+    node->get_parameter(name_ + ".global_footprint_topic", fp_topic);
+    node->get_parameter(name_ + ".global_published_footprint_topic", fp_pub_topic);
+    loadFootprints(node, name_ + ".");
+    global_footprint_pub_ =
+      node->create_publisher<geometry_msgs::msg::Polygon>(fp_topic, rclcpp::QoS(1));
+    global_footprint_pub_->on_activate();
+    // 回读：global costmap 把当前足迹按 publish_frequency 发出来。
+    // 判据只用**顶点数**，因为 published_footprint 是变换到机器人当前位姿的，
+    // 坐标随位姿变，顶点数不变。8 点 = 默认足迹，4 点 = 窄通道足迹。
+    global_footprint_sub_ = node->create_subscription<geometry_msgs::msg::PolygonStamped>(
+      fp_pub_topic, rclcpp::QoS(1),
+      [this](geometry_msgs::msg::PolygonStamped::SharedPtr msg) {
+        global_footprint_vertices_.store(static_cast<int>(msg->polygon.points.size()));
+      });
+    RCLCPP_INFO(
+      logger_, "[%s] 缩足迹话题: 写 '%s' 回读 '%s'",
+      name_.c_str(), fp_topic.c_str(), fp_pub_topic.c_str());
+  }
+
   RCLCPP_INFO(
     logger_,
     "[%s] 三段式跟踪已配置: 内层=%s 起步对齐=%s 终点对齐=%s 跟踪段横移=%s "
@@ -80,6 +105,24 @@ void ThreePhaseController::configure(
       narrow_limits_.yaw_gate_rad, narrow_favorable_period_rad_,
       narrow_stall_timeout_sec_, narrow_stall_min_gain_m_, narrow_hard_timeout_sec_,
       narrow_max_engagements_, narrow_max_path_deviation_m_);
+    // 预对齐单独打一行：A/B 验证要靠日志反证这一臂到底是开还是关，
+    // 混在上面那条里 grep 不出来（本项目已经因为"反证不到位"废掉过一整轮数据）。
+    if (narrow_prealign_enabled_) {
+      RCLCPP_INFO(
+        logger_,
+        "[%s] 进入前朝向预对齐已启用: 前视=%.2fm@%.2fm 切向前视=%.2fm "
+        "扫掠步长=%.2frad 超时=%.1fs 每目标上限=%d次 | 退出判据复用朝向闸门 %.3frad",
+        name_.c_str(), narrow_prealign_.preview_m, narrow_prealign_.sample_step_m,
+        narrow_prealign_.tangent_lookahead_m, narrow_prealign_sweep_step_rad_,
+        narrow_prealign_timeout_sec_, narrow_prealign_max_per_goal_,
+        narrow_limits_.yaw_gate_rad);
+    } else {
+      RCLCPP_INFO(
+        logger_,
+        "[%s] 进入前朝向预对齐已**禁用**(narrow_prealign_enabled=false): "
+        "机器人会以当前朝向直接进入窄处，再在里面原地转（预对齐之前的旧行为）",
+        name_.c_str());
+    }
   } else {
     RCLCPP_WARN(
       logger_,
@@ -140,7 +183,8 @@ void ThreePhaseController::declareAndLoadParams()
   declare_parameter_if_not_declared(node, p + "narrow_trigger_ticks", rclcpp::ParameterValue(3));
   declare_parameter_if_not_declared(node, p + "narrow_clear_ticks", rclcpp::ParameterValue(3));
   declare_parameter_if_not_declared(
-    node, p + "narrow_footprint_lethal_threshold", rclcpp::ParameterValue(253.0));
+    node, p + "narrow_footprint_lethal_threshold",
+    rclcpp::ParameterValue(NarrowCostValues::kLethal));
   declare_parameter_if_not_declared(
     node, p + "narrow_center_lethal_threshold", rclcpp::ParameterValue(253.0));
   declare_parameter_if_not_declared(
@@ -167,6 +211,48 @@ void ThreePhaseController::declareAndLoadParams()
   declare_parameter_if_not_declared(node, p + "narrow_max_engagements", rclcpp::ParameterValue(3));
   declare_parameter_if_not_declared(
     node, p + "narrow_max_path_deviation", rclcpp::ParameterValue(0.50));
+  // ---- 进入窄通道前的朝向预对齐 ----
+  declare_parameter_if_not_declared(
+    node, p + "narrow_prealign_enabled", rclcpp::ParameterValue(true));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_prealign_preview", rclcpp::ParameterValue(1.00));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_prealign_sample_step", rclcpp::ParameterValue(0.10));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_prealign_sweep_step", rclcpp::ParameterValue(0.20));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_prealign_timeout", rclcpp::ParameterValue(5.0));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_prealign_max_per_goal", rclcpp::ParameterValue(5));
+  // ---- 窄通道内临时缩小足迹 ----
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_enabled", rclcpp::ParameterValue(false));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_footprint_default", rclcpp::ParameterValue(std::string("")));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_footprint_narrow", rclcpp::ParameterValue(std::string("")));
+  declare_parameter_if_not_declared(
+    node, p + "chassis_min_envelope_radius", rclcpp::ParameterValue(0.30));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_hard_timeout", rclcpp::ParameterValue(30.0));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_lease_period", rclcpp::ParameterValue(0.5));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_verify_timeout", rclcpp::ParameterValue(2.0));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_exit_preview", rclcpp::ParameterValue(1.20));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_exit_ticks", rclcpp::ParameterValue(6));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_min_dwell", rclcpp::ParameterValue(2.0));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_square_cooldown", rclcpp::ParameterValue(3.0));
+  declare_parameter_if_not_declared(
+    node, p + "global_footprint_topic",
+    rclcpp::ParameterValue(std::string("/global_costmap/footprint")));
+  declare_parameter_if_not_declared(
+    node, p + "global_published_footprint_topic",
+    rclcpp::ParameterValue(std::string("/global_costmap/published_footprint")));
 
   node->get_parameter(p + "narrow_enabled", narrow_enabled_);
   narrow_trigger_.trigger_ticks =
@@ -186,6 +272,26 @@ void ThreePhaseController::declareAndLoadParams()
   node->get_parameter(p + "narrow_yaw_gate", narrow_limits_.yaw_gate_rad);
   node->get_parameter(p + "narrow_favorable_period", narrow_favorable_period_rad_);
   node->get_parameter(p + "narrow_heading_lookahead", narrow_heading_lookahead_m_);
+  node->get_parameter(p + "narrow_prealign_enabled", narrow_prealign_enabled_);
+  node->get_parameter(p + "narrow_prealign_preview", narrow_prealign_.preview_m);
+  node->get_parameter(p + "narrow_prealign_sample_step", narrow_prealign_.sample_step_m);
+  node->get_parameter(p + "narrow_prealign_sweep_step", narrow_prealign_sweep_step_rad_);
+  node->get_parameter(p + "narrow_prealign_timeout", narrow_prealign_timeout_sec_);
+  narrow_prealign_max_per_goal_ =
+    static_cast<int>(node->get_parameter(p + "narrow_prealign_max_per_goal").as_int());
+  node->get_parameter(p + "narrow_square_enabled", narrow_square_enabled_);
+  node->get_parameter(p + "narrow_square_hard_timeout", narrow_square_hard_timeout_sec_);
+  node->get_parameter(p + "narrow_square_lease_period", narrow_square_lease_period_sec_);
+  node->get_parameter(p + "narrow_square_verify_timeout", narrow_square_verify_timeout_sec_);
+  node->get_parameter(p + "narrow_square_exit_preview", narrow_square_exit_preview_m_);
+  narrow_square_exit_ticks_ =
+    static_cast<int>(node->get_parameter(p + "narrow_square_exit_ticks").as_int());
+  node->get_parameter(p + "narrow_square_min_dwell", narrow_square_min_dwell_sec_);
+  node->get_parameter(p + "narrow_square_cooldown", narrow_square_cooldown_sec_);
+  // 预对齐与既有判据**共用同一个值**，不另设阈值 —— 两处各存一份必然漂开。
+  narrow_prealign_.tangent_lookahead_m = narrow_heading_lookahead_m_;
+  narrow_prealign_.favorable_period_rad = narrow_favorable_period_rad_;
+  narrow_prealign_.footprint_lethal_threshold = narrow_trigger_.footprint_lethal_threshold;
   node->get_parameter(p + "narrow_stall_timeout", narrow_stall_timeout_sec_);
   node->get_parameter(p + "narrow_stall_min_gain", narrow_stall_min_gain_m_);
   node->get_parameter(p + "narrow_hard_timeout", narrow_hard_timeout_sec_);
@@ -257,17 +363,36 @@ void ThreePhaseController::declareAndLoadParams()
       // 0 会让 narrowCleared 永不成立（见其实现），等于接管永不退出。
       throw nav2_core::PlannerException("ThreePhaseController: narrow_clear_ticks 必须 >= 1");
     }
-    if (!(narrow_trigger_.footprint_lethal_threshold > 0.0) ||
-      narrow_trigger_.footprint_lethal_threshold >= NarrowCostValues::kLethal)
-    {
-      // >= 254 等于把「真障碍」当成触发条件，那是红线区不是本层目标域。
+    // 🔴 足迹**多边形**的阈值必须 > 253。
+    //    这条守卫的上一版写的是「必须 < 254」，恰好把唯一正确的值挡在门外，
+    //    理由写的是「254 是真障碍(红线)，不是本层触发条件」—— 那个理由是错的：
+    //    多边形查询里 253 表示"外轮廓离障碍不超过内切半径"，而内切半径就是
+    //    底盘半宽，等于把底盘算了两遍。实测后果：任何窄于 ~1.58m 的通道里
+    //    足迹代价恒为 253、零梯度，909 次「连小足迹也过不去」全是这么来的。
+    //    两种查询两个阈值的完整推导见 narrow_math.hpp 的 NarrowCostValues。
+    if (narrow_trigger_.footprint_lethal_threshold <= NarrowCostValues::kInscribedInflated) {
       throw nav2_core::PlannerException(
-        "ThreePhaseController: narrow_footprint_lethal_threshold 必须在 (0, 254) 内 —— "
-        "254 是真障碍(红线)，不是本层的触发条件");
+        "ThreePhaseController: narrow_footprint_lethal_threshold(" +
+        std::to_string(narrow_trigger_.footprint_lethal_threshold) +
+        ") 必须 > 253。足迹多边形已经表达了底盘尺寸，拿 253(膨胀内切带)当碰撞阈值"
+        "等于重复计底盘半宽 —— 后果是窄于约 4 倍底盘半宽的通道里恒为 253、零梯度。"
+        "正确值是 254(真障碍本体)。中心格查询才用 253。");
     }
-    if (!(narrow_trigger_.center_lethal_threshold > 0.0)) {
+    if (narrow_trigger_.footprint_lethal_threshold > NarrowCostValues::kNoInformation) {
       throw nav2_core::PlannerException(
-        "ThreePhaseController: narrow_center_lethal_threshold 必须 > 0");
+        "ThreePhaseController: narrow_footprint_lethal_threshold 不得 > 255");
+    }
+    // 🔴 中心格阈值反过来必须 <= 253：那里膨胀带正好代表底盘尺寸。
+    //    设成 254 等于「只有中心压在障碍本体上才算致命」，会把机器人
+    //    明明放不进去的位置判成可站。
+    if (!(narrow_trigger_.center_lethal_threshold > 0.0) ||
+      narrow_trigger_.center_lethal_threshold > NarrowCostValues::kInscribedInflated)
+    {
+      throw nav2_core::PlannerException(
+        "ThreePhaseController: narrow_center_lethal_threshold(" +
+        std::to_string(narrow_trigger_.center_lethal_threshold) +
+        ") 必须在 (0, 253] 内。中心格判据里膨胀带就代表底盘尺寸，"
+        "设成 254 会把放不进去的位置判成可站");
     }
     if (!(narrow_scan_half_width_m_ > 0.0)) {
       throw nav2_core::PlannerException("ThreePhaseController: narrow_scan_half_width 必须 > 0");
@@ -321,6 +446,41 @@ void ThreePhaseController::declareAndLoadParams()
     }
     if (!(narrow_heading_lookahead_m_ > 0.0)) {
       throw nav2_core::PlannerException("ThreePhaseController: narrow_heading_lookahead 必须 > 0");
+    }
+    if (narrow_prealign_enabled_) {
+      if (!(narrow_prealign_.preview_m > 0.0) || !(narrow_prealign_.sample_step_m > 0.0)) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_prealign_preview / sample_step 必须 > 0");
+      }
+      if (narrow_prealign_.sample_step_m > narrow_prealign_.preview_m) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_prealign_sample_step 不得大于 narrow_prealign_preview，"
+          "否则前视一个点都取不到、预对齐永不触发且不报错");
+      }
+      if (!(narrow_prealign_sweep_step_rad_ > 0.0)) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_prealign_sweep_step 必须 > 0 —— "
+          "扫掠校验是旋转前的安全前置，步长非法时本层会拒绝一切旋转");
+      }
+      if (!(narrow_prealign_timeout_sec_ > 0.0)) {
+        // 用户红线：所有脱困/受限动作必须带超时。
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_prealign_timeout 必须 > 0");
+      }
+      if (narrow_prealign_max_per_goal_ <= 0) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_prealign_max_per_goal 必须 >= 1（要关就用 "
+          "narrow_prealign_enabled:false，而不是把上限设成 0 让它静默失效）");
+      }
+      // 🔴 阈值顺序陷阱：退出判据用 narrow_yaw_gate，而 rotateOnly 的角速度在
+      // align_tolerance 以内就被压成 0。若 align_tolerance >= yaw_gate，
+      // 车会在还没到闸门就停止转动 ⇒ 预对齐每次都只能靠超时收场，且日志上
+      // 看起来像「转不过去」而不是「配置颠倒」。
+      if (align_tol_rad_ >= narrow_limits_.yaw_gate_rad) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: align_tolerance 必须 < narrow_yaw_gate，否则原地转会在"
+          "到达朝向闸门之前就停住，预对齐只能靠超时结束");
+      }
     }
     if (!(narrow_stall_timeout_sec_ > 0.0)) {
       // 用户红线：所有脱困逻辑必须带超时，不能无限循环脱困。
@@ -388,6 +548,12 @@ void ThreePhaseController::loadInnerController(
 
 void ThreePhaseController::cleanup()
 {
+  // 🔴 防锁存：本层若带着小足迹退出，代价地图会**一直**按小足迹算，
+  //    机器人从此被系统性低估，而日志上一切正常。所以 cleanup/deactivate
+  //    都必须无条件复原，且要在销毁发布者之前发出去。
+  revertFootprint("控制器 cleanup");
+  global_footprint_sub_.reset();
+  global_footprint_pub_.reset();
   if (inner_) {
     inner_->cleanup();
     inner_.reset();
@@ -397,6 +563,16 @@ void ThreePhaseController::cleanup()
 
 void ThreePhaseController::activate()
 {
+  // 每次激活都从"默认足迹"这个已知状态起步：上一次会话若异常退出，
+  // 代价地图上可能还挂着小足迹。
+  square_active_ = false;
+  square_pending_ = false;
+  if (narrow_square_enabled_) {
+    requestFootprint(footprint_default_);
+    RCLCPP_INFO(
+      logger_, "[%s] 激活：已把足迹重置为默认(%zu 点)，防上一次会话残留小足迹",
+      name_.c_str(), footprint_default_.size());
+  }
   if (inner_) {
     inner_->activate();
   }
@@ -404,6 +580,7 @@ void ThreePhaseController::activate()
 
 void ThreePhaseController::deactivate()
 {
+  revertFootprint("控制器 deactivate");
   if (inner_) {
     inner_->deactivate();
   }
@@ -487,6 +664,16 @@ void ThreePhaseController::setPlan(const nav_msgs::msg::Path & path)
     narrow_hits_ = 0;
     narrow_clear_hits_ = 0;
     narrow_engaged_ = false;
+    // 预对齐次数同理按目标计。若在这里无条件清零，1Hz 重规划会让
+    // narrow_prealign_max_per_goal_ 这道防振荡上限永远不生效。
+    prealign_used_ = 0;
+    warned_prealign_cap_ = false;
+    // 但**正在进行的旋转必须中断**：新目标的通道方向大概率不同，
+    // 继续转向旧目标算出的朝向是在往错的方向转，且没人会纠正它。
+    prealign_active_ = false;
+    // 🔴 新目标无条件复原足迹：把锁存窗口压到一个目标之内。
+    //    新目标的窄处在哪、要不要缩足迹，都要重新判一次。
+    revertFootprint("换了新目标");
   }
 
   // 起始朝向每次都重算（路径形状会变），但它只在需要重置相位时才被用到。
@@ -669,6 +856,662 @@ bool ThreePhaseController::readCosts(
   footprint_cost = collision_checker_->footprintCostAtPose(
     pose.pose.position.x, pose.pose.position.y, yaw, footprint_cache_);
   return true;
+}
+
+ThreePhaseController::PrealignDecision ThreePhaseController::evaluatePrealign(
+  const geometry_msgs::msg::PoseStamped & pose, const rclcpp::Time & now)
+{
+  PrealignDecision none;
+  if (!narrow_enabled_) {
+    // 窄通道层整体关掉时，绝不能留着小足迹 —— 那是最危险的锁存。
+    revertFootprint("窄通道层已禁用");
+    return none;
+  }
+  if (!narrow_prealign_enabled_ && !square_active_ && !square_pending_) {
+    return none;
+  }
+  const double robot_yaw = yawOf(pose.pose);
+
+  // ---- 小足迹已生效/待确认：每拍都必须先走它 ----
+  // 复原判据、超时、重新对齐都在里面。
+  // ⚠️ 拿不到路径时**不能**就此不动作，否则拿不到路径就等于把小足迹锁存了。
+  //    所以这里保留一条退化通路：只看当前位姿的大足迹代价（会被 square_exit_degraded_
+  //    计数并写进日志，避免"退化了但看不出来"）。
+  if (narrow_square_enabled_ && (square_active_ || square_pending_)) {
+    SquareExitProbe exit;
+    std::vector<PlanarPoint> path;
+    const bool have_path = planInCostmapFrame(path);
+    const PlanarPoint robot{pose.pose.position.x, pose.pose.position.y};
+
+    const bool got = withCostQueries(
+      [&](const FootprintCostFn & cost_big, const FootprintCostFn &) {
+        if (have_path) {
+          // 切出判据与切入判据问**同一个几何问题**，只是窗口更长（迟滞）。
+          // 第二个 cost_fn 故意传空：这里只问"大足迹过不过得去"，
+          // 传空后 previewNarrowStrategy 的第③支(小足迹)直接跳过。
+          PrealignConfig exit_cfg = narrow_prealign_;
+          exit_cfg.preview_m = narrow_square_exit_preview_m_;
+          const StrategyPreview ep =
+            previewNarrowStrategy(path, robot, robot_yaw, exit_cfg, cost_big, FootprintCostFn{});
+          exit.from_path = true;
+          // 只有 kNone(窗口内每一点按当前姿态都过得去) 与 kPathTooShort(前方没路了，
+          // 通常已接近目标) 算"装得下"。
+          // ⚠️ kAlignOnly 故意**不算**：它意味着大足迹还需要换个朝向才过得去，
+          //    而此刻朝向锁在 square_locked_yaw_ 上，复原可能直接落进 253 带。
+          exit.clear = (ep.strategy == NarrowStrategy::kNone ||
+            ep.strategy == NarrowStrategy::kPathTooShort);
+        } else {
+          const double big =
+            cost_big(pose.pose.position.x, pose.pose.position.y, robot_yaw);
+          exit.clear = big < narrow_trigger_.footprint_lethal_threshold;
+        }
+      });
+    if (!got) {
+      // 代价地图不可用时**不复原**：复原需要知道大足迹装不装得下，而这正是
+      // 现在读不到的量。按"还在窄处"处理，让硬超时兜底。
+      RCLCPP_WARN_THROTTLE(
+        logger_, *clock_, 3000,
+        "[%s] 小足迹生效期间代价地图不可用，无法判复原条件，等硬超时兜底",
+        name_.c_str());
+      exit.clear = false;
+      exit.from_path = false;
+    }
+    return evaluateSquare(pose, now, StrategyPreview{}, robot_yaw, exit);
+  }
+
+  // ---- 已在预对齐中：判完成 / 判超时 / 继续转 ----
+  if (prealign_active_) {
+    const double err = shortestAngularDiff(robot_yaw, prealign_target_yaw_);
+    if (std::fabs(err) <= narrow_limits_.yaw_gate_rad) {
+      // 退出判据复用朝向闸门，不新增第二个朝向阈值。
+      ++prealign_succeeded_;
+      prealign_active_ = false;
+      RCLCPP_INFO(
+        logger_,
+        "[%s] 进入前预对齐完成(第 %d 次): 朝向误差 %.3frad <= 闸门 %.3frad，交回内层跟踪 "
+        "| 累计[起N=%d 成N=%d 超N=%d 扫拒N=%d 限N=%d 无余量N=%d]",
+        name_.c_str(), prealign_used_, std::fabs(err), narrow_limits_.yaw_gate_rad,
+        prealign_triggered_, prealign_succeeded_, prealign_timeout_,
+        prealign_sweep_blocked_, prealign_capped_, prealign_blocked_even_favorable_);
+      return none;
+    }
+    if ((now - prealign_started_).seconds() > narrow_prealign_timeout_sec_) {
+      // 🔴 显式失败，但**不抛异常**：预对齐失败是「没能开始」，不是「没穿过去」。
+      // 计入 narrow_max_engagements 会误杀整条本来可行的路径（见本文件 :725 的教训）。
+      ++prealign_timeout_;
+      prealign_active_ = false;
+      RCLCPP_WARN(
+        logger_,
+        "[%s] 进入前预对齐超时 %.1fs 放弃：还差 %.3frad 没转到位（目标 %.3frad）。"
+        "交回内层跟踪，本次**不计入**放弃上限 | 累计超时=%d",
+        name_.c_str(), narrow_prealign_timeout_sec_, std::fabs(err),
+        prealign_target_yaw_, prealign_timeout_);
+      return none;
+    }
+    none.take_over = true;
+    none.cmd = rotateOnly(err, pose.header);
+    return none;
+  }
+
+  // ---- 尚未预对齐：看前方要不要 ----
+  if (prealign_used_ >= narrow_prealign_max_per_goal_) {
+    if (!warned_prealign_cap_) {
+      warned_prealign_cap_ = true;
+      ++prealign_capped_;
+      RCLCPP_WARN(
+        logger_,
+        "[%s] 进入前预对齐已达本目标上限 %d 次，后续不再预对齐（防振荡）",
+        name_.c_str(), narrow_prealign_max_per_goal_);
+    }
+    return none;
+  }
+
+  std::vector<PlanarPoint> path;
+  if (!planInCostmapFrame(path)) {
+    return none;      // 缺数据不动作。这条路径 evaluateNarrow 已经告警过，不重复刷。
+  }
+  const PlanarPoint robot{pose.pose.position.x, pose.pose.position.y};
+
+  StrategyPreview preview;
+  bool sweep_clear = false;
+  double sweep_worst = 0.0;
+  double big_cost = 0.0;
+  if (!runPrealignQueries(path, robot, robot_yaw, preview, sweep_clear, sweep_worst, big_cost)) {
+    return none;      // 代价地图不可用
+  }
+
+  switch (preview.strategy) {
+    case NarrowStrategy::kAlignOnly:
+      break;          // 落到下面的预对齐流程
+
+    case NarrowStrategy::kAlignThenShrink:
+      // 大足迹转正也过不去、小足迹转正过得去 ⇒ 交给缩足迹状态机
+      //（它内部会先要求对齐到位才切）。扫掠校验不过就不许转，同预对齐。
+      //
+      // 每拍都计数：这是**本功能有用武之地的拍数**，与 kBlocked 的拍数
+      // 直接可比。缺了它就只能拿"节流 INFO 的行数"去比"每拍累加的计数器"，
+      // 那个比值是错的（第一轮就是 1 行 vs 790 拍）。
+      ++square_applicable_ticks_;
+      if (!sweep_clear) {
+        ++prealign_sweep_blocked_;
+        RCLCPP_WARN_THROTTLE(
+          logger_, *clock_, 3000,
+          "[%s] 前方 %.2fm 处需缩足迹，但旋转扫掠途中足迹代价达 %.0f(阈值 %.0f) ⇒ "
+          "放弃预对齐，不硬转 | 累计扫掠被拒=%d",
+          name_.c_str(), preview.at_distance_m, sweep_worst,
+          narrow_trigger_.footprint_lethal_threshold, prealign_sweep_blocked_);
+        return none;
+      }
+      return evaluateSquare(pose, now, preview, robot_yaw, SquareExitProbe{});
+
+    case NarrowStrategy::kBlocked:
+      // 前方连**小足迹**转正都过不去 ⇒ 不是本层能解决的，交给红线/ESCAPE。
+      ++prealign_blocked_even_favorable_;
+      RCLCPP_WARN_THROTTLE(
+        logger_, *clock_, 5000,
+        "[%s] 前视发现窄处**转正也过不去**（扫 %zu 点，缩足迹%s），预对齐不适用，"
+        "由红线/ESCAPE 处理 | 累计=%d，同期「缩足迹能过」=%d 拍"
+        "（两者都是逐拍计数，可直接相比；这个比值决定缩足迹在本图上有没有用武之地）",
+        name_.c_str(), preview.samples,
+        narrow_square_enabled_ ? "也不行" : "未启用", prealign_blocked_even_favorable_,
+        square_applicable_ticks_);
+      return none;
+
+    case NarrowStrategy::kInvalidConfig:
+      // 参数已在启动时校验过，走到这里说明代码/参数不一致，必须吼出来。
+      RCLCPP_ERROR_THROTTLE(
+        logger_, *clock_, 5000,
+        "[%s] 预对齐参数非法（preview=%.2f step=%.2f 切向前视=%.2f 周期=%.4f）——"
+        "启动校验与运行期判据不一致，预对齐已停止工作",
+        name_.c_str(), narrow_prealign_.preview_m, narrow_prealign_.sample_step_m,
+        narrow_prealign_.tangent_lookahead_m, narrow_prealign_.favorable_period_rad);
+      return none;
+
+    case NarrowStrategy::kPathTooShort:
+    case NarrowStrategy::kNone:
+    default:
+      return none;      // 开阔或数据不足，正常放行给内层
+  }
+
+  // 到这里 strategy 必为 kAlignOnly
+  if (!sweep_clear) {
+    // 🔴 安全：转过去的途中会扫到膨胀带/真障碍 ⇒ 放弃预对齐，绝不硬转。
+    ++prealign_sweep_blocked_;
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 3000,
+      "[%s] 前方 %.2fm 处需预对齐到 %.3frad，但旋转扫掠途中足迹代价达 %.0f（阈值 %.0f）"
+      "⇒ 放弃预对齐，不硬转 | 累计扫掠被拒=%d",
+      name_.c_str(), preview.at_distance_m, preview.target_yaw, sweep_worst,
+      narrow_trigger_.footprint_lethal_threshold, prealign_sweep_blocked_);
+    return none;
+  }
+
+  prealign_active_ = true;
+  prealign_target_yaw_ = preview.target_yaw;
+  prealign_started_ = now;
+  ++prealign_used_;
+  ++prealign_triggered_;
+  const double err = shortestAngularDiff(robot_yaw, prealign_target_yaw_);
+  RCLCPP_WARN(
+    logger_,
+    "[%s] 进入前预对齐启动(第 %d/%d 次): 前方 %.2fm 处当前朝向过不去、转到 %.3frad 过得去；"
+    "原地转 %.3frad（扫掠最大代价 %.0f < %.0f）| 前视扫 %zu 点(跳过 %zu) 超时 %.1fs",
+    name_.c_str(), prealign_used_, narrow_prealign_max_per_goal_, preview.at_distance_m,
+    prealign_target_yaw_, err, sweep_worst, narrow_trigger_.footprint_lethal_threshold,
+    preview.samples, preview.skipped_no_tangent, narrow_prealign_timeout_sec_);
+
+  none.take_over = true;
+  none.cmd = rotateOnly(err, pose.header);
+  return none;
+}
+
+void ThreePhaseController::loadFootprints(
+  const rclcpp_lifecycle::LifecycleNode::SharedPtr & node, const std::string & p)
+{
+  std::string s_default;
+  std::string s_narrow;
+  node->get_parameter(p + "narrow_footprint_default", s_default);
+  node->get_parameter(p + "narrow_footprint_narrow", s_narrow);
+  node->get_parameter(p + "chassis_min_envelope_radius", chassis_min_envelope_radius_);
+
+  // 解析用 nav2 自己的 makeFootprintFromString，不自己写 parser
+  //（自己写的那份必然与 costmap 读同一个字符串的方式漂开）。
+  if (!nav2_costmap_2d::makeFootprintFromString(s_default, footprint_default_) ||
+    footprint_default_.size() < 3U)
+  {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_footprint_default 解析失败或少于 3 点: '" + s_default + "'");
+  }
+  if (!nav2_costmap_2d::makeFootprintFromString(s_narrow, footprint_narrow_) ||
+    footprint_narrow_.size() < 3U)
+  {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_footprint_narrow 解析失败或少于 3 点: '" + s_narrow + "'");
+  }
+
+  // 半径也用 nav2 自己的函数算 —— 膨胀层用的就是它，两处各算一份必然漂开。
+  // 注意：这里算的是**未加 padding** 的值；costmap 会再加 footprint_padding，
+  // 实测 padding=0.01 时八边形内切 0.388->0.399、正方形 0.310->0.320。
+  nav2_costmap_2d::calculateMinAndMaxDistances(
+    footprint_default_, footprint_default_inscribed_, footprint_default_circumscribed_);
+  nav2_costmap_2d::calculateMinAndMaxDistances(
+    footprint_narrow_, footprint_narrow_inscribed_, footprint_narrow_circumscribed_);
+
+  // 🔴 守卫 1：小足迹必须真的比默认足迹小，否则切了没有任何意义（还白付风险）。
+  if (!(footprint_narrow_inscribed_ < footprint_default_inscribed_)) {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_footprint_narrow 的内切半径(" +
+      std::to_string(footprint_narrow_inscribed_) + ") 必须小于默认足迹的(" +
+      std::to_string(footprint_default_inscribed_) + ")，否则切换毫无收益");
+  }
+  // 🔴 守卫 2：小足迹不得小于底盘物理包络。打错一个字就可能把机器人
+  //    建模成比躯干还小，而这种错**在仿真里表现为"通过率提高"**，非常危险。
+  if (footprint_narrow_inscribed_ < chassis_min_envelope_radius_) {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_footprint_narrow 内切半径(" +
+      std::to_string(footprint_narrow_inscribed_) + ") < chassis_min_envelope_radius(" +
+      std::to_string(chassis_min_envelope_radius_) +
+      ")，这会把机器人建模成比真实底盘还小 —— 拒绝启动");
+  }
+  // 🔴 守卫 3：切出窗口必须 >= 切入窗口。反了就**保证**振荡：
+  //    切入看 1.0m 内有麻烦、切出看 0.6m 内没麻烦，机器人在 0.6~1.0m 之间
+  //    两个判据同时成立 ⇒ 切入、复原、切入…（第一轮实测 123 次切换的同类病因）。
+  if (narrow_square_exit_preview_m_ < narrow_prealign_.preview_m) {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_square_exit_preview(" +
+      std::to_string(narrow_square_exit_preview_m_) + ") < narrow_prealign_preview(" +
+      std::to_string(narrow_prealign_.preview_m) +
+      ")，切出窗口比切入窗口短会保证切换振荡 —— 拒绝启动");
+  }
+  // 🔴 守卫 4：切出窗口必须容得下至少一个采样步长，否则 previewNarrowStrategy
+  //    直接返回 kInvalidConfig，切出判据永远不成立、只能等硬超时。
+  if (narrow_square_exit_preview_m_ < narrow_prealign_.sample_step_m) {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_square_exit_preview(" +
+      std::to_string(narrow_square_exit_preview_m_) + ") < 采样步长(" +
+      std::to_string(narrow_prealign_.sample_step_m) + ")，切出判据永远无法成立");
+  }
+  // 🔴 守卫 5：最短驻留必须显著小于硬超时，否则"最短驻留"会吃掉整个
+  //    正常复原通路，让每次都走硬超时那条异常路径。
+  if (!(narrow_square_min_dwell_sec_ >= 0.0) ||
+    narrow_square_min_dwell_sec_ >= narrow_square_hard_timeout_sec_)
+  {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_square_min_dwell(" +
+      std::to_string(narrow_square_min_dwell_sec_) + ") 必须 >=0 且 < narrow_square_hard_timeout(" +
+      std::to_string(narrow_square_hard_timeout_sec_) + ")");
+  }
+  if (!(narrow_square_cooldown_sec_ >= 0.0)) {
+    throw nav2_core::PlannerException("ThreePhaseController: narrow_square_cooldown 必须 >= 0");
+  }
+  if (narrow_square_exit_ticks_ < 1) {
+    throw nav2_core::PlannerException("ThreePhaseController: narrow_square_exit_ticks 必须 >= 1");
+  }
+  // 🔴 守卫 6.5：缩足迹**依赖**预对齐。唯一的切入通路是预对齐的前视判定
+  //    （顺序不可颠倒：先对齐、后换足迹），所以预对齐关着时缩足迹永远进不去。
+  //    而它进不去的表现是**切换 0 次、零告警** —— A/B 会得出"这个机制没用"，
+  //    真相是它一次都没跑。这正是"禁止静默失败"要拦的东西，必须启动即拒绝。
+  if (!narrow_prealign_enabled_) {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_square_enabled=true 但 narrow_prealign_enabled=false。"
+      "缩足迹的唯一切入通路是预对齐的前视判定（先对齐后换足迹），"
+      "预对齐关着时它永远不会生效且不会报错 —— 拒绝启动，不接受静默无效的配置");
+  }
+  // 🔴 守卫 6：续租周期必须显著小于回读验证超时，否则"等确认"期间可能一次都没续租。
+  if (!(narrow_square_lease_period_sec_ < narrow_square_verify_timeout_sec_)) {
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: narrow_square_lease_period(" +
+      std::to_string(narrow_square_lease_period_sec_) + ") 必须 < narrow_square_verify_timeout(" +
+      std::to_string(narrow_square_verify_timeout_sec_) + ")");
+  }
+
+  RCLCPP_INFO(
+    logger_,
+    "[%s] 窄通道缩足迹已启用: 默认足迹 %zu 点(内切 %.4f 外接 %.4f) -> "
+    "窄通道足迹 %zu 点(内切 %.4f 外接 %.4f) | 朝向盲区 %.4f -> %.4f "
+    "| 最窄通道 %.3fm -> %.3fm | 底盘包络下限 %.3f 硬超时 %.1fs "
+    "(以上均**未含** costmap 的 footprint_padding)",
+    name_.c_str(),
+    footprint_default_.size(), footprint_default_inscribed_, footprint_default_circumscribed_,
+    footprint_narrow_.size(), footprint_narrow_inscribed_, footprint_narrow_circumscribed_,
+    footprint_default_circumscribed_ - footprint_default_inscribed_,
+    footprint_narrow_circumscribed_ - footprint_narrow_inscribed_,
+    2.0 * footprint_default_inscribed_, 2.0 * footprint_narrow_inscribed_,
+    chassis_min_envelope_radius_, narrow_square_hard_timeout_sec_);
+  RCLCPP_INFO(
+    logger_,
+    "[%s] 缩足迹切换迟滞: 切入窗口 %.2fm / 切出窗口 %.2fm(迟滞带 %.2fm) "
+    "| 切出需连续 %d 拍 | 最短驻留 %.1fs | 复原冷却 %.1fs "
+    "⇒ 单次切换周期下限 %.1fs（用它反推的切换次数上限即为看门狗与 A/B 的判据）",
+    name_.c_str(), narrow_prealign_.preview_m, narrow_square_exit_preview_m_,
+    narrow_square_exit_preview_m_ - narrow_prealign_.preview_m,
+    narrow_square_exit_ticks_, narrow_square_min_dwell_sec_, narrow_square_cooldown_sec_,
+    narrow_square_min_dwell_sec_ + narrow_square_cooldown_sec_);
+}
+
+void ThreePhaseController::requestFootprint(const std::vector<geometry_msgs::msg::Point> & fp)
+{
+  // local costmap 同进程，直接调 —— 有返回保障，不依赖话题。
+  if (costmap_ros_) {
+    costmap_ros_->setRobotFootprint(fp);
+  }
+  // global costmap 在 planner_server 进程里，只能发话题（fire-and-forget）。
+  // 所以调用方**必须**再走 footprintVerified() 回读确认。
+  if (global_footprint_pub_) {
+    geometry_msgs::msg::Polygon msg;
+    msg.points.reserve(fp.size());
+    for (const auto & pt : fp) {
+      geometry_msgs::msg::Point32 p32;
+      p32.x = static_cast<float>(pt.x);
+      p32.y = static_cast<float>(pt.y);
+      p32.z = 0.0F;
+      msg.points.push_back(p32);
+    }
+    global_footprint_pub_->publish(msg);
+  }
+}
+
+bool ThreePhaseController::footprintVerified(std::size_t want_vertices) const
+{
+  return global_footprint_vertices_.load() == static_cast<int>(want_vertices);
+}
+
+void ThreePhaseController::revertFootprint(const char * why)
+{
+  if (!square_active_ && !square_pending_) {
+    return;                         // 幂等：没生效就什么都不做
+  }
+  const double active_s = square_active_ ?
+    (clock_->now() - square_activated_).seconds() : 0.0;
+  square_active_ = false;
+  square_pending_ = false;
+  square_exit_clear_hits_ = 0;
+  // 开启冷却期：防"复原-立刻再切"自激。安全通路（deactivate/cleanup/新目标）
+  // 走到这里也会开冷却，那是对的 —— 那些场景下也不该马上再缩。
+  if (clock_) {
+    square_cooldown_started_ = clock_->now();
+    square_cooldown_valid_ = true;
+  }
+  requestFootprint(footprint_default_);
+  RCLCPP_WARN(
+    logger_,
+    "[%s] 窄通道足迹已复原为默认(%zu 点，内切 %.4f)：%s | 本次小足迹生效 %.1fs "
+    "冷却 %.1fs | 累计[切换=%d 回读失败=%d 复原(装得下)=%d 复原(超时)=%d 重新对齐=%d "
+    "驻留压住=%d 冷却挡掉=%d 切出退化=%d 可用拍=%d]",
+    name_.c_str(), footprint_default_.size(), footprint_default_inscribed_, why, active_s,
+    narrow_square_cooldown_sec_,
+    square_switch_count_, square_verify_fail_count_, square_revert_cleared_,
+    square_revert_timeout_, square_realign_count_,
+    square_suppressed_dwell_, square_suppressed_cooldown_, square_exit_degraded_,
+    square_applicable_ticks_);
+}
+
+void ThreePhaseController::renewFootprintLease(const rclcpp::Time & now)
+{
+  if (!narrow_square_enabled_ || (!square_active_ && !square_pending_)) {
+    return;
+  }
+  if ((now - square_last_lease_).seconds() < narrow_square_lease_period_sec_) {
+    return;
+  }
+  square_last_lease_ = now;
+  requestFootprint(footprint_narrow_);
+}
+
+bool ThreePhaseController::withCostQueries(
+  const std::function<void(const FootprintCostFn &, const FootprintCostFn &)> & fn)
+{
+  if (!costmap_ros_) {
+    return false;
+  }
+  nav2_costmap_2d::Costmap2D * costmap = costmap_ros_->getCostmap();
+  if (costmap == nullptr) {
+    return false;
+  }
+  footprint_cache_ = costmap_ros_->getRobotFootprint();
+  if (footprint_cache_.size() < 3U) {
+    return false;      // 退化足迹算不出包络，宁可什么都不做
+  }
+  if (!collision_checker_) {
+    collision_checker_ = std::make_unique<
+      nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *>>(costmap);
+  } else {
+    collision_checker_->setCostmap(costmap);
+  }
+
+  // 🔴 一次持锁做完全部查询。每次单独加锁会在 20Hz 下产生大量锁竞争；
+  //    更要紧的是**绝不能**握着这把锁去调内层控制器（MPPI 也要拿它 ⇒ 必死的死锁）。
+  //    所以本函数只把查询能力交给 fn，出了这个作用域调用方才决定动作。
+  std::lock_guard<nav2_costmap_2d::Costmap2D::mutex_t> lock(*(costmap->getMutex()));
+
+  // 默认足迹：缩足迹功能开着时用 yaml 里那份显式的大足迹（因为此刻 costmap 上
+  // 挂的可能已经是小足迹了）；关着时就用 costmap 当前足迹。
+  const std::vector<geometry_msgs::msg::Point> & big =
+    (narrow_square_enabled_ && footprint_default_.size() >= 3U) ?
+    footprint_default_ : footprint_cache_;
+
+  const FootprintCostFn cost_big = [this, &big](double x, double y, double yaw) {
+      return collision_checker_->footprintCostAtPose(x, y, yaw, big);
+    };
+  FootprintCostFn cost_small{};
+  if (narrow_square_enabled_ && footprint_narrow_.size() >= 3U) {
+    cost_small = [this](double x, double y, double yaw) {
+        return collision_checker_->footprintCostAtPose(x, y, yaw, footprint_narrow_);
+      };
+  }
+  fn(cost_big, cost_small);
+  return true;
+}
+
+bool ThreePhaseController::runPrealignQueries(
+  const std::vector<PlanarPoint> & path,
+  const PlanarPoint & robot,
+  double robot_yaw,
+  StrategyPreview & preview,
+  bool & sweep_clear,
+  double & sweep_worst_cost,
+  double & big_footprint_cost)
+{
+  bool ok_sweep = false;
+  double worst = 0.0;
+  double big_cost = 0.0;
+  StrategyPreview p;
+  const bool got = withCostQueries(
+    [&](const FootprintCostFn & cost_big, const FootprintCostFn & cost_small) {
+      big_cost = cost_big(robot.x, robot.y, robot_yaw);
+      p = previewNarrowStrategy(path, robot, robot_yaw, narrow_prealign_, cost_big, cost_small);
+      if (p.strategy == NarrowStrategy::kAlignOnly ||
+        p.strategy == NarrowStrategy::kAlignThenShrink)
+      {
+        // 承诺旋转之前必须过扫掠校验：开阔处 footprint<253 只保证**当前这一个朝向**
+        // 不碰带，原地转会把八边形顶点扫进膨胀带甚至真障碍。
+        // 用**大足迹**校验：转的时候身上还是大足迹。
+        ok_sweep = sweepClearForRotation(
+          robot, robot_yaw, p.target_yaw, narrow_prealign_sweep_step_rad_,
+          narrow_trigger_.footprint_lethal_threshold, cost_big, worst);
+      }
+    });
+  preview = p;
+  sweep_clear = ok_sweep;
+  sweep_worst_cost = worst;
+  big_footprint_cost = big_cost;
+  return got;
+}
+
+ThreePhaseController::PrealignDecision ThreePhaseController::evaluateSquare(
+  const geometry_msgs::msg::PoseStamped & pose,
+  const rclcpp::Time & now,
+  const StrategyPreview & preview,
+  double robot_yaw,
+  const SquareExitProbe & exit)
+{
+  PrealignDecision none;
+  if (!narrow_square_enabled_) {
+    return none;
+  }
+  // ⚠️ 续租**不在**这里。它必须每拍无条件跑（见 renewFootprintLease 的注释）：
+  //    写在这里就会在 evaluateNarrow 接管时被 early-return 跳过，
+  //    也就是恰好在最需要小足迹的时候停止续租。
+
+  // ================= 已请求但还没验证通过 =================
+  if (square_pending_) {
+    if (footprintVerified(footprint_narrow_.size())) {
+      square_pending_ = false;
+      square_active_ = true;
+      square_activated_ = now;
+      square_last_lease_ = now;
+      square_exit_clear_hits_ = 0;
+      ++square_switch_count_;
+      RCLCPP_WARN(
+        logger_,
+        "[%s] 窄通道小足迹**已回读确认生效**(第 %d 次): global costmap 顶点数=%zu "
+        "内切 %.4f->%.4f | 朝向锁定 %.3frad 最短驻留 %.1fs 硬超时 %.1fs",
+        name_.c_str(), square_switch_count_, footprint_narrow_.size(),
+        footprint_default_inscribed_, footprint_narrow_inscribed_,
+        square_locked_yaw_, narrow_square_min_dwell_sec_, narrow_square_hard_timeout_sec_);
+      return none;                  // 本拍交回内层，开始通过
+    }
+    if ((now - square_requested_).seconds() > narrow_square_verify_timeout_sec_) {
+      // 🔴 回读没确认就**绝不**假定切成功。复原并放弃本次。
+      ++square_verify_fail_count_;
+      revertFootprint("回读验证超时：global costmap 没确认切到小足迹");
+      RCLCPP_ERROR(
+        logger_,
+        "[%s] 小足迹切换**回读失败** %.1fs 内 global costmap 未确认"
+        "(期望顶点 %zu，实际 %d)。已复原，本次不缩足迹。"
+        "若持续出现请查 /global_costmap/footprint 是否真的有订阅者 | 累计失败=%d",
+        name_.c_str(), narrow_square_verify_timeout_sec_, footprint_narrow_.size(),
+        global_footprint_vertices_.load(), square_verify_fail_count_);
+      return none;
+    }
+    // 等待期间原地不动，别带着未确认的足迹往窄处走。
+    none.take_over = true;
+    none.cmd = rotateOnly(shortestAngularDiff(robot_yaw, square_locked_yaw_), pose.header);
+    return none;
+  }
+
+  // ================= 小足迹已生效 =================
+  if (square_active_) {
+    const double dwell_s = (now - square_activated_).seconds();
+    if (!exit.from_path) {
+      ++square_exit_degraded_;
+    }
+
+    // ---- 复原判据 1：切出窗口内大足迹连续 N 拍装得下，且已过最短驻留 ----
+    //
+    // 这里的 exit.clear 是**前视窗口**的判定（exit_preview_m，比切入窗口长），
+    // 不是"当前位姿装得下"。旧判据只看当前位姿，而当前位姿必然装得下
+    //（否则 evaluateNarrow 早接管了），所以旧判据在切入那一瞬间就成立 ——
+    // 实测 121/123 次复原都发生在第 3 拍(=0.15s)，与中位驻留完全吻合。
+    if (exit.clear) {
+      ++square_exit_clear_hits_;
+    } else {
+      square_exit_clear_hits_ = 0;
+    }
+    if (square_exit_clear_hits_ >= narrow_square_exit_ticks_) {
+      if (dwell_s < narrow_square_min_dwell_sec_) {
+        // 最短驻留把这条**正常**复原路径压住。只压这一条 ——
+        // 下面的硬超时不受它限制，安全通路永远优先。
+        ++square_suppressed_dwell_;
+        RCLCPP_INFO_THROTTLE(
+          logger_, *clock_, 2000,
+          "[%s] 切出判据已连续 %d 拍成立，但驻留仅 %.2fs < 最短 %.1fs ⇒ 暂不复原"
+          "（防 0.15s 级抖动）| 累计被压住=%d",
+          name_.c_str(), square_exit_clear_hits_, dwell_s, narrow_square_min_dwell_sec_,
+          square_suppressed_dwell_);
+      } else {
+        ++square_revert_cleared_;
+        revertFootprint(
+          exit.from_path ?
+          "切出窗口内大足迹已连续装得下" :
+          "退化判据(仅当前位姿)下大足迹已连续装得下");
+        return none;
+      }
+    }
+
+    // ---- 复原判据 2：硬超时（红线：受限动作必须带超时）----
+    // ⚠️ 故意放在最短驻留**之后**且不受它约束：它是安全兜底，不是调优项。
+    if (dwell_s > narrow_square_hard_timeout_sec_) {
+      ++square_revert_timeout_;
+      revertFootprint("小足迹硬超时");
+      RCLCPP_WARN(
+        logger_,
+        "[%s] 小足迹生效已超 %.1fs 仍未脱离窄处 ⇒ 强制复原。"
+        "复原后机器人可能落在膨胀带内，由上层重规划处理 | 累计超时复原=%d",
+        name_.c_str(), narrow_square_hard_timeout_sec_, square_revert_timeout_);
+      return none;
+    }
+
+    // ---- 失去对齐：**保持小足迹**，平移置零、重新对齐 ----
+    // 这是刻意的反直觉设计（已与用户确认）：复原足迹会让机器人瞬间落在 253 带里，
+    // 而 `状态 -> ESCAPE` 实测 10 轮全为 0（ESCAPE 从不执行）——复原会困得更死。
+    // 安全性由另一条兜底：MPPI 两个 critic 都是 consider_footprint:true、
+    // 用真实多边形在真实位姿求值，且 254 红线不动。
+    const double err = shortestAngularDiff(robot_yaw, square_locked_yaw_);
+    if (std::fabs(err) > narrow_limits_.yaw_gate_rad) {
+      ++square_realign_count_;
+      RCLCPP_WARN_THROTTLE(
+        logger_, *clock_, 2000,
+        "[%s] 小足迹生效期间失去对齐(误差 %.3frad > 闸门 %.3frad) ⇒ "
+        "**保持小足迹**、平移置零、重新对齐（复原足迹会把车困在膨胀带里）| 累计=%d",
+        name_.c_str(), std::fabs(err), narrow_limits_.yaw_gate_rad, square_realign_count_);
+      none.take_over = true;
+      none.cmd = rotateOnly(err, pose.header);
+      return none;
+    }
+    return none;                     // 对齐良好，交回内层继续走
+  }
+
+  // ================= 尚未请求：看要不要切 =================
+  if (preview.strategy != NarrowStrategy::kAlignThenShrink) {
+    return none;
+  }
+  // ---- 冷却期：刚复原过就不许马上再切 ----
+  if (square_cooldown_valid_) {
+    const double since = (now - square_cooldown_started_).seconds();
+    if (since < narrow_square_cooldown_sec_) {
+      ++square_suppressed_cooldown_;
+      RCLCPP_INFO_THROTTLE(
+        logger_, *clock_, 2000,
+        "[%s] 前方 %.2fm 处需缩足迹，但距上次复原仅 %.2fs < 冷却 %.1fs ⇒ 本次不切"
+        "（防复原后立刻再切的自激）| 累计被挡=%d",
+        name_.c_str(), preview.at_distance_m, since, narrow_square_cooldown_sec_,
+        square_suppressed_cooldown_);
+      return none;
+    }
+  }
+  // 🔴 顺序不可颠倒：**必须先对齐到位**才允许缩足迹。
+  //    小足迹把代价地图的朝向盲区放大到 0.133m，朝向没锁住就切等于让
+  //    代价地图在一个它无法表达的姿态上说"可以过"。
+  const double err = shortestAngularDiff(robot_yaw, preview.target_yaw);
+  if (std::fabs(err) > narrow_limits_.yaw_gate_rad) {
+    none.take_over = true;
+    none.cmd = rotateOnly(err, pose.header);
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 2000,
+      "[%s] 前方 %.2fm 处需缩足迹才过得去，先原地对齐到 %.3frad（还差 %.3frad）",
+      name_.c_str(), preview.at_distance_m, preview.target_yaw, std::fabs(err));
+    return none;
+  }
+
+  square_locked_yaw_ = preview.target_yaw;
+  square_pending_ = true;
+  square_requested_ = now;
+  // ⚠️ 续租时刻必须在这里就初始化：renewFootprintLease 从下一拍起就会读它，
+  //    而默认构造的 rclcpp::Time 是 RCL_SYSTEM_TIME，与节点时钟相减会**抛异常**。
+  square_last_lease_ = now;
+  requestFootprint(footprint_narrow_);
+  RCLCPP_WARN(
+    logger_,
+    "[%s] 朝向已对齐(误差 %.3frad)，请求缩足迹: %zu 点 -> %zu 点，内切 %.4f -> %.4f "
+    "(最窄通道 %.3fm -> %.3fm)。等待 global costmap 回读确认，最多 %.1fs",
+    name_.c_str(), std::fabs(err), footprint_default_.size(), footprint_narrow_.size(),
+    footprint_default_inscribed_, footprint_narrow_inscribed_,
+    2.0 * footprint_default_inscribed_, 2.0 * footprint_narrow_inscribed_,
+    narrow_square_verify_timeout_sec_);
+  none.take_over = true;
+  none.cmd = rotateOnly(err, pose.header);   // 等确认期间保持朝向、不前进
+  return none;
 }
 
 void ThreePhaseController::disengageNarrow(const char * why)
@@ -977,6 +1820,13 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
   }
   const rclcpp::Time now = clock_->now();
 
+  // 🔴 续租放在**函数最顶端**，在任何相位判断、任何一层接管判断之前。
+  //    第一轮实测的教训：原先写在 evaluateSquare 里，而 kFollow 在
+  //    evaluateNarrow 接管时会 early-return，根本走不到 —— 于是恰好在窄通道
+  //    接管期间停止续租，协调器侧看门狗 2.1s 时误判"进程死了"，
+  //    把足迹从通道中途抢回默认值。续租是存活信号，与哪层在控制无关。
+  renewFootprintLease(now);
+
   double xy_tol = fallback_xy_tol_;
   double yaw_tol = fallback_yaw_tol_;
   resolveTolerances(goal_checker, xy_tol, yaw_tol);
@@ -1025,6 +1875,14 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
       const NarrowDecision narrow = evaluateNarrow(pose, now);
       if (narrow.take_over) {
         return narrow.cmd;
+      }
+
+      // 走到这里说明足迹还没碰致命带（开阔处）。此时看前方是否有「只有转正
+      // 才过得去」的窄处 —— 有就趁现在原地转，而不是等撞进去再在里面转。
+      // 顺序同样在调内层**之前**：接管这一拍内层不该出指令，也不该更新它的内部状态。
+      const PrealignDecision prealign = evaluatePrealign(pose, now);
+      if (prealign.take_over) {
+        return prealign.cmd;
       }
 
       geometry_msgs::msg::TwistStamped cmd =

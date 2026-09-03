@@ -36,9 +36,27 @@ NAMES=(
   "async_slam_toolbox_node" "sync_slam_toolbox_node"
   "pointcloud_to_laserscan_node" "pointcloud_slice_scan_node"
   "static_transform_publisher"
+  "livox_preprocess_node" "livox_fusion_node" "livox_custom_to_pc2_node"
+  # 可视化。⚠️ rviz2 是 /opt/ros/humble 的二进制，最容易被漏掉 ——
+  #    2026-09-03 实测漏了它：cycle 1 的 3 个 rviz2 活到 cycle 2，
+  #    那一轮 686s 内 0 次到位、足迹回读也失败，整轮数据作废。
+  #    而 /clock 判据抓不到它（rviz2 不发 /clock），所以"清理成功"是假的。
+  "rviz2"
+  # 底盘控制链。🔴 残留会**持续下发力矩/速度指令**，比残留 rviz 危险得多。
+  "omni_effort_drive_node" "cmd_vel_body_to_world_node"
+  "arm_speed_limiter_node" "arm_chassis_speed_coupling_node"
   # 本仓自研节点（可执行名，不是路径）
   "exploration_coordinator_node" "frontier_explorer_node"
 )
+
+# ---- 残留自检用的**宽口径**探测集。
+#      刻意与 NAMES 分开：NAMES 是"杀谁"，这个是"验证还剩谁"。
+#      两者共用一张表时，表漏了一项就同时漏掉杀与验，遗漏永远发现不了 ——
+#      这次漏 rviz2 就是这么过关的。宽口径宁可误报也不能漏报。
+# ⚠️ 不要用 `_server$` 这种通配：实测它命中了系统里无关的 screenshot_server，
+#    误报会让人开始无视这条自检 —— 那比没有自检更糟。nav2 的 server 逐个列。
+RESIDUAL_PAT='^rviz2$|^ign$|^ruby$|^gzserver$|^gzclient$|^parameter_bridg|^robot_state_pub|^joint_state_pub|^controller_serv|^planner_serv|^smoother_serv|^behavior_serv|^map_serv|^bt_navigator|^lifecycle_manager|^waypoint_follower|^velocity_smoother|^collision_monitor|slam_toolbox|^pointcloud_|^livox_|^omni_effort|^cmd_vel_body|^arm_speed|^arm_chassis|^exploration_coo|^frontier_expl|^static_transform_pub|^amcl$'
+
 
 collect_pids() {
   # 只按可执行**基名**匹配，避免误杀编辑器/浏览器等无关进程。
@@ -127,6 +145,29 @@ echo "==== 验证 (ROS_DOMAIN_ID=$DOMAIN) ===="
 CLOCK_PUBS=$(timeout 20 ros2 topic info /clock 2>/dev/null | awk '/Publisher count:/ {print $3}')
 CLOCK_PUBS="${CLOCK_PUBS:-0}"
 echo "/clock 发布者数 = $CLOCK_PUBS  (期望 0)"
+
+# ---- 🔴 宽口径残留自检：抓 NAMES 表**自己的遗漏** ----
+#
+# 为什么必须与 NAMES 分开：上一版只有 "/clock 发布者=0" 和 "NAMES 命中数=0"
+# 两条判据，而漏掉的 rviz2 既不发 /clock、也不在 NAMES 里 ——
+# 两条判据同时对它视而不见，脚本照报"干净"。3 个 rviz2 就这样活到下一轮，
+# 那一轮 686s 内 0 次到位、整轮作废。
+#
+# 判据必须能抓住清理表的遗漏，否则它验证的只是"我记得杀的那些确实杀了"。
+residual=$(ps -eo pid,args --no-headers | awk -v pat="$RESIDUAL_PAT" '
+  $0 !~ /awk/ {
+    exe = $2; k = split(exe, parts, "/"); base = parts[k]
+    if (base ~ pat) { print $1"  "base }
+  }')
+if [ -n "$residual" ]; then
+  echo "🔴 宽口径自检发现残留进程（NAMES 表漏了它们）:"
+  echo "$residual" | sed 's/^/     /'
+  echo "   ⇒ 请把上面的可执行名补进本脚本的 NAMES 数组。"
+  echo "   ⇒ 在这个状态下跑测量，数据不可信（实测：残留 rviz2 让一整轮 0 次到位）"
+  echo "结果: **未清干净**"
+  exit 1
+fi
+echo "宽口径残留自检 = 0 个进程"
 
 if [ "${#left[@]}" -eq 0 ] && [ "$CLOCK_PUBS" = "0" ]; then
   echo "结果: 干净"

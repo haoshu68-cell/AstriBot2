@@ -250,7 +250,211 @@ bool corridorHeadingFromPath(
   return true;
 }
 
+namespace
+{
+/// 沿路径从 path[start] 起向前走 arc_m 弧长，输出落点。
+///
+/// @return **是否走满了 arc_m**。走到路径终点还没走满就返回 false ——
+///         这一位必须区分，否则"路径不够长"会被当成"该处很开阔"（静默假阴性）。
+bool advanceAlongPath(
+  const std::vector<PlanarPoint> & path,
+  std::size_t start,
+  double arc_m,
+  PlanarPoint & out)
+{
+  if (start >= path.size()) {
+    return false;
+  }
+  out = path[start];
+  double remain = arc_m;
+  for (std::size_t i = start; i + 1U < path.size(); ++i) {
+    const double seg = std::hypot(path[i + 1U].x - out.x, path[i + 1U].y - out.y);
+    if (seg >= remain) {
+      const double t = (seg > 1e-12) ? (remain / seg) : 0.0;
+      out.x += (path[i + 1U].x - out.x) * t;
+      out.y += (path[i + 1U].y - out.y) * t;
+      return true;
+    }
+    remain -= seg;
+    out = path[i + 1U];
+  }
+  return false;      // 走到终点仍没走满
+}
+
+/// 路径上距 robot 最近的顶点下标。
+std::size_t nearestIndex(const std::vector<PlanarPoint> & path, const PlanarPoint & robot)
+{
+  std::size_t near = 0U;
+  double best = std::numeric_limits<double>::max();
+  for (std::size_t i = 0U; i < path.size(); ++i) {
+    const double d = std::hypot(path[i].x - robot.x, path[i].y - robot.y);
+    if (d < best) {
+      best = d;
+      near = i;
+    }
+  }
+  return near;
+}
+}  // namespace
+
+StrategyPreview previewNarrowStrategy(
+  const std::vector<PlanarPoint> & path,
+  const PlanarPoint & robot,
+  double robot_yaw,
+  const PrealignConfig & cfg,
+  const FootprintCostFn & cost_default,
+  const FootprintCostFn & cost_narrow)
+{
+  StrategyPreview r;
+
+  // 参数非法一律拒绝，不静默回落到"看起来正常"的默认值。
+  if (path.size() < 2U || !cost_default ||
+    !(cfg.preview_m > 0.0) || !(cfg.sample_step_m > 0.0) ||
+    cfg.sample_step_m > cfg.preview_m ||
+    !(cfg.tangent_lookahead_m > 0.0) || !(cfg.favorable_period_rad > 0.0))
+  {
+    r.strategy = NarrowStrategy::kInvalidConfig;
+    return r;
+  }
+
+  const std::size_t near = nearestIndex(path, robot);
+  bool blocked = false;
+
+  for (double s = cfg.sample_step_m; s <= cfg.preview_m + 1e-9; s += cfg.sample_step_m) {
+    PlanarPoint p;
+    if (!advanceAlongPath(path, near, s, p)) {
+      break;                        // 路径到头，前视结束
+    }
+    ++r.samples;
+
+    // 该采样点处的通道方向 = 从 p 再往前 tangent_lookahead_m 的方向。
+    // 用「同一条路径上再往前一段」而不是相邻两点：相邻点间距可能只有几毫米，
+    // 方向会被噪声主导（与 corridorHeadingFromPath 同一理由）。
+    PlanarPoint q;
+    if (!advanceAlongPath(path, near, s + cfg.tangent_lookahead_m, q)) {
+      // 前视够、但切向前视不够 ⇒ 这一点估不出方向。跳过并计数，
+      // 不拿一个凑出来的方向去算有利朝向。
+      ++r.skipped_no_tangent;
+      continue;
+    }
+    const double dx = q.x - p.x;
+    const double dy = q.y - p.y;
+    if (std::hypot(dx, dy) < 1e-9) {
+      ++r.skipped_no_tangent;
+      continue;
+    }
+    const double corridor_heading = std::atan2(dy, dx);
+
+    // ---- ① 保持当前朝向走到 p 会不会压致命带 ----
+    if (cost_default(p.x, p.y, robot_yaw) < cfg.footprint_lethal_threshold) {
+      continue;                     // 这一点照现在的姿态就过得去
+    }
+    const double yaw_error =
+      favorableYawError(robot_yaw, corridor_heading, cfg.favorable_period_rad);
+    const double favorable_yaw = robot_yaw - yaw_error;
+
+    // ---- ② 默认足迹转到有利朝向后过不过得去 ----
+    if (cost_default(p.x, p.y, favorable_yaw) < cfg.footprint_lethal_threshold) {
+      r.strategy = NarrowStrategy::kAlignOnly;
+      r.target_yaw = favorable_yaw;
+      r.at_distance_m = s;
+      return r;
+    }
+
+    // ---- ③ 换成小足迹、同样转到有利朝向 ----
+    if (cost_narrow && cost_narrow(p.x, p.y, favorable_yaw) < cfg.footprint_lethal_threshold) {
+      r.strategy = NarrowStrategy::kAlignThenShrink;
+      r.target_yaw = favorable_yaw;
+      r.at_distance_m = s;
+      return r;
+    }
+
+    // 两种足迹转正都过不去 ⇒ 它挡在前面，后面的点无意义。
+    blocked = true;
+    break;
+  }
+
+  if (r.samples == 0U) {
+    r.strategy = NarrowStrategy::kPathTooShort;
+  } else {
+    r.strategy = blocked ? NarrowStrategy::kBlocked : NarrowStrategy::kNone;
+  }
+  return r;
+}
+
+PrealignPreview previewFavorableAlignment(
+  const std::vector<PlanarPoint> & path,
+  const PlanarPoint & robot,
+  double robot_yaw,
+  const PrealignConfig & cfg,
+  const FootprintCostFn & cost_fn)
+{
+  // 只有一份实现：本函数是 previewNarrowStrategy 在「没有小足迹」下的投影。
+  // 复制一份判据必然与被测的那份漂开，所以这里只做枚举映射。
+  const StrategyPreview s =
+    previewNarrowStrategy(path, robot, robot_yaw, cfg, cost_fn, FootprintCostFn{});
+  PrealignPreview r;
+  r.target_yaw = s.target_yaw;
+  r.at_distance_m = s.at_distance_m;
+  r.samples = s.samples;
+  r.skipped_no_tangent = s.skipped_no_tangent;
+  switch (s.strategy) {
+    case NarrowStrategy::kAlignOnly:
+      r.verdict = PrealignVerdict::kNeeded;
+      break;
+    case NarrowStrategy::kBlocked:
+      r.verdict = PrealignVerdict::kBlockedEvenFavorable;
+      break;
+    case NarrowStrategy::kPathTooShort:
+      r.verdict = PrealignVerdict::kPathTooShort;
+      break;
+    case NarrowStrategy::kInvalidConfig:
+      r.verdict = PrealignVerdict::kInvalidConfig;
+      break;
+    case NarrowStrategy::kAlignThenShrink:
+      // 传了空的 cost_narrow，这个分支不可能出现。真出现就是实现被改坏了，
+      // 按「不需要预对齐」处理并不安全，所以映射成"前方堵死"这一保守侧。
+      r.verdict = PrealignVerdict::kBlockedEvenFavorable;
+      break;
+    case NarrowStrategy::kNone:
+    default:
+      r.verdict = PrealignVerdict::kClearAhead;
+      break;
+  }
+  return r;
+}
+
+bool sweepClearForRotation(
+  const PlanarPoint & at,
+  double from_yaw,
+  double to_yaw,
+  double step_rad,
+  double lethal_threshold,
+  const FootprintCostFn & cost_fn,
+  double & worst_cost)
+{
+  worst_cost = 0.0;
+  if (!(step_rad > 0.0) || !cost_fn) {
+    return false;      // 参数非法 ⇒ 不放行旋转（失败偏安全侧）
+  }
+  // 取最近方向旋转，|d| <= pi，与 favorableYawError 的同余类语义一致。
+  const double d = normalizeAngle(to_yaw - from_yaw);
+  const int n = std::max(1, static_cast<int>(std::ceil(std::fabs(d) / step_rad)));
+  bool clear = true;
+  for (int i = 0; i <= n; ++i) {
+    const double yaw = from_yaw + d * (static_cast<double>(i) / static_cast<double>(n));
+    const double c = cost_fn(at.x, at.y, yaw);
+    worst_cost = std::max(worst_cost, c);
+    if (c >= lethal_threshold) {
+      clear = false;
+      break;           // 已经否决，但 worst_cost 已填好供日志用
+    }
+  }
+  return clear;
+}
+
 bool narrowCleared(int consecutive_clear_ticks, int need)
+
 {
   if (need <= 0) {
     // need<=0 是配置错误。按「永不判脱离」处理而不是「立刻脱离」：

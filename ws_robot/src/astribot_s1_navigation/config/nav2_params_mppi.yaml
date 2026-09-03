@@ -277,8 +277,28 @@ controller_server:
       narrow_enabled: true
       narrow_trigger_ticks: 3      # 消抖：连续 3 拍才接管，避免边界抖动来回切控制律
       narrow_clear_ticks: 3        # 连续 3 拍脱离才退出，同理
-      narrow_footprint_lethal_threshold: 253.0   # 与 MPPI 的饱和阈值一致
-      narrow_center_lethal_threshold: 253.0      # 与 SmacPlanner2D 判起点一致
+      # 🔴 两种查询，两个阈值，绝不混用。依据是 nav2 自己的 InflationLayer::computeCost：
+      #      distance==0                        -> 254 (LETHAL，障碍本体)
+      #      distance*res <= inscribed_radius   -> 253 (INSCRIBED_INFLATED)
+      #    253 的含义是"这一格离障碍不超过内切半径"= **底盘中心放这里必然碰撞**，
+      #    而内切半径**就是底盘半宽** —— 膨胀层已经把底盘尺寸算进去了。
+      #
+      #    · 足迹**多边形**查询(footprintCostAtPose) -> 254。
+      #      多边形已经表达了底盘尺寸，再要求外轮廓躲开 253 带 = 底盘半宽算两遍。
+      #      重复计的量级：需要 通道宽 > 4*侧向半宽
+      #        八边形 侧向 0.3894 + 内切(含padding) 0.3992 -> 通道需 > 1.577m
+      #        正方形 侧向 0.3100 + 内切(含padding) 0.3200 -> 通道需 > 1.260m
+      #      本仿真环境最窄通道 0.65m 量级 ⇒ **恒为 253、零梯度**，判据完全失效。
+      #      （与早先记下的症状"窄于 1.62m 恒为 253、占可行域 35%"吻合到一个栅格内）
+      #    · **中心格**查询(getCost) -> 253。那里膨胀带正好代表底盘尺寸，
+      #      SmacPlanner2D 判 "Starting point in lethal space" 用的就是它。
+      #
+      #    实测证据（2 轮 969+709s）：足迹代价读数 51 次 253、仅 2 次 254，
+      #    其中 26 次同时中心代价=0。足迹真装不进去时读数应是 254。
+      #    上一版这里写 253，导致 909 次"连小足迹转正也过不去"全是假的。
+      #    启动守卫已强制 footprint>253 且 center<=253，改错了起不来。
+      narrow_footprint_lethal_threshold: 254.0   # 足迹多边形 = 真障碍本体
+      narrow_center_lethal_threshold: 253.0      # 中心格 = 膨胀内切带(=底盘半宽)
       # 目标区间只有 0.032m 宽（外接 0.42 − 内切 0.388），而栅格是 0.05m，
       # 所以步长必须远小于栅格。代码里 > 0.025 直接拒绝启动。
       narrow_scan_half_width: 0.30
@@ -297,6 +317,99 @@ controller_server:
       # 所以有利朝向是一个**同余类**而不是单一角度：转到最近的那个就行，不必绕远。
       narrow_favorable_period: 0.7853981634
       narrow_heading_lookahead: 0.40
+      # ---- 进入窄通道**之前**的朝向预对齐 ----
+      #
+      # 要解决的实测缺陷：本层原来只在「足迹已经碰到致命带」之后才接管并转朝向，
+      # 也就是机器人总是**先以不利朝向撞进窄处**，再在里面原地转。
+      # 实测时序（narrow_math.hpp:118）：中心代价 0 -> 218 -> 229 -> 致命，
+      # 机器人被一路推进膨胀带深处，最后自己变成了协调器 ESCAPE 的对象。
+      #
+      # ⚠️ 它**不改变全局规划器的任何判据**。SmacPlanner2D 的起点判据读栅格代价值，
+      #    膨胀层只用内切半径算 253 —— 整条链**旋转无关**。所以「转正后重新求解」
+      #    拿到的是逐字相同的 "Starting point in lethal space"。
+      #    预对齐的收益全部在两处：① MPPI 侧（footprintCostAtPose 是带位姿的）
+      #    ② 不再被推进膨胀带深处、进而不再自己变成 ESCAPE 的对象。
+      #
+      # 杠杆有多大：正八边形外接 0.42 / 内切 0.388，横向包络随朝向只变化
+      # 0.776 -> 0.840m（8%）。所以预对齐能多争取的宽度只有 0.064m ——
+      # 它治的是「不利朝向撞进去」这个过程，不是把通道变宽。
+      narrow_prealign_enabled: true       # 一键回退到旧行为（仓库规范：不删旧逻辑）
+      narrow_prealign_preview: 1.00       # 沿路径前视多远
+      narrow_prealign_sample_step: 0.10   # 前视采样间距
+      # 旋转前的扫掠校验步长。开阔处 footprint<253 只保证**当前这一个朝向**不碰带，
+      # 原地转会把八边形顶点扫进膨胀带甚至真障碍，所以必须逐个中间朝向查一遍。
+      narrow_prealign_sweep_step: 0.20
+      # 超时只放弃并告警，**不抛异常**：预对齐失败属于「没能开始」，
+      # 计入 narrow_max_engagements 会误杀整条本来可行的路径。
+      narrow_prealign_timeout: 5.0
+      narrow_prealign_max_per_goal: 5     # 防振荡。要关请用 enabled:false，别把它设成 0
+      # ---- 窄通道内临时把足迹缩成正方形 ----
+      #
+      # 为什么需要：预对齐单独上实测**主判据没有改善**
+      #   基线 on 侧 起点致命 1.08/min -> 预对齐轮 1.48/min（1 轮 365s）
+      # 日志给出原因：18 次前视里 12 次「转正也过不去」，接管日志原文
+      # `足迹代价=253(有利朝向 253)` —— 两个朝向完全相同。
+      # 因为八边形各向异性只有 0.032m、小于栅格 0.05m，取最大值时两个朝向都饱和。
+      # ⇒ 朝向对齐在八边形下没有可用余量，必须同时缩足迹。
+      #
+      # 数字全部来自 nav2 自己的 calculateMinAndMaxDistances + padFootprint（实测）：
+      #   足迹           内切(含padding 0.01)  外接      朝向盲区   最窄通道
+      #   八边形         0.399155              0.434164  0.035     0.798m
+      #   正方形 a=0.31  0.320000              0.452548  0.133     0.640m
+      #
+      # 🔴 顺序不可颠倒：**先对齐、后换足迹**。膨胀层只用内切半径、旋转无关，
+      #    小足迹把代价地图的朝向盲区放大 4 倍，朝向没锁住就切等于让代价地图
+      #    在一个它无法表达的姿态上说"可以过"。
+      # 🔴 正方形 a=0.31 是**诚实包络**（随车体旋转，任何朝向都包住底盘）：
+      #    躯干圆柱 0.30 余量 10.0mm、轮球包围盒 0.2963 余量 13.7mm。
+      #    数据源是 astribot_s1_torso_wheel.xacro 实测，不是估的。
+      # 🔴 碰撞保护不依赖膨胀层：MPPI 两个 critic 都是 consider_footprint:true、
+      #    用真实多边形在真实位姿求值，254 红线不动。所以膨胀层的乐观导致的是
+      #    **规划器乐观 ⇒ 卡住**，不是碰撞。
+      #
+      # 默认 false：这是新增的高风险能力，先用 A/B 拿到数据再决定是否默认开。
+      narrow_square_enabled: false
+      narrow_footprint_default: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
+      narrow_footprint_narrow: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
+      # 🔴 启动守卫：小足迹内切半径 < 这个值就拒绝启动。
+      #    取 0.30 = URDF 里躯干碰撞圆柱半径。打错一个字把机器人建模成比躯干还小，
+      #    在仿真里的表现是"通过率提高"——非常危险，必须在启动时就拦住。
+      chassis_min_envelope_radius: 0.30
+      narrow_square_hard_timeout: 30.0    # 红线：受限动作必须带超时
+      narrow_square_lease_period: 0.5     # 续租周期，给协调器看门狗判"设它的人还活着"
+      # 回读验证超时。切 global costmap 是发话题(fire-and-forget)，
+      # 超时内没从 published_footprint 回读到期望顶点数就复原并放弃，
+      # **绝不假定切成功**继续往窄处走。
+      narrow_square_verify_timeout: 2.0
+      # ---- 切换迟滞 ----
+      #
+      # 🔴 为什么必须有：第一轮 A/B 实测 123 次切入 / 121 次"装得下"复原 /
+      #    单次驻留中位 0.15s，小足迹只生效 5.7% 的时长。
+      #    0.15s 恰好 = narrow_clear_ticks(3) / controller_frequency(20Hz)，
+      #    也就是复原**每次都在法律允许的最早那一拍**触发。
+      #
+      #    根因不是参数没调好，而是切入与切出问的是两个不同的几何问题：
+      #      · 切入：沿路径**前视 1.0m** 有没有大足迹过不去的点
+      #      · 切出(旧)：**只看机器人当前位姿**大足迹压不压致命带
+      #    而当前位姿的大足迹代价必然低于阈值 —— 否则窄通道接管层早就接管了，
+      #    根本走不到预对齐。于是切出判据在切入那一瞬间就已成立。
+      #
+      #    修法是让两边问同一个问题、且切出窗口更长：
+      #      切入 1.00m 内有麻烦 ⇒ 切；切出 1.20m 内全无麻烦 ⇒ 复原。
+      #    0.20m 迟滞带 = 4 个栅格(resolution 0.05)，是代价地图**表达得出**的量。
+      #    对比：八边形各向异性 0.032m < 一个栅格，所以纯预对齐测不出效果。
+      narrow_square_exit_preview: 1.20    # 启动守卫：必须 >= narrow_prealign_preview
+      narrow_square_exit_ticks: 6         # 0.30s @20Hz。与 narrow_clear_ticks 分开，那是接管层的
+      # 最短驻留：切入后这段时间内不许因"装得下"复原。
+      # ⚠️ 只压这一条复原路径 —— 硬超时/新目标/deactivate/看门狗都是安全通路，不受它限制。
+      narrow_square_min_dwell: 2.0
+      narrow_square_cooldown: 3.0        # 复原后冷却，防"复原-立刻再切"自激
+      # 算术：单次切换周期下限 = 2.0+3.0 = 5.0s ⇒ 一轮 ~324s 的跑法切换次数
+      # **上限 64 次**。这是兜底天花板，不是预期值；预期值由上面的窗口迟滞决定，
+      # 下界是本轮真实遇到的独立窄处个数（预对齐 A/B 实测 ~15 次/轮）。
+      # 若复跑后仍 >64，说明有 bug，不是参数问题。
+      global_footprint_topic: /global_costmap/footprint
+      global_published_footprint_topic: /global_costmap/published_footprint
       # ---- 以下三项对应用户明确的安全红线 ----
       # ---- 卡住判据：按**进展**判，不按时长判 ----
       # 旧的 narrow_timeout: 25.0 是一个真实缺陷：
@@ -472,8 +585,9 @@ controller_server:
       narrow_enabled: true
       narrow_trigger_ticks: 3
       narrow_clear_ticks: 3
-      narrow_footprint_lethal_threshold: 253.0
-      narrow_center_lethal_threshold: 253.0
+      # 阈值语义见上一个实例那段推导（两种查询两个阈值，不可混用）
+      narrow_footprint_lethal_threshold: 254.0   # 足迹多边形 = 真障碍本体
+      narrow_center_lethal_threshold: 253.0      # 中心格 = 膨胀内切带(=底盘半宽)
       narrow_scan_half_width: 0.30
       narrow_scan_step: 0.01
       narrow_v_along: 0.10
@@ -484,6 +598,53 @@ controller_server:
       narrow_yaw_gate: 0.12
       narrow_favorable_period: 0.7853981634
       narrow_heading_lookahead: 0.40
+      # 进入窄通道前的朝向预对齐。语义与理由见上一个实例那一大段注释。
+      # ⚠️ 两个实例必须同值，否则「探索用的控制器」与「导航用的控制器」判据漂开，
+      #    而 A/B 只会切其中一个，测出来的差异归因不到任何一处。
+      narrow_prealign_enabled: true
+      narrow_prealign_preview: 1.00
+      narrow_prealign_sample_step: 0.10
+      narrow_prealign_sweep_step: 0.20
+      narrow_prealign_timeout: 5.0
+      narrow_prealign_max_per_goal: 5
+      # 窄通道内临时缩足迹。语义、数字与安全论证见上一个实例那一大段注释。
+      # ⚠️ 两个实例必须同值，否则探索用与导航用的控制器判据漂开，而 A/B 只切一个。
+      narrow_square_enabled: false
+      narrow_footprint_default: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
+      narrow_footprint_narrow: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
+      chassis_min_envelope_radius: 0.30
+      narrow_square_hard_timeout: 30.0
+      narrow_square_lease_period: 0.5
+      narrow_square_verify_timeout: 2.0
+      # ---- 切换迟滞 ----
+      #
+      # 🔴 为什么必须有：第一轮 A/B 实测 123 次切入 / 121 次"装得下"复原 /
+      #    单次驻留中位 0.15s，小足迹只生效 5.7% 的时长。
+      #    0.15s 恰好 = narrow_clear_ticks(3) / controller_frequency(20Hz)，
+      #    也就是复原**每次都在法律允许的最早那一拍**触发。
+      #
+      #    根因不是参数没调好，而是切入与切出问的是两个不同的几何问题：
+      #      · 切入：沿路径**前视 1.0m** 有没有大足迹过不去的点
+      #      · 切出(旧)：**只看机器人当前位姿**大足迹压不压致命带
+      #    而当前位姿的大足迹代价必然低于阈值 —— 否则窄通道接管层早就接管了，
+      #    根本走不到预对齐。于是切出判据在切入那一瞬间就已成立。
+      #
+      #    修法是让两边问同一个问题、且切出窗口更长：
+      #      切入 1.00m 内有麻烦 ⇒ 切；切出 1.20m 内全无麻烦 ⇒ 复原。
+      #    0.20m 迟滞带 = 4 个栅格(resolution 0.05)，是代价地图**表达得出**的量。
+      #    对比：八边形各向异性 0.032m < 一个栅格，所以纯预对齐测不出效果。
+      narrow_square_exit_preview: 1.20    # 启动守卫：必须 >= narrow_prealign_preview
+      narrow_square_exit_ticks: 6         # 0.30s @20Hz。与 narrow_clear_ticks 分开，那是接管层的
+      # 最短驻留：切入后这段时间内不许因"装得下"复原。
+      # ⚠️ 只压这一条复原路径 —— 硬超时/新目标/deactivate/看门狗都是安全通路，不受它限制。
+      narrow_square_min_dwell: 2.0
+      narrow_square_cooldown: 3.0        # 复原后冷却，防"复原-立刻再切"自激
+      # 算术：单次切换周期下限 = 2.0+3.0 = 5.0s ⇒ 一轮 ~324s 的跑法切换次数
+      # **上限 64 次**。这是兜底天花板，不是预期值；预期值由上面的窗口迟滞决定，
+      # 下界是本轮真实遇到的独立窄处个数（预对齐 A/B 实测 ~15 次/轮）。
+      # 若复跑后仍 >64，说明有 bug，不是参数问题。
+      global_footprint_topic: /global_costmap/footprint
+      global_published_footprint_topic: /global_costmap/published_footprint
       narrow_stall_timeout: 6.0          # 红线：按进展判卡住，不按时长（理由见上一块）
       narrow_stall_min_gain: 0.05
       narrow_hard_timeout: 120.0
@@ -795,6 +956,24 @@ local_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 5.5
           obstacle_min_range: 0.0
+          # ═══════ expected_update_rate：不设它等于关掉陈旧检测 ═══════
+          # nav2 默认 0.0 的含义是 ObservationBuffer::isCurrent() **永远返回 true**，
+          # 即 /scan 无论多旧 costmap 都认为是新的、一条告警都不打。
+          # 实测事故（2026-09-01 21:26 急停）：/scan 掉到 0.56Hz、龄期 2.03s，
+          # 而 nav2 全程照常规划、照常发速度、零告警。
+          #
+          # !!! 这是告警，不是联锁 !!! controller_server 二进制里没有任何检查
+          # costmap currency 的字符串，陈旧时它仍会继续发速度。真正的拒绝下发在
+          # chassis_cmd_bridge 的 /scan 联锁里，别指望这一条。
+          #
+          # 0.2s = 两个雷达帧周期(10Hz)。健康态实测 9.9~10.04Hz，
+          # 取 0.1 会因抖一帧就误报，0.2 容一帧抖动又远小于危险的秒级陈旧。
+          #
+          # !!! 这一条原先只加在 nav2_params_rpp.yaml 里 !!!
+          # 于是 controller_plugin:=mppi 一切换，陈旧检测就**静默消失** ——
+          # 2026-09-02 用探针读活节点才发现两个 costmap 都是 0.0。
+          # TestObservationStalenessDetection 现在会强制两份文件保持一致。
+          expected_update_rate: 0.2
       always_send_full_costmap: True
 
 global_costmap:
@@ -823,6 +1002,10 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 5.5
           obstacle_min_range: 0.0
+          # 与 local_costmap 同一条理由，见上面那段长注释。
+          # 全局图也要设：它的 obstacle_layer 用的是同一个 /scan，
+          # 陈旧时全局规划同样是在旧障碍上规划，而同样不会有任何报错。
+          expected_update_rate: 0.2
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_topic: /map

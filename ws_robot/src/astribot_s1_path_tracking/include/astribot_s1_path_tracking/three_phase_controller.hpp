@@ -33,10 +33,13 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
 
 #include "astribot_s1_path_tracking/align_math.hpp"
 #include "astribot_s1_path_tracking/narrow_math.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/polygon.hpp"
+#include "geometry_msgs/msg/polygon_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "nav2_core/controller.hpp"
@@ -281,6 +284,218 @@ private:
   /// 机器人离参考路径的最大距离(m)。超出抛异常 ——
   /// 用户红线「脱困不能脱离全局参考路径太远，防止机器人乱跑」。
   double narrow_max_path_deviation_m_{0.50};
+
+  // ---------------- 进入窄通道前的朝向预对齐 ----------------
+  //
+  // 原来本层只在「足迹已经碰到致命带」之后才接管并转朝向，也就是机器人总是
+  // **先以不利朝向撞进窄处**再在里面转。narrow_math.hpp:118 记录的实测时序
+  // （中心代价 0→218→229→致命，被推进膨胀带深处，最后自己变成 ESCAPE 的对象）
+  // 就是这个缺陷。预对齐趁还在开阔处（原地转零风险）先把车转正。
+  //
+  // ⚠️ 它**不改变全局规划器的任何判据**：SmacPlanner2D 读栅格代价值、
+  //    膨胀层只用内切半径，整条链旋转无关。收益全在 MPPI 侧与
+  //    「不被推进膨胀带深处」这条链上。
+
+  /// 一键回退到预对齐之前的行为（仓库规范：不删旧逻辑）。
+  bool narrow_prealign_enabled_{true};
+  PrealignConfig narrow_prealign_{};
+  /// 旋转扫掠校验的角步长(rad)。
+  double narrow_prealign_sweep_step_rad_{0.20};
+  /// 单次预对齐的超时(s)。超时只放弃并告警，**不抛异常** ——
+  /// 预对齐失败属于「没能开始」，计入放弃上限会误杀整条可行路径
+  /// （见 three_phase_controller.cpp:725 那段实测教训）。
+  double narrow_prealign_timeout_sec_{5.0};
+  /// 每个目标最多预对齐几次，防振荡。
+  int narrow_prealign_max_per_goal_{5};
+
+  /// 是否正在预对齐（原地转）。
+  bool prealign_active_{false};
+  double prealign_target_yaw_{0.0};
+  rclcpp::Time prealign_started_;
+  /// 本目标已用掉的预对齐次数。
+  int prealign_used_{0};
+
+  // 逐项计数，全部上报。合成一个总数就无法区分「从不触发」与「一路开阔」。
+  int prealign_triggered_{0};
+  int prealign_succeeded_{0};
+  int prealign_timeout_{0};
+  int prealign_sweep_blocked_{0};
+  int prealign_capped_{0};
+  int prealign_blocked_even_favorable_{0};
+  bool warned_prealign_cap_{false};
+
+  /// 预对齐的一拍决策，与 NarrowDecision 同构。
+  struct PrealignDecision
+  {
+    bool take_over{false};
+    geometry_msgs::msg::TwistStamped cmd;
+  };
+
+  /// 预对齐状态机。开阔处才会走到这里。
+  PrealignDecision evaluatePrealign(
+    const geometry_msgs::msg::PoseStamped & pose, const rclcpp::Time & now);
+
+  /// 在**一次持锁**内把两种足迹的代价查询能力交给 fn。
+  ///
+  /// 🔴 绝不能在持锁期间调用内层控制器 —— MPPI 也要拿这把同一把锁，
+  ///    那是必死的死锁（同 readCosts 的注释）。所以 fn 里只做查询，
+  ///    出了这个作用域调用方才决定动作。
+  /// @param fn  (大足迹取值, 小足迹取值)。缩足迹未启用时第二个为空。
+  /// @return false = 代价地图/足迹不可用，fn 未被调用
+  bool withCostQueries(
+    const std::function<void(const FootprintCostFn &, const FootprintCostFn &)> & fn);
+
+  /// 一次持锁跑完策略前视 + 扫掠校验 + 当前位姿的大足迹代价。
+  bool runPrealignQueries(
+    const std::vector<PlanarPoint> & path,
+    const PlanarPoint & robot,
+    double robot_yaw,
+    StrategyPreview & preview,
+    bool & sweep_clear,
+    double & sweep_worst_cost,
+    double & big_footprint_cost);
+
+  // ---------------- 窄通道内临时缩小足迹（八边形 -> 正方形）----------------
+  //
+  // 依据全部在 narrow_math.hpp 那一节。这里只强调实现纪律：
+  //
+  // 🔴 顺序不可颠倒：**先对齐、后换足迹**。膨胀层只用内切半径、旋转无关，
+  //    小足迹把代价地图的朝向盲区从 0.035 放大到 0.133（nav2 自己的
+  //    calculateMinAndMaxDistances 实测），所以小足迹生效期间朝向必须锁住。
+  //
+  // 🔴 切换是**跨进程**的：planner 用的是 global costmap（另一个进程），
+  //    只能发 Polygon 到它的 footprint 话题，是 fire-and-forget。
+  //    所以必须**回读验证**（published_footprint），验证不过就复原并放弃，
+  //    绝不"假定切成功"继续走。
+  //
+  // 🔴 防锁存：设了小足迹的进程若挂掉，代价地图会一直按小足迹算。
+  //    本层负责 deactivate/cleanup/异常/新目标时复原，并按周期续租；
+  //    租约过期由协调器侧看门狗兜底。
+
+  /// 一键回退：false 时完全不碰足迹（退回只做预对齐的行为）。
+  bool narrow_square_enabled_{false};
+  /// 默认(大)足迹与窄通道(小)足迹，均从 yaml 解析。
+  std::vector<geometry_msgs::msg::Point> footprint_default_{};
+  std::vector<geometry_msgs::msg::Point> footprint_narrow_{};
+  /// 两者的内切/外接半径，由 nav2 的 calculateMinAndMaxDistances 算出（不自己实现）。
+  double footprint_default_inscribed_{0.0};
+  double footprint_default_circumscribed_{0.0};
+  double footprint_narrow_inscribed_{0.0};
+  double footprint_narrow_circumscribed_{0.0};
+  /// 启动守卫：小足迹内切半径不得小于底盘物理包络，防打错字缩到比躯干还小。
+  double chassis_min_envelope_radius_{0.30};
+  /// 小足迹最长生效时长(s)。红线：所有受限动作必须带超时。
+  double narrow_square_hard_timeout_sec_{30.0};
+  /// 续租周期(s)与回读验证超时(s)。
+  double narrow_square_lease_period_sec_{0.5};
+  double narrow_square_verify_timeout_sec_{2.0};
+
+  // ---- 切换迟滞 ----
+  //
+  // 🔴 为什么必须有：第一轮 A/B 实测 123 次切入 / 121 次"装得下"复原 /
+  //    单次驻留中位 0.15s，小足迹只生效 5.7%。0.15s 恰好 = narrow_clear_ticks(3)
+  //    / controller_frequency(20Hz)，也就是说复原**每次都在法律允许的最早那一拍**触发。
+  //
+  //    根因不是参数没调好，而是**切入与切出问的是两个不同的几何问题**：
+  //      · 切入：沿路径**前视 preview_m** 有没有大足迹过不去的点
+  //      · 切出（旧）：**只看机器人当前位姿**大足迹压不压致命带
+  //    而当前位姿的大足迹代价必然低于阈值 —— 否则 evaluateNarrow 早就接管了，
+  //    根本走不到预对齐。于是切出判据在小足迹生效那一瞬间就已成立。
+  //
+  //    所以修法是让两边问同一个问题、且切出的窗口更长：
+  //      切入：preview_m(1.00m) 内有麻烦        ⇒ 切
+  //      切出：exit_preview_m(1.20m) 内全无麻烦 ⇒ 复原
+  //    0.20m 的迟滞带 = 4 个栅格(0.05m)，是代价地图**表达得出**的量。
+  //    （对比：八边形各向异性 0.032m < 一个栅格，所以纯预对齐测不出效果。）
+
+  /// 切出用的前视窗口(m)。启动守卫：必须 >= 切入窗口 narrow_prealign_.preview_m。
+  double narrow_square_exit_preview_m_{1.20};
+  /// 切出需要连续几拍成立。与 narrow_clear_ticks_ 分开：那个是接管层的退出判据。
+  int narrow_square_exit_ticks_{6};
+  /// 最短驻留(s)：切入后这段时间内**不许**因"装得下"复原。
+  /// ⚠️ 只压这一条复原路径；硬超时/新目标/deactivate/看门狗都是安全通路，不受它限制。
+  double narrow_square_min_dwell_sec_{2.0};
+  /// 复原后的冷却期(s)：这段时间内不许再切入，防"复原-立刻再切"自激。
+  double narrow_square_cooldown_sec_{3.0};
+
+  /// 小足迹当前是否**已验证生效**（不是"已请求"）。
+  bool square_active_{false};
+  /// 已请求但还没回读验证通过。
+  bool square_pending_{false};
+  rclcpp::Time square_requested_;
+  rclcpp::Time square_activated_;
+  rclcpp::Time square_last_lease_;
+  /// 请求缩足迹时锁定的目标朝向（失去对齐要转回它，而不是复原足迹）。
+  double square_locked_yaw_{0.0};
+  /// 复原时刻（冷却期起点）。⚠️ 必须配 valid 标志：默认构造的 rclcpp::Time 是
+  /// RCL_SYSTEM_TIME，与节点时钟(RCL_ROS_TIME)相减会**抛异常**，不是返回大值。
+  bool square_cooldown_valid_{false};
+  rclcpp::Time square_cooldown_started_;
+  /// 切出判据连续成立的拍数。
+  int square_exit_clear_hits_{0};
+
+  int square_switch_count_{0};
+  int square_verify_fail_count_{0};
+  int square_revert_cleared_{0};      ///< 因大足迹重新装得下而复原
+  int square_revert_timeout_{0};      ///< 因硬超时而复原
+  int square_realign_count_{0};       ///< 生效期间失去对齐 -> 保持小足迹、重新对齐
+  int square_suppressed_dwell_{0};    ///< 切出判据已成立但被最短驻留压住的拍数
+  int square_suppressed_cooldown_{0}; ///< 想切入但被冷却期挡掉的拍数
+  int square_exit_degraded_{0};       ///< 拿不到路径、退化成只看当前位姿判切出的拍数
+  /// 前视判定为「缩足迹能过」的拍数 —— 即**本功能有用武之地的拍数**。
+  ///
+  /// 🔴 为什么必须单独计：它的对照量 prealign_blocked_even_favorable_
+  ///    （连小足迹转正都过不去）第一轮实测 790，而"需缩足迹"那行是**节流 INFO
+  ///    且没有累计值**，只能数到 1 行 —— 两个数根本不可比，而"790 : 1"这个
+  ///    比值恰恰是决定这功能该不该留下的唯一依据。节流日志不能当事件计数器。
+  int square_applicable_ticks_{0};
+
+  /// ⚠️ 必须是 LifecyclePublisher 而不是 rclcpp::Publisher：后者能编译
+  /// （LifecyclePublisher 继承自它），但拿不到 on_activate()，而**未激活的
+  /// lifecycle 发布者会静默丢弃所有消息** —— 那正是本功能最不能出的错。
+  rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::Polygon>::SharedPtr
+    global_footprint_pub_;
+  rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr global_footprint_sub_;
+  /// 最近一次从 global costmap 回读到的顶点数（0 = 还没收到）。
+  std::atomic<int> global_footprint_vertices_{0};
+
+  /// 解析两个足迹、算半径、跑启动守卫。非法即抛。
+  void loadFootprints(const rclcpp_lifecycle::LifecycleNode::SharedPtr & node, const std::string & p);
+
+  /// 请求把两个代价地图切到指定足迹。local 直接调（同进程），global 发话题。
+  void requestFootprint(const std::vector<geometry_msgs::msg::Point> & fp);
+
+  /// 回读 global costmap 的足迹顶点数是否已等于期望值。
+  bool footprintVerified(std::size_t want_vertices) const;
+
+  /// 复原到默认足迹并清状态。why 会进日志。**幂等**，随时可调。
+  /// 副作用：开启冷却期（防"复原-立刻再切"自激）。
+  void revertFootprint(const char * why);
+
+  /// 无条件续租。
+  ///
+  /// 🔴 必须在**每一拍、任何相位、任何一层接管**的情况下都被调用。
+  ///    第一轮实测的教训：续租原先写在 evaluateSquare 里，而 evaluateNarrow
+  ///    接管时 kFollow 会 early-return，根本走不到那行 —— 于是恰好在窄通道
+  ///    接管期间（最需要小足迹的时候）停止续租，协调器侧看门狗在 2.1s 时
+  ///    误判"设它的进程死了"，把足迹从中途抢回默认值。
+  ///    续租是**存活信号**，与"本拍是哪一层在控制"完全无关。
+  void renewFootprintLease(const rclcpp::Time & now);
+
+  /// 切出判据的一次求值。
+  struct SquareExitProbe
+  {
+    bool clear{false};        ///< 本拍判定"大足迹已经装得下"
+    bool from_path{false};    ///< true=用了前视窗口；false=退化成只看当前位姿
+  };
+
+  /// 小足迹状态机。返回是否本拍接管（接管时 cmd 有效）。
+  PrealignDecision evaluateSquare(
+    const geometry_msgs::msg::PoseStamped & pose,
+    const rclcpp::Time & now,
+    const StrategyPreview & preview,
+    double robot_yaw,
+    const SquareExitProbe & exit);
 };
 
 }  // namespace astribot_s1_path_tracking

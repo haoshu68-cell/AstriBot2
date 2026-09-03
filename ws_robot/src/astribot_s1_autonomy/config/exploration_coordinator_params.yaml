@@ -23,6 +23,59 @@
     costmap_topic: "/global_costmap/costmap_raw"   # nav2_msgs/Costmap，仅用于下发前校验
     odom_topic: "/odom"                      # 用于「稳定驻留」的速度判定
     state_topic: "/exploration/state"        # std_msgs/String，状态机对外唯一状态出口
+
+    # ---- 足迹锁存看门狗 ----
+    #
+    # 要防的是什么：控制器(ThreePhaseController)可以在窄通道里临时把代价地图的
+    # 足迹从八边形缩成正方形，以便通过 0.640~0.798m 这一档通道。
+    # **设了小足迹的进程一旦死掉或卡住，代价地图会一直按小足迹算**，
+    # 机器人从此被系统性低估 0.079m 内切半径，而日志上一切正常 —— 这是本功能
+    # 最危险的失效模式（后果是规划器乐观 ⇒ 反复卡住，不是碰撞）。
+    #
+    # 判活机制是"续租"：控制器按 narrow_square_lease_period(0.5s) 把小足迹重发到
+    # 写话题；本看门狗订阅同一个话题，看到非默认足迹请求就刷新租约时刻。
+    # 回读话题告诉它代价地图**当前**到底挂着什么足迹。
+    # 「回读到非默认足迹」且「租约过期」⇒ 强制把默认足迹发回去并打 ERROR。
+    #
+    # ⚠️ lease_timeout_sec 必须 > 控制器的 narrow_square_lease_period，否则误判。
+    #    当前 2.0 > 0.5，有 4 倍余量。
+    # ⚠️ default_footprint 必须与控制器的 narrow_footprint_default **逐字一致**，
+    #    否则看门狗"复原"成的是另一个形状 —— 那比不复原更糟。
+    #
+    # 默认 false：控制器侧 narrow_square_enabled 也默认 false，两者要一起开。
+    footprint_watchdog:
+      enabled: false
+      write_topic: "/global_costmap/footprint"
+      readback_topic: "/global_costmap/published_footprint"
+      default_footprint: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
+      # ---- 动手需三条同时成立（缺任何一条都不许发默认足迹）----
+      #
+      # 🔴 第一轮 A/B 实测的教训：旧判据只有"回读到非默认 + 租约过期"两条，
+      #    在 2.1s 时误判"设小足迹的进程死了"，把足迹从通道中途抢回默认值。
+      #    两个病因：
+      #      ① 续租写在控制器的 evaluateSquare 里，而窄通道接管层会 early-return
+      #         把它跳过 —— 恰好在最需要小足迹时停止续租。（已在控制器侧修）
+      #      ② 回读周期 1.0s(= global costmap 的 publish_frequency)、本看门狗
+      #         tick 0.5s、控制器侧切换一度快到 ~1.7Hz。租约超时 2.0s 比
+      #         "凑齐 3 次连续回读所需的 3.0s"还短，等于读数没凑齐就动手。
+      #
+      # ①回读龄期 <= readback_stale_sec：读数必须是**活的**。
+      #   回读停更时最后那个非默认值会被当成当前值一直用 —— 这是本项目
+      #   一天内犯过三次的同类错（陈旧 TF / 冻结拍率 / 脉冲平均成速率）。
+      #   陈旧时**不动手**并 RCLCPP_ERROR 计数上报，绝不静默。
+      # ②连续 consecutive_reads 次**回读**都是非默认。
+      #   在回读回调里数，不在 tick 里数 —— tick 2Hz / 回读 1Hz，
+      #   在 tick 里数会把同一个采样重复计两次（采样别名）。
+      # ③租约龄期 > lease_timeout_sec。
+      #
+      # 算术守卫（启动时校验，不满足直接拒绝启动）：
+      #   lease_timeout_sec >= readback_period_sec * (consecutive_reads + 1) = 4.0
+      #   readback_stale_sec >= 2 * readback_period_sec = 2.0
+      #   lease_timeout_sec(4.0) >> 控制器 narrow_square_lease_period(0.5)，8 倍余量
+      lease_timeout_sec: 4.0
+      readback_period_sec: 1.0    # 必须与 global costmap 的 publish_frequency 一致
+      readback_stale_sec: 3.0     # 回读比这还老 ⇒ 读数不是当前值，不动手
+      consecutive_reads: 3        # 单次命中可能只是正常切换的中间态
     complete_topic: "/exploration/complete"  # std_msgs/Bool，transient_local
     current_goal_topic: "/exploration/current_goal"   # 已下发目标，仅供 RViz 观察
     nav_action_name: "navigate_to_pose"      # Nav2 导航动作

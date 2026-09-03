@@ -77,7 +77,7 @@ TEST(NarrowRedLine, CenterLethalStillWinsOverUnfavorableYaw)
 TEST(NarrowRedLine, CenterLethalIsNotOurJob)
 {
   // 中心格致命 ⇒ clearance<0.388 ⇒ 物理放不进去 ⇒ 本层必须拒绝接管。
-  // 穷举足迹代价（253 以下的真障碍之外的全部取值）。
+  // 穷举足迹代价（254 以下、即"未压到障碍本体"的全部取值）。
   NarrowTriggerConfig cfg;
   for (int fp = 0; fp < 254; ++fp) {
     const auto v = evaluateNarrowTrigger(253.0, fp, 0.0, true, cfg);
@@ -116,10 +116,27 @@ TEST(NarrowRedLine, ScanInvalidWhenBothSidesLethal)
 
 TEST(NarrowTrigger, TargetBandYieldsNarrow)
 {
-  // 目标域：中心格可站(<253) + 足迹碰致命带(>=253)
+  // 目标域：中心格可站(<253) + 足迹**多边形**压到真障碍(>=254)。
+  // ⚠️ 这里刻意用 254 而不是 253。默认阈值已改成 254，理由是 253 在
+  //    多边形查询里会重复计底盘半宽（推导见 narrow_math.hpp 的 NarrowCostValues）。
   NarrowTriggerConfig cfg;
-  EXPECT_EQ(evaluateNarrowTrigger(137.0, 253.0, 0.0, true, cfg), NarrowVerdict::kNarrow);
-  EXPECT_EQ(evaluateNarrowTrigger(0.0, 253.0, 0.0, true, cfg), NarrowVerdict::kNarrow);
+  EXPECT_EQ(evaluateNarrowTrigger(137.0, 254.0, 0.0, true, cfg), NarrowVerdict::kNarrow);
+  EXPECT_EQ(evaluateNarrowTrigger(0.0, 254.0, 0.0, true, cfg), NarrowVerdict::kNarrow);
+}
+
+TEST(NarrowTrigger, InflationBandOnFootprintIsNotBlocked)
+{
+  // 🔴 本条是这次改动的核心回归测试：足迹多边形读到 253 **不算过不去**。
+  //
+  // 253 的含义是"这一格离障碍不超过内切半径"，而内切半径就是底盘半宽。
+  // 足迹多边形已经把底盘尺寸表达了一遍，再要求它躲开 253 带就是算两遍。
+  // 上一版默认阈值 253 让本机每一条 0.65m 级通道都恒判"过不去"
+  //（实测 909 次），而实际读数 51 次 253 / 仅 2 次 254 —— 从未真的撞上。
+  NarrowTriggerConfig cfg;
+  for (double center : {0.0, 100.0, 137.0, 252.0}) {
+    EXPECT_EQ(evaluateNarrowTrigger(center, 253.0, 0.0, true, cfg), NarrowVerdict::kNone)
+      << "足迹多边形读到 253 被当成过不去 ⇒ 重复计底盘半宽（center=" << center << "）";
+  }
 }
 
 TEST(NarrowTrigger, WideAreaYieldsNone)
@@ -129,11 +146,22 @@ TEST(NarrowTrigger, WideAreaYieldsNone)
   EXPECT_EQ(evaluateNarrowTrigger(137.0, 252.0, 0.0, true, cfg), NarrowVerdict::kNone);
 }
 
+TEST(NarrowTrigger, CenterThresholdStaysAtInscribed)
+{
+  // 与上一条相反的一半：**中心格**读到 253 必须算致命。
+  // 那里膨胀带正好代表底盘尺寸，正是 SmacPlanner2D 判起点用的判据。
+  // 两个阈值方向相反，任何"统一成一个数"的改法都会破坏其中一半。
+  NarrowTriggerConfig cfg;
+  EXPECT_DOUBLE_EQ(cfg.center_lethal_threshold, NarrowCostValues::kInscribedInflated);
+  EXPECT_DOUBLE_EQ(cfg.footprint_lethal_threshold, NarrowCostValues::kLethal);
+  EXPECT_EQ(evaluateNarrowTrigger(253.0, 0.0, 0.0, true, cfg), NarrowVerdict::kCenterLethal);
+}
+
 TEST(NarrowTrigger, NoPathMeansNoTakeover)
 {
   // 本层以全局路径为核心约束。无路径不接管 —— 那种情况是 ESCAPE 的事。
   NarrowTriggerConfig cfg;
-  EXPECT_EQ(evaluateNarrowTrigger(137.0, 253.0, 0.0, false, cfg), NarrowVerdict::kNoPath);
+  EXPECT_EQ(evaluateNarrowTrigger(137.0, 254.0, 0.0, false, cfg), NarrowVerdict::kNoPath);
 }
 
 TEST(NarrowTrigger, ToStringCoversAll)
@@ -748,6 +776,562 @@ TEST(YawGate, NarrowVelocityAgreesWithTheSharedPredicate)
       EXPECT_DOUBLE_EQ(c.vy, 0.0);
     }
   }
+}
+
+// =====================================================================
+// 进入前的朝向预对齐
+// =====================================================================
+
+namespace
+{
+/// 一条沿 +x 的直线路径，点距 0.05m（与栅格同量级，接近真实规划输出）。
+std::vector<PlanarPoint> straightPathX(double length_m)
+{
+  std::vector<PlanarPoint> p;
+  for (double s = 0.0; s <= length_m + 1e-9; s += 0.05) {
+    p.push_back(PlanarPoint{s, 0.0});
+  }
+  return p;
+}
+
+/// 造一个「只有把八边形平边正对通道壁才过得去」的窄处：
+/// x >= gate_x 处，足迹代价取决于朝向与 45° 同余类的接近程度。
+/// 朝向落在同余类附近(误差 < tol) ⇒ 200（可通行）；否则 254（足迹压到障碍本体）。
+/// ⚠️ 用 254 而不是 253：这些 cost_fn 模拟的是 footprintCostAtPose（多边形查询），
+///    而多边形查询的"过不去"就是 254。用 253 会把重复计底盘半宽的旧语义写进测试。
+FootprintCostFn gateNeedsFavorableYaw(double gate_x, double tol)
+{
+  return [gate_x, tol](double x, double /*y*/, double yaw) {
+      if (x < gate_x) {
+        return 0.0;                        // 闸门之前一律开阔
+      }
+      const double err = favorableYawError(yaw, 0.0, kOct);
+      return (std::fabs(err) < tol) ? 200.0 : 254.0;
+    };
+}
+
+PrealignConfig defaultPrealignCfg()
+{
+  PrealignConfig cfg;
+  cfg.preview_m = 1.00;
+  cfg.sample_step_m = 0.10;
+  cfg.tangent_lookahead_m = 0.40;
+  cfg.favorable_period_rad = kOct;
+  cfg.footprint_lethal_threshold = NarrowCostValues::kLethal;
+  return cfg;
+}
+}  // namespace
+
+TEST(Prealign, DetectsNarrowPassableOnlyWhenAligned)
+{
+  // 机器人朝向 22.5°(=半周期)，正是最不利朝向：与任何 45° 同余类都差 22.5°。
+  const double bad_yaw = kOct * 0.5;
+  const PrealignPreview r = previewFavorableAlignment(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, bad_yaw,
+    defaultPrealignCfg(), gateNeedsFavorableYaw(0.5, 0.05));
+
+  ASSERT_EQ(r.verdict, PrealignVerdict::kNeeded)
+    << "当前朝向过不去、转正过得去 ⇒ 必须判需要预对齐";
+  // 目标朝向必须落在 45° 同余类上（本例最近的是 0 或 45°）。
+  EXPECT_LT(std::fabs(favorableYawError(r.target_yaw, 0.0, kOct)), 1e-9)
+    << "target_yaw=" << r.target_yaw << " 不在有利同余类上";
+  // 触发点应当在闸门附近，而不是贴着机器人或跑到前视尽头。
+  EXPECT_GE(r.at_distance_m, 0.5);
+  EXPECT_LE(r.at_distance_m, 0.65);
+}
+
+TEST(Prealign, ClearAheadReportsNonZeroSamples)
+{
+  // 🔴 这条防的是「扫了 0 个点也报开阔」这种静默假阴性。
+  const PrealignPreview r = previewFavorableAlignment(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, 0.3, defaultPrealignCfg(),
+    [](double, double, double) {return 0.0;});
+
+  EXPECT_EQ(r.verdict, PrealignVerdict::kClearAhead);
+  EXPECT_GT(r.samples, 0U) << "报开阔却一个点都没扫 ⇒ 与故障无法区分";
+  EXPECT_EQ(r.skipped_no_tangent, 0U);
+}
+
+TEST(Prealign, TrulyNarrowIsNotOurJob)
+{
+  // 两个朝向都过不去 ⇒ 该交红线/ESCAPE，不能报 kNeeded 让机器人白转一场。
+  const PrealignPreview r = previewFavorableAlignment(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, 0.0, defaultPrealignCfg(),
+    [](double x, double, double) {return x < 0.5 ? 0.0 : 254.0;});
+
+  EXPECT_EQ(r.verdict, PrealignVerdict::kBlockedEvenFavorable)
+    << "必须与 kClearAhead 区分开，否则'预对齐从不触发'看起来像'一路开阔'";
+  EXPECT_NE(r.verdict, PrealignVerdict::kNeeded);
+}
+
+TEST(Prealign, PathTooShortIsNotClearAhead)
+{
+  std::vector<PlanarPoint> tiny{{0.0, 0.0}, {0.01, 0.0}};
+  const PrealignPreview r = previewFavorableAlignment(
+    tiny, PlanarPoint{0.0, 0.0}, 0.0, defaultPrealignCfg(),
+    [](double, double, double) {return 0.0;});
+  EXPECT_EQ(r.verdict, PrealignVerdict::kPathTooShort)
+    << "缺数据不等于开阔";
+}
+
+TEST(Prealign, RejectsBadConfig)
+{
+  const auto free_fn = [](double, double, double) {return 0.0;};
+  const auto path = straightPathX(3.0);
+  const PlanarPoint origin{0.0, 0.0};
+
+  PrealignConfig bad = defaultPrealignCfg();
+  bad.sample_step_m = 0.0;
+  EXPECT_EQ(
+    previewFavorableAlignment(path, origin, 0.0, bad, free_fn).verdict,
+    PrealignVerdict::kInvalidConfig);
+
+  bad = defaultPrealignCfg();
+  bad.sample_step_m = 2.0;              // 步长 > 前视距离
+  EXPECT_EQ(
+    previewFavorableAlignment(path, origin, 0.0, bad, free_fn).verdict,
+    PrealignVerdict::kInvalidConfig);
+
+  bad = defaultPrealignCfg();
+  bad.favorable_period_rad = -1.0;
+  EXPECT_EQ(
+    previewFavorableAlignment(path, origin, 0.0, bad, free_fn).verdict,
+    PrealignVerdict::kInvalidConfig);
+}
+
+TEST(Prealign, TargetIsNearestFavorableNotCorridorHeading)
+{
+  // 通道方向 200°(3.49rad)。八边形每 45° 复现，所以不该绕远去凑 200°，
+  // 转角必须 <= 半周期 22.5°。
+  const double corridor = 3.4907;                  // 200 度
+  const double robot_yaw = corridor + kOct * 0.5;  // 偏离半周期
+  auto path = straightPathX(3.0);
+  // 把路径旋到 200° 方向，保证切向就是 corridor。
+  for (auto & p : path) {
+    const double s = p.x;
+    p.x = s * std::cos(corridor);
+    p.y = s * std::sin(corridor);
+  }
+  const PrealignPreview r = previewFavorableAlignment(
+    path, PlanarPoint{0.0, 0.0}, robot_yaw, defaultPrealignCfg(),
+    [corridor](double x, double y, double yaw) {
+      const double s = x * std::cos(corridor) + y * std::sin(corridor);
+      if (s < 0.5) {return 0.0;}
+      return std::fabs(favorableYawError(yaw, corridor, kOct)) < 0.05 ? 200.0 : 254.0;
+    });
+
+  ASSERT_EQ(r.verdict, PrealignVerdict::kNeeded);
+  EXPECT_LE(std::fabs(normalizeAngle(r.target_yaw - robot_yaw)), kOct * 0.5 + 1e-6)
+    << "转角超过半周期 ⇒ 绕远了";
+}
+
+TEST(Prealign, SweepBlockedByHardObstacleRefusesRotation)
+{
+  // 🔴 安全：旋转扫掠过程中撞真障碍(254) ⇒ 必须拒绝，不许硬转。
+  double worst = 0.0;
+  const bool ok = sweepClearForRotation(
+    PlanarPoint{0.0, 0.0}, 0.0, kOct, 0.05, NarrowCostValues::kLethal,
+    [](double, double, double yaw) {
+      return (std::fabs(yaw - kOct * 0.5) < 0.06) ? 254.0 : 0.0;   // 中途一段是真障碍
+    }, worst);
+
+  EXPECT_FALSE(ok) << "扫掠途中有真障碍却放行旋转";
+  EXPECT_GE(worst, 254.0) << "worst_cost 必须填，失败时也要能看出多糟";
+}
+
+TEST(Prealign, SweepClearWhenWholeArcIsFree)
+{
+  double worst = -1.0;
+  EXPECT_TRUE(
+    sweepClearForRotation(
+      PlanarPoint{0.0, 0.0}, 0.0, kOct, 0.05, NarrowCostValues::kLethal,
+      [](double, double, double) {return 100.0;}, worst));
+  EXPECT_DOUBLE_EQ(worst, 100.0);
+}
+
+TEST(Prealign, SweepTakesShortestDirection)
+{
+  // from=-170°, to=+170° ⇒ 最近方向是跨 ±180°（20°），不是绕 340°。
+  // 若走了长边，必然扫到 0° 附近那个"障碍"。
+  const double from = -2.9671;    // -170 度
+  const double to = 2.9671;       // +170 度
+  double worst = 0.0;
+  const bool ok = sweepClearForRotation(
+    PlanarPoint{0.0, 0.0}, from, to, 0.05, NarrowCostValues::kLethal,
+    [](double, double, double yaw) {
+      return (std::fabs(yaw) < 1.0) ? 254.0 : 0.0;    // 0° 附近是障碍
+    }, worst);
+  EXPECT_TRUE(ok) << "走了长边（绕过 0°），worst=" << worst;
+}
+
+TEST(Prealign, SweepRejectsBadStep)
+{
+  double worst = 0.0;
+  EXPECT_FALSE(
+    sweepClearForRotation(
+      PlanarPoint{0.0, 0.0}, 0.0, 1.0, 0.0, NarrowCostValues::kLethal,
+      [](double, double, double) {return 0.0;}, worst))
+    << "step<=0 必须拒绝旋转（失败偏安全侧），不能当成放行";
+}
+
+// =====================================================================
+// 窄通道内临时缩小足迹（八边形 -> 正方形）的策略判定
+// =====================================================================
+
+namespace
+{
+/// 造一个「宽度介于两种足迹之间」的窄处：
+/// x >= gate_x 处，默认(大)足迹任何朝向都过不去，小足迹只在有利朝向下过得去。
+/// 这正是实测里占 12/18 的那一档（足迹代价=253，有利朝向也=253）。
+FootprintCostFn bigAlwaysBlocked(double gate_x)
+{
+  return [gate_x](double x, double, double) {
+      return x < gate_x ? 0.0 : 254.0;
+    };
+}
+FootprintCostFn smallNeedsFavorableYaw(double gate_x, double tol)
+{
+  return [gate_x, tol](double x, double, double yaw) {
+      if (x < gate_x) {return 0.0;}
+      return std::fabs(favorableYawError(yaw, 0.0, kOct)) < tol ? 180.0 : 254.0;
+    };
+}
+}  // namespace
+
+TEST(Strategy, ShrinkOnlyWhenBigFootprintCannotPassEvenAligned)
+{
+  // 这是本功能存在的唯一理由：大足迹转正也过不去、小足迹转正过得去。
+  const PrealignPreview ignored = previewFavorableAlignment(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, kOct * 0.5, defaultPrealignCfg(),
+    bigAlwaysBlocked(0.5));
+  ASSERT_EQ(ignored.verdict, PrealignVerdict::kBlockedEvenFavorable)
+    << "前提检查：只给大足迹时这一档必须是「转正也过不去」";
+
+  const StrategyPreview r = previewNarrowStrategy(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, kOct * 0.5, defaultPrealignCfg(),
+    bigAlwaysBlocked(0.5), smallNeedsFavorableYaw(0.5, 0.05));
+
+  ASSERT_EQ(r.strategy, NarrowStrategy::kAlignThenShrink);
+  EXPECT_LT(std::fabs(favorableYawError(r.target_yaw, 0.0, kOct)), 1e-9)
+    << "target_yaw 必须落在有利同余类上";
+}
+
+TEST(Strategy, NoShrinkWhenAligningAloneIsEnough)
+{
+  // 🔴 不无谓缩小足迹：转正就够时必须只预对齐。
+  // 缩足迹会把代价地图的朝向盲区从 0.035 放大到 0.133，没必要就不付这个代价。
+  const StrategyPreview r = previewNarrowStrategy(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, kOct * 0.5, defaultPrealignCfg(),
+    gateNeedsFavorableYaw(0.5, 0.05),          // 大足迹转正就能过
+    smallNeedsFavorableYaw(0.5, 0.05));
+
+  EXPECT_EQ(r.strategy, NarrowStrategy::kAlignOnly);
+  EXPECT_NE(r.strategy, NarrowStrategy::kAlignThenShrink);
+}
+
+TEST(Strategy, BothBlockedIsNotOurJob)
+{
+  const StrategyPreview r = previewNarrowStrategy(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, 0.0, defaultPrealignCfg(),
+    bigAlwaysBlocked(0.5), bigAlwaysBlocked(0.5));   // 小足迹也一样堵
+  EXPECT_EQ(r.strategy, NarrowStrategy::kBlocked)
+    << "两种足迹都不行 ⇒ 交红线/ESCAPE，不能报要缩足迹让机器人白转一场";
+}
+
+TEST(Strategy, ClearAheadReportsNonZeroSamples)
+{
+  const StrategyPreview r = previewNarrowStrategy(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, 0.3, defaultPrealignCfg(),
+    [](double, double, double) {return 0.0;},
+    [](double, double, double) {return 0.0;});
+  EXPECT_EQ(r.strategy, NarrowStrategy::kNone);
+  EXPECT_GT(r.samples, 0U) << "报开阔却一个点都没扫 ⇒ 与故障无法区分";
+}
+
+TEST(Strategy, EmptyNarrowCostFnNeverAsksToShrink)
+{
+  // 一键回退语义：不提供小足迹取值函数时，绝不可能要求缩足迹。
+  const StrategyPreview r = previewNarrowStrategy(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, 0.0, defaultPrealignCfg(),
+    bigAlwaysBlocked(0.5), FootprintCostFn{});
+  EXPECT_EQ(r.strategy, NarrowStrategy::kBlocked);
+  EXPECT_NE(r.strategy, NarrowStrategy::kAlignThenShrink);
+}
+
+TEST(Strategy, PathTooShortIsNotClearAhead)
+{
+  std::vector<PlanarPoint> tiny{{0.0, 0.0}, {0.01, 0.0}};
+  const StrategyPreview r = previewNarrowStrategy(
+    tiny, PlanarPoint{0.0, 0.0}, 0.0, defaultPrealignCfg(),
+    [](double, double, double) {return 0.0;},
+    [](double, double, double) {return 0.0;});
+  EXPECT_EQ(r.strategy, NarrowStrategy::kPathTooShort) << "缺数据不等于开阔";
+}
+
+TEST(Strategy, RejectsBadConfig)
+{
+  PrealignConfig bad = defaultPrealignCfg();
+  bad.sample_step_m = 0.0;
+  EXPECT_EQ(
+    previewNarrowStrategy(
+      straightPathX(3.0), PlanarPoint{0.0, 0.0}, 0.0, bad,
+      [](double, double, double) {return 0.0;},
+      [](double, double, double) {return 0.0;}).strategy,
+    NarrowStrategy::kInvalidConfig);
+}
+
+// =====================================================================
+// 缩足迹的**切出**判据（迟滞）
+//
+// 这一组测的不是新函数，而是控制器 evaluatePrealign 里那段切出探针的
+// **判据本身**：
+//     exit_cfg = 切入配置; exit_cfg.preview_m = exit_preview_m;
+//     ep = previewNarrowStrategy(path, robot, yaw, exit_cfg, cost_big, {});
+//     clear = (ep.strategy == kNone || ep.strategy == kPathTooShort);
+//
+// 为什么值得单独测：第一轮 A/B 实测 123 次切入 / 121 次复原 / 中位驻留 0.15s，
+// 而 0.15s 恰好 = narrow_clear_ticks(3) / controller_frequency(20Hz)。
+// 病因不在参数，而在**旧切出判据只看当前位姿**，而当前位姿的大足迹代价
+// 必然低于阈值（否则窄通道接管层早接管了、根本走不到预对齐）——
+// 于是切出判据在切入那一瞬间就已成立。下面 OldCriterionFiresAtOnce
+// 就是把这个失效模式钉住的回归测试。
+// =====================================================================
+
+namespace
+{
+/// 一段**有限长**的窄处（门洞）：x ∈ [x0, x1) 内大足迹任何朝向都过不去。
+/// 比半平面更贴近真实 —— 只有有限长的门洞才可能"走过去之后就清了"，
+/// 而"能不能清"正是切出判据的全部内容。
+FootprintCostFn blockedBand(double x0, double x1)
+{
+  return [x0, x1](double x, double, double) {
+      return (x >= x0 && x < x1) ? 254.0 : 0.0;
+    };
+}
+
+/// 与控制器逐字一致的切出判据。写成函数而不是在每个用例里重复，
+/// 是为了让"测的判据"与"跑的判据"只有一份定义。
+bool exitClear(
+  const std::vector<PlanarPoint> & path, const PlanarPoint & robot, double yaw,
+  double exit_preview_m, const FootprintCostFn & cost_big)
+{
+  PrealignConfig cfg = defaultPrealignCfg();
+  cfg.preview_m = exit_preview_m;
+  const StrategyPreview ep = previewNarrowStrategy(
+    path, robot, yaw, cfg, cost_big, FootprintCostFn{});
+  return ep.strategy == NarrowStrategy::kNone ||
+         ep.strategy == NarrowStrategy::kPathTooShort;
+}
+}  // namespace
+
+TEST(SquareExit, OldCriterionFiresAtOnce)
+{
+  // 🔴 回归测试：把 123 次切换那个失效模式直接钉住。
+  // 门洞在前方 1.10m 处，机器人当前位姿完全开阔。
+  const auto cost_big = blockedBand(1.10, 1.30);
+  const auto path = straightPathX(3.0);
+
+  // 旧判据（只看当前位姿）：立刻判"装得下" ⇒ 切入那一拍就要复原。
+  EXPECT_LT(cost_big(0.0, 0.0, 0.0), NarrowCostValues::kLethal)
+    << "前提：当前位姿必然不致命 —— 否则窄通道接管层早接管、走不到预对齐";
+
+  // 新判据（前视 1.20m 窗口）：门洞还在窗口里 ⇒ 不许复原。
+  EXPECT_FALSE(exitClear(path, PlanarPoint{0.0, 0.0}, 0.0, 1.20, cost_big))
+    << "切出判据必须看前视窗口；只看当前位姿就是 0.15s 抖动的病根";
+}
+
+TEST(SquareExit, LongerExitWindowCreatesRealHysteresisBand)
+{
+  // 迟滞的定义：存在一段位置，切入判据说"开阔"而切出判据说"还没清"。
+  // 那段就是迟滞带，宽度 = exit_preview - entry_preview = 0.20m = 4 个栅格。
+  // （对比：八边形各向异性 0.032m < 一个栅格 0.05m，代价地图表达不出来，
+  //   所以纯预对齐在这张图上测不出效果。）
+  const auto cost_big = blockedBand(1.10, 1.30);
+  const auto path = straightPathX(3.0);
+  const PlanarPoint robot{0.0, 0.0};
+
+  PrealignConfig entry = defaultPrealignCfg();      // preview 1.00m
+  const StrategyPreview in = previewNarrowStrategy(
+    path, robot, 0.0, entry, cost_big, FootprintCostFn{});
+  EXPECT_EQ(in.strategy, NarrowStrategy::kNone)
+    << "1.10m 处的门洞落在 1.00m 切入窗口之外，切入侧看不见它";
+
+  EXPECT_FALSE(exitClear(path, robot, 0.0, 1.20, cost_big))
+    << "1.20m 切出窗口看得见它 ⇒ 已生效的小足迹在这一段必须保持";
+}
+
+TEST(SquareExit, ExitWindowShorterThanEntryGuaranteesThrash)
+{
+  // 反过来配（切出窗口比切入窗口短）就**保证**振荡 —— 所以控制器有启动守卫
+  // 直接拒绝这种配置。这个用例说明那条守卫拦的是真问题，不是洁癖。
+  const auto cost_big = blockedBand(0.80, 1.00);
+  const auto path = straightPathX(3.0);
+  const PlanarPoint robot{0.0, 0.0};
+
+  PrealignConfig entry = defaultPrealignCfg();      // 1.00m：看得见门洞
+  EXPECT_EQ(
+    previewNarrowStrategy(path, robot, 0.0, entry, cost_big, FootprintCostFn{}).strategy,
+    NarrowStrategy::kBlocked);
+  // 切出窗口 0.60m：看不见门洞 ⇒ 判"清了" ⇒ 与切入判据同时成立 ⇒ 切入-复原-切入…
+  EXPECT_TRUE(exitClear(path, robot, 0.0, 0.60, cost_big))
+    << "两个判据同时成立即为自激；启动守卫必须拒绝 exit < entry";
+}
+
+TEST(SquareExit, ClearsOnceGateIsBehind)
+{
+  // 必须真的会清 —— 否则"迟滞"只是把锁存换了个名字，每次都走硬超时。
+  const auto cost_big = blockedBand(0.30, 0.50);
+  const auto path = straightPathX(3.0);
+  EXPECT_TRUE(exitClear(path, PlanarPoint{1.00, 0.0}, 0.0, 1.20, cost_big))
+    << "门洞已在身后、前视窗口内全开阔 ⇒ 必须判清，否则只能等硬超时";
+}
+
+TEST(SquareExit, NeedingRotationIsNotClear)
+{
+  // 🔴 刻意的保守选择：大足迹"转个朝向才过得去"(kAlignOnly)**不算**装得下。
+  // 此刻朝向锁在 square_locked_yaw_ 上，按 kAlignOnly 复原可能直接落进 253 带。
+  const auto path = straightPathX(3.0);
+  const auto need_yaw = gateNeedsFavorableYaw(0.50, 0.05);
+  const double bad_yaw = kOct * 0.5;                 // 最不利朝向
+
+  PrealignConfig cfg = defaultPrealignCfg();
+  cfg.preview_m = 1.20;
+  EXPECT_EQ(
+    previewNarrowStrategy(path, PlanarPoint{0.0, 0.0}, bad_yaw, cfg, need_yaw,
+      FootprintCostFn{}).strategy,
+    NarrowStrategy::kAlignOnly) << "前提检查：这一档确实是「转正就能过」";
+  EXPECT_FALSE(exitClear(path, PlanarPoint{0.0, 0.0}, bad_yaw, 1.20, need_yaw))
+    << "kAlignOnly 不算装得下 —— 复原后可能立刻落在膨胀带里";
+}
+
+TEST(SquareExit, ProbeCanNeverAskToShrink)
+{
+  // 切出探针故意把第二个 cost_fn 传空：它只问"大足迹过不过得去"。
+  // 若哪天有人手滑把小足迹的取值函数传进去，kAlignThenShrink 会被
+  // 当成"不清"永远卡着 —— 这个用例把"传空"这个约定钉住。
+  const auto cost_big = blockedBand(0.50, 0.70);
+  const StrategyPreview ep = previewNarrowStrategy(
+    straightPathX(3.0), PlanarPoint{0.0, 0.0}, 0.0, defaultPrealignCfg(),
+    cost_big, FootprintCostFn{});
+  EXPECT_NE(ep.strategy, NarrowStrategy::kAlignThenShrink);
+  EXPECT_EQ(ep.strategy, NarrowStrategy::kBlocked);
+}
+
+// =====================================================================
+// 🔴 重复计底盘半宽：用一条**已知宽度**的真通道把它量出来
+//
+// 这一组不是逻辑测试，是**算术回归**。上一版把足迹多边形的阈值设成 253，
+// 于是本仿真环境里每一条 0.65m 级通道都被判"连小足迹转正也过不去"
+//（实测 909 次），而真实读数是 51 次 253 / 仅 2 次 254 —— 从未真的撞上。
+//
+// 下面用带膨胀的一维代价场复现整条因果链，并把两个阈值下的结论都测出来。
+// =====================================================================
+
+namespace
+{
+constexpr double kRes = 0.05;          // 与 local/global costmap 的 resolution 一致
+
+/// 造一条沿 x 延伸、宽 width_m 的走廊（墙在 y = ±width/2），并按 nav2 的
+/// InflationLayer::computeCost 逐字生成代价：
+///   到墙距离 == 0                    -> 254
+///   到墙距离 <= inscribed_radius     -> 253
+///   否则                              -> 指数衰减(<=252)
+/// inscribed_radius 是**代价地图当前足迹**的内切半径（含 footprint_padding）。
+FootprintCostFn corridorCost(double width_m, double inscribed_radius, double lateral_half)
+{
+  const double half = width_m * 0.5;
+  return [half, inscribed_radius, lateral_half](double, double y, double) {
+      // 足迹多边形查询 = 取外轮廓上代价最大的点。走廊里最糟的两点就是
+      // 侧向最外那两点 y ± lateral_half。
+      double worst = 0.0;
+      for (const double s : {-1.0, 1.0}) {
+        const double edge = y + s * lateral_half;
+        const double d = half - std::fabs(edge);       // 到最近的墙的距离
+        double c;
+        if (d <= 0.0) {
+          c = 254.0;                                   // 轮廓已经在墙里
+        } else if (d <= inscribed_radius) {
+          c = 253.0;                                   // 膨胀内切带
+        } else {
+          c = 252.0 * std::exp(-3.0 * (d - inscribed_radius));
+        }
+        worst = std::max(worst, c);
+      }
+      return worst;
+    };
+}
+}  // namespace
+
+TEST(CorridorArithmetic, Inflation253MakesEveryRealCorridorLookBlocked)
+{
+  // 本机实测数据（nav2 自己的 calculateMinAndMaxDistances + padFootprint）：
+  //   八边形 侧向半宽 0.3894  内切(含 padding 0.01) 0.3992
+  //   正方形 侧向半宽 0.3100  内切(含 padding 0.01) 0.3200
+  const double kOctLateral = 0.3894, kOctInscribed = 0.3992;
+  const double kSqLateral = 0.3100, kSqInscribed = 0.3200;
+
+  // 用户给的场景事实：本仿真环境**没有低于 0.65m 的通道**。
+  const double kNarrowest = 0.65;
+
+  // ---- ① 正方形在 0.65m 通道里，几何上确实过得去 ----
+  EXPECT_LT(kSqLateral, kNarrowest * 0.5)
+    << "正方形侧向半宽 " << kSqLateral << " 必须 < 通道半宽 " << kNarrowest * 0.5;
+  const auto sq = corridorCost(kNarrowest, kSqInscribed, kSqLateral);
+  EXPECT_LT(sq(0.0, 0.0, 0.0), NarrowCostValues::kLethal)
+    << "阈值 254 下：正方形居中时不压障碍本体 ⇒ 过得去（正确结论）";
+
+  // ---- ② 但同一个位姿，253 阈值判它"过不去" ----
+  EXPECT_GE(sq(0.0, 0.0, 0.0), NarrowCostValues::kInscribedInflated)
+    << "轮廓落在膨胀内切带里 —— 这就是 909 次假阴性的来源";
+
+  // ---- ③ 八边形在同一通道里是**真的**过不去（轮廓已进墙）----
+  const auto oct = corridorCost(kNarrowest, kOctInscribed, kOctLateral);
+  EXPECT_GE(oct(0.0, 0.0, 0.0), NarrowCostValues::kLethal)
+    << "八边形侧向半宽 " << kOctLateral << " > 通道半宽 " << kNarrowest * 0.5
+    << " ⇒ 轮廓进墙，254 阈值下正确判过不去";
+
+  // ⇒ 换到 254 阈值后，"缩足迹"这个策略在本图上**才有区分度**：
+  //    八边形 254(过不去) / 正方形 <254(过得去) = kAlignThenShrink 成立。
+  EXPECT_LT(sq(0.0, 0.0, 0.0), oct(0.0, 0.0, 0.0))
+    << "两种足迹必须能被区分开，否则缩足迹永远不会被选中";
+}
+
+TEST(CorridorArithmetic, The253ThresholdNeedsFourTimesHalfWidth)
+{
+  // 把重复计的量级算出来：轮廓要躲开 253 带，需要
+  //     通道半宽 > 侧向半宽 + 内切半径 ≈ 2 * 侧向半宽
+  // ⇒ 通道宽 > 4 * 侧向半宽。这就是"窄于约 1.58m 恒为 253"的成因。
+  const double lat = 0.3894, ins = 0.3992;
+  const double need = 2.0 * (lat + ins);
+  EXPECT_NEAR(need, 1.5772, 1e-3);
+  // 早先记下的实测症状是"窄于 1.62m 恒为 253"，两者差 0.043m < 一个栅格 0.05m。
+  EXPECT_LT(std::fabs(need - 1.62), kRes)
+    << "推导值与当初实测的 1.62m 必须在一个栅格之内，否则成因还没找对";
+
+  // 逐个宽度扫一遍，确认 253 阈值下确实一路"过不去"直到 1.58m
+  for (double w = 0.65; w < need; w += 0.05) {
+    const auto c = corridorCost(w, ins, lat);
+    EXPECT_GE(c(0.0, 0.0, 0.0), NarrowCostValues::kInscribedInflated)
+      << "宽度 " << w << "m 在 253 阈值下应当被判过不去（这正是问题所在）";
+  }
+  const auto wide = corridorCost(need + 0.10, ins, lat);
+  EXPECT_LT(wide(0.0, 0.0, 0.0), NarrowCostValues::kInscribedInflated)
+    << "宽到 " << need + 0.10 << "m 才终于脱离 253 —— 判据的可用域只剩这些";
+}
+
+TEST(CorridorArithmetic, PlannerCenterCheckIsWhatActuallyBlocks)
+{
+  // 真正让 SmacPlanner2D 报 "Starting point in lethal space" 的是
+  // **中心格**判据：中心格代价 >= 253 ⟺ 中心到墙距离 <= 内切半径。
+  // 这一处用 253 是**对的** —— 那里膨胀带正好代表底盘尺寸。
+  const double kNarrowest = 0.65, half = kNarrowest * 0.5;
+  EXPECT_LT(half, 0.3992) << "八边形内切 0.3992 > 通道半宽 ⇒ 中心即 253，规划器拒绝";
+  EXPECT_GT(half, 0.3200) << "正方形内切 0.3200 < 通道半宽 ⇒ 中心非 253，规划器可规划";
+  // 余量只有 5mm = 0.1 个栅格。这是真实的紧张度，不是笔误 ——
+  // 想放宽只有两条路：footprint_padding 0.01->0（余量 25mm）或
+  // resolution 0.05->0.025（让 25mm 变成 1 个栅格）。
+  EXPECT_NEAR(half - 0.3200, 0.005, 1e-9);
+  EXPECT_LT(half - 0.3200, kRes) << "余量小于一个栅格 —— 这一点必须写在结论里";
 }
 
 }  // namespace astribot_s1_path_tracking
