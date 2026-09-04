@@ -459,3 +459,147 @@ class TestTickStatsWindow:
         core.drain_events()
         self._tick(core, clock, 100)
         assert core.tick_stats().count == 20
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 最大拍间隔：均值查不出瞬时停顿
+#
+# 2026-09-04 桥接被厂商底层判 `Ecat_Command_Update_Timeout`（12280000，
+# 「电机长时间没有收到指令」）而自杀退出。事后逐窗做差，崩前最后一个 10s 窗口
+# 的均值是 228.7Hz —— 完全正常，钳位 0 次。也就是说**当时能看到的所有量都指向
+# 正常**，唯一没被观测到的是最后 0.23s。
+#
+# EtherCAT 判的是**间隔**，不是均值：250Hz 下 2287 拍里插一次 0.5s 的停顿，
+# 均值只从 229 掉到 228，肉眼不可见，而 EtherCAT 早就超时了。
+# 所以这一组测试锁死的是"极值可见"，不是"均值准确"。
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestTickWindowGap:
+
+    def _core(self):
+        clock = FakeClock(100.0)
+        session = FakeSession(desired={PART: [0.0, 0.0, 0.0]},
+                              current={PART: [0.0, 0.0, 0.0]},
+                              follow_ratio=1.0)
+        cfg = ChassisBridgeConfig(enable_slam_correction=False)
+        return ChassisBridgeCore(cfg, session, FakePose(clock, pose=[0.0]*3),
+                                 clock), clock
+
+    def _tick(self, core, clock, n, period=1.0 / 250.0):
+        # 每拍喂一帧 /scan：不喂的话跑到 2.0s（=500 拍）就被 /scan 龄期联锁停用，
+        # inner_tick 提前返回、统计冻在 500 拍 —— 测的就不再是拍间隔了。
+        # 这一组专测间隔统计，所以把联锁这一路显式排除在外。
+        for _ in range(n):
+            clock.advance(period)
+            core.submit_scan_seen()
+            core.inner_tick()
+
+    def _stall(self, core, clock, seconds):
+        """制造一次纯粹的调度停顿：/scan 仍然新鲜，只有拍间隔被拉长。"""
+        clock.advance(seconds)
+        core.submit_scan_seen()
+        core.inner_tick()
+
+    def test_mean_stays_normal_while_one_stall_hides_in_it(self):
+        """★ 这次故障的形态：均值正常，极值不正常。均值一个人是不够的。"""
+        core, clock = self._core()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 2287)            # 与实测同规模的一窗
+        self._stall(core, clock, 0.5)              # 插一次 0.5s 停顿
+        core.drain_events()
+        st = core.tick_stats()
+        gap = core.consume_tick_window_gap()
+        assert st.rate_hz > 200.0, (
+            '均值被这一次停顿拖到 %.1fHz —— 那这个测试就没在测"均值看不见极值"'
+            % st.rate_hz)
+        assert gap.max_dt >= 0.49, (                 # 浮点累加，不卡死在 0.5
+            '本窗最大间隔只有 %.4fs，0.5s 的停顿没被记下来 —— '
+            'EtherCAT 会因此超时而日志里一切正常' % gap.max_dt)
+
+    def test_max_uses_unclamped_raw_not_the_clamped_dt(self):
+        """必须记 tick.raw：dt 已被 max_tick_dt_sec 削平，最大值会恒等于上限。"""
+        core, clock = self._core()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 10)
+        self._stall(core, clock, 3.0)              # 远超 max_tick_dt_sec=0.04
+        core.drain_events()
+        gap = core.consume_tick_window_gap()
+        assert gap.max_dt > 1.0, (
+            '最大间隔报 %.4fs —— 记的是钳位后的 dt（上限 0.04s），'
+            '那么无论停顿多久都只会看到 0.04' % gap.max_dt)
+
+    def test_consume_clears_so_next_window_is_not_the_old_extreme(self):
+        """★ 只读不清 = 每条日志都印同一个历史极值（陈旧读数伪装成当前读数）。"""
+        core, clock = self._core()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 10)
+        self._stall(core, clock, 0.4)
+        core.drain_events()
+        first = core.consume_tick_window_gap()
+        assert first.max_dt >= 0.39
+        self._tick(core, clock, 10)               # 第二窗全是正常拍
+        second = core.consume_tick_window_gap()
+        assert second.max_dt < 0.05, (
+            '第二窗报最大间隔 %.4fs —— 上一窗的极值没被清掉，'
+            '于是一次停顿会在之后每条日志里重复出现，看着像一直在停'
+            % second.max_dt)
+
+    def test_over_count_counts_ticks_slower_than_twice_nominal(self):
+        core, clock = self._core()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 50)                       # 4ms，正常
+        for _ in range(3):
+            self._stall(core, clock, 3.0 / 250.0)         # 12ms > 2× 标称 8ms
+        core.drain_events()
+        gap = core.consume_tick_window_gap()
+        assert gap.over_count == 3, (
+            '超 2× 标称的拍数报 %d，应为 3' % gap.over_count)
+
+    def test_first_tick_is_not_counted_as_a_gap(self):
+        """首拍 raw=None（没有参照），不是 0 间隔，也不该进极值。"""
+        core, clock = self._core()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 1)
+        assert core.consume_tick_window_gap().ticks == 0, (
+            '首拍没有参照（raw=None），被当成一次 0 间隔计进去了')
+        self._tick(core, clock, 1)
+        gap = core.consume_tick_window_gap()
+        assert gap.ticks == 1 and gap.max_dt > 0.0, (
+            '第二拍才有间隔可测，却报 ticks=%d max=%.4fs' % (gap.ticks, gap.max_dt))
+
+    def test_enable_reopens_the_gap_window(self):
+        """极值同样属于窗口：不能把上一段的停顿带进新的一段。"""
+        core, clock = self._core()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 10)
+        self._stall(core, clock, 2.0)
+        core.drain_events()
+        core.disable()
+        core.drain_events()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 10)
+        gap = core.consume_tick_window_gap()
+        assert gap.max_dt < 0.05, (
+            '新一段报最大间隔 %.4fs —— 上一段的停顿跨段带过来了' % gap.max_dt)
+        assert core.tick_stats().max_dt < 0.05, '本段最大间隔也跨段了'
+
+    def test_segment_max_survives_window_consume(self):
+        """本段最大值**不**随 consume 清零 —— 两个量的用途不同。"""
+        core, clock = self._core()
+        core.enable()
+        core.drain_events()
+        self._tick(core, clock, 10)
+        self._stall(core, clock, 0.6)
+        core.drain_events()
+        core.consume_tick_window_gap()
+        self._tick(core, clock, 10)
+        assert core.tick_stats().max_dt >= 0.59, (   # 浮点累加，不卡死在 0.6
+            '本段最大间隔被 consume 清掉了 —— 那就没有任何量记得这一段出过停顿')

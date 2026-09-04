@@ -101,8 +101,16 @@ S_TICK_DT_CLAMPED = 'TICK_DT_CLAMPED'
 #: LOOP_OVERRUN 不同，后者的周期均值是截尾样本，不能当平均周期用。
 #: ``live``：统计窗口是否**正在累积**（核心处于使能态）。停用后 count/rate 会
 #: 停在上一段使能期间的值上，若不带这个标志，陈旧读数与当前读数长得一模一样。
+#: ``max_dt``：本段内**未钳位**的最大拍间隔（秒）。均值查不出瞬时停顿 ——
+#: 2026-09-04 桥接被 EtherCAT 判「电机长时间没有收到指令」而退出时，最后一个
+#: 10s 窗口的均值是 228.7Hz（完全正常），塌陷若发生只能发生在均值抹平的尺度上。
 TickStats = collections.namedtuple(
-    'TickStats', 'count mean_dt rate_hz clamp_count clamp_ratio live')
+    'TickStats', 'count mean_dt rate_hz clamp_count clamp_ratio live max_dt')
+
+#: :meth:`ChassisBridgeCore.consume_tick_window_gap` 的返回值。
+#: ``max_dt`` 本窗最大未钳位拍间隔，``at`` 它发生的时刻（秒，单调钟），
+#: ``over_count`` 本窗超过 2× 标称步长的拍数，``ticks`` 本窗拍数。
+TickWindowGap = collections.namedtuple('TickWindowGap', 'max_dt at over_count ticks')
 
 
 class StatusEvent:
@@ -278,6 +286,16 @@ class ChassisBridgeCore:
         self._tick_count = 0
         self._tick_dt_sum = 0.0
         self._tick_clamp_count = 0
+        # 均值查不出**瞬时**停顿：2026-09-04 桥接被 EtherCAT 判「电机长时间没有
+        # 收到指令」而退出时，最后一个 10s 窗口的均值是 228.7Hz —— 完全正常。
+        # 所以另记最大拍间隔：`_tick_max_raw` 跟整段（进 TickStats），
+        # `_tick_win_*` 每次上报后由 consume_tick_window_gap 取走并清零，
+        # 于是每条日志印的是**本窗**极值，不会被历史极值盖住。
+        self._tick_max_raw = 0.0
+        self._tick_win_max_raw = 0.0
+        self._tick_win_max_at = None
+        self._tick_win_over_count = 0
+        self._tick_win_ticks = 0
 
         self._p_des_map = None
         self._p_slam_prev = None
@@ -467,6 +485,18 @@ class ChassisBridgeCore:
         dt = tick.dt
         self._tick_count += 1
         self._tick_dt_sum += dt
+        # 最大间隔必须用**未钳位**的 tick.raw：dt 已被 max_tick_dt_sec 削平，
+        # 拿它求最大值永远只能得到钳位上限本身，看不见真实停顿有多长。
+        # 首拍 raw 是 None（没有参照），跳过 —— 不是 0 间隔。
+        if tick.raw is not None and tick.raw > 0.0:
+            self._tick_win_ticks += 1
+            if tick.raw > self._tick_max_raw:
+                self._tick_max_raw = tick.raw
+            if tick.raw > self._tick_win_max_raw:
+                self._tick_win_max_raw = tick.raw
+                self._tick_win_max_at = now_tick
+            if tick.raw > 2.0 / self.cfg.freq:
+                self._tick_win_over_count += 1
         if tick.clamped:
             self._tick_clamp_count += 1
             self._emit(S_TICK_DT_CLAMPED, tick.reason,
@@ -602,7 +632,7 @@ class ChassisBridgeCore:
         """
         live = self.state == ST_ENABLED
         if self._tick_count == 0 or self._tick_first_time is None:
-            return TickStats(0, 0.0, 0.0, self._tick_clamp_count, 0.0, live)
+            return TickStats(0, 0.0, 0.0, self._tick_clamp_count, 0.0, live, 0.0)
         elapsed = self._prev_tick_time - self._tick_first_time
         # 只有一拍时 elapsed=0，此时算不出速率，报 0 而不是除零。
         rate = (self._tick_count / elapsed) if elapsed > 0.0 else 0.0
@@ -612,7 +642,27 @@ class ChassisBridgeCore:
             rate,
             self._tick_clamp_count,
             self._tick_clamp_count / self._tick_count,
-            live)
+            live,
+            self._tick_max_raw)
+
+    def consume_tick_window_gap(self):
+        """取走并清零**本窗**的拍间隔极值。
+
+        为什么是 consume 而不是只读：这个量的意义就是"上一条日志到现在"，
+        只读会让每条日志都印同一个历史最大值 —— 那正是均值查不出瞬时停顿的
+        同一类错误（一个不再更新的量被当成当前值，见 :meth:`tick_stats` 的
+        ``live`` 那段）。所以调用方每印一次就必须清一次，名字里写明是 consume。
+
+        Returns:
+            :class:`TickWindowGap`。本窗一拍都没跑时全 0 / ``at=None``。
+        """
+        gap = TickWindowGap(self._tick_win_max_raw, self._tick_win_max_at,
+                            self._tick_win_over_count, self._tick_win_ticks)
+        self._tick_win_max_raw = 0.0
+        self._tick_win_max_at = None
+        self._tick_win_over_count = 0
+        self._tick_win_ticks = 0
+        return gap
 
     def _reset_tick_window(self):
         """重开拍率统计窗口。``enable()`` 必须调 —— 否则速率分母会含停机时长。"""
@@ -621,6 +671,11 @@ class ChassisBridgeCore:
         self._tick_count = 0
         self._tick_dt_sum = 0.0
         self._tick_clamp_count = 0
+        self._tick_max_raw = 0.0
+        self._tick_win_max_raw = 0.0
+        self._tick_win_max_at = None
+        self._tick_win_over_count = 0
+        self._tick_win_ticks = 0
 
     def reset_tick_stats(self):
         """重置拍率统计窗口。诊断时想看"当前"拍率而非整段使能的均值时用。"""

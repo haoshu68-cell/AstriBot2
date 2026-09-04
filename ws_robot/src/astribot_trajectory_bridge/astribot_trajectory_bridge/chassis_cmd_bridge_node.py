@@ -352,6 +352,9 @@ class ChassisCmdBridgeNode(Node):
             return
         self._rate_report_countdown = self._rate_report_period_ticks
         st = self.core.tick_stats()
+        # 必须**无条件**取走本窗极值，哪怕这一轮不打印：留着不清，下一条日志
+        # 就会把停用期之前的极值当成本窗的印出来（陈旧读数伪装成当前读数）。
+        gap = self.core.consume_tick_window_gap()
         if st.count == 0:
             return
         if not st.live:
@@ -367,11 +370,18 @@ class ChassisCmdBridgeNode(Node):
         self.get_logger().info(
             '内环实测拍率 %.1fHz（标称 %.1f，比例 %.2f）平均步长 %.4fs '
             '本段累计 %d 拍，钳位 %d 次(%.2f%%)。'
+            '本窗 %d 拍最大间隔 %.4fs(=%.1fHz 瞬时，超 2× 标称的 %d 拍)，'
+            '本段最大间隔 %.4fs。'
             '★ 拍率只反映调度 —— 积分已改用实测 dt，拍率低不再等于速度损失。'
-            '★ 统计窗口在每次 enable 时重开，所以这是**本段**均值。'
+            '★ 均值查不出瞬时停顿，所以**最大间隔**才是判"有没有断供"的量：'
+            'EtherCAT 的「电机长时间没有收到指令」只看间隔，不看均值。'
+            '★ 统计窗口在每次 enable 时重开，所以均值是**本段**的。'
             % (st.rate_hz, self.core.cfg.freq,
                st.rate_hz / self.core.cfg.freq if self.core.cfg.freq else 0.0,
-               st.mean_dt, st.count, st.clamp_count, 100.0 * st.clamp_ratio))
+               st.mean_dt, st.count, st.clamp_count, 100.0 * st.clamp_ratio,
+               gap.ticks, gap.max_dt,
+               (1.0 / gap.max_dt) if gap.max_dt > 0.0 else 0.0,
+               gap.over_count, st.max_dt))
 
     def _publish_odom(self):
         """把 SDK 的底盘位姿发成 Odometry。
