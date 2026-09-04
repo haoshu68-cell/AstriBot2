@@ -34,6 +34,7 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <cmath>
 
 #include "astribot_s1_path_tracking/align_math.hpp"
 #include "astribot_s1_path_tracking/narrow_math.hpp"
@@ -183,7 +184,7 @@ private:
   // ---- 状态 ----
   nav_msgs::msg::Path plan_;
   Phase phase_{Phase::kDone};
-  rclcpp::Time phase_started_;
+  rclcpp::Time phase_started_{0, 0, RCL_ROS_TIME};   // 时钟源必须显式给，默认是 SYSTEM_TIME、与 clock_->now() 相减即抛
   double start_heading_{0.0};
   bool start_heading_valid_{false};
   /// 上一条路径的终点，用于区分「新目标」与「同一目标的周期性重规划」。
@@ -197,7 +198,12 @@ private:
   /// 足迹已脱离致命带的连续拍数（退出用）。
   int narrow_clear_hits_{0};
   bool narrow_engaged_{false};
-  rclcpp::Time narrow_started_;
+  /// 本次接管的起始时刻。**必须显式指定 RCL_ROS_TIME**：默认构造是
+  /// RCL_SYSTEM_TIME，与 clock_->now() 相减会抛 "different time sources
+  /// [1 != 2]"。原先只有接管中才相减所以从未暴露；2026-09-03 加了每拍都问的
+  /// 最短驻留判据后，controller 逐拍抛异常、follow_path 逐拍 Aborting，
+  /// 机器人一步没走。时钟源不匹配是编译期看不出、运行期必炸的一类错。
+  rclcpp::Time narrow_started_{0, 0, RCL_ROS_TIME};
   /// 本次 setPlan 以来**连续**几次贴边都没穿过去。
   ///
   /// 语义是「连续失败次数」，不是「贴过几次边」——穿成功一次就清零。
@@ -256,8 +262,10 @@ private:
   double narrow_scan_half_width_m_{0.30};
   /// 横向扫描步长(m)。必须远小于栅格 0.05 —— 目标区间只有 0.032m 宽。
   double narrow_scan_step_m_{0.01};
-  /// 有利朝向周期(rad)。正八边形足迹 = pi/4。
-  double narrow_favorable_period_rad_{0.7853981634};
+  /// 朝向等价周期(rad)。**必须 pi/2**，两种足迹统一。语义与不能取 pi/4 的
+  /// 理由见 narrow_math.hpp 的 PrealignConfig::favorable_period_rad。
+  /// 启动时逐个足迹用 periodPreservesLateralExtent() 校验，不成立即拒绝启动。
+  double narrow_favorable_period_rad_{M_PI / 2.0};
   /// 估通道方向的前视弧长(m)。
   double narrow_heading_lookahead_m_{0.40};
   /// 卡住判据：这么久没有**弧长进展**就算原地蹭(s)。
@@ -273,6 +281,33 @@ private:
   double narrow_hard_timeout_sec_{120.0};
   /// 进展判据的跨拍状态。每次进入接管重置，**换路径时也重置**。
   NarrowProgressState narrow_progress_{};
+  /// 「代价场饱和 + 内层无进展」检测器状态。跑在早退**之前**。
+  NarrowStallState narrow_stall_{};
+  /// 本次接管是否由「饱和无进展」这条第二入口进来的。
+  /// 🔴 迟滞两侧必须同源：由 253 进来的，脱离判据也用 253（不是 254），
+  ///    否则接管的同一拍就满足「足迹 < 254」的脱离条件，保证振荡。
+  bool narrow_via_saturation_{false};
+  /// 由第二入口接管的累计次数。上报在统计行里，用于判这条入口有没有在乱开。
+  int narrow_saturation_engagements_{0};
+  /// 由第二入口接管后的**最短驻留**。代价掉下 253 在这段时间内不足以退出。
+  ///
+  /// 🔴 为什么必须有（2026-09-03 实测）：只把脱离阈值从 254 改成 253 仍然振荡，
+  /// 因为这一类通道的代价场不是平的 253，而是 229~253 的纹理（贴边层自己的
+  /// 横向扫描当场报回 229/233/249/253）。机器人一边原地转，当前位姿的八边形
+  /// 代价就会自己掉到 233 < 253 ⇒ 3 拍脱离命中 ⇒ 立刻交回 MPPI。
+  /// 实测 18 次接管里 13 次时长只有 0.35~1.80s，而接管起手的朝向误差是
+  /// 0.42~0.77rad、闸门 0.12rad、wz 上限 0.20rad/s ⇒ **转正就需要 1.5~3.3s**，
+  /// 于是 37 个接管拍里 27 拍是纯原地转(vx=0)、一次都没转完就被赶出去，
+  /// 出去后 MPPI 又转回它自己的朝向、再卡 3s、再从同样的 0.44rad 重来。
+  ///
+  /// 这就是「迟滞同源」的另一半：上一轮只对齐了**阈值**(253 对 253)，
+  /// 没对齐**变量** —— 入口问的是「有没有推进」，出口问的却是「代价高不高」。
+  /// 最短驻留把出口重新压回入口那个变量上：先给足能转正的时间，
+  /// 再谈代价掉没掉。这个下界不是调出来的，是算出来的：
+  ///     朝向误差到最近有利朝向 <= narrow_favorable_period/2
+  ///     转正耗时 <= (narrow_favorable_period/2) / narrow_wz_max = 0.785/0.20 = 3.93s
+  /// 故默认 4.0s，且启动守卫强制 >= 该算术下界、< 卡住判据(6s)。
+  double narrow_saturation_min_dwell_sec_{4.0};
   /// 上一拍看到的路径终点与点数，用来识别"路径被重规划换掉了"。
   ///
   /// 必须有：进展高水位是跨拍保留的，而换目标时剩余弧长会整体跳变
@@ -311,7 +346,7 @@ private:
   /// 是否正在预对齐（原地转）。
   bool prealign_active_{false};
   double prealign_target_yaw_{0.0};
-  rclcpp::Time prealign_started_;
+  rclcpp::Time prealign_started_{0, 0, RCL_ROS_TIME};   // 时钟源必须显式给，默认是 SYSTEM_TIME、与 clock_->now() 相减即抛
   /// 本目标已用掉的预对齐次数。
   int prealign_used_{0};
 
@@ -382,6 +417,11 @@ private:
   double footprint_default_circumscribed_{0.0};
   double footprint_narrow_inscribed_{0.0};
   double footprint_narrow_circumscribed_{0.0};
+  /// 对齐到通道方向后（delta=0）两种足迹的**侧向半宽**。
+  /// 🔴 通道能不能过只取决于这个量，不是内切/外接半径。
+  ///    切换的收益判据、以及"切了是否真的更窄"的运行期断言都用它。
+  double footprint_default_lateral_{0.0};
+  double footprint_narrow_lateral_{0.0};
   /// 启动守卫：小足迹内切半径不得小于底盘物理包络，防打错字缩到比躯干还小。
   double chassis_min_envelope_radius_{0.30};
   /// 小足迹最长生效时长(s)。红线：所有受限动作必须带超时。
@@ -422,15 +462,15 @@ private:
   bool square_active_{false};
   /// 已请求但还没回读验证通过。
   bool square_pending_{false};
-  rclcpp::Time square_requested_;
-  rclcpp::Time square_activated_;
-  rclcpp::Time square_last_lease_;
+  rclcpp::Time square_requested_{0, 0, RCL_ROS_TIME};   // 时钟源必须显式给，默认是 SYSTEM_TIME、与 clock_->now() 相减即抛
+  rclcpp::Time square_activated_{0, 0, RCL_ROS_TIME};   // 时钟源必须显式给，默认是 SYSTEM_TIME、与 clock_->now() 相减即抛
+  rclcpp::Time square_last_lease_{0, 0, RCL_ROS_TIME};   // 时钟源必须显式给，默认是 SYSTEM_TIME、与 clock_->now() 相减即抛
   /// 请求缩足迹时锁定的目标朝向（失去对齐要转回它，而不是复原足迹）。
   double square_locked_yaw_{0.0};
   /// 复原时刻（冷却期起点）。⚠️ 必须配 valid 标志：默认构造的 rclcpp::Time 是
   /// RCL_SYSTEM_TIME，与节点时钟(RCL_ROS_TIME)相减会**抛异常**，不是返回大值。
   bool square_cooldown_valid_{false};
-  rclcpp::Time square_cooldown_started_;
+  rclcpp::Time square_cooldown_started_{0, 0, RCL_ROS_TIME};   // 时钟源必须显式给，默认是 SYSTEM_TIME、与 clock_->now() 相减即抛
   /// 切出判据连续成立的拍数。
   int square_exit_clear_hits_{0};
 
@@ -438,10 +478,26 @@ private:
   int square_verify_fail_count_{0};
   int square_revert_cleared_{0};      ///< 因大足迹重新装得下而复原
   int square_revert_timeout_{0};      ///< 因硬超时而复原
+  /// 是否正处于小足迹生效状态（含"已请求待回读确认"）。
+  ///
+  /// 供 evaluateNarrow 的"便宜早退"开例外用：缩足迹成功后 footprint_cost
+  /// 正好从 254 掉到 253，早退条件命中，贴边通行层就不接管了，控制权落回
+  /// 内层 MPPI —— 而那一段代价恒 253、零梯度，MPPI 只会来回蹭到硬超时。
+  [[nodiscard]] bool squareActive() const {return square_active_ || square_pending_;}
+
   int square_realign_count_{0};       ///< 生效期间失去对齐 -> 保持小足迹、重新对齐
+  /// 是否正处于"接管旋转、等对齐到 yaw_resume_rad"的状态（朝向层迟滞的锁存位）。
+  ///
+  /// 没有这个锁存位就没有迟滞：切入切出同一个阈值 ⇒ 在闸门上自激。
+  /// 实测 749 次重新对齐、30s 硬超时窗口内一步没前进 ⇒ "能进不能出"。
+  bool square_realigning_{false};
   int square_suppressed_dwell_{0};    ///< 切出判据已成立但被最短驻留压住的拍数
   int square_suppressed_cooldown_{0}; ///< 想切入但被冷却期挡掉的拍数
   int square_exit_degraded_{0};       ///< 拿不到路径、退化成只看当前位姿判切出的拍数
+  /// 第二入口接管期间，「足迹已脱离致命带」但被最短驻留压住的拍数。
+  /// 与 square_suppressed_dwell_ 刻意分开：那是方形足迹层的切出计数，
+  /// 两层的驻留阈值不同(4.0s vs 2.0s)，混用会把两个现象记成一个数。
+  int narrow_suppressed_dwell_{0};
   /// 前视判定为「缩足迹能过」的拍数 —— 即**本功能有用武之地的拍数**。
   ///
   /// 🔴 为什么必须单独计：它的对照量 prealign_blocked_even_favorable_
@@ -449,6 +505,8 @@ private:
   ///    且没有累计值**，只能数到 1 行 —— 两个数根本不可比，而"790 : 1"这个
   ///    比值恰恰是决定这功能该不该留下的唯一依据。节流日志不能当事件计数器。
   int square_applicable_ticks_{0};
+  /// 因「切了反而更宽」而被运行期断言拒绝的次数。>0 就说明周期/足迹配错了。
+  int square_refused_wider_{0};
 
   /// ⚠️ 必须是 LifecyclePublisher 而不是 rclcpp::Publisher：后者能编译
   /// （LifecyclePublisher 继承自它），但拿不到 on_activate()，而**未激活的
@@ -467,6 +525,10 @@ private:
 
   /// 回读 global costmap 的足迹顶点数是否已等于期望值。
   bool footprintVerified(std::size_t want_vertices) const;
+
+  /// 校验「按 narrow_favorable_period 取模」对该足迹是否保侧向包络。不成立即抛。
+  void checkPeriodPreservesLateral(
+    const std::vector<geometry_msgs::msg::Point> & fp, const char * what) const;
 
   /// 复原到默认足迹并清状态。why 会进日志。**幂等**，随时可调。
   /// 副作用：开启冷却期（防"复原-立刻再切"自激）。

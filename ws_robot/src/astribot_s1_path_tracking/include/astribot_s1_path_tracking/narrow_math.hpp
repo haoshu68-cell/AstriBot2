@@ -53,6 +53,8 @@
 #include <functional>
 #include <vector>
 
+#include <cmath>
+
 #include "astribot_s1_path_tracking/align_math.hpp"     // PlanarPoint / normalizeAngle 约定
 
 namespace astribot_s1_path_tracking
@@ -137,7 +139,94 @@ struct NarrowTriggerConfig
   double center_lethal_threshold{NarrowCostValues::kInscribedInflated};
   /// 连续多少拍满足条件才接管。避免边界抖动导致反复切换控制律。
   int trigger_ticks{3};
+
+  // ---- 「代价场饱和 + 内层无进展」这条**第二入口** ----
+  //
+  // 为什么需要它：上面的 footprint_lethal_threshold 必须是 254（重复计半宽的
+  // 算术在 NarrowCostValues 顶部），但 254 这个值在**整整一类通道里永不出现**。
+  //
+  // 2026-09-03 实测（本图 y=-5.82、x=2.00→4.25 共 2.25m 通道，costmap_raw）：
+  //     足迹多边形代价  恒 253，一次 254 都没有
+  //     中心格代价      63 → 216（峰值 216），从不 >= 253
+  //     净宽            1.05~1.80m（八边形只要 0.86m，本来就过得去）
+  // 于是 ①②④ 三条判据全不成立 ⇒ 本层一次都不接管。日志侧独立佐证：
+  // 5 条同一目标的腿，「需缩足迹才过得去」触发 0 次；而机器人确实过不去，
+  // 停在 x≈2.02~2.14（5 次实测），81 次 "Failed to make progress"。
+  //
+  // 真正挡路的不是 253，是**膨胀梯度本身**：中心代价 63→216 的斜坡上
+  //     CostCritic        3.81 x 代价        ~几百
+  //     ObstaclesCritic   1.5 x (0.65-dist)  ~几百
+  //     PathFollowCritic  5.0 x 剩余距离     ~10
+  // 拉它前进的项比推它后退的项小一个数量级，MPPI 的最优解就是停在坡脚 ——
+  // 机器人实测停位正好在坡脚。这类"过得去但内层不肯走"的情形，
+  // 254/253 两个硬判据在原理上都测不到，只能由**实测无进展**来测。
+  //
+  // 🔴 为什么饱和不能单独作为入口：253 在本图占可行域 35%，
+  //    只看饱和就接管 = 全程 0.1m/s 贴边走。所以饱和是**必要条件**，
+  //    触发条件是「饱和 且 内层在 FOLLOW 相位下实测没推进」。
+  /// 判「代价场饱和」的阈值。253：多边形最外侧格已进膨胀致命带 ⇒ 零梯度。
+  /// 必须 < footprint_lethal_threshold，否则这条入口与 ④ 重合、等于没加。
+  double saturation_threshold{NarrowCostValues::kInscribedInflated};
+  /// 无进展观察窗口(s)。必须 > 内层一次重规划周期(实测 1.05s)，否则
+  /// 换路径造成的一拍停顿会被误判成卡住。
+  double saturation_stall_sec{3.0};
+  /// 窗口内位移小于此值判「没推进」(m)。取 0.05 = 一个栅格，低于此
+  /// 无法与定位噪声区分。
+  /// 窗口内的推进量门槛：低于此即判内层无进展。**不是"一个栅格"**。
+  ///
+  /// 🔴 曾经取 0.05m（一个栅格，"低于此与定位噪声不可分"）。实测否掉了：
+  /// MPPI 在膨胀坡脚不是完全不动，而是**蠕行** —— 18 秒净位移 0.1046m、
+  /// 累计行程 0.2800m，任意 3s 窗口内最大位移 0.0937m > 0.05m，
+  /// 于是窗口被"走一点停一点"一次次重开，第二入口整段只报了 1 次、
+  /// 一次都没能凑够消抖拍数（实测 窄通道接管启动 = 0），机器人停在 x≈2.24。
+  /// 「有没有动」是错的问题；对的问题是「推进得比本层还慢吗」。
+  ///
+  /// 门槛的三个实测锚点（同一张图、同一窗口 3.0s）：
+  ///     蠕行         0.0937m  (0.0061 m/s 净)   <- 必须触发
+  ///     半速门槛     0.1500m  = (v_along/2) * 3.0s
+  ///     健康通行     0.2940m  (0.1022 m/s，phase5 成功段实测) <- 必须不触发
+  ///     本层可达     0.3000m  = v_along * 3.0s（启动守卫的硬上界）
+  /// 两侧余量各约 2 倍。取半速是因为交接只在"本层更快"时才有意义。
+  double saturation_min_move_m{0.15};
 };
+
+/// 「饱和且无进展」检测器的状态。**只累计，不判断朝向**。
+///
+/// 用欧氏位移而不是沿路径弧长：这条检测器要跑在早退**之前**，
+/// 那时还没付路径变换的开销（付了就没有早退的意义了）。窄通道里横移
+/// 造不出假进展 —— 通道宽度本身就是横移上限。
+struct NarrowStallState
+{
+  /// 窗口起点位姿与时刻。has_anchor=false 表示窗口还没开。
+  bool has_anchor{false};
+  double anchor_x{0.0};
+  double anchor_y{0.0};
+  double anchor_sec{0.0};
+  /// 上一拍判定结果。给日志与迟滞用，不参与判定。
+  bool stalled{false};
+};
+
+/// 更新「饱和且无进展」检测器。**纯函数语义**：只读入本拍观测，改 state。
+///
+/// @param saturated   本拍足迹代价是否 >= saturation_threshold
+/// @param following   本拍是否处于 FOLLOW 相位（原地对齐时不算卡住）
+/// @param x,y         机器人当前位置（costmap 全局系）
+/// @param now_sec     当前时刻
+/// @return true = 已连续 saturation_stall_sec 内位移 < saturation_min_move_m
+///
+/// 语义要点：
+///   · saturated 或 following 任一为假 ⇒ 窗口**关闭并清空**（不是暂停）。
+///     暂停会让"走一段-停一段"累计成假卡住。
+///   · 位移一旦超阈 ⇒ 窗口以当前位姿**重开**（推进过就不算卡）。
+///   · 判定为真后窗口**不自动清**：由调用方在真正接管或脱离饱和时清。
+bool updateSaturationStall(
+  bool saturated,
+  bool following,
+  double x,
+  double y,
+  double now_sec,
+  const NarrowTriggerConfig & cfg,
+  NarrowStallState & state);
 
 /// 触发判定。**只做判断，不产生指令。**
 ///
@@ -169,11 +258,20 @@ struct NarrowTriggerConfig
 /// @param footprint_cost   **当前朝向**下的足迹最大代价，用于判「是否在窄通道档」
 /// @param favorable_cost   **最有利朝向**下的足迹最大代价，用于判红线
 /// @param have_path        是否有可用全局路径
+/// @param saturated_stalled 「代价场饱和 且 内层实测无进展」（updateSaturationStall
+///                          的返回值）。为真时 ④ 那条早退不再放行 —— 这是
+///                          254 永不出现的那一类通道唯一的入口，理由见
+///                          NarrowTriggerConfig::saturation_threshold 上方。
+/// @param already_engaged  本层是否**已经**接管。为真时 ④ 那条不再问
+///                          saturated_stalled —— 入口判据不得复用为每拍的
+///                          驾驶判据，理由与实测见函数体里的「例外五」。
 NarrowVerdict evaluateNarrowTrigger(
   double center_cost,
   double footprint_cost,
   double favorable_cost,
   bool have_path,
+  bool saturated_stalled,
+  bool already_engaged,
   const NarrowTriggerConfig & cfg);
 
 /// 八边形（或任意 n 边正多边形）的**有利朝向误差**。
@@ -261,6 +359,22 @@ struct NarrowLimits
   /// 这是本层最关键的一条：在 0.776~0.84 区间里，朝向不对就是过不去，
   /// 带着错的朝向往前走等于往卡死里走。
   double yaw_gate_rad{0.12};
+  /// 接管旋转后**交回内层**的更严阈值(rad)。必须 < yaw_gate_rad。
+  ///
+  /// 为什么必须是独立的第二个数，而不是复用 yaw_gate_rad：
+  /// 复用一个数 = 没有迟滞 = 保证在闸门上自激。实测（小足迹生效期间）：
+  ///   误差 0.121 > 闸门 0.120  -> 接管纯旋转、平移置零
+  ///   转到 0.1199              -> 交回内层
+  ///   内层一往前走             -> 又超 0.120
+  /// 于是 30s 硬超时窗口内「重新对齐」累计 749 次、机器人一步没往前挪，
+  /// 最后被硬超时踢回八边形 —— 现象是「能进不能出」，而每条日志都合理。
+  /// 实测误差分布 min=0.120 p50=0.131 p95=0.215 max=0.215：全部紧贴闸门，
+  /// 说明机器人从未真跑偏，只是在边界上擦边。
+  ///
+  /// 取值必须让迟滞带覆盖抖动：0.06 使带宽 0.120-0.060=0.060rad，
+  /// 是实测 p95 超出量(0.215-0.120=0.095)的量级，且 0.06rad=3.4° 远小于
+  /// 「朝向不对就过不去」所要求的精度，不会削弱通行能力。
+  double yaw_resume_rad{0.06};
 };
 
 /// 一拍的贴边通行指令（车体系，全向底盘）。
@@ -342,8 +456,21 @@ struct PrealignConfig
   /// 求每个采样点的通道方向(切向)时用的前视弧长(m)。
   /// 与 narrow_heading_lookahead 同一个量，**共用一个值**，不另设阈值。
   double tangent_lookahead_m{0.40};
-  /// 有利朝向周期(rad)。正八边形 = pi/4。
-  double favorable_period_rad{0.7853981634};
+  /// 朝向等价周期(rad)。**必须 pi/2**，两种足迹统一。
+  ///
+  /// 🔴 语义是「对齐目标 = 通道(路径)方向本身」，这个周期只表示
+  ///    "转 90° 的整数倍在几何上是同一个姿态，不必白转"。
+  ///    它**不是**"允许偏离多少"——那是 yaw_gate_rad 的事。
+  ///
+  /// 🔴 为什么不能是 pi/4（2026-09-03 实测事故）：pi/4 是**八边形**的对称周期，
+  ///    对正方形不成立。共享 pi/4 时，机器人朝向落在通道方向 ±30°~60° 会算出
+  ///    "有利朝向 = 通道+45°"，那是正方形的**对角朝墙**：
+  ///        面朝墙 0.3100  /  对角朝墙 0.4384（比八边形的 0.4200 还宽）
+  ///    于是"缩足迹"把足迹放大，机器人转到最坏姿态再去挤窄处。
+  ///
+  /// 合法性不是靠推理保证的：启动时对**每一个**参与的足迹调用
+  /// periodPreservesLateralExtent() 校验，不成立就拒绝启动。
+  double favorable_period_rad{M_PI / 2.0};
   /// 足迹**多边形**过不去的阈值。与 narrow_footprint_lethal_threshold 同值。
   /// 🔴 必须 254：本结构里所有查询都是 footprintCostAtPose（多边形），
   ///    用 253 会重复计底盘半宽（见 NarrowCostValues 顶部）。
@@ -387,6 +514,38 @@ PrealignPreview previewFavorableAlignment(
   double robot_yaw,
   const PrealignConfig & cfg,
   const FootprintCostFn & cost_fn);
+
+/// 足迹在「垂直于通道方向」上的**半宽**。这是判断"过不过得去"的唯一几何量 ——
+/// 通道能不能过，只取决于足迹在垂直于通道那个方向上占多宽。
+///
+/// 🔴 为什么必须有这个函数：2026-09-03 的实测事故。当时用一个共享的
+///    favorable_period = pi/4（**八边形**的对称周期）算出"有利朝向"，
+///    再拿它同时评估两种足迹。于是当机器人朝向落在通道方向 ±30°~60° 时，
+///    算出的有利朝向是 通道+45° —— 正方形在那里是**对角朝墙**：
+///        面朝墙 0.3100  /  对角朝墙 0.4384（比八边形的 0.4200 还宽！）
+///    也就是"缩足迹"反而把足迹放大，机器人转到最坏姿态再去挤。
+///    有了这个函数，"切了是否真的更窄"就成了一个可以直接断言的数。
+///
+/// 推导（只依赖 delta = 机器人朝向 - 通道方向）：
+///   顶点 (x,y) 转到世界系再投影到通道法向 n=(-sin phi, cos phi)，
+///   化简后 = |x*sin(delta) + y*cos(delta)|，与 phi 本身无关。
+///
+/// @param footprint 车体系足迹多边形（>=3 点，否则返回 0）
+/// @param delta_yaw 机器人朝向减通道方向(rad)
+/// @return 半宽(m)。通道宽度必须 > 2*该值才可能通过。
+double lateralHalfExtent(const std::vector<PlanarPoint> & footprint, double delta_yaw);
+
+/// 某个足迹在「按 period 取模」这件事上是否**保几何**。
+///
+/// 只有当 lateralHalfExtent(fp, d) == lateralHalfExtent(fp, d + k*period) 对所有 d
+/// 都成立时，把朝向按 period 取模才是合法的等价 —— 否则"同余类"里就藏着
+/// 侧向包络完全不同的姿态，那正是上面那场事故的根源。
+///
+/// 用法：启动时对**每一个**参与的足迹调用它校验 narrow_favorable_period，
+/// 不成立就拒绝启动，而不是默默按错的周期跑。
+/// @param tol_m 允许的半宽差(m)。建议取远小于栅格分辨率的值。
+bool periodPreservesLateralExtent(
+  const std::vector<PlanarPoint> & footprint, double period_rad, double tol_m);
 
 /// 原地旋转的**扫掠通路校验**。承诺转向之前必须过这一关。
 ///
@@ -458,6 +617,11 @@ struct StrategyPreview
   NarrowStrategy strategy{NarrowStrategy::kNone};
   /// 应当转到的目标朝向(rad)。kAlignOnly / kAlignThenShrink 时有意义。
   double target_yaw{0.0};
+  /// 该采样点处的通道(路径)方向(rad)。
+  /// 🔴 必须带出来：调用方要用 target_yaw - corridor_heading 去核对
+  ///    "切了之后是不是真的更窄"。若改成由 period 反推，那条断言就成了
+  ///    同义反复 —— 事故当天缺的正是一条**独立**的核对。
+  double corridor_heading{0.0};
   /// 触发点距机器人的弧长(m)。
   double at_distance_m{0.0};
   /// 实际扫过的采样点数。报 kNone 时必须 > 0，否则与故障无法区分。
@@ -603,6 +767,42 @@ bool narrowStalled(
 /// `fabs(yaw_error) > yaw_gate_rad`，靠注释约定"必须逐字一致"——
 /// 那种约定会漂，而漂的后果是"闸门关着却在累计无进展"，即误杀。
 [[nodiscard]] bool yawGateHolding(double yaw_error, double yaw_gate_rad);
+
+/// 第二入口最短驻留的**算术下界**：转正到最近有利朝向最多要多久。
+///
+/// 误差到最近有利朝向 <= favorable_period/2，角速度上限 wz_max
+/// ⇒ 上界 (favorable_period/2)/wz_max。驻留短于它，接管必然在还没转正时
+/// 就被代价纹理赶出去 —— 实测 18 次接管里 13 次就是这样（0.35~1.80s）。
+[[nodiscard]] double saturationAlignBoundSec(double favorable_period_rad, double wz_max);
+
+/// 由第二入口接管期间，是否还在最短驻留内（= 代价掉下阈值也不许退出）。
+///
+/// 🔴 存在的理由是「迟滞同变量」，不只是同阈值：入口问的是「有没有推进」，
+/// 而出口原本问的是「代价高不高」。这一类通道的代价场是 229~253 的纹理，
+/// 机器人原地转的过程中当前位姿代价会自己掉到 233 < 253，于是在**转正之前**
+/// 就满足脱离条件、交回 MPPI、MPPI 再转回去再卡住 —— 保证振荡。
+///
+/// @param engaged        本拍是否处于接管中
+/// @param via_saturation 本次接管是否由第二入口进来（不是的走原来的 254 判据）
+/// @param engaged_sec    已接管时长(s)。负值（时钟回跳）按不保持处理
+/// @param min_dwell_sec  最短驻留(s)，须 >= saturationAlignBoundSec()
+[[nodiscard]] bool saturationDwellHolding(
+  bool engaged, bool via_saturation, double engaged_sec, double min_dwell_sec);
+
+/// 接管期间是否应当**退出**（把方向盘交回内层）。
+///
+/// 🔴 这个函数存在的唯一理由是「出口只能有一个」。原来退出判据散落在两处：
+///    早退路径问了 saturationDwellHolding，而 kNone 分支那条 disengageNarrow
+///    **完全没问**。于是 banner 打印「最短驻留=4.0s」，真实退出只需
+///    narrow_clear_ticks=3 拍 = 0.15s ——「配置写着 4s，实际 0.15s」这种偏差
+///    在日志里看不出来，只能靠实测接管时长发现（实测 0.45s）。
+///    把两个条件收进一个纯函数并配测试，是为了让"漏问一项"变成编译期/测试期
+///    可见的事，而不是又一次靠跑车才发现。
+///
+/// @param clear_hits    连续脱离致命带的拍数
+/// @param need          需要连续几拍（narrow_clear_ticks，须 >= 1）
+/// @param dwell_holding saturationDwellHolding 的结果
+[[nodiscard]] bool narrowShouldDisengage(int clear_hits, int need, bool dwell_holding);
 
 /// 路径是否被换掉了（重规划）。换了就必须重开进展窗口。
 ///

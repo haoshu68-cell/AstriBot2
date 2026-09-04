@@ -130,6 +130,37 @@ Phase advancePhase(
       return (std::fabs(goal_error_rad) <= align_tol_rad) ? Phase::kDone : Phase::kAlignGoal;
 
     case Phase::kDone:
+      // 🔴 kDone **不是吸收态**。这里曾经写成 `return Phase::kDone;`，后果是
+      //    机器人到了路径末端附近就永久停车、整段目标跑到超时。
+      //
+      //    实测证据（远端目标 5.88,-5.86 那一腿）：
+      //      t+45.5s  ALIGN_GOAL -> DONE : 本段完成
+      //      随后 135s 内 /cmd_vel 共 2589 帧，**非零线速度 0 帧**、max‖v‖=0.0000、
+      //      净位移 0.048m；日志里每 ~11s 一轮
+      //        Failed to make progress -> Aborting handle -> 清 costmap + spin 恢复
+      //        -> Received a goal -> setPlan(same_goal=true) 保持相位 -> 又是零速
+      //      共 12 轮，直到调用方 180s 主动取消。日志里 **从未**出现
+      //      "Reached the goal!" —— 即 nav2 的 GoalChecker 一次都没判到位。
+      //
+      //    机制：本控制器的 dist_to_goal 是量到 plan_.poses.back()，只在进入
+      //    kDone 的**那一拍**成立。之后 1Hz 重规划换了 135 次路径、恢复行为还把
+      //    机器人原地转了（|wz| 到 1.5，那是 behavior_server 不是本层），
+      //    机器人早已滑出容差；而 GoalChecker 每拍都在量、每拍都说没到。
+      //    两边判据相同、参照点相同，唯一的差别就是**本层锁存了、它没有**。
+      //
+      //    结论：到位的裁判权在 GoalChecker，本层的 kDone 只是一个意见。
+      //    意见的前提（dist <= xy_tol）不再成立时必须撤回，回到 kFollow 继续开。
+      //
+      //    ⚠️ 退出阈值只能用 xy_tol_m 本身，**不许**为了防抖把它放宽。
+      //       放宽到 exit_tol > xy_tol 会造出死区 (xy_tol, exit_tol]：在那一段里
+      //       本层认为"还算到了"故停车，GoalChecker 认为"没到"故不结束 ——
+      //       正是上面那个死锁原样复现。用同一个阈值时死区为空集。
+      //       边界上的抖动是"贴着容差反复轻推"，那是期望行为（推到 GoalChecker
+      //       认账为止），且窄通道层的停滞检测仍在兜底；与
+      //       yaw 闸门那种"两侧都在开车"的自激不是一回事。
+      if (dist_to_goal_m > xy_tol_m) {
+        return Phase::kFollow;
+      }
       return Phase::kDone;
   }
   return Phase::kDone;

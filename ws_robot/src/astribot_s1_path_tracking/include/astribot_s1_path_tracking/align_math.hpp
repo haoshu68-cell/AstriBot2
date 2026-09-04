@@ -38,6 +38,11 @@ bool isSameGoal(const PlanarPoint & prev_end, const PlanarPoint & cur_end, doubl
 
 /// 三段式的相位。kDone 只表示「本控制器认为没有更多主动动作」，
 /// 是否真的算到达仍由 nav2 的 GoalChecker 判定 —— 两者刻意分开。
+///
+/// 因此 kDone **不是吸收态**：它是一个可撤回的意见。路径末端一旦跑出位置容差
+/// （1Hz 重规划换路径、恢复行为把机器人原地转走都会造成这个），必须退回 kFollow
+/// 继续开。写成吸收态的后果是永久停车 + 整段目标跑到超时，见 align_math.cpp
+/// 里 kDone 分支的实测记录。
 enum class Phase
 {
   kAlignStart,

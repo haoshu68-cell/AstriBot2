@@ -34,6 +34,8 @@ NarrowVerdict evaluateNarrowTrigger(
   double footprint_cost,
   double favorable_cost,
   bool have_path,
+  bool saturated_stalled,
+  bool already_engaged,
   const NarrowTriggerConfig & cfg)
 {
   // ① 🔴 红线最先判：**转到最有利朝向后仍然**压到真障碍(254)。
@@ -62,13 +64,103 @@ NarrowVerdict evaluateNarrowTrigger(
     return NarrowVerdict::kNoPath;
   }
 
-  // ④ 足迹没碰致命带 ⇒ MPPI 有正常梯度，不需要接管。
+  // ④ 足迹没碰致命带 ⇒ **通常**说明 MPPI 有正常梯度，不需要接管。
+  //
+  //    🔴 例外（2026-09-03 实测加上）：足迹恒 253 而 254 永不出现的那一类通道里，
+  //    「没碰 254」并不意味着 MPPI 有梯度 —— 多边形最外侧格全在膨胀致命带里，
+  //    代价场是平的，方向信息只能来自路径。这一类通道用 254/253 两个硬判据
+  //    在原理上都测不到，只能靠**实测无进展**。详见 NarrowTriggerConfig
+  //    里 saturation_threshold 上方那段实测数据与量级比较。
   if (footprint_cost < cfg.footprint_lethal_threshold) {
-    return NarrowVerdict::kNone;
+    const bool saturated = footprint_cost >= cfg.saturation_threshold;
+    if (!saturated) {
+      // 真的脱离饱和带了 ⇒ 代价场重新有梯度，本层没有存在理由。
+      return NarrowVerdict::kNone;
+    }
+    // 🔴 例外五（入口判据 ≠ 驾驶判据，2026-09-03 实测加上）：
+    //    已接管期间**不许再问 saturated_stalled**。
+    //
+    //    saturated_stalled 是「6s 窗口内推进 < narrow_saturation_min_move」，
+    //    每拍重算。本层 v_along = 0.10m/s、min_move = 0.15m：
+    //        0.15 / 0.10 = 1.5s
+    //    ⇒ 本层一开始走，1.5 秒后就用**自己的进展**把自己的授权吊销，
+    //      这一拍立刻掉回 kNone、方向盘交回 MPPI，MPPI 把车推回坡脚，
+    //      6s 后卡住判据重新成立、再接管 —— 自激，且无法靠调参消除
+    //      （min_move 调大就等于要求本层比它自己更慢）。
+    //
+    //    实测（51.3s 一次接管、1024 帧 /cmd_vel）：
+    //      · 中位 |wz| = 0.0287，而 kp_yaw*err = 1.5*0.44 = 0.66 早已饱和到
+    //        wz_max = 0.20 ⇒ 本层只要在下令就必然是 0.20；
+    //      · |wz| 落在 0.19~0.21 的帧仅 12.1%；
+    //      · **105 帧 |vx| > 0.10、32 帧 |wz| > 0.21，超过本层硬上限 ⇒
+    //        这些帧不可能是本层发的**（这是判"谁在开车"的硬证据，
+    //        比任何日志里的"已接管"字样都可靠）；
+    //      · 累计转角 3.728rad vs 净转角 1.311rad ⇒ 65% 的转动在来回抵消，
+    //        于是 nav2 的 PoseProgressChecker 如实报 Failed to make progress
+    //        （净位姿几乎不变，转角也够不到 required_movement_angle=0.10）。
+    //
+    //    这是同一个结构性错误的第三次：例外三对齐了阈值、例外四对齐了变量，
+    //    这一次是**把"要不要开始"的条件当成了"要不要继续"的条件**。
+    //    接管一旦成立，每拍要问的是「我还在饱和带里吗」（上面那个 saturated），
+    //    退出只由最短驻留 + 连续 N 拍脱离决定。
+    if (already_engaged) {
+      return NarrowVerdict::kNarrow;
+    }
+    if (!saturated_stalled) {
+      return NarrowVerdict::kNone;
+    }
+    // 落到这里：代价场饱和 + 内层在 FOLLOW 相位下实测没推进 ⇒ 沿路径接管。
+    return NarrowVerdict::kNarrow;
   }
 
   // ⑤ 中心可站 + 足迹碰致命带 ⇒ 正是 0.388 ≤ clearance < 0.42 那一档。
   return NarrowVerdict::kNarrow;
+}
+
+bool updateSaturationStall(
+  bool saturated,
+  bool following,
+  double x,
+  double y,
+  double now_sec,
+  const NarrowTriggerConfig & cfg,
+  NarrowStallState & state)
+{
+  // 不在饱和带、或不在 FOLLOW 相位 ⇒ 窗口关闭并清空。
+  // 必须是「清空」而不是「暂停」：暂停会把「走一段-停一段」累计成假卡住。
+  if (!saturated || !following) {
+    state = NarrowStallState{};
+    return false;
+  }
+
+  if (!state.has_anchor) {
+    state.has_anchor = true;
+    state.anchor_x = x;
+    state.anchor_y = y;
+    state.anchor_sec = now_sec;
+    state.stalled = false;
+    return false;
+  }
+
+  const double moved = std::hypot(x - state.anchor_x, y - state.anchor_y);
+  if (moved >= cfg.saturation_min_move_m) {
+    // 推进过 ⇒ 以当前位姿重开窗口。内层还在工作，本层不插手。
+    state.anchor_x = x;
+    state.anchor_y = y;
+    state.anchor_sec = now_sec;
+    state.stalled = false;
+    return false;
+  }
+
+  // 时钟回跳（sim time 重置 / bag 循环）不能算成"卡了很久"。
+  if (now_sec < state.anchor_sec) {
+    state.anchor_sec = now_sec;
+    state.stalled = false;
+    return false;
+  }
+
+  state.stalled = (now_sec - state.anchor_sec) >= cfg.saturation_stall_sec;
+  return state.stalled;
 }
 
 double favorableYawError(double yaw, double corridor_heading, double period_rad)
@@ -164,6 +256,33 @@ LateralScanResult scanLateral(
 bool yawGateHolding(double yaw_error, double yaw_gate_rad)
 {
   return std::fabs(yaw_error) > yaw_gate_rad;
+}
+
+double saturationAlignBoundSec(double favorable_period_rad, double wz_max)
+{
+  // 到最近有利朝向的误差不会超过半个周期；以 wz_max 转过去就要这么久。
+  return (favorable_period_rad / 2.0) / std::max(wz_max, 1e-6);
+}
+
+bool saturationDwellHolding(
+  bool engaged, bool via_saturation, double engaged_sec, double min_dwell_sec)
+{
+  if (!engaged || !via_saturation) {
+    return false;   // 未接管 / 不是这条入口进来的 ⇒ 与本规则无关
+  }
+  if (engaged_sec < 0.0) {
+    return false;   // 时钟回跳：宁可放行，也不要因为负数把驻留拖成无限
+  }
+  return engaged_sec < min_dwell_sec;
+}
+
+bool narrowShouldDisengage(int clear_hits, int need, bool dwell_holding)
+{
+  // 驻留优先：入口问的是「有没有推进」，出口在给足推进时间之前不许只问代价。
+  if (dwell_holding) {
+    return false;
+  }
+  return narrowCleared(clear_hits, need);
 }
 
 NarrowCommand narrowVelocity(
@@ -357,6 +476,7 @@ StrategyPreview previewNarrowStrategy(
     if (cost_default(p.x, p.y, favorable_yaw) < cfg.footprint_lethal_threshold) {
       r.strategy = NarrowStrategy::kAlignOnly;
       r.target_yaw = favorable_yaw;
+      r.corridor_heading = corridor_heading;
       r.at_distance_m = s;
       return r;
     }
@@ -365,6 +485,7 @@ StrategyPreview previewNarrowStrategy(
     if (cost_narrow && cost_narrow(p.x, p.y, favorable_yaw) < cfg.footprint_lethal_threshold) {
       r.strategy = NarrowStrategy::kAlignThenShrink;
       r.target_yaw = favorable_yaw;
+      r.corridor_heading = corridor_heading;
       r.at_distance_m = s;
       return r;
     }
@@ -422,6 +543,41 @@ PrealignPreview previewFavorableAlignment(
       break;
   }
   return r;
+}
+
+double lateralHalfExtent(const std::vector<PlanarPoint> & footprint, double delta_yaw)
+{
+  if (footprint.size() < 3U) {
+    return 0.0;      // 退化多边形算不出包络。返回 0 会让调用方的"更窄"断言失败，
+                     // 这是刻意的：宁可拒绝切换，也不要拿一个凑出来的数放行。
+  }
+  const double sd = std::sin(delta_yaw);
+  const double cd = std::cos(delta_yaw);
+  double worst = 0.0;
+  for (const auto & v : footprint) {
+    worst = std::max(worst, std::fabs(v.x * sd + v.y * cd));
+  }
+  return worst;
+}
+
+bool periodPreservesLateralExtent(
+  const std::vector<PlanarPoint> & footprint, double period_rad, double tol_m)
+{
+  if (footprint.size() < 3U || !(period_rad > 0.0) || !(tol_m > 0.0)) {
+    return false;                       // 参数非法一律不放行（fail-safe）
+  }
+  // 在一个周期内密集取样，逐点比较 d 与 d+period 的侧向半宽。
+  // 步长取 1 度：远细于任何朝向闸门，也远细于代价地图能表达的角度分辨率。
+  const int kSamples = 360;
+  for (int i = 0; i < kSamples; ++i) {
+    const double d = (2.0 * M_PI * static_cast<double>(i)) / static_cast<double>(kSamples);
+    const double a = lateralHalfExtent(footprint, d);
+    const double b = lateralHalfExtent(footprint, d + period_rad);
+    if (std::fabs(a - b) > tol_m) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool sweepClearForRotation(

@@ -105,6 +105,25 @@ void ThreePhaseController::configure(
       narrow_limits_.yaw_gate_rad, narrow_favorable_period_rad_,
       narrow_stall_timeout_sec_, narrow_stall_min_gain_m_, narrow_hard_timeout_sec_,
       narrow_max_engagements_, narrow_max_path_deviation_m_);
+    // 第二入口单独打一行，理由同下面的预对齐：A/B 验证要靠日志反证这一臂
+    // 到底开没开。上面那条横幅只写了 254/253 两个硬判据，而 254 永不出现的
+    // 那一类通道**只能**从这一行看出接管是否可能发生。
+    if (narrow_trigger_.saturation_stall_sec > 0.0) {
+      RCLCPP_INFO(
+        logger_,
+        "[%s] 第二入口(代价场饱和+内层无进展)已启用: 饱和阈值=足迹>=%.0f "
+        "窗口=%.1fs 位移下限=%.3fm 最短驻留=%.1fs | 254 永不出现的通道靠这条进，"
+        "实测依据见 nav2_params 里 narrow_saturation_threshold 上方",
+        name_.c_str(), narrow_trigger_.saturation_threshold,
+        narrow_trigger_.saturation_stall_sec, narrow_trigger_.saturation_min_move_m,
+        narrow_saturation_min_dwell_sec_);
+    } else {
+      RCLCPP_WARN(
+        logger_,
+        "[%s] 第二入口(代价场饱和+内层无进展)**已关闭**(narrow_saturation_stall_sec=%.1f)。"
+        "足迹恒 253、254 永不出现的通道将无法接管 —— 这是显式回退档，不是默认值",
+        name_.c_str(), narrow_trigger_.saturation_stall_sec);
+    }
     // 预对齐单独打一行：A/B 验证要靠日志反证这一臂到底是开还是关，
     // 混在上面那条里 grep 不出来（本项目已经因为"反证不到位"废掉过一整轮数据）。
     if (narrow_prealign_enabled_) {
@@ -187,6 +206,19 @@ void ThreePhaseController::declareAndLoadParams()
     rclcpp::ParameterValue(NarrowCostValues::kLethal));
   declare_parameter_if_not_declared(
     node, p + "narrow_center_lethal_threshold", rclcpp::ParameterValue(253.0));
+  // 「代价场饱和 + 内层无进展」第二入口。默认开（阈值 253/3.0s/0.05m），
+  // 因为 254 永不出现的那一类通道没有别的入口。要一键回退把
+  // narrow_saturation_stall_sec 设成 0 即可（见下方启动守卫）。
+  declare_parameter_if_not_declared(
+    node, p + "narrow_saturation_threshold", rclcpp::ParameterValue(253.0));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_saturation_stall_sec", rclcpp::ParameterValue(3.0));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_saturation_min_move", rclcpp::ParameterValue(0.15));
+  // 第二入口的最短驻留。默认 4.0s 是算术下界 (favorable_period/2)/wz_max=3.93s
+  // 上取整，不是调出来的值；理由见 narrow_saturation_min_dwell_sec_ 的声明。
+  declare_parameter_if_not_declared(
+    node, p + "narrow_saturation_min_dwell", rclcpp::ParameterValue(4.0));
   declare_parameter_if_not_declared(
     node, p + "narrow_scan_half_width", rclcpp::ParameterValue(0.30));
   declare_parameter_if_not_declared(node, p + "narrow_scan_step", rclcpp::ParameterValue(0.01));
@@ -197,7 +229,9 @@ void ThreePhaseController::declareAndLoadParams()
   declare_parameter_if_not_declared(node, p + "narrow_kp_yaw", rclcpp::ParameterValue(1.5));
   declare_parameter_if_not_declared(node, p + "narrow_yaw_gate", rclcpp::ParameterValue(0.12));
   declare_parameter_if_not_declared(
-    node, p + "narrow_favorable_period", rclcpp::ParameterValue(0.7853981634));
+    node, p + "narrow_yaw_resume", rclcpp::ParameterValue(0.06));
+  declare_parameter_if_not_declared(
+    node, p + "narrow_favorable_period", rclcpp::ParameterValue(M_PI / 2.0));
   declare_parameter_if_not_declared(
     node, p + "narrow_heading_lookahead", rclcpp::ParameterValue(0.40));
   // 卡住判据按**进展**，不按时长（旧的 narrow_timeout 等于给窄通道设了
@@ -262,6 +296,13 @@ void ThreePhaseController::declareAndLoadParams()
     p + "narrow_footprint_lethal_threshold", narrow_trigger_.footprint_lethal_threshold);
   node->get_parameter(
     p + "narrow_center_lethal_threshold", narrow_trigger_.center_lethal_threshold);
+  node->get_parameter(
+    p + "narrow_saturation_threshold", narrow_trigger_.saturation_threshold);
+  node->get_parameter(
+    p + "narrow_saturation_stall_sec", narrow_trigger_.saturation_stall_sec);
+  node->get_parameter(
+    p + "narrow_saturation_min_move", narrow_trigger_.saturation_min_move_m);
+  node->get_parameter(p + "narrow_saturation_min_dwell", narrow_saturation_min_dwell_sec_);
   node->get_parameter(p + "narrow_scan_half_width", narrow_scan_half_width_m_);
   node->get_parameter(p + "narrow_scan_step", narrow_scan_step_m_);
   node->get_parameter(p + "narrow_v_along", narrow_limits_.v_along);
@@ -270,6 +311,7 @@ void ThreePhaseController::declareAndLoadParams()
   node->get_parameter(p + "narrow_kp_lateral", narrow_limits_.kp_lateral);
   node->get_parameter(p + "narrow_kp_yaw", narrow_limits_.kp_yaw);
   node->get_parameter(p + "narrow_yaw_gate", narrow_limits_.yaw_gate_rad);
+  node->get_parameter(p + "narrow_yaw_resume", narrow_limits_.yaw_resume_rad);
   node->get_parameter(p + "narrow_favorable_period", narrow_favorable_period_rad_);
   node->get_parameter(p + "narrow_heading_lookahead", narrow_heading_lookahead_m_);
   node->get_parameter(p + "narrow_prealign_enabled", narrow_prealign_enabled_);
@@ -397,6 +439,60 @@ void ThreePhaseController::declareAndLoadParams()
     if (!(narrow_scan_half_width_m_ > 0.0)) {
       throw nav2_core::PlannerException("ThreePhaseController: narrow_scan_half_width 必须 > 0");
     }
+    // ---- 「饱和无进展」第二入口的参数校验 ----
+    // stall_sec <= 0 是**合法的一键关闭**（窗口永不满足，回退到只有 254 入口），
+    // 所以这里不拒绝 0，只拒绝自相矛盾的取值。
+    if (narrow_trigger_.saturation_stall_sec > 0.0) {
+      if (!(narrow_trigger_.saturation_threshold > 0.0) ||
+        narrow_trigger_.saturation_threshold >= narrow_trigger_.footprint_lethal_threshold)
+      {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_saturation_threshold(" +
+          std::to_string(narrow_trigger_.saturation_threshold) +
+          ") 必须在 (0, narrow_footprint_lethal_threshold) 内。"
+          "与 254 相等或更大时这条入口与 ④ 完全重合，等于没加，"
+          "而 254 永不出现的那一类通道仍然进不去");
+      }
+      if (!(narrow_trigger_.saturation_min_move_m > 0.0)) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_saturation_min_move 必须 > 0，"
+          "否则任何位移都算推进、这条入口永不触发");
+      }
+      // 🔴 门槛的上界：本层自己在同样窗口内能走多远。
+      // 交接只有在「本层比内层快」时才有意义；门槛 >= v_along*窗口 意味着
+      // 连本层自己都达不到这个推进量，等于随时都判内层无进展 —— 那是滥用。
+      const double layer_reach_m =
+        narrow_limits_.v_along * narrow_trigger_.saturation_stall_sec;
+      if (narrow_trigger_.saturation_min_move_m >= layer_reach_m) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_saturation_min_move(" +
+          std::to_string(narrow_trigger_.saturation_min_move_m) +
+          "m) 必须 < narrow_v_along * narrow_saturation_stall_sec = " +
+          std::to_string(layer_reach_m) +
+          "m，否则连贴边层自己都达不到这个推进量、等于恒判内层无进展");
+      }
+      // 🔴 最短驻留的算术下界：朝向误差到最近有利朝向不会超过 period/2，
+      // 以 wz_max 转正就要 (period/2)/wz_max 秒。驻留短于这个数 ⇒ 接管必然
+      // 在「还没转正」时被代价纹理赶出去（实测 13/18 次就是这样，见声明处）。
+      const double align_bound_sec =
+        saturationAlignBoundSec(narrow_favorable_period_rad_, narrow_limits_.wz_max);
+      if (narrow_saturation_min_dwell_sec_ < align_bound_sec) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_saturation_min_dwell(" +
+          std::to_string(narrow_saturation_min_dwell_sec_) +
+          "s) 必须 >= (narrow_favorable_period/2)/narrow_wz_max = " +
+          std::to_string(align_bound_sec) +
+          "s，否则第二入口永远在转正之前就被代价纹理赶出去、只会原地振荡");
+      }
+      // 驻留必须短于卡住判据，否则驻留期本身就会撞上「原地蹭」而被判死。
+      if (narrow_saturation_min_dwell_sec_ >= narrow_stall_timeout_sec_) {
+        throw nav2_core::PlannerException(
+          "ThreePhaseController: narrow_saturation_min_dwell(" +
+          std::to_string(narrow_saturation_min_dwell_sec_) +
+          "s) 必须 < narrow_stall_timeout(" +
+          std::to_string(narrow_stall_timeout_sec_) + "s)");
+      }
+    }
     if (!(narrow_scan_step_m_ > 0.0)) {
       throw nav2_core::PlannerException("ThreePhaseController: narrow_scan_step 必须 > 0");
     }
@@ -433,10 +529,33 @@ void ThreePhaseController::declareAndLoadParams()
       // 而这一档里朝向不对就是过不去，带着错的朝向往前走等于往卡死里走。
       throw nav2_core::PlannerException(
         "ThreePhaseController: narrow_yaw_gate 必须 > 0，否则朝向闸门形同虚设");
+  }
+  // 🔴 朝向层迟滞守卫：交回阈值必须**严格小于**闸门。
+  // 两者相等即没有迟滞，保证在闸门上自激 —— 实测 749 次重新对齐、
+  // 30s 硬超时窗口内一步未前进，现象是"能进不能出"，而每条日志都合理。
+  // 迟滞带还必须大于抖动幅度，否则等于没加：实测误差分布紧贴闸门
+  // (min=0.120 p50=0.131 p95=0.215)，超出量 p95 达 0.095rad。
+  if (!(narrow_limits_.yaw_resume_rad > 0.0) ||
+      narrow_limits_.yaw_resume_rad >= narrow_limits_.yaw_gate_rad)
+  {
+    throw std::runtime_error(
+      "ThreePhaseController: narrow_yaw_resume(" +
+      std::to_string(narrow_limits_.yaw_resume_rad) +
+      ") 必须 > 0 且 **严格小于** narrow_yaw_gate(" +
+      std::to_string(narrow_limits_.yaw_gate_rad) +
+      ")。两者相等就是没有迟滞 -> 在闸门上自激 -> 只进不出。");
     }
     if (!(narrow_favorable_period_rad_ > 0.0)) {
       throw nav2_core::PlannerException(
-        "ThreePhaseController: narrow_favorable_period 必须 > 0（正八边形足迹取 pi/4）");
+        "ThreePhaseController: narrow_favorable_period 必须 > 0");
+    }
+    // 逐个足迹校验周期是否保侧向包络。
+    // ⚠️ 缩足迹开启时**不在这里**校验：declareAndLoadParams() 跑在
+    //    loadFootprints() **之前**，此刻 footprint_default_/narrow_ 还是空的，
+    //    check() 会因 size<3 直接 return —— 那是一条静默失效的守卫，
+    //    比没有守卫更糟。所以那种情况移到 loadFootprints() 末尾去做。
+    if (!narrow_square_enabled_ && costmap_ros_) {
+      checkPeriodPreservesLateral(costmap_ros_->getRobotFootprint(), "代价地图当前足迹");
     }
     if (narrow_limits_.yaw_gate_rad >= narrow_favorable_period_rad_ * 0.5) {
       // 闸门比「有利朝向误差」的取值上限还大，闸门永远不会关。
@@ -1065,6 +1184,42 @@ ThreePhaseController::PrealignDecision ThreePhaseController::evaluatePrealign(
   return none;
 }
 
+void ThreePhaseController::checkPeriodPreservesLateral(
+  const std::vector<geometry_msgs::msg::Point> & fp, const char * what) const
+{
+  // 🔴 校验「按 narrow_favorable_period 取模」是否**保侧向包络**。
+  //
+  //    2026-09-03 实测事故：共享 pi/4（八边形的对称周期）时，正方形会被算到
+  //    "有利朝向 = 通道+45°"，那是它的**对角朝墙**：
+  //        面朝墙 0.3100  /  对角朝墙 0.4384（比八边形的 0.4200 还宽）
+  //    于是"缩足迹"反而放大足迹，机器人转到最坏姿态再去挤窄处。
+  //
+  //    合法性不能靠"我觉得它对称"—— 这里实测采样 360 个朝向逐点比。
+  //    容差按物理取 1mm：比栅格 0.05m 细 50 倍，又容得下 yaml 三位小数的舍入
+  //   （八边形对角 0.297*sqrt2 比轴向 0.42 多 0.0214mm，是舍入不是形状差异；
+  //     取 1e-9 会把它当差异而误报 —— 第一版测试就是这么失败的）。
+  constexpr double kPeriodTolM = 1e-3;
+  if (fp.size() < 3U) {
+    // 🔴 不能静默通过：足迹拿不到就等于没校验，而调用方以为校验过了。
+    throw nav2_core::PlannerException(
+      std::string("ThreePhaseController: 校验朝向周期时 ") + what +
+      " 少于 3 点，无法判定该周期是否保侧向包络 —— 拒绝启动，不接受未经校验的周期");
+  }
+  std::vector<PlanarPoint> pts;
+  pts.reserve(fp.size());
+  for (const auto & q : fp) {
+    pts.push_back(PlanarPoint{q.x, q.y});
+  }
+  if (!periodPreservesLateralExtent(pts, narrow_favorable_period_rad_, kPeriodTolM)) {
+    throw nav2_core::PlannerException(
+      std::string("ThreePhaseController: narrow_favorable_period=") +
+      std::to_string(narrow_favorable_period_rad_) + " 对" + what +
+      "**不保侧向包络** —— 按它取模会把机器人转到侧向更宽的姿态"
+      "（实测：正方形在 pi/4 同余类里对角朝墙 0.4384 > 面朝墙 0.3100，"
+      "比八边形的 0.4200 还宽）。两种足迹统一取 pi/2。");
+  }
+}
+
 void ThreePhaseController::loadFootprints(
   const rclcpp_lifecycle::LifecycleNode::SharedPtr & node, const std::string & p)
 {
@@ -1165,6 +1320,39 @@ void ThreePhaseController::loadFootprints(
       std::to_string(narrow_square_verify_timeout_sec_) + ")");
   }
 
+  // 🔴 守卫 7：朝向等价周期必须对**两种**足迹都保侧向包络。
+  //    放在这里而不是 declareAndLoadParams()：那里跑在本函数之前，
+  //    footprint_* 还是空的，校验会因 size<3 静默跳过。
+  checkPeriodPreservesLateral(footprint_default_, "默认(八边形)足迹");
+  checkPeriodPreservesLateral(footprint_narrow_, "窄通道(正方形)足迹");
+
+  // 🔴 守卫 8：在**对齐后的目标朝向**上，小足迹的侧向半宽必须真的更小。
+  //
+  //    这是从根上挡住"切了反而更宽"。2026-09-03 实测过：共享 pi/4 周期时
+  //    正方形会被算到对角朝墙 0.4384，比八边形的 0.4200 还宽 —— 那次
+  //    没有任何一条判据能拦住它，因为所有判据都在问"过不过得去"，
+  //    没有一条在问"换了之后是不是真的更窄"。
+  //
+  //    对齐后 delta = 0（朝向 = 通道方向），所以直接比 delta=0 处的半宽。
+  {
+    std::vector<PlanarPoint> big;
+    std::vector<PlanarPoint> small;
+    big.reserve(footprint_default_.size());
+    small.reserve(footprint_narrow_.size());
+    for (const auto & q : footprint_default_) {big.push_back(PlanarPoint{q.x, q.y});}
+    for (const auto & q : footprint_narrow_) {small.push_back(PlanarPoint{q.x, q.y});}
+    footprint_default_lateral_ = lateralHalfExtent(big, 0.0);
+    footprint_narrow_lateral_ = lateralHalfExtent(small, 0.0);
+    if (!(footprint_narrow_lateral_ < footprint_default_lateral_)) {
+      throw nav2_core::PlannerException(
+        "ThreePhaseController: 对齐到通道方向后，小足迹侧向半宽(" +
+        std::to_string(footprint_narrow_lateral_) + ") 不小于大足迹(" +
+        std::to_string(footprint_default_lateral_) +
+        ") —— 切换毫无收益甚至更宽，拒绝启动。通道宽度只取决于侧向半宽，"
+        "不是内切/外接半径。");
+    }
+  }
+
   RCLCPP_INFO(
     logger_,
     "[%s] 窄通道缩足迹已启用: 默认足迹 %zu 点(内切 %.4f 外接 %.4f) -> "
@@ -1226,6 +1414,10 @@ void ThreePhaseController::revertFootprint(const char * why)
   square_active_ = false;
   square_pending_ = false;
   square_exit_clear_hits_ = 0;
+  // 朝向层迟滞的锁存位必须一起清：留着它，下次切入时会带着上一次的
+  // "正在重新对齐"状态进来，于是**跳过** yaw_gate 判定直奔 yaw_resume，
+  // 那等于把切入阈值悄悄换成了切出阈值。
+  square_realigning_ = false;
   // 开启冷却期：防"复原-立刻再切"自激。安全通路（deactivate/cleanup/新目标）
   // 走到这里也会开冷却，那是对的 —— 那些场景下也不该马上再缩。
   if (clock_) {
@@ -1447,19 +1639,63 @@ ThreePhaseController::PrealignDecision ThreePhaseController::evaluateSquare(
     // 而 `状态 -> ESCAPE` 实测 10 轮全为 0（ESCAPE 从不执行）——复原会困得更死。
     // 安全性由另一条兜底：MPPI 两个 critic 都是 consider_footprint:true、
     // 用真实多边形在真实位姿求值，且 254 红线不动。
+    //
+    // 🔴 迟滞：切入用 yaw_gate_rad、**切出用更严的 yaw_resume_rad**。
+    // 两侧同一个数就是没有迟滞，保证在闸门上自激 —— 实测 749 次重新对齐、
+    // 30s 全耗在原地摆头、最后被硬超时踢回八边形（"能进不能出"）。
+    // 判据必须两侧同源同几何：这里两侧都是「robot_yaw 与 square_locked_yaw_ 的
+    // 最短角差」，只有阈值不同。
     const double err = shortestAngularDiff(robot_yaw, square_locked_yaw_);
+    if (square_realigning_) {
+      // 已在接管旋转中：必须转到明显好于闸门才交回，否则继续转
+      if (std::fabs(err) > narrow_limits_.yaw_resume_rad) {
+        none.take_over = true;
+        none.cmd = rotateOnly(err, pose.header);
+        return none;
+      }
+      square_realigning_ = false;
+      RCLCPP_INFO(
+        logger_, "[%s] 重新对齐完成(误差 %.3frad <= 交回阈值 %.3frad) ⇒ 交回内层",
+        name_.c_str(), std::fabs(err), narrow_limits_.yaw_resume_rad);
+      return none;
+    }
     if (std::fabs(err) > narrow_limits_.yaw_gate_rad) {
       ++square_realign_count_;
+      square_realigning_ = true;
       RCLCPP_WARN_THROTTLE(
         logger_, *clock_, 2000,
         "[%s] 小足迹生效期间失去对齐(误差 %.3frad > 闸门 %.3frad) ⇒ "
-        "**保持小足迹**、平移置零、重新对齐（复原足迹会把车困在膨胀带里）| 累计=%d",
-        name_.c_str(), std::fabs(err), narrow_limits_.yaw_gate_rad, square_realign_count_);
+        "**保持小足迹**、平移置零、重新对齐到 %.3frad 才交回"
+        "（复原足迹会把车困在膨胀带里）| 累计=%d",
+        name_.c_str(), std::fabs(err), narrow_limits_.yaw_gate_rad,
+        narrow_limits_.yaw_resume_rad, square_realign_count_);
       none.take_over = true;
       none.cmd = rotateOnly(err, pose.header);
       return none;
     }
-    return none;                     // 对齐良好，交回内层继续走
+    // ---- 对齐良好：交回**贴边通行层**继续推进，而不是交回内层 MPPI ----
+    // 🔴 这里返回 take_over=false 只表示"本层（缩足迹层）这一拍没有指令"，
+    // 真正接管的是 evaluateNarrow 的贴边通行 —— 它有横向扫描寻优、饱和检测、
+    // 偏离路径保护和物理堵死判据，是本仓库既有的实现，不要在这里另写一份。
+    //
+    // 为什么必须由贴边通行层走完整个小足迹区间、不能交回 MPPI：
+    // 小足迹生效的区间按定义就是"窄到八边形过不去"，而这种地方 MPPI 的代价场
+    // 是**饱和**的。膨胀层的 inscribed_radius_ 随运行时换足迹一起变成正方形的
+    // 0.32，多边形最外侧格到墙的距离 W/2-0.32 <= 0.32 时整个多边形恒 253：
+    //     零梯度阈值 W <= 4 x 0.32 = 1.28m
+    // 而缩足迹的用武之地本来就是 0.64 < W <= 0.86m —— 远小于 1.28m。
+    // 即缩足迹把零梯度阈值从八边形的 1.72m 降到 1.28m，**没降到通道宽度以下**。
+    // 实测（0.65~0.86m 通道）：costmap_raw 剖面 22 点里 253 占 15 个(68%)；
+    // 交回 MPPI 的后果是累计行程 1.706m / 净位移 0.488m、|vx| 中位 0.0134、
+    // 近零帧 46.4% —— 原地来回蹭到撞满 30s 硬超时（实测 11 次切换里 4 次）。
+    // 恒 253 意味着"哪都一样坏"，没有方向信息可优化；方向只能来自**路径**。
+    //
+    // 联动（关键）：evaluateNarrow 开头有一条"便宜早退" ——
+    // 中心格与足迹代价都低于阈值就直接放行。小足迹装得下之后 footprint_cost
+    // 正好从 254 掉到 253、低于 254 阈值 ⇒ 早退 ⇒ 谁都不接管 ⇒ 落回 MPPI。
+    // 所以那条早退必须加一个"小足迹生效期间不早退"的例外，否则本注释里的
+    // 交接根本不会发生。该例外由 squareActive() 提供。
+    return none;
   }
 
   // ================= 尚未请求：看要不要切 =================
@@ -1494,6 +1730,35 @@ ThreePhaseController::PrealignDecision ThreePhaseController::evaluateSquare(
     return none;
   }
 
+  // 🔴 运行期断言：在**这个具体的目标朝向**上，小足迹必须真的更窄。
+  //    启动守卫比的是 delta=0（理想对齐后）的半宽；这里比的是本次真正要
+  //    锁定的朝向 —— 两者会不一致（朝向闸门允许 yaw_gate_rad 的偏差，
+  //    而侧向半宽随 delta 变化）。事故当天缺的正是这一条：所有判据都在问
+  //    "过不过得去"，没有一条在问"换了之后是不是真的更窄"。
+  {
+    const double delta = shortestAngularDiff(preview.target_yaw, preview.corridor_heading);
+    std::vector<PlanarPoint> big;
+    std::vector<PlanarPoint> small;
+    big.reserve(footprint_default_.size());
+    small.reserve(footprint_narrow_.size());
+    for (const auto & q : footprint_default_) {big.push_back(PlanarPoint{q.x, q.y});}
+    for (const auto & q : footprint_narrow_) {small.push_back(PlanarPoint{q.x, q.y});}
+    const double lat_big = lateralHalfExtent(big, delta);
+    const double lat_small = lateralHalfExtent(small, delta);
+    if (!(lat_small < lat_big)) {
+      ++square_refused_wider_;
+      RCLCPP_ERROR_THROTTLE(
+        logger_, *clock_, 3000,
+        "[%s] 🔴 拒绝缩足迹：在目标朝向 %.3frad(相对通道 %.3frad)上，"
+        "小足迹侧向半宽 %.4f **不小于** 大足迹 %.4f —— 切了会更宽，不是更窄。"
+        "这通常意味着 narrow_favorable_period 配错（正方形必须 pi/2，"
+        "pi/4 会把它转到对角朝墙 0.4384 > 面朝墙 0.3100）| 累计拒绝=%d",
+        name_.c_str(), preview.target_yaw, delta, lat_small, lat_big,
+        square_refused_wider_);
+      return none;
+    }
+  }
+
   square_locked_yaw_ = preview.target_yaw;
   square_pending_ = true;
   square_requested_ = now;
@@ -1522,6 +1787,10 @@ void ThreePhaseController::disengageNarrow(const char * why)
   narrow_engaged_ = false;
   narrow_hits_ = 0;
   narrow_clear_hits_ = 0;
+  narrow_via_saturation_ = false;
+  // 🔴 脱离时必须清空无进展窗口。留着旧锚点会让下一次刚进饱和带就
+  //    立刻满足"3s 没动"（锚点时刻是上一次的），等于第二入口没有消抖。
+  narrow_stall_ = NarrowStallState{};
 }
 
 ThreePhaseController::NarrowDecision ThreePhaseController::evaluateNarrow(
@@ -1544,22 +1813,112 @@ ThreePhaseController::NarrowDecision ThreePhaseController::evaluateNarrow(
     return none;
   }
 
+  // ---- 「代价场饱和 + 内层无进展」检测：必须跑在早退**之前** ----
+  // 放在早退之后就永远跑不到 —— 早退命中的那些拍正是要观察的那些拍。
+  // 本函数只在 Phase::kFollow 里被调用，所以 following 恒为 true；
+  // 相位切换时窗口由 disengageNarrow / 新目标处清空。
+  const bool saturated = footprint_cost >= narrow_trigger_.saturation_threshold;
+  const bool saturated_stalled = updateSaturationStall(
+    saturated, /*following=*/ true,
+    pose.pose.position.x, pose.pose.position.y, now.seconds(),
+    narrow_trigger_, narrow_stall_);
+  if (saturated_stalled && !narrow_engaged_) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 2000,
+      "[%s] 代价场饱和(足迹 %.0f >= %.0f)且内层 %.1fs 内位移 < %.3fm ⇒ "
+      "由第二入口接管、沿路径方向走。这一类通道 254 永不出现，"
+      "只有实测无进展能测到",
+      name_.c_str(), footprint_cost, narrow_trigger_.saturation_threshold,
+      narrow_trigger_.saturation_stall_sec, narrow_trigger_.saturation_min_move_m);
+  }
+
+  // 🔴 未接管时也必须periodically报出这三个数，否则"该接管却没接管"完全不可观测。
+  //    实测教训：机器人在通道口 (2.12,-5.80) 静止了 **90s**（净位移 0.041m、
+  //    离锚点最大偏移 0.041m），期间控制器一个字都没打，第二入口直到 t+108s 才进。
+  //    我拿外部探针读 /global_costmap/costmap_raw 得到"足迹 253 持续 90s"，
+  //    据此以为两个合取项都成立 —— 但 readCosts 读的是 **controller 自己的
+  //    costmap_ros_，即 local costmap**，与全局图不是同一张。判据用哪张图，
+  //    诊断就必须报哪张图的数，否则永远在对着错的数推理。
+  if (!narrow_engaged_) {
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 2000,
+      "[%s] 未接管诊断(local costmap): 足迹=%.0f(阈值 %.0f ⇒ 饱和=%s) 中心=%.0f "
+      "无进展窗口: 有锚点=%s 已持续=%.2fs(阈值 %.1fs) 判据成立=%s",
+      name_.c_str(), footprint_cost, narrow_trigger_.saturation_threshold,
+      saturated ? "是" : "否", center_cost,
+      narrow_stall_.has_anchor ? "是" : "否",
+      narrow_stall_.has_anchor ? (now.seconds() - narrow_stall_.anchor_sec) : 0.0,
+      narrow_trigger_.saturation_stall_sec,
+      saturated_stalled ? "是" : "否");
+  }
+
   // ---- 便宜的早退：开阔处直接放行，不去付路径变换/通道方向的开销 ----
   // 中心格致命与朝向无关，也在这里判掉。
-  if (center_cost < narrow_trigger_.center_lethal_threshold &&
-    footprint_cost < narrow_trigger_.footprint_lethal_threshold)
+  //
+  // 🔴 例外一：**小足迹生效期间绝不早退**。
+  // 缩足迹成功之后 footprint_cost 正好从 254 掉到 253（这就是"装得下了"的
+  // 含义），于是它 < 254 阈值、这条早退命中、本层放行、控制权落回内层 MPPI。
+  // 而小足迹生效的区间按定义就是"窄到八边形过不去"，那里 MPPI 的代价场是
+  // **饱和**的：膨胀层 inscribed_radius_ 随换足迹变成正方形的 0.32，
+  // 多边形最外侧格到墙 W/2-0.32 <= 0.32 时整个多边形恒 253，
+  //     零梯度阈值 W <= 4 x 0.32 = 1.28m
+  // 而用武之地是 0.64 < W <= 0.86m，远小于 1.28m —— 缩足迹把阈值从八边形的
+  // 1.72m 降到 1.28m，没降到通道宽度以下。恒 253 = 哪都一样坏 = 无方向可优化。
+  // 实测后果（0.65~0.86m 通道）：costmap_raw 剖面 253 占 68%，交回 MPPI 后
+  // 累计行程 1.706m / 净位移 0.488m、|vx| 中位 0.0134、近零帧 46.4%，
+  // 11 次切换里 4 次撞满 30s 硬超时。方向信息只能来自**路径** ——
+  // 所以这一段必须由贴边通行层用 corridorHeadingFromPath 沿路径方向走完。
+  //
+  // 🔴 例外二：**饱和且内层实测无进展时不早退**（第二入口，2026-09-03 实测加上）。
+  // 例外一只覆盖"已经切过小足迹"的情形。而实测发现整整一类通道连第一次
+  // 切换都触发不了：八边形足迹恒 253、254 一次都不出现（净宽 1.05~1.80m，
+  // 八边形只要 0.86m，本来就过得去），中心格最高 216 也够不着 253 ——
+  // ①②④ 三条判据全不成立。挡路的是膨胀梯度本身而不是 253，
+  // 详见 NarrowTriggerConfig::saturation_threshold 上方那段量级比较。
+  //
+  // 🔴 例外三（迟滞同源）：**由第二入口接管期间，脱离阈值也用 253 而不是 254**。
+  // 否则接管的同一拍 footprint_cost(253) < 254 就成立，早退立刻命中，
+  // 保证振荡 —— 迟滞两侧必须问同一个几何问题。
+  const double clear_threshold =
+    (narrow_via_saturation_ || saturated_stalled)
+    ? narrow_trigger_.saturation_threshold
+    : narrow_trigger_.footprint_lethal_threshold;
+  // 🔴 例外四（迟滞同**变量**）：由第二入口接管期间，代价掉下 253 在最短驻留
+  // 之内**不足以**退出。例外三只对齐了阈值，实测仍振荡 18 次：这一类通道的
+  // 代价场是 229~253 的纹理而不是平的 253，机器人原地转的过程中当前位姿的
+  // 八边形代价会自己掉到 233 < 253，于是 3 拍脱离命中、在**还没转正**时就
+  // 交回 MPPI（13/18 次接管只活了 0.35~1.80s，而转正需要 1.5~3.3s）。
+  // 入口问的是「有没有推进」，出口必须先给足能推进的时间再问代价。
+  // ⚠️ narrow_started_ 未接管时是默认构造的 rclcpp::Time，时钟源是
+  // RCL_SYSTEM_TIME，而 now 走 ROS 时钟（仿真下是 /clock）。两者相减会抛
+  // "can't subtract times with different time sources [1 != 2]"。
+  // 原来那处相减（绝对上限兜底）只在接管中执行，所以从没暴露；
+  // 这条判据每拍都要问，必须先判 narrow_engaged_ 再读 narrow_started_。
+  // 实测代价：漏了这一步，controller 每拍抛异常 -> follow_path 逐拍 Aborting，
+  // 机器人停在 (-0.12,-0.31) 一步没走、24.3s 后 ABORTED，且零次接管。
+  const double narrow_engaged_sec =
+    narrow_engaged_ ? (now - narrow_started_).seconds() : 0.0;
+  const bool saturation_dwell_holding = saturationDwellHolding(
+    narrow_engaged_, narrow_via_saturation_,
+    narrow_engaged_sec, narrow_saturation_min_dwell_sec_);
+  if (!squareActive() && !saturation_dwell_holding &&
+    center_cost < narrow_trigger_.center_lethal_threshold &&
+    footprint_cost < clear_threshold)
   {
-    ++narrow_clear_hits_;
-    narrow_hits_ = 0;
-    if (narrow_engaged_ && narrowCleared(narrow_clear_hits_, narrow_clear_ticks_)) {
-      // 成功穿过 ⇒ 连续失败计数清零。规则在 narrow_math 里，
-      // 不在这里复制一份判断 —— 复制的那份必然与被测的那份漂开。
-      updateNarrowFailureCount(/*cleared_through=*/ true, narrow_engage_count_);
-      disengageNarrow("足迹已连续脱离致命带");
+    // ⚠️ 计数只能有一处：接管中让下面 switch 的 kNone 分支去数（它问的是
+    // footprint >= saturation_threshold，与本处 clear_threshold 在第二入口下
+    // 恰好同值 253）。若两处都 ++，3 拍的脱离条件会在 1.5 拍就满足，
+    // 迟滞带等于被砍掉一半 —— 这正是例外三/四想堵的那个洞。
+    if (!narrow_engaged_) {
+      ++narrow_clear_hits_;
+      narrow_hits_ = 0;
+      // 脱离窄通道即允许再次上报异常（若之后又遇到新的窄处）。
+      narrow_threw_here_ = false;
+      return none;
     }
-    // 脱离窄通道即允许再次上报异常（若之后又遇到新的窄处）。
-    narrow_threw_here_ = false;
-    return none;
+    // 🔴 例外五的第三个泄漏口：已接管时原来也在这里 return none ⇒
+    // 又一次 1~2 拍粒度的让位。接管中一律落到下面继续由本层驱动，
+    // 退出只走 kNone 分支里那条"连续 N 拍脱离"的正规路径。
   }
 
   // =====================================================================
@@ -1613,7 +1972,8 @@ ThreePhaseController::NarrowDecision ThreePhaseController::evaluateNarrow(
 
   const bool have_path = !path.empty();
   const NarrowVerdict verdict = evaluateNarrowTrigger(
-    center_cost, footprint_cost, favorable_cost, have_path, narrow_trigger_);
+    center_cost, footprint_cost, favorable_cost, have_path, saturated_stalled,
+    narrow_engaged_, narrow_trigger_);
 
   switch (verdict) {
     case NarrowVerdict::kPhysicallyBlocked:
@@ -1642,13 +2002,63 @@ ThreePhaseController::NarrowDecision ThreePhaseController::evaluateNarrow(
         " 已致命，通道宽度物理上放不进机器人，应由协调器 ESCAPE 挪车，本层不接管");
 
     case NarrowVerdict::kNoPath:
+      // 没有路径就定义不出「沿通道」这个轴 ⇒ 本层无从下手，必须让位。
+      // 与 kNone **不能合并**：那一条是"还在通道里但代价掉了"，可以继续开。
+      ++narrow_clear_hits_;
+      narrow_hits_ = 0;
+      return none;
+
     case NarrowVerdict::kNone:
       // 走到这里说明 footprint_cost 过阈但 favorable/center 都正常，
       // 而 kNone 只可能来自 footprint_cost 未过阈 —— 上面的早退已经处理过。
       // 保留分支是为了 switch 穷尽（编译器会盯着），不做额外动作。
       ++narrow_clear_hits_;
       narrow_hits_ = 0;
-      return none;
+      // 🔴 例外五的第二个泄漏口：**已接管期间不许在这里让位**。
+      // clear_hits 没满 narrow_clear_ticks 拍时原来直接 return none，
+      // 于是每 1~2 拍就把方向盘交回 MPPI 一次 —— 标志位还亮着"已接管"，
+      // 实际在开车的是内层。退出必须只走 disengageNarrow 那一条路径；
+      // 计数照加，但车继续由本层开，落到下面的贴边计算。
+      if (!narrow_engaged_) {
+        return none;
+      }
+      // 🔴 第四个泄漏口（实测抓到）：最短驻留只挡了上面第 1884 行那条早退路径，
+      //    **这一条 disengageNarrow 完全没问它**。于是 banner 打印
+      //    「最短驻留=4.0s」而真实退出只需 narrow_clear_ticks=3 拍 = 0.15s。
+      //
+      //    实测证据（远端目标 5.88,-5.86 那一腿）：
+      //      t=371.5s 第二入口接管(足迹 253、朝向误差 -0.680rad)
+      //      t=371.9s 「足迹已连续脱离致命带」退出 —— 只活了 **0.45s**，
+      //               而转正到最近有利朝向的算术下界是 3.93s，即它必然是在
+      //               **还没转正**时就被赶出去的
+      //      t=371.9~467.6s 交回 MPPI 后 4 次 Failed to make progress + 一次
+      //               spin 恢复，**96s 没有进展**
+      //      t=467.6s 再次接管，这次连续开了 41s，t=508.8 位置到达、成功
+      //    也就是说：本层每次真正开够时间都能穿过去，穿不过去只是因为被
+      //    提前赶出去。这正是 narrow_math.hpp 里 saturationDwellHolding 的
+      //    文档注释预言的振荡（"转正之前就满足脱离条件、交回 MPPI、
+      //    MPPI 再转回去再卡住 —— 保证振荡"），只是那道闸没接到这条出口上。
+      //
+      //    迟滞的同变量原则：入口问「有没有推进」，出口就不能只问「代价高不高」。
+      //    驻留未满时计数照加（上面已 ++），但方向盘不交回去。
+      if (saturation_dwell_holding) {
+        ++narrow_suppressed_dwell_;
+        RCLCPP_INFO_THROTTLE(
+          logger_, *clock_, 1000,
+          "[%s] 足迹已脱离致命带但第二入口最短驻留未满(%.2f/%.2fs)，继续由本层驱动",
+          name_.c_str(), narrow_engaged_sec, narrow_saturation_min_dwell_sec_);
+      }
+      // 出口只有这一处，且驻留与拍数两项都由 narrowShouldDisengage 一起问 ——
+      // 少问一项曾经让「最短驻留=4.0s」变成实际 0.15s（见上）。
+      if (narrowShouldDisengage(
+          narrow_clear_hits_, narrow_clear_ticks_, saturation_dwell_holding))
+      {
+        updateNarrowFailureCount(/*cleared_through=*/ true, narrow_engage_count_);
+        disengageNarrow("足迹已连续脱离致命带(kNone 路径)");
+        narrow_threw_here_ = false;
+        return none;
+      }
+      break;      // 继续由本层驱动
 
     case NarrowVerdict::kNarrow:
       ++narrow_hits_;
@@ -1680,6 +2090,12 @@ ThreePhaseController::NarrowDecision ThreePhaseController::evaluateNarrow(
     }
     narrow_engaged_ = true;
     narrow_started_ = now;
+    // 记录入口来源：迟滞的脱离阈值要跟着它走（见上方例外三）。
+    narrow_via_saturation_ =
+      footprint_cost < narrow_trigger_.footprint_lethal_threshold;
+    if (narrow_via_saturation_) {
+      ++narrow_saturation_engagements_;
+    }
     narrow_progress_ = NarrowProgressState{};   // 每次接管重新起算进展
     // 进入接管即先按「失败」计一次；穿过去时在早退分支清零。
     // 这样计数才是「连续未穿过的次数」。

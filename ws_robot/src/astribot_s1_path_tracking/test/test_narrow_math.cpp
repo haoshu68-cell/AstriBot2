@@ -35,7 +35,7 @@ TEST(NarrowRedLine, LethalAtFavorableOrientationNeverYieldsNarrow)
     for (int have = 0; have <= 1; ++have) {
       for (double fav : {254.0, 254.5, 255.0, 300.0}) {
         for (double fp : {0.0, 253.0, 254.0}) {
-          const auto v = evaluateNarrowTrigger(center, fp, fav, have != 0, cfg);
+          const auto v = evaluateNarrowTrigger(center, fp, fav, have != 0, false, false, cfg);
           EXPECT_EQ(v, NarrowVerdict::kPhysicallyBlocked)
             << "center=" << center << " fp=" << fp << " fav=" << fav
             << " have_path=" << have;
@@ -57,7 +57,7 @@ TEST(NarrowRedLine, UnfavorableYawAloneIsNotPhysicallyBlocked)
   // 修复前实测：中心代价 0 -> 218 -> 229 -> 致命，车被一路推进膨胀带深处。
   NarrowTriggerConfig cfg;
   for (double fav : {0.0, 100.0, 252.0, 253.0}) {
-    const auto v = evaluateNarrowTrigger(0.0, 254.0, fav, true, cfg);
+    const auto v = evaluateNarrowTrigger(0.0, 254.0, fav, true, false, false, cfg);
     EXPECT_EQ(v, NarrowVerdict::kNarrow)
       << "当前朝向压 254、有利朝向=" << fav << " 被误判成物理堵死";
   }
@@ -69,9 +69,9 @@ TEST(NarrowRedLine, CenterLethalStillWinsOverUnfavorableYaw)
   // 转朝向解决不了（判据是单个中心格，与朝向无关）。
   NarrowTriggerConfig cfg;
   EXPECT_EQ(
-    evaluateNarrowTrigger(253.0, 254.0, 0.0, true, cfg), NarrowVerdict::kCenterLethal);
+    evaluateNarrowTrigger(253.0, 254.0, 0.0, true, false, false, cfg), NarrowVerdict::kCenterLethal);
   EXPECT_EQ(
-    evaluateNarrowTrigger(255.0, 253.0, 100.0, true, cfg), NarrowVerdict::kCenterLethal);
+    evaluateNarrowTrigger(255.0, 253.0, 100.0, true, false, false, cfg), NarrowVerdict::kCenterLethal);
 }
 
 TEST(NarrowRedLine, CenterLethalIsNotOurJob)
@@ -80,7 +80,7 @@ TEST(NarrowRedLine, CenterLethalIsNotOurJob)
   // 穷举足迹代价（254 以下、即"未压到障碍本体"的全部取值）。
   NarrowTriggerConfig cfg;
   for (int fp = 0; fp < 254; ++fp) {
-    const auto v = evaluateNarrowTrigger(253.0, fp, 0.0, true, cfg);
+    const auto v = evaluateNarrowTrigger(253.0, fp, 0.0, true, false, false, cfg);
     EXPECT_EQ(v, NarrowVerdict::kCenterLethal) << "fp=" << fp;
     EXPECT_NE(v, NarrowVerdict::kNarrow)
       << "在物理放不进去的地方接管了贴边通行！fp=" << fp;
@@ -120,8 +120,8 @@ TEST(NarrowTrigger, TargetBandYieldsNarrow)
   // ⚠️ 这里刻意用 254 而不是 253。默认阈值已改成 254，理由是 253 在
   //    多边形查询里会重复计底盘半宽（推导见 narrow_math.hpp 的 NarrowCostValues）。
   NarrowTriggerConfig cfg;
-  EXPECT_EQ(evaluateNarrowTrigger(137.0, 254.0, 0.0, true, cfg), NarrowVerdict::kNarrow);
-  EXPECT_EQ(evaluateNarrowTrigger(0.0, 254.0, 0.0, true, cfg), NarrowVerdict::kNarrow);
+  EXPECT_EQ(evaluateNarrowTrigger(137.0, 254.0, 0.0, true, false, false, cfg), NarrowVerdict::kNarrow);
+  EXPECT_EQ(evaluateNarrowTrigger(0.0, 254.0, 0.0, true, false, false, cfg), NarrowVerdict::kNarrow);
 }
 
 TEST(NarrowTrigger, InflationBandOnFootprintIsNotBlocked)
@@ -134,7 +134,7 @@ TEST(NarrowTrigger, InflationBandOnFootprintIsNotBlocked)
   //（实测 909 次），而实际读数 51 次 253 / 仅 2 次 254 —— 从未真的撞上。
   NarrowTriggerConfig cfg;
   for (double center : {0.0, 100.0, 137.0, 252.0}) {
-    EXPECT_EQ(evaluateNarrowTrigger(center, 253.0, 0.0, true, cfg), NarrowVerdict::kNone)
+    EXPECT_EQ(evaluateNarrowTrigger(center, 253.0, 0.0, true, false, false, cfg), NarrowVerdict::kNone)
       << "足迹多边形读到 253 被当成过不去 ⇒ 重复计底盘半宽（center=" << center << "）";
   }
 }
@@ -142,8 +142,8 @@ TEST(NarrowTrigger, InflationBandOnFootprintIsNotBlocked)
 TEST(NarrowTrigger, WideAreaYieldsNone)
 {
   NarrowTriggerConfig cfg;
-  EXPECT_EQ(evaluateNarrowTrigger(0.0, 0.0, 0.0, true, cfg), NarrowVerdict::kNone);
-  EXPECT_EQ(evaluateNarrowTrigger(137.0, 252.0, 0.0, true, cfg), NarrowVerdict::kNone);
+  EXPECT_EQ(evaluateNarrowTrigger(0.0, 0.0, 0.0, true, false, false, cfg), NarrowVerdict::kNone);
+  EXPECT_EQ(evaluateNarrowTrigger(137.0, 252.0, 0.0, true, false, false, cfg), NarrowVerdict::kNone);
 }
 
 TEST(NarrowTrigger, CenterThresholdStaysAtInscribed)
@@ -154,14 +154,14 @@ TEST(NarrowTrigger, CenterThresholdStaysAtInscribed)
   NarrowTriggerConfig cfg;
   EXPECT_DOUBLE_EQ(cfg.center_lethal_threshold, NarrowCostValues::kInscribedInflated);
   EXPECT_DOUBLE_EQ(cfg.footprint_lethal_threshold, NarrowCostValues::kLethal);
-  EXPECT_EQ(evaluateNarrowTrigger(253.0, 0.0, 0.0, true, cfg), NarrowVerdict::kCenterLethal);
+  EXPECT_EQ(evaluateNarrowTrigger(253.0, 0.0, 0.0, true, false, false, cfg), NarrowVerdict::kCenterLethal);
 }
 
 TEST(NarrowTrigger, NoPathMeansNoTakeover)
 {
   // 本层以全局路径为核心约束。无路径不接管 —— 那种情况是 ESCAPE 的事。
   NarrowTriggerConfig cfg;
-  EXPECT_EQ(evaluateNarrowTrigger(137.0, 254.0, 0.0, false, cfg), NarrowVerdict::kNoPath);
+  EXPECT_EQ(evaluateNarrowTrigger(137.0, 254.0, 0.0, false, false, false, cfg), NarrowVerdict::kNoPath);
 }
 
 TEST(NarrowTrigger, ToStringCoversAll)
@@ -1334,4 +1334,679 @@ TEST(CorridorArithmetic, PlannerCenterCheckIsWhatActuallyBlocks)
   EXPECT_LT(half - 0.3200, kRes) << "余量小于一个栅格 —— 这一点必须写在结论里";
 }
 
+// =====================================================================
+// 侧向半宽 与 「按周期取模是否保几何」
+//
+// 这一组是 2026-09-03 那场事故的直接回归：当时共享一个 pi/4 周期
+// （八边形的对称周期）去给**两种**足迹算有利朝向，结果正方形被算到
+// 对角朝墙（0.4384，比八边形的 0.4200 还宽），"缩足迹"反而放大了足迹。
+// =====================================================================
+
+namespace
+{
+std::vector<PlanarPoint> octagonFp()
+{
+  return {{0.42, 0.0}, {0.297, 0.297}, {0.0, 0.42}, {-0.297, 0.297},
+    {-0.42, 0.0}, {-0.297, -0.297}, {0.0, -0.42}, {0.297, -0.297}};
+}
+std::vector<PlanarPoint> squareFp()
+{
+  return {{0.31, 0.31}, {-0.31, 0.31}, {-0.31, -0.31}, {0.31, -0.31}};
+}
+/// 保几何校验的容差(m)。按物理取：比栅格 0.05m 细 50 倍，
+/// 又容得下 yaml 三位小数的舍入(0.0214mm)。与生产守卫用同一个值。
+constexpr double kPeriodTolM = 1e-3;
+}  // namespace
+
+TEST(LateralExtent, MatchesHandComputedValues)
+{
+  // delta=0 ⇒ 面朝通道方向，半宽就是 max|y|。
+  EXPECT_NEAR(lateralHalfExtent(squareFp(), 0.0), 0.31, 1e-9);
+  EXPECT_NEAR(lateralHalfExtent(octagonFp(), 0.0), 0.42, 1e-9);
+  // delta=45° ⇒ 正方形对角朝墙 = 0.31*sqrt(2)
+  EXPECT_NEAR(lateralHalfExtent(squareFp(), M_PI / 4.0), 0.31 * std::sqrt(2.0), 1e-9);
+  // 八边形 45° ⇒ 对角顶点朝墙 = 0.297*sqrt(2) = 0.4200214...
+  // ⚠️ 不是 0.42：yaml 里的八边形**不是正八边形**，对角顶点比轴向顶点外伸
+  //    0.0214mm。这个量物理上可忽略（栅格的 1/2333），但写测试时按 0.42 断言
+  //    就会失败 —— 第一版就是这么失败的，是我手算的值错了，不是实现错了。
+  EXPECT_NEAR(
+    lateralHalfExtent(octagonFp(), M_PI / 4.0), 0.297 * std::sqrt(2.0), 1e-9);
+}
+
+TEST(LateralExtent, SquareIsWiderThanOctagonAtFortyFiveDegrees)
+{
+  // 🔴 事故本体：pi/4 同余类里存在一个姿态，正方形比八边形还宽。
+  const double sq = lateralHalfExtent(squareFp(), M_PI / 4.0);
+  const double oc = lateralHalfExtent(octagonFp(), M_PI / 4.0);
+  EXPECT_GT(sq, oc)
+    << "正方形对角(" << sq << ") 必须确实宽于八边形(" << oc
+    << ") —— 这就是共享 pi/4 周期会把机器人转到最坏姿态的原因";
+  // 而在 0°（路径方向本身）正方形是真的更窄，这才是我们要的姿态。
+  EXPECT_LT(lateralHalfExtent(squareFp(), 0.0), lateralHalfExtent(octagonFp(), 0.0));
+}
+
+TEST(LateralExtent, HalfPiPreservesGeometryForBothFootprints)
+{
+  // 🔴 这条决定了「按 pi/2 取模」这个等价合不合法。不成立就不许取模。
+  //
+  // ⚠️ 容差必须按**物理**取，不能取 1e-9。第一版取 1e-9 时八边形也判 false ——
+  //    因为 yaml 的八边形不是正八边形（对角 0.297*sqrt2 比轴向 0.42 多 0.0214mm）。
+  //    那是 yaml 三位小数的舍入，不是形状差异。1e-9 把舍入当差异 ⇒ 误报。
+  //    取 1mm：比栅格 50mm 细 50 倍，又容得下舍入；而要抓的真实差异
+  //   （正方形 pi/4：|0.4384-0.3100| = 128mm）比它大 128 倍，抓得很稳。
+  EXPECT_TRUE(periodPreservesLateralExtent(squareFp(), M_PI / 2.0, kPeriodTolM))
+    << "正方形在 90° 下必须保几何，否则 pi/2 同余类不成立";
+  EXPECT_TRUE(periodPreservesLateralExtent(octagonFp(), M_PI / 2.0, kPeriodTolM))
+    << "八边形在 90° 下必须保几何";
+}
+
+TEST(LateralExtent, QuarterPiDoesNotPreserveGeometryForSquare)
+{
+  // 反面：pi/4 对正方形**不保几何** —— 这正是启动守卫必须拦住的配置。
+  EXPECT_FALSE(periodPreservesLateralExtent(squareFp(), M_PI / 4.0, kPeriodTolM))
+    << "pi/4 对正方形保几何？那 0.3100 与 0.4384 就该相等 —— 说明校验函数是坏的";
+  // 八边形在 1mm 容差下 pi/4 是保几何的，所以旧配置对**八边形单独**成立 ——
+  // 错的是把同一个周期用到正方形上。这个对比正是"必须逐个足迹校验"的理由。
+  EXPECT_TRUE(periodPreservesLateralExtent(octagonFp(), M_PI / 4.0, kPeriodTolM));
+}
+
+TEST(LateralExtent, RejectsBadArguments)
+{
+  EXPECT_FALSE(periodPreservesLateralExtent(squareFp(), 0.0, 1e-9));
+  EXPECT_FALSE(periodPreservesLateralExtent(squareFp(), M_PI / 2.0, 0.0));
+  EXPECT_FALSE(periodPreservesLateralExtent({{0.0, 0.0}, {1.0, 0.0}}, M_PI / 2.0, 1e-9));
+  EXPECT_DOUBLE_EQ(lateralHalfExtent({{0.0, 0.0}, {1.0, 0.0}}, 0.0), 0.0)
+    << "退化多边形必须返回 0，让「更窄」断言失败而不是放行";
+}
+
+TEST(LateralExtent, NarrowestCorridorEachFootprintCanPass)
+{
+  // 把结论落成数：沿路径方向对齐后，各自能过的最窄通道（不含 padding）。
+  const double sq = 2.0 * lateralHalfExtent(squareFp(), 0.0);
+  const double oc = 2.0 * lateralHalfExtent(octagonFp(), 0.0);
+  EXPECT_NEAR(sq, 0.620, 1e-9);
+  EXPECT_NEAR(oc, 0.840, 1e-9);
+  // 本仿真环境最窄 0.65m：正方形过得去、八边形过不去 —— 缩足迹的意义就在这。
+  EXPECT_LT(sq, 0.65);
+  EXPECT_GT(oc, 0.65);
+}
+
+// =====================================================================
+// 启动守卫的判据本身（守卫用的就是这两个函数，这里逐条反向验证）
+// =====================================================================
+
+TEST(SquareGuards, RejectsPeriodThatDoesNotPreserveLateralExtent)
+{
+  // 生产配置：pi/2 对两种足迹都成立 -> 放行
+  EXPECT_TRUE(periodPreservesLateralExtent(octagonFp(), M_PI / 2.0, kPeriodTolM));
+  EXPECT_TRUE(periodPreservesLateralExtent(squareFp(), M_PI / 2.0, kPeriodTolM));
+  // 事故配置：pi/4 对正方形不成立 -> 守卫必须拒绝启动
+  EXPECT_FALSE(periodPreservesLateralExtent(squareFp(), M_PI / 4.0, kPeriodTolM));
+  // 其它常见误配也必须被拒
+  for (double bad : {M_PI / 3.0, M_PI / 6.0, M_PI / 8.0, 1.0, 0.5}) {
+    EXPECT_FALSE(periodPreservesLateralExtent(squareFp(), bad, kPeriodTolM))
+      << "period=" << bad << " 对正方形竟然保几何？";
+  }
+}
+
+TEST(SquareGuards, RejectsFootprintThatIsWiderAfterSwitch)
+{
+  // 守卫 8 / 运行期断言的判据：对齐后(delta=0)小足迹侧向半宽必须更小。
+  const double lat_big = lateralHalfExtent(octagonFp(), 0.0);
+
+  // ① 生产的正方形：0.31 < 0.42 -> 放行
+  EXPECT_LT(lateralHalfExtent(squareFp(), 0.0), lat_big);
+
+  // ② 把同一个正方形**转 45° 摆**（对角朝前）：侧向 0.4384 > 0.42 -> 必须拒绝。
+  //    这是事故的等价构造 —— 面积一样、内切半径一样，只是摆放角度不同，
+  //    而"内切半径"这个口径完全看不出区别。
+  const double r = 0.31 * std::sqrt(2.0);
+  const std::vector<PlanarPoint> diamond{{r, 0.0}, {0.0, r}, {-r, 0.0}, {0.0, -r}};
+  EXPECT_GT(lateralHalfExtent(diamond, 0.0), lat_big)
+    << "45° 摆放的同一正方形必须被判成更宽";
+  // 内切半径口径下两者相同 —— 证明只看内切半径抓不到这件事
+  EXPECT_NEAR(
+    lateralHalfExtent(squareFp(), M_PI / 4.0), lateralHalfExtent(diamond, 0.0), 1e-9);
+}
+
+TEST(SquareGuards, DegenerateFootprintNeverPasses)
+{
+  // 退化足迹返回 0，于是"更窄"断言 (0 < lat_big) 会**通过** —— 危险。
+  // 所以生产代码在 size<3 时是直接抛异常，不走比较。这条把那个前提钉住：
+  // 一旦有人把守卫改成"只比数值"，这个用例会提醒他 0 是个陷阱。
+  EXPECT_DOUBLE_EQ(lateralHalfExtent({{0.0, 0.0}, {1.0, 0.0}}, 0.0), 0.0);
+  EXPECT_LT(lateralHalfExtent({{0.0, 0.0}, {1.0, 0.0}}, 0.0), lateralHalfExtent(octagonFp(), 0.0))
+    << "退化足迹在纯数值比较下会被判成『更窄』—— 所以必须先查点数再比";
+  EXPECT_FALSE(periodPreservesLateralExtent({{0.0, 0.0}, {1.0, 0.0}}, M_PI / 2.0, kPeriodTolM))
+    << "退化足迹的周期校验必须 fail-safe 返回 false";
+}
+
+}  // namespace astribot_s1_path_tracking
+
+// ==================== 朝向层迟滞：切入闸门 vs 交回阈值 ====================
+// 实测缺陷：切入与交回复用同一个 yaw_gate_rad(0.120) ⇒ 没有迟滞 ⇒ 在闸门上自激。
+//   误差 0.121 > 0.120 -> 接管纯旋转、平移置零 -> 转到 0.1199 -> 交回内层
+//   -> 内层一往前走 -> 又超 0.120
+// 30s 硬超时窗口内「重新对齐」累计 749 次、机器人一步未前进，最后被硬超时踢回
+// 八边形。现象是「能进不能出」，而每条日志单独看都完全合理。
+// 实测误差分布 min=0.120 p50=0.131 p95=0.215 max=0.215 —— 全部紧贴闸门。
+TEST(YawHysteresis, ResumeMustBeStrictlyTighterThanGate)
+{
+  astribot_s1_path_tracking::NarrowLimits lim;
+  EXPECT_GT(lim.yaw_gate_rad, lim.yaw_resume_rad)
+    << "交回阈值必须严格小于切入闸门；相等就是没有迟滞，保证自激";
+  EXPECT_GT(lim.yaw_resume_rad, 0.0);
+}
+
+TEST(YawHysteresis, BandCoversMeasuredJitter)
+{
+  // 迟滞带必须覆盖实测抖动，否则等于没加。实测超出量 p95 = 0.215-0.120 = 0.095rad，
+  // 这里要求带宽至少是抖动**中位**超出量(0.131-0.120=0.011)的若干倍。
+  astribot_s1_path_tracking::NarrowLimits lim;
+  const double band = lim.yaw_gate_rad - lim.yaw_resume_rad;
+  EXPECT_GE(band, 0.011 * 4.0)
+    << "迟滞带 " << band << " 太窄，覆盖不住实测抖动 -> 仍会自激";
+}
+
+TEST(YawHysteresis, ResumeStaysWellBelowPassabilityNeed)
+{
+  // 交回阈值不能收得过狠：那会让机器人在通道里追求过高的对齐精度而走不动。
+  // 0.06rad = 3.44°，远小于"朝向不对就过不去"所要求的精度。
+  astribot_s1_path_tracking::NarrowLimits lim;
+  EXPECT_LE(lim.yaw_resume_rad, 0.10);
+}
+
+TEST(YawHysteresis, GateAloneWouldOscillateOnMeasuredSamples)
+{
+  // 反向断言：用实测那 5 个紧贴闸门的样本，证明"单阈值"会在每个样本上都翻转，
+  // 而"双阈值"不会。这条存在的意义是防止有人把 yaw_resume 改回等于 gate 后
+  // 测试仍然全绿。
+  const astribot_s1_path_tracking::NarrowLimits lim;
+  const double measured[] = {0.120, 0.121, 0.124, 0.131, 0.135};
+  int single_flips = 0;
+  int dual_flips = 0;
+  bool latched = false;
+  for (double e : measured) {
+    // 单阈值：每拍独立判断，超了就接管、不超就交回
+    if (e > lim.yaw_gate_rad) { ++single_flips; }
+    // 双阈值：一旦接管，必须降到 resume 以下才交回
+    if (!latched && e > lim.yaw_gate_rad) { latched = true; ++dual_flips; }
+    else if (latched && e <= lim.yaw_resume_rad) { latched = false; ++dual_flips; }
+  }
+  EXPECT_GE(single_flips, 4) << "单阈值在这组实测样本上反复接管，即自激";
+  EXPECT_LE(dual_flips, 1) << "双阈值只应接管一次，之后保持接管直到真的转好";
+}
+
+// ============ 小足迹生效期间不得早退（否则落回零梯度的 MPPI） ============
+// evaluateNarrow 开头有条"便宜早退"：中心格与足迹代价都低于阈值就放行。
+// 缩足迹成功之后 footprint_cost 正好从 254 掉到 253 —— 那**就是**"装得下了"
+// 的含义 —— 于是早退命中、贴边通行层不接管、控制权落回内层 MPPI。
+// 而小足迹生效的区间按定义就是"窄到八边形过不去"，那里代价场是饱和的：
+//     零梯度阈值 W <= 4 x 侧向半宽 = 4 x 0.32 = 1.28m
+// 用武之地是 0.64 < W <= 0.86m，远小于 1.28m。实测（0.65~0.86m 通道）
+// costmap_raw 剖面 22 点里 253 占 15 个(68%)，交回 MPPI 后累计行程 1.706m /
+// 净位移 0.488m、|vx| 中位 0.0134、近零帧 46.4%，11 次切换里 4 次撞满 30s 超时。
+//
+// 这组测试把"早退条件"当纯函数复算一遍，钉住 squareActive 这个例外。
+namespace
+{
+/// 与 evaluateNarrow 里那条早退**逐字同构**的判据（含 squareActive 例外）。
+bool wouldEarlyReturn(
+  double center_cost, double footprint_cost, bool square_active,
+  const astribot_s1_path_tracking::NarrowTriggerConfig & cfg)
+{
+  return !square_active &&
+         center_cost < cfg.center_lethal_threshold &&
+         footprint_cost < cfg.footprint_lethal_threshold;
+}
+}  // namespace
+
+TEST(SquareNoEarlyReturn, ShrunkFootprintCostIs253AndWouldTriggerEarlyReturn)
+{
+  // 前提复核：缩足迹成功后的典型读数(中心 253 以下、足迹 253)确实会命中早退。
+  // 这一条证明例外**是必需的**，不是多余的防御。
+  astribot_s1_path_tracking::NarrowTriggerConfig cfg;
+  EXPECT_TRUE(wouldEarlyReturn(200.0, 253.0, /*square_active=*/ false, cfg))
+    << "足迹 253 < 254 阈值 ⇒ 不加例外就会早退 ⇒ 落回零梯度的 MPPI";
+}
+
+TEST(SquareNoEarlyReturn, SquareActiveSuppressesEarlyReturn)
+{
+  astribot_s1_path_tracking::NarrowTriggerConfig cfg;
+  EXPECT_FALSE(wouldEarlyReturn(200.0, 253.0, /*square_active=*/ true, cfg))
+    << "小足迹生效期间必须继续由贴边通行层接管，不能早退";
+}
+
+TEST(SquareNoEarlyReturn, OpenSpaceStillEarlyReturnsWhenSquareInactive)
+{
+  // 例外不能把开阔处的早退也一起关掉 —— 那会让本层在整条路上都接管，
+  // 白付路径变换/横向扫描的开销，并且把 MPPI 完全排除在正常路段之外。
+  astribot_s1_path_tracking::NarrowTriggerConfig cfg;
+  EXPECT_TRUE(wouldEarlyReturn(0.0, 0.0, /*square_active=*/ false, cfg));
+}
+
+TEST(SquareNoEarlyReturn, LethalStillNoEarlyReturnRegardlessOfSquare)
+{
+  // 足迹真致命(254)时两种状态都不该早退。
+  astribot_s1_path_tracking::NarrowTriggerConfig cfg;
+  EXPECT_FALSE(wouldEarlyReturn(200.0, 254.0, false, cfg));
+  EXPECT_FALSE(wouldEarlyReturn(200.0, 254.0, true, cfg));
+}
+
+TEST(SquareNoEarlyReturn, ZeroGradientThresholdArithmetic)
+{
+  // 钉住那条算术：正方形侧向半宽 0.32 ⇒ 零梯度阈值 1.28m ⇒ 覆盖整个用武之地
+  // (0.64, 0.86]。这解释了"为什么缩足迹之后仍然需要贴边通行层沿路径走"。
+  const std::vector<astribot_s1_path_tracking::PlanarPoint> sq =
+    astribot_s1_path_tracking::squareFp();
+  const double lateral = astribot_s1_path_tracking::lateralHalfExtent(sq, 0.0);
+  const double zero_grad_w = 4.0 * lateral;
+  EXPECT_NEAR(lateral, 0.31, 1e-9);
+  EXPECT_NEAR(zero_grad_w, 1.24, 1e-9);
+  // 用武之地上界 0.86m 必须仍然小于零梯度阈值 —— 即缩足迹**没有**消除零梯度
+  EXPECT_LT(2.0 * 0.4300, zero_grad_w)
+    << "若 0.86 >= 零梯度阈值，则缩足迹本身就解决了梯度问题，本例外可以删除";
+}
+
+// ==========================================================================
+// 「代价场饱和 + 内层无进展」第二入口
+//
+// 加这条入口的实测依据（2026-09-03，本图 y=-5.82、x=2.00→4.25 共 2.25m 通道）：
+//     足迹多边形代价  恒 253，**一次 254 都没有**
+//     中心格代价      63 → 216（峰值），从不 >= 253
+//     净宽            1.05~1.80m（八边形只要 0.86m，本来就过得去）
+// ⇒ 原有 ①②④ 三条判据全不成立 ⇒ 一次都不接管（日志侧：5 条腿触发 0 次）。
+// 而机器人确实过不去：停在 x≈2.02~2.14（5 次实测），81 次 Failed to make progress。
+// ==========================================================================
+namespace astribot_s1_path_tracking
+{
+
+TEST(SaturationEntry, MeasuredCorridorProfileGetsNoTakeoverWithoutTheSecondEntry)
+{
+  // 这一条是**反向断言**：把实测剖面喂进去，不给 saturated_stalled，
+  // 结果必须是 kNone —— 这正是"策略一次都没生效"的机制本身。
+  const NarrowTriggerConfig cfg;
+  const double measured_center[] = {63.0, 80.0, 89.0, 100.0, 150.0, 186.0, 201.0, 216.0};
+  for (const double c : measured_center) {
+    EXPECT_EQ(
+      evaluateNarrowTrigger(c, 253.0, 253.0, true, false, false, cfg), NarrowVerdict::kNone)
+      << "中心代价 " << c << " 配足迹 253：无第二入口时必须是 kNone（这就是那个 bug）";
+  }
+}
+
+TEST(SaturationEntry, SameProfileTakesOverOnceStallIsObserved)
+{
+  const NarrowTriggerConfig cfg;
+  const double measured_center[] = {63.0, 80.0, 89.0, 100.0, 150.0, 186.0, 201.0, 216.0};
+  for (const double c : measured_center) {
+    EXPECT_EQ(
+      evaluateNarrowTrigger(c, 253.0, 253.0, true, true, false, cfg), NarrowVerdict::kNarrow)
+      << "中心代价 " << c << " 配足迹 253 且实测无进展：必须接管";
+  }
+}
+
+TEST(SaturationEntry, StallDoesNotOverrideAnyRedLine)
+{
+  const NarrowTriggerConfig cfg;
+  // 红线：最有利朝向下压真障碍 —— 无进展也不许接管硬挤。
+  EXPECT_EQ(
+    evaluateNarrowTrigger(100.0, 253.0, 254.0, true, true, false, cfg),
+    NarrowVerdict::kPhysicallyBlocked);
+  // 中心格致命 —— 归 ESCAPE，不是本层。
+  EXPECT_EQ(
+    evaluateNarrowTrigger(253.0, 253.0, 100.0, true, true, false, cfg),
+    NarrowVerdict::kCenterLethal);
+  // 无路径 —— 本层以路径为核心约束，无进展也不接管。
+  EXPECT_EQ(
+    evaluateNarrowTrigger(100.0, 253.0, 100.0, false, true, false, cfg),
+    NarrowVerdict::kNoPath);
+}
+
+TEST(SaturationEntry, UnsaturatedStallIsNotThisLayersBusiness)
+{
+  // 没饱和还走不动，是别的原因（内层参数、动力学、被真障碍挡住）。
+  // 本层不能因为"车没动"就接管 —— 那会变成万能兜底，掩盖真实故障。
+  const NarrowTriggerConfig cfg;
+  for (const double fp : {0.0, 100.0, 200.0, 252.0}) {
+    EXPECT_EQ(
+      evaluateNarrowTrigger(100.0, fp, fp, true, true, false, cfg), NarrowVerdict::kNone)
+      << "足迹 " << fp << " 未达饱和阈值，无进展也不接管";
+  }
+}
+
+TEST(SaturationEntry, SaturationThresholdMustStayBelowLethal)
+{
+  // 阈值配成 254 时这条入口与 ④ 完全重合 = 等于没加。
+  // 控制器启动守卫会拒绝这种配置，这里锁住那条算术前提。
+  const NarrowTriggerConfig cfg;
+  EXPECT_LT(cfg.saturation_threshold, cfg.footprint_lethal_threshold);
+  EXPECT_DOUBLE_EQ(cfg.saturation_threshold, NarrowCostValues::kInscribedInflated);
+  EXPECT_DOUBLE_EQ(cfg.footprint_lethal_threshold, NarrowCostValues::kLethal);
+}
+
+TEST(SaturationStall, WindowNeedsBothSaturatedAndFollowing)
+{
+  const NarrowTriggerConfig cfg;
+  NarrowStallState st;
+  // 不饱和 ⇒ 窗口清空
+  EXPECT_FALSE(updateSaturationStall(false, true, 0.0, 0.0, 0.0, cfg, st));
+  EXPECT_FALSE(st.has_anchor);
+  // 不在 FOLLOW（原地对齐）⇒ 窗口清空，原地转不算卡住
+  EXPECT_FALSE(updateSaturationStall(true, false, 0.0, 0.0, 0.0, cfg, st));
+  EXPECT_FALSE(st.has_anchor);
+  // 两者都真 ⇒ 开窗
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 0.0, cfg, st));
+  EXPECT_TRUE(st.has_anchor);
+}
+
+TEST(SaturationStall, FiresOnlyAfterTheFullWindow)
+{
+  const NarrowTriggerConfig cfg;    // 3.0s / 0.05m
+  NarrowStallState st;
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 100.0, cfg, st));
+  // 窗口内一动不动，但还没到 3s
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 101.0, cfg, st));
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 102.9, cfg, st));
+  // 到点
+  EXPECT_TRUE(updateSaturationStall(true, true, 0.0, 0.0, 103.0, cfg, st));
+}
+
+TEST(SaturationStall, ProgressReopensTheWindow)
+{
+  const NarrowTriggerConfig cfg;
+  NarrowStallState st;
+  // ⚠️ 推进量必须由 cfg 推出来，不能写死数字。原来写死 0.06（"> 0.05"），
+  // 门槛从 0.05 改到 0.15 之后这条测试就在测一件不成立的事（0.06 不再算推进），
+  // 而失败信息指向 anchor_sec、完全看不出真因。
+  const double progressed = cfg.saturation_min_move_m * 1.2;
+  updateSaturationStall(true, true, 0.0, 0.0, 100.0, cfg, st);
+  // 差一点到窗口尾时推进了 > 门槛 ⇒ 内层还在工作，窗口重开
+  EXPECT_FALSE(
+    updateSaturationStall(
+      true, true, progressed, 0.0, 100.0 + cfg.saturation_stall_sec - 0.1, cfg, st));
+  EXPECT_DOUBLE_EQ(st.anchor_sec, 100.0 + cfg.saturation_stall_sec - 0.1);
+  // 从新锚点起再等不足一个窗口还不够
+  EXPECT_FALSE(
+    updateSaturationStall(
+      true, true, progressed, 0.0, 100.0 + 2 * cfg.saturation_stall_sec - 1.1, cfg, st));
+  // 满一个窗口才算卡住
+  EXPECT_TRUE(
+    updateSaturationStall(
+      true, true, progressed, 0.0, 100.0 + 2 * cfg.saturation_stall_sec - 0.1, cfg, st));
+}
+
+TEST(SaturationStall, WindowIsClearedNotPausedOnLeavingSaturation)
+{
+  // 「走一段-停一段」不能累计成假卡住：脱离饱和带必须清空而不是暂停。
+  const NarrowTriggerConfig cfg;
+  NarrowStallState st;
+  updateSaturationStall(true, true, 0.0, 0.0, 100.0, cfg, st);
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 102.5, cfg, st));
+  // 中间出了一拍饱和带
+  EXPECT_FALSE(updateSaturationStall(false, true, 0.0, 0.0, 102.6, cfg, st));
+  // 回到饱和带：从这一刻重新起算，不能拿 100.0 当锚点直接判卡住
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 102.7, cfg, st));
+  EXPECT_DOUBLE_EQ(st.anchor_sec, 102.7);
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 104.9, cfg, st));
+  EXPECT_TRUE(updateSaturationStall(true, true, 0.0, 0.0, 105.7, cfg, st));
+}
+
+TEST(SaturationStall, ClockGoingBackwardsIsNotALongStall)
+{
+  const NarrowTriggerConfig cfg;
+  NarrowStallState st;
+  updateSaturationStall(true, true, 0.0, 0.0, 500.0, cfg, st);
+  // sim time 重置 ⇒ now < anchor。不能算成负时长，也不能算成"卡了很久"。
+  EXPECT_FALSE(updateSaturationStall(true, true, 0.0, 0.0, 10.0, cfg, st));
+  EXPECT_DOUBLE_EQ(st.anchor_sec, 10.0);
+}
+
+TEST(SaturationStall, WindowExceedsOneReplanPeriod)
+{
+  // 实测内层重规划周期 1.05s。窗口必须明显大于它，否则换路径那一拍的
+  // 停顿会被误判成卡住。
+  const NarrowTriggerConfig cfg;
+  EXPECT_GT(cfg.saturation_stall_sec, 2.0 * 1.05);
+}
+
+TEST(SaturationStall, MinMoveSitsBetweenMeasuredCreepAndMeasuredHealthyTravel)
+{
+  // 🔴 这条测试原来断言的是「>= 一个栅格(0.05m)」，理由是"低于此与定位噪声
+  // 不可分"。理由本身没错，但它是**下界**、而当作了取值依据 —— 实测把 0.05
+  // 直接否掉了：MPPI 在膨胀坡脚是蠕行不是不动，任意 3s 窗口位移 0.0937m
+  // 已经超过 0.05m，窗口被一次次重开，第二入口接管 0 次。
+  // 「有没有动」是错的问题，对的问题是「推进得比本层还慢吗」。
+  const NarrowTriggerConfig cfg;
+  const double window_sec = cfg.saturation_stall_sec;      // 3.0s
+  const double v_along = 0.10;                             // narrow_v_along 生产值
+
+  const double measured_creep_m = 0.0937;    // 实测：任意 3s 窗口内最大位移
+  const double measured_healthy_m = 0.1022 * window_sec;   // phase5 成功段 0.1022m/s
+  const double layer_reach_m = v_along * window_sec;       // 本层自己能走多远
+
+  // 必须能判出蠕行 —— 否则这条入口在实测现场根本进不去。
+  EXPECT_GT(cfg.saturation_min_move_m, measured_creep_m)
+    << "门槛没盖住实测蠕行 0.0937m，第二入口会像 phase7 那样接管 0 次";
+  // 必须不误判健康通行 —— 否则会把本来走得好的段也抢过来。
+  EXPECT_LT(cfg.saturation_min_move_m, measured_healthy_m)
+    << "门槛超过实测健康通行 " << measured_healthy_m << "m，会误接管";
+  // 必须 < 本层自己可达，否则连本层都达不到、等于恒判无进展（启动守卫同款）。
+  EXPECT_LT(cfg.saturation_min_move_m, layer_reach_m);
+  // 仍然要在定位噪声之上（原来那条理由作为下界依然成立）。
+  EXPECT_GE(cfg.saturation_min_move_m, 0.05);
+  // 两侧余量都要有量级冗余，不能刚好卡在实测值上。
+  EXPECT_GT(cfg.saturation_min_move_m / measured_creep_m, 1.5);
+  EXPECT_GT(measured_healthy_m / cfg.saturation_min_move_m, 1.5);
+}
+
+TEST(SaturationStall, MeasuredCreepTraceWouldNeverHaveTriggeredAtOneGrid)
+{
+  // 用实测蠕行轨迹直接回放：0.0061 m/s 净速率、每拍 0.1s。
+  // 旧门槛 0.05m 下窗口会被反复重开 ⇒ 永不触发（= phase7 的 0 次接管）；
+  // 新门槛 0.15m 下同一条轨迹必须触发。
+  const double dt = 0.1;
+  const double creep_speed = 0.0937 / 3.0;   // 实测 3s 窗口最大位移折算的速率
+
+  auto replay = [&](double min_move) {
+      NarrowTriggerConfig cfg;
+      cfg.saturation_stall_sec = 3.0;
+      cfg.saturation_min_move_m = min_move;
+      NarrowStallState st;
+      bool ever_stalled = false;
+      for (int i = 0; i < 200; ++i) {      // 20 秒
+        const double t = i * dt;
+        const double x = creep_speed * t;
+        if (updateSaturationStall(true, true, x, 0.0, t, cfg, st)) {ever_stalled = true;}
+      }
+      return ever_stalled;
+    };
+
+  EXPECT_FALSE(replay(0.05)) << "旧门槛竟然触发了，实测前提(0 次接管)有误";
+  EXPECT_TRUE(replay(0.15)) << "新门槛在实测蠕行轨迹上仍不触发，改了等于没改";
+}
+
+// =====================================================================
+// 第二入口的最短驻留。这一组测的是 2026-09-03 第二轮实测暴露的振荡：
+// 只把脱离阈值从 254 改成 253（迟滞同阈值）不够，还必须同**变量**。
+// =====================================================================
+
+TEST(SaturationDwell, MeasuredEngagementDurationsAreAllTooShortToEverAlign)
+{
+  // 2026-09-03 第二轮实测的 18 次接管，逐次配对「接管时长 / 起手朝向误差」。
+  // 闸门 0.12rad、wz 上限 0.20rad/s ⇒ 转进闸门需要 (|err| - gate)/wz 秒。
+  const double gate = 0.12;
+  const double wz = 0.20;
+  struct Engagement { double dur_sec; double yaw_err_rad; };
+  const std::vector<Engagement> measured{
+    {0.60, 0.443}, {0.90, 0.458}, {0.80, 0.444}, {0.55, 0.423}, {0.75, 0.432},
+    {2.79, 0.421}, {0.95, 0.686}, {1.80, 0.774}, {27.10, 0.496}, {0.45, 0.733},
+    {1.70, 0.736}, {0.90, 0.515}, {16.70, 0.105}, {0.60, 0.526}, {0.45, 0.513},
+    {0.35, 0.508}, {17.20, 0.619}, {15.52, 0.178}};
+
+  int too_short = 0;
+  for (const auto & e : measured) {
+    const double need = (e.yaw_err_rad - gate) / wz;
+    if (e.dur_sec < need) {++too_short;}
+  }
+  // 实测就是 13/18 次在**还没转正**时被代价纹理赶了出去。这不是调参问题：
+  // 那 13 次一拍前进指令都没发出过，出去后 MPPI 转回自己的朝向、再卡 3s、
+  // 再从同样的 ~0.44rad 重来 —— 出口判据必须先给足转正时间。
+  EXPECT_EQ(too_short, 13);
+
+  // 而 4.0s 的默认驻留覆盖了这 18 次里**每一次**的转正需求。
+  for (const auto & e : measured) {
+    EXPECT_LE((e.yaw_err_rad - gate) / wz, 4.0)
+      << "朝向误差 " << e.yaw_err_rad << "rad 转正要 "
+      << (e.yaw_err_rad - gate) / wz << "s，超过了默认驻留 4.0s";
+  }
+}
+
+TEST(SaturationDwell, DefaultDwellCoversTheArithmeticAlignBound)
+{
+  const double bound = saturationAlignBoundSec(M_PI / 2.0, 0.20);
+  EXPECT_NEAR(bound, 3.927, 1e-3);       // (1.5708/2)/0.20
+  // 生产默认值（见 three_phase_controller.hpp）必须覆盖这个下界。
+  EXPECT_GE(4.0, bound);
+  // 且必须短于卡住判据 6s，否则驻留期自己会撞上「原地蹭」被判死。
+  EXPECT_LT(4.0, 6.0);
+}
+
+TEST(SaturationDwell, AlignBoundScalesWithBothInputsAndSurvivesZeroWz)
+{
+  EXPECT_GT(saturationAlignBoundSec(M_PI / 2.0, 0.10),
+    saturationAlignBoundSec(M_PI / 2.0, 0.20));      // 转得慢 -> 要更久
+  EXPECT_GT(saturationAlignBoundSec(M_PI, 0.20),
+    saturationAlignBoundSec(M_PI / 2.0, 0.20));      // 周期大 -> 要更久
+  EXPECT_TRUE(std::isfinite(saturationAlignBoundSec(M_PI / 2.0, 0.0)));  // 不许 inf/nan
+}
+
+TEST(SaturationDwell, HoldsOnlyWhileEngagedViaSaturationAndInsideTheWindow)
+{
+  // 窗口内、由第二入口进来 ⇒ 保持（代价掉下去也不许退）。
+  EXPECT_TRUE(saturationDwellHolding(true, true, 1.0, 4.0));
+  // 窗口过了 ⇒ 交还给代价判据。
+  EXPECT_FALSE(saturationDwellHolding(true, true, 4.0, 4.0));
+  EXPECT_FALSE(saturationDwellHolding(true, true, 9.9, 4.0));
+  // 不是第二入口进来的（即 254 那条正常入口）⇒ 本规则不介入，
+  // 否则会把原来就能正常脱离的接管一律拖长 4s。
+  EXPECT_FALSE(saturationDwellHolding(true, false, 1.0, 4.0));
+  // 根本没接管 ⇒ 不介入（早退路径必须照常放行开阔地）。
+  EXPECT_FALSE(saturationDwellHolding(false, true, 1.0, 4.0));
+}
+
+TEST(SaturationDwell, ClockGoingBackwardsReleasesRatherThanLatchesForever)
+{
+  // 负的已接管时长只可能来自时钟回跳。若按「< dwell 即保持」处理，
+  // 回跳越大保持越久 —— 而回跳量无上界，等于永久锁死接管。
+  EXPECT_FALSE(saturationDwellHolding(true, true, -0.5, 4.0));
+  EXPECT_FALSE(saturationDwellHolding(true, true, -1e6, 4.0));
+}
+
+TEST(SaturationDwell, ZeroDwellIsTheOneKeyRollbackToTheOscillatingBehaviour)
+{
+  // 把 dwell 设 0 应当完全等价于「没有这条规则」，供一键回退 A/B。
+  EXPECT_FALSE(saturationDwellHolding(true, true, 0.0, 0.0));
+}
+
+// 出口判据必须同时问「拍数」和「驻留」。这个用例存在的理由是实测抓到的偏差：
+// 早退路径问了驻留，而 kNone 那条 disengageNarrow 没问 ⇒ banner 打印
+// 「最短驻留=4.0s」而真实接管只活了 0.45s，随后交回 MPPI 96s 没有进展。
+TEST(NarrowDisengage, DwellVetoesEvenWhenClearTicksAreSatisfied)
+{
+  // 拍数够了但驻留还没满 ⇒ 不许退出。这就是原来漏掉的那一项。
+  EXPECT_FALSE(narrowShouldDisengage(3, 3, /*dwell_holding=*/ true));
+  EXPECT_FALSE(narrowShouldDisengage(999, 3, true));
+  // 驻留满了、拍数够了 ⇒ 退出。
+  EXPECT_TRUE(narrowShouldDisengage(3, 3, false));
+  // 驻留满了但拍数不够 ⇒ 仍不退（消抖照旧生效）。
+  EXPECT_FALSE(narrowShouldDisengage(2, 3, false));
+  // need 非法时 narrowCleared 按「永不判脱离」处理，这里必须继承该语义，
+  // 否则配置写错会让接管一拍就退出且不报错。
+  EXPECT_FALSE(narrowShouldDisengage(999, 0, false));
+  EXPECT_FALSE(narrowShouldDisengage(999, -1, false));
+}
+
+TEST(NarrowDisengage, DwellDominatesClearTicksByArithmeticNotByTuning)
+{
+  // 算术：驻留 4.0s @20Hz = 80 拍，而 narrow_clear_ticks 默认 3 拍。
+  // 80 >> 3 ⇒ 在驻留窗口内，拍数判据**必然**早已满足。
+  // 也就是说漏问驻留不是"偶尔"漏掉，而是每次接管都会被拍数判据抢先退出。
+  const double dwell_sec = 4.0;
+  const double hz = 20.0;
+  const int dwell_ticks = static_cast<int>(dwell_sec * hz);
+  const int clear_ticks = 3;
+  EXPECT_GT(dwell_ticks, clear_ticks);
+  // 逐拍走一遍：驻留窗口内每一拍都不许退出。
+  for (int tick = 0; tick <= dwell_ticks; ++tick) {
+    const double engaged_sec = tick / hz;
+    const bool holding = saturationDwellHolding(true, true, engaged_sec, dwell_sec);
+    const bool disengage = narrowShouldDisengage(clear_ticks, clear_ticks, holding);
+    if (engaged_sec < dwell_sec) {
+      EXPECT_FALSE(disengage) << "tick=" << tick << " engaged_sec=" << engaged_sec;
+    } else {
+      EXPECT_TRUE(disengage) << "tick=" << tick << " engaged_sec=" << engaged_sec;
+    }
+  }
+  // 驻留下界不能小于转正所需时间，否则必然在还没转正时被赶出去
+  // （实测就是这样：接管 0.45s，而下界 3.93s）。
+  EXPECT_GE(dwell_sec, saturationAlignBoundSec(M_PI / 2.0, 0.20));
+}
+
+}  // namespace astribot_s1_path_tracking
+namespace astribot_s1_path_tracking
+{
+
+// =====================================================================
+// 例外五：入口判据不得复用为每拍的驾驶判据
+//
+// 实测（51.3s 一次接管、1024 帧 /cmd_vel）：中位 |wz|=0.0287 而本层饱和值
+// 应为 0.20；|wz| 落在 0.19~0.21 的帧仅 12.1%；105 帧 |vx|>0.10、32 帧
+// |wz|>0.21 —— 都超过本层硬上限，只能来自内层 MPPI。即"已接管"标志亮着，
+// 方向盘 88% 的时间在 MPPI 手里；累计转角 3.728rad vs 净转角 1.311rad。
+// =====================================================================
+TEST(SaturationEngagedDrive, LayerCannotRevokeItsOwnAuthorityByMakingProgress)
+{
+  NarrowTriggerConfig cfg;
+  const double fp = cfg.saturation_threshold;      // 253：这一类通道的恒定读数
+
+  // 未接管 + 内层无进展 ⇒ 允许进入（第二入口的本意）
+  EXPECT_EQ(
+    evaluateNarrowTrigger(0.0, fp, fp, true, /*stalled=*/ true, /*engaged=*/ false, cfg),
+    NarrowVerdict::kNarrow);
+
+  // 🔴 关键：已接管 + 内层"有进展"（因为**本层自己在走**）⇒ 仍须 kNarrow。
+  //    修复前这里返回 kNone，方向盘每 1.5s 就被交回一次。
+  EXPECT_EQ(
+    evaluateNarrowTrigger(0.0, fp, fp, true, /*stalled=*/ false, /*engaged=*/ true, cfg),
+    NarrowVerdict::kNarrow)
+    << "已接管期间问 saturated_stalled 等于让本层用自己的进展吊销自己的授权";
+
+  // 未接管 + 有进展 ⇒ 不该进入（入口判据本身没被削弱）
+  EXPECT_EQ(
+    evaluateNarrowTrigger(0.0, fp, fp, true, /*stalled=*/ false, /*engaged=*/ false, cfg),
+    NarrowVerdict::kNone);
+}
+
+TEST(SaturationEngagedDrive, SelfRevokeDeadlineIsShorterThanAnyAlignment)
+{
+  // 算术证明这个 bug 无法靠调参消除：
+  //   本层推进到 min_move 所需时间 = min_move / v_along
+  //   而转正到有利朝向所需时间 = (favorable_period/2) / wz_max
+  // 前者 < 后者 ⇒ 授权必在转正之前就被自己吊销。
+  NarrowTriggerConfig cfg;
+  const double v_along = 0.10;      // narrow_v_along
+  const double wz_max = 0.20;       // narrow_wz_max
+  const double favorable_period = 1.5707963267948966;
+
+  const double self_revoke_sec = cfg.saturation_min_move_m / v_along;
+  const double align_sec = saturationAlignBoundSec(favorable_period, wz_max);
+
+  EXPECT_NEAR(self_revoke_sec, 1.5, 1e-9);
+  EXPECT_NEAR(align_sec, 3.927, 1e-3);
+  EXPECT_LT(self_revoke_sec, align_sec)
+    << "自我吊销 " << self_revoke_sec << "s < 转正所需 " << align_sec
+    << "s ⇒ 只要每拍还问 saturated_stalled，本层就永远转不正。"
+       "把 min_move 调大到 " << align_sec * v_along
+    << "m 以上才能躲过，但那等于要求本层比它自己更慢 —— 所以只能改结构。";
+}
 }  // namespace astribot_s1_path_tracking

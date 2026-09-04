@@ -260,11 +260,39 @@ TEST(AdvancePhase, GoalAlignHoldsUntilYawWithinTolerance)
     Phase::kDone);
 }
 
-TEST(AdvancePhase, DoneIsTerminal)
+// 这个用例原来叫 DoneIsTerminal，断言 dist=9.0(远远超出容差 0.18) 时仍留在
+// kDone —— 它把一个真 bug 锁死成了"规范"。实测后果：远端目标那一腿在 t+45.5s
+// 打出 "ALIGN_GOAL -> DONE"，随后 135s 内 /cmd_vel 非零线速度 **0 帧**、
+// max‖v‖=0.0000、净位移 0.048m，nav2 从未打出 "Reached the goal!"，整段跑到
+// 180s 被主动取消。所以断言反过来写：kDone 必须可撤回。
+TEST(AdvancePhase, DoneIsRevocableWhenPathEndMovesAway)
 {
+  // 路径末端跑远了（1Hz 重规划换路径、恢复行为把机器人转走都会造成这个）
+  // -> 必须回到 kFollow 继续开，不能停在 kDone 出零速。
   EXPECT_EQ(
     advancePhase(Phase::kDone, 3.0, 3.0, 9.0, 0.18, 0.05, 0.20, true),
+    Phase::kFollow);
+  // 刚超出容差一点也要退出：退出阈值不许比 GoalChecker 的 xy 容差宽，
+  // 否则 (xy_tol, exit_tol] 就是一段死区，本层停车而 GoalChecker 不认账。
+  EXPECT_EQ(
+    advancePhase(Phase::kDone, 0.0, 0.0, 0.1801, 0.18, 0.05, 0.20, true),
+    Phase::kFollow);
+  // 仍在容差内则保持 kDone（出零速，把到位裁决交给 GoalChecker）。
+  EXPECT_EQ(
+    advancePhase(Phase::kDone, 3.0, 3.0, 0.18, 0.18, 0.05, 0.20, true),
     Phase::kDone);
+  EXPECT_EQ(
+    advancePhase(Phase::kDone, 3.0, 3.0, 0.0, 0.18, 0.05, 0.20, true),
+    Phase::kDone);
+  // 退出判据与 kFollow 的进入判据必须是同一个不等式的两侧（死区为空集）:
+  // 对同一个 dist，两个相位的裁决必须一致地"要不要继续开"。
+  for (double d : {0.0, 0.05, 0.1799, 0.18, 0.1801, 0.5, 9.0}) {
+    const bool follow_keeps_driving =
+      advancePhase(Phase::kFollow, 0.0, 0.0, d, 0.18, 0.05, 0.20, true) == Phase::kFollow;
+    const bool done_resumes_driving =
+      advancePhase(Phase::kDone, 0.0, 0.0, d, 0.18, 0.05, 0.20, true) == Phase::kFollow;
+    EXPECT_EQ(follow_keeps_driving, done_resumes_driving) << "dist=" << d;
+  }
 }
 
 TEST(AdvancePhase, ToleranceComesFromCaller)
