@@ -127,6 +127,33 @@ Phase advancePhase(
 /// 同一目标的周期性重规划刻意不重置（否则对齐段永远等不到超时，保护形同虚设）。
 bool shouldRestartPhaseTimer(Phase before, Phase requested, bool is_new_goal);
 
+/// 这次 setPlan 是不是「同一目标的**新一次** FollowPath 下发」。
+///
+/// ⚠2026-09-04 实机根因。上面那条 shouldRestartPhaseTimer 只补住了
+/// 「新目标 + 相位没变」这一个洞，**同一目标被重新下发**那个洞还开着：
+/// setPlan 判出 same_goal 后会提前 return，压根走不到 enterPhase，
+/// 于是相位计时器继续沿用上一次的值。实机时间轴：
+///   · 734.0s  最后一次真·新目标 -> 计时器重置
+///   · 之后协调器把**同一个**目标 (1.68, 8.43) 每 1.5s 重下发一次
+///   · 844.8s  计时器读到 110.708s > 15.0s，每条新路径第一拍就抛超时
+/// 后果与上面那条一模一样：Controller patience exceeded ×43 ->
+/// Aborting handle ×48 -> 上游 3 连败 -> PAUSED -> 自动恢复 3 次全在 3s 内
+/// 再死 -> 永久 parked。ALIGN_START 超时读数**单调爬升**就是这个洞的指纹。
+///
+/// 判据不能看路径内容（同一目标的两次下发路径几乎一样），只能看**时间空档**：
+/// nav2 在一个 FollowPath action 存续期间会以 controller_frequency 持续调
+/// computeVelocityCommands；action 一结束（成功/中止/取消）调用就停了。
+/// 所以「上一次 tick 距今超过 gap_threshold」⇔「上一个 action 已经结束」，
+/// 这一次 setPlan 就是新一次尝试，必须给它一份完整的对齐预算。
+///
+/// 阈值取 controller_frequency 的若干倍（默认 0.5s = 20Hz 下 10 拍）：
+/// 大于单拍抖动、又远小于 align_timeout(15s)，不会把周期重规划误判成新尝试。
+///
+/// \param has_prev_tick 之前是否 tick 过（首次 setPlan 时为 false）
+/// \param idle_gap_sec  距上一次 tick 的秒数（has_prev_tick 为 false 时忽略）
+/// \param gap_threshold_sec 判定空档的阈值，必须 > 0
+bool isFreshFollowAttempt(bool has_prev_tick, double idle_gap_sec, double gap_threshold_sec);
+
 }  // namespace astribot_s1_path_tracking
 
 #endif  // ASTRIBOT_S1_PATH_TRACKING__ALIGN_MATH_HPP_

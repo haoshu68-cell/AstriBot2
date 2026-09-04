@@ -69,7 +69,7 @@ source $WS/install/setup.bash
 ST=/opt/ros/humble/lib/tf2_ros/static_transform_publisher
 
 # ---------------------------------------------------------------------------
-# launcher：厂商裁剪版 ros2 没有 launch 子命令，而阶段 9 source 完 env.sh 之后
+# launcher：厂商裁剪版 ros2 没有 launch 子命令，而阶段 8 source 完 env.sh 之后
 # PATH 会被换回厂商的 ros2 —— 所以所有 launch 一律走这个 Python 直调。
 #
 # ⚠️ 它**必须放在持久目录**。原来放 /tmp/roslaunch.py，实测机器人一重启 /tmp 就被清空、
@@ -938,18 +938,7 @@ if [ "$USE_RVIZ" = true ]; then
   [ "${NR:-0}" -ge 1 ] && ok "rviz2 在跑（VNC / NoMachine 看 :0）" || bad "rviz2 起不来，看 $LOG/rviz.log"
 fi
 
-say "阶段 8  自主探索调度器"
-# map_topic 必须是 /map_nav，与 nav2 静态层同源 ——
-# 换数据源时判据口径也要跟着换，历史上在这上面栽过（0.42 重复计足迹 / 0.0 导航超时）。
-# map_transient_local:=false —— /map_nav 是 VOLATILE，
-# TRANSIENT_LOCAL 订阅 VOLATILE 发布是不兼容的：一帧都收不到，只有一行 QoS WARN。
-nohup setsid python3 $RL astribot_s1_autonomy exploration_coordinator.launch.py \
-  use_sim_time:=false map_topic:=/map_nav odom_topic:=/odom \
-  map_transient_local:=false robot_base_frame:=astribot_torso_base > $LOG/explore.log 2>&1 &
-sleep 25
-ok "调度器已起"
-
-say "阶段 9  底盘写通路（astribot_trajectory_bridge）"
+say "阶段 8  底盘写通路（astribot_trajectory_bridge）"
 # ┌─ 这一段是整条链唯一"能让机器人动"的地方，四个坑逐条防住 ─────────────┐
 # ① SDK import：必须 source $SDK/env.sh，它提供 PYTHONPATH / LD_LIBRARY_PATH /
 #    ROBOT_TYPE / ASTRIBOT_SDK_ROOT。少 ASTRIBOT_SDK_ROOT 时报的是
@@ -992,7 +981,7 @@ if [ -z "$BP" ]; then
     grep -oE "astribot_[a-z_]+ is not alive" $LOG/bridge.log | sort -u | tr '\n' ' ' | sed 's/^/    离线部件: /'
     echo
     warn "→ 这几乎总是**急停按下**（或整机未使能）。松开急停 / 使能后重跑本脚本即可。"
-    warn "→ 探索建图链(阶段 1~8)已经起好了，只有写通路这一段没起来。"
+    warn "→ 探索建图链(阶段 1~7)已经起好了，只有写通路这一段没起来。"
   else
     bad "bridge_container 没起来，看 $LOG/bridge.log"
   fi
@@ -1019,13 +1008,32 @@ elif [ "$DRIVE" = true ]; then
     || bad "控制权没拿到（看 $LOG/bridge.log）"
   [ "$NREJ" -eq 0 ] && ok "SDK 拒绝次数 0" || bad "SDK 仍拒绝 ×$NREJ —— 控制权没真拿到"
 
-  say "阶段 10  使能写通路（默认做；--no-drive 时跳过）"
+  say "阶段 9  使能写通路（默认做；--no-drive 时跳过）"
   timeout 25 ros2 service call /astribot_bridge_container/enable \
     std_srvs/srv/SetBool "{data: true}" 2>&1 | tail -2 | sed 's/^/  /'
   ok "写通路已 enable"
 else
   ok "桥接在跑但**未使能**（--no-drive），/cmd_vel 有帧、底盘不动"
 fi
+
+say "阶段 10  自主探索调度器"
+# ⚠️ 这一阶段**必须排在写通路使能之后**，2026-09-04 实机吃过这个亏。
+#    老顺序是「调度器(8) -> 桥接(9) -> 使能(10)」，于是调度器在写通路活起来之前
+#    就开始派发目标：实测 nav2 六节点 643.4s active、调度器随即开跑，而内环直到
+#    **789.3s** 才真正有帧落地 —— 中间约 130s 里 nav2 一直在对一台聋了的底盘发速度。
+#    机器人不动 -> 控制器判"原地转不动"抛超时 -> Controller patience exceeded ->
+#    Aborting handle -> 上游连败 -> PAUSED -> 自动恢复预算(3 次)烧光 -> 永久 parked。
+#    末尾那次 resume 只能救回一次，救不回"预算在链路还没成型时就被烧掉"这件事。
+#    新顺序让调度器的**第一次**派发就落在一条通的链上。
+# map_topic 必须是 /map_nav，与 nav2 静态层同源 ——
+# 换数据源时判据口径也要跟着换，历史上在这上面栽过（0.42 重复计足迹 / 0.0 导航超时）。
+# map_transient_local:=false —— /map_nav 是 VOLATILE，
+# TRANSIENT_LOCAL 订阅 VOLATILE 发布是不兼容的：一帧都收不到，只有一行 QoS WARN。
+nohup setsid python3 $RL astribot_s1_autonomy exploration_coordinator.launch.py \
+  use_sim_time:=false map_topic:=/map_nav odom_topic:=/odom \
+  map_transient_local:=false robot_base_frame:=astribot_torso_base > $LOG/explore.log 2>&1 &
+sleep 25
+ok "调度器已起"
 
 # resume 与 enable 必须**分开**：
 #   enable = 底盘写通路，会让机器人真动 —— 默认做，--no-drive 时跳过。

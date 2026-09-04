@@ -180,6 +180,7 @@ void ThreePhaseController::declareAndLoadParams()
   declare_parameter_if_not_declared(
     node, p + "fallback_yaw_tolerance", rclcpp::ParameterValue(0.20));
   declare_parameter_if_not_declared(node, p + "new_goal_epsilon", rclcpp::ParameterValue(0.25));
+  declare_parameter_if_not_declared(node, p + "new_attempt_gap", rclcpp::ParameterValue(0.5));
 
   node->get_parameter(p + "inner_controller_plugin", inner_plugin_);
   node->get_parameter(p + "align_start_enabled", align_start_enabled_);
@@ -196,6 +197,7 @@ void ThreePhaseController::declareAndLoadParams()
   node->get_parameter(p + "fallback_xy_tolerance", fallback_xy_tol_);
   node->get_parameter(p + "fallback_yaw_tolerance", fallback_yaw_tol_);
   node->get_parameter(p + "new_goal_epsilon", new_goal_epsilon_m_);
+  node->get_parameter(p + "new_attempt_gap", new_attempt_gap_sec_);
 
   // ---- 窄通道贴边通行 ----
   declare_parameter_if_not_declared(node, p + "narrow_enabled", rclcpp::ParameterValue(true));
@@ -392,6 +394,13 @@ void ThreePhaseController::declareAndLoadParams()
   if (!(new_goal_epsilon_m_ > 0.0)) {
     // 置 0 会让每次重规划都被判成新目标，退化回"每秒原地转一次"那个缺陷。
     throw nav2_core::PlannerException("ThreePhaseController: new_goal_epsilon 必须 > 0");
+  }
+  if (!(new_attempt_gap_sec_ > 0.0) || !(new_attempt_gap_sec_ < align_timeout_sec_)) {
+    // 下界：置 0/负数会让每次重规划都被判成"新一次尝试"，align_timeout 永远
+    //       等不到触发 —— 等于把"原地转不动"这道保护关掉。
+    // 上界：>= align_timeout 则空档判据永远比超时晚，救不了那个锁死。
+    throw nav2_core::PlannerException(
+      "ThreePhaseController: new_attempt_gap 必须 in (0, align_timeout)");
   }
 
   // ---- 窄通道参数校验 ----
@@ -815,6 +824,31 @@ void ThreePhaseController::setPlan(const nav_msgs::msg::Path & path)
   if (same_goal) {
     // 同一目标的周期性重规划：保持当前相位，只换路径。
     // 这样起步对齐只在一条路径**开始时**做一次，符合需求 3(a) 的语义。
+    //
+    // ⚠2026-09-04 实机根因就在这个 return 上。「同一目标」其实混了两件事：
+    //   (a) action **还活着**，nav2/协调器周期重规划 -> 确实不该重置相位，
+    //       否则退化回"每秒原地转一次"（实测 86 次重规划 12 次真停下来转）。
+    //   (b) 上一次 FollowPath 已经 abort，协调器把**同一个目标**重新下发 ——
+    //       这是一次全新的尝试，必须给它一份完整的对齐预算。
+    // 老代码把 (b) 也走了这条 return，于是 enterPhase 压根没被调用，
+    // phase_started_ 继续沿用旧值。实机时间轴：734.0s 最后一次真·新目标之后，
+    // 同一目标 (1.68, 8.43) 每 1.5s 重下发，计时器单调爬到 110.708s，
+    // 每条新路径第一拍就抛 "ALIGN_START 段超时 110.708s > 15.0s" ->
+    // Controller patience exceeded ×43 -> Aborting handle ×48 ->
+    // 上游 3 连败 -> PAUSED -> 自动恢复 3 次全在 3s 内再死 -> 永久 parked。
+    //
+    // 两者路径内容几乎一样，分不开；能分开的只有**时间空档**：action 存续
+    // 期间 nav2 以 controller_frequency 持续 tick，action 一结束 tick 就停。
+    const double idle_gap = has_tick_ ? (now - last_tick_time_).seconds() : 0.0;
+    if (isFreshFollowAttempt(has_tick_, idle_gap, new_attempt_gap_sec_)) {
+      RCLCPP_INFO(
+        logger_,
+        "[%s] 同一目标的新一次下发（距上次 tick %.2fs > %.2fs，上个 action 已结束），"
+        "重置相位 %s 的计时器",
+        name_.c_str(), idle_gap, new_attempt_gap_sec_, toString(phase_));
+      phase_started_ = now;
+      return;
+    }
     RCLCPP_DEBUG(
       logger_, "[%s] 同一目标的重规划，保持相位 %s", name_.c_str(), toString(phase_));
     return;
@@ -2242,6 +2276,15 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
   //    接管期间停止续租，协调器侧看门狗 2.1s 时误判"进程死了"，
   //    把足迹从通道中途抢回默认值。续租是存活信号，与哪层在控制无关。
   renewFootprintLease(now);
+
+  // 🔴 tick 时刻也必须在**任何** early-return / throw 之前记下来。
+  //    它是 setPlan 里区分「周期重规划」与「同一目标的新一次下发」的唯一依据
+  //    （见 isFreshFollowAttempt）。记漏一拍不致命，但如果把它挪到某个
+  //    early-return 之后，窄通道接管期间就会停止更新 —— 那时空档会被越算越大，
+  //    接管一结束的第一次重规划就被误判成"新尝试"、白白重置对齐预算。
+  //    这与续租那条教训是同一个坑：存活信号不能藏在 early-return 后面。
+  last_tick_time_ = now;
+  has_tick_ = true;
 
   double xy_tol = fallback_xy_tol_;
   double yaw_tol = fallback_yaw_tol_;

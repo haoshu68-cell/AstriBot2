@@ -191,6 +191,12 @@ private:
   PlanarPoint last_goal_end_{};
   bool has_last_goal_{false};
   bool warned_tolerance_fallback_{false};
+  /// 上一次 computeVelocityCommands 的时刻，用来区分「同一目标的周期重规划」
+  /// 与「同一目标的**新一次** FollowPath 下发」。见 isFreshFollowAttempt 的
+  /// 头注释：这两者路径内容几乎一样，只有时间空档能分开。
+  /// **必须显式 RCL_ROS_TIME**：默认构造是 SYSTEM_TIME，与 clock_->now() 相减即抛。
+  rclcpp::Time last_tick_time_{0, 0, RCL_ROS_TIME};
+  bool has_tick_{false};
 
   // ---- 窄通道接管状态 ----
   /// 足迹碰致命带的连续拍数（进入用）。
@@ -248,6 +254,9 @@ private:
   double fallback_yaw_tol_{0.20};
   /// 终点位移小于此值即视为同一目标（默认行为树 1Hz 重规划会反复调 setPlan）。
   double new_goal_epsilon_m_{0.25};
+  /// tick 空档超过此值 => 上一个 FollowPath action 已结束，这次 setPlan 是新一次
+  /// 尝试。默认 0.5s = 20Hz 下 10 拍：远大于单拍抖动，又远小于 align_timeout(15s)。
+  double new_attempt_gap_sec_{0.5};
 
   // ---- 窄通道参数 ----
   /// 总开关。false = 完全走旧行为（只调内层），一行代价查询都不做。

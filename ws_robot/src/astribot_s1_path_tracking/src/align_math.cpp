@@ -175,4 +175,19 @@ bool shouldRestartPhaseTimer(Phase before, Phase requested, bool is_new_goal)
   return is_new_goal;
 }
 
+bool isFreshFollowAttempt(bool has_prev_tick, double idle_gap_sec, double gap_threshold_sec)
+{
+  if (!has_prev_tick) {
+    return true;                 // 从没 tick 过 = 这是第一次下发，当然是新尝试
+  }
+  if (!(gap_threshold_sec > 0.0)) {
+    // 阈值非法时**按保守方向**返回 false：宁可少重置一次计时器（对齐段仍会
+    // 在 15s 后正常超时），也不要把每次周期重规划都当成新尝试 ——
+    // 那会让 align_timeout 这道保护永远等不到触发，等于把保护关掉。
+    return false;
+  }
+  // NaN 会让任何比较都为 false，于是自然落到 "不是新尝试"，与上面同向保守。
+  return idle_gap_sec > gap_threshold_sec;
+}
+
 }  // namespace astribot_s1_path_tracking

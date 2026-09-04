@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <limits>
 #include <vector>
 
 #include "astribot_s1_path_tracking/align_math.hpp"
@@ -20,6 +21,9 @@ using astribot_s1_path_tracking::Phase;
 using astribot_s1_path_tracking::PlanarPoint;
 using astribot_s1_path_tracking::advancePhase;
 using astribot_s1_path_tracking::alignAngularVelocity;
+// 只吃 bool/double，没有本命名空间的实参 => ADL 找不到它，必须显式 using。
+// （上面那批之所以不用，是因为参数里带 Phase/PlanarPoint，ADL 自动生效。）
+using astribot_s1_path_tracking::isFreshFollowAttempt;
 using astribot_s1_path_tracking::needsStartAlign;
 using astribot_s1_path_tracking::normalizeAngle;
 using astribot_s1_path_tracking::pathStartHeading;
@@ -375,6 +379,60 @@ TEST(PhaseTimer, DoneIsNotSpecialCased) {
   EXPECT_FALSE(shouldRestartPhaseTimer(Phase::kDone, Phase::kDone, false));
   EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kDone, Phase::kDone, true));
   EXPECT_TRUE(shouldRestartPhaseTimer(Phase::kDone, Phase::kAlignStart, false));
+}
+
+// ============ 「同一目标被重新下发」= 新一次尝试（2026-09-04 实机根因）============
+//
+// 上面那三条只覆盖了「新目标」。实机死在另一半：**同一个目标**被协调器
+// 重新下发（上一次 FollowPath 已 abort），setPlan 判出 same_goal 就提前
+// return，enterPhase 压根没被调用，计时器继续沿用旧值。
+// 实测：734.0s 最后一次真·新目标之后，同一目标 (1.68, 8.43) 每 1.5s 重下发，
+// 计时器单调爬到 110.708s，每条新路径第一拍即超时 -> patience exceeded ×43
+// -> abort ×48 -> 上游 3 连败 -> PAUSED -> 自动恢复 3 次全在 3s 内再死。
+//
+// 判据只能看时间空档：action 存续期间 nav2 会以 controller_frequency 持续
+// tick，action 一结束 tick 就停。
+
+TEST(FreshAttempt, FirstEverSetPlanIsFresh) {
+  // 从没 tick 过 = 第一次下发。idle_gap 此时无意义，给什么都不该改变结论。
+  EXPECT_TRUE(isFreshFollowAttempt(false, 0.0, 0.5));
+  EXPECT_TRUE(isFreshFollowAttempt(false, 999.0, 0.5));
+  EXPECT_TRUE(isFreshFollowAttempt(false, -1.0, 0.5));
+}
+
+TEST(FreshAttempt, GapLongerThanThresholdIsFresh) {
+  // !!! 这条是实机那个锁死的哨兵 !!!
+  // 上一个 action 已 abort，tick 停了；协调器隔 1.5s 重下发同一目标。
+  // 1.5s > 0.5s => 必须判为新尝试，给一份完整的 15s 对齐预算。
+  EXPECT_TRUE(isFreshFollowAttempt(true, 1.5, 0.5));
+  EXPECT_TRUE(isFreshFollowAttempt(true, 0.51, 0.5));
+  // 实机那次 PAUSED 冷却是 10.2s，更不该被误判成"还在同一个 action 里"
+  EXPECT_TRUE(isFreshFollowAttempt(true, 10.2, 0.5));
+}
+
+TEST(FreshAttempt, TickGapWithinActionIsNotFresh) {
+  // 反向对照：action 存续期间的周期重规划。20Hz 下相邻 tick 间隔 0.05s，
+  // 抖动到 0.2s 也仍在同一个 action 里 —— 判成新尝试就会让 align_timeout
+  // 永远等不到触发，等于把"原地转不动"这道保护关掉。
+  EXPECT_FALSE(isFreshFollowAttempt(true, 0.05, 0.5));
+  EXPECT_FALSE(isFreshFollowAttempt(true, 0.2, 0.5));
+  EXPECT_FALSE(isFreshFollowAttempt(true, 0.5, 0.5));   // 恰好等于阈值：不算空档
+}
+
+TEST(FreshAttempt, IllegalThresholdFailsClosed) {
+  // 阈值非法时按保守方向（不重置）。宁可少重置一次 —— 对齐段仍会在 15s 后
+  // 正常超时；反过来把每次重规划都当新尝试则是把保护彻底关掉。
+  EXPECT_FALSE(isFreshFollowAttempt(true, 100.0, 0.0));
+  EXPECT_FALSE(isFreshFollowAttempt(true, 100.0, -1.0));
+  // 但"从没 tick 过"优先于阈值检查：那确实是第一次下发。
+  EXPECT_TRUE(isFreshFollowAttempt(false, 0.0, 0.0));
+}
+
+TEST(FreshAttempt, NanGapFailsClosed) {
+  // NaN 的任何比较都是 false，于是自然落到"不是新尝试"，与上面同向。
+  // 显式钉住：时钟跳变造出 NaN 时不许把保护关掉。
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  EXPECT_FALSE(isFreshFollowAttempt(true, nan, 0.5));
 }
 
 
