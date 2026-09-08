@@ -1,0 +1,21 @@
+<class_libraries>
+  <!-- MPPI critic 的 pluginlib 描述。注意与 plugins.xml（nav2_core::Controller）
+       是**两个不同的基类**，必须分文件导出，且 package.xml 里的导出标签也不同：
+         <nav2_core plugin=".../plugins.xml"/>
+         <nav2_mppi_controller plugin=".../critics.xml"/>
+       写错标签的表现是 controller_server 启动时报
+       "Failed to create critic ... not found"，而编译一切正常。 -->
+  <library path="astribot_s1_mppi_critics">
+    <!-- type 必须是 mppi::critics::<Name>，不能是本包的命名空间：
+         CriticManager::getFullName() 无条件把 yaml 里的名字拼上 "mppi::critics::"
+         前缀（反汇编确认，无分支），查找名对不上时同样报
+         "Failed to create critic ... not found"。 -->
+    <class type="mppi::critics::CurvatureSpeedLimitCritic"
+           base_class_type="mppi::critics::CriticFunction">
+      <description>
+        曲率-速度耦合限速：按 rollout 角速度算侧向加速度超出量（反馈项），
+        并按前方路径最大 Menger 曲率算速度上限（前馈项），实现 vx = f(kappa) 过弯减速。
+      </description>
+    </class>
+  </library>
+</class_libraries>

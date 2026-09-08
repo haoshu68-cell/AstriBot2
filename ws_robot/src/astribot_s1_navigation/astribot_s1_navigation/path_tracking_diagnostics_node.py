@@ -25,6 +25,9 @@
 #   preCpl 有、cmd 无           -> 臂-底盘耦合在限速（检查双臂是否展开）
 #   cmd 有、轮速≈0              -> 底盘不响应：底盘层问题
 #   轮子转了但实速≈0            -> 打滑或被物理卡住
+#   cmd 有、轮速 n/a、实速≈0    -> 有指令但没位移，而轮速这一路**没有数据源**
+#                                  （实机的 /joint_states 是固定姿态，velocity 为空），
+#                                  所以"底盘不响应"和"打滑"区分不了 —— 如实这么报。
 # 峰值取滑窗最大值而非最新值：最新帧可能刚好是 0，会看不出这一路其实有输出。
 #
 # 另外单独报 raw 的实际频率 —— 它就是控制环频率的下界。
@@ -50,11 +53,13 @@ BODY_TO_WORLD_BLOCKED = '车体->世界转换断开'
 ARM_COUPLING_BLOCKED = '臂-底盘耦合限速'
 CHASSIS_NOT_RESPONDING = '底盘不响应(有指令无轮速)'
 SLIPPING_OR_BLOCKED = '打滑或被卡住(轮子转但不位移)'
+CMD_BUT_NO_MOTION = '有指令但无位移(轮速不可测，底盘不响应与打滑无法区分)'
 HEALTHY = '正常'
 
 STUCK_VERDICTS = (
     PLANNER_NO_OUTPUT, SMOOTHER_BLOCKED, BODY_TO_WORLD_BLOCKED,
     ARM_COUPLING_BLOCKED, CHASSIS_NOT_RESPONDING, SLIPPING_OR_BLOCKED,
+    CMD_BUT_NO_MOTION,
 )
 
 
@@ -83,6 +88,12 @@ def classify(snap):
         return BODY_TO_WORLD_BLOCKED
     if not cmd_active:
         return ARM_COUPLING_BLOCKED
+    # 轮速这一段可能整段不可测：实机的 /joint_states 由 joint_state_publisher 发
+    # 固定姿态，velocity 数组是**空的**，于是 wheel_peak 恒为 0。照常判就会在每一拍
+    # 都误报"底盘不响应"—— 一个恒真的判据不是判据。不可测时退到 /odom 位移这条
+    # 真能测的判据上，并在结论里明说两种原因区分不了，不替读者猜。
+    if not snap['wheel_known']:
+        return HEALTHY if moving else CMD_BUT_NO_MOTION
     if not wheels_turning:
         return CHASSIS_NOT_RESPONDING
     if not moving:
@@ -157,6 +168,9 @@ class PathTrackingDiagnostics(Node):
         self.last_path_sec = -1e9
         self.robot_speed = 0.0
         self.wheel_peak = 0.0
+        # 轮速这一路是否**可测**。只有真收到过带 velocity 的轮关节才置 True；
+        # 一直是 False 就说明这一段没有数据源（实机常态），判定要绕过它。
+        self.wheel_known = False
 
         self.create_subscription(Twist, raw_t, self._mk(self.raw), 10)
         self.create_subscription(Twist, sm_t, self._mk(self.smoothed), 10)
@@ -192,6 +206,9 @@ class PathTrackingDiagnostics(Node):
         n = min(len(msg.name), len(msg.velocity))
         for i in range(n):
             if msg.name[i].startswith(self.wheel_prefix):
+                # 出现过一次带 velocity 的轮关节，这一路就算可测（不再回退）。
+                # n==0 是实机常态（velocity 数组为空），此处一次都进不来。
+                self.wheel_known = True
                 peak = max(peak, abs(msg.velocity[i]))
         self.wheel_peak = peak
 
@@ -204,6 +221,7 @@ class PathTrackingDiagnostics(Node):
             'pre_rate': self.pre.rate(t), 'pre_peak': self.pre.peak_lin,
             'cmd_rate': self.cmd.rate(t), 'cmd_peak': self.cmd.peak_lin,
             'wheel_peak': self.wheel_peak, 'robot_speed': self.robot_speed,
+            'wheel_known': self.wheel_known,
             'vel_epsilon': self.vel_eps, 'wheel_epsilon': self.wheel_eps,
             'motion_epsilon': self.motion_eps,
         }
@@ -213,6 +231,10 @@ class PathTrackingDiagnostics(Node):
             self._reset()
             return
 
+        # 轮速不可测时打 n/a，不打 0.000 —— 打 0.000 会被读成"轮子没转"，
+        # 而实际上是这一路没有数据源，两件事的处置完全不同。
+        wheel_txt = (f'{snap["wheel_peak"]:.3f}rad/s'
+                     if snap['wheel_known'] else 'n/a(无 velocity 字段)')
         line = (
             f'[跟踪诊断] {verdict} | '
             f'路径{"在" if snap["has_path"] else "无"}({self.path_points}点) | '
@@ -220,7 +242,7 @@ class PathTrackingDiagnostics(Node):
             f'smooth {snap["smoothed_rate"]:.1f}Hz/{snap["smoothed_peak"]:.3f} -> '
             f'preCpl {snap["pre_rate"]:.1f}Hz/{snap["pre_peak"]:.3f} -> '
             f'cmd {snap["cmd_rate"]:.1f}Hz/{snap["cmd_peak"]:.3f} | '
-            f'轮速峰值 {snap["wheel_peak"]:.3f}rad/s | '
+            f'轮速峰值 {wheel_txt} | '
             f'实速 {snap["robot_speed"]:.3f}m/s'
         )
         if stuck:

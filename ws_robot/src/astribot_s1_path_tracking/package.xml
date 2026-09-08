@@ -16,6 +16,7 @@
   <depend>geometry_msgs</depend>
   <depend>nav2_core</depend>
   <depend>nav2_costmap_2d</depend>
+  <depend>nav2_mppi_controller</depend>
   <depend>nav2_util</depend>
   <depend>nav_msgs</depend>
   <depend>pluginlib</depend>
@@ -32,5 +33,6 @@
   <export>
     <build_type>ament_cmake</build_type>
     <nav2_core plugin="${prefix}/plugins.xml" />
+    <nav2_mppi_controller plugin="${prefix}/critics.xml" />
   </export>
 </package>

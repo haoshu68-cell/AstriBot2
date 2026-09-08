@@ -156,14 +156,37 @@ Phase advancePhase(
       //       本层认为"还算到了"故停车，GoalChecker 认为"没到"故不结束 ——
       //       正是上面那个死锁原样复现。用同一个阈值时死区为空集。
       //       边界上的抖动是"贴着容差反复轻推"，那是期望行为（推到 GoalChecker
-      //       认账为止），且窄通道层的停滞检测仍在兜底；与
-      //       yaw 闸门那种"两侧都在开车"的自激不是一回事。
+      //       认账为止）；与 yaw 闸门那种"两侧都在开车"的自激不是一回事。
+      //       兜底不在本层，而在 nav2 的 controller_server：
+      //       PoseProgressChecker（required_movement_radius 0.5m /
+      //       required_movement_angle 0.10rad / movement_time_allowance 10.0s）
+      //       —— 注意它的量纲与本层完全不同（0.5m 远大于 xy_tol），
+      //       所以它只兜"彻底不动"，兜不住"在容差边界上小幅轻推"。
+      //       后者靠上面"退出阈值 == xy_tol、死区为空集"这一条自己收敛。
       if (dist_to_goal_m > xy_tol_m) {
         return Phase::kFollow;
       }
       return Phase::kDone;
   }
   return Phase::kDone;
+}
+
+double approachSpeedCap(
+  double dist_to_goal_m, double approach_dist_m, double v_min, double nominal_speed)
+{
+  // 参数非法 / dist 为 NaN ⇒ 退化成不限速（= 今天的行为），不静默把机器人限到蠕行。
+  // NaN 走的就是这一支：`NaN < D` 为 false。
+  if (!(approach_dist_m > 0.0) || !(v_min >= 0.0) || !(nominal_speed > 0.0)) {
+    return nominal_speed;
+  }
+  if (!(dist_to_goal_m < approach_dist_m)) {
+    return nominal_speed;
+  }
+  const double d = std::max(0.0, dist_to_goal_m);
+  const double linear = nominal_speed * (d / approach_dist_m);
+  // 先抬下限、再压回 nominal：v_min 只保证「还能动」，绝不允许因此比不限速时更快
+  // （nominal < v_min 的情形 —— 内层本来就在慢速走 —— 必须保持内层的慢）。
+  return std::min(std::max(linear, v_min), nominal_speed);
 }
 
 bool shouldRestartPhaseTimer(Phase before, Phase requested, bool is_new_goal)

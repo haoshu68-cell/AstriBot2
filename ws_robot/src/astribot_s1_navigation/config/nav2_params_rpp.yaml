@@ -33,7 +33,14 @@ controller_server:
     # ~/.ros/log/controller_server_*.log 里。
     # 回退档 loose_goal_checker 定义保留在下面，但**不要**加进这个列表。
     goal_checker_plugins: ["general_goal_checker"]
-    controller_plugins: ["FollowPath"]
+    # FollowPathExplore 必须在列：探索用的行为树
+    # behavior_trees/navigate_to_pose_explore_three_phase.xml 里
+    # <FollowPath controller_id="FollowPathExplore"/> 是硬编码的，
+    # 而 controller_server 对不存在的 controller_id 是**每次 FollowPath 直接 abort**：
+    #   FollowPath called with controller name "FollowPathExplore" ... does not exist
+    # 2026-09-07 运行态实测：这里只列 FollowPath 时启动日志只有
+    # 「Created controller : FollowPath」一条，探索路径整体不可用。
+    controller_plugins: ["FollowPath", "FollowPathExplore"]
 
     progress_checker:
       # !!! 必须用 PoseProgressChecker 而不是 SimpleProgressChecker !!!
@@ -69,9 +76,10 @@ controller_server:
     # goal checker 永不满足 -> FollowPath 不成功 -> Failed to make progress ->
     # 恢复行为 -> 超时。现象就是「转完之后不跟路径、原地漂移」。
     #
-    # 朝向约束并没有消失，只是移到了知道场景的那两层：
-    #   · 三段式控制器 align_goal_enabled=true(FollowPathThreePhase) 负责转到位
+    # 朝向约束并没有消失，只是移到了知道场景的那一层：
     #   · 协调器 check_yaw + arrival_yaw_tolerance 负责复核
+    # 注意本文件默认的 FollowPath 是 RPP、**没有**三段式的 ALIGN_GOAL 段
+    #（原注释在这里写"三段式控制器负责转到位"是抄错位，已删）。
     # 需要在 Nav2 层也严格卡朝向时，正解是加第二个 goal checker 并让**每个**行为树
     # 都显式传 goal_checker_id —— 注意不能只是把它加进 goal_checker_plugins 列表：
     # 该端口无默认值，列表里有两项而调用方传空字符串会让每次 FollowPath 直接 abort。
@@ -118,6 +126,65 @@ controller_server:
       max_robot_pose_search_dist: 10.0
       allow_reversing: false
 
+    # ---- 探索用的三段式实例（内层 = RPP）----
+    # 与 nav2_params_mppi.yaml 的 FollowPathExplore 同构，只是内层换成 RPP。
+    # 两份文件的这一节必须一起改，否则切 controller_plugin 时行为口径会不一致
+    # （而这种不一致只在切换那一次才显形）。
+    #
+    # 为什么内层参数要**整块复制**而不是只写差异项：ThreePhaseController 用
+    # inner_->configure(parent, name_ + ".inner", ...)（three_phase_controller.cpp:246），
+    # 内层读的是 FollowPathExplore.inner.* 这个独立命名空间，
+    # 上面 FollowPath 的值一项都不会继承过来 —— 漏一项就是内层插件的编译期默认值。
+    FollowPathExplore:
+      plugin: "astribot_s1_path_tracking::ThreePhaseController"
+      inner_controller_plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      align_start_enabled: true
+      # !!! 探索场景刻意为 false !!! 与 exploration_coordinator_params.yaml 的
+      # check_yaw: false 保持一致；理由同 mppi 那份的同名项。
+      align_goal_enabled: false
+      # 内层 RPP 本来就不产生 vy，这里置 true 只是把口径写明。
+      zero_vy_in_follow: true
+      align_kp: 1.0
+      align_max_vel: 0.6
+      align_floor_vel: 0.05
+      align_tolerance: 0.05
+      start_min_angle: 0.20
+      start_heading_lookahead: 0.5
+      align_timeout: 15.0
+      new_attempt_gap: 0.5
+      follow_timeout: 0.0
+      fallback_xy_tolerance: 0.18
+      fallback_yaw_tolerance: 0.20
+      # 接近段限速：RPP 内层自己已有 approach_velocity_scaling_dist +
+      # min_approach_linear_velocity（同一形状的收敛律），外层再叠一层会让
+      # 两个收敛律相乘、终段速度低于 approach_v_min。故这里关掉，交给内层。
+      approach_enabled: false
+      inner:
+        plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+        desired_linear_vel: 0.5
+        lookahead_dist: 0.6
+        min_lookahead_dist: 0.3
+        max_lookahead_dist: 1.2
+        lookahead_time: 1.5
+        rotate_to_heading_angular_vel: 1.0
+        transform_tolerance: 0.2
+        use_velocity_scaled_lookahead_dist: false
+        min_approach_linear_velocity: 0.05
+        approach_velocity_scaling_dist: 0.6
+        use_collision_detection: true
+        max_allowed_time_to_collision_up_to_carrot: 1.0
+        use_regulated_linear_velocity_scaling: true
+        use_cost_regulated_linear_velocity_scaling: false
+        regulated_linear_scaling_min_radius: 0.9
+        regulated_linear_scaling_min_speed: 0.25
+        # 外层三段式已经负责起步对齐，内层的 rotate_to_heading 保留原值：
+        # 关掉会让 RPP 自己的跟踪逻辑不稳定（见文件头部说明）。
+        use_rotate_to_heading: true
+        rotate_to_heading_min_angle: 0.785
+        max_angular_accel: 3.2
+        max_robot_pose_search_dist: 10.0
+        allow_reversing: false
+
 smoother_server:
   ros__parameters:
     use_sim_time: True
@@ -137,7 +204,16 @@ planner_server:
       # SmacPlanner2D：栅格搜索，不强加非全向运动约束(不像SmacHybrid/StateLattice假设
       # 阿克曼转弯半径)，比较适合全向底盘。
       plugin: "nav2_smac_planner/SmacPlanner2D"
-      tolerance: 0.5
+      # 🔴 必须 <= xy_goal_tolerance(0.18) 且留一格(0.05)余量 ⇒ 上限 0.13。
+      # 取 0.10。规划器 tolerance 比到位容差**松**时，它会交付一条终点
+      # 落在到位容差之外的路径，goal checker 永远收不了 —— 表现是
+      # "控制器说本段完成、BT 却一直重规划、action 永不返回"。
+      # 2026-09-03 实测过这个组合：tolerance 0.5 时交付的路径终点距目标
+      # 0.409m，而 xy_goal_tolerance 只有 0.18m，真实成功率 0/10。
+      # 收紧的代价是**目标不可达时显式失败**而不是悄悄交一条短路径 ——
+      # 这正是想要的：不可达要报出来，不能假装到位。
+      # 与 nav2_params_mppi.yaml 的同名项必须一致（配置一致性测试会强制）。
+      tolerance: 0.10
       downsample_costmap: false
       downsampling_factor: 1
       # 未知区域禁行：全局规划器不得把未知栅格纳入路径。
@@ -245,29 +321,39 @@ local_costmap:
       # 不用多边形——双臂/头部展开时的真实包络无法用静态足迹精确表达。
       # !!! 更正(C1，2026-08-25)：原注释说这个风险"靠 arm_speed_limiter_node 的展开
       # 限速缓解"，这句是错的——限速只降低速度，**完全不缩小碰撞包络**。实测(URDF
-      # 全工作空间采样)机械臂水平伸展最大可达 0.8865m，比这里的 robot_radius 0.42
-      # 多伸出 0.47m，这部分是规划器彻底看不见的真实碰撞风险，限速一点也没减少它。
+      # 全工作空间采样)机械臂水平伸展最大可达 0.8865m，比这里的足迹外接 0.438
+      # 多伸出 0.45m，这部分是规划器彻底看不见的真实碰撞风险，限速一点也没减少它。
       # 正确机制是姿态相关的动态足迹(nav2_collision_monitor 订阅机械臂 TF 实时改
       # footprint)，尚未实现，立项为 C1b，见 README_NAVIGATION.md。这里如实标成
       # 未解决，不再声称已被限速缓解。
-      robot_radius: 0.42   # 真实底盘外接半径 0.386m（URDF 实测：轮心离轴 0.306 + 轮球半径 0.080），
-                           # 取 0.42 留余量。原值 0.35 偏小 36mm，会让 Nav2 以为机器人比实际小、
-                           # 规划出让轮子蹭到货架立柱的路径。rpp 版不需要显式 footprint
-                           # （那是 MPPI 的 consider_footprint 才要求的），只用这个半径即可。
+      # 足迹是正方形 a=0.31（半边长）。2026-09-07 从 robot_radius: 0.42 的圆换过来，
+      # 与 nav2_params_mppi.yaml **逐字一致**（test_config_consistency 会强制）。
+      # 换的理由见 mppi 那份的长注释，一句话：圆/八边形在轴向虚报 120mm，
+      # 而真实底盘轴向只有躯干圆柱 0.300、对角才有轮缘 0.386。
+      # 正方形 a=0.31 逐 0.01° 扫过 0~90° 的最小余量 +10mm，任何朝向都包住底盘。
+      # rpp 本身不要求显式 footprint（那是 MPPI 的 consider_footprint 才要求的），
+      # 这里给显式多边形是为了两份配置的几何口径不漂开。
+      footprint: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
       plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         # !!! 原值 0.25 比足迹外接半径还小，Nav2 每次启动都在报 ERROR：
         #   "The configured inflation radius (0.250) is smaller than the robot radius (0.35)"
         # 后果是膨胀层连机器人自身轮廓都覆盖不住，规划器拿不到"离墙远一点"的代价梯度，
-        # 路径会紧贴障碍物走。inflation_radius 必须大于 robot_radius(0.42)。
+        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(正方形 a=0.31 ⇒ 0.438)。
         #
-        # 取 0.65 后的代价梯度（圆形足迹内切=外接=0.42、cost_scaling_factor 3.0）：
-        #   离障碍 0.42m -> 229   (刚好轮缘擦到，重罚)
-        #   离障碍 0.50m -> 180
-        #   离障碍 0.60m -> 133
-        #   离障碍 >0.65m -> 0    (自由通行)
-        # 注意膨胀代价只在机器人半径以内才是致死值，所以放大 inflation_radius
+        # 取 0.65 后的代价梯度（内切半径 0.310、cost_scaling_factor 3.0，
+        # 按 nav2 InflationLayer::computeCost 逐字算，含截尾）：
+        #   离障碍 <=0.31m -> 253  (内切带内，底盘中心放这里必然碰撞)
+        #   离障碍 0.35m  -> 223
+        #   离障碍 0.39m  -> 199
+        #   离障碍 0.42m  -> 181   (刚好轮缘擦到)
+        #   离障碍 0.50m  -> 142
+        #   离障碍 0.60m  -> 105
+        #   离障碍 >0.65m -> 0     (自由通行)
+        # ⚠️ 2026-09-07 换正方形足迹后这张表整体下移：内切从 0.388 缩到 0.310，
+        #    253 那一档跟着缩 78mm，0.35~0.39 这一段从"致命"变成"高代价"。
+        # 注意膨胀代价只在内切半径以内才是致死值，所以放大 inflation_radius
         # 不会把窄通道变成不可通行，只是让规划器更偏向走通道中间。
         cost_scaling_factor: 3.0
         inflation_radius: 0.65
@@ -320,10 +406,14 @@ global_costmap:
       global_frame: map
       robot_base_frame: astribot_torso_base
       use_sim_time: True
-      robot_radius: 0.42   # 真实底盘外接半径 0.386m（URDF 实测：轮心离轴 0.306 + 轮球半径 0.080），
-                           # 取 0.42 留余量。原值 0.35 偏小 36mm，会让 Nav2 以为机器人比实际小、
-                           # 规划出让轮子蹭到货架立柱的路径。rpp 版不需要显式 footprint
-                           # （那是 MPPI 的 consider_footprint 才要求的），只用这个半径即可。
+      # 足迹是正方形 a=0.31（半边长）。2026-09-07 从 robot_radius: 0.42 的圆换过来，
+      # 与 nav2_params_mppi.yaml **逐字一致**（test_config_consistency 会强制）。
+      # 换的理由见 mppi 那份的长注释，一句话：圆/八边形在轴向虚报 120mm，
+      # 而真实底盘轴向只有躯干圆柱 0.300、对角才有轮缘 0.386。
+      # 正方形 a=0.31 逐 0.01° 扫过 0~90° 的最小余量 +10mm，任何朝向都包住底盘。
+      # rpp 本身不要求显式 footprint（那是 MPPI 的 consider_footprint 才要求的），
+      # 这里给显式多边形是为了两份配置的几何口径不漂开。
+      footprint: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -356,7 +446,7 @@ global_costmap:
         # !!! 原值 0.25 比足迹外接半径还小，Nav2 每次启动都在报 ERROR：
         #   "The configured inflation radius (0.250) is smaller than the robot radius (0.35)"
         # 后果是膨胀层连机器人自身轮廓都覆盖不住，规划器拿不到"离墙远一点"的代价梯度，
-        # 路径会紧贴障碍物走。inflation_radius 必须大于 robot_radius(0.42)。
+        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(正方形 a=0.31 ⇒ 0.438)。
         #
         # ======================================================================
         # 需求：(1) 全局路径尽可能居中；(2) **不要为抄近道去钻窄通道**，
@@ -380,9 +470,12 @@ global_costmap:
         # 需求口径 2m ⇒ 取 1.0；cost_travel_multiplier 取 8.0
         # （2m 通道原始代价 40.2 只有 1.5m 通道 85.1 的一半，权重要跟上才有区分度）。
         #
-        # 取 1.0 + 8.0 后（本文件几何：圆形 robot_radius 半径 0.42）：
-        #    1.5m 通道 -> 中心代价  93.6 -> 惩罚因子 3.973 -> 容忍绕路 3.97x
-        #    2.0m 通道 -> 中心代价  44.2 -> 惩罚因子 2.404 -> 容忍绕路 2.40x
+        # 取 1.0 + 8.0 后（本文件几何：正方形 a=0.31，内切半径 0.310）：
+        #    1.5m 通道 -> 中心代价  67.0 -> 惩罚因子 3.127 -> 容忍绕路 3.13x
+        #    2.0m 通道 -> 中心代价  31.0 -> 惩罚因子 1.984 -> 容忍绕路 1.98x
+        # ⚠️ 2026-09-07 换正方形足迹前这两行是 85.1/3.70x 与 40.2/2.28x
+        #    （内切 0.388）。窄通道惩罚随内切半径变小而**变弱** —— 这是换足迹的
+        #    连带代价，如实记下：2m 通道的容忍绕路从 2.28x 降到 1.98x。
         #    2.5m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
         #    3.0m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
         #    4.0m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
@@ -392,7 +485,7 @@ global_costmap:
         # 「比这更宽的通道我一律视为同等优良」。取 1.0 时 2.5m 与 4m 大路
         # 无法区分（都是 0）。若要连 2.5m 也轻微惩罚需取 1.25。
         #
-        # 253(不可通行) 那一档由内切半径 0.42 决定、与 inflation_radius 无关，
+        # 253(不可通行) 那一档由内切半径 0.310 决定、与 inflation_radius 无关，
         # 所以本改动**不缩小可行域**，只塑造梯度形状。
         #
         # 只改**全局**这一份：局部代价地图维持 0.65 不变。局部图被 MPPI 的

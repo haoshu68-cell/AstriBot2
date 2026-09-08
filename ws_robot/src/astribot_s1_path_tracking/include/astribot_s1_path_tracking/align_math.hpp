@@ -114,6 +114,35 @@ Phase advancePhase(
   double start_min_rad,
   bool align_goal_enabled);
 
+/// 接近段线速度上限：离终点越近，允许的速度越小（线性收敛 + 下限）。
+///
+/// 为什么需要它，以及为什么是线性而不是硬上限：
+///   实测（run11 18 轮）指令→实际速度存在 **0.55s 未建模死时间**
+///   （`vel_track_best_lag_s` p50=0.55、max=0.64，而增益 0.977 —— 底盘最终跟得上，
+///   只是慢半拍）。终段过冲因此近似 `overshoot ≈ v_接近 × τ`，实测
+///   `overshoot_radial_m` p50=0.146 ⇔ 接近速度约 0.27 m/s，自洽。
+///   nav2 的 MPPI 模型里**没有任何时延项**，所以改代价权重动不了 `v·τ`；
+///   唯一能直接把这个乘积做小的就是压小 `v_接近`。
+///
+///   线性收敛（`v = v0·d/D`）对时延是**自校正**的：终段过冲 ≈ `v(d)·τ`
+///   随 `d→0` 自己趋于 0。硬上限不是 —— 它在 d 跨过阈值那一拍产生速度阶跃，
+///   且到达时速度仍恰好等于上限。这也是 nav2 自带 RPP 的形状
+///   （`approach_velocity_scaling_dist` + `min_approach_linear_velocity`），
+///   本仓库沿用同一口径而不是另发明一套。
+///
+/// @param dist_to_goal_m 到路径终点的距离（m）
+/// @param approach_dist_m 收敛区长度 D（m），必须 > 0
+/// @param v_min 速度下限（m/s），保证底盘还能动（实测 0.02 m/s 即可平动）
+/// @param nominal_speed 不限速时的速度（m/s），通常传内层算出的 ‖v‖
+/// @return 允许的线速度模长上限；`dist >= D` 时原样返回 nominal_speed
+///
+/// 参数非法（D<=0、v_min<0、nominal<=0）或 dist 为 NaN 时**原样返回
+/// nominal_speed**，即退化成「不限速」= 今天的行为。刻意不返回 v_min：
+/// 那会因为一个坏参数把机器人静默限到蠕行，比不限速危险得多；
+/// 参数合法性由 configure() 的启动期 throw 负责，不在这里兜。
+double approachSpeedCap(
+  double dist_to_goal_m, double approach_dist_m, double v_min, double nominal_speed);
+
 /// 相位计时器是否应当重置。
 ///
 /// 这是一条曾经被写错、且后果是**永久锁死整套导航**的不变式，所以单独抽成

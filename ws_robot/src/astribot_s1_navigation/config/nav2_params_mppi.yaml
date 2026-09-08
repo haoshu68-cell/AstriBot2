@@ -1,12 +1,26 @@
 # Nav2 参数文件（controller_plugin=mppi：MPPI + Smac2D，推荐配置）。
 #
-# MPPI (Model Predictive Path Integral) 原生支持 holonomic 全向运动模型
-# （motion_model: "Omni"），能真正利用本机器人全向轮的全向平移能力（斜着直接走，
-# 不需要先转向），比 nav2_params_rpp.yaml 里的 RPP 更适合这个机器人——推荐实际部署用
-# 这一份，rpp 只是为了满足任务书字面要求保留的默认值。除 controller_server 外，
-# 其它 server(planner/behavior/bt_navigator/waypoint_follower/velocity_smoother/
-# 两个costmap) 与 nav2_params_rpp.yaml 完全一致，复用同样的坐标系/速度限制/代价地图
-# 配置，这里不重复展开注释，详见 nav2_params_rpp.yaml 对应段落。
+# MPPI (Model Predictive Path Integral) 原生支持 holonomic 全向运动模型，比
+# nav2_params_rpp.yaml 里的 RPP 更适合这个机器人——推荐实际部署用这一份，rpp 只是
+# 为了满足任务书字面要求保留的默认值。
+#
+# ⚠2026-09-03「路线A」：三处 MPPI 块的运动模型已从 "Omni" 改成 "DiffDrive"
+# （vy_max/vy_std 一并置 0，twirling_cost_weight 10.0->1.0，两处
+# zero_vy_in_follow false->true）。原因：Omni 下机头是自由变量——PathAlignCritic
+# (14.0) 只约束位置，横移就能满足它，PathAngleCritic 的 ±57.3° 是死区，
+# TwirlingCritic(10.0) 还在压制转向，于是机器人蟹行。要"机头沿路径"就得把横向
+# 自由度从模型层去掉，而不是继续加航向权重。run11 基线（平移中 n=9679）：
+# 机头−切向 中位 9.25° / P90 44.33° / P99 63.77°，尾部压在 57.3° 死区边界上。
+# 一键回退：把上述五处改回注释里标注的原值即可，不需要改代码。
+# ⚠️ 2026-09-07 删掉窄通道贴边接管层之后，**再没有任何一层保留横移能力**：
+#    原先那一层自己算指令并在内层之前 return，是 vy 的唯一出口。现在
+#    DiffDrive + vy_max/vy_std=0 + zero_vy_in_follow 三处一致地把 vy 归零，
+#    底盘物理上仍是全向的，但整条控制链不再使用横移。
+#
+# 除 controller_server 外，其它 server(planner/behavior/bt_navigator/
+# waypoint_follower/velocity_smoother/两个costmap) 与 nav2_params_rpp.yaml
+# 完全一致，复用同样的坐标系/速度限制/代价地图配置，这里不重复展开注释，
+# 详见 nav2_params_rpp.yaml 对应段落。
 
 controller_server:
   ros__parameters:
@@ -28,8 +42,18 @@ controller_server:
     goal_checker_plugins: ["general_goal_checker"]
     # FollowPath 必须留在列表里且保持这个名字：FollowPath 行为树节点的
     # controller_id 端口默认就是 "FollowPath"，默认 BT 会用它。
-    # 另两个是三段式实例，定义在本节末尾，由调用方通过 controller_id 选择。
-    controller_plugins: ["FollowPath", "FollowPathThreePhase", "FollowPathExplore"]
+    #
+    # 🔴 2026-09-07：**FollowPath 现在就是三段式实例**（定义在本节末尾）。
+    #    改动理由：nav2 自带 11 份 BT 的 FollowPath 节点全都只写
+    #    controller_id="FollowPath"、且**一份都不传 goal_checker_id**
+    #    （已逐个查过 /opt/ros/humble/share/nav2_bt_navigator/behavior_trees/）。
+    #    所以"让所有导航走三段式"的最小改法就是让名字叫 FollowPath 的那个实例
+    #    是三段式 —— 一份 BT 都不用改，rviz 手动目标 / ros2 action send_goal
+    #    / 任何 NavigateToPose 调用方立刻生效。
+    #
+    #    按仓库规范旧逻辑留开关不删，随时可用 controller_id 切回做 A/B。
+    #    它同时是下面三份 MPPI 参数副本的**基准块**，
+    controller_plugins: ["FollowPath", "FollowPathExplore"]
 
     progress_checker:
       # !!! 必须用 PoseProgressChecker 而不是 SimpleProgressChecker !!!
@@ -70,9 +94,14 @@ controller_server:
     # goal checker 永不满足 -> FollowPath 不成功 -> Failed to make progress ->
     # 恢复行为 -> 超时。现象就是「转完之后不跟路径、原地漂移」。
     #
-    # 朝向约束并没有消失，只是移到了知道场景的那两层：
-    #   · 三段式控制器 align_goal_enabled=true(FollowPathThreePhase) 负责转到位
+    # 朝向约束并没有消失，只是移到了知道场景的那一层：
     #   · 协调器 check_yaw + arrival_yaw_tolerance 负责复核
+    #
+    # ⚠️ 这里原来还写着"三段式控制器 align_goal_enabled=true 负责转到位"，
+    #    那一句是**错的**，已删：本值 3.15 恰恰是让 ALIGN_GOAL 段拿不到执行机会的
+    #    原因（判到位与进 ALIGN_GOAL 用的是同一个 dist <= xy_goal_tolerance）。
+    #    详见下面 FollowPath 实例 align_goal_enabled 上方的推导。
+    #    ——「守卫/测试/注释三处写同一个错理由 = 一份证据不是三份」，故一并纠正。
     # 需要在 Nav2 层也严格卡朝向时，正解是加第二个 goal checker 并让**每个**行为树
     # 都显式传 goal_checker_id —— 注意不能只是把它加进 goal_checker_plugins 列表：
     # 该端口无默认值，列表里有两项而调用方传空字符串会让每次 FollowPath 直接 abort。
@@ -93,134 +122,6 @@ controller_server:
       xy_goal_tolerance: 0.25
       yaw_goal_tolerance: 0.25
 
-    FollowPath:
-      plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 56
-      model_dt: 0.05
-      batch_size: 2000
-      vx_std: 0.2
-      # 全向底盘特有：vy_std 非零才能让 MPPI 真正采样横向平移轨迹。
-      vy_std: 0.2
-      wz_std: 0.4
-      vx_max: 1.0
-      vx_min: -1.0
-      # 全向底盘特有：vy_max 非零，配合下面 motion_model: "Omni"。
-      vy_max: 1.0
-      wz_max: 2.0
-      ax_max: 2.5
-      ax_min: -2.5
-      ay_max: 2.5
-      az_max: 3.2
-      iteration_count: 1
-      prune_distance: 1.7
-      transform_tolerance: 0.2
-      temperature: 0.3
-      gamma: 0.015
-      # !!! 关键参数 !!!：motion_model 必须是 "Omni"（全向），不是 MPPI 默认示例常见的
-      # "DiffDrive"——设成 DiffDrive 的话 MPPI 也会跟 RPP 一样退化成"先转向再前进"，
-      # 白白浪费全向轮的全向能力。
-      motion_model: "Omni"
-      visualize: false
-      reset_period: 1.0
-      regenerate_noises: false
-      TrajectoryVisualizer:
-        trajectory_step: 5
-        time_step: 3
-      AckermannConstraints:
-        min_turning_r: 0.0
-      critics: [
-        "ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic",
-        "PathAlignCritic", "PathFollowCritic", "PathAngleCritic",
-        "PreferForwardCritic", "ObstaclesCritic", "TwirlingCritic"]
-      ConstraintCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 4.0
-      GoalCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
-        threshold_to_consider: 1.4
-      GoalAngleCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 3.0
-        threshold_to_consider: 0.5
-      PreferForwardCritic:
-        enabled: true
-        cost_power: 1
-        # 全向底盘不强制"必须朝前走"，权重比典型差速车配置调低一些，允许侧移/斜移。
-        cost_weight: 2.0
-        threshold_to_consider: 0.5
-      CostCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 3.81
-        critical_cost: 300.0
-        # 保持 true。曾改成 false 试图解决窄通道走不动，实测**无可测收益**后回退，
-        # 详见本文件末尾「窄通道通行能力：一次未能证实的尝试」。
-        # 那一节记录的「足迹代价在 <1.62m 通道里饱和成 253」是实测硬数据，
-        # 将来真在窄通道里卡住时可以直接接着查，不用重来一轮。
-        consider_footprint: true
-        collision_cost: 1000000.0
-        near_goal_distance: 1.0
-      PathAlignCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 14.0
-        max_path_occupancy_ratio: 0.05
-        trajectory_point_step: 4
-        threshold_to_consider: 0.5
-        offset_from_furthest: 20
-      PathFollowCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
-        offset_from_furthest: 5
-        threshold_to_consider: 1.4
-      PathAngleCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 2.0
-        offset_from_furthest: 4
-        threshold_to_consider: 0.5
-        max_angle_to_furthest: 1.0
-      TwirlingCritic:
-        enabled: true
-        twirling_cost_power: 1
-        twirling_cost_weight: 10.0
-      ObstaclesCritic:
-        enabled: true
-        cost_power: 1
-        repulsion_weight: 1.5
-        critical_weight: 20.0
-        # 保持 true，理由同 CostCritic（试过 false，无可测收益，已回退）。
-        consider_footprint: true
-        collision_cost: 1000000.0
-        # !!! 0.10 -> 0.05：这一条**没有**跟着 consider_footprint 一起回退 !!!
-        # 它的依据独立于 consider_footprint，且不涉及那条
-        # "Inconsistent configuration in collision checking" 告警（那是 false 才有的）。
-        #
-        # 这是「足迹边缘到障碍」的重罚带宽度，带内吃 critical_weight=20 的重罚。
-        # 实测本仓库地图（全局 costmap 快照，280x416）：
-        #   center-clearance ∈ [0.05,0.10) 的位置占可行域 6.71%（物理通道宽 0.88~0.98m）
-        #   center-clearance <  0.05       的位置占可行域 0.00%
-        # 即 0.10 恰好把**所有**真实窄通道罚了个遍，而 0.05 一个不罚 ——
-        # 这个阈值正好落在本地图窄通道分布的断层上，不是随手取的。
-        #
-        # 安全性不靠这个参数兜底：真碰撞由 254 判定（consider_footprint:true 下
-        # 253 不算碰撞），且八边形足迹本身已有 34mm 余量
-        # （顶点 0.42 vs URDF 实测真实轮缘包络 0.386）。
-        #
-        # !!! 但要注意：这条改动同样**没有**实测收益证据 !!!
-        # 三个已验证可达目标上改前改后都是 3/3 SUCCEEDED、0 次
-        # "Failed to make progress"，差异在单次运行噪声内。保留它是因为
-        # 「罚遍所有窄通道」这个事实独立成立、且风险面比 consider_footprint 小，
-        # 但它仍属**待评估**状态，不是已验证的优化。
-        # 单独立项要做的事见文件末尾「待评估：collision_margin_distance」。
-        collision_margin_distance: 0.05
-        near_goal_distance: 0.5
-
     # ================== 三段式路径跟踪（astribot_s1_path_tracking）==================
     # 相位：原地对齐路径起始方向 -> 沿路径行驶 -> 原地对齐目标姿态。
     # 跟踪段委托给内层控制器（这里用上面同一套 MPPI），本插件只加相位调度与原地旋转。
@@ -231,18 +132,40 @@ controller_server:
     # 所以多控制器共存不会像多 goal checker 那样导致 abort —— 只要其中一个叫 FollowPath。
     #
     # 两个实例的区别只有 align_goal_enabled：
-    #   FollowPathThreePhase  终点对齐**开** —— 搬运等需要卡姿态的场景
-    #   FollowPathExplore     终点对齐**关** —— 自主探索（按需求：到位后不再转朝向）
+    #   FollowPath          终点对齐**开** —— 默认实例，所有 NavigateToPose 目标走这里
+    #   FollowPathExplore   终点对齐**关** —— 自主探索（按需求：到位后不再转朝向）
     # 选择方式：FollowPath action 的 controller_id，不在代码里 if 场景。
-    FollowPathThreePhase:
+    #
+    # 🔴 2026-09-07 本块从 FollowPathThreePhase 改名为 FollowPath（要求：所有导航
+    #    改三段式）。改名而不是复制一份：nav2 的内层参数前缀是 <实例名>.inner，
+    #    再加一个实例就是第四份 MPPI 参数副本。
+    FollowPath:
       plugin: "astribot_s1_path_tracking::ThreePhaseController"
       inner_controller_plugin: "nav2_mppi_controller::MPPIController"
       align_start_enabled: true
+      # ⚠️ align_goal_enabled=true，但**当前这一段实际拿不到执行机会**。
+      #    这是既有状态、不是新引入的缺陷，写在这里是为了不留一个"看着开着其实
+      #    关着"的开关。运行时控制器也会 WARN 一次（warnIfGoalAlignInert）。
+      #
+      #    机制：进入 ALIGN_GOAL 的条件是 dist_to_goal <= xy_tol，而 xy_tol
+      #    取自 general_goal_checker；controller_server 判到位用的是**同一个**
+      #    goal checker，且 yaw_goal_tolerance: 3.15 >= pi 等于不约束朝向，
+      #    于是"判到位" ≡ dist <= 0.18 —— 与进 ALIGN_GOAL 是同一个数。
+      #    位置一进容差，nav2 当拍就结束 action，本段最多拿到一拍。
+      #
+      #    真正启用它需要四处联动，漏一处则**每个目标都 abort**：
+      #      1. 加一个卡朝向的 goal checker（不能只加进 goal_checker_plugins：
+      #         列表 >1 项而调用方传空 goal_checker_id 会直接 abort）
+      #      2. 自带两份 BT 并在 FollowPath 节点显式传 goal_checker_id
+      #      3. bt_navigator 设 default_nav_to_pose_bt_xml 指向那份 BT
+      #      4. 探索协调器的 follow_goal_checker_id 显式赋值
+      #    用户已决定本轮不动 goal checker，故先如实记录。
       align_goal_enabled: true
-      # 内层是 MPPI Omni，会主动规划横移；这里若掐掉 vy，内层的预测与实际下发
-      # 就不一致（它以为能横移）。所以配 MPPI 时保持 false。
-      # 要"前向为主(差速风格)"应把 inner 换成 RPP 并置 true。
-      zero_vy_in_follow: false
+      # 路线A：原值 false。当时的理由是"内层 MPPI 是 Omni，掐掉 vy 会让内层的
+      # 预测与实际下发不一致（它以为能横移）"——那个理由现在不成立了：内层已配成
+      # motion_model: "DiffDrive" + vy_max/vy_std = 0，它自己就不再采样横移。
+      # 置 true 只是最后一道保险（代码默认值本来就是 true）。
+      zero_vy_in_follow: true
       align_kp: 1.0
       # 实测原地旋转跟踪比 0.73~0.92，且发零速后仍余转 0.006(慢)~0.033(快) rad，
       # 所以上限不取满 wz_max(2.0)，留出减速余量。
@@ -255,175 +178,53 @@ controller_server:
       start_min_angle: 0.20
       start_heading_lookahead: 0.5
       align_timeout: 15.0
+      # 两次 tick 的空档超过此值 => 上一个 FollowPath action 已经结束，这次 setPlan
+      # 是**同一目标的新一次下发**，必须重发一份完整的对齐预算。
+      # 必须 in (0, align_timeout)：置 0 会让每次周期重规划都被判成新尝试、
+      # align_timeout 永远等不到触发；>= align_timeout 则救不了那个锁死（代码里会拒绝启动）。
+      # 0.5s = controller_frequency(20Hz) 下 10 拍，远大于单拍抖动。
+      new_attempt_gap: 0.5
       follow_timeout: 0.0        # 0 = 交给 nav2 的 progress_checker
       # 只在取不到 GoalChecker 容差时兜底；正常路径下容差**取自 GoalChecker**，
       # 不在这里维护第二份（两处各存一份必然漂开）。
       fallback_xy_tolerance: 0.18
       fallback_yaw_tolerance: 0.20
-      # ---- 窄通道贴边通行（状态 3）----
-      # 「窄通道」按用户口径：**局部代价值全覆盖足迹的通道**（足迹最大代价 >= 253）。
-      # 本图实测该档占可行域 34.68%，按通道宽度分三段：
-      #   < 0.388m   31.26%  物理放不进去（内切直径 0.776m）→ 不是本层职责，
-      #                      应由 exploration_coordinator 的 ESCAPE 把车挪出来
-      #   0.388~0.42  3.42%  **只有朝向有利时才过得去 → 本层目标域**
-      #   >= 0.42m   65.32%  MPPI 自己能过
+      # ---- 接近段限速（提升到位精度，2026-09-07）----
+      # 依据（run11 18 轮实测，/tmp/explore_run11/metrics/run11_rounds.csv）：
+      #   cross_track_p95_m      0.048   <- 沿途跟得很准
+      #   arrival_error_xy_m     0.121   <- 误差集中在终段
+      #   overshoot_radial_m     0.146
+      #   vel_track_best_lag_s   0.55 (max 0.64)，vel_track_gain 0.977
+      # 即：**不是路径跟不准，是指令->实际速度有 0.55s 未建模死时间**（增益 0.977
+      # 说明底盘最终跟得上、只是慢半拍）。终段过冲 ≈ v_接近 × τ；
+      # 反推 0.146/0.55 ⇒ 当时接近速度约 0.27 m/s，自洽。
       #
-      # 为什么用「接管」而不是「临时改 MPPI 权重/膨胀参数」：
-      #   1) 一个 MPPI 参数都不改 ⇒ 退出后不存在「复原漏项」这类安全降级。
-      #      这直接满足红线「脱困结束所有改过的权重必须复原」。
-      #   2) 这一档里足迹代价恒为 253、梯度为 0（实测占可行域 35%），
-      #      改权重是给一个零梯度量乘系数，乘多少还是零梯度。
-      #      2026-08 已实测 consider_footprint:false 无收益并回退。
-      narrow_enabled: true
-      narrow_trigger_ticks: 3      # 消抖：连续 3 拍才接管，避免边界抖动来回切控制律
-      narrow_clear_ticks: 3        # 连续 3 拍脱离才退出，同理
-      # 🔴 两种查询，两个阈值，绝不混用。依据是 nav2 自己的 InflationLayer::computeCost：
-      #      distance==0                        -> 254 (LETHAL，障碍本体)
-      #      distance*res <= inscribed_radius   -> 253 (INSCRIBED_INFLATED)
-      #    253 的含义是"这一格离障碍不超过内切半径"= **底盘中心放这里必然碰撞**，
-      #    而内切半径**就是底盘半宽** —— 膨胀层已经把底盘尺寸算进去了。
+      # 为什么不靠调 MPPI 权重：nav2 MPPI 的模型里**没有任何时延项**（无 dead-time
+      # 参数），改 GoalCritic/PathFollowCritic 的 threshold_to_consider 或权重
+      # 一点也动不了 v·τ 这个乘积。唯一的杠杆是压小 v_接近。
       #
-      #    · 足迹**多边形**查询(footprintCostAtPose) -> 254。
-      #      多边形已经表达了底盘尺寸，再要求外轮廓躲开 253 带 = 底盘半宽算两遍。
-      #      重复计的量级：需要 通道宽 > 4*侧向半宽
-      #        八边形 侧向 0.3894 + 内切(含padding) 0.3992 -> 通道需 > 1.577m
-      #        正方形 侧向 0.3100 + 内切(含padding) 0.3200 -> 通道需 > 1.260m
-      #      本仿真环境最窄通道 0.65m 量级 ⇒ **恒为 253、零梯度**，判据完全失效。
-      #      （与早先记下的症状"窄于 1.62m 恒为 253、占可行域 35%"吻合到一个栅格内）
-      #    · **中心格**查询(getCost) -> 253。那里膨胀带正好代表底盘尺寸，
-      #      SmacPlanner2D 判 "Starting point in lethal space" 用的就是它。
+      # 为什么线性收敛而不是硬上限：带 τ 时终段过冲 ≈ v(d)·τ 随 d→0 自己趋于 0，
+      # 线性律对时延是**自校正**的；硬上限在跨阈那一拍产生速度阶跃，且到达时
+      # 速度仍恰好等于上限。这也是 nav2 自带 RPP 的形状（见 nav2_params_rpp.yaml
+      # 的 approach_velocity_scaling_dist + min_approach_linear_velocity），沿用同一口径。
       #
-      #    实测证据（2 轮 969+709s）：足迹代价读数 51 次 253、仅 2 次 254，
-      #    其中 26 次同时中心代价=0。足迹真装不进去时读数应是 254。
-      #    上一版这里写 253，导致 909 次"连小足迹转正也过不去"全是假的。
-      #    启动守卫已强制 footprint>253 且 center<=253，改错了起不来。
-      narrow_footprint_lethal_threshold: 254.0   # 足迹多边形 = 真障碍本体
-      narrow_center_lethal_threshold: 253.0      # 中心格 = 膨胀内切带(=底盘半宽)
-      # 目标区间只有 0.032m 宽（外接 0.42 − 内切 0.388），而栅格是 0.05m，
-      # 所以步长必须远小于栅格。代码里 > 0.025 直接拒绝启动。
-      narrow_scan_half_width: 0.30
-      narrow_scan_step: 0.01
-      # 全部低速：这是受限通行，不是正常跟踪。此处离墙不足 0.02m，
-      # 高速下任何一拍的横向误差都直接变成撞墙。
-      narrow_v_along: 0.10
-      narrow_v_lateral_max: 0.05
-      narrow_wz_max: 0.20
-      narrow_kp_lateral: 1.0
-      narrow_kp_yaw: 1.5
-      # 本层最关键的一条：朝向误差超过闸门就**不前进**，先转到有利朝向。
-      # 在 0.776~0.84m 区间里朝向不对就是过不去，带着错的朝向往前走等于往卡死里走。
-      narrow_yaw_gate: 0.12
-      # 有利朝向周期。足迹是正八边形 ⇒ 每 45°(pi/4) 复现相同的横向包络，
-      # 所以有利朝向是一个**同余类**而不是单一角度：转到最近的那个就行，不必绕远。
-      narrow_favorable_period: 0.7853981634
-      narrow_heading_lookahead: 0.40
-      # ---- 进入窄通道**之前**的朝向预对齐 ----
-      #
-      # 要解决的实测缺陷：本层原来只在「足迹已经碰到致命带」之后才接管并转朝向，
-      # 也就是机器人总是**先以不利朝向撞进窄处**，再在里面原地转。
-      # 实测时序（narrow_math.hpp:118）：中心代价 0 -> 218 -> 229 -> 致命，
-      # 机器人被一路推进膨胀带深处，最后自己变成了协调器 ESCAPE 的对象。
-      #
-      # ⚠️ 它**不改变全局规划器的任何判据**。SmacPlanner2D 的起点判据读栅格代价值，
-      #    膨胀层只用内切半径算 253 —— 整条链**旋转无关**。所以「转正后重新求解」
-      #    拿到的是逐字相同的 "Starting point in lethal space"。
-      #    预对齐的收益全部在两处：① MPPI 侧（footprintCostAtPose 是带位姿的）
-      #    ② 不再被推进膨胀带深处、进而不再自己变成 ESCAPE 的对象。
-      #
-      # 杠杆有多大：正八边形外接 0.42 / 内切 0.388，横向包络随朝向只变化
-      # 0.776 -> 0.840m（8%）。所以预对齐能多争取的宽度只有 0.064m ——
-      # 它治的是「不利朝向撞进去」这个过程，不是把通道变宽。
-      narrow_prealign_enabled: true       # 一键回退到旧行为（仓库规范：不删旧逻辑）
-      narrow_prealign_preview: 1.00       # 沿路径前视多远
-      narrow_prealign_sample_step: 0.10   # 前视采样间距
-      # 旋转前的扫掠校验步长。开阔处 footprint<253 只保证**当前这一个朝向**不碰带，
-      # 原地转会把八边形顶点扫进膨胀带甚至真障碍，所以必须逐个中间朝向查一遍。
-      narrow_prealign_sweep_step: 0.20
-      # 超时只放弃并告警，**不抛异常**：预对齐失败属于「没能开始」，
-      # 计入 narrow_max_engagements 会误杀整条本来可行的路径。
-      narrow_prealign_timeout: 5.0
-      narrow_prealign_max_per_goal: 5     # 防振荡。要关请用 enabled:false，别把它设成 0
-      # ---- 窄通道内临时把足迹缩成正方形 ----
-      #
-      # 为什么需要：预对齐单独上实测**主判据没有改善**
-      #   基线 on 侧 起点致命 1.08/min -> 预对齐轮 1.48/min（1 轮 365s）
-      # 日志给出原因：18 次前视里 12 次「转正也过不去」，接管日志原文
-      # `足迹代价=253(有利朝向 253)` —— 两个朝向完全相同。
-      # 因为八边形各向异性只有 0.032m、小于栅格 0.05m，取最大值时两个朝向都饱和。
-      # ⇒ 朝向对齐在八边形下没有可用余量，必须同时缩足迹。
-      #
-      # 数字全部来自 nav2 自己的 calculateMinAndMaxDistances + padFootprint（实测）：
-      #   足迹           内切(含padding 0.01)  外接      朝向盲区   最窄通道
-      #   八边形         0.399155              0.434164  0.035     0.798m
-      #   正方形 a=0.31  0.320000              0.452548  0.133     0.640m
-      #
-      # 🔴 顺序不可颠倒：**先对齐、后换足迹**。膨胀层只用内切半径、旋转无关，
-      #    小足迹把代价地图的朝向盲区放大 4 倍，朝向没锁住就切等于让代价地图
-      #    在一个它无法表达的姿态上说"可以过"。
-      # 🔴 正方形 a=0.31 是**诚实包络**（随车体旋转，任何朝向都包住底盘）：
-      #    躯干圆柱 0.30 余量 10.0mm、轮球包围盒 0.2963 余量 13.7mm。
-      #    数据源是 astribot_s1_torso_wheel.xacro 实测，不是估的。
-      # 🔴 碰撞保护不依赖膨胀层：MPPI 两个 critic 都是 consider_footprint:true、
-      #    用真实多边形在真实位姿求值，254 红线不动。所以膨胀层的乐观导致的是
-      #    **规划器乐观 ⇒ 卡住**，不是碰撞。
-      #
-      # 默认 false：这是新增的高风险能力，先用 A/B 拿到数据再决定是否默认开。
-      narrow_square_enabled: false
-      narrow_footprint_default: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
-      narrow_footprint_narrow: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
-      # 🔴 启动守卫：小足迹内切半径 < 这个值就拒绝启动。
-      #    取 0.30 = URDF 里躯干碰撞圆柱半径。打错一个字把机器人建模成比躯干还小，
-      #    在仿真里的表现是"通过率提高"——非常危险，必须在启动时就拦住。
-      chassis_min_envelope_radius: 0.30
-      narrow_square_hard_timeout: 30.0    # 红线：受限动作必须带超时
-      narrow_square_lease_period: 0.5     # 续租周期，给协调器看门狗判"设它的人还活着"
-      # 回读验证超时。切 global costmap 是发话题(fire-and-forget)，
-      # 超时内没从 published_footprint 回读到期望顶点数就复原并放弃，
-      # **绝不假定切成功**继续往窄处走。
-      narrow_square_verify_timeout: 2.0
-      # ---- 切换迟滞 ----
-      #
-      # 🔴 为什么必须有：第一轮 A/B 实测 123 次切入 / 121 次"装得下"复原 /
-      #    单次驻留中位 0.15s，小足迹只生效 5.7% 的时长。
-      #    0.15s 恰好 = narrow_clear_ticks(3) / controller_frequency(20Hz)，
-      #    也就是复原**每次都在法律允许的最早那一拍**触发。
-      #
-      #    根因不是参数没调好，而是切入与切出问的是两个不同的几何问题：
-      #      · 切入：沿路径**前视 1.0m** 有没有大足迹过不去的点
-      #      · 切出(旧)：**只看机器人当前位姿**大足迹压不压致命带
-      #    而当前位姿的大足迹代价必然低于阈值 —— 否则窄通道接管层早就接管了，
-      #    根本走不到预对齐。于是切出判据在切入那一瞬间就已成立。
-      #
-      #    修法是让两边问同一个问题、且切出窗口更长：
-      #      切入 1.00m 内有麻烦 ⇒ 切；切出 1.20m 内全无麻烦 ⇒ 复原。
-      #    0.20m 迟滞带 = 4 个栅格(resolution 0.05)，是代价地图**表达得出**的量。
-      #    对比：八边形各向异性 0.032m < 一个栅格，所以纯预对齐测不出效果。
-      narrow_square_exit_preview: 1.20    # 启动守卫：必须 >= narrow_prealign_preview
-      narrow_square_exit_ticks: 6         # 0.30s @20Hz。与 narrow_clear_ticks 分开，那是接管层的
-      # 最短驻留：切入后这段时间内不许因"装得下"复原。
-      # ⚠️ 只压这一条复原路径 —— 硬超时/新目标/deactivate/看门狗都是安全通路，不受它限制。
-      narrow_square_min_dwell: 2.0
-      narrow_square_cooldown: 3.0        # 复原后冷却，防"复原-立刻再切"自激
-      # 算术：单次切换周期下限 = 2.0+3.0 = 5.0s ⇒ 一轮 ~324s 的跑法切换次数
-      # **上限 64 次**。这是兜底天花板，不是预期值；预期值由上面的窗口迟滞决定，
-      # 下界是本轮真实遇到的独立窄处个数（预对齐 A/B 实测 ~15 次/轮）。
-      # 若复跑后仍 >64，说明有 bug，不是参数问题。
-      global_footprint_topic: /global_costmap/footprint
-      global_published_footprint_topic: /global_costmap/published_footprint
-      # ---- 以下三项对应用户明确的安全红线 ----
-      # ---- 卡住判据：按**进展**判，不按时长判 ----
-      # 旧的 narrow_timeout: 25.0 是一个真实缺陷：
-      #   25s x v_along 0.10 m/s = 2.5 m
-      # 等于悄悄给窄通道设了 2.5 米的长度上限。实测一条 2.5m 长的窄通道被连砍
-      # 3 次（每次恰好停在 25.0x 秒），期间机器人全程 0.10m/s 正常前进、
-      # 朝向误差 ±0.008rad、离路径最远 0.112m —— 完全健康，只是"走得久"。
-      # 「无限循环脱困」的真实特征是原地蹭：时间在走而弧长不涨。
-      # 代码里若检测到 narrow_timeout 这个旧键会直接拒绝启动（语义已变，不静默忽略）。
-      narrow_stall_timeout: 6.0          # 红线：这么久没有弧长进展即判原地蹭
-      narrow_stall_min_gain: 0.05        # 小于此增量不算进展（滤栅格噪声）
-      narrow_hard_timeout: 120.0         # 绝对上限兜底，只防弧长判据本身失效
-      narrow_max_engagements: 3          # 红线：不能无限循环脱困（按连续失败计，成功即清零）
-      narrow_max_path_deviation: 0.50    # 红线：不得脱离全局参考路径太远
+      # 作用面：只夹 kFollow 段的线速度**模长**（旋转不变，按比例缩放 vx/vy），
+      # 不夹 wz（终段仍要继续对齐路径方向）。
+      # 注：2026-09-07 前这里还有一段"窄通道接管不受影响"的说明。那一层已删，
+      # 连带解掉一个零余量重合：approach_v_min(0.05) 曾恰好等于窄通道第二入口的
+      # 交接门槛 narrow_v_along/2，即终段一踩到下限就被判"内层太慢该接管"。
+      approach_enabled: true
+      # 收敛区长度 D。隐含最大减速在 d=D 处 = v0²/D = 1.0²/1.50 = 0.67 m/s²，
+      # ≤ 实测有效减速 0.45~0.8 m/s²（由滑行量反推 v²/2d：0.069m@0.25 ⇒ 0.45、
+      # 0.100m@0.40 ⇒ 0.8）。取 D=1.0 则隐含 1.0 m/s²、超出底盘能力，
+      # 又会变成"规划了做不到的刹车"。
+      # 另有硬约束 D > fallback_xy_tolerance（代码里拒绝启动）：否则限速段整个
+      # 落在到位容差内、一次都不生效，而日志上看不出任何异常。
+      approach_dist: 1.50
+      # 速度下限。终段残留过冲 ≈ v_min·τ = 0.05×0.55 = 0.028m，落在 0.05 目标内。
+      # 下界依据：实测底盘 0.02 m/s 就能平动（无静摩擦地板），故 0.05 有 2.5 倍
+      # 余量、不会蠕行不动。置 0 会让终段算出驱动不了底盘的速度而卡在容差外。
+      approach_v_min: 0.05
       inner:
         # !!! 这一整块是原始 FollowPath 的 MPPI 配置逐行复制(含全部 10 个 critics) !!!
         # 上一版我只手抄了 15 行、漏掉 critics —— MPPI 的代价函数**全部**来自 critics，
@@ -437,13 +238,15 @@ controller_server:
           model_dt: 0.05
           batch_size: 2000
           vx_std: 0.2
-          # 全向底盘特有：vy_std 非零才能让 MPPI 真正采样横向平移轨迹。
-          vy_std: 0.2
+          # 路线A（机头沿路径）：横向自由度从"模型层"去掉，不是靠加航向权重。
+          # 原值 vy_std: 0.2（采样横移轨迹）。置 0 后 MPPI 不再采样任何横移。
+          vy_std: 0.0
           wz_std: 0.4
           vx_max: 1.0
           vx_min: -1.0
-          # 全向底盘特有：vy_max 非零，配合下面 motion_model: "Omni"。
-          vy_max: 1.0
+          # 路线A：原值 vy_max: 1.0。置 0 = 机头必须指向前进方向，
+          # 于是 PathAlignCritic(14.0) 的位置对齐只能靠转向来满足。
+          vy_max: 0.0
           wz_max: 2.0
           ax_max: 2.5
           ax_min: -2.5
@@ -454,10 +257,11 @@ controller_server:
           transform_tolerance: 0.2
           temperature: 0.3
           gamma: 0.015
-          # !!! 关键参数 !!!：motion_model 必须是 "Omni"（全向），不是 MPPI 默认示例常见的
-          # "DiffDrive"——设成 DiffDrive 的话 MPPI 也会跟 RPP 一样退化成"先转向再前进"，
-          # 白白浪费全向轮的全向能力。
-          motion_model: "Omni"
+          # !!! 关键参数 !!!：路线A 已把这里从 "Omni" 改成 "DiffDrive"。
+          # 原值 motion_model: "Omni"（配 vy_max: 1.0 / vy_std: 0.2），机器人会蟹行：
+          # PathAlignCritic 只约束位置，横移就能满足它，机头是自由变量。
+          # 改 DiffDrive 后机头沿路径成为运动学必然，不需要再调航向权重。
+          motion_model: "DiffDrive"
           visualize: false
           reset_period: 1.0
           regenerate_noises: false
@@ -469,7 +273,8 @@ controller_server:
           critics: [
             "ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic",
             "PathAlignCritic", "PathFollowCritic", "PathAngleCritic",
-            "PreferForwardCritic", "ObstaclesCritic", "TwirlingCritic"]
+            "PreferForwardCritic", "ObstaclesCritic", "TwirlingCritic",
+            "CurvatureSpeedLimitCritic"]
           ConstraintCritic:
             enabled: true
             cost_power: 1
@@ -520,13 +325,58 @@ controller_server:
             enabled: true
             cost_power: 1
             cost_weight: 2.0
+            # 路线A 故意不动 PathAngleCritic（理由见顶层 FollowPath 同名块）。
             offset_from_furthest: 4
             threshold_to_consider: 0.5
             max_angle_to_furthest: 1.0
           TwirlingCritic:
             enabled: true
             twirling_cost_power: 1
-            twirling_cost_weight: 10.0
+            # 路线A：原值 10.0。罚 mean|wz| 会压制 DiffDrive 下必需的转向；
+            # 反汇编确认它在非全向模型下不会自动失效，必须显式降权。
+            twirling_cost_weight: 1.0
+          # ═══ 曲率-速度耦合限速（本仓库自研，思路来自社区 PR AngularVelocitySpeedLimitCritic）═══
+          # 判据只有一条恒等式：a_lat = v*|wz| = kappa*v^2，要求 <= a_lat_max，
+          # 等价于 v <= sqrt(a_lat_max / kappa) —— 后者就是 vx = f(kappa) 那条耦合曲线。
+          # 项1（反馈）罚 rollout 自身 v*|wz| 的超出量；项2（前馈）从前方路径最大 Menger
+          # 曲率算速度上限再罚超出量。"入弯**前**就减速"只能来自项2：一条"保持高速、
+          # 先不转"的 rollout |wz|≈0，反馈项对它毫无读数，而它恰是过弯冲出去的那条。
+          # 完整推导 / 与其他 critic 的关系，见
+          #   astribot_s1_path_tracking/include/astribot_s1_path_tracking/curvature_speed_limit_critic.hpp
+          # 它罚的是 v*|wz|，**低速转弯代价恒为 0**，所以不会重现 TwirlingCritic 10.0
+          # 压制对齐的那个问题，也不是把 Twirling 调回 10.0 的替代品（两者不要一起加）。
+          CurvatureSpeedLimitCritic:
+            enabled: true
+            # 幂次取 2：越限越狠，而软带内仍近线性、梯度温和。
+            cost_power: 2
+            # 项1 权重。超出量已归一化到 a_lat_max，量纲无关，可跨速度档位/机型迁移。
+            cost_weight: 6.0
+            # 项2 权重（单位 m/s，未归一化）。置 0 = 退化成社区 PR 的纯反馈行为。
+            path_cost_weight: 8.0
+            path_lookahead_dist: 1.5
+            # 终段让位给 GoalCritic 与接近段限速，否则两层限速串联叠乘把终段拖成龟速。
+            threshold_to_consider: 0.5
+            # ⚠ 侧向加速度的**物理上界 = vx_max * wz_max**，而 navigation.launch.py 会把
+            #   vx_max 重写成 max_linear_speed。按轴 0.2 档位下上界只有 0.2*2.0 = 0.4，
+            #   惩罚触发要 |wz| > 1.05 ⇒ kappa > 5.25 (R < 0.19m)，全局路径不会有这种曲率
+            #   ⇒ **该档位下本 critic 近似空操作**。这是物理事实不是 bug：0.2m/s 绕 R=1m
+            #   只需 0.04 m/s^2 侧向加速度，本来就不该限速。推论：若 0.2 档位下仍出现
+            #   大曲率跟踪失败，根因不在动力学，而在 PathAngleCritic 的 ±57.3° 航向死区。
+            #   收益在解除限速跑 vx_max=1.0 时显现：上界 2.0，从 kappa>0.21 (R<4.8m) 起咬，
+            #   R=1m 处限到 0.458 m/s（-54%）。
+            #   a_lat_max >= 上界时 initialize() 会打 WARN 明说"恒为空操作"（否则它会静默无效，
+            #   而 nav2 只打一条 "Critic loaded"，不会告诉你它不起作用）。
+            # ⚠ 本值是**待实测标定项**，验收看大曲率处 v 与 wz 的实测联合分布，不是这个数字本身。
+            a_lat_max: 0.35
+            # 软带起点 = soft_ratio * a_lat_max = 0.21 m/s^2。它存在的唯一理由是避免零梯度区：
+            # 硬 hinge 在未越限时代价恒 0，MPPI 无法给"还没越限但已经很快"的样本排序。
+            # 本仓库已两次栽在零梯度上（足迹代价在窄通道饱和成 253 / 全局 costmap 恒为 0）。
+            # 等价地 v_soft / v_hard = sqrt(soft_ratio)。取 1.0 退化成硬 hinge，不推荐。
+            soft_ratio: 0.6
+            # 过弯速度地板：防极大曲率处把允许速度算到 0 而彻底不动。
+            v_min_turn: 0.08
+            # v_max 刻意**没有**这个键 —— 它取父控制器的 vx_max，因此自动跟着
+            # max_linear_speed 走。同一物理量在 yaml 里出现两次一定会漂开。
           ObstaclesCritic:
             enabled: true
             cost_power: 1
@@ -547,8 +397,12 @@ controller_server:
             # 这个阈值正好落在本地图窄通道分布的断层上，不是随手取的。
             #
             # 安全性不靠这个参数兜底：真碰撞由 254 判定（consider_footprint:true 下
-            # 253 不算碰撞），且八边形足迹本身已有 34mm 余量
-            # （顶点 0.42 vs URDF 实测真实轮缘包络 0.386）。
+            # 253 不算碰撞），且足迹本身对真实底盘留有余量。
+            # ⚠️ 2026-09-07 换正方形足迹后这个余量**变薄了**，如实记下：
+            #    八边形 R=0.42 的最小余量 34mm（对角：顶点 0.42 vs 真实轮缘 0.386）；
+            #    正方形 a=0.31 的最小余量 10mm（轴向：0.310 vs 躯干圆柱 0.300），
+            #    对角方向反而更宽（0.438 vs 0.386，余量 52mm）。
+            #    另有 footprint_padding 默认 0.01 再叠 10mm ⇒ 有效最小余量 20mm。
             #
             # !!! 但要注意：这条改动同样**没有**实测收益证据 !!!
             # 三个已验证可达目标上改前改后都是 3/3 SUCCEEDED、0 次
@@ -567,7 +421,8 @@ controller_server:
       # check_yaw: false 必须保持一致 —— 既然不对齐终点姿态，再去卡朝向偏差
       # 就是让每个探索目标都必然判失败。
       align_goal_enabled: false
-      zero_vy_in_follow: false
+      # 路线A：原值 false，理由同 FollowPath 实例的同名项（内层已非全向）。
+      zero_vy_in_follow: true
       align_kp: 1.0
       align_max_vel: 0.6
       align_floor_vel: 0.05
@@ -575,81 +430,45 @@ controller_server:
       start_min_angle: 0.20
       start_heading_lookahead: 0.5
       align_timeout: 15.0
+      # 两次 tick 的空档超过此值 => 上一个 FollowPath action 已经结束，这次 setPlan
+      # 是**同一目标的新一次下发**，必须重发一份完整的对齐预算。
+      # 必须 in (0, align_timeout)：置 0 会让每次周期重规划都被判成新尝试、
+      # align_timeout 永远等不到触发；>= align_timeout 则救不了那个锁死（代码里会拒绝启动）。
+      # 0.5s = controller_frequency(20Hz) 下 10 拍，远大于单拍抖动。
+      new_attempt_gap: 0.5
       follow_timeout: 0.0
       fallback_xy_tolerance: 0.18
       fallback_yaw_tolerance: 0.20
-      # ---- 窄通道贴边通行（状态 3）----
-      # 逐行与 FollowPathThreePhase 相同，理由见那一块的注释。
-      # 刻意重复而不用 YAML anchor：本文件的既有约定就是「两个实例各自写全」，
-      # 上一版用「只写差异项」的方式漏掉过整块 critics 配置。
-      narrow_enabled: true
-      narrow_trigger_ticks: 3
-      narrow_clear_ticks: 3
-      # 阈值语义见上一个实例那段推导（两种查询两个阈值，不可混用）
-      narrow_footprint_lethal_threshold: 254.0   # 足迹多边形 = 真障碍本体
-      narrow_center_lethal_threshold: 253.0      # 中心格 = 膨胀内切带(=底盘半宽)
-      narrow_scan_half_width: 0.30
-      narrow_scan_step: 0.01
-      narrow_v_along: 0.10
-      narrow_v_lateral_max: 0.05
-      narrow_wz_max: 0.20
-      narrow_kp_lateral: 1.0
-      narrow_kp_yaw: 1.5
-      narrow_yaw_gate: 0.12
-      narrow_favorable_period: 0.7853981634
-      narrow_heading_lookahead: 0.40
-      # 进入窄通道前的朝向预对齐。语义与理由见上一个实例那一大段注释。
-      # ⚠️ 两个实例必须同值，否则「探索用的控制器」与「导航用的控制器」判据漂开，
-      #    而 A/B 只会切其中一个，测出来的差异归因不到任何一处。
-      narrow_prealign_enabled: true
-      narrow_prealign_preview: 1.00
-      narrow_prealign_sample_step: 0.10
-      narrow_prealign_sweep_step: 0.20
-      narrow_prealign_timeout: 5.0
-      narrow_prealign_max_per_goal: 5
-      # 窄通道内临时缩足迹。语义、数字与安全论证见上一个实例那一大段注释。
-      # ⚠️ 两个实例必须同值，否则探索用与导航用的控制器判据漂开，而 A/B 只切一个。
-      narrow_square_enabled: false
-      narrow_footprint_default: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
-      narrow_footprint_narrow: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
-      chassis_min_envelope_radius: 0.30
-      narrow_square_hard_timeout: 30.0
-      narrow_square_lease_period: 0.5
-      narrow_square_verify_timeout: 2.0
-      # ---- 切换迟滞 ----
+      # ---- 接近段限速（提升到位精度，2026-09-07）----
+      # 依据（run11 18 轮实测，/tmp/explore_run11/metrics/run11_rounds.csv）：
+      #   cross_track_p95_m      0.048   <- 沿途跟得很准
+      #   arrival_error_xy_m     0.121   <- 误差集中在终段
+      #   overshoot_radial_m     0.146
+      #   vel_track_best_lag_s   0.55 (max 0.64)，vel_track_gain 0.977
+      # 即：**不是路径跟不准，是指令->实际速度有 0.55s 未建模死时间**（增益 0.977
+      # 说明底盘最终跟得上、只是慢半拍）。终段过冲 ≈ v_接近 × τ；
+      # 反推 0.146/0.55 ⇒ 当时接近速度约 0.27 m/s，自洽。
       #
-      # 🔴 为什么必须有：第一轮 A/B 实测 123 次切入 / 121 次"装得下"复原 /
-      #    单次驻留中位 0.15s，小足迹只生效 5.7% 的时长。
-      #    0.15s 恰好 = narrow_clear_ticks(3) / controller_frequency(20Hz)，
-      #    也就是复原**每次都在法律允许的最早那一拍**触发。
+      # 为什么不靠调 MPPI 权重：nav2 MPPI 的模型里**没有任何时延项**（无 dead-time
+      # 参数），改 GoalCritic/PathFollowCritic 的 threshold_to_consider 或权重
+      # 一点也动不了 v·τ 这个乘积。唯一的杠杆是压小 v_接近。
       #
-      #    根因不是参数没调好，而是切入与切出问的是两个不同的几何问题：
-      #      · 切入：沿路径**前视 1.0m** 有没有大足迹过不去的点
-      #      · 切出(旧)：**只看机器人当前位姿**大足迹压不压致命带
-      #    而当前位姿的大足迹代价必然低于阈值 —— 否则窄通道接管层早就接管了，
-      #    根本走不到预对齐。于是切出判据在切入那一瞬间就已成立。
-      #
-      #    修法是让两边问同一个问题、且切出窗口更长：
-      #      切入 1.00m 内有麻烦 ⇒ 切；切出 1.20m 内全无麻烦 ⇒ 复原。
-      #    0.20m 迟滞带 = 4 个栅格(resolution 0.05)，是代价地图**表达得出**的量。
-      #    对比：八边形各向异性 0.032m < 一个栅格，所以纯预对齐测不出效果。
-      narrow_square_exit_preview: 1.20    # 启动守卫：必须 >= narrow_prealign_preview
-      narrow_square_exit_ticks: 6         # 0.30s @20Hz。与 narrow_clear_ticks 分开，那是接管层的
-      # 最短驻留：切入后这段时间内不许因"装得下"复原。
-      # ⚠️ 只压这一条复原路径 —— 硬超时/新目标/deactivate/看门狗都是安全通路，不受它限制。
-      narrow_square_min_dwell: 2.0
-      narrow_square_cooldown: 3.0        # 复原后冷却，防"复原-立刻再切"自激
-      # 算术：单次切换周期下限 = 2.0+3.0 = 5.0s ⇒ 一轮 ~324s 的跑法切换次数
-      # **上限 64 次**。这是兜底天花板，不是预期值；预期值由上面的窗口迟滞决定，
-      # 下界是本轮真实遇到的独立窄处个数（预对齐 A/B 实测 ~15 次/轮）。
-      # 若复跑后仍 >64，说明有 bug，不是参数问题。
-      global_footprint_topic: /global_costmap/footprint
-      global_published_footprint_topic: /global_costmap/published_footprint
-      narrow_stall_timeout: 6.0          # 红线：按进展判卡住，不按时长（理由见上一块）
-      narrow_stall_min_gain: 0.05
-      narrow_hard_timeout: 120.0
-      narrow_max_engagements: 3          # 红线：不能无限循环脱困
-      narrow_max_path_deviation: 0.50    # 红线：不得脱离全局参考路径太远
+      # 为什么线性收敛而不是硬上限：带 τ 时终段过冲 ≈ v(d)·τ 随 d→0 自己趋于 0，
+      # 线性律对时延是**自校正**的；硬上限在跨阈那一拍产生速度阶跃，且到达时
+      # 速度仍恰好等于上限。这也是 nav2 自带 RPP 的形状（见 nav2_params_rpp.yaml
+      # 的 approach_velocity_scaling_dist + min_approach_linear_velocity），沿用同一口径。
+      approach_enabled: true
+      # 收敛区长度 D。隐含最大减速在 d=D 处 = v0²/D = 1.0²/1.50 = 0.67 m/s²，
+      # ≤ 实测有效减速 0.45~0.8 m/s²（由滑行量反推 v²/2d：0.069m@0.25 ⇒ 0.45、
+      # 0.100m@0.40 ⇒ 0.8）。取 D=1.0 则隐含 1.0 m/s²、超出底盘能力，
+      # 又会变成"规划了做不到的刹车"。
+      # 另有硬约束 D > fallback_xy_tolerance（代码里拒绝启动）：否则限速段整个
+      # 落在到位容差内、一次都不生效，而日志上看不出任何异常。
+      approach_dist: 1.50
+      # 速度下限。终段残留过冲 ≈ v_min·τ = 0.05×0.55 = 0.028m，落在 0.05 目标内。
+      # 下界依据：实测底盘 0.02 m/s 就能平动（无静摩擦地板），故 0.05 有 2.5 倍
+      # 余量、不会蠕行不动。置 0 会让终段算出驱动不了底盘的速度而卡在容差外。
+      approach_v_min: 0.05
       inner:
         # !!! 这一整块是原始 FollowPath 的 MPPI 配置逐行复制(含全部 10 个 critics) !!!
         # 上一版我只手抄了 15 行、漏掉 critics —— MPPI 的代价函数**全部**来自 critics，
@@ -663,13 +482,15 @@ controller_server:
           model_dt: 0.05
           batch_size: 2000
           vx_std: 0.2
-          # 全向底盘特有：vy_std 非零才能让 MPPI 真正采样横向平移轨迹。
-          vy_std: 0.2
+          # 路线A（机头沿路径）：横向自由度从"模型层"去掉，不是靠加航向权重。
+          # 原值 vy_std: 0.2（采样横移轨迹）。置 0 后 MPPI 不再采样任何横移。
+          vy_std: 0.0
           wz_std: 0.4
           vx_max: 1.0
           vx_min: -1.0
-          # 全向底盘特有：vy_max 非零，配合下面 motion_model: "Omni"。
-          vy_max: 1.0
+          # 路线A：原值 vy_max: 1.0。置 0 = 机头必须指向前进方向，
+          # 于是 PathAlignCritic(14.0) 的位置对齐只能靠转向来满足。
+          vy_max: 0.0
           wz_max: 2.0
           ax_max: 2.5
           ax_min: -2.5
@@ -680,10 +501,11 @@ controller_server:
           transform_tolerance: 0.2
           temperature: 0.3
           gamma: 0.015
-          # !!! 关键参数 !!!：motion_model 必须是 "Omni"（全向），不是 MPPI 默认示例常见的
-          # "DiffDrive"——设成 DiffDrive 的话 MPPI 也会跟 RPP 一样退化成"先转向再前进"，
-          # 白白浪费全向轮的全向能力。
-          motion_model: "Omni"
+          # !!! 关键参数 !!!：路线A 已把这里从 "Omni" 改成 "DiffDrive"。
+          # 原值 motion_model: "Omni"（配 vy_max: 1.0 / vy_std: 0.2），机器人会蟹行：
+          # PathAlignCritic 只约束位置，横移就能满足它，机头是自由变量。
+          # 改 DiffDrive 后机头沿路径成为运动学必然，不需要再调航向权重。
+          motion_model: "DiffDrive"
           visualize: false
           reset_period: 1.0
           regenerate_noises: false
@@ -695,7 +517,8 @@ controller_server:
           critics: [
             "ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic",
             "PathAlignCritic", "PathFollowCritic", "PathAngleCritic",
-            "PreferForwardCritic", "ObstaclesCritic", "TwirlingCritic"]
+            "PreferForwardCritic", "ObstaclesCritic", "TwirlingCritic",
+            "CurvatureSpeedLimitCritic"]
           ConstraintCritic:
             enabled: true
             cost_power: 1
@@ -746,13 +569,58 @@ controller_server:
             enabled: true
             cost_power: 1
             cost_weight: 2.0
+            # 路线A 故意不动 PathAngleCritic（理由见顶层 FollowPath 同名块）。
             offset_from_furthest: 4
             threshold_to_consider: 0.5
             max_angle_to_furthest: 1.0
           TwirlingCritic:
             enabled: true
             twirling_cost_power: 1
-            twirling_cost_weight: 10.0
+            # 路线A：原值 10.0。罚 mean|wz| 会压制 DiffDrive 下必需的转向；
+            # 反汇编确认它在非全向模型下不会自动失效，必须显式降权。
+            twirling_cost_weight: 1.0
+          # ═══ 曲率-速度耦合限速（本仓库自研，思路来自社区 PR AngularVelocitySpeedLimitCritic）═══
+          # 判据只有一条恒等式：a_lat = v*|wz| = kappa*v^2，要求 <= a_lat_max，
+          # 等价于 v <= sqrt(a_lat_max / kappa) —— 后者就是 vx = f(kappa) 那条耦合曲线。
+          # 项1（反馈）罚 rollout 自身 v*|wz| 的超出量；项2（前馈）从前方路径最大 Menger
+          # 曲率算速度上限再罚超出量。"入弯**前**就减速"只能来自项2：一条"保持高速、
+          # 先不转"的 rollout |wz|≈0，反馈项对它毫无读数，而它恰是过弯冲出去的那条。
+          # 完整推导 / 与其他 critic 的关系，见
+          #   astribot_s1_path_tracking/include/astribot_s1_path_tracking/curvature_speed_limit_critic.hpp
+          # 它罚的是 v*|wz|，**低速转弯代价恒为 0**，所以不会重现 TwirlingCritic 10.0
+          # 压制对齐的那个问题，也不是把 Twirling 调回 10.0 的替代品（两者不要一起加）。
+          CurvatureSpeedLimitCritic:
+            enabled: true
+            # 幂次取 2：越限越狠，而软带内仍近线性、梯度温和。
+            cost_power: 2
+            # 项1 权重。超出量已归一化到 a_lat_max，量纲无关，可跨速度档位/机型迁移。
+            cost_weight: 6.0
+            # 项2 权重（单位 m/s，未归一化）。置 0 = 退化成社区 PR 的纯反馈行为。
+            path_cost_weight: 8.0
+            path_lookahead_dist: 1.5
+            # 终段让位给 GoalCritic 与接近段限速，否则两层限速串联叠乘把终段拖成龟速。
+            threshold_to_consider: 0.5
+            # ⚠ 侧向加速度的**物理上界 = vx_max * wz_max**，而 navigation.launch.py 会把
+            #   vx_max 重写成 max_linear_speed。按轴 0.2 档位下上界只有 0.2*2.0 = 0.4，
+            #   惩罚触发要 |wz| > 1.05 ⇒ kappa > 5.25 (R < 0.19m)，全局路径不会有这种曲率
+            #   ⇒ **该档位下本 critic 近似空操作**。这是物理事实不是 bug：0.2m/s 绕 R=1m
+            #   只需 0.04 m/s^2 侧向加速度，本来就不该限速。推论：若 0.2 档位下仍出现
+            #   大曲率跟踪失败，根因不在动力学，而在 PathAngleCritic 的 ±57.3° 航向死区。
+            #   收益在解除限速跑 vx_max=1.0 时显现：上界 2.0，从 kappa>0.21 (R<4.8m) 起咬，
+            #   R=1m 处限到 0.458 m/s（-54%）。
+            #   a_lat_max >= 上界时 initialize() 会打 WARN 明说"恒为空操作"（否则它会静默无效，
+            #   而 nav2 只打一条 "Critic loaded"，不会告诉你它不起作用）。
+            # ⚠ 本值是**待实测标定项**，验收看大曲率处 v 与 wz 的实测联合分布，不是这个数字本身。
+            a_lat_max: 0.35
+            # 软带起点 = soft_ratio * a_lat_max = 0.21 m/s^2。它存在的唯一理由是避免零梯度区：
+            # 硬 hinge 在未越限时代价恒 0，MPPI 无法给"还没越限但已经很快"的样本排序。
+            # 本仓库已两次栽在零梯度上（足迹代价在窄通道饱和成 253 / 全局 costmap 恒为 0）。
+            # 等价地 v_soft / v_hard = sqrt(soft_ratio)。取 1.0 退化成硬 hinge，不推荐。
+            soft_ratio: 0.6
+            # 过弯速度地板：防极大曲率处把允许速度算到 0 而彻底不动。
+            v_min_turn: 0.08
+            # v_max 刻意**没有**这个键 —— 它取父控制器的 vx_max，因此自动跟着
+            # max_linear_speed 走。同一物理量在 yaml 里出现两次一定会漂开。
           ObstaclesCritic:
             enabled: true
             cost_power: 1
@@ -773,8 +641,12 @@ controller_server:
             # 这个阈值正好落在本地图窄通道分布的断层上，不是随手取的。
             #
             # 安全性不靠这个参数兜底：真碰撞由 254 判定（consider_footprint:true 下
-            # 253 不算碰撞），且八边形足迹本身已有 34mm 余量
-            # （顶点 0.42 vs URDF 实测真实轮缘包络 0.386）。
+            # 253 不算碰撞），且足迹本身对真实底盘留有余量。
+            # ⚠️ 2026-09-07 换正方形足迹后这个余量**变薄了**，如实记下：
+            #    八边形 R=0.42 的最小余量 34mm（对角：顶点 0.42 vs 真实轮缘 0.386）；
+            #    正方形 a=0.31 的最小余量 10mm（轴向：0.310 vs 躯干圆柱 0.300），
+            #    对角方向反而更宽（0.438 vs 0.386，余量 52mm）。
+            #    另有 footprint_padding 默认 0.01 再叠 10mm ⇒ 有效最小余量 20mm。
             #
             # !!! 但要注意：这条改动同样**没有**实测收益证据 !!!
             # 三个已验证可达目标上改前改后都是 3/3 SUCCEEDED、0 次
@@ -802,7 +674,33 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_smac_planner/SmacPlanner2D"
-      tolerance: 0.5
+      # 🔴 必须 <= controller_server 的 xy_goal_tolerance(0.18)。
+      #
+      # 这是规划器"允许把路径终点放在目标多远处仍算成功"的容差。它大于到位容差
+      # 时，规划器会交付一条**它认为合格、而 goal checker 永远不满足**的路径：
+      #   实测 tolerance=0.5 时 B(1.04,-6.12) -> A(5.88,-5.86) 的路径终点是
+      #   (5.47,-5.82)，离目标 0.41m —— 正好落在 (0.18, 0.50) 这个区间里。
+      #   机器人走完全程也进不了 0.18m，于是 goal checker 不满足 -> 无限重规划
+      #   -> 200s 超时。10 段循环导航里"去 A"方向 5/5 全超时、机器人一步没离开
+      #   起点，而"回 B"5/5 报成功（它本来就在 B，不动就满足容差）——
+      #   真实往返成功率是 0/10，却有一半的段显示 SUCCEEDED。
+      #
+      # 这与窄通道策略无关：那 5 次缩足迹切换都是在这个死循环里被反复触发的，
+      # 曾被误读成"策略进不去"。
+      #
+      # 取 0.15 而不是 0.18：留一格余量(分辨率 0.05)，避免规划器踩在判据边界上。
+      # 目标本身落在膨胀带(实测 A 点代价 216)时仍然可达 —— 规划器只避 253/254，
+      # 216 是可通行的衰减值。
+      # 🔴 必须 <= xy_goal_tolerance(0.18) 且留一格(0.05)余量 ⇒ 上限 0.13。
+      # 取 0.10。规划器 tolerance 比到位容差**松**时，它会交付一条终点
+      # 落在到位容差之外的路径，goal checker 永远收不了 —— 表现是
+      # "控制器说本段完成、BT 却一直重规划、action 永不返回"。
+      # 2026-09-03 实测过这个组合：tolerance 0.5 时交付的路径终点距目标
+      # 0.409m，而 xy_goal_tolerance 只有 0.18m，真实成功率 0/10，
+      # 当时被误读成"窄通道策略进不去"。
+      # 收紧的代价是**目标不可达时显式失败**而不是悄悄交一条短路径 ——
+      # 这正是想要的：不可达要报出来，不能假装到位。
+      tolerance: 0.10
       downsample_costmap: false
       downsampling_factor: 1
       # 未知区域禁行：全局规划器不得把未知栅格纳入路径。
@@ -907,7 +805,7 @@ local_costmap:
       # consider_footprint:true 时会调用 costmap 的"足迹多边形"接口，只给
       # robot_radius(不给显式footprint) 时这个接口在controller_server启动的那次
       # 生命周期transition里报"no robot footprint provided in the costmap"直接FATAL退出。
-      # 改成显式给一个八边形footprint，问题消失——这是 nav2_costmap_2d 在
+      # 改成显式给一个多边形footprint，问题消失——这是 nav2_costmap_2d 在
       # "只给radius不给footprint"这条路径下的一个实测发现的真实限制，不是配置错误。
       #
       # 注：两个 critic 都是 consider_footprint:true，所以上面那条 FATAL 路径**仍然有效**，
@@ -916,28 +814,42 @@ local_costmap:
       #   即便将来再改成 false，footprint 也仍有三个使用者：膨胀层据此算内切/外接半径、
       #   behavior_server 的 published_footprint、全局规划器的可通行性判定。）
       #
-      # !!! 足迹尺寸按真实底盘几何重算过（原来的 0.35 偏小，会规划出蹭到障碍的路径）!!!
-      # 从 URDF 实测：轮心离轴 0.306m + 轮球半径 0.080m => 底盘真实外接半径 0.386m。
-      # 关键点：本底盘是 X 型布局，四个轮子正好在 ±45° 对角线上，
-      # 也就是八边形的**顶点方向**——原配置在这个方向只有 0.35，比轮缘小 36mm，
-      # 等于告诉 Nav2「机器人比实际更小」，代价地图算出来的可通行区域偏大，
-      # 于是规划出的路径会让轮子蹭上货架立柱。
-      # 现在取外接半径 0.42：顶点 0.42 > 轮缘 0.386（余量 34mm）；
-      # 顶点之间凹陷处的内切半径 0.388 > 躯干圆柱 0.30，也够。
-      footprint: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
+      # !!! 足迹是正方形 a=0.31（半边长）。2026-09-07 从八边形 R=0.42 换过来 !!!
+      # 换的理由是**八边形在轴向虚报 120mm**，不是为了放松安全余量：
+      #   底盘真实包络（URDF 实测）：X 型布局，四个轮子在 ±45° 对角线上，
+      #     轮心离轴 0.306 + 轮球半径 0.080 ⇒ 对角方向 0.386；
+      #     轴向没有轮子，只有躯干圆柱 0.300。
+      #   八边形 R=0.42：轴向 0.420 vs 真实 0.300 —— 虚报 120mm。
+      #   正方形 a=0.31：轴向 0.310 vs 0.300（余量 10mm）、
+      #                  对角 0.438 vs 0.386（余量 52mm）。
+      # 逐 0.01° 扫过 0~90°，正方形对真实底盘的**最小**余量 = +10mm（在轴向），
+      # 即任何朝向都包住底盘 —— 是诚实包络，不是缩小。另有 footprint_padding
+      # 默认 0.01 再叠 10mm。（原来的 0.35 圆偏小，会规划出蹭到障碍的路径。）
+      #
+      # 连带口径（改这个数之前先看这两行）：
+      #   内切半径 0.388 -> 0.310（膨胀层的致死带按内切半径算，跟着缩 78mm）
+      #   外接半径 0.420 -> 0.438（inflation_radius 0.65 仍大于它，不触发启动 ERROR）
+      # 两个 costmap 必须逐字一致，test_config_consistency 会强制。
+      footprint: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
       plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         # !!! 原值 0.25 比足迹外接半径还小，Nav2 每次启动都在报 ERROR：
         #   "The configured inflation radius (0.250) is smaller than the robot radius (0.35)"
         # 后果是膨胀层连机器人自身轮廓都覆盖不住，规划器拿不到"离墙远一点"的代价梯度，
-        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(0.42)。
+        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(正方形 a=0.31 ⇒ 0.438)。
         #
-        # 取 0.65 后的代价梯度（内切半径 0.388、cost_scaling_factor 3.0）：
-        #   离障碍 0.42m -> 229   (刚好轮缘擦到，重罚)
-        #   离障碍 0.50m -> 180
-        #   离障碍 0.60m -> 133
-        #   离障碍 >0.65m -> 0    (自由通行)
+        # 取 0.65 后的代价梯度（内切半径 0.310、cost_scaling_factor 3.0，
+        # 按 nav2 InflationLayer::computeCost 逐字算，含截尾）：
+        #   离障碍 <=0.31m -> 253  (内切带内，底盘中心放这里必然碰撞)
+        #   离障碍 0.35m  -> 223
+        #   离障碍 0.39m  -> 199
+        #   离障碍 0.42m  -> 181   (刚好轮缘擦到)
+        #   离障碍 0.50m  -> 142
+        #   离障碍 0.60m  -> 105
+        #   离障碍 >0.65m -> 0     (自由通行)
+        # ⚠️ 2026-09-07 换正方形足迹后这张表整体下移：内切从 0.388 缩到 0.310，
+        #    253 那一档跟着缩 78mm，0.35~0.39 这一段从"致命"变成"高代价"。
         # 注意膨胀代价只在内切半径以内才是致死值，所以放大 inflation_radius
         # 不会把窄通道变成不可通行，只是让规划器更偏向走通道中间。
         cost_scaling_factor: 3.0
@@ -984,7 +896,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: astribot_torso_base
       use_sim_time: True
-      footprint: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
+      footprint: "[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]"
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -1015,7 +927,7 @@ global_costmap:
         # !!! 原值 0.25 比足迹外接半径还小，Nav2 每次启动都在报 ERROR：
         #   "The configured inflation radius (0.250) is smaller than the robot radius (0.35)"
         # 后果是膨胀层连机器人自身轮廓都覆盖不住，规划器拿不到"离墙远一点"的代价梯度，
-        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(0.42)。
+        # 路径会紧贴障碍物走。inflation_radius 必须大于足迹外接半径(正方形 a=0.31 ⇒ 0.438)。
         #
         # ======================================================================
         # 需求：(1) 全局路径尽可能居中；(2) **不要为抄近道去钻窄通道**，
@@ -1039,9 +951,12 @@ global_costmap:
         # 需求口径 2m ⇒ 取 1.0；cost_travel_multiplier 取 8.0
         # （2m 通道原始代价 40.2 只有 1.5m 通道 85.1 的一半，权重要跟上才有区分度）。
         #
-        # 取 1.0 + 8.0 后（本文件几何：八边形内切 半径 0.388）：
-        #    1.5m 通道 -> 中心代价  85.1 -> 惩罚因子 3.701 -> 容忍绕路 3.70x
-        #    2.0m 通道 -> 中心代价  40.2 -> 惩罚因子 2.276 -> 容忍绕路 2.28x
+        # 取 1.0 + 8.0 后（本文件几何：正方形 a=0.31，内切半径 0.310）：
+        #    1.5m 通道 -> 中心代价  67.0 -> 惩罚因子 3.127 -> 容忍绕路 3.13x
+        #    2.0m 通道 -> 中心代价  31.0 -> 惩罚因子 1.984 -> 容忍绕路 1.98x
+        # ⚠️ 2026-09-07 换正方形足迹前这两行是 85.1/3.70x 与 40.2/2.28x
+        #    （内切 0.388）。窄通道惩罚随内切半径变小而**变弱** —— 这是换足迹的
+        #    连带代价，如实记下：2m 通道的容忍绕路从 2.28x 降到 1.98x。
         #    2.5m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
         #    3.0m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
         #    4.0m 通道 -> 中心代价   0.0 -> 惩罚因子 1.000 -> 容忍绕路 1.00x
@@ -1051,7 +966,7 @@ global_costmap:
         # 「比这更宽的通道我一律视为同等优良」。取 1.0 时 2.5m 与 4m 大路
         # 无法区分（都是 0）。若要连 2.5m 也轻微惩罚需取 1.25。
         #
-        # 253(不可通行) 那一档由内切半径 0.388 决定、与 inflation_radius 无关，
+        # 253(不可通行) 那一档由内切半径 0.310 决定、与 inflation_radius 无关，
         # 所以本改动**不缩小可行域**，只塑造梯度形状。
         #
         # 只改**全局**这一份：局部代价地图维持 0.65 不变。局部图被 MPPI 的
@@ -1083,9 +998,11 @@ global_costmap:
 #   中心格代价    取值集合 = [0,118,125,134,137]   → 有梯度
 #
 # 为什么必然饱和（纯几何，与具体位置无关）：
-#   · 253(INSCRIBED_INFLATED_OBSTACLE) 区域从墙面向内吃掉一个**内切半径** 0.388m
-#   · 八边形足迹顶点伸到**外接半径** 0.42m
-#   → 通道窄于 2*(0.388+0.42) = 1.62m 时，足迹顶点必然压在 253 带里，
+#   · 253(INSCRIBED_INFLATED_OBSTACLE) 区域从墙面向内吃掉一个**内切半径**
+#   · 足迹顶点伸到**外接半径**
+#   → 通道窄于 2*(内切+外接) 时，足迹顶点必然压在 253 带里，
+#     八边形(0.388+0.420) ⇒ 1.616m；正方形 a=0.31(0.310+0.438) ⇒ 1.497m。
+#     ⚠️ 下面那组代价采样是 2026-08 在**八边形**足迹下实测的，阈值按 1.62m 读。
 #     footprintCostAtPose 恒返回 253，由它反推的 dist_to_obj 成为常数，
 #     critical/repulsion 两项对所有候选轨迹完全相同 → 评价函数在该区域失去梯度。
 #   实测本地图 center-clearance < 0.42m 的区域约占可行域 35%。
@@ -1126,7 +1043,8 @@ global_costmap:
 #
 # ---- 另一个被实测反证的方案，别再试 ----
 # 曾打算调大 BT 的 BackUp 参数（默认 backup_dist=0.30m，看着像"小于内切半径
-# 0.388m 所以退不出致命区"）。实测沿 BackUp 方向（车体 -x）后退 0.40m
+# 0.388m 所以退不出致命区"；换正方形足迹后内切是 0.310m，0.30 仍略小于它）。
+# 实测沿 BackUp 方向（车体 -x）后退 0.40m
 # 反而**撞进 253**——那个方向是朝墙的。调大 backup_dist 只会把机器人推得更深。
 # =============================================================================
 
@@ -1147,8 +1065,10 @@ global_costmap:
 #     [0.40,inf)   65.07%
 # 0.10 恰好把**所有**真实窄通道罚了个遍，0.05 一个不罚 ——
 # 阈值正好落在本地图窄通道分布的断层上（<0.05 的占 0.00%），不是随手取的。
-# 安全性不靠它兜底：真碰撞由 254 判定，八边形足迹本身已有 34mm 余量
-# （顶点 0.42 vs URDF 实测真实轮缘包络 0.386）。
+# 安全性不靠它兜底：真碰撞由 254 判定，足迹本身对真实底盘留有余量。
+# ⚠️ 2026-09-07 起足迹是正方形 a=0.31，最小余量 10mm（轴向 0.310 vs 躯干 0.300），
+#    比原八边形的 34mm 薄；加 footprint_padding 0.01 后有效 20mm。
+#    这一条与本节第 2 问（0.05 只有一格软缓冲够不够）叠加，评估时必须一起算。
 #
 # ---- 立项要回答的问题 ----
 #   1. 收益：需要能触发重罚带的用例（见上一节「下次要验证该怎么做」）。

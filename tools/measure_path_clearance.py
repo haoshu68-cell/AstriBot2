@@ -161,7 +161,7 @@ def main():
     print(f'  每条路径的**平均净空**: 均值 {sum(means)/len(means):.3f}m')
     print(f'  每条路径的 P10 净空  : 均值 {sum(p10s)/len(p10s):.3f}m')
     print()
-    print('参考量: 八边形内切 0.388m / 外接 0.420m / 1.5m 通道居中 = 0.750m')
+    print('参考量: 正方形内切 0.310m / 外接 0.438m / 1.5m 通道居中 = 0.750m')
     print('=' * 62)
     rc = 0
     if args.expect_mean_min > 0.0:

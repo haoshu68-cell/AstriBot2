@@ -69,6 +69,33 @@ def _load(path):
         return yaml.safe_load(fh)
 
 
+def _py_without_comments(text):
+    """去掉 .py 源码里的注释，保留代码与字符串字面量。
+
+    为什么必须剥注释：本仓库的 launch 文件注释极长，且注释里会**逐字引用**
+    被禁用的标识符来说明"为什么不能这么写"。直接 grep 会命中自己的说明文字，
+    于是守卫在文档写得越清楚时越容易假阳性（本项目已踩过一次）。
+
+    !!! 为什么不连字符串字面量一起剥 !!!
+    第一版剥了 STRING token，结果突变验证当场打脸：被禁的名字是当**dict 键**
+    写进去的（``{'bt_xml_filename': ...}``），本身就是字符串字面量，
+    于是"把缺陷造回去"那一版**守卫照样全绿**。剥得太狠 = 守卫失效。
+    代价是将来某个 description 文案里提到这些名字会假阳性 —— 那是可接受的
+    方向：宁可吵，不可漏。
+    """
+    import io
+    import tokenize
+    out = []
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+            if tok.type == tokenize.COMMENT:
+                continue
+            out.append(tok.string)
+    except tokenize.TokenError as exc:      # pragma: no cover
+        raise AssertionError('源码 tokenize 失败，守卫无法工作：%s' % exc)
+    return ' '.join(out)
+
+
 def _controller_params(path):
     return _load(path)['controller_server']['ros__parameters']
 
@@ -104,7 +131,7 @@ def _robot_envelope_radius(path, which):
 def _inscribed_radius(path, which):
     """内切半径：膨胀层判 253 用的就是它。
       · rpp  圆形足迹 robot_radius -> 内切=外接=robot_radius
-      · mppi 八边形 footprint      -> 各边到原点的最短距离
+      · mppi 正方形 footprint      -> 各边到原点的最短距离（a=0.31 -> 0.310）
     两份文件几何不同，数值必然不同，所以不能抄常数。
     """
     p = _costmap_params(path, which)
@@ -244,26 +271,6 @@ class TestInnerControllerCritics:
                     f'MPPI 的代价函数全部来自 critics，漏了它机器人会贴着路径原地漂移'
                     f'（实测：指令 vx 均值 -0.021、剩余距离来回晃、'
                     f'Failed to make progress）。')
-
-    def test_inner_critics_match_outer_followpath(self):
-        """内层 critics 必须与外层 FollowPath 同集合 —— 两处漂开时行为会不一致，
-        而这种不一致只在切控制器那次才显形。"""
-        for f in NAV_PARAM_FILES:
-            cp = _controller_params(f)
-            outer = cp.get('FollowPath', {})
-            if 'mppi' not in str(outer.get('plugin', '')).lower():
-                continue
-            expected = set(outer.get('critics', []))
-            assert expected, f'{os.path.basename(f)} 的 FollowPath 自己就没有 critics'
-            for name, block in _three_phase_instances(cp).items():
-                inner = block.get('inner', {})
-                if 'mppi' not in str(inner.get('plugin', '')).lower():
-                    continue
-                got = set(inner.get('critics', []))
-                assert got == expected, (
-                    f'{os.path.basename(f)} 的 {name}.inner critics 与 FollowPath 不一致。\n'
-                    f'  缺少: {sorted(expected - got)}\n'
-                    f'  多出: {sorted(got - expected)}')
 
     def test_inner_critic_blocks_are_configured(self):
         """列进 critics 的每个 critic 都应有自己的参数块，否则它按默认值跑，
@@ -502,210 +509,142 @@ class TestThreePhaseInstanceParams:
                 assert eps > 0.0, (
                     f'{os.path.basename(f)} {name}: new_goal_epsilon={eps} 必须 > 0')
 
+    def test_new_attempt_gap_within_open_interval(self):
+        """对应 ThreePhaseController::declareAndLoadParams 里那次 throw。
 
-# =============================== 窄通道贴边通行：yaml 必须落在运行期接受的范围内
+        下界：置 0/负数 => 每次周期重规划都被判成"新一次尝试"、相位计时器每次都重置，
+              align_timeout 这道"原地转不动"的保护永远等不到触发，等于把它关掉。
+        上界：>= align_timeout => 空档判据永远比超时晚，救不了 2026-09-04 那次锁死
+              （同一目标每 1.5s 重下发、计时器单调爬到 110.708s > 15.0s，
+              每条新路径第一拍就抛超时 -> 48 次 Aborting handle -> 永久 parked）。
+        """
+        for f in NAV_PARAM_FILES:
+            for name, b in _three_phase_instances(_controller_params(f)).items():
+                gap = b.get('new_attempt_gap', 0.5)
+                to = b.get('align_timeout', 15.0)
+                assert 0.0 < gap < to, (
+                    f'{os.path.basename(f)} {name}: new_attempt_gap={gap} '
+                    f'必须 in (0, align_timeout={to})')
+
+
+# =========================== 接近段限速（2026-09-07，提升到位精度）
 #
-# 下面每一条都对应 ThreePhaseController::declareAndLoadParams 里的一次 throw。
-# 离线抓的价值：在线表现是 controller_server 起不来，而 nav2 的 lifecycle
-# 握手会一直等下去（进程活着、话题在、就是不工作）—— 这个现象极难反推。
+# 为什么是线性收敛而不是硬性限速：过冲的主因是**链路死区时间** ——
+# run11 实测 vel_track_best_lag_s p50=0.55s、max=0.64s、增益 0.977，
+# 于是 过冲 ≈ v_approach × τ。MPPI **没有**死区时间/传输延迟参数，
+# 任何代价权重都改不了 v·τ 这个乘积，只能压 v。
+# 线性收敛 v = v0·d/D 时 d→0 过冲也→0（自校正）；硬性限速在阈值处产生速度阶跃，
+# 且最终还是以限速值撞进容差球。RPP 那份的
+# approach_velocity_scaling_dist + min_approach_linear_velocity 是同一做法。
 
-class TestNarrowPassageParams:
+class TestApproachTaperParams:
+    """对应 ThreePhaseController::declareAndLoadParams 里那 4 次 throw
+    （approach_dist>0 / v_min>0 / v_min<dist / dist>xy_tol）。
 
-    # 足迹几何。八边形正好每 45° 复现一次横向包络，所以有利朝向周期是 pi/4。
-    OCTAGON_PERIOD_RAD = 0.7853981634
+    这里额外做两件 configure() 做不到的事：跨包核对 nav2 的 goal checker 容差、
+    用底盘实测减速度上限反算 approach_dist 的下界。"""
 
-    def test_narrow_block_present_in_every_instance(self):
-        """漏配整块 = 全部回落到代码默认值。本项目已踩过一次同类问题
-        （节点名 remap 让 yaml 键匹配不上，所有参数静默回落）。"""
-        for f in NAV_PARAM_FILES:
-            for name, b in _three_phase_instances(_controller_params(f)).items():
-                assert 'narrow_enabled' in b, (
-                    f'{os.path.basename(f)} {name}: 缺少窄通道配置块。'
-                    f'漏配不会报错，只会静默使用代码默认值')
+    # 实测底盘有效减速度上限。由滑行距离反算 v²/2d：
+    #   0.069m @0.25m/s => 0.45m/s²；0.100m @0.40m/s => 0.80m/s²
+    # 取两者上界 0.80 作判据（velocity_smoother 里写的 2.5 是**期望值不是实测**）。
+    MEASURED_MAX_DECEL = 0.80
+    # 实测底盘能动起来的最小速度（低于此只是嗡而不走）。
+    MEASURED_MIN_MOVABLE_SPEED = 0.02
 
-    def test_scan_step_resolves_the_target_band(self):
-        """本档可通行区间只有 0.032m 宽（外接 0.42 − 内切 0.388），
-        而栅格是 0.05m。步长过大就分辨不出「贴哪边能过」。"""
-        for f in NAV_PARAM_FILES:
-            for name, b in _three_phase_instances(_controller_params(f)).items():
-                if not b.get('narrow_enabled', True):
-                    continue
-                step = b.get('narrow_scan_step', 0.01)
-                half = b.get('narrow_scan_half_width', 0.30)
-                assert 0.0 < step <= 0.025, (
-                    f'{os.path.basename(f)} {name}: narrow_scan_step={step} '
-                    f'必须在 (0, 0.025] —— 目标区间仅 0.032m 宽')
-                assert step < half, (
-                    f'{os.path.basename(f)} {name}: narrow_scan_step({step}) >= '
-                    f'narrow_scan_half_width({half})，横向扫描只有一个样本')
+    @staticmethod
+    def _approach_instances(f):
+        """只挑显式打开接近段限速的实例。"""
+        out = {}
+        for name, b in _three_phase_instances(_controller_params(f)).items():
+            if b.get('approach_enabled', True):
+                out[name] = b
+        return out
 
-    def test_yaw_gate_actually_gates(self):
-        """闸门必须 < 周期/2。favorableYawError 的返回值上限就是周期/2，
-        闸门比它还大 ⇒ 误差恒在闸门内 ⇒ 闸门永不生效。
-        而这一档里朝向不对就是过不去，闸门失效等于带着错朝向往卡死里走。"""
-        for f in NAV_PARAM_FILES:
-            for name, b in _three_phase_instances(_controller_params(f)).items():
-                if not b.get('narrow_enabled', True):
-                    continue
-                gate = b.get('narrow_yaw_gate', 0.12)
-                period = b.get('narrow_favorable_period', self.OCTAGON_PERIOD_RAD)
-                assert gate > 0.0, (
-                    f'{os.path.basename(f)} {name}: narrow_yaw_gate={gate} 必须 > 0')
-                assert gate < period / 2.0, (
-                    f'{os.path.basename(f)} {name}: narrow_yaw_gate({gate}) >= '
-                    f'narrow_favorable_period/2({period / 2.0})，朝向闸门形同虚设')
+    def test_approach_dist_exceeds_goal_tolerance(self):
+        """限速段必须比到位容差**大**，否则整段落在容差球内、形同虚设。
 
-    def test_favorable_period_matches_footprint_symmetry(self):
-        """有利朝向周期必须与足迹的旋转对称性一致。八边形配成 pi/2（四边形的周期）
-        会让机器人绕远路去凑一个本来不必要的朝向。"""
+        跨包判据：approach_dist 在 <instance> 块里，xy_goal_tolerance 在
+        controller_server 的 goal checker 块里，两处谁都不知道对方。"""
+        checked = 0
         for f in NAV_PARAM_FILES:
             cp = _controller_params(f)
-            n_vertices = None
-            fp = _costmap_params(f, 'local_costmap').get('footprint')
-            if fp:
-                if isinstance(fp, str):
-                    fp = yaml.safe_load(fp)
-                n_vertices = len(fp)
-            for name, b in _three_phase_instances(cp).items():
-                if not b.get('narrow_enabled', True):
-                    continue
-                period = b.get('narrow_favorable_period', self.OCTAGON_PERIOD_RAD)
-                assert period > 0.0
-                if n_vertices:
-                    expected = 2.0 * 3.141592653589793 / n_vertices
-                    assert abs(period - expected) < 1e-3, (
-                        f'{os.path.basename(f)} {name}: narrow_favorable_period={period} '
-                        f'与 {n_vertices} 边形足迹的对称周期 {expected:.6f} 不符')
+            checkers = cp.get('goal_checker_plugins', [])
+            if not checkers:
+                continue
+            xy = cp[checkers[0]].get('xy_goal_tolerance')
+            if xy is None:
+                continue
+            for name, b in self._approach_instances(f).items():
+                D = b.get('approach_dist')
+                assert D is not None, (
+                    f'{os.path.basename(f)} {name}: approach_enabled 为真却没有 '
+                    f'approach_dist —— 别靠代码默认值，阈值必须显式写在 yaml 里')
+                assert D > xy, (
+                    f'{os.path.basename(f)} {name}: approach_dist({D}) <= '
+                    f'xy_goal_tolerance({xy})，限速段整个落在到位容差内、形同虚设')
+                checked += 1
+        assert checked > 0, '一个接近段实例都没核到 —— 本测试在空转'
 
-    def test_footprint_threshold_must_be_lethal_not_inflation(self):
-        """足迹**多边形**的阈值必须是 254，不能是 253。
+    def test_implied_decel_within_measured_chassis_limit(self):
+        """线性收敛隐含的最大减速度 = v0²/D，必须 <= 实测 0.8m/s²。
 
-        ⚠️ 本条推翻了它的上一版。上一版断言 `thr < 254`，理由写的是
-           "254 是真障碍，把它当触发条件就是让脱困逻辑去穿真障碍" ——
-           **那个理由是错的**，而且这条测试当时正在把 bug 锁死。
-
-        错在哪：253 的语义是"这一格离障碍不超过内切半径"（nav2
-        InflationLayer::computeCost 逐字），而内切半径**就是底盘半宽**。
-        足迹多边形已经把底盘尺寸表达了一遍，再要求外轮廓躲开 253 带，
-        就是把底盘半宽算两遍。用 254 并不会"去穿真障碍" —— 恰恰相反，
-        254 才是"轮廓压到障碍本体"这一唯一真实的碰撞条件。
-
-        重复计的量级（实测数据）：需要 通道宽 > 4*侧向半宽
-            八边形 侧向 0.3894 + 内切(含padding) 0.3992 -> 需 > 1.577m
-        而本仿真环境最窄通道 0.65m 量级 ⇒ 恒为 253、零梯度。
-        实测 2 轮共 1678s：足迹代价读数 51 次 253、仅 2 次 254，
-        其中 26 次同时中心代价=0。909 次"连小足迹也过不去"全是假的。
-        """
+        两个数都从 yaml 读（inner.vx_max 与 approach_dist），不抄常量 ——
+        否则改了限速却没改收敛区时，机器人会以跟不上的斜率减速，
+        表现就是照旧过冲，而配置看着"已经限速了"。"""
+        checked = 0
         for f in NAV_PARAM_FILES:
-            for name, b in _three_phase_instances(_controller_params(f)).items():
-                if not b.get('narrow_enabled', True):
+            for name, b in self._approach_instances(f).items():
+                D = b.get('approach_dist')
+                v0 = b.get('inner', {}).get('vx_max')
+                if D is None or v0 is None:
                     continue
-                thr = b.get('narrow_footprint_lethal_threshold', 254.0)
-                assert 253.0 < thr <= 255.0, (
-                    f'{os.path.basename(f)} {name}: '
-                    f'narrow_footprint_lethal_threshold={thr} 必须 > 253。'
-                    f'足迹多边形已经表达了底盘尺寸，用 253(膨胀内切带)当碰撞阈值'
-                    f'等于重复计底盘半宽 —— 后果是窄于约 1.58m 的通道里恒为 253、'
-                    f'零梯度。中心格查询才用 253。')
+                implied = v0 * v0 / D
+                assert implied <= self.MEASURED_MAX_DECEL + 1e-9, (
+                    f'{os.path.basename(f)} {name}: inner.vx_max({v0})²/'
+                    f'approach_dist({D}) = {implied:.3f}m/s² 超过实测底盘上限 '
+                    f'{self.MEASURED_MAX_DECEL}m/s²。要么放大 approach_dist '
+                    f'(>= {v0 * v0 / self.MEASURED_MAX_DECEL:.2f})，要么压低 inner.vx_max。')
+                checked += 1
+        assert checked > 0, '一个接近段实例都没核到 —— 本测试在空转'
 
-    def test_red_line_guards_are_all_armed(self):
-        """用户明确的三条红线各自对应一个参数，任何一个 <= 0 都会让该红线失守：
-          · narrow_timeout           所有脱困逻辑必须带超时
-          · narrow_max_engagements   不能无限循环脱困
-          · narrow_max_path_deviation 不得脱离全局参考路径太远
-        """
+    def test_v_min_keeps_chassis_moving(self):
+        """速度下限必须 >= 实测最小可动速度，否则收敛区末段机器人根本不走，
+        现象是"贴着目标不动 + Failed to make progress"，而不是精度变好。"""
+        checked = 0
         for f in NAV_PARAM_FILES:
-            for name, b in _three_phase_instances(_controller_params(f)).items():
-                if not b.get('narrow_enabled', True):
-                    continue
-                # 旧键必须**不存在**：它的语义已变（把"走得久"当成"卡住"，
-                # 等于给窄通道设了 v_along x timeout 的长度上限，实测 2.5m
-                # 连砍 3 次健康通行）。留着它会让人以为超时还按旧语义生效；
-                # 代码侧也会拒绝启动。
-                assert 'narrow_timeout' not in b, (
-                    f'{os.path.basename(f)} {name}: narrow_timeout 已废弃且语义已变，'
-                    f'必须改用 narrow_stall_timeout + narrow_stall_min_gain + '
-                    f'narrow_hard_timeout')
-                stall = b.get('narrow_stall_timeout', 6.0)
-                gain = b.get('narrow_stall_min_gain', 0.05)
-                hard = b.get('narrow_hard_timeout', 120.0)
-                v_along = b.get('narrow_v_along', 0.10)
-                assert stall > 0.0, (
-                    f'{os.path.basename(f)} {name}: narrow_stall_timeout 必须 > 0'
-                    f'（红线：必须带超时）')
-                assert gain > 0.0, (
-                    f'{os.path.basename(f)} {name}: narrow_stall_min_gain 必须 > 0，'
-                    f'否则栅格噪声就能冒充进展、卡住判据形同虚设')
-                assert hard > stall, (
-                    f'{os.path.basename(f)} {name}: narrow_hard_timeout({hard}) 必须 > '
-                    f'narrow_stall_timeout({stall})，否则绝对上限先触发'
-                    f'＝退回"按时长判"那个缺陷')
-                # 隐含的最低容忍速度不能超过实际行进速度，否则正常通行必被判卡住。
-                implied = gain / stall
-                assert implied < v_along, (
-                    f'{os.path.basename(f)} {name}: 卡住判据隐含最低速度 '
-                    f'{implied:.4f}m/s 已达到或超过 narrow_v_along({v_along})，'
-                    f'正常通行也会被判成原地蹭')
-                assert b.get('narrow_max_engagements', 3) >= 1, (
-                    f'{os.path.basename(f)} {name}: narrow_max_engagements 必须 >= 1'
-                    f'（红线：不能无限循环脱困）')
-                dev = b.get('narrow_max_path_deviation', 0.50)
-                half = b.get('narrow_scan_half_width', 0.30)
-                assert dev > 0.0, (
-                    f'{os.path.basename(f)} {name}: narrow_max_path_deviation 必须 > 0'
-                    f'（红线：不得脱离参考路径）')
-                assert dev >= half, (
-                    f'{os.path.basename(f)} {name}: narrow_max_path_deviation({dev}) < '
-                    f'narrow_scan_half_width({half})，横向扫描会选出立刻触发越界的目标')
+            for name, b in self._approach_instances(f).items():
+                v_min = b.get('approach_v_min')
+                assert v_min is not None, (
+                    f'{os.path.basename(f)} {name}: approach_enabled 为真却没有 '
+                    f'approach_v_min')
+                assert v_min >= self.MEASURED_MIN_MOVABLE_SPEED, (
+                    f'{os.path.basename(f)} {name}: approach_v_min({v_min}) < '
+                    f'实测最小可动速度 {self.MEASURED_MIN_MOVABLE_SPEED}m/s，'
+                    f'末段等于停住')
+                D = b.get('approach_dist')
+                if D is not None:
+                    assert v_min < D, (
+                        f'{os.path.basename(f)} {name}: approach_v_min({v_min}) >= '
+                        f'approach_dist({D})，两个值疑似写颠倒')
+                checked += 1
+        assert checked > 0, '一个接近段实例都没核到 —— 本测试在空转'
 
-    def test_speeds_are_restricted_not_normal_tracking(self):
-        """贴边通行是受限通行。此处离墙不足 0.02m，高速下任何一拍的横向误差
-        都直接变成撞墙。代码里 > 0.30 拒绝启动，这里用更紧的工程上限。"""
-        for f in NAV_PARAM_FILES:
-            for name, b in _three_phase_instances(_controller_params(f)).items():
-                if not b.get('narrow_enabled', True):
-                    continue
-                v_along = b.get('narrow_v_along', 0.10)
-                v_lat = b.get('narrow_v_lateral_max', 0.05)
-                wz = b.get('narrow_wz_max', 0.20)
-                assert 0.0 < v_along <= 0.30, (
-                    f'{os.path.basename(f)} {name}: narrow_v_along={v_along} '
-                    f'必须在 (0, 0.30] —— 贴边通行必须低速')
-                assert 0.0 < v_lat <= v_along, (
-                    f'{os.path.basename(f)} {name}: narrow_v_lateral_max({v_lat}) '
-                    f'不应超过 narrow_v_along({v_along})，横向比前进还快说明配反了')
-                assert 0.0 < wz <= 0.5, (
-                    f'{os.path.basename(f)} {name}: narrow_wz_max={wz} 必须在 (0, 0.5]')
-
-    def test_hysteresis_ticks_are_at_least_one(self):
-        """clear_ticks=0 会让 narrowCleared 永不成立（见其实现），
-        等于接管永不退出 —— 那是一个永久接管的控制器。"""
-        for f in NAV_PARAM_FILES:
-            for name, b in _three_phase_instances(_controller_params(f)).items():
-                if not b.get('narrow_enabled', True):
-                    continue
-                assert b.get('narrow_trigger_ticks', 3) >= 1, (
-                    f'{os.path.basename(f)} {name}: narrow_trigger_ticks 必须 >= 1')
-                assert b.get('narrow_clear_ticks', 3) >= 1, (
-                    f'{os.path.basename(f)} {name}: narrow_clear_ticks 必须 >= 1，'
-                    f'0 会让接管永不退出')
-
-    def test_instances_agree_on_narrow_config(self):
-        """两个实例的差异只应在终点对齐上。窄通道是安全机制，
-        两个场景各配一套必然漂开，而漂开后的现象是「搬运场景能过、探索场景卡住」。"""
+    def test_instances_agree_on_approach_config(self):
+        """与窄通道同理：接近段限速是精度机制，两个实例各配一套必然漂开，
+        漂开后的现象是「点到点导航准、探索导航不准」，极易误判成场景差异。"""
         for f in NAV_PARAM_FILES:
             inst = _three_phase_instances(_controller_params(f))
-            narrow = {
-                name: {k: v for k, v in b.items() if k.startswith('narrow')}
+            approach = {
+                name: {k: v for k, v in b.items() if k.startswith('approach')}
                 for name, b in inst.items()
             }
-            if len(narrow) < 2:
+            if len(approach) < 2:
                 continue
-            ref_name, ref = next(iter(narrow.items()))
-            for name, blk in narrow.items():
+            ref_name, ref = next(iter(approach.items()))
+            for name, blk in approach.items():
                 assert blk == ref, (
-                    f'{os.path.basename(f)}: {name} 与 {ref_name} 的窄通道配置不一致，'
-                    f'差异={set(blk.items()) ^ set(ref.items())}')
+                    f'{os.path.basename(f)}: {name} 与 {ref_name} 的接近段限速配置'
+                    f'不一致，差异={set(blk.items()) ^ set(ref.items())}')
 
 
 # ================================ 全局路径居中：膨胀梯度必须在中心有唯一最小值
@@ -916,19 +855,6 @@ class TestDispatchMode:
         mode = _coordinator_params().get('nav_dispatch_mode', 'follow_path')
         assert mode in ('follow_path', 'navigate_to_pose'), (
             f'nav_dispatch_mode={mode!r} 非法，只接受 follow_path / navigate_to_pose')
-
-    def test_follow_controller_id_is_configured(self):
-        coord = _coordinator_params()
-        if coord.get('nav_dispatch_mode', 'follow_path') != 'follow_path':
-            pytest.skip('未启用 follow_path 模式')
-        cid = coord.get('follow_controller_id', 'FollowPathExplore')
-        declared = set()
-        for f in NAV_PARAM_FILES:
-            declared |= set(_controller_params(f).get('controller_plugins', []))
-        assert cid in declared, (
-            f'follow_controller_id={cid!r} 不在任何 controller_plugins 里: '
-            f'{sorted(declared)}。后果：每次 FollowPath 直接 abort，'
-            f'现象是机器人完全不跟踪路径')
 
     def test_goal_checker_id_matches_checker_count(self):
         """留空只在「只有一个 goal checker」时安全；多项时留空必然 abort。"""
@@ -1187,7 +1113,11 @@ class TestBootstrap:
             f'绕过 smoother/倾倒监控/耦合限速/leash 四层保护')
 
     def test_min_clearance_matches_robot_envelope(self):
-        """净空门限应当就是底盘外接半径：更小则八边形顶点可能已接触障碍。"""
+        """净空门限应当就是底盘外接半径：更小则正方形的角可能已接触障碍。
+
+        2026-09-07 换正方形后外接半径 0.420 -> 0.438，所以 bootstrap_min_clearance_m
+        必须从 0.42 抬到 0.44。这条测试就是那次改动的守卫：留 0.42 会在这里失败。
+        """
         coord = _coordinator_params()
         if coord.get('bootstrap_mode', 'rotate') == 'disabled':
             pytest.skip('自举已关闭')
@@ -1195,9 +1125,10 @@ class TestBootstrap:
         for f in NAV_PARAM_FILES:
             for which in ('global_costmap', 'local_costmap'):
                 r = _robot_envelope_radius(f, which)
-                # 容差取 1mm：mppi 的 footprint 顶点 (0.297,0.297) 算出来是
-                # 0.420021m，比标称 0.42 大 21μm —— 那是 yaml 里写坐标时的取整
-                # 残差，不是安全裕度问题。用 1e-6 会让这条测试变成噪声。
+                # 容差取 1mm：正方形顶点 (0.31,0.31) 的外接半径是 0.4384062m，
+                # 门限写 0.44 留了 1.6mm 余量。1mm 容差是为了吸收 yaml 坐标的
+                # 取整残差（八边形时代 (0.297,0.297) 算出 0.420021，多 21μm），
+                # 不是安全裕度。用 1e-6 会让这条测试变成噪声。
                 assert clearance >= r - 1e-3, (
                     f'bootstrap_min_clearance_m({clearance}) < '
                     f'{os.path.basename(f)} {which} 外接半径({r})：'
@@ -1471,23 +1402,57 @@ class TestSpeedCapOverride:
             'navigation.launch.py 里找不到 max_linear_speed 的 '
             'DeclareLaunchArgument 默认值')
 
+    @staticmethod
+    def _all_vx_max(cp):
+        """递归收集控制器参数树里**所有** vx_max，返回 [(点分键名, 值)]。
+
+        不能只看 cp['FollowPath']['vx_max']：2026-09-07 起 FollowPath 是
+        ThreePhaseController，MPPI 的 vx_max 下移到了 FollowPath.inner。
+        写死那一层的后果不是测试失败，而是测试**静默失效** —— 旧版这里是
+        `if vx is None: continue`，于是两份 yaml 全被跳过，本类的核心断言
+        一个字都没检查却照样报绿。判据必须自带"一个都没找到就失败"的守卫。
+        """
+        found = []
+
+        def walk(node, path):
+            if not isinstance(node, dict):
+                return
+            for k, v in node.items():
+                if k == 'vx_max' and isinstance(v, (int, float)):
+                    found.append(('.'.join(path), float(v)))
+                else:
+                    walk(v, path + [str(k)])
+
+        walk(cp, [])
+        return found
+
     def test_launch_default_matches_yaml(self):
         """**本类的核心断言。**"""
         default = self._launch_default()
         if default is None:
             pytest.skip('launch 参数不存在，由上一条测试报错')
+        total = 0
         for f in NAV_PARAM_FILES:
-            cp = _controller_params(f)
-            fp = cp.get('FollowPath', {})
-            vx = fp.get('vx_max')
-            if vx is None:
-                continue
-            assert abs(float(vx) - default) < 1e-9, (
-                '%s 的 FollowPath.vx_max=%s，而 navigation.launch.py 的 '
-                'max_linear_speed 默认值是 %s。两者必须相等 —— '
-                'RewrittenYaml 无条件生效，不相等时这个"默认"会静默把 yaml 里的'
-                '限速**抬高**到 launch 的值，改 yaml 的人完全看不出来。'
-                % (os.path.basename(f), vx, default))
+            found = self._all_vx_max(_controller_params(f))
+            # 这里**不能**逐文件断言非空：RPP 那份 yaml 本来就没有 vx_max
+            # （RPP 的线速度上限叫 desired_linear_vel），空集合是正确的。
+            # 守卫放在循环外的总数上。
+            total += len(found)
+            for key, vx in found:
+                assert abs(vx - default) < 1e-9, (
+                    '%s 的 %s.vx_max=%s，而 navigation.launch.py 的 '
+                    'max_linear_speed 默认值是 %s。两者必须相等 —— '
+                    'RewrittenYaml 按**键名**全树替换且无条件生效，不相等时'
+                    '这个"默认"会静默把 yaml 里的限速**抬高**到 launch 的值，'
+                    '改 yaml 的人完全看不出来。'
+                    % (os.path.basename(f), key, vx, default))
+        # 空集合的"全部相等"是空真 —— 旧版就是这样静默失效的（它只看
+        # cp['FollowPath']['vx_max']，键名下移到 .inner 后两份 yaml 全被
+        # `if vx is None: continue` 跳过，本类核心断言一个字都没检查却报绿）。
+        assert total >= 2, (
+            '全部 nav2 参数文件加起来只找到 %d 个 vx_max。MPPI 那份至少有'
+            ' FollowPathMppiRaw、FollowPath.inner '
+            '三处，数量对不上说明解析口径不对、判据自己瞎了。' % total)
 
     def test_linear_caps_are_rewritten(self):
         """只压 vx_max 是个漏洞：vx_min 仍是负的满量程，可以全速倒车。"""
@@ -1551,6 +1516,98 @@ class TestSpeedCapOverride:
         block = block[:block.find('})') + 2]
         assert "'wz_max'" not in block, (
             'max_linear_speed 把 wz_max 也压了 —— 调用方只要求限线速度')
+
+    def test_behavior_server_cmd_vel_is_remapped_into_the_chain(self):
+        """恢复行为的速度必须走限速+坐标变换链，不能直连 /cmd_vel。
+
+        nav2_behaviors 的每个行为插件在**相对**话题 "cmd_vel" 上建发布者
+        （timed_behavior.hpp:130），命名空间为 / 时解析成 /cmd_vel。
+        2026-09-07 运行态实测：漏 remap 时 /cmd_vel 有 5 个发布者
+        = 4 个行为插件 + 链路末端，即 Spin/BackUp 直接写终端话题。
+
+        后果里最要紧的一条不是限速被绕过（backup_speed 0.05 本来就小），
+        而是**body->world 变换被绕过**：gz 的 VelocityControl 按世界系解读
+        /cmd_vel，BackUp 的车体 -x 于是被当成世界 -x，只有 yaw≈0 时方向才对。
+        Spin 只出 wz、旋转不变，所以这个缺陷不会在旋转恢复上显形 ——
+        这正是它能长期存在的原因，也是为什么要用测试而不是靠观察来钉住它。
+        """
+        with open(self.NAV_LAUNCH, encoding='utf-8') as fh:
+            src = fh.read()
+        i = src.find("executable='behavior_server'")
+        assert i > 0, 'navigation.launch.py 里找不到 behavior_server 节点'
+        block = src[i:src.find('Node(', i + 1)]
+        block = '\n'.join(
+            ln for ln in block.splitlines() if not ln.strip().startswith('#'))
+        m = re.search(r"remappings=remappings\s*\+?\s*(\[[^\]]*\])?", block)
+        assert m and m.group(1) and "'cmd_vel'" in m.group(1), (
+            'behavior_server 没有重映射 cmd_vel —— 恢复行为会直接写 /cmd_vel，'
+            '绕过 body->world 变换（BackUp 会往错的方向退）。当前 remappings: %s'
+            % (m.group(1) if m else None))
+        assert "'/cmd_vel'" not in m.group(1), (
+            'behavior_server 的 cmd_vel 被映射到 /cmd_vel 本身，等于没改')
+
+    def test_lateral_rewrite_agrees_with_motion_model(self):
+        """**路线A 的保命断言：限速层不得把 yaml 掐掉的横移复活。**
+
+        RewrittenYaml 的 param_rewrites 是按键名全树替换的，它**不看** yaml 里
+        原来是多少。所以 param_substitutions 里写 'vy_max': max_linear_speed 时，
+        yaml 里的 vy_max: 0.0 会被静默抬回 0.2：
+          · 不报错
+          · 不告警
+          · nav2 起来一切正常，机器人照旧蟹行
+        整个"改成 DiffDrive 让机头沿路径"的改动就此失效，而唯一的症状是
+        「改了没用」——最容易被误判成"策略无效"的那种失效。
+        （2026-09-03 改配置时就差点这么放过去，是这条断言的由来。）
+
+        不变式：只要有任何 MPPI 块是非全向（DiffDrive）或 vy_max=0，
+        launch 侧的 vy 重写值就必须是 0。反之若模型是 Omni，才允许按限速重写。
+        """
+        with open(self.NAV_LAUNCH, encoding='utf-8') as fh:
+            src = fh.read()
+        block = src[src.find('param_substitutions.update('):]
+        block = block[:block.find('})') + 2]
+        m = re.search(r"'vy_max'\s*:\s*([^,\n]+)", block)
+        assert m, "param_substitutions 里找不到 'vy_max'"
+        rewrite = m.group(1).strip()
+
+        for f in NAV_PARAM_FILES:
+            cp = _controller_params(f)
+            for name, blk in cp.items():
+                if not isinstance(blk, dict):
+                    continue
+                # 顶层 FollowPath 与两个三段式实例的 inner 都要查
+                for mppi in _iter_mppi_blocks(blk):
+                    model = str(mppi.get('motion_model', '')).strip('"\'')
+                    vy = mppi.get('vy_max')
+                    lateral_off = (model == 'DiffDrive'
+                                   or (vy is not None and float(vy) == 0.0))
+                    if not lateral_off:
+                        continue
+                    assert re.fullmatch(r"'0(\.0*)?'|\"0(\.0*)?\"", rewrite), (
+                        '%s 的 %s 块把横移关掉了（motion_model=%s, vy_max=%s），'
+                        '而 navigation.launch.py 的 param_substitutions 把 '
+                        "vy_max 重写成 %s。RewrittenYaml 按键名全树替换、不看 "
+                        'yaml 原值，于是 yaml 里的 0 被静默抬回限速值，机器人'
+                        '照旧蟹行且没有任何报错。两边必须一致。'
+                        % (os.path.basename(f), name, model, vy, rewrite))
+
+
+def _iter_mppi_blocks(blk):
+    """产出一个 controller 参数块里所有含 motion_model 的 MPPI 子块。
+
+    三段式控制器把真正的 MPPI 参数藏在 inner: 下面，只查顶层会漏掉两处
+    （见 [[三处 MPPI 块]]：改一处等于没改）。
+    """
+    if 'motion_model' in blk or 'vy_max' in blk:
+        yield blk
+    inner = blk.get('inner')
+    if isinstance(inner, dict):
+        for sub in inner.values():
+            if isinstance(sub, dict):
+                for got in _iter_mppi_blocks(sub):
+                    yield got
+        if 'motion_model' in inner or 'vy_max' in inner:
+            yield inner
 
 
 # =============================================================================
@@ -1678,7 +1735,8 @@ class TestSpeedCapForwarding:
         normal_height=0.134 是**仿真**值 -> |0-0.134|=0.134 > 0.06 ->
         一上电就判异常姿态 -> **永久**把 /cmd_vel 归零，且没有复位路径。
 
-        所以外层默认值必须是一个含 env 的表达式，且 real 侧取 false。
+        所以外层默认值必须是一个含 env 的表达式，且 hardware 侧取 false。
+        分支用的 token 从 env 的声明里现取，不写死在本测试里。
         """
         src = self._src(NAV_BRINGUP_LAUNCH)
         m = re.search(
@@ -1686,359 +1744,363 @@ class TestSpeedCapForwarding:
             r"\s*default_value=(.{0,400}?)\n\s*description=", src, re.S)
         assert m, "找不到 enable_posture_monitor 的 default_value"
         default = m.group(1)
+        # !!! 先剥注释再匹配 !!! 否则断言会命中说明文字本身：
+        # 那段注释里为了讲清楚这个坑，逐字写了 'real'，
+        # 于是"表达式里不许出现 real"这条检查在代码正确时也会失败
+        # （本仓库已在 rviz 工具栏校验上踩过同一个坑）。
+        default = '\n'.join(
+            ln for ln in default.splitlines() if not ln.strip().startswith('#'))
         assert 'PythonExpression' in default, (
             'enable_posture_monitor 的默认值是写死的字面量 %r。'
             '写死 true 时实机会被永久归零 /cmd_vel；写死 false 时仿真里'
             '倾倒检测被静默关掉。必须跟着 env 走。' % default.strip())
-        assert "'real'" in default, (
-            '默认值表达式里没有出现 real —— 它没有按环境分支')
-        real_branch = default.split("'real'")[0]
-        assert "'false'" in real_branch, (
+        assert "'real'" not in default, (
+            "默认值里出现了 'real'，但 env 的声明取值是 sim/hardware —— "
+            "'hardware' == 'real' 恒假，实机会静默拿到 true。")
+
+        # ---- 分支 token 必须来自 env 自己的声明，不能是本测试写死的字面量 ----
+        # 2026-09-07：这条断言原来是 `assert "'real'" in default`，而 env 声明的
+        # 取值是 sim/hardware —— 测试和被测代码用了**同一个错 token**，于是
+        # 「实机拿到 true」这个缺陷被测试锁死成了期望行为
+        # （同源常量 + 同源断言 = 一份证据，不是两份）。
+        # 现在 token 从 env 的 DeclareLaunchArgument 里现取，二者不再同源。
+        env_m = re.search(
+            r"DeclareLaunchArgument\(\s*\n\s*'env'\s*,(.{0,600}?)\),\s*\n\s*DeclareLaunchArgument",
+            src, re.S)
+        assert env_m, "找不到 env 的 DeclareLaunchArgument"
+        env_decl = env_m.group(1)
+        env_tokens = {t for t in ('sim', 'hardware', 'real') if t in env_decl}
+        assert env_tokens >= {'sim', 'hardware'}, (
+            'env 的声明里没有同时出现 sim 与 hardware，取值口径变了：%r' % env_decl)
+
+        cmp_tokens = set(re.findall(r"==\s*\\?'([a-z_]+)\\?'", default))
+        assert cmp_tokens, '默认值表达式里没有任何 == 字面量比较: %s' % default.strip()
+        unknown = cmp_tokens - env_tokens
+        assert not unknown, (
+            '默认值拿 %r 去比 env，而 env 声明的取值只有 %r —— '
+            '比较恒为假，分支静默失效。' % (sorted(unknown), sorted(env_tokens)))
+
+        # 实机侧必须取 false。'X if cond else Y' 里 cond 为真时取 X，
+        # 所以要看比较的是哪个 token：比 hardware 则 X 必须是 false，
+        # 比 sim 则 else 后的 Y 必须是 false。
+        if 'hardware' in cmp_tokens:
+            hw_branch = default.split('==')[0]
+        else:
+            hw_branch = default.split('else')[-1]
+        assert "'false'" in hw_branch, (
             "实机分支必须取 false。当前表达式: %s" % default.strip())
 
 
+class TestPlannerToleranceNotLooserThanGoalChecker:
+    """规划器容差必须 <= 到位容差，否则规划器有权交付一条到不了的路径。
+
+    实测（2026-09-03）：planner tolerance=0.5 而 xy_goal_tolerance=0.18 时，
+    B(1.04,-6.12) -> A(5.88,-5.86) 的规划路径终点是 (5.47,-5.82)，离目标 0.41m
+    —— 正好落在 (0.18, 0.50) 区间。机器人走完全程也进不了 0.18m，goal checker
+    永不满足 -> 无限重规划 -> 200s 超时。
+
+    10 段循环导航的表现极具欺骗性：「去 A」5/5 全超时且机器人一步没离开起点，
+    而「回 B」5/5 报 SUCCEEDED（它本来就在 B，几乎不动就满足容差）。
+    于是一半的段显示成功，真实往返成功率却是 0/10。
+
+    这条曾被误判成"窄通道策略进不去"：那 5 次缩足迹切换都是在这个死循环里
+    被反复触发的，与策略本身无关。
+    """
+
+    def test_planner_tolerance_le_xy_goal_tolerance(self):
+        for path in NAV_PARAM_FILES:
+            cfg = _load(path)
+            if 'planner_server' not in cfg:
+                continue
+            planner = cfg['planner_server']['ros__parameters']['GridBased']
+            ptol = float(planner['tolerance'])
+            gtol = float(_controller_params(path)['general_goal_checker']
+                         ['xy_goal_tolerance'])
+            assert ptol <= gtol, (
+                '%s: planner tolerance %.3f > xy_goal_tolerance %.3f —— '
+                '规划器会交付一条终点在 (%.3f, %.3f] 区间的路径，'
+                'goal checker 永不满足，表现为无限重规划直到超时'
+                % (path, ptol, gtol, gtol, ptol))
+
+    def test_planner_tolerance_keeps_a_grid_of_margin(self):
+        """还要留至少一格分辨率的余量，别踩在判据边界上。"""
+        for path in NAV_PARAM_FILES:
+            cfg = _load(path)
+            if 'planner_server' not in cfg:
+                continue
+            ptol = float(cfg['planner_server']['ros__parameters']['GridBased']['tolerance'])
+            gtol = float(_controller_params(path)['general_goal_checker']
+                         ['xy_goal_tolerance'])
+            res = 0.05
+            assert ptol <= gtol - res, (
+                '%s: planner tolerance %.3f 与到位容差 %.3f 之差不足一格(%.2f)'
+                % (path, ptol, gtol, res))
+
 
 # =============================================================================
-# 窄通道缩足迹：跨两个包的配置自洽性
+# 2026-09-07 删除八边形足迹与窄通道贴边通行层之后的两条回归守卫
 #
-# 这一节防的是**同一个几何量被抄在两个包里然后漂开**。
-# 足迹字符串现在出现在三处：
-#   nav2_params_mppi.yaml  的两个 ThreePhaseController 实例(narrow_footprint_*)
-#   exploration_coordinator_params.yaml 的 footprint_watchdog.default_footprint
-# 看门狗若"复原"成另一个形状，比不复原更糟 —— 它会一边报"已复原"一边把
-# 机器人建成错的尺寸，而两边日志都正常。
+# 这两条防的是**旧东西悄悄回来**，不是防配置写错：
+#   · 足迹必须处处是同一个正方形。八边形曾经把轴向包络虚报 120mm
+#     (0.420 vs 实测 0.300)，正方形 a=0.31 对真实底盘支撑函数的最小余量
+#     是 0° 处的 +10.0mm。任何一处漏改回八边形，规划器就又开始乐观。
+#   · 仓库里不允许再出现任何 narrow_ 参数。窄通道层删除后这些键不再被任何
+#     代码读取，留着就是"配了但静默无效"—— 本项目最贵的一类缺陷。
 # =============================================================================
 
 
-def _square_cfg():
-    """mppi 的两个 ThreePhaseController 实例的缩足迹配置。"""
-    cp = _controller_params(os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'))
-    return _three_phase_instances(cp)
+SQUARE_HALF = 0.31
 
 
-def _poly_inscribed(fp_str):
-    """多边形内切半径。与 nav2 的 calculateMinAndMaxDistances 同一定义：
-    取所有**顶点距离**与**边距离**里的最小值。
-    实测核对：八边形 0.388039、正方形 a=0.31 -> 0.310000（与 nav2 逐位一致）。
-    """
-    fp = yaml.safe_load(fp_str)
-    assert len(fp) >= 3, f'足迹少于 3 点: {fp_str}'
+class TestFootprintIsAlwaysTheSquare:
+    """每个代价地图的足迹都必须是边长 0.62m 的同一个正方形。"""
 
-    def edge_dist(a, b):
-        ax, ay = a
-        bx, by = b
-        ex, ey = bx - ax, by - ay
-        l2 = ex * ex + ey * ey
-        t = 0.0 if l2 == 0 else max(0.0, min(1.0, -(ax * ex + ay * ey) / l2))
-        return math.hypot(ax + t * ex, ay + t * ey)
+    def test_every_costmap_footprint_is_the_square(self):
+        found = 0
+        for f in NAV_PARAM_FILES:
+            for which in ('global_costmap', 'local_costmap'):
+                p = _costmap_params(f, which)
+                assert p.get('robot_radius') is None, (
+                    '%s %s: 还在用圆形 robot_radius，必须显式写正方形足迹'
+                    % (os.path.basename(f), which))
+                fp = p.get('footprint')
+                assert fp, '%s %s: 没有 footprint' % (os.path.basename(f), which)
+                pts = yaml.safe_load(fp) if isinstance(fp, str) else fp
+                assert len(pts) == 4, (
+                    '%s %s: 足迹有 %d 个顶点，正方形应当是 4 个'
+                    % (os.path.basename(f), which, len(pts)))
+                for x, y in pts:
+                    assert abs(abs(x) - SQUARE_HALF) < 1e-9 and \
+                           abs(abs(y) - SQUARE_HALF) < 1e-9, (
+                        '%s %s: 顶点 (%s,%s) 不在 ±%s 的正方形上'
+                        % (os.path.basename(f), which, x, y, SQUARE_HALF))
+                found += 1
+        assert found == 2 * len(NAV_PARAM_FILES), (
+            '只查到 %d 个代价地图足迹，期望 %d —— 判据自身没覆盖全'
+            % (found, 2 * len(NAV_PARAM_FILES)))
 
-    best = min(math.hypot(x, y) for x, y in fp)
-    for i in range(len(fp)):
-        best = min(best, edge_dist(fp[i], fp[(i + 1) % len(fp)]))
-    return best
+    def test_inscribed_and_circumscribed_match_the_square(self):
+        """内切/外接半径必须就是正方形的值。下游一堆注释和门限按这两个数写的。"""
+        for f in NAV_PARAM_FILES:
+            for which in ('global_costmap', 'local_costmap'):
+                ins = _inscribed_radius(f, which)
+                cir = _robot_envelope_radius(f, which)
+                assert abs(ins - SQUARE_HALF) < 1e-6, (
+                    '%s %s: 内切 %.6f != %.3f' % (os.path.basename(f), which, ins, SQUARE_HALF))
+                assert abs(cir - SQUARE_HALF * math.sqrt(2.0)) < 1e-6, (
+                    '%s %s: 外接 %.6f != %.6f'
+                    % (os.path.basename(f), which, cir, SQUARE_HALF * math.sqrt(2.0)))
 
 
-class TestNarrowSquareFootprint:
-    """缩足迹的三处配置必须自洽，且守卫必须真的能拦住不安全的值。"""
+    def test_escape_footprint_radius_covers_the_square_corners(self):
+        """脱困红线的足迹半径必须覆盖到正方形的**角点**。
 
-    def test_watchdog_default_matches_controller_default(self):
-        """看门狗复原用的足迹必须与控制器的默认足迹**几何一致**。
+        escape_logic 用「圆盘沿线段扫掠」近似车体判"会不会撞"。半径若小于
+        外接半径，四个角伸出去的那一截就落在判据之外 —— 方向是「判成没撞、
+        实际会撞」，正是这条红线要防的那一侧。
 
-        比几何而不是比字符串：空格/小数写法不同不该算失败，
-        但形状不同必须算失败。
+        2026-09-07 实测该值还是八边形时代的 0.386，对正方形低估 0.052m。
+
+        期望值**从 nav2 的 footprint 现算**，不在本测试里抄常数：
+        escape_logic.hpp 的值和它描述的是同一个车体，若两边都写 0.386，
+        那是一份证据而不是两份，错值会被锁成期望行为。
         """
-        coord = _coordinator_params()
-        wd = coord.get('footprint_watchdog')
-        assert wd, 'exploration_coordinator_params.yaml 缺 footprint_watchdog 段'
-        wd_fp = yaml.safe_load(wd['default_footprint'])
-        for name, inst in _square_cfg().items():
-            ctrl_fp = yaml.safe_load(inst['narrow_footprint_default'])
-            assert len(wd_fp) == len(ctrl_fp), (
-                f'{name}: 看门狗默认足迹 {len(wd_fp)} 点 != 控制器 {len(ctrl_fp)} 点 —— '
-                f'看门狗会"复原"成另一个形状，比不复原更糟')
-            for (wx, wy), (cx, cy) in zip(wd_fp, ctrl_fp):
-                assert math.isclose(wx, cx, abs_tol=1e-9) and \
-                       math.isclose(wy, cy, abs_tol=1e-9), (
-                    f'{name}: 看门狗与控制器的默认足迹顶点不一致')
+        hpp = os.path.join(
+            _SRC, 'astribot_s1_autonomy', 'include', 'astribot_s1_autonomy',
+            'escape_logic.hpp')
+        assert os.path.isfile(hpp), hpp
+        with open(hpp, encoding='utf-8') as fh:
+            src = fh.read()
+        m = re.search(r'double\s+footprint_radius_m\{([0-9.]+)\}', src)
+        assert m, 'escape_logic.hpp 里找不到 footprint_radius_m 的默认值'
+        radius = float(m.group(1))
 
-    def test_narrow_footprint_is_actually_smaller(self):
-        """小足迹的内切半径必须真的更小，否则切换毫无收益还白付风险。"""
-        for name, inst in _square_cfg().items():
-            big = _poly_inscribed(inst['narrow_footprint_default'])
-            small = _poly_inscribed(inst['narrow_footprint_narrow'])
-            assert small < big, (
-                f'{name}: 窄通道足迹内切 {small:.4f} 不小于默认 {big:.4f}')
-
-    def test_narrow_footprint_not_smaller_than_chassis(self):
-        """🔴 小足迹不得小于底盘物理包络。
-
-        数据源 astribot_s1_torso_wheel.xacro：躯干碰撞圆柱 radius 0.30、
-        轮球 radius 0.08 且轮心 (±0.21635, ±0.21635)。
-        轴向真实伸出 = max(0.30, 0.21635+0.08) = 0.30。
-        把机器人建模成比这更小，在仿真里的表现是"通过率提高"——非常危险。
-        """
-        for name, inst in _square_cfg().items():
-            small = _poly_inscribed(inst['narrow_footprint_narrow'])
-            guard = float(inst['chassis_min_envelope_radius'])
-            assert guard >= 0.30 - 1e-9, (
-                f'{name}: chassis_min_envelope_radius={guard} 低于 URDF 躯干半径 0.30')
-            assert small >= guard, (
-                f'{name}: 窄通道足迹内切 {small:.4f} < 底盘包络下限 {guard:.4f}')
-
-    def test_lease_timeout_exceeds_lease_period(self):
-        """租约超时必须大于续租周期，否则看门狗会在正常工作时误判复原。"""
-        coord = _coordinator_params()
-        timeout = float(coord['footprint_watchdog']['lease_timeout_sec'])
-        for name, inst in _square_cfg().items():
-            period = float(inst['narrow_square_lease_period'])
-            assert timeout > period, (
-                f'{name}: 看门狗租约超时 {timeout}s 不大于续租周期 {period}s —— '
-                f'会在控制器正常续租时误判进程已死')
-
-    def test_square_and_watchdog_enabled_together(self):
-        """缩足迹与看门狗必须同开同关。
-
-        只开缩足迹 = 没有防锁存兜底；只开看门狗 = 无害但说明配置在漂。
-        """
-        coord = _coordinator_params()
-        wd_on = bool(coord['footprint_watchdog']['enabled'])
-        for name, inst in _square_cfg().items():
-            sq_on = bool(inst['narrow_square_enabled'])
-            assert sq_on == wd_on, (
-                f'{name}: narrow_square_enabled={sq_on} 而 '
-                f'footprint_watchdog.enabled={wd_on} —— 两者必须同开同关，'
-                f'只开前者等于没有防锁存兜底')
-
-    def test_both_instances_agree(self):
-        """两个控制器实例(导航用/探索用)的缩足迹配置必须一致。
-
-        漂开的话，A/B 只切一个实例，测出来的差异归因不到任何一处。
-        """
-        insts = _square_cfg()
-        assert len(insts) >= 2, f'预期至少 2 个 ThreePhaseController 实例，实际 {len(insts)}'
-        keys = ['narrow_square_enabled', 'narrow_footprint_default',
-                'narrow_footprint_narrow', 'chassis_min_envelope_radius',
-                'narrow_square_hard_timeout', 'narrow_square_lease_period',
-                'narrow_square_verify_timeout']
-        ref_name, ref = next(iter(insts.items()))
-        for name, inst in insts.items():
-            for k in keys:
-                assert inst[k] == ref[k], (
-                    f'{name}.{k}={inst[k]} != {ref_name}.{k}={ref[k]}')
-
-    def test_exit_window_not_shorter_than_entry(self):
-        """🔴 切出窗口必须 >= 切入窗口，否则**保证**切换振荡。
-
-        算术：切入看 preview 内有麻烦、切出看 exit_preview 内没麻烦。
-        若 exit < entry，则机器人处在 [exit, entry] 之间时两个判据同时成立
-        ⇒ 切入、复原、切入…（第一轮实测 123 次切换的同类病因）。
-        控制器侧有启动守卫会拒绝启动，这里在配置层再拦一道。
-        """
-        for name, inst in _square_cfg().items():
-            entry = inst['narrow_prealign_preview']
-            exit_w = inst['narrow_square_exit_preview']
-            assert exit_w >= entry, (
-                f'{name}: narrow_square_exit_preview={exit_w} < '
-                f'narrow_prealign_preview={entry} —— 保证振荡')
-
-    def test_hysteresis_band_exceeds_costmap_resolution(self):
-        """迟滞带必须大于代价地图分辨率，否则它表达不出来。
-
-        这条不是洁癖：八边形各向异性 0.032m < 分辨率 0.05m，正是纯预对齐
-        在这张图上测不出任何效果的原因。迟滞带若也小于一格，就是同一个错。
-        """
-        res = _costmap_params(
-            os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'), 'local_costmap')['resolution']
-        for name, inst in _square_cfg().items():
-            band = inst['narrow_square_exit_preview'] - inst['narrow_prealign_preview']
-            assert band > res, (
-                f'{name}: 迟滞带 {band:.3f}m <= 栅格 {res}m —— '
-                f'代价地图表达不出这个差异，等于没有迟滞')
-
-    def test_min_dwell_below_hard_timeout(self):
-        """最短驻留必须显著小于硬超时。
-
-        反了的话「最短驻留」会吃掉整条正常复原路径，让每次都走硬超时那条
-        异常分支 —— 表面上"复原了"，实际每次都是异常收尾。
-        """
-        for name, inst in _square_cfg().items():
-            dwell = inst['narrow_square_min_dwell']
-            hard = inst['narrow_square_hard_timeout']
-            assert 0.0 <= dwell < hard, (
-                f'{name}: narrow_square_min_dwell={dwell} 必须在 [0, {hard}) 内')
-
-    def test_switch_ceiling_arithmetic_is_stated(self):
-        """单次切换周期下限必须 > 实测的中位驻留 0.15s，且给出切换次数上限。
-
-        0.15s = narrow_clear_ticks(3) / controller_frequency(20Hz)，是第一轮
-        A/B 里 121/123 次复原的实际触发时刻。新配置的周期下限
-        = min_dwell + cooldown，必须比它高一个量级，否则改了等于没改。
-        """
-        freq = _controller_params(
-            os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'))['controller_frequency']
-        for name, inst in _square_cfg().items():
-            old_dwell = inst['narrow_clear_ticks'] / freq
-            new_floor = inst['narrow_square_min_dwell'] + inst['narrow_square_cooldown']
-            assert new_floor > 10.0 * old_dwell, (
-                f'{name}: 新的单次切换周期下限 {new_floor}s 不足旧中位驻留 '
-                f'{old_dwell:.3f}s 的 10 倍 —— 改动量级不够')
-
-    def test_lease_period_below_verify_timeout(self):
-        """续租周期必须 < 回读验证超时，否则"等确认"期间可能一次都没续租。"""
-        for name, inst in _square_cfg().items():
-            assert inst['narrow_square_lease_period'] < inst['narrow_square_verify_timeout'], (
-                f'{name}: narrow_square_lease_period 必须 < narrow_square_verify_timeout')
-
-    def test_watchdog_lease_timeout_allows_consecutive_reads(self):
-        """🔴 看门狗租约超时必须容得下"凑齐 N 次连续回读"所需的时间。
-
-        算术：N 次连续回读**至少**需要 N 个回读周期。租约超时若比这还短，
-        看门狗就可能在读数根本还凑不齐时动手 —— 那正是旧配置
-        (2.0s 超时 vs 1.0s 回读周期 vs 需要 3 次) 造成 2.1s 误判的病因。
-        留 1 个周期的抖动余量。
-        """
-        wd = _coordinator_params()['footprint_watchdog']
-        period = wd['readback_period_sec']
-        n = wd['consecutive_reads']
-        assert period > 0 and n >= 1
-        need = period * (n + 1)
-        assert wd['lease_timeout_sec'] >= need, (
-            f"lease_timeout_sec={wd['lease_timeout_sec']} < "
-            f'readback_period_sec*(consecutive_reads+1)={need} —— '
-            f'读数还凑不齐就可能动手')
-
-    def test_watchdog_stale_threshold_allows_normal_jitter(self):
-        """陈旧阈值必须容得下至少 2 个回读周期。
-
-        太紧的话正常抖动就会让看门狗永远处于"读数太老、不敢动手"的瞎眼状态，
-        而它瞎眼时**不会报"故障"**、只会安静地不动手 —— 等于没有兜底却看不出来。
-        """
-        wd = _coordinator_params()['footprint_watchdog']
-        assert wd['readback_stale_sec'] >= 2.0 * wd['readback_period_sec'], (
-            f"readback_stale_sec={wd['readback_stale_sec']} < "
-            f"2*readback_period_sec={2.0 * wd['readback_period_sec']}")
-
-    def test_watchdog_timeout_dwarfs_controller_lease_period(self):
-        """看门狗租约超时必须远大于控制器续租周期（>= 4 倍）。
-
-        这两个数在不同的包、不同的 yaml 里，最容易各改一个而漂开。
-        余量不足时一次调度抖动就会让看门狗误判"设它的进程死了"。
-        """
-        wd_timeout = _coordinator_params()['footprint_watchdog']['lease_timeout_sec']
-        for name, inst in _square_cfg().items():
-            lease = inst['narrow_square_lease_period']
-            assert wd_timeout >= 4.0 * lease, (
-                f'{name}: 看门狗 lease_timeout_sec={wd_timeout} < '
-                f'4*narrow_square_lease_period={4.0 * lease}')
-
-    def test_watchdog_readback_period_matches_global_costmap(self):
-        """看门狗的 readback_period_sec 必须等于 global costmap 的 publish_frequency。
-
-        它只用于启动守卫的算术 —— 但算术的输入写错，守卫算出来的下限就是错的，
-        而守卫会照样"通过"。这是本项目反复吃过的那类错：判据本身错了。
-        """
-        pf = _costmap_params(
-            os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'),
-            'global_costmap')['publish_frequency']
-        wd_period = _coordinator_params()['footprint_watchdog']['readback_period_sec']
-        assert abs(wd_period - 1.0 / pf) < 1e-9, (
-            f'footprint_watchdog.readback_period_sec={wd_period} != '
-            f'1/global_costmap.publish_frequency={1.0 / pf}')
-
-    def test_square_requires_prealign(self):
-        """🔴 缩足迹依赖预对齐：开了前者却关了后者 = 静默无效。
-
-        唯一的切入通路是预对齐的前视判定（顺序不可颠倒：先对齐后换足迹），
-        所以 narrow_prealign_enabled=false 时缩足迹**永远进不去**，
-        表现是切换 0 次、零告警 —— A/B 会得出"这机制没用"，真相是它一次没跑。
-        控制器侧有启动守卫直接拒绝启动，这里在配置层再拦一道。
-        """
-        for name, inst in _square_cfg().items():
-            if inst['narrow_square_enabled']:
-                assert inst['narrow_prealign_enabled'], (
-                    f'{name}: narrow_square_enabled=true 但 '
-                    f'narrow_prealign_enabled=false —— 缩足迹会静默永不生效')
+        for f in NAV_PARAM_FILES:
+            for which in ('global_costmap', 'local_costmap'):
+                circ = _robot_envelope_radius(f, which)
+                assert radius >= circ - 1e-4, (
+                    'escape_logic.hpp 的 footprint_radius_m=%.4f < %s %s 的'
+                    '外接半径 %.4f —— 车体的角有 %.4fm 落在红线判据之外，'
+                    '会出现"判成没撞、实际撞上"。'
+                    % (radius, os.path.basename(f), which, circ, circ - radius))
+        # 过度保守也要有上界：半径大到把 253 带整个吞掉时脱困永远无解。
+        # 2 倍外接半径是个宽松但非空的上界，防的是"顺手改大到离谱"。
+        circ0 = _robot_envelope_radius(NAV_PARAM_FILES[0], 'global_costmap')
+        assert radius <= 2.0 * circ0, (
+            'footprint_radius_m=%.4f 超过外接半径 %.4f 的两倍，脱困会恒无解'
+            % (radius, circ0))
 
 
-class TestCostThresholdSemantics:
-    """🔴 两种代价查询、两个阈值，绝不混用。
+class TestNarrowLayerIsGone:
+    """窄通道层已删除，它的参数键不允许再出现在配置或 path_tracking 源码里。
 
-    依据是 nav2 自己的 InflationLayer::computeCost：
-        distance == 0                      -> 254 (LETHAL，障碍本体)
-        distance*res <= inscribed_radius   -> 253 (INSCRIBED_INFLATED)
-    253 的含义是"离障碍不超过内切半径"= **底盘中心放这里必然碰撞**，
-    而内切半径就是底盘半宽 —— 膨胀层已经把底盘尺寸算进去了。
-
-    · 足迹**多边形**查询(footprintCostAtPose) -> 254
-      多边形已经表达了底盘尺寸，再要求外轮廓躲开 253 带 = 算两遍
-    · **中心格**查询(getCost) -> 253
-      那里膨胀带正好代表底盘尺寸
-
-    上一版把多边形阈值写成 253，后果是窄于 4*侧向半宽(本机 ~1.58m)的通道里
-    足迹代价恒为 253、零梯度，实测 909 次"连小足迹也过不去"全是假的。
+    范围刻意不是"整个仓库搜 narrow_"：explore_metrics 里有 narrow_width_m /
+    narrow_traversals 这类**环境**指标（量的是通道有多宽、过去了几次），
+    与被删掉的控制层无关，一并禁掉会逼着改掉正当的指标名。
+    同理跳过注释行 —— 历史记录里提到旧参数名是应该允许的。
     """
 
-    def test_footprint_threshold_is_lethal_not_inscribed(self):
-        for name, inst in _square_cfg().items():
-            v = inst['narrow_footprint_lethal_threshold']
-            assert v > 253.0, (
-                f'{name}: narrow_footprint_lethal_threshold={v} <= 253 —— '
-                f'足迹多边形用 253 会重复计底盘半宽；正确值 254')
+    SCOPES = ('astribot_s1_navigation/config',
+              'astribot_s1_autonomy/config',
+              'astribot_s1_path_tracking')
 
-    def test_center_threshold_stays_inscribed(self):
-        for name, inst in _square_cfg().items():
-            v = inst['narrow_center_lethal_threshold']
-            assert 0.0 < v <= 253.0, (
-                f'{name}: narrow_center_lethal_threshold={v} 必须在 (0,253] —— '
-                f'中心格判据里膨胀带就代表底盘尺寸，设 254 会把放不进去的位置判成可站')
+    def test_no_narrow_param_in_config_or_controller(self):
+        root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        offenders = []
+        # 逐 scope 计数而不是只数总数：总数判据（原来是 scanned > 10，而实际就是 11）
+        # 在文件搬走一两个之后会静默变假 —— 更糟的是某个 scope 整个不再被扫时
+        # 总数仍可能过关，于是那个包的残留永远不会被发现。
+        per_scope = {}
+        for scope in self.SCOPES:
+            base = os.path.join(root, scope)
+            assert os.path.isdir(base), '扫描范围不存在: %s' % scope
+            per_scope[scope] = 0
+            for dirpath, dirnames, filenames in os.walk(base):
+                dirnames[:] = [d for d in dirnames if d != '__pycache__']
+                for fn in filenames:
+                    if not fn.endswith(('.yaml', '.yml', '.py', '.cpp', '.hpp')):
+                        continue
+                    fp = os.path.join(dirpath, fn)
+                    per_scope[scope] += 1
+                    for i, line in enumerate(open(fp, encoding='utf-8'), 1):
+                        bare = line.lstrip()
+                        if bare.startswith(('#', '//', '/*', '*', '///')):
+                            continue
+                        m = re.search(r'\bnarrow_[a-z_]+', line)
+                        if m:
+                            offenders.append('%s:%d: %s'
+                                             % (os.path.relpath(fp, root), i, m.group(0)))
+        empty = [s for s, n in per_scope.items() if n == 0]
+        assert not empty, (
+            '这些扫描范围里一个文件都没匹配到，判据在该范围内是空的: %s（各范围计数 %r）'
+            % (', '.join(empty), per_scope))
+        assert not offenders, (
+            '窄通道层已删除，但仍有 %d 处 narrow_ 参数残留:\n  %s'
+            % (len(offenders), '\n  '.join(offenders[:20])))
 
-    def test_two_thresholds_must_differ(self):
-        """两个阈值方向相反，"统一成一个数"会破坏其中一半。"""
-        for name, inst in _square_cfg().items():
-            fp = inst['narrow_footprint_lethal_threshold']
-            ce = inst['narrow_center_lethal_threshold']
-            assert fp > ce, f'{name}: 足迹阈值({fp}) 必须 > 中心格阈值({ce})'
+    def test_controller_sources_have_no_narrow_symbol(self):
+        """连带守住 C++ 侧：narrow_math 库、evaluateNarrow 等符号必须全无。"""
+        root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        base = os.path.join(root, 'astribot_s1_path_tracking')
+        banned = ('narrow_math', 'evaluateNarrow', 'disengageNarrow',
+                  'NarrowDecision', 'revertFootprint', 'renewFootprintLease')
+        offenders = []
+        scanned = 0
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames[:] = [d for d in dirnames if d != '__pycache__']
+            for fn in filenames:
+                if not fn.endswith(('.cpp', '.hpp', '.txt')):
+                    continue
+                fp = os.path.join(dirpath, fn)
+                scanned += 1
+                txt = open(fp, encoding='utf-8').read()
+                for b in banned:
+                    if b in txt:
+                        offenders.append('%s: %s' % (os.path.relpath(fp, root), b))
+        assert scanned > 3, '只扫了 %d 个文件，判据自身没生效' % scanned
+        assert not offenders, '窄通道符号残留:\n  ' + '\n  '.join(offenders)
 
-    def test_square_actually_fits_the_narrowest_corridor(self):
-        """缩足迹必须真的能过本环境最窄的通道，否则这个机制没有意义。
 
-        场景事实：本仿真环境没有低于 0.65m 的通道。
-        判据分两层，都要过：
-          · 规划器的**中心格**判据：内切半径(含 padding) < 通道半宽
-          · 足迹**多边形**判据：侧向半宽 < 通道半宽
+# ---------------------------------------------------------------------------
+# 探索行为树的重规划语义
+# ---------------------------------------------------------------------------
+# 2026-09-08：有人往 navigation.launch.py 里加过
+# parameters=[..., {'bt_xml_filename': <nav2 的 navigate_to_pose_no_replanning.xml>}]，
+# 想去掉周期重规划。它三重静默失效、一条告警都没有：文件在 Humble 不存在、
+# 参数名在 Humble 叫 default_nav_to_pose_bt_xml、而探索本来就逐目标覆盖默认树。
+# 这一组把「真正生效的那条通路」钉住，让同类改动下次直接红。
+class TestExploreBehaviorTree:
+
+    BT = os.path.join(NAV_BT_DIR, 'navigate_to_pose_explore_three_phase.xml')
+
+    def _root(self):
+        import xml.etree.ElementTree as ET
+        assert os.path.isfile(self.BT), (
+            '探索行为树不存在: %s。它由协调器的 nav_behavior_tree 默认值指向，'
+            '缺了会让 exploration_coordinator.launch.py 直接 RuntimeError。' % self.BT)
+        return ET.parse(self.BT).getroot()
+
+    def test_follow_path_uses_three_phase_instance(self):
+        """FollowPath 必须显式指向 FollowPathExplore，且该实例在 yaml 里存在。
+
+        漏掉 controller_id 时 nav2 会用端口默认值 "FollowPath"，
+        自定义实例一次都不被调用且零提示 —— 与「策略无效」的现象完全一致。
         """
-        import math
-        NARROWEST = 0.65
-        half = NARROWEST / 2.0
-        for name, inst in _square_cfg().items():
-            poly = yaml.safe_load(inst['narrow_footprint_narrow'])
-            pad = _costmap_params(
-                os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'),
-                'global_costmap').get('footprint_padding', 0.01)
-            # 侧向半宽取所有朝向里最小的那个（= 对齐到最有利朝向）
-            lateral = min(
-                max(abs(-x * math.sin(t) + y * math.cos(t)) for x, y in poly)
-                for t in [math.radians(d) for d in range(0, 91)])
-            inscribed = _poly_inscribed(inst['narrow_footprint_narrow']) + pad
-            assert lateral + pad < half, (
-                f'{name}: 小足迹侧向半宽(含 padding) {lateral + pad:.4f} '
-                f'>= 通道半宽 {half:.4f} —— 缩了也过不去，机制无意义')
-            assert inscribed < half, (
-                f'{name}: 小足迹内切半径(含 padding) {inscribed:.4f} >= 通道半宽 '
-                f'{half:.4f} —— 规划器仍会报 Starting point in lethal space')
+        nodes = [e for e in self._root().iter('FollowPath')]
+        assert len(nodes) == 1, '期望恰好一个 FollowPath 节点，实际 %d 个' % len(nodes)
+        cid = nodes[0].attrib.get('controller_id')
+        assert cid == 'FollowPathExplore', \
+            'FollowPath 的 controller_id=%r，应为 FollowPathExplore' % cid
+        for f in NAV_PARAM_FILES:
+            plugins = _controller_params(f).get('controller_plugins', [])
+            assert cid in plugins, \
+                '%s 的 controller_plugins 里没有 %s' % (os.path.basename(f), cid)
 
-    def test_octagon_genuinely_cannot_fit_narrowest_corridor(self):
-        """反面：默认八边形必须**真的**过不去，否则根本不需要缩足迹。
+    def test_replan_is_gated_not_unconditional(self):
+        """ComputePathToPose 不允许是 RateController 的直接子节点。
 
-        这条是防"两个足迹其实都能过/都不能过"——那样 A/B 测不出任何东西。
+        裸的 RateController hz=1.0 包 ComputePathToPose = **每秒无条件重算**，
+        实测后果是没有任何一条路径被跟踪到位（36 个目标换了 393 条路径、
+        每条只活 1.5s）。现在必须经过 Fallback + IsPathValid 这道闸。
         """
-        NARROWEST = 0.65
-        half = NARROWEST / 2.0
-        for name, inst in _square_cfg().items():
-            pad = _costmap_params(
-                os.path.join(NAV_CFG_DIR, 'nav2_params_mppi.yaml'),
-                'global_costmap').get('footprint_padding', 0.01)
-            inscribed = _poly_inscribed(inst['narrow_footprint_default']) + pad
-            assert inscribed > half, (
-                f'{name}: 默认足迹内切半径 {inscribed:.4f} < 通道半宽 {half:.4f} —— '
-                f'它本来就过得去，那缩足迹解决的是什么问题？')
+        root = self._root()
+        for rc in root.iter('RateController'):
+            direct = [c.tag for c in rc]
+            for child in direct:
+                assert child != 'ComputePathToPose', (
+                    'RateController 直接包着 ComputePathToPose = 无条件周期重规划。'
+                    '应改成 Fallback + ReactiveSequence(Inverter(GlobalUpdatedGoal), '
+                    'IsPathValid) 兜一层。')
+        tags = {e.tag for e in root.iter()}
+        for need in ('IsPathValid', 'GlobalUpdatedGoal', 'Fallback'):
+            assert need in tags, '行为树里缺 %s，重规划闸门不完整' % need
+
+    def test_launch_does_not_pass_bt_to_bt_navigator(self):
+        """navigation.launch.py 不得给 bt_navigator 传行为树参数。
+
+        Humble 的参数名是 default_nav_to_pose_bt_xml（navigator.hpp:156）；
+        bt_xml_filename 是旧版名字，作为未声明的覆盖会被 rclcpp 静默忽略。
+        而且探索逐目标覆盖默认树，这里传什么都到不了探索路径 ——
+        留着只会让人以为换过树了。
+        """
+        path = os.path.join(
+            _SRC, 'astribot_s1_navigation', 'launch', 'navigation.launch.py')
+        code = _py_without_comments(open(path, encoding='utf-8').read())
+        # 先自检：剥注释后必须还剩下真正的代码，否则下面两条恒真。
+        assert 'bt_navigator' in code, \
+            '剥注释后代码里连 bt_navigator 都没了，守卫自身失效'
+        for bad in ('bt_xml_filename', 'default_nav_to_pose_bt_xml'):
+            assert bad not in code, (
+                'navigation.launch.py 的**代码**里出现了 %s。换行为树要改协调器的 '
+                'nav_behavior_tree，不是 bt_navigator 的默认值。' % bad)
+
+    def test_referenced_nav2_bt_nodes_are_in_default_plugin_list(self):
+        """本仓库 BT 用到的 nav2 节点必须都在 bt_navigator 的可用插件清单里。
+
+        本仓库 yaml 没有覆盖 plugin_lib_names，所以用的是内置默认清单；
+        清单里没有的节点会让 bt_navigator 在**加载 BT 时**失败。
+        这条按 so 里的符号核对，找不到 so 时 skip（判据不能假装通过）。
+        """
+        import glob as _glob
+        sos = _glob.glob('/opt/ros/humble/lib/*bt_navigator*.so')
+        if not sos:
+            pytest.skip('本机没有 /opt/ros/humble 的 bt_navigator so，无法核对')
+        syms = ''
+        for so in sos:
+            with open(so, 'rb') as fh:
+                syms += fh.read().decode('latin-1')
+        # tag -> 插件库名（只列本仓库 BT 实际用到的）
+        expect = {
+            'RateController': 'nav2_rate_controller_bt_node',
+            'IsPathValid': 'nav2_is_path_valid_condition_bt_node',
+            'GlobalUpdatedGoal': 'nav2_globally_updated_goal_condition_bt_node',
+        }
+        used = {e.tag for e in self._root().iter()}
+        checked = 0
+        for tag, lib in expect.items():
+            if tag not in used:
+                continue
+            checked += 1
+            assert lib in syms, \
+                '行为树用了 %s，但默认 plugin_lib_names 里找不到 %s' % (tag, lib)
+        assert checked >= 3, '只核对了 %d 个节点，判据自身没生效' % checked

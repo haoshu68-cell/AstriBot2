@@ -21,6 +21,7 @@ using astribot_s1_path_tracking::Phase;
 using astribot_s1_path_tracking::PlanarPoint;
 using astribot_s1_path_tracking::advancePhase;
 using astribot_s1_path_tracking::alignAngularVelocity;
+using astribot_s1_path_tracking::approachSpeedCap;
 // 只吃 bool/double，没有本命名空间的实参 => ADL 找不到它，必须显式 using。
 // （上面那批之所以不用，是因为参数里带 Phase/PlanarPoint，ADL 自动生效。）
 using astribot_s1_path_tracking::isFreshFollowAttempt;
@@ -434,5 +435,107 @@ TEST(FreshAttempt, NanGapFailsClosed) {
   const double nan = std::numeric_limits<double>::quiet_NaN();
   EXPECT_FALSE(isFreshFollowAttempt(true, nan, 0.5));
 }
+
+// ============ 接近段线性限速（提升到位精度）============
+//
+// 主因是 **0.55s 未建模死时间**，不是路径跟不准：
+//   run11 18 轮实测 cross_track_p95 = 0.048m，而 arrival_error_xy p50 = 0.121m、
+//   overshoot_radial p50 = 0.146m —— 误差集中在终段。
+//   vel_track_best_lag_s p50 = 0.55 / max 0.64，vel_track_gain = 0.977
+//   ⇒ 底盘最终跟得上，只是慢半拍。终段过冲 ≈ v_接近 × τ。
+// nav2 MPPI 没有 dead-time 参数，改代价权重动不了这个乘积，只能压小 v_接近。
+
+namespace
+{
+// 生产取值，与 nav2_params_mppi.yaml 的三段式实例一致。
+// 这里刻意抄一份**是为了让单测能独立表达算术**；yaml 与实现不许漂移这件事
+// 由 astribot_s1_navigation/test/test_config_consistency.py 从 yaml 直接读值来守。
+constexpr double kApproachDist = 1.50;
+constexpr double kApproachVMin = 0.05;
+constexpr double kNominal = 1.0;        // inner.vx_max
+constexpr double kLagSec = 0.55;        // vel_track_best_lag_s p50（实测）
+constexpr double kXyTol = 0.18;         // general_goal_checker.xy_goal_tolerance
+}  // namespace
+
+TEST(ApproachSpeedCap, NoLimitOutsideConvergenceZone) {
+  // 收敛区之外必须逐字返回内层的速度 —— 限速只影响最后 1.5m，
+  // 不许把整段行程拖慢（反向守卫：duration_s / traveled_m 不能恶化）。
+  EXPECT_DOUBLE_EQ(kNominal, approachSpeedCap(5.0, kApproachDist, kApproachVMin, kNominal));
+  EXPECT_DOUBLE_EQ(kNominal, approachSpeedCap(1.6, kApproachDist, kApproachVMin, kNominal));
+  // 边界：d == D 时还不限速（区间是 [0, D)）
+  EXPECT_DOUBLE_EQ(kNominal, approachSpeedCap(kApproachDist, kApproachDist, kApproachVMin, kNominal));
+}
+
+TEST(ApproachSpeedCap, LinearInsideZone) {
+  EXPECT_DOUBLE_EQ(0.5, approachSpeedCap(0.75, kApproachDist, kApproachVMin, kNominal));
+  EXPECT_DOUBLE_EQ(0.2, approachSpeedCap(0.30, kApproachDist, kApproachVMin, kNominal));
+  EXPECT_DOUBLE_EQ(0.12, approachSpeedCap(0.18, kApproachDist, kApproachVMin, kNominal));
+}
+
+TEST(ApproachSpeedCap, FloorKeepsChassisMoving) {
+  // 线性律在 d < D·v_min/v0 = 0.075m 处算出的值小于 v_min，被下限抬起来。
+  // 下限存在的理由：实测底盘 0.02 m/s 就能平动（无静摩擦地板），
+  // 0.05 有 2.5 倍余量；没有下限则终段会算出小到驱动不了底盘的值而卡死。
+  EXPECT_DOUBLE_EQ(kApproachVMin, approachSpeedCap(0.05, kApproachDist, kApproachVMin, kNominal));
+  EXPECT_DOUBLE_EQ(kApproachVMin, approachSpeedCap(0.0, kApproachDist, kApproachVMin, kNominal));
+  EXPECT_DOUBLE_EQ(kApproachVMin, approachSpeedCap(-0.1, kApproachDist, kApproachVMin, kNominal));
+}
+
+TEST(ApproachSpeedCap, ResidualOvershootMeetsAccuracyTarget) {
+  // 算术判据一：终段残留过冲 = v_min·τ，必须落在 0.05m 目标内。
+  EXPECT_LT(kApproachVMin * kLagSec, 0.05);      // 0.05×0.55 = 0.0275
+
+  // 算术判据二（更强）：nav2 判到位那一拍（d = xy_tol）的滑行量必须**小于容差本身**，
+  // 否则机器人会从"刚判到位"的位置一路冲过目标点。
+  const double v_at_tol = approachSpeedCap(kXyTol, kApproachDist, kApproachVMin, kNominal);
+  EXPECT_LT(v_at_tol * kLagSec, kXyTol);         // 0.12×0.55 = 0.066 < 0.18
+
+  // 反证：不限速时同一拍的滑行量 1.0×0.55 = 0.55m，是容差的 3 倍 ——
+  // 这就是 run11 overshoot p50=0.146 的来源方向（实际接近速度约 0.27 m/s）。
+  EXPECT_GT(kNominal * kLagSec, kXyTol);
+}
+
+TEST(ApproachSpeedCap, ImpliedDecelWithinMeasuredChassisLimit) {
+  // 线性律的隐含最大减速在 d=D 处 = v0²/D。必须 ≤ 实测有效减速 0.45~0.8 m/s²
+  // （由滑行量反推 v²/2d：0.069m@0.25m/s ⇒ 0.45，0.100m@0.40m/s ⇒ 0.8）。
+  // 否则又变成"规划了做不到的刹车"，限速本身就成了新的模型失配。
+  EXPECT_LE(kNominal * kNominal / kApproachDist, 0.8);   // 1.0/1.5 = 0.67
+  // 哨兵：若有人把 D 收到 1.0，隐含减速 1.0 m/s² 已超出底盘能力 —— 本条会失败。
+}
+
+TEST(ApproachSpeedCap, MonotoneNonDecreasingInDistance) {
+  // 单调性保证不会出现"越靠近反而允许更快"的反向段。
+  double prev = 0.0;
+  for (double d = 0.0; d <= 2.0; d += 0.01) {
+    const double v = approachSpeedCap(d, kApproachDist, kApproachVMin, kNominal);
+    EXPECT_GE(v, prev - 1e-12) << "d=" << d;
+    prev = v;
+  }
+}
+
+TEST(ApproachSpeedCap, NeverExceedsNominal) {
+  // 内层本来就在慢速走（窄通道邻域、setSpeedLimit 生效等）时，
+  // v_min 不许把它抬快 —— 下限只是"能动"，不是"至少这么快"。
+  EXPECT_DOUBLE_EQ(0.03, approachSpeedCap(0.02, kApproachDist, kApproachVMin, 0.03));
+  EXPECT_DOUBLE_EQ(0.03, approachSpeedCap(1.0, kApproachDist, kApproachVMin, 0.03));
+}
+
+TEST(ApproachSpeedCap, IllegalParamsDegradeToNoLimit) {
+  // 参数非法时退化成"不限速"= 今天的行为，而不是限到 v_min ——
+  // 后者会因为一个坏参数把机器人静默限到蠕行，比不限速危险得多。
+  // 合法性由 configure() 的启动期 throw 负责（拒绝启动，不静默回退）。
+  EXPECT_DOUBLE_EQ(kNominal, approachSpeedCap(0.1, 0.0, kApproachVMin, kNominal));
+  EXPECT_DOUBLE_EQ(kNominal, approachSpeedCap(0.1, -1.5, kApproachVMin, kNominal));
+  EXPECT_DOUBLE_EQ(kNominal, approachSpeedCap(0.1, kApproachDist, -0.05, kNominal));
+  // nominal <= 0：内层已经在发零速，没有可限的东西
+  EXPECT_DOUBLE_EQ(0.0, approachSpeedCap(0.1, kApproachDist, kApproachVMin, 0.0));
+}
+
+TEST(ApproachSpeedCap, NanDistanceDegradesToNoLimit) {
+  // NaN 的比较全为 false，自然落到"不限速"这一支，与非法参数同向。
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  EXPECT_DOUBLE_EQ(kNominal, approachSpeedCap(nan, kApproachDist, kApproachVMin, kNominal));
+}
+
 
 
