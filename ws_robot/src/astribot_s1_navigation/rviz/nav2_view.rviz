@@ -51,6 +51,11 @@ Visualization Manager:
       Name: LaserScan
       Size (m): 0.05
       Topic:
+        # 必须 Best Effort：/scan 的发布方是 BEST_EFFORT，rviz 默认订阅是
+        # RELIABLE —— 不匹配时一帧都收不到，且只有一条
+        # "incompatible QoS ... RELIABILITY_QOS_POLICY" 警告，画面上看着就是
+        # "激光没数据"，很容易误判成感知链坏了（实测过）。
+        Reliability Policy: Best Effort
         Value: /scan
       Value: true
     - Alpha: 0.7
