@@ -134,11 +134,42 @@ def clamp_velocity(twist_xy_wz, max_vel_xy, max_vel_theta):
     return (vx, vy, wz)
 
 
-def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt):
+def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt,
+                        max_accel_xy_up=None):
     """速度斜率限制（加速度限幅）。与 nav2 velocity_smoother 的 max_accel 取齐。
 
     没有这一层时，Nav2 一个突变的 Twist 会在一个积分周期内变成位置阶跃，
     底盘会猛冲。
+
+    ═══════════ max_accel_xy_up：非对称限幅，只限**加速** ═══════════
+    2026-09-08 实机：RPP 一进 FOLLOW 就要 0.5m/s，桥接按 max_accel_xy=2.5
+    在 0.20s 内把指令拉到 0.5，而底盘真实加速度实测只有 ~0.39m/s²（由
+    "0.0872m / 0.67s 从静止起"反解），要 1.29s 才到 0.5。
+    **底盘是位置指令开环积分链**：加速段指令跑在实际前面积下的位置欠账，
+    在随后的匀速段**永不归还**（指令与实际同步前进，差值不变），而 leash
+    预算是总量制。纯加速暂态的欠账：
+
+        Δ = v²/2 × (1/a_实际 − 1/a_指令) ≈ 1.09·v²
+        v=0.5 → 0.272m  >  leash_xy_m 0.250m   ← 每次从静止起步都必然跳闸
+        v=0.3 → 0.098m  =  39% 预算
+        v=0.2 → 0.044m  =  17% 预算（与 MPPI 那次 leash 从未跳吻合）
+
+    实测跳闸值 0.2509m（0.0124 + 0.2385 两窗累加）对 0.250m 阈值，吻合 0.4%。
+    所以瓶颈**不是速度上限**，是指令加速度比底盘快 6.4 倍。
+
+    **减速方向刻意不限**：减速时底盘因惯性反超指令，欠账是**缩小**的 ——
+    同一份日志里实测过（旋转段 `指令 -0.4158 / 实际 -0.5484`）。而
+    max_accel_xy 同时管刹车，一起压下去会把停车距离从实测的 0.069~0.100m
+    拉长到 0.36m，那是拿一个真实的安全裕度换另一个。
+
+    ``max_accel_xy_up=None`` 时退化为对称限幅（与本函数原行为一致）。
+
+    ⚠ xy 按**二维矢量**限幅，不是逐轴。逐轴符号判据不是旋转不变的
+    （本项目已在"越界判据"上踩过一次：横向分量能合法顶到
+    sqrt(0.10²+0.05²)）。逐轴限幅在斜向上放行 sqrt(2) 倍的加速度，
+    而"加速还是减速"只有对速度**模长**才有定义。
+    模长不减（含等模长的方向变化）一律走 up 限幅，取保守侧。
+    theta 是标量，仍按原样逐轴处理。
     """
     if dt <= 0.0:
         raise ChassisConfigError('dt=%r 必须为正' % (dt,))
@@ -146,17 +177,35 @@ def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt):
         raise ChassisConfigError(
             'max_accel_xy=%r / max_accel_theta=%r 必须为正'
             % (max_accel_xy, max_accel_theta))
-    out = []
-    limits = (max_accel_xy, max_accel_xy, max_accel_theta)
-    for i in range(3):
-        delta = target[i] - previous[i]
-        max_delta = limits[i] * dt
-        if delta > max_delta:
-            delta = max_delta
-        elif delta < -max_delta:
-            delta = -max_delta
-        out.append(previous[i] + delta)
-    return tuple(out)
+    if max_accel_xy_up is not None and max_accel_xy_up <= 0.0:
+        raise ChassisConfigError(
+            'max_accel_xy_up=%r 必须为正或 None' % (max_accel_xy_up,))
+
+    # ---- xy：二维矢量限幅，加速方向可用更紧的限值 ----
+    dx = target[0] - previous[0]
+    dy = target[1] - previous[1]
+    a_xy = max_accel_xy
+    if max_accel_xy_up is not None:
+        speed_t = math.hypot(target[0], target[1])
+        speed_p = math.hypot(previous[0], previous[1])
+        if speed_t >= speed_p:
+            a_xy = max_accel_xy_up
+    max_delta_xy = a_xy * dt
+    delta_norm = math.hypot(dx, dy)
+    if delta_norm > max_delta_xy:
+        scale = max_delta_xy / delta_norm
+        dx *= scale
+        dy *= scale
+
+    # ---- theta：标量，逐轴 ----
+    dth = target[2] - previous[2]
+    max_delta_th = max_accel_theta * dt
+    if dth > max_delta_th:
+        dth = max_delta_th
+    elif dth < -max_delta_th:
+        dth = -max_delta_th
+
+    return (previous[0] + dx, previous[1] + dy, previous[2] + dth)
 
 
 #: :func:`measure_tick_dt` 的返回值。

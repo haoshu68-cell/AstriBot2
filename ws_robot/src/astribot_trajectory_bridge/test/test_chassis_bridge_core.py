@@ -590,3 +590,67 @@ class TestPosePortContractViolation:
             reason='需要先 colcon build astribot_bridge_msgs')
         from astribot_bridge_msgs.msg import BridgeStatus
         assert hasattr(BridgeStatus, 'POSE_PORT_FAILED')
+
+
+class TestLastStopIsDistinguishable:
+    """`last_stop` 必须能把四种"掉出使能态"分辨开。
+
+    为什么要有这一组（2026-09-08 实机排查代价换来的）：节点层周期日志的判据是
+    `TickStats.live`，而 `live == (state == ST_ENABLED)` —— 四种停车状态打出
+    **逐字相同**的"内环已停用"。实机那次 leash 跳闸并闩锁（机器人此后再没动），
+    日志里与"还没使能"长得一模一样；而 xy 超限还是 theta 超限至今无法从日志
+    判定，因为原因只进了没人在录的 /astribot/bridge/status。
+
+    这一组钉住的是"原因可反复读"这个性质：事件会被 drain_events() 取空，
+    周期日志读到的必须是另一个不会被取空的载体。
+    """
+
+    def test_none_before_any_stop(self):
+        core, _, _, _ = build()
+        assert core.last_stop is None
+        core.enable()
+        core.submit_twist(0.1, 0.0, 0.0)
+        core.inner_tick()
+        # 使能并正常跑过之后仍然是 None —— 没停过就不该有"停车原因"
+        assert core.last_stop is None
+
+    def test_leash_trip_records_state_reason_and_both_errors(self):
+        core, _, _, _ = build(follow_ratio=0.0, leash_xy_m=0.10,
+                              enable_slam_correction=False, max_accel_xy=1e6)
+        core.enable()
+        core.submit_twist(1.0, 0.0, 0.0)
+        for _ in range(200):
+            if core.state == ST_LEASH_TRIPPED:
+                break
+            core.inner_tick()
+        assert core.state == ST_LEASH_TRIPPED
+        state, reason, m1, m2, stamp = core.last_stop
+        assert state == ST_LEASH_TRIPPED
+        # 原因里必须带上是哪条轴超了 —— 这正是实机那次缺的那一项
+        assert 'xy' in reason
+        # metric_1 是 xy 偏差，必须真的越过阈值（不是 0.0 占位）
+        assert m1 > 0.10
+        assert stamp > 0.0
+
+    def test_survives_drain_events(self):
+        """事件被取空后原因仍可读 —— 周期日志就是在取空之后才打印的。"""
+        core, _, _, _ = build(follow_ratio=0.0, leash_xy_m=0.10,
+                              enable_slam_correction=False, max_accel_xy=1e6)
+        core.enable()
+        core.submit_twist(1.0, 0.0, 0.0)
+        for _ in range(200):
+            if core.state == ST_LEASH_TRIPPED:
+                break
+            core.inner_tick()
+        core.drain_events()
+        core.drain_events()
+        assert core.last_stop is not None
+        assert core.last_stop[0] == ST_LEASH_TRIPPED
+
+    def test_disable_is_distinguishable_from_leash_trip(self):
+        core, _, _, _ = build()
+        core.enable()
+        core.disable()
+        assert core.last_stop[0] == ST_DISABLED
+        assert core.last_stop[0] != ST_LEASH_TRIPPED
+        assert 'disable' in core.last_stop[1]

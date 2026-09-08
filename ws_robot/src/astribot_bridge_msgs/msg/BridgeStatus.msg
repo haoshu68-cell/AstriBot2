@@ -107,6 +107,28 @@ uint8 SLAM_LOST_STOPPED = 27
 # **真 bug** 伪装成正常的降级工况。
 uint8 POSE_PORT_FAILED = 28
 
+# /scan 龄期超过 scan_max_age_sec，本拍速度已置零（可自动恢复）。
+# metric_1=龄期(s)，metric_2=阈值(s)。
+#
+# 与 SLAM_STALE(23) 并列而不合并：位姿陈旧丢的是"我在哪"，感知陈旧丢的是
+# "周围有什么"。前者退化为开环+leash 还能继续走，后者继续走就是拿旧障碍图
+# 开车，处置完全不同。
+uint8 SCAN_STALE = 29
+
+# /scan 持续陈旧超过 scan_loss_grace_sec，已闩锁停车（要人介入）。
+# metric_1=持续陈旧时长(s)，metric_2=宽限阈值(s)。
+# 与 SLAM_LOST_STOPPED(27) 同构：短暂异常自动恢复，持续异常必须有人看到。
+uint8 SCAN_LOST_STOPPED = 30
+
+# 从未收到过 /scan，速度置零。metric_1=已等待时长(s)，metric_2=阈值(s)。
+#
+# !!! 为什么与 SCAN_STALE 分开 !!!
+# "收到过但变旧了"是上游故障（查雷达/驱动/转换节点）；"一帧都没收到过"几乎
+# 总是话题名或 QoS 配错（查配置）。本项目已因 QoS 单向不兼容
+# （BEST_EFFORT 发布 + RELIABLE 订阅，一帧都收不到、只有一条 WARNING）
+# 浪费过一轮排查 —— 这个区分就是为那个场景留的。
+uint8 SCAN_NEVER_RECEIVED = 31
+
 # --- 机械臂专用 ---
 
 # 目标越关节限位。detail 携带越限的关节序号与数值。

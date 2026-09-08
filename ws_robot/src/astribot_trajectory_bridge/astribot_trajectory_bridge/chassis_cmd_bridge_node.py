@@ -31,6 +31,7 @@ from astribot_trajectory_bridge.chassis_bridge_core import (
     ChassisBridgeConfig,
     ChassisBridgeCore,
     ST_ENABLED,
+    ST_LEASH_TRIPPED,
 )
 from astribot_trajectory_bridge.ros_ports import (
     RosClock,
@@ -149,6 +150,14 @@ class ChassisCmdBridgeNode(Node):
         self._rate_report_period_ticks = max(1, int(round(cfg.outer_rate * 10.0)))
         self._rate_report_countdown = self._rate_report_period_ticks
 
+        # 桥接内部速度链路日志。刻意取 1Hz（不跟拍率日志的 10s）：
+        # path_tracking_diagnostics_node 也是 1Hz，两边同拍才能逐行对齐 ——
+        # 桥接外面四段和桥接里面五段拼起来才是完整的速度链路。
+        vel_period = float(self.get_parameter('vel_trace_period_sec').value)
+        self._vel_report_period_ticks = max(
+            1, int(round(cfg.outer_rate * vel_period)))
+        self._vel_report_countdown = self._vel_report_period_ticks
+
         # 周期抖动监控
         self._last_inner_time = None
         self._overrun_count = 0
@@ -179,6 +188,12 @@ class ChassisCmdBridgeNode(Node):
         d('max_vel_theta', 2.0)
         d('max_accel_xy', 2.5)
         d('max_accel_theta', 3.2)
+        # xy **加速**方向的加速度上限（m/s²）；减速仍走 max_accel_xy。
+        # 0.0 = 关闭非对称限幅，退化为对称（旧行为），这是默认。
+        # ROS 参数没有 None，所以用 0.0 当哨兵 —— 而 0.0 本身作为"加速度上限"
+        # 是无意义的（永远加不起速），拿它当"关闭"不会与任何有效值撞车。
+        # 为什么需要它、实机为什么必须给 0.35：见 chassis_bridge.yaml 那一段。
+        d('max_accel_xy_up', 0.0)
         # 内环步长上限（秒）。默认 0.04 = 标称 4ms 的 10 倍。
         # 单拍最大位移 = max_vel_xy * 该值，必须远小于 leash_xy_m，
         # 构造 ChassisBridgeConfig 时会硬校验，不满足直接拒绝启动。
@@ -202,6 +217,9 @@ class ChassisCmdBridgeNode(Node):
         d('odom_drift_window_sec', 2.0)
         d('odom_drift_warn_m', 0.15)
         d('loop_overrun_factor', 1.5)
+        # 桥接内部速度链路日志的周期（秒）。设 <=0 关掉这一行日志。
+        # 默认 1.0：与 path_tracking_diagnostics_node 同拍，两边日志能逐行对齐。
+        d('vel_trace_period_sec', 1.0)
         # ---- /scan 时效性联锁 ----
         # nav2 的 expected_update_rate 只会**告警**（实测 controller_server 里
         # 没有任何检查 costmap currency 的字符串），所以"感知瞎了还继续走"
@@ -224,6 +242,10 @@ class ChassisCmdBridgeNode(Node):
             cmd_vel_timeout_sec=g('cmd_vel_timeout_sec'),
             max_vel_xy=g('max_vel_xy'), max_vel_theta=g('max_vel_theta'),
             max_accel_xy=g('max_accel_xy'), max_accel_theta=g('max_accel_theta'),
+            # 0.0 哨兵 -> None（对称限幅）。用 > 0.0 判而不是 != 0.0：
+            # 负值同样是"没给有效值"，也该退化成旧行为而不是抛在 250Hz 回调里。
+            max_accel_xy_up=(g('max_accel_xy_up')
+                             if g('max_accel_xy_up') > 0.0 else None),
             max_tick_dt_sec=g('max_tick_dt_sec'),
             leash_xy_m=g('leash_xy_m'), leash_theta_rad=g('leash_theta_rad'),
             require_manual_reset=g('require_manual_reset'),
@@ -335,6 +357,7 @@ class ChassisCmdBridgeNode(Node):
         self.status.publish_events(self.core.drain_events())
         self._publish_odom()
         self._report_tick_rate()
+        self._report_vel_trace()
 
     def _report_tick_rate(self):
         """周期性打印内环**实测**拍率。
@@ -362,10 +385,34 @@ class ChassisCmdBridgeNode(Node):
             # inner_tick 在 ST_DISABLED 提前返回，count/rate 会冻在上一段使能的
             # 值上。原来这里照打，我因此误判过两次（"内环停了" / "桥接仍是
             # enabled"）。陈旧读数与当前读数长得一样，是最难查的一类。
+            #
+            # !!! 状态名与停车原因也必须打出来（2026-09-08 实机代价换来的）!!!
+            # st.live 的定义是 `state == ST_ENABLED`，于是 DISABLED /
+            # LEASH_TRIPPED / STOPPED_NO_POSE / STOPPED_STALE_SCAN 四种状态
+            # 打出**逐字相同**的一行。实机那次是 leash 跳闸并因
+            # require_manual_reset=True 闩锁（机器人此后再没动过），而日志里
+            # "跳闸不动了"与"还没使能"长得一模一样；真正的原因和
+            # err_xy/err_theta 只进 /astribot/bridge/status，跑车时没人录那个
+            # 话题。定位这一次停车因此花掉十几轮日志交叉比对，其中最关键的
+            # "是 xy 超限还是 theta 超限"至今无法从日志判定 —— 两条都逼近阈值。
+            # 下面这一行本可以让它变成一次 grep。
+            # 与本文件上面那条教训同源：读数必须自带它自己的处境。
+            stop = self.core.last_stop
+            if stop is None:
+                why = ('当前状态 %s，本次启动以来未发生过停车事件'
+                       % self.core.state)
+            else:
+                why = ('当前状态 %s；最近一次停车原因：%s'
+                       '（metric_1=%.4f metric_2=%.4f）'
+                       % (self.core.state, stop[1], stop[2], stop[3]))
+                if self.core.state == ST_LEASH_TRIPPED:
+                    why += ('。**这是闩锁态**：require_manual_reset=%s，'
+                            '不调 ~/reset_leash 就永远不会再动'
+                            % self.core.cfg.require_manual_reset)
             self.get_logger().info(
-                '内环已停用；上一段使能期间实测拍率 %.1fHz（%d 拍，'
+                '内环已停用；%s。上一段使能期间实测拍率 %.1fHz（%d 拍，'
                 '钳位 %d 次）。**这是历史值，不是当前拍率。**'
-                % (st.rate_hz, st.count, st.clamp_count))
+                % (why, st.rate_hz, st.count, st.clamp_count))
             return
         self.get_logger().info(
             '内环实测拍率 %.1fHz（标称 %.1f，比例 %.2f）平均步长 %.4fs '
@@ -382,6 +429,55 @@ class ChassisCmdBridgeNode(Node):
                gap.ticks, gap.max_dt,
                (1.0 / gap.max_dt) if gap.max_dt > 0.0 else 0.0,
                gap.over_count, st.max_dt))
+
+    def _report_vel_trace(self):
+        """周期性打印桥接**内部**的速度链路。
+
+        为什么值得单独一行：在这行之前，整条速度链路上唯一落盘的东西是
+        path_tracking_diagnostics_node 的四段（raw→smooth→preCpl→cmd），
+        而它看到的最后一段就是 /cmd_vel —— 进了桥接之后的五段变换**一个都没有
+        记录**。其中两段在任何速度话题上都不可见：
+
+          · 看门狗/scan 联锁把速度置零 —— 在 /cmd_vel 上和"上游没发"长得一样；
+          · 外环 SLAM 校正直接加在位置上 —— 它贡献的位移不经过任何速度量。
+
+        于是"底盘为什么没按指令走"在桥接这一层是全黑的。这一行把它点亮。
+
+        口径（照抄 VelTrace 的约定，读的时候必须守）：cmd_path 是路径长，
+        cmd_net/act_net 是净位移。只有 cmd_path≈cmd_net（这一窗基本走直线）时，
+        act_net 和 cmd_net 的比较才有意义 —— 否则那个"误差"是口径差，不是跟踪差。
+        """
+        if self._vel_report_period_ticks <= 0:
+            return
+        self._vel_report_countdown -= 1
+        if self._vel_report_countdown > 0:
+            return
+        self._vel_report_countdown = self._vel_report_period_ticks
+        # 必须**无条件**取走，哪怕这一轮不打印 —— 留着不清，下一条日志就会把
+        # 停用期之前的窗口当成本窗印出来。与 consume_tick_window_gap 同一个理由。
+        tr = self.core.consume_vel_trace()
+        if tr.ticks == 0:
+            # 刻意不打全 0 那一行：全 0 会被读成"链路上确实全是零"，
+            # 而真相是这一窗内环一拍都没跑（停用/联锁停车）—— 两件事处置不同。
+            return
+
+        cmd_speed = tr.cmd_path / tr.wall if tr.wall > 0.0 else 0.0
+        act_speed = tr.act_net / tr.wall if tr.wall > 0.0 else 0.0
+        # 走得直不直：净位移 / 路径长。接近 1 才允许把 act_net 和 cmd_net 对比。
+        straight = tr.cmd_net / tr.cmd_path if tr.cmd_path > 1e-9 else 1.0
+        self.get_logger().info(
+            '[桥接速度链] %d拍/%.2fs | in %.3f -> clamp %.3f(咬%d拍) -> '
+            'slew %.3f(咬%d拍) -> 本体 %.3f m/s(峰值) | '
+            '联锁置零 %d 拍 | 指令路径 %.4fm(净 %.4fm 直度%.2f) '
+            '外环校正另加 %.4fm | 实际净位移 %.4fm | '
+            '指令均速 %.3f 实际均速 %.3f m/s | dθ 指令 %.4f 实际 %.4f rad'
+            % (tr.ticks, tr.wall,
+               tr.in_peak, tr.clamped_peak, tr.clamp_bit,
+               tr.slewed_peak, tr.slew_bit, tr.local_peak,
+               tr.zeroed_ticks,
+               tr.cmd_path, tr.cmd_net, straight, tr.corr_path,
+               tr.act_net, cmd_speed, act_speed,
+               tr.dtheta_cmd, tr.dtheta_act))
 
     def _publish_odom(self):
         """把 SDK 的底盘位姿发成 Odometry。
