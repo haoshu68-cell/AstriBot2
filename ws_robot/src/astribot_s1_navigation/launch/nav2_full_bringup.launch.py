@@ -81,6 +81,54 @@ def generate_launch_description():
             description='是否接入臂-底盘动力学耦合动态调速节点(astribot_s1_dynamics_'
                         'coupling)，透传给 navigation.launch.py'),
         DeclareLaunchArgument(
+            'enable_posture_monitor',
+            default_value=PythonExpression(
+                # !!! 比较的字面量必须逐字等于 env 的声明取值 !!!
+                # 这里原来写的是 'real'，而 env 的声明取值是 sim/hardware
+                # （见本文件 'env' 的 DeclareLaunchArgument）——
+                # 'hardware' == 'real' 永远为假，于是实机也拿到 true，
+                # 正好是这段注释说要避免的那个后果，且**没有任何报错或告警**。
+                ["'false' if '", LaunchConfiguration('env'), "' == 'hardware' else 'true'"]),
+            description='cmd_vel_body_to_world_node 的姿态止损监控，透传给 '
+                        'navigation.launch.py。\n'
+                        '默认值**跟着 env 走**，而不是照抄内层的 true：\n'
+                        '  env:=sim  -> true   仿真里 /odom 有真的 z/roll/pitch，'
+                        '监控有意义\n'
+                        '  env:=hardware -> false  实机 /odom 是 3-DOF 轮式里程计，'
+                        'z/roll/pitch **恒等于 0**（实测 509 帧 min=max=0.0000），'
+                        '而判据是 |z-0.134|>0.06 -> 一上电就判为异常姿态 -> '
+                        '**永久**把 /cmd_vel 归零，且 safety_tripped 没有复位路径。\n'
+                        '为什么必须在本文件重复声明并显式转发：'
+                        'IncludeLaunchDescription 的 launch_arguments 是白名单，'
+                        '没列进去的名字不会传到子 launch，而子 launch 的 '
+                        'default_value 会照常生效 —— 本文件此前漏了这一项，'
+                        '于是**根本没有办法**从这个入口关掉它，'
+                        '而 runbook 要求实机必须关。'
+                        '这一条由 TestSpeedCapForwarding 一并钉住。'),
+        DeclareLaunchArgument(
+            'max_linear_speed', default_value='1.0',
+            description='线速度上限(m/s)，透传给 navigation.launch.py，一键同时压住 '
+                        'MPPI 的 vx_max/vy_max/vx_min/vy_min 与 velocity_smoother。\n'
+                        '!!! 这个默认值必须与 navigation.launch.py 的同名默认值、'
+                        '以及 nav2_params_*.yaml 里的 vx_max 三者一致 !!!\n'
+                        '为什么本文件必须重复声明并显式转发：IncludeLaunchDescription 的 '
+                        'launch_arguments 是白名单——没列进去的名字**不会**传到子 launch，'
+                        '而子 launch 里 DeclareLaunchArgument 的 default_value 会照常生效。'
+                        '本文件此前漏了这一项，于是 '
+                        '`nav2_full_bringup.launch.py max_linear_speed:=0.2` '
+                        '不报错、不告警、vx_max 仍是 1.0 —— 限速扫描会产出若干档位'
+                        '数字完全相同的表，而每张表看起来都正常。'
+                        '这一条由 TestSpeedCapForwarding 钉住。'),
+        DeclareLaunchArgument(
+            'posture_normal_height', default_value='0.134',
+            description='姿态监控的基准高度(m)，透传给 navigation.launch.py。\n'
+                        '仿真 0.134（Gazebo 里 world z=0 不是地面）/ 实机 0.0'
+                        '（/odom 由 SLAM TF 导出，z=0 是开机位姿）。\n'
+                        '本文件必须重复声明并显式转发，理由同 max_linear_speed：'
+                        'launch_arguments 是白名单，漏项不报错、子 launch 用自己的默认值。'
+                        '给错的后果实测过：第一帧就止损、/cmd_vel 30s 内 1668 帧全零，'
+                        '而现象是"机器人不动"、nav2 如实报 Failed to make progress。'),
+        DeclareLaunchArgument(
             'headless', default_value='false',
             description='true 时 Gazebo 只起 server、不起 GUI（RViz 不受影响）。'
                         'EGL 初始化失败的机器上必须用：GUI 会退化成软件渲染吃满 CPU，'
@@ -229,6 +277,9 @@ def generate_launch_description():
             'use_sim_time': use_sim_time_expr,
             'controller_plugin': LaunchConfiguration('controller_plugin'),
             'enable_arm_chassis_coupling': LaunchConfiguration('enable_arm_chassis_coupling'),
+            'max_linear_speed': LaunchConfiguration('max_linear_speed'),
+            'enable_posture_monitor': LaunchConfiguration('enable_posture_monitor'),
+            'posture_normal_height': LaunchConfiguration('posture_normal_height'),
             'scan_topic': scan_topic_expr,
         }.items(),
     )

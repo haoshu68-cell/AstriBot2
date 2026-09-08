@@ -30,8 +30,17 @@ import math
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
+
+from astribot_s1_navigation.posture_monitor_policy import (
+    ACT_COLLECTING,
+    ACT_DISABLE_DEGENERATE,
+    ACT_TRIP,
+    describe_monitor_state,
+    evaluate_posture,
+)
 
 
 class CmdVelBodyToWorldNode(Node):
@@ -50,6 +59,17 @@ class CmdVelBodyToWorldNode(Node):
         # (车体系语义)取代，默认不再做 body→world 旋转，本节点退化为
         # "直通转发 + 姿态安全监控"。换回VelocityControl架构时设回 true。
         self.declare_parameter('enable_body_to_world', False)
+        # ---- 姿态监控总开关 ----
+        # !!! 实机必须显式给 false !!! 理由（实测，不是推演）：
+        # 实机 /odom 是轮式里程计、只暴露 3-DOF，z/roll/pitch **恒等于 0**，
+        # 而 normal_height=0.134 是仿真值 -> |0-0.134|=0.134 > 0.06 -> 判为异常姿态。
+        # 此前之所以没炸，是因为这个节点的 /odom 订阅用的是默认 RELIABLE QoS，
+        # 而实机 /odom 发布者是 BEST_EFFORT，回调**一帧都没执行过**（实测
+        # RELIABLE 0 帧 / BEST_EFFORT 704 帧 @50Hz）—— 两个缺陷互相掩盖。
+        # 本次把 QoS 修成 sensor_data（对 RELIABLE 发布者同样兼容），
+        # 于是缺陷 2 会暴露出来，所以必须同时有这个开关。
+        # 默认保持 True 是为了不改变仿真行为。
+        self.declare_parameter('enable_posture_monitor', True)
 
         input_topic = self.get_parameter('input_topic').value
         output_topic = self.get_parameter('output_topic').value
@@ -57,26 +77,40 @@ class CmdVelBodyToWorldNode(Node):
 
         self.current_yaw = 0.0
         self.safety_tripped = False
+        #: 姿态监控运行态。degenerate=数据源不携带姿态信息（自动停用）。
+        self.posture_enabled = self.get_parameter('enable_posture_monitor').value
+        self.posture_degenerate = False
+        self._attitude_samples = []
 
         self.cmd_pub = self.create_publisher(Twist, output_topic, 10)
         self.create_subscription(Twist, input_topic, self.cmd_vel_callback, 10)
-        self.create_subscription(Odometry, odom_topic, self.odom_callback, 10)
+        # !!! /odom 必须用 sensor_data（BEST_EFFORT）!!!
+        # 原先是 `..., 10)` 即默认 RELIABLE，而实机 /odom 发布者是 BEST_EFFORT ——
+        # 单向不兼容，订阅者**一帧都收不到**，只有一条 WARNING，
+        # 而节点活着、发布者数正常，按 pub>0 写的判据一条都发现不了。
+        # BEST_EFFORT 订阅者对 RELIABLE 发布者同样兼容，所以仿真侧不受影响。
+        self.create_subscription(Odometry, odom_topic, self.odom_callback,
+                                 qos_profile_sensor_data)
 
         self.get_logger().info(
             'cmd_vel_body_to_world_node 已启动：订阅 %s(车体系, Nav2输出) + %s，'
             '转发到 %s。body→world旋转=%s（力矩闭环底盘吃车体系，默认关闭旋转，'
-            '详见cmd_vel_callback注释）。同时监控 /odom 做异常姿态安全止损。' %
+            '详见cmd_vel_callback注释）。%s' %
             (input_topic, odom_topic, output_topic,
              'ON(VelocityControl架构)' if self.get_parameter('enable_body_to_world').value
-             else 'OFF(直通)'))
+             else 'OFF(直通)',
+             describe_monitor_state(self.posture_enabled, False, False)))
 
     def odom_callback(self, msg: Odometry):
         q = msg.pose.pose.orientation
         self.current_yaw = math.atan2(
             2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
 
+        if not self.posture_enabled or self.posture_degenerate:
+            return
         if self.safety_tripped:
             return
+
         z = msg.pose.pose.position.z
         sinr_cosp = 2 * (q.w * q.x + q.y * q.z)
         cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y)
@@ -84,16 +118,32 @@ class CmdVelBodyToWorldNode(Node):
         sinp = max(-1.0, min(1.0, 2 * (q.w * q.y - q.z * q.x)))
         pitch = math.asin(sinp)
 
-        normal_height = self.get_parameter('normal_height').value
-        max_dev = self.get_parameter('max_height_deviation').value
-        max_tilt = self.get_parameter('max_tilt_rad').value
+        # ---- 判定顺序在 evaluate_posture 里，刻意不写在这里 ----
+        # 实机 z=0 同时满足"超限"和"数据源退化"两个判定，顺序直接决定行为。
+        # 顺序留在 callback 里就没有任何测试能钉住它 —— 实测过：这里顺序写对了，
+        # 但"把顺序调回去"这个变异在 20 条测试下**全部存活**。
+        # 挪进纯函数后 TestEvaluatePostureOrdering 才真正拦得住。
+        if len(self._attitude_samples) < 64:
+            self._attitude_samples.append((z, roll, pitch))
+        action, reason = evaluate_posture(
+            True, self._attitude_samples, z, roll, pitch,
+            self.get_parameter('normal_height').value,
+            self.get_parameter('max_height_deviation').value,
+            self.get_parameter('max_tilt_rad').value)
 
-        if abs(z - normal_height) > max_dev or abs(roll) > max_tilt or abs(pitch) > max_tilt:
+        if action == ACT_COLLECTING:
+            return
+        if action == ACT_DISABLE_DEGENERATE:
+            self.posture_degenerate = True
+            self.get_logger().error(describe_monitor_state(True, True, False))
+            return
+        if action == ACT_TRIP:
             self.safety_tripped = True
             self.get_logger().error(
-                '!!! 安全监控触发止损：检测到异常姿态(z=%.3f, roll=%.3f, pitch=%.3f)，'
-                '停止转发 Nav2 的速度指令、持续下发零速度。请检查 Gazebo 画面，'
-                '必要时重新执行 ros2 launch 把机器人重新生成一遍。' % (z, roll, pitch))
+                '%s 触发项：%s。（z=%.3f roll=%.3f pitch=%.3f）'
+                'safety_tripped 没有复位路径，需重启本节点才能恢复转发。'
+                % (describe_monitor_state(True, False, True), reason,
+                   z, roll, pitch))
             self.cmd_pub.publish(Twist())
 
     def cmd_vel_callback(self, msg: Twist):
