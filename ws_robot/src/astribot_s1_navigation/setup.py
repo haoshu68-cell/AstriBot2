@@ -20,6 +20,20 @@ setup(
         (os.path.join('share', package_name, 'behavior_trees'),
          glob('behavior_trees/*.xml')),
     ],
+    # 评测脚本走 setup.py 的 scripts= 而**不是** data_files。
+    #
+    # 两个原因：
+    #  ① data_files 指向 lib/<pkg>/ 时与 --symlink-install 冲突，实测直接构建失败：
+    #     "No such file or directory: install/.../lib/astribot_s1_navigation/
+    #      run_speed_sweep.sh"
+    #  ② scripts= 会装到 setup.cfg 里 install_scripts 指定的
+    #     lib/astribot_s1_navigation，也就是 `ros2 run` 找可执行文件的地方。
+    # 不写这一段的话文件只躺在 src 里，install 下永远没有它，
+    # 而症状是"命令找不到"——很容易被当成环境问题。
+    scripts=[
+        'scripts/run_speed_sweep.sh',
+        'scripts/aggregate_speed_sweep.py',
+    ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='astribot-dev',
@@ -36,6 +50,8 @@ setup(
             'arm_speed_limiter_node = astribot_s1_navigation.arm_speed_limiter_node:main',
             'path_tracking_diagnostics_node = '
             'astribot_s1_navigation.path_tracking_diagnostics_node:main',
+            'explore_metrics_recorder_node = '
+            'astribot_s1_navigation.explore_metrics_recorder_node:main',
         ],
     },
 )

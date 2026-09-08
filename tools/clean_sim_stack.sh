@@ -47,6 +47,12 @@ NAMES=(
   "arm_speed_limiter_node" "arm_chassis_speed_coupling_node"
   # 本仓自研节点（可执行名，不是路径）
   "exploration_coordinator_node" "frontier_explorer_node"
+  # 🔴 指标录制器。残留它比残留 rviz2 更隐蔽：它不发 /clock、不占 GPU，
+  #    只是**继续往 rounds.csv 追写**。于是新旧两个录制器写同一张表，
+  #    表里混着两次运行的轮次而没有任何标记（run_label 默认为空串）。
+  #    列在这里只为可读性 —— 真正抓到它的是下面 `ros2 (launch|run)`
+  #    与 install 路径两个收集器，因为它的 $2 是 /usr/bin/python3。
+  "explore_metrics_recorder_node"
 )
 
 # ---- 残留自检用的**宽口径**探测集。
@@ -55,7 +61,7 @@ NAMES=(
 #      这次漏 rviz2 就是这么过关的。宽口径宁可误报也不能漏报。
 # ⚠️ 不要用 `_server$` 这种通配：实测它命中了系统里无关的 screenshot_server，
 #    误报会让人开始无视这条自检 —— 那比没有自检更糟。nav2 的 server 逐个列。
-RESIDUAL_PAT='^rviz2$|^ign$|^ruby$|^gzserver$|^gzclient$|^parameter_bridg|^robot_state_pub|^joint_state_pub|^controller_serv|^planner_serv|^smoother_serv|^behavior_serv|^map_serv|^bt_navigator|^lifecycle_manager|^waypoint_follower|^velocity_smoother|^collision_monitor|slam_toolbox|^pointcloud_|^livox_|^omni_effort|^cmd_vel_body|^arm_speed|^arm_chassis|^exploration_coo|^frontier_expl|^static_transform_pub|^amcl$'
+RESIDUAL_PAT='^rviz2$|^ign$|^ruby$|^gzserver$|^gzclient$|^parameter_bridg|^robot_state_pub|^joint_state_pub|^controller_serv|^planner_serv|^smoother_serv|^behavior_serv|^map_serv|^bt_navigator|^lifecycle_manager|^waypoint_follower|^velocity_smoother|^collision_monitor|slam_toolbox|^pointcloud_|^livox_|^omni_effort|^cmd_vel_body|^arm_speed|^arm_chassis|^exploration_coo|^frontier_expl|^static_transform_pub|^amcl$|^explore_metrics'
 
 
 collect_pids() {
@@ -81,7 +87,13 @@ collect_pids() {
       base = parts[k]
       if (base ~ pat) { print $1 }
     }')
-  # launch 的 python 进程：只认命令行里同时含 ros2 launch 与本仓包名的。
+  # launch / run 的 python 包装进程：只认命令行里同时含 ros2 launch|run
+  # 与本仓包名的。
+  #
+  # ⚠️ 必须同时认 `ros2 run`：这两层进程的 $2 都是 `/usr/bin/python3`，
+  # 所以上面按基名匹配的 NAMES 表**对它们结构性无效**（加进 NAMES 也没用）。
+  # 实测漏过 `ros2 run astribot_s1_navigation explore_metrics_recorder_node`：
+  # 它既没有 install 路径、也不含 "ros2 launch"，三个收集器全不命中。
   #
   # `$0 !~ /awk/` 不是多余的：awk 自己的命令行里就含有上面那些模式字符串，
   # 于是它会**匹配到自己**，凭空多出一个已经不存在的 pid。表现是脚本报
@@ -89,7 +101,7 @@ collect_pids() {
   while read -r pid; do
     [ -n "$pid" ] && out+=("$pid")
   done < <(ps -eo pid,args --no-headers | awk \
-    '$0 ~ /ros2 launch/ && $0 ~ /astribot_s1_/ && $0 !~ /awk/ {print $1}')
+    '$0 ~ /ros2 (launch|run)/ && $0 ~ /astribot_s1_/ && $0 !~ /awk/ {print $1}')
   # 本仓 install 目录下的 python 节点。
   while read -r pid; do
     [ -n "$pid" ] && out+=("$pid")
@@ -122,9 +134,26 @@ fi
 
 # ---- 共享内存与信号量。前缀必须两种都清：
 #      只清 fastrtps_ 会漏掉 sem.fastrtps_*（实测漏下 73 个）。
+#
+# 这里清一遍只是为了让**下面验证段自己的 DDS** 从干净状态起，
+# 计数不在这里打印 —— 见文件末尾 shm_sweep 的说明。
 rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null
-SHM_LEFT=$(ls /dev/shm 2>/dev/null | grep -c "fastrtps" || true)
-echo "残留 fastrtps 共享内存对象: ${SHM_LEFT:-0}"
+
+# ---- 🔴 shm 必须在**验证段之后**再清一遍，计数也只能在那时打印。
+#
+# 实测（2026-09-03）：上一版在这个位置清完就 `grep -c fastrtps` 打印 0，
+# 但紧接着的验证段自己要跑 `ros2 daemon stop` 和 `ros2 topic info`，
+# 那两个 CLI 进程**当场又把 shm 建了回来**（时间戳与验证段同一秒，
+# 实测残留 5 个：fastrtps_<hash>、_el、_port<n>、_port<n>_el、sem.*_mutex）。
+# 于是屏幕上写着 0，而调用者继承到的是脏的 —— 又一例"打印值不是当前值"。
+#
+# 注意这不是模式漏了 sem.* 前缀（上面两个前缀都在），是**顺序**错了。
+shm_sweep() {
+  rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null
+  local n
+  n=$(ls /dev/shm 2>/dev/null | grep -c "fastrtps" || true)
+  echo "残留 fastrtps 共享内存对象: ${n:-0}  (验证段之后重新清理并计数)"
+}
 
 # ---- daemon 陈旧时 `ros2 topic list` 会给出完全过时的结果
 #      （实测话题数 2 vs 80），必须重启。
@@ -164,10 +193,12 @@ if [ -n "$residual" ]; then
   echo "$residual" | sed 's/^/     /'
   echo "   ⇒ 请把上面的可执行名补进本脚本的 NAMES 数组。"
   echo "   ⇒ 在这个状态下跑测量，数据不可信（实测：残留 rviz2 让一整轮 0 次到位）"
+  shm_sweep
   echo "结果: **未清干净**"
   exit 1
 fi
 echo "宽口径残留自检 = 0 个进程"
+shm_sweep
 
 if [ "${#left[@]}" -eq 0 ] && [ "$CLOCK_PUBS" = "0" ]; then
   echo "结果: 干净"
