@@ -206,7 +206,7 @@ open_area = min(freeWidth(沿路径切线), freeWidth(垂直于路径切线))
 | **B1 命令即低速** | `/cmd_vel_nav_body_raw` 线速度持续 < `stall_cmd_threshold`(0.05)，而目标还很远 | ✅ 实测 mean 0.019 m/s | 控制器自己选择了低速。**不是**下游限速：✅ 实测 `/speed_limit` 20 s 内零消息，raw 在源头就是低值 |
 | **B2 命令正常但车不动** | cmd_vel 正常，odom 速度 ≈ 0，轮实际转速 ≈ 0 | ⬜ 未在开阔区观测到 | 力矩不足 / 物理卡住 |
 | **B3 轮转车不动** | 轮转速非零、odom ≈ 0 | ⬜ 未确认 | 打滑 |
-| **B4 窄通道零梯度** | `open_area < 1.62 m` | ✅ 已记录（占可行域 35%）| `consider_footprint: true` 下代价饱和成 253、梯度为零 |
+| **B4 窄通道零梯度** | `open_area < 1.24 m`（八边形时代是 1.62 m）| ✅ 现象已记录；「占可行域 35%」是八边形时代的实测值，**换正方形后未重测**，不要引用 | `consider_footprint: true` 下代价饱和成 253、梯度为零 |
 
 ⚠️ **抓取器判据必须同时看平移和转角。** ✅ 实测教训：第一版只看位移，
 把每一次 `ALIGN_START` 的正常原地旋转都判成卡死（124 次触发里绝大多数是假阳性），
@@ -220,7 +220,7 @@ B1 的性质是"控制器能动但选择不动"，所以解法方向是**换一�
 **方案 B1-a：fallback 控制器（推荐）**
 
 `controller_server` 已经支持多控制器实例（本项目已有 `FollowPath` /
-`FollowPathThreePhase` / `FollowPathExplore` 三个）。再加一个基于
+`FollowPathExplore` / `FollowPathMppiRaw` 三个）。再加一个基于
 RPP（`nav2_regulated_pure_pursuit_controller`）的实例作为兜底：
 
 ```

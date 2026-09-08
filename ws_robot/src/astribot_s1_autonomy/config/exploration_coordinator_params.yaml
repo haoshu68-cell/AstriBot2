@@ -12,7 +12,8 @@
 #   /global_costmap/costmap_raw —— 只用于下发前校验（与 planner_server 同一张图）
 #
 # 坐标系前提：本机器人没有 base_link，本体系是 astribot_torso_base。
-# 尺度前提：SLAM 分辨率 0.05 m/格；Nav2 footprint 外接半径 0.42 m。
+# 尺度前提：SLAM 分辨率 0.05 m/格；Nav2 footprint 是边长 0.62m 的正方形
+# （侧向半宽 0.310 / 内切 0.310 / 外接 0.438 m）。
 #   凡是「距离」类阈值都和这两个数字耦合，换机器人/换分辨率必须一起调。
 # =============================================================================
 /**:
@@ -20,62 +21,14 @@
 
     # ---------------- 话题、动作与坐标系 ----------------
     map_topic: "/map"                        # slam_toolbox 输出，transient_local QoS；仅用于前沿搜索
+    # map_topic 订阅的 durability。仿真 slam_toolbox 的 /map 是 transient_local；
+    # 实机的 /map_scan_filtered_prob 实测是 RELIABLE + VOLATILE，必须改成 false，
+    # 否则 QoS 不兼容、一帧都收不到（表现为"尚未收到占据栅格地图"无限刷）。
+    map_transient_local: true
     costmap_topic: "/global_costmap/costmap_raw"   # nav2_msgs/Costmap，仅用于下发前校验
     odom_topic: "/odom"                      # 用于「稳定驻留」的速度判定
     state_topic: "/exploration/state"        # std_msgs/String，状态机对外唯一状态出口
 
-    # ---- 足迹锁存看门狗 ----
-    #
-    # 要防的是什么：控制器(ThreePhaseController)可以在窄通道里临时把代价地图的
-    # 足迹从八边形缩成正方形，以便通过 0.640~0.798m 这一档通道。
-    # **设了小足迹的进程一旦死掉或卡住，代价地图会一直按小足迹算**，
-    # 机器人从此被系统性低估 0.079m 内切半径，而日志上一切正常 —— 这是本功能
-    # 最危险的失效模式（后果是规划器乐观 ⇒ 反复卡住，不是碰撞）。
-    #
-    # 判活机制是"续租"：控制器按 narrow_square_lease_period(0.5s) 把小足迹重发到
-    # 写话题；本看门狗订阅同一个话题，看到非默认足迹请求就刷新租约时刻。
-    # 回读话题告诉它代价地图**当前**到底挂着什么足迹。
-    # 「回读到非默认足迹」且「租约过期」⇒ 强制把默认足迹发回去并打 ERROR。
-    #
-    # ⚠️ lease_timeout_sec 必须 > 控制器的 narrow_square_lease_period，否则误判。
-    #    当前 2.0 > 0.5，有 4 倍余量。
-    # ⚠️ default_footprint 必须与控制器的 narrow_footprint_default **逐字一致**，
-    #    否则看门狗"复原"成的是另一个形状 —— 那比不复原更糟。
-    #
-    # 默认 false：控制器侧 narrow_square_enabled 也默认 false，两者要一起开。
-    footprint_watchdog:
-      enabled: false
-      write_topic: "/global_costmap/footprint"
-      readback_topic: "/global_costmap/published_footprint"
-      default_footprint: "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], [-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]"
-      # ---- 动手需三条同时成立（缺任何一条都不许发默认足迹）----
-      #
-      # 🔴 第一轮 A/B 实测的教训：旧判据只有"回读到非默认 + 租约过期"两条，
-      #    在 2.1s 时误判"设小足迹的进程死了"，把足迹从通道中途抢回默认值。
-      #    两个病因：
-      #      ① 续租写在控制器的 evaluateSquare 里，而窄通道接管层会 early-return
-      #         把它跳过 —— 恰好在最需要小足迹时停止续租。（已在控制器侧修）
-      #      ② 回读周期 1.0s(= global costmap 的 publish_frequency)、本看门狗
-      #         tick 0.5s、控制器侧切换一度快到 ~1.7Hz。租约超时 2.0s 比
-      #         "凑齐 3 次连续回读所需的 3.0s"还短，等于读数没凑齐就动手。
-      #
-      # ①回读龄期 <= readback_stale_sec：读数必须是**活的**。
-      #   回读停更时最后那个非默认值会被当成当前值一直用 —— 这是本项目
-      #   一天内犯过三次的同类错（陈旧 TF / 冻结拍率 / 脉冲平均成速率）。
-      #   陈旧时**不动手**并 RCLCPP_ERROR 计数上报，绝不静默。
-      # ②连续 consecutive_reads 次**回读**都是非默认。
-      #   在回读回调里数，不在 tick 里数 —— tick 2Hz / 回读 1Hz，
-      #   在 tick 里数会把同一个采样重复计两次（采样别名）。
-      # ③租约龄期 > lease_timeout_sec。
-      #
-      # 算术守卫（启动时校验，不满足直接拒绝启动）：
-      #   lease_timeout_sec >= readback_period_sec * (consecutive_reads + 1) = 4.0
-      #   readback_stale_sec >= 2 * readback_period_sec = 2.0
-      #   lease_timeout_sec(4.0) >> 控制器 narrow_square_lease_period(0.5)，8 倍余量
-      lease_timeout_sec: 4.0
-      readback_period_sec: 1.0    # 必须与 global costmap 的 publish_frequency 一致
-      readback_stale_sec: 3.0     # 回读比这还老 ⇒ 读数不是当前值，不动手
-      consecutive_reads: 3        # 单次命中可能只是正常切换的中间态
     complete_topic: "/exploration/complete"  # std_msgs/Bool，transient_local
     current_goal_topic: "/exploration/current_goal"   # 已下发目标，仅供 RViz 观察
     nav_action_name: "navigate_to_pose"      # Nav2 导航动作
@@ -116,8 +69,6 @@
     # 探索目标的朝向只是「让雷达看向未知区」的建议值，不是任务约束。
     # 卡朝向会让机器人在原地反复微调、浪费大量时间，所以默认不卡。
     #
-    # !!! 必须与三段式跟踪的 align_goal_enabled 保持一致 !!!
-    # 探索场景刻意跳过终点原地旋转(FollowPathExplore: align_goal_enabled=false)，
     # 因此这里**必须保持 false**：既然不对齐终点姿态，再去卡朝向偏差就是
     # 让每个目标都必然判失败。搬运等需要卡姿态的场景用另一个控制器实例，
     # 并在该场景自己的配置里把 check_yaw 打开。
@@ -132,7 +83,7 @@
     #              而不是只发目标点让 bt_navigator 再规划一条（那条不曾被校验过）。
     nav_dispatch_mode: "follow_path"
     follow_action_name: "follow_path"
-    follow_controller_id: "FollowPathExplore"   # 三段式、且终点不再原地旋转
+    follow_controller_id: "FollowPath"  
     # 留空 = 用 controller_server 的唯一那个 goal checker。
     # !!! 别乱填 !!! 该 BT 端口无默认值；goal_checker_plugins 列了多项而这里留空，
     # 会让每一次 FollowPath 直接 abort（实测踩过：机器人从头到尾不跟踪任何路径）。
@@ -169,7 +120,7 @@
     # → 本节点在地图内容不可用时不下发目标 → 机器人不动 → 地图不长 → 永远不动。
     # 之前每次冷启动都要人工发 cmd_vel 推一把（实测地图 0 → 26 m²）。
     #
-    # 只做原地旋转，刻意不提供平移：底盘足迹是外接 0.42 / 内切 0.388 的正八边形，
+    # 只做原地旋转，刻意不提供平移：底盘足迹是外接 0.438 / 内切 0.310 的正方形，
     # 原地旋转最多扫过 3.2cm 环带，几何上几乎不进入新区域；平移是开环积分推进，
     # 风险面完全不同。0.2rad 就够触发 SLAM 插入扫描，破环不需要平移。
     # ================= 膨胀带脱困（ESCAPE）=================
@@ -182,7 +133,7 @@
     #   planner_server: "Starting point in lethal space!" **25652 次**
     #   14 次到位全部集中在开头 2.5 分钟，之后 222 分钟只再到位 1 次
     # 成因链：SmacPlanner2D 判起点用**单个中心格** cost >= INSCRIBED(253)，
-    # 而 253 是**膨胀层**写的（本机 inflation 从墙面向内吃掉内切半径 0.388m）；
+    # 而 253 是**膨胀层**写的（本机 inflation 从墙面向内吃掉内切半径 0.310m）；
     # 机器人中心一进这条带，去**任何**目标都被拒。而 nav_dispatch_mode=follow_path
     # 绕过了 BT，clear_costmap/backup/spin 全部拿不到；本节点的「自动恢复」只是
     # 状态复位，物理上什么都没做 —— 于是重新校验、重新失败，永久死锁。
@@ -202,18 +153,20 @@
     escape_heading_tol_rad: 1.5708           # ±90°
     # 低速是硬要求：脱困是故障恢复态，不是正常导航。代码里 >0.30 直接拒绝启动。
     # 实测本底盘 0.02m/s 就能动(无静摩擦地板)；0.08 时 4s 滑行 <0.03m，
-    # 远小于 253 带宽 0.388m，所以不会「冲过头又进另一侧的带」。
+    # 远小于 253 带宽 0.310m，所以不会「冲过头又进另一侧的带」。
     escape_linear_vel: 0.08
     escape_angular_vel: 0.20                 # 实测 wz=0.05 就能动，跟踪比 0.73~0.92
     escape_arrive_tol_m: 0.05                # 一个栅格
     escape_align_tol_rad: 0.35               # 容差内 wz 归零，避免在带里原地抖动
-    # 253 带宽=内切半径 0.388m，0.08m/s 走完约 5s，留 4 倍余量。
+    # 253 带宽=内切半径 0.310m，0.08m/s 走完约 3.9s，留 5 倍余量。
     escape_timeout_sec: 20.0
-    escape_max_attempts: 3                   # 达上限进 PAUSED 等人工，禁止死循环
+    escape_max_attempts: 3                   # 数**连续**失败(成功出带/人工 resume 清零)；达上限进 PAUSED
     escape_clear_ticks: 5                    # 连续几拍非致命才算出带，防边界抖动
     # 来路轨迹：脱困**优先沿来路退**，因为机器人是自己开进来的 ⇒
     # 来路可通行是**可证明的**，而代价梯度只是启发（且实测足迹代价在窄于
-    # 1.62m 的通道里恒为 253、零梯度，梯度在那里根本不存在）。
+    # 1.24m 的通道里恒为 253、零梯度，梯度在那里根本不存在）。
+    # 1.24 = 2*(侧向半宽 0.310 + 内切 0.310)；同一公式对八边形给出 1.616，
+    # 与当年的实测 1.62 吻合，所以这个换算可信而不是重新猜的。
     breadcrumb_window_sec: 60.0
     breadcrumb_sample_hz: 2.0
     # ======================================================
@@ -242,8 +195,10 @@
     # 激光超时就拒绝运动。**无数据不得视为「周围没有障碍」** ——
     # 本项目已在探针脚本上踩过一次（RELIABLE 收不到 BEST_EFFORT 的 scan，盲走 3m）。
     bootstrap_scan_timeout_sec: 1.0
-    # 最近障碍已经进到自己的外接半径以内就不要再转了（八边形顶点可能已接触障碍）。
-    bootstrap_min_clearance_m: 0.42
+    # 最近障碍已经进到自己的外接半径以内就不要再转了（正方形的角可能已接触障碍）。
+    # 0.42 -> 0.44：这个值的定义就是足迹外接半径，正方形外接 0.438 比八边形的
+    # 0.420 大，留 0.42 会让「角已经压到障碍」的位形通过自举安全门。
+    bootstrap_min_clearance_m: 0.44
     # 一次自举至少要**实测**转出这么多才算真的动了。必须 >= slam_toolbox 的
     # minimum_travel_heading(0.2)，否则转了也不插入扫描。达不到会显式报错并指出
     # 最可能的原因（下游限速），不静默算成功。
@@ -288,7 +243,9 @@
       # 而 253 = INSCRIBED_INFLATED_OBSTACLE 的语义本身就是
       # 「机器人中心落在此处 → 足迹必然碰撞」，膨胀余量**已经算进去了**。
       # 再要求 0.42m 邻域无占据格，等于把足迹半径重复计了一次：
-      #   nav2 内切半径 0.388(inflation_radius=0.65) + 0.42 ≈ 0.81m，
+      #   nav2 内切半径 0.388(inflation_radius=0.65) + 0.42 ≈ 0.81m，   # 八边形时代的数
+      #   （下面这一整段是 2026-08 那轮标定的历史记录，数字按当时的八边形足迹，
+      #    刻意不改成正方形 —— 改了就不是记录了。结论 0.25 与足迹形状无关。）
       #   目标点得离真实障碍 0.8m 以上才合法，而实际只需要 0.42m。
       #
       # 实测证据（方案A 落地后同一轮运行）：18 次成功下发，但目标点复检否决 691 次，
@@ -392,7 +349,9 @@
     search:
       occupied_threshold: 65
       free_threshold: 25
-      # 膨胀半径 0.45 略大于 footprint 外接半径 0.42：
+      # 膨胀半径 0.45 略大于 footprint 外接半径 0.438：
+      # ⚠️ 余量从八边形时代的 30mm 缩到 12mm（0.450-0.438），仍然成立但已经
+      #    小于一个栅格(0.05m)。要再改足迹就得同时抬这个值。
       # 采出来的点必须是机器人真能站进去的，而不是贴墙的理论自由格。
       obstacle_inflation_radius: 0.45
       min_obstacle_cluster_cells: 3
@@ -405,7 +364,7 @@
       min_samples_per_cluster: 1
       max_samples_per_cluster: 8
       # 0.45 → 0.05：这里是**在膨胀掩码之上**再要求的净空。
-      # obstacle_inflation_radius 已经把机器人外接半径算进去了（0.45 >= 0.42），
+      # obstacle_inflation_radius 已经把机器人外接半径算进去了（0.45 >= 0.438），
       # 凡是不在膨胀掩码里的格子本身就已经离真实障碍 >=0.45m。
       # 再叠一个 0.45 等于要求离障碍 0.90m —— 仓库过道里几乎没有这种点，
       # 实测唯一的候选就是被这一条以「净空不足」否掉的。这里只留一格安全余量。

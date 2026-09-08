@@ -401,6 +401,21 @@ bool findNearestPlannableCell(
     return false;
   }
 
+  // 逐条否决计数。**只做观测，不改任何判据。**
+  //
+  // 为什么必须有：2026-09-02 的在线验证里这个函数连续 4 次返回
+  // 「半径 1.5m 内没有任何可用格子」，而**没有任何办法知道是哪一条否决的** ——
+  // 5 个条件全部沉默地 continue。当时只能靠读代码推断，推断的第一版还是错的
+  // （怀疑 require_target_map_free，被日志里「物理不可站=0」直接否证）。
+  // 来路搜索那边早就有同样的分类计数，这里漏了。
+  std::size_t n_scanned = 0U;      // 扫过的格子总数
+  std::size_t rej_range = 0U;      // 超出 search_radius_m 或距离为 0
+  std::size_t rej_heading = 0U;    // 方向约束（仅趟 1）
+  std::size_t rej_lethal = 0U;     // costmap 致命/未知 ⇒ 规划器不接受
+  std::size_t rej_map = 0U;        // /map 上未知或物理占据
+  std::size_t rej_map_free = 0U;   // require_target_map_free：/map 不是明确空闲
+  std::size_t rej_blocked = 0U;    // 直线段物理被挡
+
   // 两趟：先守方向约束，无解才放开。顺序不能反 —— 反了就等于没有方向约束。
   for (int pass = 0; pass < 2; ++pass) {
     const bool constrain = (pass == 0);
@@ -422,15 +437,18 @@ bool findNearestPlannableCell(
           const auto uy = static_cast<unsigned int>(ny);
           const double wx = costmap.worldX(ux);
           const double wy = costmap.worldY(uy);
+          ++n_scanned;
 
           const double dist = std::hypot(wx - robot.x, wy - robot.y);
           if (dist <= 1e-6 || dist > cfg.search_radius_m) {
+            ++rej_range;
             continue;
           }
 
           if (constrain) {
             const double bearing = std::atan2(wy - robot.y, wx - robot.x);
             if (std::fabs(shortestAngularDiff(ref_heading, bearing)) > cfg.heading_tol_rad) {
+              ++rej_heading;
               continue;
             }
           }
@@ -438,6 +456,7 @@ bool findNearestPlannableCell(
           // 目标必须是规划器会接受的起点：三态非致命 ⇒ raw < 253。
           const int cost_tri = static_cast<int>(costmap.data[costmap.index(ux, uy)]);
           if (isPlannerLethal(cost_tri, cfg.thresholds) || isUnknownCell(cost_tri)) {
+            ++rej_lethal;
             continue;
           }
 
@@ -446,15 +465,18 @@ bool findNearestPlannableCell(
           if (!readTri(map, wx, wy, map_tri) || isUnknownCell(map_tri) ||
             isPhysicallyOccupied(map_tri, cfg.thresholds))
           {
+            ++rej_map;
             continue;
           }
           if (cfg.require_target_map_free && map_tri > cfg.thresholds.free_threshold) {
+            ++rej_map_free;
             continue;
           }
 
           // 直线必须物理可通行。
           PlanarPoint cand{wx, wy};
           if (!segmentPhysicallyClear(robot, cand, map, cfg)) {
+            ++rej_blocked;
             continue;
           }
 
@@ -473,7 +495,10 @@ bool findNearestPlannableCell(
 
   std::ostringstream oss;
   oss << "半径 " << cfg.search_radius_m << "m 内没有任何「规划器可接受且物理可直达」的格子，"
-      << "脱困无解";
+      << "脱困无解（扫 " << n_scanned << " 格：超距 " << rej_range
+      << "、方向约束 " << rej_heading << "、膨胀带/未知 " << rej_lethal
+      << "、物理占据/未知 " << rej_map << "、非明确空闲 " << rej_map_free
+      << "、直线被挡 " << rej_blocked << "）";
   why = oss.str();
   return false;
 }
@@ -495,7 +520,8 @@ EscapeCommand escapeVelocity(
   }
 
   // 世界系方向 → 车体系分量。全向底盘直接侧移，不必先转身：
-  // 转身反而可能让八边形足迹的顶点扫进 254（顶点 0.42 > 内切 0.388）。
+  // 转身反而可能让正方形足迹的角扫进 254（角 0.438 > 内切 0.310）。
+  // 换正方形后这个风险放大了 4 倍：可扫入的环带从 3.2cm 变成 12.8cm。
   const double bearing_world = std::atan2(dy, dx);
   const double bearing_body = shortestAngularDiff(robot_yaw, bearing_world);
   const double speed = std::min(lim.max_linear, std::max(0.0, lim.max_linear));

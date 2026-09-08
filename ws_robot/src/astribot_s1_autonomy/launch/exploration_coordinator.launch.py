@@ -34,6 +34,9 @@ from launch_ros.substitutions import FindPackageShare
 # 需求要求所有阈值外置可配置，命令行覆盖是补充手段，不是参数的正式来源。
 _OVERRIDABLE = {
     'map_topic': str,
+    # 实机必须传 false：/map_scan_filtered_prob 是 VOLATILE，
+    # TRANSIENT_LOCAL 订阅它一帧都收不到（只有一条 QoS WARN）。
+    'map_transient_local': bool,
     'odom_topic': str,
     'robot_base_frame': str,
     'arrival_xy_tolerance': float,
@@ -123,6 +126,11 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'map_topic', default_value='',
             description='覆盖占据栅格话题；留空用 yaml 值。'),
+        DeclareLaunchArgument(
+            'map_transient_local', default_value='',
+            description='覆盖 map_topic 的 durability；留空用 yaml 值。'
+                        '仿真 slam_toolbox 的 /map 是 transient_local(true)；'
+                        '实机 /map_scan_filtered_prob 是 VOLATILE，必须 false。'),
         DeclareLaunchArgument(
             'odom_topic', default_value='',
             description='覆盖里程计话题（用于驻留速度判定）；留空用 yaml 值。'),

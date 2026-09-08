@@ -12,7 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include "nav2_costmap_2d/footprint.hpp"
 
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
 #include "tf2/exceptions.h"
@@ -129,8 +128,18 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
 
   // slam_toolbox 的 /map 是 transient_local + reliable，订阅端必须匹配，
   // 否则会出现「话题存在但一直收不到地图」。
+  //
+  // !!! 实机必须设 map_transient_local:=false !!!
+  // 厂商 Voxel-SLAM 侧不发 /map；实机用的是 /map_scan_filtered_prob，
+  // 它的 QoS 实测是 RELIABLE + **VOLATILE**。而 TRANSIENT_LOCAL 订阅 +
+  // VOLATILE 发布是**不兼容**的：一帧都收不到，日志里只有一条 QoS WARN，
+  // 表现是"等待地图就绪: 尚未收到占据栅格地图"无限刷 + 反复原地自举旋转。
+  // nav2 的 static_layer 有同名开关(map_subscribe_transient_local)，两处口径要一致。
   rclcpp::QoS map_qos(1);
-  map_qos.transient_local().reliable();
+  map_qos.reliable();
+  if (map_transient_local_) {
+    map_qos.transient_local();
+  }
   rclcpp::SubscriptionOptions sub_opts;
   sub_opts.callback_group = io_cb_group_;
   map_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
@@ -214,7 +223,6 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
     std::chrono::duration_cast<std::chrono::nanoseconds>(period),
     [this]() {controlTick();}, timer_cb_group_);
 
-  setupFootprintWatchdog();
 
   publishComplete(false);
 
@@ -309,47 +317,17 @@ void ExplorationCoordinatorNode::declareParameters()
     };
 
   declare_parameter<std::string>("map_topic", "/map", describe("输入占据栅格话题(仅用于前沿搜索)"));
+  declare_parameter<bool>(
+    "map_transient_local", true,
+    describe("map_topic 订阅是否用 TRANSIENT_LOCAL。仿真的 slam_toolbox /map 是 "
+             "transient_local 必须为 true；实机 /map_scan_filtered_prob 是 VOLATILE，"
+             "必须为 false，否则 QoS 不兼容、一帧都收不到"));
   declare_parameter<std::string>(
     "costmap_topic", "/global_costmap/costmap_raw",
     describe("全局代价地图话题(nav2_msgs/Costmap，仅用于下发前校验)"));
   declare_parameter<std::string>("odom_topic", "/odom", describe("里程计话题，用于速度收敛判定"));
   declare_parameter<std::string>(
     "state_topic", "/exploration/state", describe("状态机状态话题(String)"));
-  // ---- 足迹锁存看门狗 ----
-  // 控制器可以在窄通道里临时缩小代价地图的足迹；设它的进程一旦死掉/卡住，
-  // 代价地图会一直按小足迹算，机器人从此被系统性低估而日志毫无异常。
-  // 本看门狗按"续租"判活：写话题上持续有非默认足迹请求 = 设它的人还活着。
-  declare_parameter<bool>(
-    "footprint_watchdog.enabled", false,
-    describe("是否启用足迹锁存看门狗。控制器开了 narrow_square_enabled 时必须一起开"));
-  declare_parameter<std::string>(
-    "footprint_watchdog.write_topic", "/global_costmap/footprint",
-    describe("代价地图的足迹**写入**话题(Polygon)。既订阅它判续租，也用它复原"));
-  declare_parameter<std::string>(
-    "footprint_watchdog.readback_topic", "/global_costmap/published_footprint",
-    describe("代价地图的足迹**回读**话题(PolygonStamped)，判当前到底是什么足迹"));
-  declare_parameter<std::string>(
-    "footprint_watchdog.default_footprint",
-    "[[0.42, 0.0], [0.297, 0.297], [0.0, 0.42], [-0.297, 0.297], "
-    "[-0.42, 0.0], [-0.297, -0.297], [0.0, -0.42], [0.297, -0.297]]",
-    describe("默认(大)足迹。必须与控制器的 narrow_footprint_default 一致"));
-  declare_parameter<double>(
-    "footprint_watchdog.lease_timeout_sec", 4.0,
-    describe("续租超时(s)。回读到非默认足迹且这么久没有新请求 ⇒ 强制复原。"
-      "必须大于控制器的 narrow_square_lease_period，也必须 >= "
-      "readback_period_sec*(consecutive_reads+1)，否则会在读数还凑不齐时就动手"));
-  declare_parameter<double>(
-    "footprint_watchdog.readback_period_sec", 1.0,
-    describe("回读话题的周期(s)，必须与 global costmap 的 publish_frequency 一致。"
-      "只用于启动守卫的算术，不参与运行期判定"));
-  declare_parameter<double>(
-    "footprint_watchdog.readback_stale_sec", 3.0,
-    describe("回读龄期上限(s)。最新回读比这还老 ⇒ 读数不是当前值，看门狗**不动手**"
-      "并计数上报（不能拿冻结的读数当当前状态）"));
-  declare_parameter<int>(
-    "footprint_watchdog.consecutive_reads", 3,
-    describe("需要连续多少次**回读**都是非默认足迹才允许动手。"
-      "在回读回调里数，不在 tick 里数 —— 后者会把同一个 1Hz 采样重复计两次"));
   declare_parameter<std::string>(
     "complete_topic", "/exploration/complete", describe("探索完成标志话题(Bool)"));
   declare_parameter<std::string>(
@@ -395,7 +373,7 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<double>(
     "escape_linear_vel", 0.08,
     describe("脱困线速度上限(m/s)。实测本底盘 0.02m/s 就能动(无静摩擦地板)，"
-             "0.08 时 4s 滑行 <0.03m，远小于 253 带宽 0.388m"));
+             "0.08 时 4s 滑行 <0.03m，远小于 253 带宽 0.310m"));
   declare_parameter<double>(
     "escape_angular_vel", 0.20,
     describe("脱困角速度上限(rad/s)。实测 wz=0.05 就能动，跟踪比 0.73~0.92"));
@@ -407,10 +385,10 @@ void ExplorationCoordinatorNode::declareParameters()
     describe("航向对齐容差(rad)。误差在此内 wz 归零，避免在带里原地抖动"));
   declare_parameter<double>(
     "escape_timeout_sec", 20.0,
-    describe("单次脱困超时(s)。253 带宽=内切半径 0.388m，0.08m/s 走完约 5s，留 4 倍余量"));
+    describe("单次脱困超时(s)。253 带宽=内切半径 0.310m，0.08m/s 走完约 3.9s，留 5 倍余量"));
   declare_parameter<int>(
     "escape_max_attempts", 3,
-    describe("脱困次数上限。达上限后进 PAUSED 等人工，禁止死循环脱困"));
+    describe("**连续**脱困失败次数上限(成功出带或人工 resume 会清零)。达上限后进 PAUSED 等人工，禁止死循环脱困"));
   declare_parameter<int>(
     "escape_clear_ticks", 5,
     describe("连续多少拍读到非致命才算真出带。防栅格边界抖动导致状态来回跳"));
@@ -532,7 +510,7 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<int>("validator.free_threshold", 25, describe("空闲判定阈值(0~100)"));
   declare_parameter<double>(
     "validator.goal_clearance_radius", 0.42,
-    describe("目标点【占据】净空半径(m)：碰撞约束，应>=机器人外接半径"));
+    describe("目标点【占据】净空半径(m)：碰撞约束。注意不要按外接半径取 —— 2026-08 标定证明那样会把 99% 的贴墙前沿误否决，正确取值是控制器的 xy_goal_tolerance(0.25)"));
   declare_parameter<double>(
     "validator.goal_unknown_clearance_radius", 0.0,
     describe("目标点【未知】净空半径(m)：必须 < 地图分辨率(实际就是 0)，"
@@ -592,7 +570,7 @@ void ExplorationCoordinatorNode::declareParameters()
     "bootstrap_mode", "rotate",
     describe(
       "冷启动自举方式。rotate(默认)=只原地旋转；disabled=关闭自举(需人工推一把)。"
-      "刻意不提供平移：底盘足迹是外接半径 0.42 / 内切 0.388 的正八边形，"
+      "刻意不提供平移：底盘足迹是外接半径 0.438 / 内切 0.310 的正方形，"
       "原地旋转最多扫过 3.2cm 环带，几何上几乎不进入新区域；平移是开环积分推进，"
       "风险面完全不同"));
   declare_parameter<std::string>(
@@ -634,11 +612,11 @@ void ExplorationCoordinatorNode::declareParameters()
     "bootstrap_scan_timeout_sec", 1.0,
     describe("激光多久未更新就拒绝自举(s)。无数据必须拒绝运动，不得当成「周围没有障碍」"));
   declare_parameter<double>(
-    "bootstrap_min_clearance_m", 0.42,
+    "bootstrap_min_clearance_m", 0.44,
     describe(
       "自举前要求的最小周边净空(m)，取机器人外接半径。"
       "语义：如果最近障碍已经进到自己的足迹半径以内，就不要再转了 —— "
-      "此时八边形的顶点可能已经接触障碍"));
+      "此时正方形的角可能已经接触障碍"));
   declare_parameter<double>(
     "bootstrap_min_yaw_delta", 0.20,
     describe(
@@ -661,22 +639,10 @@ void ExplorationCoordinatorNode::declareParameters()
 bool ExplorationCoordinatorNode::loadParameters(std::string & error)
 {
   map_topic_ = get_parameter("map_topic").as_string();
+  map_transient_local_ = get_parameter("map_transient_local").as_bool();
   costmap_topic_ = get_parameter("costmap_topic").as_string();
   odom_topic_ = get_parameter("odom_topic").as_string();
   state_topic_ = get_parameter("state_topic").as_string();
-  fp_watchdog_enabled_ = get_parameter("footprint_watchdog.enabled").as_bool();
-  fp_watchdog_write_topic_ = get_parameter("footprint_watchdog.write_topic").as_string();
-  fp_watchdog_readback_topic_ = get_parameter("footprint_watchdog.readback_topic").as_string();
-  fp_watchdog_default_footprint_ =
-    get_parameter("footprint_watchdog.default_footprint").as_string();
-  fp_watchdog_lease_timeout_sec_ =
-    get_parameter("footprint_watchdog.lease_timeout_sec").as_double();
-  fp_watchdog_readback_period_sec_ =
-    get_parameter("footprint_watchdog.readback_period_sec").as_double();
-  fp_watchdog_readback_stale_sec_ =
-    get_parameter("footprint_watchdog.readback_stale_sec").as_double();
-  fp_watchdog_consecutive_reads_ =
-    static_cast<int>(get_parameter("footprint_watchdog.consecutive_reads").as_int());
   complete_topic_ = get_parameter("complete_topic").as_string();
   current_goal_topic_ = get_parameter("current_goal_topic").as_string();
   nav_action_name_ = get_parameter("nav_action_name").as_string();
@@ -914,6 +880,7 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   //    原因是重复计算足迹半径：costmap 里代价 >=253 的语义已经是
   //    「机器人中心在此则足迹必然碰撞」，膨胀余量算过了；再套 0.42m 邻域，
   //    等于要求目标离真实障碍 内切半径0.388 + 0.42 ≈ 0.81m。
+  //    (这一段是八边形时代的历史记录，数字刻意不改；结论 0.25 与足迹形状无关。)
   //
   // 2) 太小：于是改成 0.0（纯碰撞判据，理论上不多不少），结果 3 个目标全部
   //    校验通过、Nav2 全部接受、然后**全部导航超时**，恢复行为触发 9 次，
@@ -924,7 +891,8 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   // 「以目标为心、控制器容差为半径的球内，足迹处处不碰撞」——既合法又收敛得进去。
   // 这里只能查出方向1(重复计算)；方向2 依赖 Nav2 侧参数，本节点读不到，
   // 靠 yaml 注释和这段记录约束。
-  if (use_costmap_for_validation_ && vp.goal_clearance_radius > 0.42) {
+  // 上界取足迹外接半径(正方形 0.438，向上取 0.44)：超过它必然是把足迹重复计了。
+  if (use_costmap_for_validation_ && vp.goal_clearance_radius > 0.44) {
     RCLCPP_WARN(
       get_logger(),
       "validator.goal_clearance_radius=%.3fm 与 validation.use_costmap=true 不配套："
@@ -1407,187 +1375,6 @@ void ExplorationCoordinatorNode::transitionTo(ExplorationState next, const std::
   state_entered_time_ = now();
 }
 
-void ExplorationCoordinatorNode::setupFootprintWatchdog()
-{
-  if (!fp_watchdog_enabled_) {
-    RCLCPP_INFO(
-      get_logger(),
-      "足迹锁存看门狗未启用(footprint_watchdog.enabled=false)。"
-      "只有在控制器开了 narrow_square_enabled 时才需要它。");
-    return;
-  }
-
-  std::vector<geometry_msgs::msg::Point> default_fp;
-  if (!nav2_costmap_2d::makeFootprintFromString(fp_watchdog_default_footprint_, default_fp) ||
-    default_fp.size() < 3U)
-  {
-    // 🔴 看门狗自己配错了绝不能静默降级 —— 那等于"以为有兜底其实没有"，
-    //    比明确没有兜底更危险。
-    throw std::runtime_error(
-      "footprint_watchdog.default_footprint 解析失败或少于 3 点: '" +
-      fp_watchdog_default_footprint_ + "' —— 看门狗无法复原，拒绝启动");
-  }
-  fp_watchdog_default_vertices_ = default_fp.size();
-  if (!(fp_watchdog_lease_timeout_sec_ > 0.0)) {
-    throw std::runtime_error("footprint_watchdog.lease_timeout_sec 必须 > 0");
-  }
-  if (fp_watchdog_consecutive_reads_ < 1) {
-    throw std::runtime_error("footprint_watchdog.consecutive_reads 必须 >= 1");
-  }
-  if (!(fp_watchdog_readback_period_sec_ > 0.0)) {
-    throw std::runtime_error("footprint_watchdog.readback_period_sec 必须 > 0");
-  }
-  // 🔴 算术守卫：凑齐 N 次连续回读**至少**需要 N 个回读周期。租约超时若比这还短，
-  //    看门狗就可能在读数根本还凑不齐时动手 —— 那正是第一轮实测里
-  //    2.0s 超时 vs 1.0s 回读周期造成误判的病因。留 1 个周期的抖动余量。
-  const double min_lease =
-    fp_watchdog_readback_period_sec_ * (fp_watchdog_consecutive_reads_ + 1);
-  if (fp_watchdog_lease_timeout_sec_ < min_lease) {
-    throw std::runtime_error(
-      "footprint_watchdog.lease_timeout_sec(" +
-      std::to_string(fp_watchdog_lease_timeout_sec_) + ") < readback_period_sec*(" +
-      std::to_string(fp_watchdog_consecutive_reads_) + "+1)=" + std::to_string(min_lease) +
-      " —— 连续读数还凑不齐就可能动手，拒绝启动");
-  }
-  // 🔴 陈旧阈值必须容得下至少 2 个回读周期，否则正常抖动就会让看门狗
-  //    永远处于"读数太老、不敢动手"的瞎眼状态，等于没有兜底。
-  if (fp_watchdog_readback_stale_sec_ < 2.0 * fp_watchdog_readback_period_sec_) {
-    throw std::runtime_error(
-      "footprint_watchdog.readback_stale_sec(" +
-      std::to_string(fp_watchdog_readback_stale_sec_) + ") < 2*readback_period_sec(" +
-      std::to_string(2.0 * fp_watchdog_readback_period_sec_) +
-      ") —— 正常抖动就会让看门狗永久瞎眼，拒绝启动");
-  }
-
-  // ⚠️ 独立回调组：与 controlTick 共用互斥组会把这两个订阅饿死
-  //    （本项目实测过订阅回调一次都执行不到、且全程无任何告警）。
-  fp_watchdog_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  rclcpp::SubscriptionOptions opts;
-  opts.callback_group = fp_watchdog_cb_group_;
-
-  // 写话题：谁在请求换足迹。请求非默认足迹即视为一次"续租"。
-  fp_write_sub_ = create_subscription<geometry_msgs::msg::Polygon>(
-    fp_watchdog_write_topic_, rclcpp::QoS(5),
-    [this](geometry_msgs::msg::Polygon::SharedPtr msg) {
-      if (msg->points.size() != fp_watchdog_default_vertices_) {
-        fp_last_request_ns_.store(now().nanoseconds());
-      }
-    }, opts);
-
-  // 回读话题：代价地图**当前**是什么足迹。只看顶点数 —— published_footprint
-  // 是变换到机器人当前位姿的，坐标随位姿变而顶点数不变。
-  // 连续计数在**这里**累加，不在 tick 里 —— tick 是 2Hz、回读是 1Hz，
-  // 在 tick 里数会把同一个采样重复计两次（采样别名）。
-  fp_readback_sub_ = create_subscription<geometry_msgs::msg::PolygonStamped>(
-    fp_watchdog_readback_topic_, rclcpp::QoS(1),
-    [this](geometry_msgs::msg::PolygonStamped::SharedPtr msg) {
-      const int n = static_cast<int>(msg->polygon.points.size());
-      fp_current_vertices_.store(n);
-      fp_last_readback_ns_.store(now().nanoseconds());
-      if (n == static_cast<int>(fp_watchdog_default_vertices_)) {
-        fp_nondefault_streak_.store(0);
-      } else {
-        fp_nondefault_streak_.fetch_add(1);
-      }
-    }, opts);
-
-  fp_revert_pub_ = create_publisher<geometry_msgs::msg::Polygon>(
-    fp_watchdog_write_topic_, rclcpp::QoS(5));
-
-  fp_watchdog_timer_ = create_wall_timer(
-    std::chrono::milliseconds(500), [this]() {footprintWatchdogTick();}, fp_watchdog_cb_group_);
-
-  RCLCPP_INFO(
-    get_logger(),
-    "足迹锁存看门狗已启用: 写话题='%s' 回读='%s' 默认足迹 %zu 点。"
-    "动手需三条同时成立: ①回读龄期<=%.1fs(活的) ②连续 %d 次回读均为非默认 "
-    "③租约龄期>%.1fs。回读周期按 %.1fs 计，连续读数下限 %.1fs < 租约超时 ✓",
-    fp_watchdog_write_topic_.c_str(), fp_watchdog_readback_topic_.c_str(),
-    fp_watchdog_default_vertices_, fp_watchdog_readback_stale_sec_,
-    fp_watchdog_consecutive_reads_, fp_watchdog_lease_timeout_sec_,
-    fp_watchdog_readback_period_sec_,
-    fp_watchdog_readback_period_sec_ * fp_watchdog_consecutive_reads_);
-}
-
-void ExplorationCoordinatorNode::footprintWatchdogTick()
-{
-  if (!fp_watchdog_enabled_ || !fp_revert_pub_) {
-    return;
-  }
-  const int cur = fp_current_vertices_.load();
-  if (cur == 0) {
-    return;                 // 还没回读到，什么都不判（缺数据不等于异常）
-  }
-  if (cur == static_cast<int>(fp_watchdog_default_vertices_)) {
-    return;                 // 已经是默认足迹，正常
-  }
-
-  // ---- 条件①：读数必须是**活的** ----
-  // 🔴 冻结的读数不能当当前值用。回读停更时 cur 会永远停在最后那个非默认值，
-  //    据此动手等于凭一张过期快照判定现状（本项目已犯过三次同类错）。
-  const int64_t last_read = fp_last_readback_ns_.load();
-  const double read_age = (last_read == 0) ?
-    std::numeric_limits<double>::infinity() :
-    static_cast<double>(now().nanoseconds() - last_read) / 1e9;
-  if (read_age > fp_watchdog_readback_stale_sec_) {
-    ++fp_watchdog_stale_skips_;
-    // 必须显式上报：否则"看门狗没动手"会被读成"一切正常"，
-    // 而真相是它已经瞎了、根本没有兜底。
-    RCLCPP_ERROR_THROTTLE(
-      get_logger(), *get_clock(), 5000,
-      "🔴 足迹看门狗**瞎眼**: 最新回读已 %.1fs 未更新(>%.1fs)，"
-      "最后读到的是 %d 顶点的非默认足迹。无法判定代价地图现状 ⇒ 本拍不动手。"
-      "请查 '%s' 是否还在发布(global costmap 是否存活) | 累计放弃判定=%d 次",
-      read_age, fp_watchdog_readback_stale_sec_, cur,
-      fp_watchdog_readback_topic_.c_str(), fp_watchdog_stale_skips_);
-    return;
-  }
-
-  // ---- 条件②：连续 N 次回读都是非默认 ----
-  // 单次读数不足以动手：控制器侧切换本身有 ~1Hz 量级的节拍，
-  // 单次命中可能只是"正在正常切换"的中间态。
-  const int streak = fp_nondefault_streak_.load();
-  if (streak < fp_watchdog_consecutive_reads_) {
-    return;
-  }
-
-  // ---- 条件③：租约过期 ----
-  const int64_t last = fp_last_request_ns_.load();
-  const double age = (last == 0) ?
-    std::numeric_limits<double>::infinity() :
-    static_cast<double>(now().nanoseconds() - last) / 1e9;
-  if (age <= fp_watchdog_lease_timeout_sec_) {
-    return;                 // 有人还在续租，说明设它的进程活着
-  }
-
-  // 🔴 三条全成立：设小足迹的那个进程要么死了、要么卡住了。强制复原。
-  std::vector<geometry_msgs::msg::Point> default_fp;
-  (void)nav2_costmap_2d::makeFootprintFromString(fp_watchdog_default_footprint_, default_fp);
-  geometry_msgs::msg::Polygon msg;
-  msg.points.reserve(default_fp.size());
-  for (const auto & pt : default_fp) {
-    geometry_msgs::msg::Point32 p32;
-    p32.x = static_cast<float>(pt.x);
-    p32.y = static_cast<float>(pt.y);
-    p32.z = 0.0F;
-    msg.points.push_back(p32);
-  }
-  fp_revert_pub_->publish(msg);
-  ++fp_watchdog_reverts_;
-  // 复原后重置连续计数：下一次动手必须重新凑齐 N 次读数，
-  // 否则同一批陈旧 streak 会让它连发好几拍。
-  fp_nondefault_streak_.store(0);
-  RCLCPP_ERROR(
-    get_logger(),
-    "🔴 足迹锁存看门狗介入(第 %d 次): 代价地图挂着 %d 顶点的非默认足迹"
-    "(连续 %d 次回读确认，最新读数龄期 %.1fs)，而续租已停了 %.1fs(>%.1fs) "
-    "⇒ 已强制发回 %zu 顶点的默认足迹。"
-    "这说明设小足迹的进程死了或卡住了 —— 请查 controller_server 是否存活。"
-    "在此之前规划器一直在用被低估的机器人尺寸做可通行判定。",
-    fp_watchdog_reverts_, cur, streak, read_age, age, fp_watchdog_lease_timeout_sec_,
-    fp_watchdog_default_vertices_);
-}
-
 void ExplorationCoordinatorNode::controlTick()
 
 {
@@ -1825,8 +1612,10 @@ bool ExplorationCoordinatorNode::bootstrapSafe(std::string & why)
     return false;
   }
   if (min_range < bootstrap_min_clearance_m_) {
-    // 原地旋转本身只扫过内切半径(0.388)到外接半径(0.42)之间约 3.2cm 的环带，
-    // 但如果最近障碍已经进到外接半径以内，八边形的顶点可能已经接触障碍，此时不该再转。
+    // 原地旋转扫过内切半径(0.310)到外接半径(0.438)之间约 12.8cm 的环带 ——
+    // ⚠️ 八边形时代这里只有 3.2cm，换正方形后是 4 倍。所以「旋转几乎不扫新面积」
+    // 不再是有力论据，真正兜住的是下面这道净空门。
+    // 如果最近障碍已经进到外接半径以内，正方形的角可能已经接触障碍，此时不该再转。
     why = "最近障碍 " + std::to_string(min_range) + "m < 要求净空 " +
       std::to_string(bootstrap_min_clearance_m_) + "m";
     return false;
@@ -1979,7 +1768,7 @@ bool ExplorationCoordinatorNode::pickEscapeTarget(PlanarPoint & target, std::str
   }
   RCLCPP_INFO(get_logger(), "来路不可用：%s", bc_why.c_str());
 
-  // 二级：最近可规划格。不用代价梯度 —— 实测足迹代价在窄于 1.62m 的通道里
+  // 二级：最近可规划格。不用代价梯度 —— 足迹代价在窄于 1.24m 的通道里
   // 恒为 253、零梯度；而「三态非致命」是规划器会接受起点的**充分**条件。
   double ref_heading = yaw;
   if (!candidates_.empty() && candidate_index_ < candidates_.size()) {
@@ -2093,6 +1882,9 @@ void ExplorationCoordinatorNode::tickEscape()
     publishEscapeCmd(escape_cmd_);
     escape_target_valid_ = false;
     start_lethal_failures_ = 0;
+    // 连续失败计数清零：escape_max_attempts_ 数的是「连续失败」而不是累计尝试。
+    // 不清会让沿途有多个窄处、但整体走得通的长路径在第 N+1 处被永久拒绝。
+    escape_count_ = 0;
     escape_last_result_ = "成功出带";
     RCLCPP_INFO(
       get_logger(),
@@ -2829,7 +2621,8 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
       if (escape_count_ >= escape_max_attempts_) {
         RCLCPP_ERROR(
           get_logger(),
-          "起点仍在膨胀带但脱困已用满 %d 次，停止重试，等待人工 ~/resume。%s",
+          "起点仍在膨胀带且脱困已连续失败 %d 次，停止重试，等待人工 ~/resume"
+          "(resume 会清零该计数)。%s",
           escape_max_attempts_, esc_why.c_str());
         escape_last_result_ = "次数用尽";
         transitionTo(ExplorationState::kPaused, "脱困次数用尽");
@@ -2851,7 +2644,7 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
         //      比脱困本身更安全（脱困要走直线，自举只转）；
         //   2. 它把未知变已知，正好解决"无解是因为周围全未知"这个根因；
         //   3. shouldBootstrap 自带全部闸门：次数上限、停滞计时、安全门
-        //      (激光新鲜 + 最近障碍 >=0.42m)、人工暂停中不动、有在途目标不动。
+        //      (激光新鲜 + 最近障碍 >=0.44m)、人工暂停中不动、有在途目标不动。
         //      所以这里不需要再加一层判断，也不会变成死循环重试。
         //
         // 注意红线仍然在上面先判：verdict == kBlockedPhysically 时早已 return，
@@ -3651,10 +3444,13 @@ void ExplorationCoordinatorNode::onResumeService(
   }
   std::lock_guard<std::mutex> lock(state_mutex_);
   manually_paused_ = false;
-  // 人工恢复视为一次「重置」：所有失败计数清零，包括自动恢复次数。
+  // 人工恢复视为一次「重置」：所有失败计数清零，包括自动恢复次数与脱困次数。
+  // 脱困次数必须在这里清：否则「等待人工 ~/resume」这句提示是假的 ——
+  // 操作员调了 resume，下一次脱困仍然立刻撞上次数上限。
   failure_budget_.resetAll();
   nav_failure_count_ = 0;
   auto_resume_count_ = 0;
+  escape_count_ = 0;
   resetCycleState();
   transitionTo(ExplorationState::kIdle, "收到人工恢复请求");
   response->success = true;

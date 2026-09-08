@@ -369,6 +369,39 @@ TEST(NearestPlannable, NoSolutionWhenFullySurrounded)
   EXPECT_NE(why.find("无解"), std::string::npos) << why;
 }
 
+// 无解时**必须说出是哪一条否决的**，否则线上只能靠读代码猜。
+//
+// 这条测试挡住的具体历史错误：2026-09-02 在线验证里本函数连续 4 次返回
+// 「半径 1.5m 内没有任何可用格子」，5 个否决条件全部沉默地 continue，
+// 完全无法定位。我据此做的第一版推断还是错的（怀疑 require_target_map_free，
+// 被另一条日志的「物理不可站=0」直接否证）。
+// 判据取「诊断串里必须同时含扫描总数与全部 6 类计数的字样」，
+// 而不是只检查非空 —— 少一类就会在那一类上永远瞎。
+TEST(NearestPlannable, FailureReasonIsItemized)
+{
+  GridMap cost = makeFreeGrid(40U, 40U, 0.05);
+  GridMap map = makeFreeGrid(40U, 40U, 0.05);
+  EscapeSearchConfig cfg;
+  cfg.search_radius_m = 0.40;
+  for (auto & v : cost.data) {
+    v = 100;                       // 整张图都是膨胀带 ⇒ 必然无解
+  }
+  PlanarPoint t;
+  bool relaxed = false;
+  std::string why;
+  ASSERT_FALSE(findNearestPlannableCell({1.00, 1.00}, 0.0, cost, map, cfg, t, relaxed, why));
+
+  for (const char * key : {"扫", "超距", "方向约束", "膨胀带/未知",
+      "物理占据/未知", "非明确空闲", "直线被挡"})
+  {
+    EXPECT_NE(why.find(key), std::string::npos)
+      << "诊断串缺少「" << key << "」这一类计数，该类否决将无法定位。实际: " << why;
+  }
+  // 本场景是「全图膨胀带」，所以膨胀带那一类必须真的记到了非零。
+  EXPECT_EQ(why.find("膨胀带/未知 0、"), std::string::npos)
+    << "全图膨胀带却记成 0，计数没接上。实际: " << why;
+}
+
 TEST(NearestPlannable, RobotOutsideCostmapIsRejected)
 {
   GridMap cost = makeFreeGrid(20U, 20U, 0.05);
