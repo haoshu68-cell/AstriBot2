@@ -505,8 +505,11 @@ IDLE → GEN_NEXT_POINT → VALIDATING → NAVIGATING → ARRIVED → GEN_NEXT_P
 两份配置 `nav2_params_mppi.yaml` / `nav2_params_rpp.yaml` 的差异只在控制器插件及其专属参数；
 代价地图几何两份相同。**MPPI 发挥全向能力更好**，是推荐值。
 
-⚠️ **MPPI 足迹代价在窄通道里饱和**：`consider_footprint: true` 时窄于 1.62 m 的通道内代价恒为 253、
-零梯度（实测占可行域 35%）。改 `false` 无收益已回退 —— **这张地图上根本测不出差别**，
+⚠️ **MPPI 足迹代价在窄通道里饱和**：`consider_footprint: true` 时窄于 **1.24 m** 的通道内代价恒为 253、
+零梯度。1.24 = 2×(侧向半宽 0.310 + 内切 0.310)；同一公式对旧的八边形足迹给出 1.616，
+与当年实测的 1.62 吻合，所以这个换算可信。
+⚠️ 「占可行域 35%」是**八边形时代**在那张地图上的实测值，换正方形后必然变小但**尚未重测** ——
+不要引用那个百分比。改 `false` 无收益已回退 —— **这张地图上根本测不出差别**，
 不要据此结论推广到别的场地。
 
 这条限制现在是链路上**唯一的实质瓶颈** ✅ 实测：一轮 35 次下发里 10 次导航失败，
@@ -519,12 +522,21 @@ IDLE → GEN_NEXT_POINT → VALIDATING → NAVIGATING → ARRIVED → GEN_NEXT_P
 
 | 配置 | 表示法 | 外接半径 |
 |---|---|---|
-| `nav2_params_rpp.yaml` | `robot_radius: 0.42`（标量）| 0.42 |
-| `nav2_params_mppi.yaml` | `footprint`（正八边形多边形）| 0.420021（顶点 `(0.297,0.297)` 的模）|
+| `nav2_params_rpp.yaml` | `footprint`（正方形，与 mppi 逐字相同）| 0.438406 |
+| `nav2_params_mppi.yaml` | `footprint`（正方形 a=0.31）| 0.438406（顶点 `(0.31,0.31)` 的模）|
 
-那 21 μm 是 yaml 里写坐标时的取整残差，不是安全裕度差异 —— 跨两份配置做数值比较时
-容差要留到 1 mm 量级，否则测试会变成噪声。内切半径 = 0.42·cos(22.5°) = **0.388**，
-所以原地旋转只扫过约 **3.2 cm** 的环带（这是 §2.3 自举只允许旋转的几何依据）。
+**2026-09-07 起两份配置的足迹逐字相同**，rpp 那边的圆形 `robot_radius: 0.42` 已删除 ——
+圆形与多边形不可能几何一致，留着就是两份不同的机器人尺寸。
+
+为什么正方形 a=0.31 不是"缩小足迹"：八边形 R=0.42 把**轴向**包络虚报了 120 mm
+（0.420 vs 实测 0.300 —— 轴上没有轮子，只有躯干圆柱）。按 0.01° 步长扫 0~90°，
+正方形对真实底盘支撑函数的最小余量是 0° 处的 **+10.0 mm**（八边形是 +25.3 mm），
+对角处 0.438 vs 真实 0.386 = **+52 mm**。所以它更诚实，但余量确实变薄了。
+
+内切半径 = **0.310**（正方形边到中心），外接 = 0.31·√2 = **0.438**，
+⚠️ 原地旋转扫过的环带因此从 3.2 cm 变成 **12.8 cm（4 倍）** ——
+§2.3「自举只允许旋转」的几何依据明显变弱了，现在真正兜住它的是
+`bootstrap_min_clearance_m`（已随之从 0.42 抬到 **0.44**，就是外接半径）。
 
 **goal checker 的三个陷阱**（每一个都实测过，现象都是"机器人完全不跟踪路径"）：
 
@@ -553,8 +565,23 @@ ALIGN_START（原地转向路径起始方向）→ FOLLOW（沿路径行驶）�
 
 | 实例 | `align_goal_enabled` | 用于 |
 |---|---|---|
-| `FollowPathThreePhase` | true | 需要卡终点姿态的场景（如搬运）|
+| `FollowPath` | true（但当前不生效，见下）| **默认实例** —— 所有 `NavigateToPose` 目标（rviz 手动目标、`ros2 action send_goal`）|
 | `FollowPathExplore` | **false** | 自主探索 —— 探索目标的朝向只是"让雷达看向未知区"的建议值 |
+| `FollowPathMppiRaw` | 不适用（纯 MPPI，无相位）| 一键回退档，用于 A/B |
+
+⚠️ **2026-09-07 改名**：名字叫 `FollowPath` 的实例过去是**纯 MPPI**，现在是三段式
+（原 `FollowPathThreePhase` 改名而来），纯 MPPI 块改名为 `FollowPathMppiRaw`。
+这么做是因为 nav2 自带 11 份 BT 的 `FollowPath` 节点全都只写
+`controller_id="FollowPath"`，改名即让所有 `NavigateToPose` 调用方走三段式，
+**一份 BT 都不用改**。
+
+⚠️ **`FollowPath` 的 ALIGN_GOAL 段当前拿不到执行机会**（既有状态，不是回归）：
+进入该段的条件是 `dist_to_goal <= xy_goal_tolerance`，而 `controller_server`
+判到位用的是**同一个** goal checker，且 `yaw_goal_tolerance: 3.15 >= pi`
+等于不约束朝向 ⇒ 判到位 ≡ `dist <= 0.18`，与进 ALIGN_GOAL 是同一个数，
+位置一进容差 nav2 当拍就结束 action。控制器启动后会 WARN 一次说明这件事。
+真要启用需要四处联动（加卡朝向的 goal checker + 两份 BT 显式传 `goal_checker_id`
++ `default_nav_to_pose_bt_xml` + 协调器 `follow_goal_checker_id`），漏一处则每个目标都 abort。
 
 ⚠️ **`inner:` 块必须是完整的 MPPI 配置。** 实测手抄 15 行、漏掉 10 个 critics 的后果：
 MPPI 的代价函数**全部**来自 critics，漏掉 `PathFollowCritic`/`PathAlignCritic` 就没有东西
