@@ -392,6 +392,32 @@ class CloudToGridNode(Node):
         self._last_project_sec = self._now()
         self._publish(self._last_grid, self._last_stamp)
 
+    def _describe_publishers(self):
+        """把上游话题**实际的**类型与 QoS 报出来，不让人靠猜。
+
+        2026-09-03 的教训：厂商把 `/map_scan_filtered` 从 PointCloud2 改成了
+        `nav_msgs/OccupancyGrid`。此时话题名完全正确、发布者也在以 10Hz 发，
+        而本节点按 PointCloud2 订阅 —— 回调一次都不执行，`收=0`。
+        原来的自查清单第 ② 条让人去查**话题名**，于是排查会卡在
+        "话题名对的呀" 上；第 ③ 条讲的是 SLAM 收不到雷达，方向也不对。
+        所以这里直接把实测的类型/QoS 打出来，一眼就能看出是不是类型变了。
+        """
+        try:
+            infos = self.get_publishers_info_by_topic(self.cloud_topic)
+        except Exception as exc:                     # noqa: BLE001
+            return f'    （查询发布者失败：{exc}）\n'
+        if not infos:
+            return ('    实测：该话题**没有任何发布者** —— '
+                    '上游没起来，或 domain/DDS profile 不一致。\n')
+        lines = []
+        for i in infos:
+            q = i.qos_profile
+            lines.append(
+                f'    实测发布者 {i.node_name}：类型 {i.topic_type}'
+                f'  reliability={str(q.reliability).split(".")[-1]}'
+                f'  durability={str(q.durability).split(".")[-1]}\n')
+        return ''.join(lines)
+
     def _tick_watchdog(self):
         """源超时就非零退出，不静默等待。
 
@@ -404,15 +430,27 @@ class CloudToGridNode(Node):
         self.get_logger().error(
             f'{self.source_timeout}s 内没有成功投影任何一帧，退出。\n'
             f'  收到点云 {self._stats["received"]} 帧。\n'
+            f'  本节点按 sensor_msgs/PointCloud2 订阅 {self.cloud_topic}。\n'
+            f'{self._describe_publishers()}'
             f'  依次查：\n'
-            f'  ① Voxel-SLAM 是否在跑（ros2 node list | grep -i voxel）\n'
-            f'  ② 话题名是否真是 {self.cloud_topic}'
+            f'  ① **话题类型是否被上游改了**（收=0 且上面实测有发布者时，'
+            f'几乎一定是这一条）。\n'
+            f'     2026-09-03 实测：厂商把 /map_scan_filtered 改成了 '
+            f'nav_msgs/OccupancyGrid，\n'
+            f'     话题名没变、10Hz 照发，而本节点的回调一次都不执行。\n'
+            f'     此时不要改本节点的订阅类型 —— 那份栅格**没有未知区(-1)**，\n'
+            f'     用它当 /map 会让前沿检测失效、自主探索立刻判"完成"。\n'
+            f'     可行替代是改吃 /map_scan（仍是 PointCloud2），\n'
+            f'     但必须同时把 z 切片补成 [0.05, 1.63]：实测 /map_scan 有大量\n'
+            f'     2.6~4.3m 的天花板点，放通会把天花板投影成地面障碍。\n'
+            f'  ② Voxel-SLAM 是否在跑（ros2 node list | grep -i voxel）\n'
+            f'  ③ 话题名是否真是 {self.cloud_topic}'
             f'（候选：/map_cmap /map_pmap /map_scan /map_true）\n'
-            f'  ③ **Voxel-SLAM 很可能收不到雷达数据**：mid360.yaml 的\n'
+            f'  ④ **Voxel-SLAM 很可能收不到雷达数据**：mid360.yaml 的\n'
             f'     lidar_type=0(LIVOX) 意味着它订阅 livox_ros_driver2/CustomMsg，\n'
             f'     而厂商驱动 xfer_format=0 发 PointCloud2 —— 类型不匹配，零数据。\n'
             f'     先确认厂商雷达驱动在跑：ros2 topic hz /livox/lidar_front\n'
-            f'  ④ ROS_DOMAIN_ID 是否一致（实机是 25，不是 42）')
+            f'  ⑤ ROS_DOMAIN_ID 是否一致（实机是 25，不是 42）')
         self.exit_code = 1
         raise SystemExit(1)
 

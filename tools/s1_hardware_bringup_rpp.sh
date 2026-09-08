@@ -1,18 +1,57 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Astribot S1 实机自主探索建图 —— 一键启停
+# Astribot S1 实机自主探索建图 —— 一键启停【RPP 跟踪版】
 #
-#   启动 + 使能（默认，底盘会动）：  s1_hardware_bringup.sh start
-#   启动但不使能（底盘不动）：       s1_hardware_bringup.sh start --no-drive
-#   停止：            s1_hardware_bringup.sh stop
-#   看状态：          s1_hardware_bringup.sh status
-#   只跑判据：        s1_hardware_bringup.sh verify
+#   启动 + 使能（默认，底盘会动）：  s1_hardware_bringup_rpp.sh start
+#   启动但不使能（底盘不动）：       s1_hardware_bringup_rpp.sh start --no-drive
+#   停止：            s1_hardware_bringup_rpp.sh stop
+#   看状态：          s1_hardware_bringup_rpp.sh status
+#   只跑判据：        s1_hardware_bringup_rpp.sh verify
 #
 #   附加开关：--no-rviz          不起 rviz2
 #             --keep-nav2-yaml   不从快照复原 nav2 参数（调参时用）
 #
-# 口径：局部规划器 MPPI，线速度上限见 AXIS_SPEED_CAP（当前 0.5 m/s，按轴），
-# use_sim_time=false，ROS_DOMAIN_ID=25。
+# 口径：局部规划器 **RPP**（Regulated Pure Pursuit），线速度上限见 AXIS_SPEED_CAP
+# （当前 0.5 m/s，按轴），use_sim_time=false，ROS_DOMAIN_ID=25。
+#
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ 与 s1_hardware_bringup.sh（MPPI 版）的关系                                │
+# └───────────────────────────────────────────────────────────────────────────┘
+# 本文件是那份脚本的**派生副本**，派生时源 md5 = 9c7c1b698a9173f9d71231097f2b9157。
+# 只改了 5 处，其余逐字一致：
+#   ① SELF_TAG（否则 stop 会把自己杀掉）
+#   ② 阶段 6 的参数快照：nav2_params_rpp_hw.yaml -> nav2_params_rpp.yaml
+#   ③ 阶段 6 的 controller_plugin:=rpp
+#   ④ 判据 5/7 的键名：MPPI 的 vx_max/vy_max -> RPP 的 desired_linear_vel
+#      （RPP **没有** v?_max 这两个键，照抄会撞上"一个都没枚举到"的守卫而必然失败）
+#   ⑤ 本段说明 + 一条派生源漂移告警
+# MPPI 那份脚本**未做任何修改**。改动共同部分时两份都要改 —— start 时会比对
+# 派生源 md5 并在漂移时告警（只告警不中止：漂移原因可能与本文件无关）。
+#
+# ⚠️ 已知分叉，未替用户决定（2026-09-08 发现）：实机 $TOOLS 下那份 MPPI 脚本
+#    比仓库/git HEAD **新 1h16m**，且差异是功能性的 ——
+#    "/home/astribot/SLAM/vxlm-slam/" 被从 VENDOR **移到了 OURS**，
+#    即那份脚本的 stop 会**杀掉厂商 SLAM（地图随之丢失）**。
+#    而它自己阶段 0 的注释仍写着"stop **不动**它们…SLAM 一杀地图就没了"，
+#    两处互相矛盾，无从判断哪一侧是当时的本意。
+#    本文件按 git HEAD 的语义走：vxlm-slam 留在 VENDOR，**stop 不杀厂商 SLAM**。
+#    理由是两条里只有这一条与文件内仍在的设计说明自洽，且另一条的失败模式是
+#    破坏性的（地图没了不可逆）。要改成杀 SLAM，把那一行搬到 OURS 即可，
+#    但请同时改掉阶段 0 那段注释，别再留一份自相矛盾的文件。
+#
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ 切到 RPP 的行为差异（如实标注，不是遗漏）                                  │
+# └───────────────────────────────────────────────────────────────────────────┘
+#   · FollowPathExplore.approach_enabled: false —— 三段式的接近段限速在 rpp 路径上
+#     是关掉的。2026-09-08 急停前那次"‖v‖ 被压到 0.05 而 wz 保持满权限、转弯半径
+#     0.177m < 足迹内切 0.310m"的机制在这条路径上不存在。
+#   · 但 RPP 自己的原地旋转**更快**：rotate_to_heading_angular_vel 1.0 rad/s，
+#     高于三段式的 align_max_vel 0.6，触发阈值 rotate_to_heading_min_angle 0.785(45°)。
+#     角速度上限全链路无人压（launch 刻意不压、桥接默认 2.0）—— 这是已知的、
+#     与刚诊断出的那个轴同向的回归风险，第一次跑必须盯着看。
+#   · 失去 CurvatureSpeedLimitCritic 与 MPPI 的 consider_footprint: true，
+#     窄通道行为与 MPPI 路径不同。
+#   · 失去 vy 不是真变化：MPPI 那份的 motion_model 本来就是 DiffDrive 且 vy_max=0。
 #
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ 使能（默认开）做了什么                                                     │
@@ -47,7 +86,10 @@ WS=$SDK/ws_robot
 TOOLS=/home/astribot/s1_tools
 LOG=/tmp/s1_logs
 SHARE=$WS/install/astribot_s1_navigation/share/astribot_s1_navigation
-SELF_TAG=s1_hardware_bringup      # 用来把自己从"要杀的进程"里排除掉，见 ours_pids
+SELF_TAG=s1_hardware_bringup_rpp  # 用来把自己从"要杀的进程"里排除掉，见 ours_pids
+                                  # ⚠ 必须跟着文件名改：沿用 MPPI 那份的 tag 时
+                                  #   本脚本的命令行虽然含该子串（能自排除），但反过来
+                                  #   MPPI 版的 stop 会误把本脚本也当成自己而漏杀。
 
 # ---------------------------------------------------------------------------
 # 环境：全部集中在这里，别处不再 export
@@ -85,8 +127,11 @@ export RCUTILS_CONSOLE_OUTPUT_FORMAT='[{date_time_with_ms}] [{severity}] [{name}
 # 判据和被判对象共用同一个变量，才不可能漂开。
 #
 # 口径未变（用户 2026-09-03 决定）：**按轴**独立上限，不是合速度模长上限。
-# 但**不要**据此写"模长上界 = sqrt(2)*cap"：路线A 把 vy_max 钉死为 0.0 且
-# motion_model 是 DiffDrive，MPPI 不输出横向速度，所以模长上界就等于 cap 本身。
+# 但**不要**据此写"模长上界 = sqrt(2)*cap"：RPP 是为非全向载体设计的控制器，
+# 结构上只输出 (vx, wz)，横向分量恒为 0，所以模长上界就等于 cap 本身。
+# （在 MPPI 那份脚本里这个结论同样成立，但理由不同 —— 那边靠 vy_max=0.0 +
+#   motion_model: DiffDrive；rpp yaml 里根本没有 vy_max 这个键，launch 侧那条
+#   'vy_max':'0.0' 改写是无害 no-op。结论一致、依据不同，别混着引用。）
 # （脚本尾部「已知未解决」里记着上一版这里的算术是错的，别再犯一次。）
 AXIS_SPEED_CAP=0.5     # 2026-09-08 用户决定由 0.2 提到 0.5
 export AXIS_SPEED_CAP  # 两个判据的 python3 heredoc 是 <<'PY'（不做 shell 展开），
@@ -259,7 +304,6 @@ import os, re
 
 VENDOR = (                       # 一票否决，先判
     "/opt/astribot_ros/",                 # 厂商整套栈
-    "/home/astribot/SLAM/vxlm-slam/",     # 厂商 SLAM(voxelslam / nav_prob_grid_node)
     "astribot_orin_startup.sh",           # 开机脚本
     "ptp_sync_time", "orin_sync.sh",      # 时间同步(实机开机时钟是 1970，别碰)
     "/usr/NX/", "nxexec", "x11vnc",       # 远程桌面 —— 杀了就再也连不上
@@ -272,6 +316,7 @@ VENDOR = (                       # 一票否决，先判
     "roslaunch.py nav_prob_grid",
 )
 OURS = (                         # 我们的：按路径
+    "/home/astribot/SLAM/vxlm-slam/",     # 厂商 SLAM(voxelslam / nav_prob_grid_node)    
     "/Downloads/astribot_sdk_aarch64/ws_robot/install/",  # 我们编译出来的所有包
     "/tmp/roslaunch.py",                                 # 旧路径，留着以便清掉重启前遗留的进程
     "/home/astribot/s1_tools/",                          # launcher / tf_to_odom / grid_self_clear 等
@@ -517,7 +562,7 @@ raise SystemExit(1 if nn > 0 else 0)
 PY
   [ $fail -eq 0 ] && ok "/map_nav 清理半径圆内占据格 = 0"
 
-  say "判据 5/7  nav2 活着且吃到地图（MPPI / ${AXIS_SPEED_CAP}m/s 按轴 / 真墙钟）"
+  say "判据 5/7  nav2 活着且吃到地图（RPP / ${AXIS_SPEED_CAP}m/s 按轴 / 真墙钟）"
   local n_active n_nomap vx
   # ⚠️ 不能写 `grep -c ... || echo 0`：grep -c 没命中时**既打印 0 又返回 1**，
   #    于是变量拿到 "0\n0"，后面的 [ -eq ] 直接 "integer expression expected"，
@@ -565,25 +610,47 @@ PY
   #   要用模长；这里讲的是"限速口径"，按轴。两者不冲突，各自的边界不同。
   # 按轴口径 => 必须**两轴都查**，只查 vx_max 会漏掉 vy_max 被调高。
   #
-  # ⚠️ 不要硬编码 `FollowPath.vx_max` 这种键名：FollowPath 现在是三段式控制器，
-  #    MPPI 的限速参数下移到了 `FollowPath.inner.vx_max`，老键**根本不存在**，
-  #    判据于是印 "✘ 读不到 FollowPath.vx_max" —— 看着像限速失效，实际是
-  #    判据在查一个已经不存在的键（2026-09-07 实测：三个控制器全是 0.2，没有越限）。
-  #    改成**枚举** controller_server 里所有 v?_max 参数逐个查，结构再变也不会误判。
-  #    并且必须有"一个都没枚举到就算失败"的守卫，否则 0 个键会静默通过。
+  # ⚠️ RPP 路径的键名跟 MPPI 完全不同：**没有** vx_max/vy_max，线速度上限叫
+  #    desired_linear_vel（launch 侧 param_substitutions 两个键都写，各在对应
+  #    yaml 上生效、在另一份上是无害 no-op）。照抄 MPPI 版会枚举到 0 个键，
+  #    直接撞上下面"一个都没枚举到就算失败"的守卫 —— 那条守卫是对的，
+  #    是键名该换。
+  # ⚠️ 不要硬编码 `FollowPath.desired_linear_vel`：FollowPath 是三段式控制器时
+  #    参数下移到 `FollowPath.inner.desired_linear_vel`，老键根本不存在。
+  #    一律**枚举** controller_server 里所有以 .desired_linear_vel 结尾的参数。
   local cap_fail=0
+  # RPP_YAML 必须显式传：heredoc 是 <<'PY'（不做 shell 展开），
+  # 且判据要拿 yaml 回落值来判断自己是否退化。
+  RPP_YAML=$SHARE/config/nav2_params_rpp.yaml \
   python3 - <<'PY' || cap_fail=1
 import rclpy
 import os
 from rcl_interfaces.srv import ListParameters, GetParameters
 CAP = float(os.environ['AXIS_SPEED_CAP'])   # 无默认值：见脚本顶部 AXIS_SPEED_CAP
 # 这条判据能抓到"外层 launch 把 max_linear_speed 静默吞了"，靠的是漏传时
-# vx_max 会回落到 yaml 的 1.0 而 1.0 > CAP。所以 CAP 一旦被调到 >= 1.0，
-# 判据就退化成恒真、再也分不清"限速生效"和"参数根本没传下去"。
-if CAP >= 1.0:
-    print('  ✘ AXIS_SPEED_CAP=%.2f >= 1.0：本判据会退化成恒真（yaml 回落值也是 1.0），'
-          '分不清限速生效与参数被吞' % CAP)
+# desired_linear_vel 会回落到 **yaml 里的值**，而那个值 > CAP。
+# ⚠️ 所以判据的分辨力取决于 yaml 回落值：CAP >= 回落值时它退化成恒真，
+#    再也分不清"限速生效"和"参数根本没传下去"。
+#    rpp 那份 yaml 的 desired_linear_vel 是 **0.5**，而用户 2026-09-08 定的
+#    CAP 也是 0.5 —— 即当前配置下这一条**确实是退化的**，如实印出来，
+#    不假装它还在验"参数传下去了"。它仍然是有效的**安全上界**判据。
+#    回落值直接从磁盘上的 yaml 读，不硬编码，免得两处漂开。
+import re
+YAML = os.environ['RPP_YAML']
+try:
+    txt = open(YAML, encoding='utf-8').read()
+    fb = max(float(m) for m in re.findall(r'^\s*desired_linear_vel:\s*([0-9.]+)',
+                                          txt, re.M))
+except Exception as exc:
+    print('  ✘ 读不到 %s 的 desired_linear_vel 回落值（%s）——'
+          '无法判断本判据是否退化' % (YAML, exc))
     raise SystemExit(1)
+print('  yaml 回落值 desired_linear_vel = %.3f，授权上限 CAP = %.3f' % (fb, CAP))
+if CAP >= fb:
+    print('  ⚠ 本判据在 CAP(%.2f) >= yaml 回落值(%.2f) 时退化成恒真：'
+          '它只验"不超上界"，**验不出 max_linear_speed 是否被静默吞掉**。'
+          % (CAP, fb))
+    print('    要验参数真传下去，只能看运行时实测幅值（桥接日志的指令均速）。')
 rclpy.init()
 n = rclpy.create_node('cap_chk')
 lc = n.create_client(ListParameters, '/controller_server/list_parameters')
@@ -594,9 +661,9 @@ rclpy.spin_until_future_complete(n, f, timeout_sec=20.0)
 if f.result() is None:
     print('  ✘ list_parameters 无响应'); raise SystemExit(1)
 keys = sorted(k for k in f.result().result.names
-              if k.endswith('.vx_max') or k.endswith('.vy_max'))
+              if k.endswith('.desired_linear_vel'))
 if not keys:
-    print('  ✘ 一个 v?_max 参数都没枚举到（判据自身失效，不能算通过）')
+    print('  ✘ 一个 desired_linear_vel 参数都没枚举到（判据自身失效，不能算通过）')
     raise SystemExit(1)
 gc = n.create_client(GetParameters, '/controller_server/get_parameters')
 if not gc.wait_for_service(timeout_sec=10.0):
@@ -611,12 +678,12 @@ for k, v in zip(keys, f2.result().values):
     if v.double_value > CAP + 1e-4:
         over.append((k, v.double_value))
 for k, val in over:
-    print('  ✘ %s=%.3f 超过授权的各轴上限 %.2f' % (k, val, CAP))
-print('  共查 %d 个轴上限，越限 %d 个' % (len(keys), len(over)))
+    print('  ✘ %s=%.3f 超过授权的线速度上限 %.2f' % (k, val, CAP))
+print('  共查 %d 个线速度上限，越限 %d 个' % (len(keys), len(over)))
 raise SystemExit(1 if over else 0)
 PY
   if [ $cap_fail -eq 0 ]; then
-    ok "各轴线速度上限 ≤ $AXIS_SPEED_CAP m/s（vy≡0，故模长上界同为 $AXIS_SPEED_CAP）"
+    ok "RPP desired_linear_vel ≤ $AXIS_SPEED_CAP m/s（RPP 不输出 vy，故模长上界同为 $AXIS_SPEED_CAP）"
   else
     fail=1
   fi
@@ -715,9 +782,12 @@ nz = sum(1 for v in V if abs(v[0]) > 1e-4 or abs(v[1]) > 1e-4 or abs(v[2]) > 1e-
 axmax = max((max(abs(v[0]), abs(v[1])) for v in V), default=0.0)
 over = sum(1 for v in V if abs(v[0]) > CAP + 1e-4 or abs(v[1]) > CAP + 1e-4)
 # 不要在这里印 sqrt(2)*CAP 当"模长上界" —— 那个算术是错的，脚本尾部
-# 「已知未解决」里已经记了：vy_max 被路线A 钉死为 0.0 且 motion_model 是
-# DiffDrive（navigation.launch.py 强制 'vy_max':'0.0'，yaml 三处也都是 0.0），
-# MPPI 压根不输出横向速度，所以模长上界就等于按轴上限本身。
+# 「已知未解决」里已经记了：RPP 结构上只输出 (vx, wz)，横向分量恒为 0，
+# 所以模长上界就等于按轴上限本身。
+# ⚠️ 但 vy≡0 在 rpp 路径上是**控制器结构**保证的，不是限速层保证的：
+#    rpp yaml 里没有 vy_max 这个键，launch 侧的 'vy_max':'0.0' 是 no-op。
+#    所以下面这个越限判据仍然两轴都查 —— 若哪天真出现非零 vy，
+#    那说明发速度的不是 RPP，而这正是需要被抓到的事。
 print('  /cmd_vel %d 帧，非零 %d，单轴峰值 %.4f m/s（越 %.2f 的帧 %d），'
       '合速度模长峰值 %.4f m/s（vy≡0，模长上界=按轴上限 %.2f）'
       % (len(V), nz, axmax, CAP, over, vmax, CAP))
@@ -757,6 +827,26 @@ if [ "$DRIVE" = true ]; then
   printf '\033[1;33m│ 默认使能：会强夺控制权（**立刻停止机器人当前运动**）并驱动底盘 │\033[0m\n'
   printf '\033[1;33m│ 确认：周围安全 / 没有别人在操作 / 急停可及                    │\033[0m\n'
   printf '\033[1;33m└──────────────────────────────────────────────────────────────┘\033[0m\n'
+fi
+
+# ── 派生源漂移告警 ──────────────────────────────────────────────────────────
+# 本脚本是 s1_hardware_bringup.sh 的派生副本（只差文件头列的 5 处）。
+# 共同部分若只改了 MPPI 那份，这里的 RPP 版就是**陈旧**的，而症状会是
+# "同一台机器上两个跟踪器行为差异莫名其妙" —— 很难反推到脚本没同步。
+# 比的是**归一化** md5（剥掉注释行与空行）：实机那份与仓库那份差一行注释的
+# 位置，用裸 md5 会必然误报。只告警不中止 —— 漂移原因可能与本文件无关，
+# 而中止会挡掉一次正常启动。
+DERIVED_FROM_NORM_MD5=88ba2948708e2ba258f8da2f24394486   # = 实机 2026-09-08 14:31 那份
+_mppi_sh=$TOOLS/s1_hardware_bringup.sh
+if [ -f "$_mppi_sh" ]; then
+  _now=$(grep -vE '^[[:space:]]*#' "$_mppi_sh" | grep -vE '^[[:space:]]*$' \
+         | md5sum | cut -d' ' -f1)
+  if [ "$_now" != "$DERIVED_FROM_NORM_MD5" ]; then
+    warn "派生源 s1_hardware_bringup.sh 已改动（归一化 md5 $_now != $DERIVED_FROM_NORM_MD5）"
+    warn "  本 RPP 版可能缺了那边的修改，逐条核对后更新 DERIVED_FROM_NORM_MD5"
+  fi
+else
+  warn "找不到 $_mppi_sh，跳过派生源漂移检查"
 fi
 
 do_stop     # 干净起点：把上一轮我们的进程全清掉（含重复进程）
@@ -966,20 +1056,31 @@ nohup setsid python3 $TOOLS/grid_self_clear_node.py --ros-args \
 hz=$(wait_hz /map_nav nav_msgs/OccupancyGrid 0.3 25) || die "/map_nav 只有 $hz Hz"
 ok "/map_nav $hz Hz"
 
-say "阶段 6  nav2（MPPI，线速度上限 $AXIS_SPEED_CAP m/s 按轴）"
-# install 下的 config 是**真实拷贝**不是符号链接：只改 src 对运行中的节点零效果，
-# 而 colcon build 又会把 install 覆盖回 src 的版本。所以从快照复原，
-# 快照里含三处实机改动：静态层 map_topic=/map_nav、transient_local=False、限速 0.2。
+say "阶段 6  nav2（**RPP**，线速度上限 $AXIS_SPEED_CAP m/s 按轴）"
+# 从快照复原实机参数。快照 $TOOLS/nav2_params_rpp_hw.yaml 相对仓库版本含 5 处
+# 实机差异：planner tolerance=0.5、velocity_smoother 上下限 ±0.5、静态层
+# map_topic=/map_nav、transient_local=False，外加 11 处 use_sim_time=False。
+# ⚠️ 这台机器上 $SHARE/config 这条路径 install->build->src **三层都是符号链接**
+#    （已逐层实证；MPPI 那份脚本此处的注释写着"是真实拷贝"，那句话在这台机器上
+#    是错的）。后果有两条，都要知道：
+#      · 改 yaml **不需要** colcon build —— 写进去就是运行时读到的；
+#      · 这个 cp 会**覆盖仓库工作区里的** config/nav2_params_rpp.yaml。
 if [ "$RESTORE_YAML" = true ]; then
-  if [ -f $TOOLS/nav2_params_mppi_hw.yaml ]; then
-    cp $TOOLS/nav2_params_mppi_hw.yaml $SHARE/config/nav2_params_mppi.yaml
-    ok "已从快照复原实机 nav2 参数"
+  if [ -f $TOOLS/nav2_params_rpp_hw.yaml ]; then
+    cp $TOOLS/nav2_params_rpp_hw.yaml $SHARE/config/nav2_params_rpp.yaml
+    ok "已从快照复原实机 nav2 参数（rpp）"
   else
-    bad "缺 $TOOLS/nav2_params_mppi_hw.yaml —— 静态层可能指向厂商原始栅格"
+    bad "缺 $TOOLS/nav2_params_rpp_hw.yaml —— 静态层可能指向厂商原始栅格"
   fi
 else
-  warn "--keep-nav2-yaml：不复原，用 install 里当前的 nav2_params_mppi.yaml"
+  warn "--keep-nav2-yaml：不复原，用 install 里当前的 nav2_params_rpp.yaml"
 fi
+# 行为树里 FollowPath 的 controller_id 写死是 FollowPathExplore
+# （behavior_trees/navigate_to_pose_explore_three_phase.xml），
+# 所以 yaml 的 controller_plugins 必须含这个实例名，否则每个 follow_path 目标
+# 都会失败。实机上曾有一份 2026-09-02 的陈旧 rpp yaml 只有 ["FollowPath"]。
+grep -q 'FollowPathExplore' $SHARE/config/nav2_params_rpp.yaml \
+  || die "$SHARE/config/nav2_params_rpp.yaml 里没有 FollowPathExplore —— 行为树会每个目标都失败"
 # use_sim_time:=false —— 实机无 /clock 发布者，true 会让六个节点时钟恒 0 且永不前进，
 #                        而 costmap 照发、判据照过（nav2 的默认值是 true，最容易踩）
 # posture_normal_height:=0.0 —— 姿态监控**保持开启**，只把基准高度换成实机这个
@@ -998,7 +1099,7 @@ fi
 #    enable_posture_monitor，漏项不报错、子 launch 静默用自己的默认值。
 nohup setsid python3 $RL \
   --path $WS/src/astribot_s1_navigation/launch/navigation.launch.py \
-  controller_plugin:=mppi use_sim_time:=false max_linear_speed:=$AXIS_SPEED_CAP \
+  controller_plugin:=rpp use_sim_time:=false max_linear_speed:=$AXIS_SPEED_CAP \
   posture_normal_height:=0.0 \
   scan_topic:=/scan autostart:=true > $LOG/nav2.log 2>&1 &
 for i in $(seq 1 40); do
@@ -1140,7 +1241,7 @@ say "阶段 11  路径跟踪诊断器（只读，唯一记录速度链路的东�
 #   · 每拍会打的只有 three_phase_controller.cpp:603 的"接近段限速 ‖v‖ x -> y"，
 #     而它只在 D=1.50m 接近段内、且限速真的咬住时才打（上一轮共 24 条）。
 #   · 底盘桥接与 cmd_vel_body_to_world_node 一个速度都不打。
-# 于是"MPPI 根本没发速度"和"发了但底盘没动"在日志上长得一模一样，
+# 于是"控制器根本没发速度"和"发了但底盘没动"在日志上长得一模一样，
 # 上一轮就是卡在这个区分上。这个节点把四段速度 + 实位移一行打全，正好补这个缺口。
 #
 # 只订阅、不发布任何指令 —— 起它不会改变被诊断系统的行为，所以放在使能之后也安全。
@@ -1172,7 +1273,7 @@ if [ -x "$DIAG" ]; then
   warn "轮速一段在实机恒为 n/a（/joint_states 无 velocity 字段），这是预期的"
 else
   bad "缺 $DIAG —— 速度链路本轮无任何记录，事后无法区分"
-  bad "  「MPPI 没发速度」与「发了但底盘没动」。补法：colcon build astribot_s1_navigation"
+  bad "  「RPP 没发速度」与「发了但底盘没动」。补法：colcon build astribot_s1_navigation"
 fi
 
 say "全链判据"
@@ -1184,11 +1285,22 @@ cat <<'TAIL'
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 已知未解决（不是本脚本的 bug，是待定的事）                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
-· 0.2 m/s 的口径：**上一版这里的算术是错的**，写的是"各轴独立、模长上界
-  sqrt(0.2²+0.2²)=0.283"。实机快照里 vy_max: 0.0 且 motion_model: "DiffDrive"
-  （nav2_params_mppi_hw.yaml:691/695/710），MPPI 不会输出横向速度 ——
-  所以模长上界就是 0.2，不是 0.283。而实测峰值 0.2085、1351 帧里 178 帧 > 0.2：
-  在只有 vx 的前提下这些帧是**真的越了上限**，比原来那个说法更需要解释。未查。
+· 按轴口径的模长上界：**上一版的算术是错的**，写的是"各轴独立、模长上界
+  sqrt(cap²+cap²)"。RPP 结构上只输出 (vx, wz)，横向分量恒为 0，
+  所以模长上界就等于 cap 本身。MPPI 那条路径上（0.2 档）实测峰值 0.2085、
+  1351 帧里 178 帧 > 0.2：在只有 vx 的前提下这些帧是**真的越了上限**，未查。
+  rpp 路径上还没有对应实测。
+· 判据 5/7 在 CAP=0.5 时是**退化的**：rpp yaml 的 desired_linear_vel 回落值
+  也是 0.5，所以它验不出 max_linear_speed 被外层 launch 静默吞掉的情形，
+  只能验"不超上界"。判据自己会把这一点印出来。要真验参数传下去，得看
+  桥接日志的指令均速（阶段 11 的诊断器会打）。
+· velocity_smoother 两份快照不一致：本脚本用的 rpp 快照是 ±0.5（用户
+  2026-09-08 决定），而 nav2_params_mppi_hw.yaml 仍是 ±0.2。切回 MPPI 那份
+  脚本时第二层限速会静默降到 0.2 —— 已如实报告给用户，等其决定是否对齐。
+· RPP 的原地旋转比三段式更快（rotate_to_heading_angular_vel 1.0 rad/s vs
+  align_max_vel 0.6），而**全链路没有任何一层压角速度**。2026-09-08 急停前
+  那次异常正是"线速度被压死、角速度满权限"，方向同源。第一次跑 rpp 必须盯着
+  桥接日志的 dθ 指令看，别只看线速度。
 · safety_tripped 无复位通路：voxel_slam 位姿会被 GBA 回环修正，z 一次跳超
   0.06m 就永久跳闸，只能重启 cmd_vel_body_to_world_node。
 · 实测机器人走出 1.23m 后卡在 "Starting point in lethal space"：中心格 253

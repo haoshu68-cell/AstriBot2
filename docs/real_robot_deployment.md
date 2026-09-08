@@ -43,8 +43,7 @@ astribot_msgs/lib/libastribot_msgs__rosidl_typesupport_*.so            ELF 64-bi
 ### 0.3 你给的三个网络参数与仓库现状有冲突
 
 | 现场参数 | 仓库现状 | 冲突后果 |
-|---|---|---|
-| `ROS_DOMAIN_ID=42`（现场给的值） | [`env.sh:115`](../env.sh#L115) 是 `25`，各 launch 默认也已统一为 `25` | SDK 侧与本栈不同 domain 时，**话题互不可见**，且报错只表现为"节点全都 Node not found"。**仓库这边已统一 25，仍需 §1.3 现场实测确认控制器就在 25** |
+|---|---|---| | [`env.sh:115`](../env.sh#L115) 是 `25`，各 launch 默认也已统一为 `25` | SDK 侧与本栈不同 domain 时，**话题互不可见**，且报错只表现为"节点全都 Node not found"。**仓库这边已统一 25，仍需 §1.3 现场实测确认控制器就在 25** |
 | `eno1 = 192.168.0.11` | [`env.sh:142-163`](../env.sh#L142-L163) 的 lan 分支把 `192.168.0.10` 当"本机即机器人"，其余 IP 一律按"远程工作站"处理 | Orin 是 `.11` → 走错分支 → 生成的白名单 XML 带 `useBuiltinTransports=false`，**丢掉共享内存**，Livox 点云退化为回环 UDP |
 | `ROS_IP` 固定用 eno1 | 仓库从不设 `ROS_IP` | `ROS_IP` 是 **ROS1 变量，ROS2/Fast DDS 完全忽略**。等价手段是 Fast DDS `interfaceWhiteList`（§3.2） |
 

@@ -9,5 +9,14 @@ livox_fusion_node:
     # slop 设成半个周期左右比较合理；实测建图效果不理想可以适当调大/调小。
     sync_slop_sec: 0.05
     tf_timeout_sec: 0.2
+    # 同步队列深度。**别为了少丢帧调大**：本节点吞吐一旦跟不上输入，输出帧龄期就恒等于
+    # 队列深度/输入拍率，而下游 pointcloud_slice_scan_node 有 0.3s 陈旧闸门，
+    # 队列越深越是把"处理慢"翻译成"整条链一帧不过"（实测 10 + 9.1Hz ⇒ 1.10s，全丢）。
+    sync_queue_size: 2
+    # 发布前龄期上限，必须明显小于下游那道 0.3s 闸门，否则丢帧发生在下游、
+    # 日志却出在这里之外，排查会被引到两跳以外的地方。
+    max_output_age_sec: 0.25
+    # 同一 source frame 连续查不到几次就判定"不在 TF 树里"，此后不再为它等超时。
+    missing_frame_threshold: 3
     # 逐点去畸变开关，默认关闭，见 livox_fusion_node.py 文件头部详细说明。
     deskew_enable: false
