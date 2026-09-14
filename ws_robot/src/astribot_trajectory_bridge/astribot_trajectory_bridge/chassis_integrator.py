@@ -39,13 +39,11 @@ local coordinate" —— 方向是**世界系 → 本体系**。由此推断 ``s
 import collections
 import math
 
-# 三个自由度的下标（ROBOT_TYPE=S1 时 chassis_dof=3，见 astribot_base.py:36-38）
 IDX_X = 0
 IDX_Y = 1
 IDX_THETA = 2
 CHASSIS_DOF_S1 = 3
 
-# input_frame 合法取值
 FRAME_BODY = 'body'      # 202 模式：直接积分（Nav2 默认口径）
 FRAME_WORLD = 'world'    # 203 模式：先 rot_mat.T 转回本体系
 VALID_INPUT_FRAMES = (FRAME_BODY, FRAME_WORLD)
@@ -109,8 +107,6 @@ def to_local_velocity(twist_xy_wz, input_frame, theta):
     vx, vy, wz = twist_xy_wz
     if input_frame == FRAME_BODY:
         return (vx, vy, wz)
-    # FRAME_WORLD：203:58-61 —— rot_mat 是 local->global，用它的转置把
-    # 世界系速度转成本体系速度。角速度不受平面旋转影响，原样透传。
     local_xy = rotate_vec2_transposed(rot_z(theta), (vx, vy))
     return (local_xy[0], local_xy[1], wz)
 
@@ -181,7 +177,6 @@ def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt,
         raise ChassisConfigError(
             'max_accel_xy_up=%r 必须为正或 None' % (max_accel_xy_up,))
 
-    # ---- xy：二维矢量限幅，加速方向可用更紧的限值 ----
     dx = target[0] - previous[0]
     dy = target[1] - previous[1]
     a_xy = max_accel_xy
@@ -197,7 +192,6 @@ def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt,
         dx *= scale
         dy *= scale
 
-    # ---- theta：标量，逐轴 ----
     dth = target[2] - previous[2]
     max_delta_th = max_accel_theta * dt
     if dth > max_delta_th:
@@ -208,12 +202,6 @@ def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt,
     return (previous[0] + dx, previous[1] + dy, previous[2] + dth)
 
 
-#: :func:`measure_tick_dt` 的返回值。
-#:
-#: - ``dt``：本拍实际该用的积分步长（秒），已钳位。
-#: - ``clamped``：是否被钳位。钳位说明调度出了状况，必须上报而不是静默吞掉。
-#: - ``reason``：钳位原因，空串表示未钳位。
-#: - ``raw``：钳位前的原始测量值，用于诊断（首拍为 ``None``）。
 TickDt = collections.namedtuple('TickDt', 'dt clamped reason raw')
 
 
@@ -254,13 +242,10 @@ def measure_tick_dt(now, prev, nominal_dt, max_dt):
             '积分恒等于钳位值，等于没修这个缺陷' % (max_dt, nominal_dt))
 
     if prev is None:
-        # 首拍没有参照，用标称值。不算钳位（不是异常）。
         return TickDt(nominal_dt, False, '', None)
 
     raw = now - prev
     if raw <= 0.0:
-        # 时钟没前进或倒退。rclpy 定时器积压时会背靠背触发，dt≈0；
-        # 用 0 积分等于这一拍白丢，用标称值至少保持速度连续。
         return TickDt(nominal_dt, True,
                       '时钟未前进（raw=%.6fs），退回标称步长' % raw, raw)
     if raw > max_dt:

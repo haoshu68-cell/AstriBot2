@@ -79,66 +79,30 @@ class CloudToGridNode(Node):
     def __init__(self):
         super().__init__('cloud_to_grid')
 
-        # -- 入 --
-        # Voxel-SLAM 的 /map_scan_filtered 是**给导航用的实时障碍点云**：
-        #   · 已在 SLAM 侧做过高度 ROI（nav_scan_z_min=0.05 / max=1.63，
-        #     见 voxelslam.cpp:63 与 mid360.yaml:26-27）
-        #   · frame_id = camera_init，坐标已是**世界系**
-        #   · 点类型 pcl::PointXYZINormal 经 pcl::toROSMsg 直转，
-        #     除 x/y/z 外的 intensity/normal_*/curvature **均未赋值**，忽略
-        #
-        # ⚠️ 不要用 /map_cmap：那是全量地图（含 previous_map 加载的旧会话），
-        #    不是实时障碍，而且**没有**做高度过滤。
         self.declare_parameter('cloud_topic', '/map_scan_filtered')
         self.declare_parameter('cloud_frame_override', '')   # 空 = 用消息自带 frame_id
 
-        # -- 出 --
         self.declare_parameter('publish_directly', True)
         self.declare_parameter('map_topic', '/map')
         self.declare_parameter('intermediate_map_topic', '/slam/map')
-        # camera_init 是 Voxel-SLAM 的世界系（原点 = 底盘启动位姿），
-        # 而 aft_mapped 是**底盘中心**（SLAM 内部已用 chassis_extrinsic_* 从
-        # IMU 位姿换算过，见 voxelslam.cpp:38-42 + mid360.yaml:19-20）。
-        # 默认直接用 camera_init 当 map，省掉一条恒等静态 TF；
-        # 若上层要求 frame 名必须叫 map，就把这里设成 map 并补一条
-        # map→camera_init 的静态 TF —— 但**不能只改这里**，否则查不到变换。
         self.declare_parameter('map_frame', 'camera_init')
 
-        # -- 投影参数（逐项对应 GridConfig）--
         self.declare_parameter('resolution', 0.05)
-        # ⚠️⚠️ z 切片默认**放通**（-inf, +inf），刻意如此。
-        #
-        # /map_scan_filtered 已经在 SLAM 侧按 [0.05, 1.63] 过滤过。我们再切一刀
-        # 就是**两层过滤串联取交集**：本仓库踩过同形态的坑（两个包各一层限速，
-        # 0.50×0.15=0.075，只改一个看不到效果）。
-        #
-        # 具体危害：若这里保留旧默认 [-0.05, 0.60]，交集变成 [0.05, 0.60]，
-        # **0.60~1.63m 的障碍全部被静默丢掉** —— 那正是人体躯干、桌面、
-        # 台面高度的障碍。地图上看不出来，机器人会直接撞过去。
-        #
-        # 什么时候才该收紧：只有当你订阅的是**未过滤**的话题（如 /map_scan），
-        # 或者需要比 SLAM 更严的区间时。改之前先确认 SLAM 侧的 nav_scan_z_* 值。
         self.declare_parameter('z_min', float('-inf'))
         self.declare_parameter('z_max', float('inf'))
         self.declare_parameter('min_points_per_cell', 2)
         self.declare_parameter('padding_m', 1.0)
         self.declare_parameter('max_cells', 4_000_000)
 
-        # -- 空闲空间雕刻 --
-        # 不雕的话整张图只有"占据"和"未知"，没有"空闲"，nav2 无法规划，
-        # 而探索协调器会把每个前沿候选都判为不可站（前沿必须在自由空间边上）。
         self.declare_parameter('carve_free_space', True)
         self.declare_parameter('carve_max_range_m', 8.0)
         self.declare_parameter('carve_n_rays', 360)
-        # 传感器位置从 TF 取；取不到就退化为不雕并 WARN（不静默）
         self.declare_parameter('sensor_frame', 'aft_mapped')
         self.declare_parameter('tf_timeout_sec', 0.5)
 
-        # -- 行为 --
         self.declare_parameter('republish_period_sec', 5.0)
         self.declare_parameter('source_timeout_sec', 60.0)
         self.declare_parameter('report_period_sec', 10.0)
-        # 投影一帧大图要秒级。这个上限防止回调堆积把节点拖死。
         self.declare_parameter('min_interval_sec', 2.0)
 
         self.cloud_topic = str(self.get_parameter('cloud_topic').value)
@@ -149,9 +113,6 @@ class CloudToGridNode(Node):
         self.min_interval = float(self.get_parameter('min_interval_sec').value)
         self.source_timeout = float(self.get_parameter('source_timeout_sec').value)
 
-        # GridConfig 自己会在构造期校验并抛 GridConfigError（由 main 兜住并以
-        # 退出码 2 结束）。这里刻意不 try —— 捕获后原样 raise 没有任何作用，
-        # 只会让读代码的人以为这里做了额外处理。
         self.config = GridConfig(
             resolution=float(self.get_parameter('resolution').value),
             z_min=float(self.get_parameter('z_min').value),
@@ -211,7 +172,6 @@ class CloudToGridNode(Node):
         代价是漏掉那一段的障碍。本仓库踩过同形态的坑（两个包各一层限速，
         0.50×0.15=0.075，只改一个看不到效果，根因在另一个包里）。
         """
-        # 上游的过滤区间（Voxel-SLAM 的默认值，见 voxelslam.cpp:902 / mid360.yaml:26-27）
         upstream_min, upstream_max = 0.05, 1.63
         if 'scan_filtered' not in self.cloud_topic:
             return          # 订阅的不是已过滤话题，我们自己切是应该的
@@ -236,13 +196,10 @@ class CloudToGridNode(Node):
     def _now(self):
         return self.get_clock().now().nanoseconds * 1e-9
 
-    # -- 点云回调 ---------------------------------------------------------
     def _on_cloud(self, msg):
         self._stats['received'] += 1
         now = self._now()
 
-        # 限流。投影一帧真实规模的图要秒级（实测 4.84s / 3367 位姿），
-        # 不限流的话回调会堆积，越拖越久最后完全跟不上。
         if (self._last_project_sec is not None
                 and now - self._last_project_sec < self.min_interval):
             self._stats['skipped'] += 1
@@ -261,7 +218,6 @@ class CloudToGridNode(Node):
         try:
             grid = project(points, self.config, sensor_xy=sensor_xy)
         except GridConfigError as exc:
-            # 通常是 max_cells 被撑爆：点云范围远超预期
             self.get_logger().error(
                 f'投影失败: {exc}\n'
                 f'  点数={len(points)}。若是 max_cells 超限，说明点云范围远超预期 ——'
@@ -281,8 +237,6 @@ class CloudToGridNode(Node):
             f'用点={grid.points_used} 切片外={grid.points_out_of_slab} '
             f'耗时={self._last_project_sec - now:.2f}s')
 
-        # 全是未知/占据、一个空闲格都没有 —— 这种图 nav2 无法规划，
-        # 而症状会表现成 "Starting point in lethal space" 之类，离根因很远。
         if grid.free_cells == 0:
             self.get_logger().warning(
                 '空闲格为 0：nav2 无法规划，探索会把每个前沿都判为不可站。'
@@ -342,7 +296,6 @@ class CloudToGridNode(Node):
             return [(float(t.x), float(t.y))]
         except (LookupException, ConnectivityException, ExtrapolationException) as exc:
             self._stats['carve_failed'] += 1
-            # 只在前几次和每 20 次报一次，避免刷屏掩盖别的信息
             if self._stats['carve_failed'] <= 3 or self._stats['carve_failed'] % 20 == 0:
                 self.get_logger().warning(
                     f'取不到 {target}→{source} 的变换（第 '
@@ -357,7 +310,6 @@ class CloudToGridNode(Node):
                     f'ros2 topic echo /tf --once | grep -A2 aft_mapped')
             return None
 
-    # -- 发布 -------------------------------------------------------------
     def _publish(self, grid, stamp):
         msg = OccupancyGrid()
         msg.header.stamp = stamp
@@ -367,14 +319,11 @@ class CloudToGridNode(Node):
         msg.info.height = grid.height
         msg.info.origin.position.x = grid.origin_x
         msg.info.origin.position.y = grid.origin_y
-        # origin 的朝向必须是单位四元数：下游所有 world↔cell 换算都假定轴对齐
-        # （`cloud_to_grid.world_to_cell` 就是纯平移）。带旋转不报错，只让路径偏移。
         msg.info.origin.orientation.w = 1.0
         msg.data = list(grid.data)
         self.map_pub.publish(msg)
         self._stats['published'] += 1
 
-    # -- 定时器 -----------------------------------------------------------
     def _tick_heartbeat(self):
         """按周期重发最后一帧。
 
@@ -388,7 +337,6 @@ class CloudToGridNode(Node):
             return
         if self._now() - self._last_project_sec < self._republish_period:
             return
-        # 借用 _last_project_sec 做心跳计时：重发也算一次"发出"
         self._last_project_sec = self._now()
         self._publish(self._last_grid, self._last_stamp)
 
@@ -474,9 +422,6 @@ def main(argv=None):
     except SystemExit as exc:
         code = int(exc.code or 0)
     except ExternalShutdownException:
-        # SIGTERM（launch 关停 / systemd stop）的正常表现，不是故障。
-        # 不接住的话 rclpy 会把它抛成一串栈回溯，看起来像崩溃 ——
-        # 而那会掩盖真正的错误，也让 launch 的退出处理器难以区分正常与异常。
         pass
     except KeyboardInterrupt:
         pass

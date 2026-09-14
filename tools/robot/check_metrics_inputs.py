@@ -41,7 +41,6 @@ from tf2_msgs.msg import TFMessage
 STREAM = 'stream'   # 判据：实收拍率 > 0
 EVENT = 'event'     # 判据：有发布者（帧数只作参考，0 帧是正常的）
 
-# (话题, 类型, 种类, 是否必需, 说明)
 CHECKS = [
     ('/tf',                        TFMessage,      STREAM, True,
      '底盘位姿的唯一来源。厂商栈不发布任何 TF，整棵树是我们这侧的责任'),
@@ -99,9 +98,6 @@ def main():
     rclpy.init()
     node = Probe()
 
-    # TF 要真查一次 —— /tf 有帧不代表 map->base 这一条链是通的。
-    # 用 Time()（取最新）而不是带 timeout 的 lookup：带 timeout 的查询在
-    # 非专用线程里对**动态 TF** 会失败，而静态 TF 照样查得到，看起来一切正常。
     import tf2_ros
     buf = tf2_ros.Buffer()
     _listener = tf2_ros.TransformListener(buf, node)  # noqa: F841
@@ -139,7 +135,6 @@ def main():
                 good = n > 0
                 shown = '%5d 帧 %6.1f Hz' % (n, n / args.window)
             else:
-                # 事件式：有发布者就算通，帧数只是"这个窗口里发生了几次"
                 good = pub > 0
                 shown = 'pub=%d  本窗 %d 次' % (pub, n)
             if req and not good:
@@ -160,7 +155,6 @@ def main():
             print('  必需项还缺: %s%s —— 再等一个窗口（DDS 发现可能还没收敛）'
                   % (' '.join(missing), '' if tf_ok else ' TF'))
 
-    # 通过之后仍要把"会少哪几列"讲清楚，不能让它看起来一切完美。
     if ok:
         st = node.last_state or ''
         if 'state=PAUSED' in st or 'state=IDLE' in st:

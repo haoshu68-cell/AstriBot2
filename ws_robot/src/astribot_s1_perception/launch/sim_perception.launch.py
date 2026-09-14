@@ -38,15 +38,6 @@ def generate_launch_description():
     declare_args = [
         DeclareLaunchArgument('use_sim_time', default_value='true',
                               description='仿真分支固定用仿真时钟'),
-        # ── 输入话题名做成参数，而不是写死 ──────────────────────────────
-        # 仿真里 gz 直接出 PointCloud2，话题叫 /livox/lidar_{left,right}。
-        # 实机不一样：厂商驱动以 xfer_format=1 发 **CustomMsg**，话题叫
-        # /livox/lidar_{front,back}，两路的 frame_id 都是 livox_frame。
-        # 所以实机要先经 astribot_s1_autonomy 的 livox_custom_to_pc2_node
-        # 转成 PointCloud2（话题后缀 _pc2），再进本文件这条链。
-        # 之前 hardware_perception.launch.py 只改了 use_sim_time 就直接 include 本文件，
-        # 于是在实机上订阅了两个**根本不存在**的话题 —— 表现是整条链静默无输出，
-        # /scan 一帧都不出，而每个节点看着都活得好好的。
         DeclareLaunchArgument(
             'left_input_topic', default_value='/livox/lidar_left',
             description='左/前雷达的 PointCloud2 输入；实机传 /livox/lidar_front_pc2'),
@@ -99,17 +90,6 @@ def generate_launch_description():
         output='screen',
         parameters=[p2l_params, {'use_sim_time': use_sim_time}],
         remappings=[
-            # !!! 订阅**已剔除自身点**的点云，不要订阅 /livox/fused_points !!!
-            # p2l 自己没有任何形状级自滤能力，只有 range_min。吃未过滤点云时，
-            # 机器人伸进扫描带 z∈[0.05,0.6] 且距离 >range_min 的自身部件会被当成
-            # 障碍物 —— 装上夹爪后实测指尖在 0.415m 处，/scan 因此出现 0.414m 回波，
-            # SLAM 把它烙进 /map，最终每次全局规划都报
-            # "Starting point in lethal space!"，导航与探索彻底瘫掉。
-            # 自滤只在 pointcloud_slice_scan_node 里实现一次，这里复用它的输出，
-            # 避免两条链各自实现、各自漂移。
-            #
-            # 代价：多依赖一个节点。若 slice 节点没起来，这个话题就没有发布者，
-            # /scan 会静默地一帧都不出 —— 比"出脏数据"好，但要知道这个依赖存在。
             ('cloud_in', '/livox/cloud_self_filtered'),
             ('scan', '/scan'),
         ],

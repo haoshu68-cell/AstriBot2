@@ -66,8 +66,6 @@ def volatile_qos(depth=5):
         durability=DurabilityPolicy.VOLATILE)
 
 
-#: `source_map_qos: auto` 时，先按 transient_local 订阅，这么久还没消息就补一个
-#: volatile 订阅并 WARN。取值小于 source_timeout_sec，好让退化发生在超时退出之前。
 AUTO_QOS_FALLBACK_SEC = 8.0
 
 
@@ -77,15 +75,12 @@ class SlamAdapterNode(Node):
     def __init__(self):
         super().__init__('slam_adapter')
 
-        # -- 入 --
         self.declare_parameter('source_map_topic', '/slam/map')
         self.declare_parameter('source_map_qos', 'auto')      # auto|transient_local|volatile
         self.declare_parameter('source_map_frame', 'map')
-        # -- 出（下游硬依赖，不建议改）--
         self.declare_parameter('map_topic', '/map')
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('odom_frame', 'odom')
-        # -- 行为 --
         self.declare_parameter('republish_period_sec', 5.0)
         self.declare_parameter('strict_contract', True)
         self.declare_parameter('source_timeout_sec', 30.0)
@@ -107,7 +102,6 @@ class SlamAdapterNode(Node):
                 f'source_map_qos={self.source_map_qos!r} 非法，'
                 f'只能是 auto|transient_local|volatile')
 
-        # 契约在构造期就可能拒绝（心跳慢于协调器超时），让它停在启动前
         self.contract = MapContract(
             resolution_expected=float(self.get_parameter('resolution_expected').value),
             republish_period_sec=float(self.get_parameter('republish_period_sec').value),
@@ -117,21 +111,17 @@ class SlamAdapterNode(Node):
             source_map_frame=self.source_map_frame,
             strict=self.strict)
 
-        #: 非零退出用。rclpy 里 spin 中途没法直接返回退出码，
-        #: 所以置位后由 main() 读走 —— 静默失败一次都不能有。
         self.exit_code = 0
 
         self._setup_io()
         self._log_startup()
 
-    # -- 参数小工具 -------------------------------------------------------
     def _str(self, name):
         return str(self.get_parameter(name).value)
 
     def _now_sec(self):
         return self.get_clock().now().nanoseconds * 1e-9
 
-    # -- 收发搭建 ---------------------------------------------------------
     def _setup_io(self):
         self.map_pub = self.create_publisher(
             OccupancyGrid, self.map_topic, latched_qos())
@@ -144,7 +134,6 @@ class SlamAdapterNode(Node):
 
         self._start_sec = self._now_sec()
         self._fallback_added = False
-        # 三个定时器职责刻意分开，好让任一条单独失效时症状可区分
         self.create_timer(1.0, self._tick_watchdog)
         self.create_timer(0.5, self._tick_heartbeat)
         report_period = float(self.get_parameter('report_period_sec').value)
@@ -165,7 +154,6 @@ class SlamAdapterNode(Node):
             '的 odom→base 两者都在）。若 TF 树断在 map→odom，查那个节点，'
             '不要在这里找。')
 
-    # -- 源地图回调 -------------------------------------------------------
     def _on_source_map(self, msg):
         forwarded = self.adapter.on_source_map(msg, self._now_sec())
         if forwarded is None:
@@ -186,7 +174,6 @@ class SlamAdapterNode(Node):
         self.get_logger().warning(
             f'源地图违反契约，本帧不转发（strict_contract=false）：\n{detail}')
 
-    # -- 发出 -------------------------------------------------------------
     def _emit(self, grid):
         """改 frame 名后发出。刻意**不改** header.stamp。
 
@@ -198,7 +185,6 @@ class SlamAdapterNode(Node):
         self.map_pub.publish(grid)
 
 
-    # -- 定时器 -----------------------------------------------------------
     def _tick_heartbeat(self):
         grid = self.adapter.republish(self._now_sec())
         if grid is not None:
@@ -253,15 +239,11 @@ def main(argv=None):
         node = SlamAdapterNode()
         rclpy.spin(node)
     except ContractViolation as exc:
-        # 构造期的配置错误：直接打出来，不要让它变成一串 rclpy 栈回溯
         print(f'[slam_adapter] 配置被拒绝：{exc}', file=sys.stderr)
         code = 2
     except SystemExit as exc:
         code = int(exc.code or 0)
     except ExternalShutdownException:
-        # SIGTERM（launch 关停 / systemd stop）的正常表现，不是故障。
-        # 不接住的话 rclpy 会把它抛成一串栈回溯，看起来像崩溃 ——
-        # 而那会掩盖真正的错误，也让 launch 的退出处理器难以区分正常与异常。
         pass
     except KeyboardInterrupt:
         pass

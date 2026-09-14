@@ -84,7 +84,6 @@ def _build_demo(context, *args, **kwargs):
 
     scenarios = LaunchConfiguration('scenarios').perform(context)
     if scenarios:
-        # 逗号分隔转列表，方便命令行只跑某一个场景
         overrides['demo.scenarios'] = [s for s in scenarios.split(',') if s]
 
     nav_goal = LaunchConfiguration('nav_goal').perform(context)
@@ -106,15 +105,6 @@ def _build_demo(context, *args, **kwargs):
 
     params_file = LaunchConfiguration('params_file').perform(context)
 
-    # !!! demo 节点需要自己那一份 robot_description_* 参数，不能只给 move_group !!!
-    # 实测踩坑：DualArmPlanner 内部用 RobotModelLoader 自己加载一份 RobotModel
-    # （它要做 FK/IK/雅可比，不能每次都走 move_group 的 service）。
-    # 如果只把 kinematics.yaml 传给 move_group，demo 节点这边会打
-    #   "No kinematics plugins defined. Fill and load kinematics.yaml!"
-    # 然后 follower 组没有 IK 求解器，闭链约束 configure 直接失败：
-    #   "follower group 'arm_right' has no IK solver configured"
-    # 这条错误信息本身是对的（我们的 configure 有这道校验），
-    # 但根因在 launch 少传了参数，不在 kinematics.yaml 内容。
     robot_description_content = Command([
         'xacro ',
         PathJoinSubstitution([
@@ -162,25 +152,6 @@ def _build_demo(context, *args, **kwargs):
 
     return [
         demo_node,
-        # demo 节点跑完就关掉整个 launch，**这条不能少**。
-        #
-        # 不加的话 move_group 会一直活着：demo 是一次性任务，跑完就退出，
-        # 但 launch 里其他节点没有退出条件，`ros2 launch` 就一直挂着。
-        # 于是每跑一次 demo 就泄漏一个 move_group 进程。
-        #
-        # 实测后果（连跑 7 次之后）：域内同时存在 7 个 move_group，
-        # 也就是 7 组同名 action server（move_action / execute_trajectory）。
-        # 客户端的 goal/result response 于是被多个 server 抢答，日志刷
-        #   [ERROR] [<node>.rclcpp_action]: unknown goal response, ignoring...
-        #   [ERROR] [<node>.rclcpp_action]: unknown result response, ignoring...
-        # 更糟的是**其中一个 move_group 把轨迹发给了控制器、机器人真的动了，
-        # 另一个 move_group 稍后才做起点校验**，此时机器人已经离开规划起点，
-        # 于是报
-        #   Invalid Trajectory: start point deviates from current robot state
-        #   more than 0.05
-        #   joint 'astribot_arm_left_joint_1': expected: 0.399907, current: 0.267065
-        # 并返回 ABORTED / MoveItErrorCode=-7 (CONTROL_FAILED)。
-        # 排查时极易被误导成"执行链路有并发 bug"，实际只是进程泄漏。
         RegisterEventHandler(
             OnProcessExit(
                 target_action=demo_node,
@@ -251,8 +222,6 @@ def generate_launch_description():
             description='demo 节点日志级别。'),
     ]
 
-    # move_group 用 scoped group 包住：它内部声明的 params_file / log_level 等
-    # 同名 LaunchConfiguration 不会泄漏出来污染 demo 节点的参数。
     move_group = GroupAction(
         scoped=True,
         actions=[

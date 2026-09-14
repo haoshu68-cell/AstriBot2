@@ -21,8 +21,6 @@ def generate_launch_description():
         DeclareLaunchArgument('robot_name', default_value='astribot_s1'),
         DeclareLaunchArgument('use_lidar', default_value='true'),
         DeclareLaunchArgument('use_camera', default_value='true'),
-        # 和 warehouse_sim.launch.py 用同一个默认值，避免 /robot_description 之类的默认话题名
-        # 撞上同一台机器上其它无关 ROS2 图里的同名话题（实测遇到过这个问题，见该文件里的详细注释）。
         DeclareLaunchArgument('ros_domain_id', default_value='25'),
     ]
 
@@ -37,8 +35,6 @@ def generate_launch_description():
         [pkg_bringup, 'config', 'astribot_s1_controllers.yaml'])
     rviz_config = PathJoinSubstitution([pkg_description, 'rviz', 'astribot_s1_view.rviz'])
 
-    # ParameterValue(..., value_type=str)：强制把 xacro 输出当字符串传参，
-    # 否则 launch_ros 会把这段 XML 当 YAML 解析而报错。
     robot_description_content = ParameterValue(
         Command([
             'xacro', ' ', xacro_file, ' ',

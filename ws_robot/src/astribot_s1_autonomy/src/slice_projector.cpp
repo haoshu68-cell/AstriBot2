@@ -53,8 +53,6 @@ bool SliceProjector::configure(const Params & params, std::string & error)
     return false;
   }
 
-  // 逐层校验。注意这里只校验「层自身是否自洽」，
-  // 层数是否 >= 2 由节点层判定（那是需求约束，不是算法约束）。
   for (std::size_t i = 0; i < params.slices.size(); ++i) {
     const SliceConfig & s = params.slices[i];
     if (!(s.z_max > s.z_min)) {
@@ -88,14 +86,6 @@ bool SliceProjector::configure(const Params & params, std::string & error)
 
 bool SliceProjector::angleToBucket(double angle, std::size_t & bucket) const
 {
-  // 用 round 而非截断，让点落到**最近**的角度桶，最大角度误差半个桶。
-  //
-  // 与 pointcloud_to_laserscan 的差异提示（排查时会遇到，先写在这里省得再查一遍）：
-  // 官方那份实现用的是截断(int 强转)，所以同一个点可能被分到相邻的桶里。
-  // 逐束对比两路 scan 时会看到「各有约 90 束对方没有」的对称差异，
-  // 看着像漏检，其实只是分桶取整方式不同——实测把容差放到 ±1 个桶(±0.5°)
-  // 之后两路差异**精确归零**。0.25° 的角度偏差在 2m 处只有约 1cm 横向误差，
-  // 对导航避障没有实际影响。
   if (angle < params_.angle_min || angle > params_.angle_max) {
     return false;
   }
@@ -105,8 +95,6 @@ bool SliceProjector::angleToBucket(double angle, std::size_t & bucket) const
   }
   const std::size_t candidate = static_cast<std::size_t>(idx);
   if (candidate >= bucket_count_) {
-    // 浮点舍入可能把最后一个角度顶出去一格，夹回最后一个桶而不是丢弃，
-    // 避免 360° 扫描在接缝处出现一个恒定空洞。
     bucket = bucket_count_ - 1U;
     return true;
   }
@@ -125,21 +113,16 @@ void SliceProjector::project(const std::vector<SlicePoint> & points, ProjectionR
   result.out_of_range_point_count = 0U;
 
   if (!configured_) {
-    // 未配置就调用属于调用方的编程错误；这里保持「不崩溃」，返回全空扫描。
     return;
   }
 
-  // 复位内部缓冲。用 infinity 作为「本层本桶还没有观测」的哨兵值。
   constexpr float kInf = std::numeric_limits<float>::infinity();
   for (std::size_t s = 0; s < slice_count; ++s) {
     std::fill(slice_min_range_[s].begin(), slice_min_range_[s].end(), kInf);
     std::fill(slice_hit_count_[s].begin(), slice_hit_count_[s].end(), 0);
   }
 
-  // ---- 第一遍：逐点分桶，按层累计「最近距离」和「证据数」 ----
   for (const SlicePoint & p : points) {
-    // 非有限值（NaN/Inf）在 Livox 原始数据里是常态，必须显式挡掉，
-    // 否则 atan2/比较会把脏值传播进 scan。
     if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) {
       continue;
     }
@@ -159,13 +142,11 @@ void SliceProjector::project(const std::vector<SlicePoint> & points, ProjectionR
     const float range_f = static_cast<float>(range);
     for (std::size_t s = 0; s < slice_count; ++s) {
       const SliceConfig & cfg = params_.slices[s];
-      // 高度区间取左闭右开，保证相邻层不会把同一个点重复计两次。
       if (static_cast<double>(p.z) < cfg.z_min || static_cast<double>(p.z) >= cfg.z_max) {
         continue;
       }
       ++result.per_slice_point_counts[s];
 
-      // 未启用的层照样统计点数（便于对比调参），但不参与距离累计。
       if (!cfg.enabled) {
         continue;
       }
@@ -177,7 +158,6 @@ void SliceProjector::project(const std::vector<SlicePoint> & points, ProjectionR
     }
   }
 
-  // ---- 第二遍：逐层做证据数判决，再跨层取最近距离做融合 ----
   for (std::size_t s = 0; s < slice_count; ++s) {
     const SliceConfig & cfg = params_.slices[s];
     std::vector<float> & per_slice = result.per_slice_ranges[s];

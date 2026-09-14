@@ -1,18 +1,4 @@
 # Copyright 2026 Astribot.
-#
-# /exploration/state 单行 key=value 串的解析。**纯函数，无 ROS 依赖**。
-#
-# 放在这里而不是留在录制节点里，是为了它能在**不 source ROS** 的情况下被单测。
-# 节点文件 import rclpy/tf2_ros，测试它就得整套 ROS 环境；而模块级
-# pytest.importorskip 会把整个 collection 吃掉 —— pytest 6.2.5 下
-# `pytest test/` 只报 "1 skipped"，几百条测试静默消失。
-# 干净的 "1 skipped" 比报错更危险，所以判据一律留在无依赖的模块里。
-#
-# 协调器发的串形如：
-#   state=NAVIGATING goal_in_flight=1 goal=(1.23,4.56) candidate=2/7
-#   dispatched=5 succeeded=3 rejected=11 nav_fail=0/5 sample_fail=0/8
-#   validate_fail=1/6 auto_resume=0/3 bootstrap=1/3 bootstrap_result=ok
-#   path_pts=36 replan_policy=on_invalid
 
 
 def parse_state_line(line):

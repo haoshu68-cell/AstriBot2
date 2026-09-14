@@ -1,5 +1,4 @@
 import os
-#import tf
 import ast
 import cv2
 import time
@@ -13,13 +12,11 @@ from functools import wraps, partial
 
 import threading
 
-# NOTE: (panchunbo) ROS2 modify
 import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
-# NOTE: (panchunbo) ROS2 modify end
 
 from std_msgs.msg import Int32MultiArray,Header
 from astribot_msgs.srv import RawRequest
@@ -30,7 +27,6 @@ from std_srvs.srv import SetBool
 
 import astribot_ros_middleware as ast_ros_middleware
 
-# ----------- 关闭 fd 打印 -----------
 import sys, ctypes
 quiet = os.getenv("ASTRIBOT_LOG", "").lower() not in ("1", "true", "on")
 
@@ -46,7 +42,6 @@ from astribot_sdk.core.common.util.astribot_function import AstribotFunction
 from astribot_sdk.core.common.robotics_library_py.robotics_library_base import robot_init, load_astribot, load_astribot_s1
 from astribot_sdk.core.common.logger import default_logger
 
-# >>> 恢复标准输出/错误流
 if quiet:
     os.dup2(_fd1, 1); os.dup2(_fd2, 2)
     os.close(_fd1); os.close(_fd2)
@@ -75,7 +70,6 @@ class AstribotInterface(AstribotBase):
         def _spin_with_exception_handler():
             while rclpy.ok():
                 try:
-                    #self.executor.spin_once(0.0)
                     self.executor.spin()
                 except Exception:
                     pass
@@ -97,7 +91,6 @@ class AstribotInterface(AstribotBase):
         self._desired_joint_subscribers = []
         self.__have_control_rights = None
         self.__high_control_rights = high_control_rights
-        # 添加 transfer_control_timer 的初始化和锁
         self.transfer_control_timer = None
         self.transfer_control_lock = threading.Lock()
         self._logger.info("acquiring control rights...")
@@ -108,7 +101,6 @@ class AstribotInterface(AstribotBase):
         self.heartbeat_timer = self.node.create_timer(0.1, self._run_pub_heartbeat)
         self.flag_robot_driver_alive = True
 
-        # self._tf_listener = tf.TransformListener()
         self._device_activate_service = self.node.create_client(
             RawRequest, "/astribot/device_activate_service"
         )
@@ -137,15 +129,12 @@ class AstribotInterface(AstribotBase):
             )
         )
 
-        # image
         self.color_images_dict = dict()
         self.depth_images_dict = dict()
         self.ir_images_dict = dict()
         self.cam_timestamp = 0.0
         self.need_decode_ = False
-        # atexit.register(self.shutdown)
 
-    ### SDK Common Functions ###
     def is_alive(self):
         flag = True
         for robot_name in self.__astribot_class.robot_dict.keys():
@@ -211,14 +200,11 @@ class AstribotInterface(AstribotBase):
         self.node.destroy_node()
 
     def stop_transfer_control_timer(self, timeout=1.0):
-        # 等待 transfer_control_timer 完成（如果存在且正在运行）
         with self.transfer_control_lock:
             if hasattr(self, 'transfer_control_timer') and self.transfer_control_timer is not None:
                 if self.transfer_control_timer.is_alive():
-                    # 等待定时器完成，设置一个合理的超时时间
                     self.transfer_control_timer.join(timeout=timeout)
 
-                    # 如果超时后仍在运行，强制取消
                     if self.transfer_control_timer.is_alive():
                         self.transfer_control_timer.cancel()
 
@@ -231,7 +217,6 @@ class AstribotInterface(AstribotBase):
         self.transfer_control_rights(req, resp)
         for sub in self.error_code_sub_list:
             self.node.destroy_subscription(sub)
-        # self._tf_listener = None
         if getattr(self, "_control_rights_srv", None) is not None:
             self.node.destroy_service(self._control_rights_srv)
 
@@ -241,8 +226,6 @@ class AstribotInterface(AstribotBase):
             rclpy.shutdown()
 
     def acquire_control_rights(self, high_control_rights: bool) -> None:
-        # Do not allow multiple users to control the robot at the same time
-        # A simple control rights management, the control_rights service belongs to the user with control rights
         control_rights_name = "/astribot/control_rights"
         if self.__have_control_rights:
             return
@@ -251,11 +234,9 @@ class AstribotInterface(AstribotBase):
             service_exit_flag = client.wait_for_service(timeout_sec=0.2)
             
             if service_exit_flag is False:
-                # 抛出异常
                 raise RuntimeError(f"Service {control_rights_name} not available")
 
             if high_control_rights:
-                # Create service client and call the service
                 control_rights_request = self.node.create_client(RawRequest, control_rights_name)
 
                 future = control_rights_request.call_async(RawRequest.Request())
@@ -307,7 +288,6 @@ class AstribotInterface(AstribotBase):
         if not self.have_control_rights:
             resp.response = "Internal failure"
             return resp
-        # NOTE: After 50ms, it will close service
         self.transfer_control_timer = threading.Timer(0.05, self.shutdown_control_rights_srv)
         self.transfer_control_timer.start()
         self.logger.warning("Control rights will be released after 50ms")
@@ -328,7 +308,6 @@ class AstribotInterface(AstribotBase):
     def _run_pub_heartbeat(self):
         if self.__have_control_rights  and self.error_code_timestamp and time.time() - self.error_code_timestamp < 1:
             self._pub_heartbeat(data=[16000000])
-            # 收到正常心跳，重置超时计数器
             if self.heartbeat_timeout_count > 0:
                 self.logger.info(f"Driver recovered. Resetting timeout count from {self.heartbeat_timeout_count} to 0.")
                 self.heartbeat_timeout_count = 0
@@ -366,10 +345,8 @@ class AstribotInterface(AstribotBase):
         if len(list(msg.data)) > 1:
             current_code = str(msg.data[1])
 
-            # If the current error code is the same as the last reported error code, it will not be reported again.
             if current_code == self.last_reported_code:
                 return
-            # Otherwise, record the current error code and report an error/warning
             self.last_reported_code = current_code 
         
             third_digit = int(current_code[2])
@@ -380,7 +357,6 @@ class AstribotInterface(AstribotBase):
 
     def drive_error_code(self, msg):
         self.error_code_timestamp = time.time()
-        # 收到驱动错误代码说明驱动仍在运行，重置超时计数器
         if self.heartbeat_timeout_count > 0:
             self.logger.info(f"Received driver error code. Resetting timeout count from {self.heartbeat_timeout_count} to 0.")
             self.heartbeat_timeout_count = 0
@@ -388,7 +364,6 @@ class AstribotInterface(AstribotBase):
         self.show_error_code(msg)
 
 
-    ### 1: Robot Information ###
     def get_robot_mode(self):
         try:
             client = self.node.create_client(RawRequest, '/astribot_safe_mode/state')
@@ -400,10 +375,8 @@ class AstribotInterface(AstribotBase):
 
             future = client.call_async(request)
 
-            # Use a simple timeout mechanism
             import time
             start_time = time.time()
-            # It will return 'simulation' if the service is not available or 5s times out
             while not future.done() and (time.time() - start_time) < 5:
                 time.sleep(0.001)
 
@@ -490,7 +463,6 @@ class AstribotInterface(AstribotBase):
             return ik_flag, None
 
 
-    ### 2: Robot Control ###
     @check_control_rights
     def set_mode(self, mode: str, enable: bool, arm_name: str = "dual"):
         if mode == "set_head_follow_effector":
@@ -638,8 +610,6 @@ class AstribotInterface(AstribotBase):
         )
 
 
-    ### 3: Sensors ###
-    # Mic and Speaker
     def activate_audio(self, audio_config: Dict[str, float]):
         """
         Activate audio by requesting system monitor.
@@ -652,14 +622,11 @@ class AstribotInterface(AstribotBase):
                 raise RuntimeError("Service /astribot_micspeaker_control not available")
 
             try:
-                # 创建请求
                 req = SetBool.Request()
                 req.data = True
 
-                # 调用服务
                 future = client.call_async(req)
                 
-                # 等待服务调用完成
                 start_time = time.time()
                 while not future.done() and (time.time() - start_time) < 5.0:
                     time.sleep(0.001)
@@ -688,14 +655,11 @@ class AstribotInterface(AstribotBase):
                 raise RuntimeError("Service /astribot_micspeaker_control not available")
 
             try:
-                # 创建请求
                 req = SetBool.Request()
                 req.data = False
 
-                # 调用服务
                 future = client.call_async(req)
                 
-                # 等待服务调用完成
                 import time
                 start_time = time.time()
                 while not future.done() and (time.time() - start_time) < 5.0:
@@ -707,7 +671,6 @@ class AstribotInterface(AstribotBase):
                     self.logger.error("Service call timeout")
                     return False
 
-                # 处理响应
                 if response.success:
                     self.logger.info(f"Successfully deactivate audio")
                     return True
@@ -721,7 +684,6 @@ class AstribotInterface(AstribotBase):
             self.logger.error(f"System monitor audio service wait timeout: {e}")
             return False
 
-    # Camera
     def activate_camera_abs(self, cameras_setting: Dict[str, Dict]):
         """
         Activate cameras which using astribot_camera_abs driver by requesting system monitor.
@@ -734,14 +696,11 @@ class AstribotInterface(AstribotBase):
                 raise RuntimeError("Service /camera_control_command not available")
 
             try:
-                # 创建请求
                 req = SetBool.Request()
                 req.data = True
 
-                # 调用服务
                 future = client.call_async(req)
                 
-                # 等待服务调用完成
                 import time
                 start_time = time.time()
                 while not future.done() and (time.time() - start_time) < 5.0:
@@ -753,7 +712,6 @@ class AstribotInterface(AstribotBase):
                     self.logger.error("Service call timeout")
                     return False
 
-                # 处理响应
                 if response.success:
                     self.logger.info(f"Successfully activate cameras")
                     return True
@@ -778,14 +736,11 @@ class AstribotInterface(AstribotBase):
                 raise RuntimeError("Service /camera_control_command not available")
 
             try:
-                # 创建请求
                 req = SetBool.Request()
                 req.data = False
 
-                # 调用服务
                 future = client.call_async(req)
                 
-                # 等待服务调用完成
                 import time
                 start_time = time.time()
                 while not future.done() and (time.time() - start_time) < 5.0:
@@ -797,7 +752,6 @@ class AstribotInterface(AstribotBase):
                     self.logger.error("Service call timeout")
                     return False
 
-                # 处理响应
                 if response.success:
                     self.logger.info(f"Successfully deactivate cameras")
                     return True
@@ -832,23 +786,18 @@ class AstribotInterface(AstribotBase):
             real_topic_name = f"{topic_name}/compressed"
         
         try:
-            # Create a temporary subscription to check if topic is active
             message_received = threading.Event()
             
             def temp_callback(msg):
                 message_received.set()
 
-            # Create subscription
             temp_sub = self.node.create_subscription(
                 CompressedImage, real_topic_name, temp_callback, 10
             )
-            # Wait for message with timeout (200ms)
             if message_received.wait(timeout=0.2):
-                # Clean up subscription
                 self.node.destroy_subscription(temp_sub)
                 return True
             else:
-                # Clean up subscription
                 self.node.destroy_subscription(temp_sub)
                 return False
                 
@@ -862,15 +811,11 @@ class AstribotInterface(AstribotBase):
         """
         try:
             if self.need_decode_ == True and msg.format.lower() == "jpeg":
-                # if ask for decode, decode the jpeg image
                 np_arr = np.frombuffer(msg.data, np.uint8)
                 cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-                # May be its better to keep BGR as output 
-                # cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
 
                 self.user_callback_(topic_name, msg, cv_image.shape[1], cv_image.shape[0], cv_image)
             else:
-                # if not ask for decode, just convert the data to numpy array
                 cv_image = np.frombuffer(msg.data, np.uint8)
                 self.user_callback_(topic_name, msg, 0, 0, cv_image)
         except Exception as e:
@@ -886,10 +831,8 @@ class AstribotInterface(AstribotBase):
             return None
 
         parts = topic_name.split('/')
-        # get camera_name
         camera_name = parts[2]
 
-        # get image type
         image_type = parts[3]
 
         if image_type == 'color_compress':
@@ -898,15 +841,12 @@ class AstribotInterface(AstribotBase):
             topic_name_ = topic_name
         self.user_callback_ = callback
         self.need_decode_ = need_decode
-        # use lambda to provide topic_name
         callback = lambda msg: self.camera_callback(msg, topic_name_)
-        # register callback
         return self.node.create_subscription(
             CompressedImage, topic_name_, callback, 10,
             callback_group=ReentrantCallbackGroup()
         )
 
-    # Lidar
     def activate_lidar(self):
         try:
             client = self.node.create_client(SetBool, '/astribot_lidar_control')
@@ -915,14 +855,11 @@ class AstribotInterface(AstribotBase):
                 raise RuntimeError("Service /astribot_lidar_control not available")
 
             try:
-                # 创建请求
                 req = SetBool.Request()
                 req.data = True
 
-                # 调用服务
                 future = client.call_async(req)
 
-                # 等待服务调用完成
                 import time
                 start_time = time.time()
                 while not future.done() and (time.time() - start_time) < 5.0:
@@ -934,7 +871,6 @@ class AstribotInterface(AstribotBase):
                     self.logger.error("Service call timeout")
                     return False
 
-                # 处理响应
                 if response.success:
                     self.logger.info(f"Successfully activate lidar")
                     return True
@@ -956,14 +892,11 @@ class AstribotInterface(AstribotBase):
                 raise RuntimeError("Service /astribot_lidar_control not available")
 
             try:
-                # 创建请求
                 req = SetBool.Request()
                 req.data = False
 
-                # 调用服务
                 future = client.call_async(req)
 
-                # 等待服务调用完成
                 import time
                 start_time = time.time()
                 while not future.done() and (time.time() - start_time) < 5.0:
@@ -975,7 +908,6 @@ class AstribotInterface(AstribotBase):
                     self.logger.error("Service call timeout")
                     return False
 
-                # 处理响应
                 if response.success:
                     self.logger.info(f"Successfully deactivate lidar")
                     return True
@@ -990,7 +922,6 @@ class AstribotInterface(AstribotBase):
             return False
 
 
-    ### 4: High Level API ###
     def set_effector_max_force(self, max_force):
         if max_force[0] is not None:
             left_gripper_max_force_request = self.node.create_client(
@@ -1008,7 +939,6 @@ class AstribotInterface(AstribotBase):
             req = RawRequest.Request()
             req.request = request_json
             future = left_gripper_max_force_request.call_async(req)
-            # Wait for the service call to complete
             import time
             start_time = time.time()
             while not future.done() and (time.time() - start_time) < 5.0:
@@ -1032,7 +962,6 @@ class AstribotInterface(AstribotBase):
             req = RawRequest.Request()
             req.request = request_json
             future = right_gripper_max_force_request.call_async(req)
-            # Wait for the service call to complete
             import time
             start_time = time.time()
             while not future.done() and (time.time() - start_time) < 5.0:

@@ -3,20 +3,19 @@
 <package format="3">
   <name>astribot_s1_path_tracking</name>
   <version>0.1.0</version>
-  <description>
-    三段式路径跟踪控制器插件：原地对齐路径起始方向 -> 沿路径行驶 -> 原地对齐目标姿态。
-    第三段可关闭（探索场景按需求刻意跳过）。跟踪段委托给内层 nav2 控制器（RPP 或 MPPI），
-    因此本包不重新实现路径跟踪算法，只增加相位调度与原地旋转。
-  </description>
+  <description>Nav2 path following with terminal pose refinement and bounded failure handling.</description>
   <maintainer email="astribot-dev@astribot.com">astribot-dev</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <depend>astribot_navigation_msgs</depend>
+  <depend>nav2_controller</depend>
   <depend>geometry_msgs</depend>
   <depend>nav2_core</depend>
   <depend>nav2_costmap_2d</depend>
   <depend>nav2_mppi_controller</depend>
+  <depend>nav2_smac_planner</depend>
   <depend>nav2_util</depend>
   <depend>nav_msgs</depend>
   <depend>pluginlib</depend>
@@ -26,13 +25,13 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
 
-  <test_depend>ament_cmake_gtest</test_depend>
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
-
   <export>
     <build_type>ament_cmake</build_type>
     <nav2_core plugin="${prefix}/plugins.xml" />
     <nav2_mppi_controller plugin="${prefix}/critics.xml" />
   </export>
+  <depend>nav2_behavior_tree</depend>
+  <depend>behaviortree_cpp_v3</depend>
+  <depend>nav2_msgs</depend>
+  <depend>std_msgs</depend>
 </package>

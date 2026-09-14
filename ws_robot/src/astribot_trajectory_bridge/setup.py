@@ -7,7 +7,7 @@ package_name = 'astribot_trajectory_bridge'
 setup(
     name=package_name,
     version='0.1.0',
-    packages=find_packages(exclude=['test']),
+    packages=find_packages(),
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -24,7 +24,6 @@ setup(
         'SDK 按部件读关节状态 -> 展开成逐关节 /joint_states'
     ),
     license='Apache-2.0',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'state_bridge_node = '

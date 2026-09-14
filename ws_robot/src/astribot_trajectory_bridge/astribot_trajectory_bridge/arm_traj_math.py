@@ -123,9 +123,6 @@ def check_within_limits(positions, lower, upper, margin=0.0):
     return (True, '')
 
 
-# ---------------------------------------------------------------------------
-# 轨迹插值（方案 B 流式下发用）
-# ---------------------------------------------------------------------------
 
 INTERP_LINEAR = 'linear'
 INTERP_CUBIC = 'cubic'
@@ -184,7 +181,6 @@ def interpolate_trajectory(times, positions, velocities, t, mode=INTERP_CUBIC):
     if t >= times[-1]:
         return list(positions[-1])
 
-    # 定位区间
     hi = 0
     for i in range(1, len(times)):
         if t <= times[i]:
@@ -208,9 +204,6 @@ def interpolate_trajectory(times, positions, velocities, t, mode=INTERP_CUBIC):
     return out
 
 
-# ---------------------------------------------------------------------------
-# 收敛判据
-# ---------------------------------------------------------------------------
 
 def max_abs_error(a, b):
     """两个关节向量的最大逐元素绝对差。"""
@@ -237,9 +230,6 @@ def is_settled(actual, target, tolerance):
     return max_abs_error(actual, target) <= tolerance
 
 
-# ---------------------------------------------------------------------------
-# 方案 A 的路点整形（保留接口）
-# ---------------------------------------------------------------------------
 
 def reshape_waypoints(flat, dof):
     """把展平数组还原成 List[List[float]]。ROS2 IDL 不支持变长嵌套序列，

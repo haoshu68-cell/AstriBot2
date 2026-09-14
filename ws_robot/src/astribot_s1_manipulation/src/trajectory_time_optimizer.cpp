@@ -20,8 +20,6 @@ constexpr const char * kLoggerName = "astribot_s1_manipulation.time_optimizer";
 
 bool isValidScaling(double value)
 {
-  // MoveIt 的缩放系数定义域是 (0, 1]。给 0 会让轨迹永远走不完，
-  // 给 >1 会直接突破 joint_limits.yaml 里的硬限位。
   return value > 0.0 && value <= 1.0;
 }
 }  // namespace
@@ -69,8 +67,6 @@ bool TrajectoryTimeOptimizer::configure(
     return false;
   }
 
-  // 优化档的缩放不比 baseline 大的话，"优化"没有任何意义 ——
-  // 这是配置错误，早点拦住比让用户困惑"为什么节拍没缩短"要好。
   if (params.enable_optimization &&
     params.optimized_velocity_scaling <= params.baseline_velocity_scaling)
   {
@@ -112,8 +108,6 @@ bool TrajectoryTimeOptimizer::applyTotg(
 {
   error.clear();
   try {
-    // path_tolerance / min_angle_change 通过构造函数给；
-    // resample_dt 也在构造函数里（0 表示不重采样）。
     trajectory_processing::TimeOptimalTrajectoryGeneration totg(
       params_.totg_path_tolerance,
       params_.totg_resample_dt,
@@ -124,8 +118,6 @@ bool TrajectoryTimeOptimizer::applyTotg(
     }
     return true;
   } catch (const std::exception & e) {
-    // TOTG 在路径含重复点/退化段时确实会抛异常。捕获后按"优化失败"处理，
-    // 上层会回退到 baseline，而不是让整个规划崩掉。
     error = std::string("exception in TOTG: ") + e.what();
     return false;
   }
@@ -157,8 +149,6 @@ PlanErrorCode TrajectoryTimeOptimizer::optimize(
   metrics_params.limit_tolerance_ratio = params_.limit_tolerance_ratio;
   metrics_params.allow_finite_difference = true;
 
-  // ---- 第一步：baseline (IPTP) ----
-  // 用副本做，这样失败时原始轨迹还在。
   robot_trajectory::RobotTrajectory baseline(trajectory);
   std::string iptp_error;
   if (!applyIptp(
@@ -176,8 +166,6 @@ PlanErrorCode TrajectoryTimeOptimizer::optimize(
     result.baseline_metrics.summary.c_str());
 
   if (!result.baseline_metrics.isLegal()) {
-    // baseline 就超限：说明 joint_limits.yaml 与路径本身矛盾（例如路径里有
-    // 关节位置跳变）。此时**不输出任何轨迹** —— 任务禁止输出非法轨迹。
     result.note = "baseline trajectory violates joint limits: " +
       result.baseline_metrics.summary;
     RCLCPP_ERROR(
@@ -187,7 +175,6 @@ PlanErrorCode TrajectoryTimeOptimizer::optimize(
     return PlanErrorCode::kJointLimitViolation;
   }
 
-  // 优化关闭：直接采纳 baseline。
   if (!params_.enable_optimization) {
     trajectory = baseline;
     result.optimized_accepted = false;
@@ -197,7 +184,6 @@ PlanErrorCode TrajectoryTimeOptimizer::optimize(
     return PlanErrorCode::kSuccess;
   }
 
-  // ---- 第二步：优化版 (TOTG) ----
   robot_trajectory::RobotTrajectory optimized(trajectory);
   std::string totg_error;
   if (!applyTotg(
@@ -212,8 +198,6 @@ PlanErrorCode TrajectoryTimeOptimizer::optimize(
     return PlanErrorCode::kSuccess;
   }
 
-  // 可选的 Ruckig 平滑。失败不致命：平滑只是锦上添花，
-  // 失败就用未平滑的 TOTG 结果，但要告警说明。
   if (params_.enable_ruckig_smoothing) {
     try {
       if (!trajectory_processing::RuckigSmoothing::applySmoothing(
@@ -237,8 +221,6 @@ PlanErrorCode TrajectoryTimeOptimizer::optimize(
     params_.optimized_velocity_scaling, params_.optimized_acceleration_scaling,
     result.optimized_metrics.summary.c_str());
 
-  // ---- 第三步：独立复核限位，非法则回退 ----
-  // 这是本模块最重要的一条契约：绝不因为"参数化器说它遵守了限位"就相信它。
   if (!result.optimized_metrics.isLegal()) {
     trajectory = baseline;
     result.fell_back = true;
@@ -250,15 +232,12 @@ PlanErrorCode TrajectoryTimeOptimizer::optimize(
     return PlanErrorCode::kSuccess;
   }
 
-  // ---- 第四步：确认真的更快 ----
   if (result.baseline_metrics.duration > 1e-9) {
     result.duration_reduction_ratio =
       (result.baseline_metrics.duration - result.optimized_metrics.duration) /
       result.baseline_metrics.duration;
   }
   if (result.optimized_metrics.duration >= result.baseline_metrics.duration) {
-    // "优化"后反而更慢/一样：没有采纳的理由，回退到 baseline。
-    // 这种情况在路径极短（只有两三个点）时会出现，属正常。
     trajectory = baseline;
     result.fell_back = true;
     std::ostringstream oss;

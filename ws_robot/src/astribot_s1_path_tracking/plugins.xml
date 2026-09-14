@@ -1,10 +1,17 @@
 <library path="astribot_s1_path_tracking">
-  <class type="astribot_s1_path_tracking::ThreePhaseController"
-         base_class_type="nav2_core::Controller">
-    <description>
-      三段式路径跟踪：原地对齐路径起始方向 -> 沿路径行驶 -> 原地对齐目标姿态。
-      跟踪段委托给 inner_controller_plugin 指定的内层 nav2 控制器。
-      align_goal_enabled=false 时跳过终点对齐（探索场景）。
-    </description>
+  <class name="astribot_s1_path_tracking::ThreePhaseController" type="astribot_s1_path_tracking::ThreePhaseController" base_class_type="nav2_core::Controller">
+    <description>Original three-phase tracking controller.</description>
+  </class>
+  <class type="astribot_s1_path_tracking::ArrivalController" base_class_type="nav2_core::Controller">
+    <description>Native path following and terminal pose refinement.</description>
+  </class>
+  <class type="astribot_s1_path_tracking::ArrivalGoalChecker" base_class_type="nav2_core::GoalChecker">
+    <description>Fresh, settled arrival within 3cm and 1.5 degrees.</description>
+  </class>
+  <class type="astribot_s1_path_tracking::ExactGoalPlanner" base_class_type="nav2_core::GlobalPlanner">
+    <description>Smac planning with the original continuous goal as the terminal pose.</description>
+  </class>
+  <class type="astribot_s1_path_tracking::PolicyProgressChecker" base_class_type="nav2_core::ProgressChecker">
+    <description>Original pose progress checks with explicit policy hold time excluded.</description>
   </class>
 </library>

@@ -112,8 +112,6 @@ PlanErrorCode GripperCommander::configure(
     return PlanErrorCode::kPlanningGroupNotFound;
   }
 
-  // 夹爪只允许 1 个主动自由度。多于 1 个说明 SRDF 把 mimic 从动关节也写进组里了，
-  // 那会让 JTC 收到多关节目标而控制器只认 1 个，报的错离根因很远，所以在这里就拦住。
   const std::vector<const moveit::core::JointModel *> & active = jmg->getActiveJointModels();
   if (active.size() != 1U) {
     detail = "夹爪组 '" + config_.group_name + "' 有 " + std::to_string(active.size()) +
@@ -122,7 +120,6 @@ PlanErrorCode GripperCommander::configure(
   }
   joint_name_ = active.front()->getName();
 
-  // ---- 开合角从 SRDF 的 group_state 读，不写死 ----
   std::map<std::string, double> open_values;
   std::map<std::string, double> closed_values;
   if (!jmg->getVariableDefaultPositions(config_.open_state_name, open_values)) {
@@ -149,7 +146,6 @@ PlanErrorCode GripperCommander::configure(
     return PlanErrorCode::kInvalidInput;
   }
 
-  // ---- 量张口用的三个 link 必须都在模型里 ----
   for (const auto & pair : {
       std::pair<const char *, const std::string &>{"tcp_link", config_.tcp_link},
       std::pair<const char *, const std::string &>{"left_pad_link", config_.left_pad_link},
@@ -241,19 +237,6 @@ PlanErrorCode GripperCommander::buildJawTable(std::string & detail)
     const double t = static_cast<double>(i) / static_cast<double>(kJawTableSamples - 1);
     const double angle = lo_angle + t * (hi_angle - lo_angle);
 
-    // !!! 必须用 setJointPositions(master, ...)，不能用 setJointGroupPositions !!!
-    //
-    // 实测踩坑（这个错误被本包的单测抓住了，否则完全不会报错）：
-    //   setJointGroupPositions() 内部走 updateMimicJoints(group)，它只遍历
-    //   **组内**的 mimic 关节（group->getMimicJointModels()）。而 SRDF 里夹爪组
-    //   刻意只声明主动关节 joint_L1、不含 5 个 mimic 从动关节 —— 于是从动关节
-    //   一个都不会被更新，指垫停在初始位置。
-    //   后果是张口的变化率只有真实值的一半（合成模型上实测 0.035 而非 0.070），
-    //   反解出的抓取角随之错一倍，而全程没有任何报错。
-    //
-    //   setJointPositions(master, ...) 走的是 updateMimicJoint(joint)，它遍历
-    //   master->getMimicRequests() —— 所有跟随这个主动关节的从动关节，
-    //   不管它们在不在组里。这才是四连杆夹爪要的语义。
     state.setJointPositions(master, &angle);
     state.update();
 
@@ -268,7 +251,6 @@ PlanErrorCode GripperCommander::buildJawTable(std::string & detail)
       return PlanErrorCode::kInvalidInput;
     }
 
-    // 两指垫相向面之间的间隙。谁在轴的正侧由包络中点决定，不假定 left 一定在 +x。
     const double l_mid = 0.5 * (l_lo + l_hi);
     const double r_mid = 0.5 * (r_lo + r_hi);
     const double gap = (l_mid < r_mid) ? (r_lo - l_hi) : (l_lo - r_hi);
@@ -277,14 +259,9 @@ PlanErrorCode GripperCommander::buildJawTable(std::string & detail)
     table_width_.push_back(gap);
   }
 
-  // ---- 单调性校验 ----
-  // 反解用的是线性插值，前提是张口随角度单调。四连杆在行程内本该单调，
-  // 但如果 URDF 的 mimic 比例被改错（比如某一侧符号写反），表就会先减后增，
-  // 那时插值会静默给出一个错误角度 —— 宁可在这里明确失败。
   const bool open_is_lo = (open_angle_ <= closed_angle_);
   double worst_reverse = 0.0;
   for (std::size_t i = 1; i < table_width_.size(); ++i) {
-    // 角度从 lo 到 hi 递增；张开在 lo 侧时张口应递减，反之应递增。
     const double delta = table_width_[i] - table_width_[i - 1];
     const double reverse = open_is_lo ? delta : -delta;
     worst_reverse = std::max(worst_reverse, reverse);
@@ -297,11 +274,6 @@ PlanErrorCode GripperCommander::buildJawTable(std::string & detail)
     return PlanErrorCode::kInvalidInput;
   }
 
-  // ---- 行程校验 ----
-  // 如果 jaw_axis_in_tcp 指错方向、或者 pad link 选错（选成了不相向的两个 link），
-  // 张口会几乎不随角度变化 —— 这**通不过**下面的判断，但**能**通过上面的单调性判断
-  // （处处 delta≈0 也算单调）。那时错误会推迟到 graspAngleForWidth 才暴露，
-  // 报的却是"物体比闭合间隙还窄"，指向完全错的方向。所以在这里就拦住。
   const double stroke = std::abs(table_width_.front() - table_width_.back());
   if (stroke < kMinJawStrokeM) {
     detail = "从张开到闭合，张口只变化了 " + std::to_string(stroke) +
@@ -323,7 +295,6 @@ double GripperCommander::jawWidthAtAngle(double angle_rad) const
   const double hi = table_angle_.back();
   const double clamped = std::min(std::max(angle_rad, lo), hi);
 
-  // 表按角度递增建好，可以直接二分。
   const auto upper = std::upper_bound(table_angle_.begin(), table_angle_.end(), clamped);
   if (upper == table_angle_.begin()) {
     return table_width_.front();
@@ -368,16 +339,12 @@ PlanErrorCode GripperCommander::graspAngleForWidth(
     return PlanErrorCode::kGraspWidthUnreachable;
   }
   if (target < w_closed) {
-    // 完全闭合后间隙仍大于物体宽度 —— 两指合到底也碰不到物体。
-    // 这种情况碰撞检测查不出来（没有接触就没有碰撞），只能在这里拦。
     detail = "物体宽 " + std::to_string(width_m) + " m（含预紧后目标张口 " +
       std::to_string(target) + " m）小于完全闭合时的间隙 " + std::to_string(w_closed) +
       " m，合到底也夹不住";
     return PlanErrorCode::kGraspWidthUnreachable;
   }
 
-  // 在表里找目标张口所在的区间，线性插值出角度。
-  // 表的张口方向可能递增也可能递减（取决于 open/closed 哪个角更小），两种都处理。
   for (std::size_t i = 1; i < table_width_.size(); ++i) {
     const double w0 = table_width_[i - 1];
     const double w1 = table_width_[i];
@@ -392,8 +359,6 @@ PlanErrorCode GripperCommander::graspAngleForWidth(
     return PlanErrorCode::kSuccess;
   }
 
-  // 上面两个量程判断已经把 target 夹在 [w_closed, w_open] 内，
-  // 走到这里说明表本身有断裂（不该发生）。宁可明确报错，不返回一个凑出来的角度。
   detail = "目标张口 " + std::to_string(target) + " m 落在张口表的区间之外（表有断裂）";
   return PlanErrorCode::kInvalidInput;
 }
@@ -419,13 +384,9 @@ PlanErrorCode GripperCommander::sendTrajectory(double angle_rad, std::string & d
   point.time_from_start.sec = static_cast<std::int32_t>(move_ns.count() / 1000000000LL);
   point.time_from_start.nanosec = static_cast<std::uint32_t>(move_ns.count() % 1000000000LL);
   goal.trajectory.points.push_back(point);
-  // header.stamp 留 0 = "立刻开始"。不要打墙钟戳：仿真下 tf 与控制器都用 sim time，
-  // 墙钟戳会落在未来，轨迹被判成过期。
   goal.trajectory.header.stamp.sec = 0;
   goal.trajectory.header.stamp.nanosec = 0U;
 
-  // 阻塞等待一律用 future.wait_for()：本节点已被外部执行器 spin，
-  // 再调 spin_until_future_complete 会变成两个执行器抢同一个节点。
   auto goal_future = action_client_->async_send_goal(goal);
   const auto result_budget = std::chrono::duration<double>(config_.result_timeout_sec);
   const auto result_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(result_budget);
@@ -475,7 +436,6 @@ GripperOutcome GripperCommander::moveTo(double angle_rad)
   outcome.target_width_m = jawWidthAtAngle(target);
 
   const auto started = std::chrono::steady_clock::now();
-  // 第三方 action / MoveIt 都可能抛异常，本层边界上一律转错误码，绝不上抛。
   try {
     std::string send_detail;
     const PlanErrorCode send_code = sendTrajectory(target, send_detail);
@@ -487,9 +447,6 @@ GripperOutcome GripperCommander::moveTo(double angle_rad)
       return outcome;
     }
 
-    // ---- 控制器报完成之后必须再驻留 ----
-    // JTC 的 SUCCEEDED 只代表它自己的容差满足。实测过「报完成时还在收敛」，
-    // 不驻留就读，读到的是运动中的值，会把「正常收敛」误判成 NOT_CONVERGED。
     if (config_.settle_time_sec > 0.0) {
       std::this_thread::sleep_for(
         std::chrono::duration_cast<std::chrono::nanoseconds>(

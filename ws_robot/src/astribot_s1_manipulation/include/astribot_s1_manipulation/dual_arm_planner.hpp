@@ -1,28 +1,4 @@
 // Copyright 2026 Astribot
-//
-// 双臂规划编排器：对外的总接口。
-//
-// 职责边界
-// --------
-// 本类**不实现**规划算法，它把下面这些已有能力串成完整流程：
-//   OMPL 规划(经 move_group)  ->  闭链投影  ->  碰撞/奇异校验  ->  时间参数化/节拍优化
-// 每一步失败都转成错误码返回，绝不抛异常、绝不返回非法轨迹。
-//
-// 为什么用 MoveGroupInterface 而不是 PlanningPipeline
-// -------------------------------------------------
-// MoveGroupInterface 是 Humble 的稳定官方接口，且自带轨迹执行
-// （经 move_group 的 controller manager 下发到 ros2_control）。
-// 用 PlanningPipeline 在进程内规划虽然少一次 IPC，但执行链要自己搭
-// action client，且拿不到 move_group 维护的实时 PlanningScene。
-// 任务要求"启动 move_group"并"Gazebo 里下发执行"，MoveGroupInterface 更贴合。
-//
-// 单臂 vs 双臂闭链的关键区别
-// ------------------------
-// 单臂：直接交给 OMPL，出来的轨迹只需校验碰撞/奇异/限位。
-// 双臂闭链：**不能**直接对 dual_arm(14维) 调 OMPL —— 那样两条臂各走各的，
-//   相对位姿一路漂移，闭链约束不成立（任务明确禁止）。必须：
-//   leader 单臂规划 -> 逐点投影出 follower -> 逐点校验 -> 合并成 14 维轨迹。
-//   详见 closed_chain_constraint.hpp 的数学说明。
 
 #ifndef ASTRIBOT_S1_MANIPULATION__DUAL_ARM_PLANNER_HPP_
 #define ASTRIBOT_S1_MANIPULATION__DUAL_ARM_PLANNER_HPP_
@@ -78,14 +54,6 @@ struct DualArmPlannerParams
   int densify_max_waypoints{400};
 
   /// "起点已经在目标上"的判定阈值(rad)：leader 每个关节与目标的偏差都在
-  /// 这个值以内时，直接返回 kAlreadyAtGoal，不去调规划器、也不重试。
-  ///
-  /// 为什么要有（Gazebo 实测）：起点==目标时 OMPL 返回一条"2 个相同状态、
-  /// 代价 0.00"的退化路径，加密后有效点数 < 2，会被误判成规划器失败并
-  /// 白重试 3 次。见 error_codes.hpp 里 kAlreadyAtGoal 的说明。
-  ///
-  /// 取值：要明显大于控制器稳态误差（实测 ~1e-4 rad），又要明显小于
-  /// 最小的有意义动作幅度。1e-3 rad ≈ 0.057°，两边都留了一个数量级。
   double already_at_goal_tolerance_rad{1e-3};
 
   ClosedChainParams closed_chain;
@@ -95,19 +63,6 @@ struct DualArmPlannerParams
   MetricsParams metrics;
 
   /// 执行完一条轨迹后，等机械臂真正静止下来的参数。
-  ///
-  /// 为什么必须有（Gazebo 实测，多步序列的必踩坑）：
-  /// JointTrajectoryController 在轨迹时长走完时就报 "successfully finished"，
-  /// 但此时手臂**还在向最后一个设定点收敛**。于是"执行成功"返回后立刻规划下一步，
-  /// 起点取的是一个仍在移动的瞬时构型；等这一步规划完（实测 0.53s）再下发，
-  /// 真实关节已经又走了一截，move_group 的起点校验直接否掉：
-  ///     Invalid Trajectory: start point deviates from current robot state more than 0.05
-  ///     joint 'astribot_arm_left_joint_2': expected: -0.963636, current: -1.02968
-  /// 偏差 0.066rad，正好越过默认的 allowed_start_tolerance 0.05。
-  ///
-  /// 注意这不该靠放大 allowed_start_tolerance 来"解决"：那是把
-  /// "从错误的起点出发"合法化，轨迹前段会有一个真实的跳变。
-  /// 正确做法是等静止 —— 让下一步的规划起点就是真实起点。
   struct ExecutionParams
   {
     /// 等静止的总超时(s)。超时不算执行失败（轨迹本身已经执行完了），

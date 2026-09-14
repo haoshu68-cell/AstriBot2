@@ -36,8 +36,6 @@ def _setup(context, *args, **kwargs):
     description_share = get_package_share_directory('astribot_s1_description')
     xacro_path = os.path.join(description_share, 'urdf', 'astribot_s1.xacro')
 
-    # 用 xacro 命令行展开而不是 Command() 替换，是为了在这里就能对失败给出
-    # 清晰报错 —— Command() 失败时 launch 报的是一长串无上下文的 stderr。
     import subprocess
     result = subprocess.run(
         ['xacro', xacro_path, 'robot_name:=astribot_s1'],
@@ -55,8 +53,6 @@ def _setup(context, *args, **kwargs):
             name='robot_state_publisher',
             output='screen',
             parameters=[{'robot_description': robot_description,
-                         # 厂商栈没有 /clock，用系统时钟。
-                         # 切真机时这一条不用改：真机也是系统时钟。
                          'use_sim_time': False}],
         ))
 

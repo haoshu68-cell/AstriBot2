@@ -83,7 +83,6 @@ class Astribot(AstribotBase):
         """
         return self.astribot_interface.have_control_rights
 
-    ### 1. Robot Information ###
     def get_info(self):
         """
         Brief:
@@ -489,7 +488,6 @@ class Astribot(AstribotBase):
             self.astribot_interface.get_self_closest_point(torso_joints_position, arm_left_joints_position, arm_right_joints_position)
         return min_distance, link_A_name, link_B_name, closest_point_on_A_of_torso_frame, closest_point_on_B_of_torso_frame
 
-    ### 2. Robot Control ###
     def move_joints_position(self, names: List[str] , commands: List[List[float]] , duration=5.0, use_wbc:bool=False, add_default_torso:bool=True):
         """
         Brief:
@@ -866,8 +864,6 @@ class Astribot(AstribotBase):
         """
         return self.astribot_interface.restart_robot()
 
-    ### 3. Sensor Control ###
-    # Camera
     def activate_camera(self, cameras_setting: Optional[Dict[str, Any]] = None):
         """
         Brief:
@@ -1002,11 +998,9 @@ class Astribot(AstribotBase):
         output = {}
         for camera in camera_name_list:
             output[camera] = {}
-            # we can only check color topic to decide whether camera is activated or not
             output[camera]['activate'] = self.astribot_interface.is_camera_activated(camera, "color")
         return output
 
-    # Lidar
     def activate_lidar(self):
         """
         Brief:
@@ -1039,7 +1033,6 @@ class Astribot(AstribotBase):
         """
         return self.astribot_interface.deactivate_lidar()
 
-    # Microphone and Speaker
     def activate_audio(self,audio_setting: Optional[Dict[str, Any]] = None):
         """
         Brief:
@@ -1072,7 +1065,6 @@ class Astribot(AstribotBase):
         """
         return self.astribot_interface.deactivate_audio()
 
-    ### 4. High Level API ###
     def set_head_follow_effector(self, enable:bool=True, arm_name:str="dual"):
         """
         Brief:

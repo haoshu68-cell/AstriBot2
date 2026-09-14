@@ -1,37 +1,9 @@
 #!/usr/bin/env bash
-# 实机分阶段启动：① SLAM ② 感知 ③ 状态桥+RSP ④ 底盘里程计 ⑤ nav2 ⑥ 控制桥接
-#
-# ════════════════ 设计原则 ════════════════
-# 1. **每阶段必须过判据才进下一阶段**，不用 sleep 当成功。
-#    本项目反复吃过"sleep 完就假定起来了"的亏：ros2 topic list 里有话题
-#    但 pub=0（只是我自己订阅造出来的）、进程活着但子节点已死。
-# 2. **判据一律是 count_publishers() > 0**，不是话题存在、不是进程在。
-# 3. **发现窗口 ≥40 秒**：实机 DDS 收敛实测 30~50s，短窗口会得出"坏了"的假结论。
-# 4. **绝不碰运动**。①~⑤ 连写通路都没有；⑥ 显式 allow_write_to_real=false，
-#    WriteGate 会主动拒绝，`_inner_tick` 第一行即 return。
-#    使能与发速度**不在本脚本职责内**，必须人工另行确认。
-# 5. **不用 pkill -f**：本项目已六次把自己的 shell 杀掉（命令行含该模式）。
-#    要清理先 ps 取 PID 再 kill <pid>。
-#
-# ════════════════ 环境的坑 ════════════════
-# 厂商 middleware 覆盖了 ros2cli 的扩展点，`ros2 topic` / `ros2 launch`
-# 子命令会消失（报 invalid choice）。可靠解法是从**活着的厂商进程**
-# /proc/<pid>/environ 整份导出环境，而不是自己拼 source 顺序。
-#
-# 用法：
-#   ./bringup_stages.sh            全部阶段
-#   ./bringup_stages.sh 1 2 3      只起指定阶段
-#   ./bringup_stages.sh --status   只查当前状态，不启动任何东西
 set -uo pipefail
 
 WS=/home/astribot/Downloads/astribot_sdk_aarch64/ws_robot
 SDK_ROOT=/home/astribot/Downloads/astribot_sdk_aarch64   # `import astribot_sdk` 要它在 PYTHONPATH 上
 SLAM_WS=/home/astribot/SLAM/vxlm-slam   # voxel_slam 独立工作区，不在 WS 下
-# voxelslam 链接的是自建 GTSAM 4.1.0，其 libmetis-gtsam.so 不在 ldconfig 里。
-# 真值来源是机器人 ~/.bashrc 第 126 行，那里写明必须**置于最前端**
-#（"强行在 ROS2 环境加载完后，将自定义 GTSAM 路径置于最前端"）——
-# 系统里另有 /lib/aarch64-linux-gnu/libmetis.so.5，顺序反了会链到错的那个。
-# 我们的环境取自厂商 all_node 进程的 environ，那个进程不经 .bashrc，所以没有这一段。
 GTSAM_LIB=/home/astribot/SLAM/ThirdParty/GTSAM/install4.1.0/lib
 ENVF=/tmp/robot_env.sh
 LOGDIR=/tmp/bringup
@@ -44,78 +16,50 @@ err()  { echo "${C_ER}[ERR]${C_N} $*"; }
 warn() { echo "${C_WA}[WARN]${C_N} $*"; }
 die()  { err "$*"; exit 1; }
 
-# ---------------------------------------------------------------- 环境
 build_env() {
-    # 从活着的厂商进程取环境。自己拼 source 顺序会丢 ros2cli 扩展点。
     local p
     p=$(pgrep -f 'all_node.launch' | head -1)
     [ -n "$p" ] || die "厂商 all_node.launch 没在跑 —— 先启动本体驱动。"
-    tr '\0' '\n' < "/proc/$p/environ" \
-        | grep -vE '^(_|PWD|OLDPWD|SHLVL)=' \
-        | sed 's/^/export /;s/=/="/;s/$/"/' > "$ENVF"
+    python3 - "$p" "$ENVF" <<'PYENV'
+import os
+import re
+import shlex
+import sys
+from pathlib import Path
+lines = []
+for entry in Path('/proc', sys.argv[1], 'environ').read_bytes().split(b'\0'):
+    key, sep, value = entry.partition(b'=')
+    name = os.fsdecode(key)
+    if sep and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name) and name not in {'_', 'PWD', 'OLDPWD', 'SHLVL'}:
+        lines.append('export ' + name + '=' + shlex.quote(os.fsdecode(value)))
+path = Path(sys.argv[2])
+with open(path, 'w', encoding='utf-8', errors='surrogateescape') as stream:
+    os.fchmod(stream.fileno(), 0o600)
+    stream.write('\n'.join(lines) + '\n')
+PYENV
     grep -q 'ROS_DOMAIN_ID' "$ENVF" || die "导出的环境里没有 ROS_DOMAIN_ID"
-    ok "环境取自 pid=$p（$(wc -l < "$ENVF") 个变量，domain=$(grep -oP 'ROS_DOMAIN_ID="\K[0-9]+' "$ENVF")）"
+    ok "环境取自 pid=$p（$(wc -l < "$ENVF") 个变量，domain=$(sed -n 's/^export ROS_DOMAIN_ID=//p' "$ENVF")）"
 }
 
 load_env() {
-    # !!! source ROS 的 setup.bash 前必须临时关掉 set -u !!!
-    # colcon 生成的 setup.bash / 厂商 setup 会引用未定义变量（AMENT_TRACE_SETUP_FILES、
-    # COLCON_TRACE 之类）。`set -u` 下那是致命错误，**整个脚本当场退出**，
-    # 而且退出前一个字都不打印 —— 表现是"判据那一段完全没输出"，
-    # 看起来像探针坏了，实际是脚本已经死了。我在这上面浪费了三轮排查。
     set +u
     # shellcheck disable=SC1090
     source "$ENVF"
     # shellcheck disable=SC1091
     source "$WS/install/setup.bash" 2>/dev/null || true
-    # !!! SLAM 不在 ws_robot 里，它是独立工作区 !!!
-    # 漏掉这一行的表现：`ros2 launch voxel_slam ...` 报 "Package 'voxel_slam'
-    # not found"，但那条报错只写进 R1_slam.log，run_all.log 里看到的是
-    # "已后台启动" + 20 秒后 /map_scan pub=0 —— 看起来像 SLAM 起来了没出数据。
-    # 判据本身没问题（确实 pub=0），但错因会把人引到 SLAM 配置上去。
     source "$SLAM_WS/install/setup.bash" 2>/dev/null || true
-    # GTSAM 必须**前置**（见文件头 GTSAM_LIB 的说明），且必须在 source 之后 ——
-    # colcon 的 setup.bash 会重写 LD_LIBRARY_PATH，放前面会被它盖掉。
     export LD_LIBRARY_PATH="$GTSAM_LIB:${LD_LIBRARY_PATH:-}"
 
-    # ═══ 只补 PYTHONPATH，**绝不 source $SDK_ROOT/env.sh** ═══
-    # 阶段③④⑥ 需要 `import astribot_sdk`，而它只靠 SDK_ROOT 在 PYTHONPATH 上
-    #（namespace package，__file__ 是 None，能 import 就够）。
-    #
-    # 但那个 env.sh 的第 6 节会顺手改 DDS：本机 192 段地址是 192.168.0.11
-    #（不是它判定"机器人端"的 .10），于是它会**生成并导出**一份
-    # interfaceWhiteList 的 fastdds XML，覆盖掉厂商的
-    #   FASTRTPS_DEFAULT_PROFILES_FILE=/opt/astribot_ros/robot_system_ctrl/fastdds_udp.xml
-    # 厂商这套双网卡隔离是靠多播路由 + iptables 做的，不是靠白名单；
-    # 在上面再叠一层白名单本项目已经吃过亏（话题能列出来但 pub 恒 0）。
-    # 域号/RMW/profiles 一律沿用从厂商进程 environ 导出的那份，那才是权威。
     export PYTHONPATH="$SDK_ROOT:${PYTHONPATH:-}"
-    # SDK 的原生库。这一份**是 aarch64 的**（`file` 实测 ELF ARM aarch64），
-    # 不是仓库里那份 x86 预编译包 —— 所以能直接用，只差路径。
-    # 目录取自 env.sh 第 4 节，但这里只抄库路径，不抄它的 DDS 那一节。
     export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:$SDK_ROOT/astribot_sdk/core/common/robotics_library_py"
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SDK_ROOT/astribot_sdk/core/common/whole_body_control/third_party"
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SDK_ROOT/third_party/drake/lib"
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SDK_ROOT/third_party/third_pkg"
-    # SDK 构造函数硬校验 robot_type ∈ {S0, S1}，不满足就抛
-    # `ValueError: Invalid robot type`（astribot_client.py:41）。
-    # 厂商 all_node 进程的 environ 里**没有**这个变量（实测 grep 计数 0），
-    # 所以从 environ 导出的环境天生缺它 —— 这不是我漏抄，是那边本来就靠
-    # env.sh 兜底设 S1。
     export ROBOT_TYPE="${ROBOT_TYPE:-S1}"
-    # SDK 内部 `create_robot_dict` 会执行 `os.environ[ASTRIBOT_COMMON_ROOT] = <值>`，
-    # 那个值取自 ASTRIBOT_SDK_ROOT。没设时它是 None，于是抛
-    # `TypeError: str expected, not NoneType`（os.py:757），
-    # 而调用方只 log 一行异常消息，看不出是哪个变量 —— 我为此白查了两轮。
-    # 分层探针（robot_init / load_astribot_s1 / AstribotInterface 各试一次）
-    # 才把它定位到 load_robot.py:98。
     export ASTRIBOT_SDK_ROOT="${ASTRIBOT_SDK_ROOT:-$SDK_ROOT}"
     set -u
 }
 
-#: 启动前查动态库齐不齐。缺库的表现是 exit code 127 + 一行 "error while
-#: loading shared libraries"，而那行只进各阶段自己的日志；主日志上看到的是
-#: 20 秒后判据 pub=0 —— 看起来像"进程起来了但没出数据"，错因方向完全相反。
 check_ldd() {
     local bin=$1 name=$2 missing
     load_env
@@ -130,10 +74,6 @@ check_ldd() {
     ok "$name 动态库齐全"
 }
 
-# ---------------------------------------------------------------- 判据
-#: 数一组话题的发布者数。判据是 pub>0 —— 话题存在不代表有人发。
-#
-# !!! 探针写成独立文件，不用 `python3 - args <<EOF` !!!
 # 那种写法下 heredoc 与 `-` 抢 stdin，argv 传不进去，表现是**一行都不输出**、
 # 退出码却是 0 —— 于是判据静默通过，比报错难查。
 PROBE=/tmp/.bringup_probe.py

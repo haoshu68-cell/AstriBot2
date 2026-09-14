@@ -96,15 +96,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'scan_topic', default_value='/scan',
             description='最终 LaserScan，nav2 两个 costmap 的唯一数据源'),
-        # 零偏移静态边的开关。默认 true —— 因为实测确认这条边**当前没人发**，
-        # 缺了整条链静默失效。若将来 RSP/别的节点接管了它，设 false 避免
-        # 「同一条边两个源」（tf2 不会报错，只会按最后收到的那个用）。
         DeclareLaunchArgument(
             'publish_chassis_alias', default_value='true',
             description='发 aft_mapped -> astribot_torso_base 零偏移静态边'),
-        # 自滤节点归 astribot_s1_autonomy 包。默认在这里一起起，因为它是
-        # /scan 的必要环节（p2l 订阅它的输出），分开起太容易漏。
-        # 如果上层 bringup 已经起过它，设 false 避免两个同名节点。
         DeclareLaunchArgument(
             'launch_slice_node', default_value='true',
             description='是否一并启动 pointcloud_slice_scan_node'),
@@ -112,11 +106,6 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time')
 
-    # 自滤 + 四层切片。**关键：input_cloud_topic 覆盖成 SLAM 那路世界系点云。**
-    # 用命令行覆盖而不是改 yaml —— pointcloud_slice_scan_params.yaml 被仿真
-    # 和实机**共用**，改 yaml 里的 input_cloud_topic 会把仿真链一起打断。
-    # slice_scan.launch.py 的 parameters 列表顺序是 yaml -> use_sim_time ->
-    # 命令行覆盖，后者胜出；空字符串表示不覆盖。
     slice_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
@@ -129,9 +118,6 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('launch_slice_node')),
     )
 
-    # aft_mapped ≡ astribot_torso_base（零偏移，依据见文件头第 2 条）。
-    # 放在这里而不是 URDF：URDF 是本体模型，不该知道 SLAM 的 frame 命名；
-    # 而这条边的存在性取决于跑的是哪套 SLAM，属于部署期适配。
     chassis_alias = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -152,11 +138,6 @@ def generate_launch_description():
         output='screen',
         parameters=[p2l_params, {'use_sim_time': use_sim_time}],
         remappings=[
-            # 必须订阅**已剔除自身点**的点云，不是 SLAM 原始输出。
-            # p2l 自己没有任何形状级自滤能力，只有 range_min：吃未自滤的点云时，
-            # 机器人伸进扫描带 z∈[0.05,0.6] 且距离 >range_min 的自身部件会被
-            # 当成障碍物，SLAM 把它烙进地图，最终每次全局规划都报
-            # "Starting point in lethal space!"。
             ('cloud_in', LaunchConfiguration('self_filtered_topic')),
             ('scan', LaunchConfiguration('scan_topic')),
         ],

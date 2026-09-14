@@ -1,6 +1,5 @@
 import os
 
-# ROS 导入
 try:
     import rospy
 except ImportError:
@@ -107,16 +106,13 @@ def main():
 
     ros_wrapper = ROSWrapper(node_name="ros_wrapper_demo")
 
-    # --- 发布消息示例 ---
     publisher = ros_wrapper.create_publisher("/example_topic", String)
 
     def callback(msg):
         print(f"Received message: {msg.data}")
 
-    # --- 订阅消息示例 ---
     ros_wrapper.create_subscriber("/example_topic", String, callback)
 
-    # --- 服务端示例 (Server) ---
     def handle_service(request):
         print("Received a service request.")
         response = TriggerResponse(success=True, message="Service handled successfully.")
@@ -124,7 +120,6 @@ def main():
 
     ros_wrapper.create_service("/example_service", Trigger, handle_service)
 
-    # --- 服务客户端示例 (Client) ---
     client = ros_wrapper.create_client("/example_service", Trigger)
 
     def call_service_example():

@@ -1,27 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// 探索协调器：严格时序探索调度 + 未知区域禁行强校验。
-//
-// ============================ 它解决什么问题 ============================
-// 本包已有的 frontier_explorer_node 是「候选点建议流」——每个规划周期都发一次
-// /explore/goal_pose，不管上一个目标走到哪了。直接把那个流接到 Nav2 会出现
-// 需求点名禁止的问题：提前下发、重叠下发、连续跳点。
-// （实测过：临时 Python 桥接 20s 内向 Nav2 下发 18 次目标、反复抢占、成功 0 次。）
-//
-// 本节点是「调度器」：
-//   · 严格单点推进 —— 必须完全抵达并稳定驻留当前目标，才允许生成下一个
-//   · 双层校验 —— 目标点本身 + 从当前位置到目标的全局路径，都不许碰未知栅格
-//   · 异常闭环 —— 导航失败/定位丢失/候选不合法都有明确的状态与限次重试
-//
-// 两类栅格图的分工（实测踩坑后定下的，混用会让探索一个目标都发不出去，
-// 完整机制见 costmap_adapter.hpp 文件头）：
-//   /map                       —— 只用于前沿搜索（前沿的定义依赖「未知」状态）
-//   /global_costmap/costmap_raw —— 只用于下发前校验（与 planner_server 同一张图）
-//
-// 与 Nav2 的关系：**只用官方接口，不改 Nav2 任何源码**。
-//   NavigateToPose      —— 执行导航
-//   ComputePathToPose   —— 只为拿到全局路径做校验，不用它来控制
-// =====================================================================
 #ifndef ASTRIBOT_S1_AUTONOMY__EXPLORATION_COORDINATOR_NODE_HPP_
 #define ASTRIBOT_S1_AUTONOMY__EXPLORATION_COORDINATOR_NODE_HPP_
 
@@ -79,12 +56,6 @@ private:
   using FollowGoalHandle = rclcpp_action::ClientGoalHandle<FollowPath>;
 
   /// 下发方式。
-  ///   kNavigateToPose —— 只发目标点，路径由 bt_navigator 内部重新规划。
-  ///                      保留 BT 的 1Hz 重规划与整套恢复行为。
-  ///   kFollowPath     —— 直接把**已通过双层校验的那条路径**交给控制器跟踪。
-  ///                      省掉一次重规划，且跟踪的就是被校验过的路径；
-  ///                      代价是 BT 的重规划与恢复行为全部拿不到，
-  ///                      必须由本节点自己承担（见 replan_period_sec）。
   enum class DispatchMode
   {
     kNavigateToPose,
@@ -92,13 +63,6 @@ private:
   };
 
   /// 跟踪期的重规划策略。
-  ///
-  ///   kOnInvalid（默认）—— 只在「当前路径已经不能用」时才重规划：剩余段被新观测
-  ///       判成不可通行、机器人已偏离路径、控制器中止、或路径超龄。
-  ///       这是需求「未跟踪到位不得开始规划下一条路径」的实现。
-  ///   kPeriodic       —— 旧行为：无条件按 replan_period_sec 周期重规划。
-  ///       只保留作一键回退对比用。实测数据：36 个目标下发了 393 次 FollowPath，
-  ///       平均每个目标换 10.9 条路径、节拍 ~1.5s，没有一条被跟踪到位。
   enum class ReplanPolicy
   {
     kOnInvalid,
@@ -106,16 +70,6 @@ private:
   };
 
   /// 冷启动自举的动作方式。
-  ///
-  ///   kDisabled —— 不自举（出问题时一键关掉）。
-  ///   kRotate   —— 只原地旋转。**刻意不提供平移**：底盘足迹是外接半径 0.438 的
-  ///       正方形（内切半径 0.310），原地旋转扫过 12.8cm 的环带，
-  ///       ⚠️ 换正方形后这条环带从 3.2cm 变成 12.8cm（4 倍），
-  ///       「原地旋转几乎不扫新面积」这个论据已经明显变弱 ——
-  ///       真正兜住安全的是 bootstrap_min_clearance_m(0.44) 这道门，
-  ///       几何上几乎不进入新区域；而平移是开环积分推进，风险面完全不同。
-  ///       0.2rad 的旋转已经足够触发 slam_toolbox 的 minimum_travel_heading(0.2)
-  ///       插入首批扫描，这就够破环了。
   enum class BootstrapMode
   {
     kDisabled,
@@ -131,22 +85,9 @@ private:
     double cost{0.0};
   };
 
-  // ---------------- 参数 ----------------
   void declareParameters();
   bool loadParameters(std::string & error);
 
-  // ---------------- 状态机 ----------------
-  //
-  // !!! 线程约定（整份实现的地基，改动前务必先读）!!!
-  // 下面这一整组「状态机 / 生成校验 / 下发监控」的私有函数，**一律要求调用方
-  // 已持有 state_mutex_**。锁不在函数内部拿，而是由三类入口统一拿：
-  //     controlTick()          —— 定时器入口
-  //     onPlanResult() / onNavGoalResponse() / onNavResult()  —— action 回调入口
-  //     onPauseService() / onResumeService()                  —— 服务入口
-  // 这样做的原因：需求要求「每次目标下发必须有状态锁与时序锁，禁止多线程重复下发」。
-  // 如果每个小函数各自加锁，状态判断和状态修改之间就会出现锁间隙，
-  // 两个线程能各自通过「现在是 kValidating」的检查、然后双双下发目标。
-  // 把锁提到入口，一次 tick / 一次回调就是一个原子的状态推进。
 
   /// 集中式状态转换。非法转换会被拒绝并回退到 kIdle（需求：状态机异常自动回退安全态）。
   void transitionTo(ExplorationState next, const std::string & why);
@@ -162,16 +103,7 @@ private:
   void tickPaused();
   void tickCompleted();
 
-  // ---------------- 冷启动自举 ----------------
   /// 是否应当进入自举，并给出原因。只在 IDLE / GEN_NEXT_POINT 里调用。
-  ///
-  /// 刻意**不**从 PAUSED 触发：PAUSED 的语义是需求写死的「保持当前状态、输出告警、
-  /// 等待人工重置」，在那个状态下自己动起来与需求直接冲突。冷启动死锁本来就发生在
-  /// 预算耗尽之前的 IDLE/GEN_NEXT_POINT，从这两处触发已经够破环。
-  /// context 是**调用方**的触发理由（地图内容不足 / 采不到候选 / 地图未就绪）。
-  /// 必须由调用方传进来：本函数只知道"停滞了多久"，不知道停在哪一步 ——
-  /// 早先把理由写死成"地图内容不足"，结果采不到候选那条路径也报这句，
-  /// 日志直接指错方向（实测：地图明明有 71 个前沿格，日志却说地图内容不足）。
   bool shouldBootstrap(const std::string & context, std::string & why);
   /// 进入自举：记录起始朝向、清零计时。
   void beginBootstrap(const std::string & why);
@@ -185,11 +117,6 @@ private:
   /// 正好卡在超时边界上，速度会被反复归零 —— 必须独立高频重发。
   void bootstrapCmdTick();
 
-  // ---------------- 膨胀带脱困（ESCAPE）----------------
-  //
-  // 与 BOOTSTRAP 是两个不同的死锁：BOOTSTRAP 治「地图还没长出来」，
-  // ESCAPE 治「机器人站在膨胀带里、全局规划器拒绝从这儿起步」。
-  // 判据是单个中心格 cost>=253，所以**原地旋转无效**，必须平移。
 
   /// 读机器人所在格在 costmap(规划器视角) 与 /map(物理真值) 上的三态值。
   CellReading readRobotCell();
@@ -209,15 +136,8 @@ private:
   /// 记一个面包屑（低频采样机器人位姿），并裁掉过期的。
   void recordBreadcrumb();
   /// 地图是否「已经能用来做探索决策」。
-  ///
-  /// 与 mapReady() 的区别（这是两回事，混用会造出假的 COMPLETED）：
-  ///   mapReady()  —— 消息层面：收到了、自洽、没超时。
-  ///   mapUsable() —— 内容层面：已知格数量够不够支撑一次前沿判定。
-  /// 冷启动时地图是「收到了但全是未知」，mapReady 为真而 mapUsable 为假；
-  /// 此时 raw_frontier_cells==0，只看前沿格数就会把它判成「探索完成」。
   bool mapUsable(const GridMap & map, std::size_t & known_cells) const;
 
-  // ---------------- 数据回调 ----------------
   void mapCallback(const nav_msgs::msg::OccupancyGrid::ConstSharedPtr & msg);
   void odomCallback(const nav_msgs::msg::Odometry::ConstSharedPtr & msg);
   /// 自举安全门用的激光回调。**必须用 BEST_EFFORT 订阅**：
@@ -229,15 +149,7 @@ private:
   /// 详细机制见 costmap_adapter.hpp 文件头。
   void costmapCallback(const nav2_msgs::msg::Costmap::ConstSharedPtr & msg);
 
-  // ---------------- 前置条件 ----------------
   /// 地图是否可用（非空、自洽、未超时）。不可用时拦截生成逻辑。
-  /// 整栈是否已就绪：地图 + 定位 + 里程计 + **下发前校验用的栅格图**。
-  ///
-  /// 为什么要它：三个失败计数器（导航失败/采样失败/自动恢复）原先在启动瞬态里
-  /// 就开始累加，而那时 TF 还没铺开、代价地图还没发布。实测两次死锁都是这样来的：
-  ///   · 3~4 次 TF extrapolation 瞬态失败烧光 3 次自动恢复预算 -> 永久停住；
-  ///   · 图还没长起来时采不到候选，同样烧光预算 -> 永久停住。
-  /// 就绪之前的失败**只记日志、不计数**；就绪之后的失败照常计数。
   bool stackReady(std::string & why);
 
   bool mapReady(std::string & why);
@@ -259,7 +171,6 @@ private:
   /// 为假时返回 /map 快照（保留旧行为，供出问题时一键回退对比）。
   std::shared_ptr<GridMap> validationGrid(std::string & why);
 
-  // ---------------- 目标生成与校验 ----------------
   /// 跑前沿搜索，产出按代价升序排列的候选点。
   std::vector<GoalCandidatePose> generateCandidates(
     const GridMap & map, double rx, double ry, std::size_t & raw_frontier_cells);
@@ -277,7 +188,6 @@ private:
   /// 记一次「去过/试过」，让代价函数后续避开这个位置。
   void recordVisit(double x, double y);
 
-  // ---------------- 导航下发与监控 ----------------
   /// 下发导航目标。**这是全节点唯一一处下发点**，且只允许从 kValidating 调用。
   void dispatchNavGoal(const GoalCandidatePose & goal);
   void onNavGoalResponse(const NavGoalHandle::SharedPtr & handle);
@@ -289,15 +199,6 @@ private:
   /// kFollowPath 模式下的周期性重规划：BT 的 1Hz 重规划拿不到了，得自己发。
   void maybeRequestReplan(const rclcpp::Time & now);
   /// 当前在跟踪的这条路径是否已经不能用了（kOnInvalid 策略的判据）。
-  ///
-  /// 这是需求「没跟踪到位就开始规划下一条路径」的正面实现：默认答案是 false，
-  /// 也就是**默认让控制器把当前路径跟踪完**，只有下面这几条硬条件之一成立才换路径：
-  ///   1) replan_forced_ —— 控制器已经中止，当前路径事实上已经作废
-  ///   2) 没有在途路径（异常兜底）
-  ///   3) 剩余段被最新观测判成穿未知/占据区 —— 再跟下去就是往障碍里开
-  ///   4) 机器人已偏离当前路径超过 path_deviation_limit_m —— 这条路径不再描述它的处境
-  ///   5) 路径超龄超过 path_max_age_sec（>0 才启用，纯兜底）
-  /// 每一条都会把原因写进 why，日志里能直接看出是哪一条触发的。
   bool needsReplan(const rclcpp::Time & now, std::string & why);
   /// 真正发出一次「跟踪期重规划」请求。调用方负责已经判定需要重规划。
   void requestReplan(const rclcpp::Time & now, const std::string & why);
@@ -312,11 +213,9 @@ private:
   /// 记录一次导航失败，达上限则转 PAUSED。
   void registerNavFailure(const std::string & reason);
 
-  // ---------------- 输出 ----------------
   void publishState();
   void publishComplete(bool done);
 
-  // ---------------- 服务 ----------------
   void onPauseService(
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
@@ -324,10 +223,7 @@ private:
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
-  // ================= 成员 =================
-  // ---- 参数：话题/坐标系 ----
   std::string map_topic_;
-  // map_topic 订阅的 durability：实机的 /map_scan_filtered_prob 是 VOLATILE，必须 false
   bool map_transient_local_{true};
   std::string costmap_topic_;
   std::string odom_topic_;
@@ -343,7 +239,6 @@ private:
   std::string robot_base_frame_;
   std::string planner_id_;
 
-  // ---- 参数：节拍与超时 ----
   double control_period_sec_{0.0};
   double tf_timeout_sec_{0.0};
   double map_timeout_sec_{0.0};
@@ -352,26 +247,19 @@ private:
   double plan_timeout_sec_{0.0};
   double nav_timeout_sec_{0.0};
 
-  // 未知净空半径的副本。校验本身在 PathValidator 里，但「它是否与地图分辨率相容」
-  // 只有收到真实地图才能判断，所以 mapCallback 需要能读到它。
   double unknown_clearance_radius_{0.0};
 
-  // ---- 参数：抵达收敛判定 ----
   double arrival_xy_tolerance_{0.0};
   double arrival_yaw_tolerance_{0.0};
   bool check_yaw_{true};
   double dwell_time_sec_{0.0};
   double settle_speed_{0.0};
 
-  // ---- 参数：重试与限次 ----
   int max_candidates_per_cycle_{0};
-  // 两个失败上限的**唯一真值**在 failure_budget_ 里（max_sample_failures /
-  // max_validation_failures），不要在这里再存一份镜像 —— 两份就会不同步。
   int max_consecutive_nav_failures_{0};
   double pause_cooldown_sec_{0.0};
   int max_auto_resume_attempts_{0};
 
-  // ---- 算法 ----
   FrontierSearch search_;
   FrontierSearchParams search_params_;
   PathValidator validator_;
@@ -381,7 +269,6 @@ private:
   /// 只保留作对比排查用，正常运行不要关。
   bool use_costmap_for_validation_{true};
 
-  // ---- ROS 句柄 ----
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
   rclcpp::Subscription<nav2_msgs::msg::Costmap>::SharedPtr costmap_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
@@ -404,7 +291,6 @@ private:
   /// 订阅/服务/action 客户端共用一个组，保证数据快照与状态查询彼此串行。
   rclcpp::CallbackGroup::SharedPtr io_cb_group_;
 
-  // ---- 状态 ----
   /// 状态机主锁：保护 state_ 及其相关计数器。
   /// 所有 action 回调、服务回调、定时器都要先拿这把锁再动状态。
   std::mutex state_mutex_;
@@ -420,13 +306,6 @@ private:
   NavGoalHandle::SharedPtr nav_goal_handle_;
   FollowGoalHandle::SharedPtr follow_goal_handle_;
   /// 当前"有效"的 FollowPath 目标 id。
-  ///
-  /// 为什么必须有它：周期性重规划要换路径，只能再发一个 FollowPath 目标，
-  /// 而 nav2 的 action server 是单目标语义 —— 新目标会 terminate_current()，
-  /// 旧目标以 ABORTED 回到客户端。若把这种"被自己取代"当成控制器失败，
-  /// 就会：重规划 -> 旧目标 ABORTED -> 判失败 -> 重试 -> 再发 -> 再抢占…
-  /// 实测该自激循环产生 66 个终止结果，而 controller_server 真正 abort 只有 2 次。
-  /// 所以结果回调必须先比对 goal_id，只认当前这一个。
   rclcpp_action::GoalUUID current_follow_goal_id_{};
   bool has_current_follow_goal_id_{false};
   DispatchMode dispatch_mode_{DispatchMode::kFollowPath};
@@ -491,7 +370,6 @@ private:
   rclcpp::Time dwell_started_time_;
   bool dwell_active_{false};
 
-  // ---- 计数器 ----
   /// 两个连续失败预算。**必须**用这个结构体而不是两个裸 int：
   /// 清零条件的归属是这里唯一出过 bug 的地方（共用一个计数器时上限结构上
   /// 不可达，实测空转 400s），已由 test_failure_budget 钉住，别再拆回裸 int。
@@ -502,7 +380,6 @@ private:
   uint64_t goals_succeeded_{0U};
   uint64_t candidates_rejected_{0U};
 
-  // ---- 数据快照 ----
   /// SLAM 原始占据栅格。**只用于前沿搜索**：前沿的定义依赖「未知」这个状态，
   /// 代价地图被 obstacle_layer 清障刷过之后未知区不完整，拿它找前沿会漏区域。
   std::shared_ptr<GridMap> latest_map_;
@@ -524,7 +401,6 @@ private:
   /// pause 服务请求的冻结标志，与异常导致的 kPaused 区分开。
   bool manually_paused_{false};
 
-  // ---- 冷启动自举 ----
   BootstrapMode bootstrap_mode_{BootstrapMode::kRotate};
   std::string bootstrap_cmd_vel_topic_;
   std::string bootstrap_scan_topic_;
@@ -558,7 +434,6 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::TimerBase::SharedPtr bootstrap_cmd_timer_;
 
-  // ---- 脱困参数 ----
   bool escape_enabled_{true};
   int escape_trigger_failures_{5};
   double escape_search_radius_m_{1.5};
@@ -573,7 +448,6 @@ private:
   double breadcrumb_window_sec_{60.0};
   double breadcrumb_sample_hz_{2.0};
 
-  // ---- 脱困运行期状态 ----
   /// 连续「起点致命」计数。与 consecutive_invalid_ 分开：后者混了目标侧失败。
   int start_lethal_failures_{0};
   /// **连续**失败的脱困次数，不是累计尝试次数。与 escape_max_attempts_ 比较。

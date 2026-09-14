@@ -11,10 +11,6 @@
     每一个都必须能单测到；要起一个真 Node 才能测的逻辑，实际上就是测不到。
 """
 
-# action_msgs/msg/GoalStatus.msg 的状态码。
-# 抄常量而不 import action_msgs 是为了保持本包 ROS 无关；节点侧启动时会用
-# verify_status_codes() 拿真 GoalStatus 逐条核对，改了名/改了值会**立刻报错**，
-# 不会静默按错的码归类。
 STATUS_UNKNOWN = 0
 STATUS_ACCEPTED = 1
 STATUS_EXECUTING = 2
@@ -33,8 +29,6 @@ STATUS_NAMES = {
     STATUS_ABORTED: 'ABORTED',
 }
 
-# 终态。CANCELED 不算规划失败 —— round_metrics 只按 'ABORTED' 数失败率，
-# 把取消混进去会让抢占频繁的跑次凭空多出一堆"规划失败"
 TERMINAL = (STATUS_SUCCEEDED, STATUS_CANCELED, STATUS_ABORTED)
 
 
@@ -79,21 +73,9 @@ class PlanRequestLedger:
         self.max_future_skew_sec = float(max_future_skew_sec)
         self.entries = []
         self.by_id = {}
-        # goal_info.stamp 为 0（上游没填）而只能退回收报时刻的条数。
-        # 这是口径退化，要能被报出来，不能静默
         self.stamp_fallbacks = 0
-        # stamp 落在**未来**的条数 = 两个时间轴不同源。
-        #
-        # 🔴 判据是"未来"，不是"差得远"。我第一版写的是 |stamp-now|>300s
-        #    就算不同轴，实测把 192/192 条全判成了不同轴 —— 而实测证明
-        #    stamp 与节点时钟本来就同轴（都是仿真时间，1.861~543.647s vs
-        #    now=1905.4s），它们只是**旧**：探索早已 PAUSED，最近一次规划
-        #    发生在 1362s 前。旧是合法的（锁存话题必然给历史状态），
-        #    归轮时按时间窗筛掉即可；而"发生在未来"才是物理上不可能。
         self.stamp_in_future = 0
-        # 第一眼就是终态的条数 —— 这些条目有状态、无耗时（见 observe）。
         self.terminal_on_first_sight = 0
-        # 裁剪下限：不能短于见过的最长一帧，否则每帧全部重建（见 observe_batch）
         self._min_keep = 0
         self.keep_raised_to = None
 
@@ -119,9 +101,6 @@ class PlanRequestLedger:
                 accept = now
                 self.stamp_fallbacks += 1
             elif accept > now + self.max_future_skew_sec:
-                # 受理时刻落在未来 = 两个时间轴不同源（use_sim_time 配错最常见）。
-                # accept 取自消息、end 取自收报时刻，不同轴相减能出天文数字。
-                # 宁可用一个偏晚但同轴的时刻。
                 accept = now
                 self.stamp_in_future += 1
             entry = {'accept': float(accept), 'end': None, 'status': None}
@@ -131,13 +110,6 @@ class PlanRequestLedger:
         if status in TERMINAL and entry['end'] is None:
             entry['status'] = STATUS_NAMES.get(status, str(status))
             if fresh:
-                # 🔴 第一眼就是终态 = 我们**没看见它在跑**，end 只能取"我此刻
-                #    才知道"，而它其实早就结束了。锁存话题订阅上来的第一帧就
-                #    全是这种条目（实测 192 条，最新一条也已 543.6s，距今
-                #    1362s）。end=now - accept=旧stamp 是凭空造出来的耗时。
-                #    状态码是可信的（终态就是终态，归轮时按 accept 筛窗），
-                #    但耗时不可知 —— 宁可留空。
-                #    见 [[frozen-counter-read-as-current-value]]
                 self.terminal_on_first_sight += 1
             else:
                 entry['end'] = float(now)

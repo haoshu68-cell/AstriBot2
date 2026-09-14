@@ -36,8 +36,6 @@ class TfToOdom(Node):
         self.base = self.get_parameter('base_frame').value
         rate = float(self.get_parameter('publish_rate_hz').value)
 
-        # nav2 与调度器的 /odom 订阅都是默认 QoS(RELIABLE/VOLATILE)，这里必须匹配，
-        # 否则 BEST_EFFORT 发布 + RELIABLE 订阅 = 一帧都收不到、只有一条 WARNING。
         q = QoSProfile(reliability=ReliabilityPolicy.RELIABLE,
                        durability=DurabilityPolicy.VOLATILE,
                        history=HistoryPolicy.KEEP_LAST, depth=10)
@@ -51,7 +49,6 @@ class TfToOdom(Node):
 
     def tick(self):
         try:
-            # 用最新可得的 TF（Time() 即 latest available），不指定时刻等于要求外推
             tr = self.buf.lookup_transform(self.src, self.base, rclpy.time.Time())
         except (LookupException, ExtrapolationException, ConnectivityException) as e:
             if not self.warned:
@@ -80,13 +77,11 @@ class TfToOdom(Node):
             dt = t - self.prev[0]
             if dt > 1e-3:
                 dx, dy = x - self.prev[1], y - self.prev[2]
-                # 机体系线速度：把 map 系位移旋回当前朝向
                 c, s = math.cos(-yaw), math.sin(-yaw)
                 m.twist.twist.linear.x = (dx * c - dy * s) / dt
                 m.twist.twist.linear.y = (dx * s + dy * c) / dt
                 dyaw = math.atan2(math.sin(yaw - self.prev[3]), math.cos(yaw - self.prev[3]))
                 m.twist.twist.angular.z = dyaw / dt
-        # 协方差留 0：本机没有消费者用它做融合（只做阈值判定）
         self.prev = (t, x, y, yaw)
         self.pub.publish(m)
 

@@ -1,6 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// 探索节点的独立进程入口。
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"

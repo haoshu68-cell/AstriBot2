@@ -126,31 +126,15 @@ def generate_launch_description():
     mode = LaunchConfiguration('mode')
     is_sim = PythonExpression(["'", env, "' == 'sim'"])
     is_hardware = PythonExpression(["'", env, "' == 'hardware'"])
-    # slam_toolbox 的两个分支现在多一个前置条件：只有 map_source 需要它时才起。
-    # 'use_slam_toolbox' 由 _resolve_map_source() 在 OpaqueFunction 里算出并写入。
     use_slam_toolbox = LaunchConfiguration('use_slam_toolbox')
     is_mapping = PythonExpression(
         ["'", mode, "' == 'mapping' and '", use_slam_toolbox, "' == 'true'"])
     is_localization = PythonExpression(
         ["'", mode, "' == 'localization' and '", use_slam_toolbox, "' == 'true'"])
-    # real_file / real_live：地图由 map_provider 提供，不启 slam_toolbox。
     is_external_map = PythonExpression(["'", use_slam_toolbox, "' == 'false'"])
 
-    # !!! 实测踩坑记录 !!!：下面 include warehouse_sim.launch.py 时传了
-    # launch_arguments={'use_rviz': 'false', ...}（不想重复开两个RViz），
-    # 但 ROS2 launch 的 LaunchConfiguration 并不是按 include 层级严格隔离的——
-    # IncludeLaunchDescription 的 launch_arguments 本质上是在"当前"这个共享的
-    # launch 上下文里设置同名变量，等 warehouse_sim.launch.py 执行完
-    # DeclareLaunchArgument('use_rviz', ...) 时，会把共享上下文里的 'use_rviz'
-    # 覆盖成 'false'——导致本文件自己最下面的 rviz_node 读到的
-    # LaunchConfiguration('use_rviz') 也变成了 'false'，不管用户在命令行传了
-    # use_rviz:=true 还是默认值 true，RViz 都不会被打开（而且日志里连尝试启动的
-    # 记录都没有，非常隐蔽）。修复：在 include warehouse_sim 之前，先把用户真正
-    # 传入的 use_rviz 值另存一份到 'use_rviz_actual' 这个不会被覆盖的独立变量名，
-    # 本文件自己的 rviz_node 用这个副本判断，不用原名。
     save_use_rviz = SetLaunchConfiguration('use_rviz_actual', LaunchConfiguration('use_rviz'))
 
-    # ---- 仿真分支 ----
     warehouse_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_bringup, 'launch', 'warehouse_sim.launch.py'])),
@@ -169,7 +153,6 @@ def generate_launch_description():
         condition=IfCondition(is_sim),
     )
 
-    # ---- 硬件分支 ----
     hardware_livox = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_perception, 'launch', 'hardware_livox.launch.py'])),
@@ -183,7 +166,6 @@ def generate_launch_description():
         condition=IfCondition(is_hardware),
     )
 
-    # ---- SLAM（建图/定位二选一，use_sim_time 跟随 env） ----
     use_sim_time_str = PythonExpression(["'true' if '", env, "' == 'sim' else 'false'"])
     slam_mapping = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -201,9 +183,6 @@ def generate_launch_description():
         condition=IfCondition(is_localization),
     )
 
-    # 外部地图分支（map_source=real_file / real_live）。
-    # map_provider 自己会再读一次配置拿它需要的参数，这里只透传覆盖项 ——
-    # 覆盖项留空时它用配置文件的值，与本文件解析出的结果必然一致（同一份实现）。
     map_provider = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_perception, 'launch', 'map_provider.launch.py'])),
@@ -239,8 +218,6 @@ def generate_launch_description():
     )
 
     return LaunchDescription(declare_args + [
-        # 必须排在所有 IfCondition 之前：它写入 'use_slam_toolbox'，
-        # 下面几个分支的条件都依赖那个变量。
         OpaqueFunction(function=_resolve_map_source),
         save_use_rviz,   # 必须排在 warehouse_sim 前面，抢在共享变量被覆盖之前先存一份快照
         warehouse_sim,

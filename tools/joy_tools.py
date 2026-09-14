@@ -31,7 +31,6 @@ class XboxController:
             "whether the joystick driver is started, and whether the joystick is powered.")
 
     def joy_callback_for_chassis_vel(self, joy):
-        # 读取axes数组中的值
         self.have_value = True
         x_vel = joy.axes[1] * 0.5
         y_vel = joy.axes[0] * 0.5

@@ -61,26 +61,18 @@ class MapOdomTfNode(Node):
     def __init__(self):
         super().__init__('map_odom_tf')
 
-        # -- SLAM 侧（frame 名在 Voxel-SLAM 源码里硬编码，改不了）--
         self.declare_parameter('slam_world_frame', 'camera_init')
         self.declare_parameter('slam_base_frame', 'aft_mapped')
-        # -- 我们这侧 --
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'astribot_torso_base')
-        # -- 行为 --
         self.declare_parameter('publish_rate', 20.0)
         self.declare_parameter('tf_timeout_sec', 0.2)
         self.declare_parameter('jump_report_m', 0.30)
         self.declare_parameter('max_tilt_rad', 0.10)
-        # 也发一条 map→slam_world 的恒等静态 TF，把两套命名接起来。
-        # 置 false 的场合：上层直接用 camera_init 当地图系（那时 map_frame
-        # 应设成 camera_init，本节点退化为只发 camera_init→odom）。
         self.declare_parameter('publish_map_to_slam_world', True)
         self.declare_parameter('source_timeout_sec', 60.0)
         self.declare_parameter('report_period_sec', 10.0)
-        # 源变换的最大龄期。tf2 会永久返回一个停更 frame pair 的最后一条记录，
-        # 且不报错 —— 详见 check_source_age 的说明。置 0 关闭检查。
         self.declare_parameter('max_source_age_sec', DEFAULT_MAX_SOURCE_AGE_SEC)
 
         self.slam_world = str(self.get_parameter('slam_world_frame').value)
@@ -110,14 +102,6 @@ class MapOdomTfNode(Node):
         self.exit_code = 0
         self._start_sec = self._now()
 
-        # !!! map→camera_init 必须在这里发，不能等第一次 _tick 成功 !!!
-        # 原来它挂在 _tick 里、而 _tick 在拿不到 odom 时提前 return，
-        # 于是"阶段④底盘里程计还没起"这一整段时间里这条边根本不存在，
-        # 而 /map 的 frame_id 就是 camera_init —— rviz 以 map 为全局系时
-        # 地图整个显示不出来，看起来像 SLAM 没出图。
-        # 而且原来用的是**动态**广播器且只发一次：晚于那一刻启动的消费者
-        # （nav2、rviz、cloud_to_grid）永远收不到，因为 /tf 不是 latched。
-        # 静态广播器是 TRANSIENT_LOCAL，后来者会补收到。
         if bool(self.get_parameter('publish_map_to_slam_world').value):
             self._send_map_to_slam_world()
 
@@ -141,7 +125,6 @@ class MapOdomTfNode(Node):
     def _now(self):
         return self.get_clock().now().nanoseconds * 1e-9
 
-    # -- 主循环 -----------------------------------------------------------
     def _tick(self):
         slam = self._lookup(self.slam_world, self.slam_base, 'slam')
         if slam is None:
@@ -156,7 +139,6 @@ class MapOdomTfNode(Node):
         self._send(map_to_odom, stamp)
 
         if jumped:
-            # 上报但不平滑 —— 回环修正**应该**体现在 map→odom 上
             self.get_logger().info(
                 f'map→odom 跳变 {jump_m:.3f}m（累计 '
                 f'{self.decomposer.stats.jumps} 次，最大 '
@@ -188,12 +170,6 @@ class MapOdomTfNode(Node):
                        f'否则 SDK 报 "No simulation or real robot is started" 并非零退出。'))
             return None
 
-        # !!! 取到了不代表是新的 !!!
-        # rclpy.time.Time() 的语义是"最新可用的"，而 tf2 只在某个 frame pair
-        # 有新数据进来时才修剪它 —— 停更的 pair 会把最后一条记录永久保留，
-        # 于是这行 lookup 会一直成功、一直返回陈旧值、一直不报错。
-        # 对本节点尤其恶劣：SLAM 挂掉后 map→odom 会被算成
-        # "冻结的全局位姿 ∘ 活着的里程计的逆"，随机器人移动反向漂移。
         stamp = tf.header.stamp
         age = check_source_age(
             self._now(), stamp.sec + stamp.nanosec * 1e-9,
@@ -203,9 +179,6 @@ class MapOdomTfNode(Node):
             n = self._stale[kind]
             if n <= 3 or n % 100 == 0:
                 self.get_logger().warning(f'（第 {n} 次陈旧）{age.reason}')
-            # 宁可不发，也不发一个错的：本模块的契约是"不允许发凑合能用的变换"。
-            # 下游会看到"no transform from map to odom"，那是个诚实、可查的失败；
-            # 而发出去的错变换是个静默的错定位。
             return None
 
         t = tf.transform.translation
@@ -215,7 +188,6 @@ class MapOdomTfNode(Node):
             n = self.decomposer.stats.rejected_tilt
             if n <= 3 or n % 100 == 0:
                 self.get_logger().warning(tilt)
-            # 仍然继续：丢掉倾角比整条链断掉好，但已经响亮说过了
         try:
             return Pose2D(x=float(t.x), y=float(t.y),
                           theta=yaw_from_quaternion(q.z, q.w))
@@ -223,7 +195,6 @@ class MapOdomTfNode(Node):
             self.get_logger().error(f'{target}→{source} 的数值非法：{exc}')
             return None
 
-    # -- 发布 -------------------------------------------------------------
     def _send(self, pose, stamp):
         tf = TransformStamped()
         tf.header.stamp = stamp
@@ -231,7 +202,6 @@ class MapOdomTfNode(Node):
         tf.child_frame_id = self.odom_frame
         tf.transform.translation.x = pose.x
         tf.transform.translation.y = pose.y
-        # z 留 0：平面运动。带上 z 会把地面起伏漏进 map→odom，表现成地图上下抖。
         z, w = quaternion_from_yaw(pose.theta)
         tf.transform.rotation.z = z
         tf.transform.rotation.w = w
@@ -265,7 +235,6 @@ class MapOdomTfNode(Node):
             f'{self.slam_world}，缺这条边时以 {self.map_frame} 为全局系的'
             f'消费者会整个显示不出地图。')
 
-    # -- 看门狗 / 上报 ----------------------------------------------------
     def _tick_watchdog(self):
         if self.decomposer.stats.updates > 0:
             return

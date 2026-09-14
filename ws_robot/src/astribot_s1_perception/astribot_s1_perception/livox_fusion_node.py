@@ -21,16 +21,17 @@
     不是完整的运动畸变补偿方案。
   - 硬件分支：若 livox_ros_driver2 切到 xfer_format=1(CustomMsg)，消息里每个点都带
     相对于帧起始时刻的时间偏移(point.offset_time)，可以结合 /odom 做逐点插值去畸变。
-    本节点已预留 `_deskew_placeholder()` 挂载点和详细注释，当前默认关闭
-    （deskew_enable:=false），后续要接入 CustomMsg 精细去畸变时在这里扩展，
-    不假装当前版本已经实现了完整的逐点去畸变。
+    当前未实现逐点去畸变；deskew_enable:=true 会明确拒绝启动，避免静默空操作。
 """
+
+from copy import deepcopy
 
 import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.duration import Duration
+from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
 import message_filters
@@ -49,19 +50,15 @@ class LivoxFusionNode(Node):
         self.declare_parameter('target_frame', 'astribot_torso_base')
         self.declare_parameter('sync_slop_sec', 0.05)
         self.declare_parameter('tf_timeout_sec', 0.2)
-        # 同步队列深度。**不要**为了"少丢帧"调大：本节点一旦吞吐跟不上输入，
-        # 发出去的帧戳龄期就恒等于 队列深度/输入拍率，而下游 pointcloud_slice_scan_node
-        # 有 0.3s 陈旧闸门 —— 队列越深越是把"处理慢"翻译成"整条链一帧不过"。
-        # 实测(2026-09-07)：深度 10 + 输入 9.1Hz ⇒ 龄期 10/9.1=1.10s，实测 1.09~1.20s，
-        # 下游累计丢弃 684 帧，/scan 与 /map 全程为空。
         self.declare_parameter('sync_queue_size', 2)
-        # 发布前的自检上限：宁可不发，也不发下游一定会丢的陈旧帧（要打错误日志说清楚）。
         self.declare_parameter('max_output_age_sec', 0.25)
-        # 同一个 source frame 连续查不到多少次之后，判定"这个 frame 不在 TF 树里"，
-        # 从此不再为它等待超时（理由见 _lookup_timeout_for）。
         self.declare_parameter('missing_frame_threshold', 3)
-        # 去畸变预留开关，见文件头部说明；默认关闭，本版本不实现逐点插值。
         self.declare_parameter('deskew_enable', False)
+        self.declare_parameter('future_tolerance_sec', 0.05)
+        if self.get_parameter('deskew_enable').value:
+            raise ValueError('deskew_enable is unsupported: per-point timestamps and motion compensation are required')
+
+        self.add_on_set_parameters_callback(self._validate_parameters)
 
         self.target_frame = self.get_parameter('target_frame').value
         self.tf_timeout = Duration(
@@ -82,7 +79,6 @@ class LivoxFusionNode(Node):
             slop=self.get_parameter('sync_slop_sec').value)
         self.sync.registerCallback(self.sync_callback)
 
-        # frame_id -> 连续查不到的次数。达到阈值后不再为它等 TF 超时。
         self.missing_frames = {}
         self.missing_frame_threshold = int(
             self.get_parameter('missing_frame_threshold').value)
@@ -95,6 +91,12 @@ class LivoxFusionNode(Node):
             f"livox_fusion_node 启动：融合 [{left_topic}] + [{right_topic}] -> "
             f"[{output_topic}]，目标坐标系 [{self.target_frame}]，"
             f"同步队列深度 {queue_size}，输出龄期上限 {self.max_output_age:.2f}s")
+
+    @staticmethod
+    def _validate_parameters(parameters):
+        if any(p.name == 'deskew_enable' and p.value for p in parameters):
+            return SetParametersResult(successful=False, reason='Per-point deskew is not implemented')
+        return SetParametersResult(successful=True)
 
     def _lookup_timeout_for(self, frame_id: str) -> Duration:
         """对"已判定压根不在 TF 树里"的 frame 不再等超时。
@@ -123,10 +125,6 @@ class LivoxFusionNode(Node):
             n = self.missing_frames.get(src, 0) + 1
             self.missing_frames[src] = n
             if n == self.missing_frame_threshold:
-                # 升级成 ERROR 且只在跨过阈值这一次打：连续查不到就不是抖动了，
-                # 是这个 frame 没有人发。这条日志必须能直接指向修法 —— 上一次
-                # 排查它花了很久，因为当时只有一条 throttle 过的 WARN，而真正的
-                # 现象出现在两跳之外(/scan 全空)。
                 self.get_logger().error(
                     f"[{src}] -> [{self.target_frame}] 连续 {n} 次查不到，判定该 frame "
                     f"不在 TF 树里：这一路点云从此被整路丢弃(只发另一路)。"
@@ -143,9 +141,6 @@ class LivoxFusionNode(Node):
             self.get_logger().info(f"[{src}] 的 TF 已恢复，这一路重新参与融合")
             self.missing_frames[src] = 0
         transformed = do_transform_cloud(cloud_msg, tf)
-        # 用 read_points()（结构化数组）而不是 read_points_numpy()：后者要求消息里
-        # "所有字段"数据类型统一，遇到带 intensity/ring 等混合类型字段的点云会直接
-        # assert 崩溃（livox_preprocess_node.py 里踩过这个坑，这里预防性同样处理）。
         structured = pc2.read_points(transformed, field_names=('x', 'y', 'z'), skip_nans=True)
         if structured.shape[0] == 0:
             return np.zeros((0, 3), dtype=np.float32)
@@ -153,20 +148,13 @@ class LivoxFusionNode(Node):
             [structured['x'], structured['y'], structured['z']]).astype(np.float32)
         return pts
 
-    def _deskew_placeholder(self, points: np.ndarray, cloud_msg: PointCloud2):
-        """
-        逐点去畸变扩展点（当前不启用，见文件头部说明）。
-        若后续接入 livox_ros_driver2 的 CustomMsg（含每点 offset_time）：
-          1. 在这里按 offset_time 把每个点的采集时刻精确定位到 scan_start ~ scan_end 之间；
-          2. 用 /odom 里 scan_start~scan_end 时间段内的位姿插值，算出每个点相对 scan_start
-             时刻的位姿修正量；
-          3. 把每个点变换到 scan_start 时刻的传感器系下，再统一做本节点已有的 tf2 变换。
-        目前 gz-sim 仿真点云和 xfer_format=2/0 的标准 PointCloud2 都没有逐点时间戳，
-        直接原样返回，不做任何处理。
-        """
-        return points
-
     def sync_callback(self, left_msg: PointCloud2, right_msg: PointCloud2):
+        now = self.get_clock().now()
+        future_tolerance = self.get_parameter('future_tolerance_sec').value
+        if any((now - Time.from_msg(msg.header.stamp)).nanoseconds / 1e9 < -future_tolerance
+               for msg in (left_msg, right_msg)):
+            self.get_logger().warn('点云时间戳超前，丢弃此同步帧', throttle_duration_sec=5.0)
+            return
         left_pts = self._transform_to_target(left_msg)
         right_pts = self._transform_to_target(right_msg)
 
@@ -175,17 +163,15 @@ class LivoxFusionNode(Node):
             return
         fused = np.concatenate(clouds, axis=0)
 
-        if self.get_parameter('deskew_enable').value:
-            fused = self._deskew_placeholder(fused, left_msg)
-
-        header = left_msg.header
+        participating = [msg for pts, msg in ((left_pts, left_msg), (right_pts, right_msg))
+                         if pts is not None and pts.shape[0] > 0]
+        header = deepcopy(min(participating, key=lambda msg:
+                              Time.from_msg(msg.header.stamp).nanoseconds).header)
         header.frame_id = self.target_frame
         out = pc2.create_cloud_xyz32(header, fused.astype(np.float32))
 
-        # 发布前自检龄期。发一帧下游注定要丢的陈旧数据，等于把"本节点吞吐不够"
-        # 伪装成"下游在丢包"，上一次就是这样把排查引到了两跳之外。
         age = (self.get_clock().now() - Time.from_msg(header.stamp)).nanoseconds / 1e9
-        if age > self.max_output_age:
+        if age > self.max_output_age or age < -future_tolerance:
             self.stale_dropped += 1
             self.get_logger().error(
                 f"融合帧龄期 {age:.3f}s 超过上限 {self.max_output_age:.2f}s，不发布"

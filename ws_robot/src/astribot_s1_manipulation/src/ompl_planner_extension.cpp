@@ -1,43 +1,4 @@
 // Copyright 2026 Astribot
-//
-// OMPL 规划器扩展插件：把 MoveIt2 官方没有注册的 OMPL 规划器补注册进去。
-//
-// 为什么需要这个东西（这是本文件存在的全部理由）
-// ----------------------------------------------
-// 任务要求启用 RRT* / BIT* / Informed RRT* 三类规划器。实测结论：
-//
-//   $ strings /opt/ros/humble/lib/libmoveit_ompl_interface.so
-//       | grep -oE "geometric::[A-Za-z_]+" | sort -u
-//   共 25 个，其中有 geometric::RRTstar，**没有** BITstar，**没有** InformedRRTstar
-//   （注意：上面这条命令原本是一行，这里断成两行是因为行尾反斜杠在 // 注释里
-//    会被当作续行符，触发 -Wcomment 告警 —— 本工程要求零 warning）
-//
-// 也就是说 MoveIt2 Humble 的官方 OMPL 接口只注册了三者中的一个。
-// 而 OMPL 1.7 本体是**有**这两个规划器的：
-//   /opt/ros/humble/include/ompl-1.7/ompl/geometric/planners/informedtrees/BITstar.h
-//   /opt/ros/humble/include/ompl-1.7/ompl/geometric/planners/rrt/InformedRRTstar.h
-//
-// 更麻烦的是：在 ompl_planning.yaml 里写一个 MoveIt 不认识的规划器名，
-// MoveIt **不报错**，而是静默回退到该组的默认规划器。所以"配置写了 BIT*、
-// 实际跑的是 RRTConnect"这种事完全不会被发现，除非去看日志里的实际规划器名。
-//
-// 实现路径（只用公开 API，不改任何系统库源码）
-// ------------------------------------------
-// MoveIt 官方的插件类 ompl_interface::OMPLPlannerManager **没有公开头文件**
-// （只在它自己的 .cpp 里定义），所以无法继承它。但是：
-//
-//   ompl_interface::OMPLInterface                              <- 有公开头
-//     ::getPlanningContextManager()  非 const 重载             <- 公开 (ompl_interface.h:94)
-//       ::registerPlannerAllocator(id, allocator)              <- 公开 (planning_context_manager.h:187)
-//
-// 因此本文件实现一个自己的 planning_interface::PlannerManager 插件，
-// 内部持有一个 OMPLInterface，在 initialize() 里把缺失的规划器注册进去。
-// 这符合任务约束「允许基于 OMPL 原生接口做封装扩展」「禁止修改系统库源码」。
-//
-// allocator 的签名（model_based_planning_context.h:60）：
-//   std::function<ob::PlannerPtr(const ob::SpaceInformationPtr& si,
-//                                const std::string& name,
-//                                const ModelBasedPlanningContextSpecification& spec)>
 
 #include <algorithm>
 #include <map>
@@ -56,14 +17,11 @@
 
 #include "astribot_s1_manipulation/optimizing_planner_wrapper.hpp"
 
-// OMPL 里官方未注册、但本工程需要的两个规划器
 #include <ompl/geometric/planners/informedtrees/ABITstar.h>
 #include <ompl/geometric/planners/informedtrees/AITstar.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
 #include <ompl/geometric/planners/rrt/SORRTstar.h>
-// RRTstar 官方已注册，但本包要覆盖注册它以套上 OptimizingPlannerWrapper，
-// 见 registerExtraPlanners() 里的说明。
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 
 namespace astribot_s1_manipulation
@@ -160,9 +118,6 @@ ompl_interface::ConfiguredPlannerAllocator makeAllocator()
                logger, "space information is null, cannot allocate planner '%s'", name.c_str());
              return ob::PlannerPtr();
            }
-           // 先把本包自己的策略键取出来（并从副本里删掉），剩下的才是
-           // 要透传给 OMPL ParamSet 的真参数。顺序不能反：否则这两个键
-           // 会被当成拼错的 OMPL 参数报 WARN。
            std::map<std::string, std::string> config = spec.config_;
            const OptimizingPlannerPolicy policy = extractOptimizingPolicy(config, name, logger);
 
@@ -202,8 +157,6 @@ public:
 
     node_ = node;
     try {
-      // OMPLInterface 的构造会从参数服务器读取 ompl_planning.yaml 的内容
-      // （planner_configs 段与各组段），行为与官方插件完全一致。
       ompl_interface_ = std::make_unique<ompl_interface::OMPLInterface>(
         model, node, parameter_namespace);
     } catch (const std::exception & e) {
@@ -220,8 +173,6 @@ public:
 
   bool canServiceRequest(const planning_interface::MotionPlanRequest & req) const override
   {
-    // 与官方 OMPL 插件相同的判定：本插件只做关节空间/位姿目标的路径规划，
-    // 不处理轨迹约束(trajectory_constraints)。
     return req.trajectory_constraints.constraints.empty();
   }
 
@@ -240,16 +191,6 @@ public:
       return;
     }
 
-    // 这里要报两类名字，缺一不可：
-    //   1. 已注册的 allocator id（"geometric::BITstar" 这种 OMPL 类名）
-    //      —— 证明规划器本身可用。
-    //   2. ompl_planning.yaml 里的**配置名**（"BITstarConfig" 这种）
-    //      —— 这才是 MotionPlanRequest.planner_id 实际该填的值。
-    //
-    // 只报第 1 类的话（本插件最初的写法），`ros2 service call
-    // /query_planner_interface` 看到的全是 OMPL 类名，用户照着填
-    // "BITstarConfig" 会以为规划器不存在；反过来只报第 2 类，
-    // 又看不出哪些规划器是本插件补注册进来的。两类都报最省事。
     const auto & allocators =
       ompl_interface_->getPlanningContextManager().getRegisteredPlannerAllocators();
     const auto & configurations =
@@ -260,8 +201,6 @@ public:
       algs.push_back(item.first);
     }
     for (const auto & item : configurations) {
-      // PlannerConfigurationMap 的 key 形如 "arm_left[RRTstarConfig]" 或
-      // 直接就是 "RRTstarConfig"。两种都原样报出去，让调用方能对上号。
       algs.push_back(item.first);
     }
     std::sort(algs.begin(), algs.end());
@@ -298,8 +237,6 @@ public:
     }
 
     try {
-      // 这里把实际生效的规划器名打出来。前面说过：yaml 里写了不存在的
-      // 规划器时 MoveIt 会静默回退，只有对着日志核对才能发现。
       RCLCPP_INFO(
         rclcpp::get_logger(kLoggerName),
         "planning request: group='%s' planner_id='%s' allowed_time=%.2fs",
@@ -309,8 +246,6 @@ public:
 
       return ompl_interface_->getPlanningContext(planning_scene, req, error_code);
     } catch (const std::exception & e) {
-      // 绝不让第三方库的异常穿出插件边界：move_group 不会捕获它，
-      // 会直接让整个 move_group 进程终止。
       RCLCPP_ERROR(
         rclcpp::get_logger(kLoggerName),
         "exception while creating planning context: %s", e.what());
@@ -335,28 +270,14 @@ private:
 
     const auto before = manager.getRegisteredPlannerAllocators().size();
 
-    // ---- 任务明确要求的两个 ----
     manager.registerPlannerAllocator("geometric::BITstar", makeAllocator<og::BITstar>());
     manager.registerPlannerAllocator(
       "geometric::InformedRRTstar", makeAllocator<og::InformedRRTstar>());
 
-    // ---- 同族的另外几个，一并注册（成本为零，便于后续对比选型）----
-    // ABITstar  : BIT* 的 anytime 变体，先快速出解再持续优化
-    // AITstar   : 自适应启发式的 informed tree
-    // SORRTstar : Informed RRT* 的有序采样变体
     manager.registerPlannerAllocator("geometric::ABITstar", makeAllocator<og::ABITstar>());
     manager.registerPlannerAllocator("geometric::AITstar", makeAllocator<og::AITstar>());
     manager.registerPlannerAllocator("geometric::SORRTstar", makeAllocator<og::SORRTstar>());
 
-    // ---- 覆盖注册 RRTstar ----
-    // RRT* 官方**已经**注册了，本来不需要动。但官方 allocator 直接 new
-    // og::RRTstar，拿不到 OptimizingPlannerWrapper 的两条策略，于是
-    // RRTstarConfig 会继续把 allowed_planning_time 全部烧掉（实测 5.001s，
-    // 而首解在第 4 次迭代就出了，代价 0.600 -> 0.600 一点没降）。
-    // known_planners_ 是 std::map，同名 id 重复注册即覆盖，所以在这里
-    // 用同一个 id 重新注册一遍，让 RRT* 也走本包的包装层。
-    // 不覆盖 geometric::RRTConnect：它不是渐进最优规划器，拿到首解就返回，
-    // 本来就没有"烧完超时"的问题。
     manager.registerPlannerAllocator("geometric::RRTstar", makeAllocator<og::RRTstar>());
 
     const auto & allocators = manager.getRegisteredPlannerAllocators();
@@ -365,8 +286,6 @@ private:
       "registered extra OMPL planners: %zu -> %zu total",
       before, allocators.size());
 
-    // 把三个必需规划器逐个确认一遍并打日志。任务的成功判定要求
-    // "可切换 RRT*/BIT*/Informed RRT*"，这几行就是该判定的自证。
     for (const char * required :
       {"geometric::RRTstar", "geometric::BITstar", "geometric::InformedRRTstar"})
     {

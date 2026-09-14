@@ -5,7 +5,6 @@ from datetime import datetime
 class DefaultLogger:
     def _get_caller_info(self):
         """Get caller's filename and line number"""
-        # Get current timestamp
         now = datetime.now()
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S") + f".{now.microsecond // 1000:03d}"
 

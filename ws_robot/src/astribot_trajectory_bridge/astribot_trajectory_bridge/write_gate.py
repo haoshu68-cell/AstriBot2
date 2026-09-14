@@ -30,14 +30,6 @@ VALID_TARGETS = (TARGET_SIM, TARGET_REAL)
 
 ROBOT_MODE_SAFE = 'safe'
 
-# 真机的三种模式。**实测依据** astribot_client.py:54-62 的 if/elif/elif/else：
-# 只有这三个值会被识别为真机，**落进 else 的一律是仿真**（该分支置
-# __in_simulation = True）。Gate 0 探针实测仿真返回的字符串就是 'simulation'。
-#
-# 为什么必须区分"仿真"与"真机非安全模式"：
-# 闸门若只认 'safe'，仿真下会被判成"非安全模式"而拒绝写 —— 逼人去开
-# allow_unsafe_mode，而那个开关同时也把**真机的 professional/extremity 放开**。
-# 一个仿真期的便利开关会变成真机上的安全缺口，所以两件事必须分开判。
 ROBOT_MODES_REAL = ('safe', 'professional', 'extremity')
 
 
@@ -50,11 +42,9 @@ def is_simulation_mode(robot_mode):
     """
     return robot_mode not in ROBOT_MODES_REAL
 
-# SDK 的 fd 级静音开关。见 astribot_sdk/core/astribot_api/astribot_interface.py:34-41
 ASTRIBOT_LOG_ENV = 'ASTRIBOT_LOG'
 ASTRIBOT_LOG_TRUTHY = ('1', 'true', 'on')
 
-# 决定 chassis_dof 的环境变量。见 astribot_sdk/core/common/astribot_base.py:34-38
 ROBOT_TYPE_ENV = 'ROBOT_TYPE'
 VALID_ROBOT_TYPES = ('S0', 'S1')
 
@@ -68,9 +58,6 @@ class GateDecision:
         self.status_code = status_code
 
 
-# 与 astribot_bridge_msgs/BridgeStatus.msg 的枚举保持一致。
-# 这里用字符串常量而不是 import 消息类型，是为了让本模块可以在**没有编译 msgs**
-# 的环境下被单测（纯逻辑测试不该依赖 rosidl 产物）。调用方负责映射成数字。
 ST_SDK_NOT_ALIVE = 'SDK_NOT_ALIVE'
 ST_MULTIPLE_BACKENDS = 'MULTIPLE_BACKENDS'
 ST_TARGET_MISMATCH = 'TARGET_MISMATCH'
@@ -100,7 +87,6 @@ def evaluate_write_gate(discovered_backends, declared_target,
             'declared_target=%r 非法，只能是 %s' % (declared_target, list(VALID_TARGETS)),
             ST_TARGET_MISMATCH)
 
-    # ① 后端唯一性
     backends = list(discovered_backends or [])
     if len(backends) == 0:
         return GateDecision(False, '图上没有发现任何后端', ST_SDK_NOT_ALIVE)
@@ -116,7 +102,6 @@ def evaluate_write_gate(discovered_backends, declared_target,
         return GateDecision(
             False, '发现的后端标识 %r 无法识别' % (actual,), ST_TARGET_MISMATCH)
 
-    # ② 声明与实际一致
     if actual != declared_target:
         return GateDecision(
             False,
@@ -124,7 +109,6 @@ def evaluate_write_gate(discovered_backends, declared_target,
             % (declared_target, actual),
             ST_TARGET_MISMATCH)
 
-    # ③ 打真机需要二次显式授权
     if actual == TARGET_REAL and not allow_write_to_real:
         return GateDecision(
             False,
@@ -132,14 +116,6 @@ def evaluate_write_gate(discovered_backends, declared_target,
             '（该参数刻意不写进默认 yaml，避免被存进配置后忘记）',
             ST_REAL_WRITE_NOT_AUTHORIZED)
 
-    # ④ 机器人模式
-    #
-    # 仿真后端不参与本条判定：仿真的 get_robot_mode() 必然不是 'safe'
-    # （厂商就是用"不在三个真机模式里"来识别仿真的），若在这里拒绝，
-    # 使用者只能去打开 allow_unsafe_mode —— 而那个开关会连带把**真机的
-    # professional/extremity 一起放开**。仿真期的便利绝不能是真机的缺口。
-    #
-    # 注意这里已经过了②，actual == declared_target，所以用 actual 判断即可。
     if actual == TARGET_REAL and robot_mode != ROBOT_MODE_SAFE:
         if not allow_unsafe_mode:
             return GateDecision(
@@ -148,8 +124,6 @@ def evaluate_write_gate(discovered_backends, declared_target,
                 '（真机模式取值见 astribot_client.py:54-62）' % (robot_mode,),
                 ST_ROBOT_MODE_UNEXPECTED)
 
-    # 反向一致性：声明 sim 但 SDK 报的是真机模式，说明连上的其实是真机。
-    # 这条比②更强 —— ②比的是"发现的后端"，这条比的是**SDK 自己报的模式**。
     if actual == TARGET_SIM and not is_simulation_mode(robot_mode):
         return GateDecision(
             False,
@@ -175,9 +149,6 @@ def validate_pose_source_target_combo(pose_source, declared_target):
     return GateDecision(True, 'OK')
 
 
-# ---------------------------------------------------------------------------
-# 环境变量守卫
-# ---------------------------------------------------------------------------
 
 def is_astribot_log_enabled(env=None):
     """按 SDK 自己的判据检查 ASTRIBOT_LOG 是否已开启。
@@ -228,7 +199,6 @@ def check_env_before_sdk_import(env=None, sdk_module_names=None,
             '2 自由度而不是 3。必须显式设置 %s=S1。'
             % (ROBOT_TYPE_ENV, robot_type, ROBOT_TYPE_ENV))
 
-    # SDK 是否已被 import（此时补环境变量已经来不及）
     if loaded_modules is not None:
         names = sdk_module_names or ('astribot_sdk', 'astribot_ros_middleware')
         already = [n for n in names if n in loaded_modules]

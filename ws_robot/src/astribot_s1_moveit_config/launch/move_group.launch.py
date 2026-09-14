@@ -68,9 +68,6 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time')
 
-    # ---- 机器人模型 ----
-    # URDF 由 description 包的 xacro 展开；robot_name 必须显式传，
-    # 否则 xacro 里 $(arg robot_name) 未定义会直接报错。
     robot_description_content = Command([
         'xacro ',
         PathJoinSubstitution([
@@ -87,7 +84,6 @@ def generate_launch_description():
     with open(srdf_path, 'r', encoding='utf-8') as handle:
         robot_description_semantic = {'robot_description_semantic': handle.read()}
 
-    # ---- MoveIt 各段配置 ----
     kinematics = _load_yaml('astribot_s1_moveit_config', 'config/kinematics.yaml') or {}
     joint_limits = _load_yaml('astribot_s1_moveit_config', 'config/joint_limits.yaml') or {}
     ompl_planning = _load_yaml('astribot_s1_moveit_config', 'config/ompl_planning.yaml') or {}
@@ -95,8 +91,6 @@ def generate_launch_description():
         'astribot_s1_moveit_config', 'config/moveit_controllers.yaml') or {}
 
     robot_description_kinematics = {'robot_description_kinematics': kinematics}
-    # joint_limits.yaml 的内容要挂在 robot_description_planning 下，
-    # MoveIt 才会用它覆盖 URDF 的限位（加速度限位就是这么补进去的）。
     robot_description_planning = {'robot_description_planning': joint_limits}
 
     planning_pipeline = {
@@ -104,9 +98,6 @@ def generate_launch_description():
         'default_planning_pipeline': 'ompl',
         'ompl': {
             'planning_plugin': LaunchConfiguration('planning_plugin'),
-            # request adapters 的顺序有讲究：FixStartState* 三个必须在
-            # AddTimeParameterization 之前，否则起点非法时会先被打时间戳再修，
-            # 得到的轨迹时间戳与实际路径不符。
             'request_adapters': ' '.join([
                 'default_planner_request_adapters/AddTimeOptimalParameterization',
                 'default_planner_request_adapters/ResolveConstraintFrames',
@@ -118,7 +109,6 @@ def generate_launch_description():
             'start_state_max_bounds_error': 0.1,
         },
     }
-    # ompl_planning.yaml 的 planner_configs 与各组配置直接并进 ompl 段。
     planning_pipeline['ompl'].update(ompl_planning)
 
     move_group_node = Node(
@@ -134,7 +124,6 @@ def generate_launch_description():
             planning_pipeline,
             controllers,
             {'use_sim_time': use_sim_time},
-            # publish_* 三项开着，RViz 才能看到规划场景与机器人状态。
             {'publish_robot_description_semantic': True},
             {'publish_planning_scene': True},
             {'publish_geometry_updates': True},
@@ -162,8 +151,5 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('use_rviz')),
     )
 
-    # 用 scoped GroupAction 包起来：避免本 launch 里声明的同名
-    # LaunchConfiguration（尤其 use_sim_time / log_level）泄漏到上层 launch。
-    # 这个坑在 nav2_full_bringup.launch.py 里踩过两次，见那里的记录。
     return LaunchDescription(
         declared_args + [GroupAction(scoped=True, actions=[move_group_node, rviz_node])])

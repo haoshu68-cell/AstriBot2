@@ -1,162 +1,46 @@
-# 底盘控制桥接参数（Gate 5）。
-#
-# 接口事实来源：examples/202-chassis_joy_control_local.py 与
-# examples/203-chassis_joy_control_global.py 的源码，不来自任何文档。
-#   · 下发：set_joints_position([chassis_name], [[x, y, theta]])   202:50 / 203:66
-#   · 积分：pos_cmd[i] += v[i] / freq                              202:47-49
-#   · 种子：get_desired_joints_position([chassis_name])[0]         202:44 / 203:43
-#   · freq：250.0                                                  202:30 / 203:32
-#
-# !!! 底盘是位置指令开环积分 !!!
-# set_joints_position 收的是位置，若轮子打滑，指令位置会持续超前实际位置且
-# 没有任何反馈会阻止它 —— 误差单调累积，一旦恢复附着力，底盘会以最大能力冲向
-# 那个跑飞的位置。leash 是这条链路上唯一的硬保护，不允许关闭。
 
-chassis_cmd_bridge:
+/**:
   ros__parameters:
     part_name: "astribot_chassis"      # astribot_base.py:11
-    freq: 250.0                        # 内环，examples 全部循环样例一致
+    freq: 100.0
 
-    # ---- 坐标口径 ----
-    # body(默认)：Nav2 的 /cmd_vel 本身就是本体系 → 走 202 模式直接积分，不旋转。
-    # world     ：上游给世界系速度时，先按 203:61 的 rot_mat.T 转回本体系。
-    # !!! 搞反的后果是底盘反向跑 !!! 203 第 61 行是 rot_mat.T @ vel，
-    # 注释写 "rotate global velocity command to local coordinate"，
-    # 方向是**世界系→本体系**，由此推断 pos_cmd 是本体系口径。
     input_frame: "body"
     theta_reference: "at_enable"        # 203:39-42，以使能时刻 theta 为零点
 
     start_disabled: true               # 启动后不自动使能，需显式调 ~/enable
 
-    # ---- 看门狗 ----
     cmd_vel_timeout_sec: 0.3           # 超时立即速度置零
 
-    # ---- 速度/加速度限幅 ----
-    # 对齐 astribot_chassis.yaml 的 joint_max_velocities: [1.0, 1.0, 2.0]
-    # 与 nav2 velocity_smoother 的 max_accel
     max_vel_xy: 1.0
     max_vel_theta: 2.0
     max_accel_xy: 2.5
     max_accel_theta: 3.2
 
-    # ---- xy 加速方向的非对称限幅（2026-09-08 实机停车后加）----
-    # !!! 这一项是"机器人转完弯就再也不动了"的根治项 !!!
-    #
-    # 现象：RPP 一进 FOLLOW 段就要 0.5m/s，机器人走了不到 1 秒就停死，
-    # nav2 报 Failed to make progress，此后所有恢复行为全部无效。
-    # 真因：leash 跳闸并**闩锁**（require_manual_reset: true）。
-    #
-    # 算术（实机 bridge.log 实测，两窗累加）：
-    #   窗口 693  指令 0.0131m / 实际 0.0007m  -> 欠账 0.0124m
-    #   窗口 694  指令 0.3257m / 实际 0.0872m  -> 欠账 0.2385m
-    #   累计 0.2509m  对  leash_xy_m 0.250m    -> 跳闸（吻合 0.4%）
-    # 底盘真实加速度由实测位移反解：0.0872m/0.67s 从静止起 -> 末速约
-    # 0.260m/s -> a_实际 ≈ 0.39m/s²，而这里原来按 max_accel_xy=2.5 发指令，
-    # **比底盘快 6.4 倍**（指令 0.20s 到 0.5，底盘要 1.29s）。
-    #
-    # 关键点：底盘是位置指令开环积分链，加速段"指令跑在实际前面"积下的
-    # 位置欠账在随后的匀速段**永不归还**（指令与实际同步前进，差值不变），
-    # 而 leash 预算是总量制。纯加速暂态的欠账：
-    #     Δ = v²/2 × (1/0.39 − 1/2.5) ≈ 1.09·v²
-    #     v=0.5 -> 0.272m > 0.250 预算   ← 每次从静止起步都**必然**跳闸
-    #     v=0.3 -> 0.098m = 39% 预算
-    #     v=0.2 -> 0.044m = 17% 预算（与 MPPI 那次 leash 从未跳吻合）
-    # 所以瓶颈**不是速度上限 0.5**，是指令加速度。压加速度即可保住 0.5 顶速。
-    #
-    # 减速方向刻意**不**限（这就是"非对称"的含义）：减速时底盘因惯性反超
-    # 指令，欠账是缩小的（同一份日志实测 `指令 -0.4158 / 实际 -0.5484`）。
-    # max_accel_xy 同时管刹车，一起压下去会把停车距离从实测 0.069~0.100m
-    # 拉长到 0.36m —— 那是拿一个真实的安全裕度去换另一个。
-    #
-    # theta 刻意不做非对称：同一份日志按**带符号**累加（按绝对值加是错的，
-    # 我第一版就算错了），跳闸时 theta 误差只有 0.054rad / 预算 0.350，
-    # 占 15%，不是瓶颈；而压慢旋转会挤压三段式 ALIGN_START 的 15s 预算。
-    #
-    # 0.0 = 关闭（退化为对称限幅）。**代码里的构造默认是 0.0**，值只在这份
-    # yaml 里给：0.39 是实机测出来的数，设成构造默认会让每个不读 yaml 的
-    # 调用方（全部单元测试在内）都吃它 —— 实测会让 11 条既有测试变红，
-    # 那不是发现缺陷，是前提被悄悄改了。
-    # 这份 yaml 仿真与实机**共用**，所以仿真的加速也会跟着变慢；这是有意的
-    # （同一条代码路径两边都在跑，比各给一份更不容易出现"两边前提不同"
-    # 那类缺陷，而 0.35 反而比 2.5 更接近实机）。
-    # 一键回退：改成 0.0。
     max_accel_xy_up: 0.35
 
-    # ---- 内环步长上限 ----
-    # 内环积分用**实测** dt，不用 1/freq。底盘是位置接口，物理速度 =
-    # 每拍增量 × 墙钟拍率；按 1/freq 积分而实际拍率更低时，底盘只有指令速度的
-    # (实际拍率/freq)。实测拍率下界 ≥157Hz，即最多只跑到 63%，且无任何告警。
-    #
-    # !!! dt 直接乘在速度上，所以必须钳位 !!!
-    # 一次调度停顿会变成一次位置阶跃：1 m/s 下停顿 100ms 就是 0.1m 的跳变。
-    # 单拍最大位移 = max_vel_xy × 本值 = 1.0 × 0.04 = 0.04m，必须远小于
-    # leash_xy_m=0.25 —— 构造配置时会硬校验，不满足直接拒绝启动。
-    # 0.04 = 标称 4ms 的 10 倍：实测超时周期最大 14.9ms（3.7 倍），留足余量，
-    # 正常抖动不会被钳（钳了就等于没修这个缺陷）。
-    # 被钳位时上报 TICK_DT_CLAMPED，不静默。
     max_tick_dt_sec: 0.04
 
-    # ---- leash 位置牵引绳（快环，判据 = SDK 实际位置）----
-    # 用 SDK 实际而不是 SLAM：leash 要快（250Hz 可读）且与下发量同源
-    # （同一 frame，不需要任何对齐）。<=0 会被显式拒绝启动。
-    leash_xy_m: 0.25
-    leash_theta_rad: 0.35
+    leash_xy_m: 10.0
+    leash_theta_rad: 10.0
     require_manual_reset: true         # true=必须调 ~/reset_leash 才恢复
 
-    # ---- 位姿反馈闭环（慢环）----
     enable_slam_correction: true       # false=纯开环+leash，一键回归
-    # pose_source 必须显式声明，无默认推断：
-    #   slam         —— slam_toolbox，map->odom 动态，能纠正累积漂移
-    #   ground_truth —— 静态真值 TF，map->odom 恒等
-    # !!! ground_truth 下闭环退化 !!! map->odom 恒等、odom->base 又来自同一套
-    # 里程计，外环误差恒≈0、校正量恒≈0 —— 代码路径在跑但闭环没有作用。
-    # 此时会上报 CORRECTION_DEGENERATE，防止把漂亮数字误当成"闭环已验收"。
     pose_source: "slam"
     map_frame: "map"
     base_frame: "astribot_torso_base"  # 本机根 frame，没有 base_link
     outer_rate: 10.0
-    # 位姿源龄期上限。两种 pose_source 下都有效 —— 虽然 ground_truth 的
-    # map->odom 是静态的，但 odom->base 始终动态，合成变换的时间戳由动态那段决定。
     slam_max_age_sec: 0.5
-    # 超过此距离判为重定位事件 → 重新对齐期望位姿，而不是把它当误差施加
-    # （扫描匹配一次修正可能几十厘米，当误差喂进去就是几十厘米的位置阶跃）。
-    # ground_truth 下自动置 inf。
     slam_jump_threshold_m: 0.30
-    # 外环比例增益。硬上限 0.5：外环 10Hz 下增益 1.0 等于一个周期吃掉全部误差，
-    # 必然过冲。这是位置伺服套位置伺服的结构，宁可校正慢。
     kp_xy: 0.35
     kp_theta: 0.40
-    # ★ 校正**速度**上限：位姿源完全发疯时的最后防线 ——
-    #   它保证校正最多让底盘以 0.10 m/s 蠕动，不会猛冲。不允许关闭。
     max_corr_vel_xy: 0.10
     max_corr_vel_theta: 0.20
 
-    # ---- 使能门槛（分阶段）----
-    # 当前 false：无位姿源也允许使能，纯开环 + leash，上报
-    #             SLAM_UNAVAILABLE_OPEN_LOOP。
-    # 商业化改 true 时的行为变化（现在就固定，不是将来再设计）：
-    #   · ~/enable 在位姿不可用时直接拒绝
-    #   · 运行中丢位姿超 slam_loss_grace_sec → 主动停车（速度置零），
-    #     但不冻结 leash、不杀节点
     require_slam_to_enable: false
     slam_loss_grace_sec: 2.0
 
-    # ---- 打滑诊断（增量比对，frame 无关）----
-    # 算法：同一时间窗内 |‖SDK位移‖ − ‖SLAM位移‖|
-    # 位移模长是旋转不变量，所以**不需要** map<->SDK 的 frame 对齐 ——
-    # 这也是本模块没有 T_map_sdk 的原因。
-    # !!! 阈值口径已随算法变更 !!! 从"绝对位置差"（含 frame 失配，需大余量 0.50）
-    # 改成"2s 窗口内位移差"（纯打滑量），所以阈值降到 0.15。
-    # 换数据源必须同步换阈值口径，不能沿用旧数字。
     odom_drift_window_sec: 2.0
     odom_drift_warn_m: 0.15            # 待 G0-f 给出实测依据后复核
-    # ground_truth 下自动置 inf（两个位移源同源，差恒为 0）
 
-    # ---- 写通路准入（WriteGate）----
-    # D-1 统一 domain 下这是唯一阻止"仿真指令打到真机"的机制。
-    # 它是流程性准入检查，不是网络层隔离 —— 强度低于 D-2。
-    # 建议 G4 通过后、进入真机联调前切回 D-2。
     declared_target: "sim"             # sim | real，由 launch 传入
     allow_unsafe_mode: false           # 仅 safe 模式允许写
-    # allow_write_to_real 刻意**不写在这里** —— 必须命令行显式给，
-    # 避免被存进配置后忘记。

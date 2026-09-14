@@ -27,6 +27,9 @@ z高度/roll/pitch超出阈值时，判定发生了仿真物理异常（大概�
 """
 
 import math
+import time
+
+from rclpy.clock import Clock, ClockType
 
 import rclpy
 from rclpy.node import Node
@@ -36,7 +39,6 @@ from geometry_msgs.msg import Twist
 
 from astribot_s1_navigation.posture_monitor_policy import (
     ACT_COLLECTING,
-    ACT_DISABLE_DEGENERATE,
     ACT_TRIP,
     describe_monitor_state,
     evaluate_posture,
@@ -51,46 +53,39 @@ class CmdVelBodyToWorldNode(Node):
         self.declare_parameter('input_topic', '/cmd_vel_nav_body')
         self.declare_parameter('output_topic', '/cmd_vel')
         self.declare_parameter('odom_topic', '/odom')
-        # ---- 安全监控阈值：与 autonomous_patrol_node.py 保持一致的判定标准 ----
         self.declare_parameter('normal_height', 0.134)
         self.declare_parameter('max_height_deviation', 0.06)
         self.declare_parameter('max_tilt_rad', 0.12)  # 约7°
-        # 见 cmd_vel_callback 里的详细说明：VelocityControl(world系语义)已被力矩闭环
-        # (车体系语义)取代，默认不再做 body→world 旋转，本节点退化为
-        # "直通转发 + 姿态安全监控"。换回VelocityControl架构时设回 true。
         self.declare_parameter('enable_body_to_world', False)
-        # ---- 姿态监控总开关 ----
-        # !!! 实机必须显式给 false !!! 理由（实测，不是推演）：
-        # 实机 /odom 是轮式里程计、只暴露 3-DOF，z/roll/pitch **恒等于 0**，
-        # 而 normal_height=0.134 是仿真值 -> |0-0.134|=0.134 > 0.06 -> 判为异常姿态。
-        # 此前之所以没炸，是因为这个节点的 /odom 订阅用的是默认 RELIABLE QoS，
-        # 而实机 /odom 发布者是 BEST_EFFORT，回调**一帧都没执行过**（实测
-        # RELIABLE 0 帧 / BEST_EFFORT 704 帧 @50Hz）—— 两个缺陷互相掩盖。
-        # 本次把 QoS 修成 sensor_data（对 RELIABLE 发布者同样兼容），
-        # 于是缺陷 2 会暴露出来，所以必须同时有这个开关。
-        # 默认保持 True 是为了不改变仿真行为。
         self.declare_parameter('enable_posture_monitor', True)
+        self.declare_parameter('odom_timeout_sec', 0.5)
+        self.declare_parameter('cmd_timeout_sec', 0.5)
+
+        for key in ('odom_timeout_sec', 'cmd_timeout_sec'):
+            value = float(self.get_parameter(key).value)
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(key + ' must be finite and positive')
 
         input_topic = self.get_parameter('input_topic').value
         output_topic = self.get_parameter('output_topic').value
         odom_topic = self.get_parameter('odom_topic').value
 
+        self._last_odom_received = None
+        self._last_odom_stamp = None
+        self._last_cmd_received = None
+        self._odom_valid = False
         self.current_yaw = 0.0
         self.safety_tripped = False
-        #: 姿态监控运行态。degenerate=数据源不携带姿态信息（自动停用）。
         self.posture_enabled = self.get_parameter('enable_posture_monitor').value
-        self.posture_degenerate = False
         self._attitude_samples = []
 
         self.cmd_pub = self.create_publisher(Twist, output_topic, 10)
         self.create_subscription(Twist, input_topic, self.cmd_vel_callback, 10)
-        # !!! /odom 必须用 sensor_data（BEST_EFFORT）!!!
-        # 原先是 `..., 10)` 即默认 RELIABLE，而实机 /odom 发布者是 BEST_EFFORT ——
-        # 单向不兼容，订阅者**一帧都收不到**，只有一条 WARNING，
-        # 而节点活着、发布者数正常，按 pub>0 写的判据一条都发现不了。
-        # BEST_EFFORT 订阅者对 RELIABLE 发布者同样兼容，所以仿真侧不受影响。
         self.create_subscription(Odometry, odom_topic, self.odom_callback,
                                  qos_profile_sensor_data)
+
+        self._watchdog_clock = Clock(clock_type=ClockType.STEADY_TIME)
+        self._watchdog_timer = self.create_timer(0.05, self._watchdog, clock=self._watchdog_clock)
 
         self.get_logger().info(
             'cmd_vel_body_to_world_node 已启动：订阅 %s(车体系, Nav2输出) + %s，'
@@ -103,10 +98,19 @@ class CmdVelBodyToWorldNode(Node):
 
     def odom_callback(self, msg: Odometry):
         q = msg.pose.pose.orientation
+        values = (q.x, q.y, q.z, q.w, msg.pose.pose.position.z)
+        norm = sum(v * v for v in values[:4])
+        self._odom_valid = all(math.isfinite(v) for v in values) and abs(norm - 1.0) < 0.01
+        self._last_odom_received = time.monotonic()
+        self._last_odom_stamp = rclpy.time.Time.from_msg(msg.header.stamp)
+        if not self._odom_valid or not self._odom_ready():
+            if self.posture_enabled or self.get_parameter('enable_body_to_world').value:
+                self.cmd_pub.publish(Twist())
+            return
         self.current_yaw = math.atan2(
             2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
 
-        if not self.posture_enabled or self.posture_degenerate:
+        if not self.posture_enabled:
             return
         if self.safety_tripped:
             return
@@ -118,11 +122,6 @@ class CmdVelBodyToWorldNode(Node):
         sinp = max(-1.0, min(1.0, 2 * (q.w * q.y - q.z * q.x)))
         pitch = math.asin(sinp)
 
-        # ---- 判定顺序在 evaluate_posture 里，刻意不写在这里 ----
-        # 实机 z=0 同时满足"超限"和"数据源退化"两个判定，顺序直接决定行为。
-        # 顺序留在 callback 里就没有任何测试能钉住它 —— 实测过：这里顺序写对了，
-        # 但"把顺序调回去"这个变异在 20 条测试下**全部存活**。
-        # 挪进纯函数后 TestEvaluatePostureOrdering 才真正拦得住。
         if len(self._attitude_samples) < 64:
             self._attitude_samples.append((z, roll, pitch))
         action, reason = evaluate_posture(
@@ -133,10 +132,6 @@ class CmdVelBodyToWorldNode(Node):
 
         if action == ACT_COLLECTING:
             return
-        if action == ACT_DISABLE_DEGENERATE:
-            self.posture_degenerate = True
-            self.get_logger().error(describe_monitor_state(True, True, False))
-            return
         if action == ACT_TRIP:
             self.safety_tripped = True
             self.get_logger().error(
@@ -146,24 +141,34 @@ class CmdVelBodyToWorldNode(Node):
                    z, roll, pitch))
             self.cmd_pub.publish(Twist())
 
+    def _odom_ready(self):
+        if not (self.get_parameter('enable_body_to_world').value or self.posture_enabled):
+            return True
+        if not self._odom_valid or self._last_odom_received is None:
+            return False
+        timeout = self.get_parameter('odom_timeout_sec').value
+        age = (self.get_clock().now() - self._last_odom_stamp).nanoseconds / 1e9
+        return 0.0 <= age <= timeout and time.monotonic() - self._last_odom_received <= timeout
+
+    def _watchdog(self):
+        if self._last_cmd_received is None:
+            return
+        if (self.safety_tripped or not self._odom_ready() or
+                time.monotonic() - self._last_cmd_received > self.get_parameter('cmd_timeout_sec').value):
+            self.cmd_pub.publish(Twist())
+            # Stop a lost command once; an idle adapter must not keep overriding other inputs.
+            self._last_cmd_received = None
+
     def cmd_vel_callback(self, msg: Twist):
-        if self.safety_tripped:
+        self._last_cmd_received = time.monotonic()
+        valid = all(math.isfinite(v) for v in (
+            msg.linear.x, msg.linear.y, msg.linear.z,
+            msg.angular.x, msg.angular.y, msg.angular.z))
+        if self.safety_tripped or not valid or not self._odom_ready():
             self.cmd_pub.publish(Twist())
             return
 
-        # !!! 力控重构方案后的关键变化（务必读完再改）!!!：
-        # 这个 body→world 旋转当初存在的唯一理由是 gz-sim VelocityControl 插件
-        # 按 **world 系** 解释速度指令。现在 VelocityControl 已经整体移除，
-        # 底盘换成 astribot_s1_chassis_effort_drive 的力矩闭环，它的全向轮
-        # 逆解吃的是 **车体系** (vx,vy,wz)——正好就是 Nav2 原生输出的坐标系。
-        # 此时如果还做这个旋转，等于把 Nav2 要求的方向额外转了一个航向角 yaw：
-        # 机器人正对 x 轴(yaw=0)时看起来正常，一旦转弯就会往错误方向走，导航必然失败。
-        # 所以默认 enable_body_to_world=false（直通转发），只保留本节点的
-        # z/roll/pitch 安全监控职责。若哪天换回 VelocityControl 那套架构，
-        # 把这个参数设回 true 即可，转换代码原样保留、没有删。
         if self.get_parameter('enable_body_to_world').value:
-            # msg.linear.x/y 是 Nav2 按车体系(astribot_torso_base)算出来的速度分量；
-            # wz(角速度)不受坐标系影响，直接照抄。
             body_speed = math.hypot(msg.linear.x, msg.linear.y)
             if body_speed > 1e-6:
                 body_angle = math.atan2(msg.linear.y, msg.linear.x)
@@ -192,8 +197,6 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        # 退出前发一个零速度做兜底（力矩闭环节点自己也有cmd_vel超时归零逻辑，
-        # 但多发一个零速度没有坏处）。
         try:
             node.cmd_pub.publish(Twist())
         except Exception:

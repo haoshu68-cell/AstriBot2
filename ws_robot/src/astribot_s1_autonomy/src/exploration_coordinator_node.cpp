@@ -16,8 +16,6 @@
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
 #include "tf2/exceptions.h"
 #include "tf2/LinearMath/Quaternion.h"
-// tf2::getYaw(geometry_msgs Quaternion) 的 fromMsg 特化在 tf2_geometry_msgs 里，
-// 只 include tf2/utils.h 能编过但链接期报 undefined reference。
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 
@@ -48,28 +46,19 @@ bool isTransitionAllowed(ExplorationState from, ExplorationState to)
   }
   switch (from) {
     case ExplorationState::kIdle:
-      // 冷启动自举只能从 IDLE / GEN_NEXT_POINT 进（这两处都保证没有在途目标）。
       return to == ExplorationState::kGenNextPoint || to == ExplorationState::kCompleted ||
              to == ExplorationState::kBootstrap;
     case ExplorationState::kBootstrap:
-      // 自举结束（正常转完、被安全门拦下、或超时）**一律回 IDLE**，
-      // 由 IDLE 重新走「地图/定位/里程计是否就绪」这套前置条件，不许直接跳去选点。
       return to == ExplorationState::kIdle;
     case ExplorationState::kEscape:
-      // 脱困结束一律回 GEN_NEXT_POINT 重新走完整校验流程 ——
-      // 不许直接跳去 VALIDATING：出带之后地图/候选都该重新算一遍。
-      // 失败路径（超时/无解/红线）走 kPaused，由上面那条统一出口覆盖。
       return to == ExplorationState::kGenNextPoint;
     case ExplorationState::kGenNextPoint:
       return to == ExplorationState::kValidating || to == ExplorationState::kCompleted ||
              to == ExplorationState::kBootstrap;
     case ExplorationState::kValidating:
-      // 候选全被拒 → 回 kGenNextPoint 重采样；校验通过 → kNavigating。
-      // 起点落在膨胀带（≠ 找不到合法点）→ kEscape，这两者的正确响应完全相反。
       return to == ExplorationState::kNavigating || to == ExplorationState::kGenNextPoint ||
              to == ExplorationState::kEscape;
     case ExplorationState::kNavigating:
-      // 只有 Nav2 报成功才进 kArrived；失败走 registerNavFailure → kGenNextPoint/kPaused。
       return to == ExplorationState::kArrived || to == ExplorationState::kGenNextPoint;
     case ExplorationState::kArrived:
       return to == ExplorationState::kGenNextPoint || to == ExplorationState::kCompleted;
@@ -84,9 +73,6 @@ bool isTransitionAllowed(ExplorationState from, ExplorationState to)
 
 ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions & options)
 : rclcpp::Node("exploration_coordinator_node", options),
-  // 每一个 rclcpp::Time 成员都必须显式指定 RCL_ROS_TIME：默认构造是 RCL_SYSTEM_TIME，
-  // 与 now() 相减会直接抛 "can't subtract times with different time sources"。
-  // 顺序必须与头文件里的声明顺序一致，否则 -Wreorder 告警。
   state_entered_time_(0, 0, RCL_ROS_TIME),
   active_path_time_(0, 0, RCL_ROS_TIME),
   last_replan_check_time_(0, 0, RCL_ROS_TIME),
@@ -107,13 +93,10 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
 
   std::string error;
   if (!loadParameters(error)) {
-    // 参数非法时不崩溃、也不用默认值蒙着跑：停在 kIdle 空转，等参数被改对。
     RCLCPP_ERROR(get_logger(), "参数校验失败，协调器将停在 IDLE 空转: %s", error.c_str());
   }
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
-  // 带 timeout 的 lookupTransform 从非执行器线程调用时必须让 listener 自带 spin 线程，
-  // 否则动态 TF 恒超时（静态 TF 却正常，因此现象上很像「一切正常」）。
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, true);
   tf_buffer_->setUsingDedicatedThread(true);
 
@@ -126,15 +109,6 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
   goal_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
     current_goal_topic_, rclcpp::QoS(1));
 
-  // slam_toolbox 的 /map 是 transient_local + reliable，订阅端必须匹配，
-  // 否则会出现「话题存在但一直收不到地图」。
-  //
-  // !!! 实机必须设 map_transient_local:=false !!!
-  // 厂商 Voxel-SLAM 侧不发 /map；实机用的是 /map_scan_filtered_prob，
-  // 它的 QoS 实测是 RELIABLE + **VOLATILE**。而 TRANSIENT_LOCAL 订阅 +
-  // VOLATILE 发布是**不兼容**的：一帧都收不到，日志里只有一条 QoS WARN，
-  // 表现是"等待地图就绪: 尚未收到占据栅格地图"无限刷 + 反复原地自举旋转。
-  // nav2 的 static_layer 有同名开关(map_subscribe_transient_local)，两处口径要一致。
   rclcpp::QoS map_qos(1);
   map_qos.reliable();
   if (map_transient_local_) {
@@ -151,12 +125,6 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
     [this](const nav_msgs::msg::Odometry::ConstSharedPtr msg) {odomCallback(msg);},
     sub_opts);
 
-  // 全局代价地图。只在启用「用 costmap 校验」时才订阅——关掉时不订阅，
-  // 免得白占一份带宽和一次 O(w*h) 的转换开销。
-  //
-  // QoS 用默认的 reliable/volatile：costmap_raw 由 nav2_costmap_2d 以
-  // update_frequency(本项目 1.0Hz) 周期发布，是持续更新的活数据，
-  // 不像 /map 那样需要 transient_local 补发历史。
   if (use_costmap_for_validation_) {
     costmap_sub_ = create_subscription<nav2_msgs::msg::Costmap>(
       costmap_topic_, rclcpp::QoS(1),
@@ -182,15 +150,9 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
   bootstrap_stall_since_ = now();
   bootstrap_started_time_ = now();
 
-  // ---- 冷启动自举的发布/订阅/定时器 ----
-  // 关闭自举时一个句柄都不建：既省资源，也让「谁能发 cmd_vel」这件事在
-  // 配置层面就是确定的（disabled 时本节点物理上没有 cmd_vel 发布者）。
   if (bootstrap_mode_ != BootstrapMode::kDisabled) {
     bootstrap_cmd_pub_ = create_publisher<geometry_msgs::msg::Twist>(
       bootstrap_cmd_vel_topic_, rclcpp::QoS(1));
-    // !!! 必须 BEST_EFFORT !!! 点云切片出来的 scan 是 SensorDataQoS 发布的，
-    // 用 RELIABLE 订阅一帧都收不到；而「收不到」在安全门里等价于「拒绝运动」，
-    // 表现就是自举永远被拦下、却看不出为什么。
     rclcpp::SubscriptionOptions scan_opts;
     scan_opts.callback_group = io_cb_group_;
     scan_sub_ = create_subscription<sensor_msgs::msg::LaserScan>(
@@ -236,7 +198,6 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
     "抵达判定: xy<=%.2fm yaw<=%.2frad(启用=%s) 驻留>=%.2fs 速度<=%.3fm/s",
     arrival_xy_tolerance_, arrival_yaw_tolerance_, check_yaw_ ? "是" : "否",
     dwell_time_sec_, settle_speed_);
-  // 注意不要写成 (std::to_string(x) + "s").c_str() 三目 —— 那是个悬垂临时量。
   const std::string age_desc =
     path_max_age_sec_ > 0.0 ? (std::to_string(path_max_age_sec_) + "s") : std::string("不限");
   RCLCPP_INFO(
@@ -278,11 +239,9 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
 
 ExplorationCoordinatorNode::~ExplorationCoordinatorNode()
 {
-  // 析构时把在途目标撤掉，避免节点没了、Nav2 还在往一个没人监管的目标开。
   if (control_timer_) {
     control_timer_->cancel();
   }
-  // 自举定时器先停，再发零速：反过来的话刚发的零速可能被定时器的下一帧覆盖。
   if (bootstrap_cmd_timer_) {
     bootstrap_cmd_timer_->cancel();
   }
@@ -293,8 +252,6 @@ ExplorationCoordinatorNode::~ExplorationCoordinatorNode()
   if (nav_client_ && nav_goal_handle_) {
     nav_client_->async_cancel_goal(nav_goal_handle_);
   }
-  // follow_path 模式下在途的是 FollowPath，同样要撤 —— 漏掉它会让节点退出后
-  // controller_server 继续沿着一条没人监管的路径开。
   if (follow_client_ && follow_goal_handle_) {
     follow_client_->async_cancel_goal(follow_goal_handle_);
   }
@@ -304,9 +261,6 @@ ExplorationCoordinatorNode::~ExplorationCoordinatorNode()
     goals_dispatched_, goals_succeeded_, candidates_rejected_);
 }
 
-// ============================ 参数 ============================
-// 需求硬性要求：禁止硬编码距离阈值/判定参数，全部外置可配置。
-// 因此这里每一个数字都只作为「declare 的缺省值」存在，运行值一律来自 YAML。
 
 void ExplorationCoordinatorNode::declareParameters()
 {
@@ -343,20 +297,12 @@ void ExplorationCoordinatorNode::declareParameters()
       "它把 FollowPath 的 controller_id 指向三段式控制器(终点不转朝向)"));
   declare_parameter<std::string>(
     "plan_action_name", "compute_path_to_pose", describe("Nav2 全局规划动作名(仅用于校验)"));
-  // ---- 下发方式（需求1：复用已校验路径）----
   declare_parameter<std::string>(
     "nav_dispatch_mode", "follow_path",
     describe(
       "下发方式: follow_path=把已校验路径直接交给控制器跟踪(跟踪的就是被校验过的那条，"
       "省一次重规划，但 BT 的重规划与恢复行为拿不到，须靠 replan_period_sec 自己补)；"
       "navigate_to_pose=只发目标点，由 BT 内部重新规划(保留 BT 全部能力)，一键回退用"));
-  // ---- 膨胀带脱困（ESCAPE）----
-  //
-  // 实测依据（2026-08-31 一次 3h41m 运行）：planner_server 报
-  // "Starting point in lethal space!" 25652 次，14 次到位全部集中在开头 2.5 分钟。
-  // 成因：SmacPlanner2D 判起点用单个中心格 cost>=INSCRIBED(253)，而 253 是
-  // 膨胀层写的；机器人中心一进这条带，去任何目标都被拒。而 follow_path 模式
-  // 绕过 BT，clear_costmap/backup/spin 全拿不到，自动恢复只是状态复位。
   declare_parameter<bool>(
     "escape_enabled", true,
     describe("是否启用膨胀带脱困。false=回退到改动前行为(卡住只能等人工)"));
@@ -402,10 +348,10 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<std::string>(
     "follow_action_name", "follow_path", describe("controller_server 的 FollowPath 动作名"));
   declare_parameter<std::string>(
-    "follow_controller_id", "FollowPathExplore",
+    "follow_controller_id", "FollowPath",
     describe(
-      "FollowPath 用哪个控制器实例。探索场景用 FollowPathExplore(终点不转朝向)。"
-      "必须真的在 controller_plugins 里，否则每次 FollowPath 直接 abort"));
+      "FollowPath 用哪个控制器实例。必须真的在 controller_plugins 里，"
+      "否则每次 FollowPath 直接 abort（yaml 没加载时用的就是这个默认值）"));
   declare_parameter<std::string>(
     "follow_goal_checker_id", "",
     describe(
@@ -505,7 +451,6 @@ void ExplorationCoordinatorNode::declareParameters()
     describe("自动恢复次数上限。达上限后只等人工 resume，禁止死循环重试"));
   declare_parameter<int>("visit_history_limit", 50, describe("历史访问记录保留条数上限"));
 
-  // ---- 未知区域禁行校验参数 ----
   declare_parameter<int>("validator.occupied_threshold", 65, describe("占据判定阈值(0~100)"));
   declare_parameter<int>("validator.free_threshold", 25, describe("空闲判定阈值(0~100)"));
   declare_parameter<double>(
@@ -524,7 +469,6 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<int>(
     "validator.max_samples", 200000, describe("单条路径采样点数上限，防御性无界保护"));
 
-  // ---- 下发前校验所用栅格图的选择 + 代价地图转换参数 ----
   declare_parameter<bool>(
     "validation.use_costmap", true,
     describe("下发前校验是否用全局代价地图(与规划器同一张图)。"
@@ -538,7 +482,6 @@ void ExplorationCoordinatorNode::declareParameters()
       "语义是「机器人中心在此则足迹必然碰撞」。不要调低：调低会把可通行的膨胀带"
       "判成障碍，贴墙路径全被否决，探索重新锁死"));
 
-  // ---- 前沿搜索算法参数（与 frontier_explorer 同一套语义）----
   declare_parameter<int>("search.occupied_threshold", 65, describe("占据判定阈值(0~100)"));
   declare_parameter<int>("search.free_threshold", 25, describe("空闲判定阈值(0~100)"));
   declare_parameter<double>("search.obstacle_inflation_radius", 0.45, describe("障碍膨胀半径(m)"));
@@ -560,12 +503,6 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<double>("search.visit_penalty_radius", 1.2, describe("历史访问惩罚作用半径(m)"));
   declare_parameter<int>("search.random_seed", 20260819, describe("采样随机种子"));
 
-  // ---- 冷启动自举（破 SLAM 冷启动死锁）----
-  //
-  // 死锁链条（实测过）：slam_toolbox 只在机器人移动超过 minimum_travel_heading(0.2rad)
-  // 或 minimum_travel_distance(0.2m) 之后才插入新扫描 -> 刚上电时地图一个已知格都没有
-  // -> 本节点在地图内容不可用时不下发目标 -> 机器人不动 -> 地图不长 -> 永远不动。
-  // 上一轮是靠外部脚本发 cmd_vel 走 0.79m 把它推开的（地图 0 -> 26 m²）。
   declare_parameter<std::string>(
     "bootstrap_mode", "rotate",
     describe(
@@ -653,11 +590,9 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   } else if (mode_str == "navigate_to_pose") {
     dispatch_mode_ = DispatchMode::kNavigateToPose;
   } else {
-    // 非法值拒绝启动，不静默回落 —— 回落会让"我明明配了复用"变成静默失效。
     throw std::runtime_error(
       "nav_dispatch_mode 非法: '" + mode_str + "'，只接受 follow_path / navigate_to_pose");
   }
-  // ---- 脱困参数读取 + 自检 ----
   escape_enabled_ = get_parameter("escape_enabled").as_bool();
   escape_trigger_failures_ = static_cast<int>(get_parameter("escape_trigger_failures").as_int());
   escape_search_radius_m_ = get_parameter("escape_search_radius_m").as_double();
@@ -672,7 +607,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   breadcrumb_window_sec_ = get_parameter("breadcrumb_window_sec").as_double();
   breadcrumb_sample_hz_ = get_parameter("breadcrumb_sample_hz").as_double();
   if (escape_enabled_) {
-    // 非法参数直接拒绝启动，不带着危险配置蒙着跑 —— 本包既有纪律。
     if (escape_trigger_failures_ < 1) {
       throw std::runtime_error("escape_trigger_failures 必须 >= 1");
     }
@@ -686,7 +620,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
       throw std::runtime_error("escape_timeout_sec 必须 > 0");
     }
     if (escape_clear_ticks_ < 1) {
-      // 0 会让 escapeCleared 永不成立(见其实现)，那等于脱困永远不结束。
       throw std::runtime_error("escape_clear_ticks 必须 >= 1");
     }
     if (escape_max_attempts_ < 1) {
@@ -696,8 +629,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
       throw std::runtime_error("breadcrumb_sample_hz / breadcrumb_window_sec 必须 > 0");
     }
     if (escape_linear_vel_ > 0.30) {
-      // 脱困是故障恢复态，不是正常导航。高速脱困等于让一个已经异常的
-      // 状态机在贴着障碍的地方快跑。
       throw std::runtime_error(
         "escape_linear_vel 不得超过 0.30 m/s：脱困必须低速(见 escape_logic.hpp 文件头)");
     }
@@ -741,15 +672,12 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   if (replan_period_sec_ < 0.0) {
     throw std::runtime_error("replan_period_sec 不能为负");
   }
-  // 注意：path_deviation_limit_m 与 arrival_xy_tolerance 的耦合校验放在下面
-  // arrival_* 参数读完之后 —— 在这里查会拿到还没赋值的 0.0，等于没查。
   if (dispatch_mode_ == DispatchMode::kFollowPath) {
     if (follow_action_name_.empty() || follow_controller_id_.empty()) {
       throw std::runtime_error(
         "follow_path 模式下 follow_action_name / follow_controller_id 不能为空");
     }
     if (replan_policy_ == ReplanPolicy::kPeriodic && replan_period_sec_ == 0.0) {
-      // 允许，但必须说清代价：BT 的重规划拿不到了，路径失效只能等 nav_timeout。
       RCLCPP_WARN(
         get_logger(),
         "follow_path 模式且 replan_policy=periodic + replan_period_sec=0：不做重规划。"
@@ -803,9 +731,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
     error = "抵达判定参数非法：容差>0, dwell_time_sec>=0, settle_speed>=0";
     return false;
   }
-  // 判据颠倒必须拒绝启动：偏离阈值若不大于抵达容差，收尾阶段的正常贴合误差
-  // 就会被判成「已偏离路径」，于是每次快到目标时都换一条新路径 ——
-  // 那正是本次要修掉的现象，不能靠新参数再造一遍。
   if (path_deviation_limit_m_ <= arrival_xy_tolerance_) {
     error = "path_deviation_limit_m(" + std::to_string(path_deviation_limit_m_) +
       ") 必须 > arrival_xy_tolerance(" + std::to_string(arrival_xy_tolerance_) +
@@ -873,25 +798,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
     error = "validation.use_costmap=true 时 costmap_topic 不能为空";
     return false;
   }
-  // 「阈值口径」与「校验数据源」必须配套。这条实测栽过两次，两次方向相反：
-  //
-  // 1) 太大：方案A 刚落地时 goal_clearance_radius 还留着按 /map 标定的 0.42，
-  //    一轮跑下来 18 次成功下发、却有 691 次目标复检否决(99.1% 都是这一条)。
-  //    原因是重复计算足迹半径：costmap 里代价 >=253 的语义已经是
-  //    「机器人中心在此则足迹必然碰撞」，膨胀余量算过了；再套 0.42m 邻域，
-  //    等于要求目标离真实障碍 内切半径0.388 + 0.42 ≈ 0.81m。
-  //    (这一段是八边形时代的历史记录，数字刻意不改；结论 0.25 与足迹形状无关。)
-  //
-  // 2) 太小：于是改成 0.0（纯碰撞判据，理论上不多不少），结果 3 个目标全部
-  //    校验通过、Nav2 全部接受、然后**全部导航超时**，恢复行为触发 9 次，
-  //    控制器 26 次 "Failed to make progress"。目标压在致命区边界上，
-  //    而控制器有自己的收敛容差球，球内任何一点都可能让足迹碰撞。
-  //
-  // 结论：正确取值是**控制器的 xy_goal_tolerance**，语义是
-  // 「以目标为心、控制器容差为半径的球内，足迹处处不碰撞」——既合法又收敛得进去。
-  // 这里只能查出方向1(重复计算)；方向2 依赖 Nav2 侧参数，本节点读不到，
-  // 靠 yaml 注释和这段记录约束。
-  // 上界取足迹外接半径(正方形 0.438，向上取 0.44)：超过它必然是把足迹重复计了。
   if (use_costmap_for_validation_ && vp.goal_clearance_radius > 0.44) {
     RCLCPP_WARN(
       get_logger(),
@@ -933,7 +839,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   }
   search_params_ = sp;
 
-  // ---- 冷启动自举 ----
   const std::string boot_str = get_parameter("bootstrap_mode").as_string();
   if (boot_str == "rotate") {
     bootstrap_mode_ = BootstrapMode::kRotate;
@@ -976,17 +881,12 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
       error = "自举参数非法：角速度/时长/频率/超时/净空/最小转角 均须 >0，次数上限 >=1";
       return false;
     }
-    // 频率必须显著高于底盘 cmd_vel 超时的倒数，否则速度会被反复归零。
-    // 底盘 cmd_vel_timeout_sec 是另一个包的参数，本节点读不到，
-    // 这里按已知值 0.5s 做下限校验并在注释里记录出处。
     constexpr double kChassisCmdVelTimeoutSec = 0.5;
     if (bootstrap_cmd_rate_hz_ < 2.0 / kChassisCmdVelTimeoutSec) {
       error = "bootstrap_cmd_rate_hz 太低(" + std::to_string(bootstrap_cmd_rate_hz_) +
         ")：底盘 cmd_vel_timeout_sec=0.5，至少要 4Hz 才不会被反复超时归零";
       return false;
     }
-    // 转不出 minimum_travel_heading 就等于没转，SLAM 不会插入新扫描。
-    // 这条只能查「配置上是否自相矛盾」，实际转出多少由 tickBootstrap 实测并告警。
     if (bootstrap_angular_vel_ * bootstrap_duration_sec_ < bootstrap_min_yaw_delta_) {
       error = "自举配置自相矛盾：即使完全不限速，"
         "bootstrap_angular_vel * bootstrap_duration_sec = " +
@@ -1000,8 +900,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   return true;
 }
 
-// ====================== 数据回调与前置条件 ======================
-// 需求：所有回调必须做空指针/有效性判断；地图为空或延迟必须拦截逻辑而不是崩溃。
 
 void ExplorationCoordinatorNode::mapCallback(
   const nav_msgs::msg::OccupancyGrid::ConstSharedPtr & msg)
@@ -1033,14 +931,6 @@ void ExplorationCoordinatorNode::mapCallback(
       "地图分辨率非法(%.4f)，忽略本帧", msg->info.resolution);
     return;
   }
-  // 未知净空半径与地图分辨率的相容性检查。
-  // 只有拿到真实地图才知道分辨率，所以这条只能在这里做，不能在参数校验里做。
-  //
-  // 机制：前沿格的定义是「空闲格且 8 邻域含未知格」，未知邻居的格距离
-  // d_sq = 1(正交) 或 2(对角)；校验按 d_sq <= (r/resolution)^2 遍历邻域。
-  // 于是 r >= resolution 时 (r/res)^2 >= 1 >= d_sq，**每一个**前沿候选都会被否，
-  // 探索表现为 dispatched 恒为 0、机器人一步不动，而日志只说「目标校验淘汰 N」。
-  // 这个坑真实踩过两次(0.42 -> 0.10 仍然中招)，所以在这里硬性告警。
   if (unknown_clearance_radius_ >= msg->info.resolution) {
     RCLCPP_ERROR_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
@@ -1049,7 +939,6 @@ void ExplorationCoordinatorNode::mapCallback(
       "探索将永远发不出目标。请把该参数改成 0.0",
       unknown_clearance_radius_, msg->info.resolution);
   }
-  // 时间戳校验：未来戳说明有节点时钟不同步，这种地图用来做未知区判定风险很大。
   const rclcpp::Time stamp(msg->header.stamp);
   if (stamp.nanoseconds() > 0) {
     const double ahead = (stamp - now()).seconds();
@@ -1082,8 +971,6 @@ void ExplorationCoordinatorNode::costmapCallback(
     return;
   }
 
-  // 尺寸/长度/分辨率的全部校验都在 costmapToGridMap 里，
-  // 这里不重复一遍——重复校验迟早会和被调方漂移，出问题时两处说法不一致更难查。
   auto snapshot = std::make_shared<GridMap>();
   std::string convert_error;
   if (!costmapToGridMap(
@@ -1098,9 +985,6 @@ void ExplorationCoordinatorNode::costmapCallback(
     return;
   }
 
-  // 代价地图的 origin 会随机器人滚动(rolling window)，与 /map 的 origin 不同，
-  // 这是正常的——两张图各自用自己的 origin 做 worldToMap，不能混用。
-  // 这里只在首帧打一条日志，便于确认订阅到的确实是全局图。
   const CostmapGridStats stats = summarizeGrid(*snapshot);
   const unsigned int width = snapshot->width;
   const unsigned int height = snapshot->height;
@@ -1110,7 +994,6 @@ void ExplorationCoordinatorNode::costmapCallback(
 
   bool first_frame = false;
   {
-    // latest_costmap_time_ 由本锁保护，首帧判定必须在锁内做，不能在锁外读。
     std::lock_guard<std::mutex> lock(costmap_mutex_);
     first_frame = (latest_costmap_time_.nanoseconds() == 0);
     latest_costmap_ = std::move(snapshot);
@@ -1131,7 +1014,6 @@ std::shared_ptr<GridMap> ExplorationCoordinatorNode::validationGrid(std::string 
 {
   why.clear();
   if (!use_costmap_for_validation_) {
-    // 回退路径：用 /map 校验。已知会锁死探索，仅供对比排查，构造时已 WARN 过。
     std::lock_guard<std::mutex> lock(map_mutex_);
     if (!latest_map_ || !latest_map_->consistent()) {
       why = "校验用 /map 不可用";
@@ -1142,8 +1024,6 @@ std::shared_ptr<GridMap> ExplorationCoordinatorNode::validationGrid(std::string 
 
   std::lock_guard<std::mutex> lock(costmap_mutex_);
   if (!latest_costmap_ || !latest_costmap_->consistent()) {
-    // 绝不在这里退回 /map：那正是把两层判据放到两张图上的错误做法。
-    // 拿不到代价地图就不下发，宁可停着也不能拿错误的图放行目标。
     why = "尚未收到可用的全局代价地图(" + costmap_topic_ + ")";
     return nullptr;
   }
@@ -1172,7 +1052,6 @@ void ExplorationCoordinatorNode::odomCallback(
     return;
   }
   std::lock_guard<std::mutex> lock(odom_mutex_);
-  // 全向底盘可以纯横移，速度必须取合速度，只看 linear.x 会把横移当成「已静止」。
   odom_speed_ = std::hypot(vx, vy);
   latest_odom_time_ = now();
 }
@@ -1185,12 +1064,9 @@ void ExplorationCoordinatorNode::scanCallback(
       get_logger(), *get_clock(), kLogThrottleMs, "收到空的激光消息指针，已忽略");
     return;
   }
-  // 取全周最小有效距离。自举是原地旋转，机器人会依次朝向每个方向，
-  // 所以关心的是「一圈里最近的障碍」，不是只看正前方一个扇区。
   double min_range = std::numeric_limits<double>::infinity();
   std::size_t valid = 0U;
   for (const float r : msg->ranges) {
-    // NaN/Inf 是「这个方向没有回波」，不是「这个方向很近」，必须跳过而不是当成 0。
     if (!std::isfinite(r)) {
       continue;
     }
@@ -1203,7 +1079,6 @@ void ExplorationCoordinatorNode::scanCallback(
   std::lock_guard<std::mutex> lock(scan_mutex_);
   latest_scan_time_ = now();
   if (valid == 0U) {
-    // 一个有效点都没有：这**不是**「周围空旷」。置成 -1 让安全门判为不可用。
     latest_scan_min_range_ = -1.0;
     has_scan_ = true;
     return;
@@ -1237,8 +1112,6 @@ bool ExplorationCoordinatorNode::stackReady(std::string & why)
   if (!odomReady(why)) {
     return false;
   }
-  // 校验图也必须在 —— 它不在时一个候选都产不出来，那不是"探索失败"，
-  // 是栈还没起齐。之前正是这一项缺失导致 0 派发却把预算烧光。
   std::string grid_why;
   if (!validationGrid(grid_why)) {
     why = "校验图未就绪: " + grid_why;
@@ -1291,7 +1164,6 @@ bool ExplorationCoordinatorNode::poseInFrame(
     return false;
   }
   try {
-    // 取最新可用变换：探索调度是低频决策，不需要和某一帧数据严格对齐。
     const geometry_msgs::msg::TransformStamped tf = tf_buffer_->lookupTransform(
       frame, robot_base_frame_, tf2::TimePointZero,
       tf2::durationFromSec(tf_timeout_sec_));
@@ -1312,7 +1184,6 @@ bool ExplorationCoordinatorNode::poseInFrame(
 
 bool ExplorationCoordinatorNode::robotPose(double & x, double & y, double & yaw, std::string & why)
 {
-  // map -> base 查不到即视为定位丢失，上层必须冻结目标发布。
   return poseInFrame(map_frame_, x, y, yaw, why);
 }
 
@@ -1336,31 +1207,22 @@ void ExplorationCoordinatorNode::resetCycleState()
 {
   candidates_.clear();
   candidate_index_ = 0U;
-  // 一轮结束（成功/失败都算）后，正在跟踪的路径不再有效。
-  // 忘了清会让下一个目标的第一次 needsReplan 拿上一个目标的路径去算偏离度，
-  // 结果必然远超阈值 -> 刚下发就立刻换一次路径。
   active_path_.clear();
   replan_forced_ = false;
   active_path_impassable_ = false;
   invalid_replan_count_ = 0;
 }
 
-// ========================= 状态机 =========================
 
 void ExplorationCoordinatorNode::transitionTo(ExplorationState next, const std::string & why)
 {
   if (state_ == next) {
     return;                                   // 空转换不刷新计时，避免驻留/冷却计时被反复重置
   }
-  // 离开自举态**一定**要显式发一帧零速，不能只是「停止发布」。
-  // 放在这里而不是各个出口：pause 服务、安全门中断、正常转完、非法转换回退
-  // 全都要经过这里，一处覆盖所有出口，漏一条就是「已暂停但机器人还在转」。
   if (drivesChassisDirectly(state_) && !drivesChassisDirectly(next)) {
     publishBootstrapCmd(true);
   }
   if (!isTransitionAllowed(state_, next)) {
-    // 非法转换不是「纠正一下继续跑」，而是状态机本身出了问题：
-    // 强制回退到 kIdle 这个无在途目标的安全态，并把在途目标撤掉。
     RCLCPP_ERROR(
       get_logger(), "非法状态转换 %s -> %s (%s)，强制回退 IDLE",
       toString(state_), toString(next), why.c_str());
@@ -1378,14 +1240,8 @@ void ExplorationCoordinatorNode::transitionTo(ExplorationState next, const std::
 void ExplorationCoordinatorNode::controlTick()
 
 {
-  // 整个 tick 在一把锁里完成：状态判断和状态修改之间不留缝隙，
-  // 这是「禁止多线程重复下发」的第一道保险（第二道是 nav_goal_in_flight_）。
   std::lock_guard<std::mutex> lock(state_mutex_);
 
-  // 来路轨迹全程记录（函数内部按 breadcrumb_sample_hz_ 节流）。
-  // 放在 switch 之前而不是塞进某几个状态里：脱困可能在任何时刻被触发，
-  // 而那时需要的是**之前**走过的路 —— 只在 NAVIGATING 记会漏掉自举/校验期的位移。
-  // ESCAPE 期间不记：那时记的是脱困自己走的路，会污染「来路」的语义。
   if (state_ != ExplorationState::kEscape) {
     recordBreadcrumb();
   }
@@ -1431,7 +1287,6 @@ void ExplorationCoordinatorNode::tickIdle()
       "已被人工暂停，等待 ~/resume 服务");
     return;
   }
-  // 自检：IDLE 态不应该有在途目标。若有（例如刚从异常态回退），先撤干净。
   if (nav_goal_in_flight_.load()) {
     cancelActiveNavGoal("IDLE 态发现残留在途目标");
     return;
@@ -1441,8 +1296,6 @@ void ExplorationCoordinatorNode::tickIdle()
   if (!mapReady(why)) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs, "等待地图就绪: %s", why.c_str());
-    // 「一直收不到地图」也可能是 SLAM 在等机器人先动一动（见 shouldBootstrap）。
-    // 注意仍然要先等 bootstrap_trigger_wait_sec，不抢在 SLAM 前面动。
     std::string boot_why;
     if (shouldBootstrap("地图未就绪", boot_why)) {
       beginBootstrap(boot_why);
@@ -1462,8 +1315,6 @@ void ExplorationCoordinatorNode::tickIdle()
       get_logger(), *get_clock(), kLogThrottleMs, "等待里程计就绪: %s", why.c_str());
     return;
   }
-  // 地图收到了、但内容还不足以做决策（冷启动时全是未知格）：
-  // 这时进 GEN_NEXT_POINT 只会因为「前沿格 0」被判成探索完成，必须先自举。
   {
     std::shared_ptr<GridMap> map;
     {
@@ -1486,12 +1337,6 @@ void ExplorationCoordinatorNode::tickIdle()
   transitionTo(ExplorationState::kGenNextPoint, "地图/定位/里程计均就绪");
 }
 
-// ======================== 冷启动自举 ========================
-//
-// 破的是这个死锁：slam_toolbox 只在机器人移动超过 minimum_travel_heading(0.2rad)
-// 之后才插入新扫描 → 冷启动时地图没有已知格 → 本节点不下发目标 → 机器人不动
-// → 地图不长 → 永远不动。上一轮验证是靠外部脚本发 cmd_vel 走 0.79m 破的
-// （地图 0 → 26 m²），本节点把这一步收进来，做成有限次 + 有安全门 + 只旋转。
 
 bool ExplorationCoordinatorNode::shouldBootstrap(
   const std::string & context, std::string & why)
@@ -1509,7 +1354,6 @@ bool ExplorationCoordinatorNode::shouldBootstrap(
     return false;              // 与 Nav2 抢底盘是绝对不允许的
   }
   if (bootstrap_count_ >= bootstrap_max_attempts_) {
-    // 达上限只记日志、不动，等人工介入。禁止死循环重试。
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "自举已达上限 %d 次仍未能让地图可用，停止自举(最近一次结论: %s)",
@@ -1517,8 +1361,6 @@ bool ExplorationCoordinatorNode::shouldBootstrap(
     why = "自举次数已用尽";
     return false;
   }
-  // 停滞计时：不是一发现地图不可用就动，先等 bootstrap_trigger_wait_sec。
-  // 启动瞬态里地图本来就要几秒才长出来，立刻自举等于抢在 SLAM 前面动。
   const rclcpp::Time now_time = now();
   if (!bootstrap_stall_active_) {
     bootstrap_stall_active_ = true;
@@ -1533,8 +1375,6 @@ bool ExplorationCoordinatorNode::shouldBootstrap(
   }
   std::string safe_why;
   if (!bootstrapSafe(safe_why)) {
-    // 被安全门拦下必须显式可见（禁止静默失败），但不消耗次数预算 ——
-    // 拦下的原因（激光没来）可能几秒后就消失了。
     bootstrap_last_result_ = "被安全门拦下: " + safe_why;
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
@@ -1552,15 +1392,6 @@ void ExplorationCoordinatorNode::beginBootstrap(const std::string & why)
   double ry = 0.0;
   double ryaw = 0.0;
   std::string pose_why;
-  // 起始朝向取不到就不进自举：没有它就无法在结束时实测「到底转了多少」，
-  // 而那正是判断自举是否真的起作用的唯一依据（指令发出去 ≠ 机器人动了）。
-  //
-  // !!! 必须用 bootstrap_yaw_frame_（默认 odom）而不是 map !!!
-  // 这一条是实测踩出来的：robotPose() 查的是 map -> base，而 map -> odom 由 SLAM 发布。
-  // 真正的冷启动死锁下 SLAM 还没出图、也就没有那条 TF，于是自举被自己的前置条件挡住
-  // （实测连续 71 次「需要自举但取不到当前朝向」），而自举本来就是为破这个死锁存在的。
-  // odom -> base 来自底盘里程计，与 SLAM 无关；而且量一次原地小转本来就该在 odom 系里量
-  //（map 系的 yaw 还含 SLAM 回环修正，会污染测量）。
   if (!poseInFrame(bootstrap_yaw_frame_, rx, ry, ryaw, pose_why)) {
     bootstrap_last_result_ = "无法取得起始朝向: " + pose_why;
     RCLCPP_WARN_THROTTLE(
@@ -1597,8 +1428,6 @@ bool ExplorationCoordinatorNode::bootstrapSafe(std::string & why)
     }
   }
   if (!have) {
-    // 关键规则：没有数据 **不等于** 安全。本项目已经在探针脚本上踩过一次
-    // （RELIABLE 订阅收不到 BEST_EFFORT 的 scan，代码把「无数据」当「前方无障碍」，盲走 3m）。
     why = "尚未收到任何激光数据(无数据不得视为安全)";
     return false;
   }
@@ -1612,10 +1441,6 @@ bool ExplorationCoordinatorNode::bootstrapSafe(std::string & why)
     return false;
   }
   if (min_range < bootstrap_min_clearance_m_) {
-    // 原地旋转扫过内切半径(0.310)到外接半径(0.438)之间约 12.8cm 的环带 ——
-    // ⚠️ 八边形时代这里只有 3.2cm，换正方形后是 4 倍。所以「旋转几乎不扫新面积」
-    // 不再是有力论据，真正兜住的是下面这道净空门。
-    // 如果最近障碍已经进到外接半径以内，正方形的角可能已经接触障碍，此时不该再转。
     why = "最近障碍 " + std::to_string(min_range) + "m < 要求净空 " +
       std::to_string(bootstrap_min_clearance_m_) + "m";
     return false;
@@ -1635,18 +1460,13 @@ void ExplorationCoordinatorNode::publishBootstrapCmd(bool zero)
   cmd.linear.z = 0.0;
   cmd.angular.x = 0.0;
   cmd.angular.y = 0.0;
-  // 只转不平移。这是 BootstrapMode::kRotate 的全部含义，不留平移分支。
   cmd.angular.z = zero ? 0.0 : bootstrap_angular_vel_;
   bootstrap_cmd_pub_->publish(cmd);
 }
 
 void ExplorationCoordinatorNode::bootstrapCmdTick()
 {
-  // 高频重发速度指令。底盘 cmd_vel_timeout_sec=0.5，靠 0.5s 的状态机节拍发
-  // 正好卡在超时边界上，速度会被反复归零 —— 所以必须有这个独立定时器。
   std::lock_guard<std::mutex> lock(state_mutex_);
-  // 只有 drivesChassisDirectly() 为真的状态才允许发速度 —— 唯一出处在
-  // exploration_state.hpp，新增直驱状态时改那一处即可，这里不再各自列举。
   if (!drivesChassisDirectly(state_)) {
     return;                            // 非直驱态一帧都不发，避免与 Nav2 抢底盘
   }
@@ -1657,9 +1477,6 @@ void ExplorationCoordinatorNode::bootstrapCmdTick()
   }
 }
 
-// =====================================================================
-// 膨胀带脱困（ESCAPE）
-// =====================================================================
 
 CellReading ExplorationCoordinatorNode::readRobotCell()
 {
@@ -1672,8 +1489,6 @@ CellReading ExplorationCoordinatorNode::readRobotCell()
     return r;                          // 两个 valid 都是 false ⇒ 判 kDataInsufficient
   }
 
-  // costmap：规划器视角，含膨胀。三态阈值 253 与 SmacPlanner2D 的
-  // INSCRIBED 完全一致（见 costmap_adapter.hpp 的 lethal_cost_threshold）。
   {
     std::lock_guard<std::mutex> lock(costmap_mutex_);
     if (latest_costmap_ && latest_costmap_->consistent()) {
@@ -1685,7 +1500,6 @@ CellReading ExplorationCoordinatorNode::readRobotCell()
       }
     }
   }
-  // /map：物理真值，不含 nav2 膨胀。红线判据只认它。
   {
     std::lock_guard<std::mutex> lock(map_mutex_);
     if (latest_map_ && latest_map_->consistent()) {
@@ -1708,8 +1522,6 @@ EscapeVerdict ExplorationCoordinatorNode::checkEscapeTrigger(std::string & why)
   }
   const CellReading reading = readRobotCell();
 
-  // 起点致命计数单独维护：consecutive_invalid_ 混了目标侧失败，
-  // 用它做触发阈值会把「目标不可达」也算进脱困的账上。
   if (reading.costmap_valid &&
     isPlannerLethal(reading.costmap_tri, EscapeGridThresholds{}))
   {
@@ -1758,7 +1570,6 @@ bool ExplorationCoordinatorNode::pickEscapeTarget(PlanarPoint & target, std::str
   cfg.search_radius_m = escape_search_radius_m_;
   cfg.heading_tol_rad = escape_heading_tol_rad_;
 
-  // 一级：反向沿来路。机器人是自己开进来的 ⇒ 来路可通行是**可证明的**。
   std::string bc_why;
   if (pickBreadcrumbTarget(
       breadcrumbs_, robot, costmap_snapshot, map_snapshot, cfg, target, bc_why))
@@ -1768,8 +1579,6 @@ bool ExplorationCoordinatorNode::pickEscapeTarget(PlanarPoint & target, std::str
   }
   RCLCPP_INFO(get_logger(), "来路不可用：%s", bc_why.c_str());
 
-  // 二级：最近可规划格。不用代价梯度 —— 足迹代价在窄于 1.24m 的通道里
-  // 恒为 253、零梯度；而「三态非致命」是规划器会接受起点的**充分**条件。
   double ref_heading = yaw;
   if (!candidates_.empty() && candidate_index_ < candidates_.size()) {
     const auto & c = candidates_[candidate_index_];
@@ -1784,7 +1593,6 @@ bool ExplorationCoordinatorNode::pickEscapeTarget(PlanarPoint & target, std::str
     return false;
   }
   if (relaxed) {
-    // 放开方向约束必须显式可见：这意味着机器人可能朝任务反方向退。
     RCLCPP_WARN(get_logger(), "脱困已放开方向约束：%s", nn_why.c_str());
   }
   why = nn_why;
@@ -1828,7 +1636,6 @@ void ExplorationCoordinatorNode::recordBreadcrumb()
   last_breadcrumb_time_ = t;
   breadcrumbs_.push_back(Breadcrumb{PlanarPoint{x, y}, t.seconds()});
 
-  // 裁掉过期的。用时间窗而不是固定条数：采样频率可配，条数窗会随频率漂移。
   const double cutoff = t.seconds() - breadcrumb_window_sec_;
   std::size_t drop = 0U;
   while (drop < breadcrumbs_.size() && breadcrumbs_[drop].stamp_sec < cutoff) {
@@ -1843,9 +1650,6 @@ void ExplorationCoordinatorNode::tickEscape()
 {
   const double elapsed = (now() - escape_started_time_).seconds();
 
-  // ---- 每拍复查红线。不是只在入口查一次 ----
-  // 脱困过程中 SLAM 可能新插入一帧扫描，把机器人所在格标成占据。
-  // 那一刻必须立刻停，不能沿用入口时的判断。
   const CellReading reading = readRobotCell();
   if (reading.map_valid && isPhysicallyOccupied(reading.map_tri, EscapeGridThresholds{})) {
     escape_cmd_ = EscapeCommand{};
@@ -1857,7 +1661,6 @@ void ExplorationCoordinatorNode::tickEscape()
     return;
   }
 
-  // ---- 安全门持续生效（复用自举那一套激光判据）----
   std::string safe_why;
   if (!bootstrapSafe(safe_why)) {
     escape_cmd_ = EscapeCommand{};
@@ -1869,7 +1672,6 @@ void ExplorationCoordinatorNode::tickEscape()
     return;
   }
 
-  // ---- 出带判定 ----
   if (reading.costmap_valid &&
     !isPlannerLethal(reading.costmap_tri, EscapeGridThresholds{}))
   {
@@ -1882,8 +1684,6 @@ void ExplorationCoordinatorNode::tickEscape()
     publishEscapeCmd(escape_cmd_);
     escape_target_valid_ = false;
     start_lethal_failures_ = 0;
-    // 连续失败计数清零：escape_max_attempts_ 数的是「连续失败」而不是累计尝试。
-    // 不清会让沿途有多个窄处、但整体走得通的长路径在第 N+1 处被永久拒绝。
     escape_count_ = 0;
     escape_last_result_ = "成功出带";
     RCLCPP_INFO(
@@ -1894,7 +1694,6 @@ void ExplorationCoordinatorNode::tickEscape()
     return;
   }
 
-  // ---- 超时 ----
   if (elapsed > escape_timeout_sec_) {
     escape_cmd_ = EscapeCommand{};
     publishEscapeCmd(escape_cmd_);
@@ -1906,7 +1705,6 @@ void ExplorationCoordinatorNode::tickEscape()
     return;
   }
 
-  // ---- 产生本拍速度 ----
   if (!escape_target_valid_) {
     escape_cmd_ = EscapeCommand{};
     publishEscapeCmd(escape_cmd_);
@@ -1936,8 +1734,6 @@ void ExplorationCoordinatorNode::tickEscape()
   publishEscapeCmd(escape_cmd_);
 
   if (escape_cmd_.arrived) {
-    // 走到本段目标却仍未出带：重新选一个目标继续，而不是判失败 ——
-    // 一次挪动 0.05m 量级，可能需要几段才出带。超时保护仍然兜着。
     std::string tgt_why;
     if (pickEscapeTarget(escape_target_, tgt_why)) {
       RCLCPP_INFO(
@@ -1962,7 +1758,6 @@ void ExplorationCoordinatorNode::tickBootstrap()
 {
   const double elapsed = (now() - bootstrap_started_time_).seconds();
 
-  // 安全门在整个自举过程中持续生效，不是只在入口查一次。
   std::string safe_why;
   if (!bootstrapSafe(safe_why)) {
     publishBootstrapCmd(true);         // 立刻显式发零速，不是"停止发布"
@@ -1980,7 +1775,6 @@ void ExplorationCoordinatorNode::tickBootstrap()
     return;
   }
 
-  // 时间到：先停车，再实测到底转了多少。
   publishBootstrapCmd(true);
 
   double rx = 0.0;
@@ -1999,8 +1793,6 @@ void ExplorationCoordinatorNode::tickBootstrap()
   bootstrap_start_yaw_valid_ = false;
 
   if (turned < bootstrap_min_yaw_delta_) {
-    // 「指令发出去了」不等于「机器人动了」——这一条必须实测，且达不到时要显式告警，
-    // 否则自举会静默地什么也没做，而现象仍然是「机器人不动」，排查会绕回原点。
     bootstrap_last_result_ = "实测仅转 " + std::to_string(turned) + "rad，未达阈值";
     RCLCPP_ERROR(
       get_logger(),
@@ -2022,13 +1814,11 @@ void ExplorationCoordinatorNode::tickBootstrap()
 
 void ExplorationCoordinatorNode::tickGenNextPoint()
 {
-  // 冗余但必要的断言式检查：生成目标点这件事只允许在 kGenNextPoint 发生。
   if (!allowsGoalGeneration(state_)) {
     RCLCPP_ERROR(get_logger(), "在 %s 态被要求生成目标点，已拦截", toString(state_));
     transitionTo(ExplorationState::kIdle, "非法的生成时机");
     return;
   }
-  // 严格单点推进：上一目标还在途就绝不生成下一个。
   if (nav_goal_in_flight_.load()) {
     RCLCPP_ERROR(
       get_logger(), "检测到在途导航目标却进入了生成态，拦截并等待其结束");
@@ -2070,13 +1860,7 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
   std::size_t raw_frontier_cells = 0U;
   auto candidates = generateCandidates(*map, rx, ry, raw_frontier_cells);
 
-  // 关键区分（写反了会让上层提前停止探索）：
-  //   一个前沿格都没有 ⇒ 真的探索完了
-  //   有前沿格但候选点全不合法 ⇒ 只是暂时找不到合法点，属异常暂停
   if (raw_frontier_cells == 0U) {
-    // …但还有第三种，只看前沿格数会漏：**地图本身还几乎全是未知**。
-    // 冷启动时地图收到了、自洽、不超时（mapReady 全部通过），可是一个已知格都没有，
-    // 于是前沿格数也是 0 —— 若直接判 COMPLETED，探索会在真正开始前就"完成"。
     std::size_t known = 0U;
     if (!mapUsable(*map, known)) {
       RCLCPP_WARN_THROTTLE(
@@ -2098,7 +1882,6 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
   if (candidates.empty()) {
     std::string ready_why;
     if (!stackReady(ready_why)) {
-      // 栈没起齐时采不到候选是必然的，不该消耗预算（实测这正是一次死锁的成因）。
       RCLCPP_WARN_THROTTLE(
         get_logger(), *get_clock(), kLogThrottleMs,
         "未采到合法候选点，但栈尚未就绪(%s) —— 本次不计入连续失败", ready_why.c_str());
@@ -2111,8 +1894,6 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
       raw_frontier_cells, failure_budget_.sample_failures,
       failure_budget_.max_sample_failures);
     if (budget_used_up) {
-      // 转 PAUSED 之前先给自举一个机会：原地转一圈往往能把「贴着未知区、
-      // 净空判定卡在边界上」的候选点变成合法。次数用完了才真的 PAUSED。
       std::string boot_why;
       if (shouldBootstrap("连续多轮采不到合法候选点", boot_why)) {
         beginBootstrap(boot_why);
@@ -2123,11 +1904,8 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
     return;
   }
 
-  // 能采到候选就说明地图内容已经够用了：清掉自举的停滞计时与次数预算。
   bootstrap_stall_active_ = false;
   bootstrap_count_ = 0;
-  // 只清**采样**预算。校验预算刻意不在这里清 —— 「采样->校验全废->重采样」
-  // 循环里每轮都会走到这一行，清了就等于把校验预算的上限废掉（实测空转 400s）。
   failure_budget_.onCandidatesSampled();
   candidates_ = std::move(candidates);
   candidate_index_ = 0U;
@@ -2141,7 +1919,6 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
 void ExplorationCoordinatorNode::tickValidating()
 {
   if (!plan_request_in_flight_.load()) {
-    // 校验请求不在途：可能是 action server 当时没就绪，重试一次。
     requestPlanForCurrentCandidate();
     return;
   }
@@ -2159,7 +1936,6 @@ void ExplorationCoordinatorNode::tickValidating()
 
 void ExplorationCoordinatorNode::tickNavigating()
 {
-  // 一致性自检：导航态必须有在途目标，否则说明结果回调丢了。
   if (!nav_goal_in_flight_.load()) {
     RCLCPP_ERROR(get_logger(), "导航态却无在途目标，回退安全态重新调度");
     has_active_goal_ = false;
@@ -2193,7 +1969,6 @@ void ExplorationCoordinatorNode::tickNavigating()
     return;
   }
 
-  // follow_path 模式下 BT 的 1Hz 重规划拿不到了，由这里周期性补上。
   maybeRequestReplan(now());
 
   RCLCPP_INFO_THROTTLE(
@@ -2217,7 +1992,6 @@ void ExplorationCoordinatorNode::tickArrived()
 
   const double dxy = std::hypot(active_goal_.x - rx, active_goal_.y - ry);
   if (dxy > arrival_xy_tolerance_) {
-    // Nav2 报了成功，实测位置却不达标 —— 不能当成抵达，否则「抵达校验」形同虚设。
     RCLCPP_WARN(
       get_logger(), "Nav2 报成功但位置偏差 %.2fm > 容差 %.2fm，按导航失败处理",
       dxy, arrival_xy_tolerance_);
@@ -2225,12 +1999,13 @@ void ExplorationCoordinatorNode::tickArrived()
     registerNavFailure("抵达位置偏差超容差");
     return;
   }
+  const double dyaw = std::fabs(normalizeAngle(active_goal_.yaw - ryaw));
   if (check_yaw_) {
-    const double dyaw = std::fabs(normalizeAngle(active_goal_.yaw - ryaw));
     if (dyaw > arrival_yaw_tolerance_) {
       RCLCPP_WARN(
-        get_logger(), "朝向偏差 %.2frad > 容差 %.2frad，按导航失败处理",
-        dyaw, arrival_yaw_tolerance_);
+        get_logger(), "朝向偏差 %.3frad (%.1f°) > 容差 %.3frad (%.1f°)，按导航失败处理",
+        dyaw, dyaw * 180.0 / M_PI, arrival_yaw_tolerance_,
+        arrival_yaw_tolerance_ * 180.0 / M_PI);
       dwell_active_ = false;
       registerNavFailure("抵达朝向偏差超容差");
       return;
@@ -2243,7 +2018,6 @@ void ExplorationCoordinatorNode::tickArrived()
     speed = odom_speed_;
   }
   if (speed > settle_speed_) {
-    // 位置到了但还在动，说明还没稳住：重新计时，不允许「路过即算抵达」。
     dwell_active_ = false;
     RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
@@ -2254,7 +2028,11 @@ void ExplorationCoordinatorNode::tickArrived()
   if (!dwell_active_) {
     dwell_active_ = true;
     dwell_started_time_ = now();
-    RCLCPP_INFO(get_logger(), "开始驻留计时(偏差 %.2fm 速度 %.3fm/s)", dxy, speed);
+    RCLCPP_INFO(
+      get_logger(),
+      "开始驻留计时(位置偏差 %.3fm/容差 %.3f 朝向偏差 %.3frad=%.1f°/容差 %.3f%s 速度 %.3fm/s)",
+      dxy, arrival_xy_tolerance_, dyaw, dyaw * 180.0 / M_PI, arrival_yaw_tolerance_,
+      check_yaw_ ? "" : "(未启用校验)", speed);
     return;
   }
   const double dwelled = (now() - dwell_started_time_).seconds();
@@ -2262,7 +2040,6 @@ void ExplorationCoordinatorNode::tickArrived()
     return;                                   // 还没稳够，继续等
   }
 
-  // 到这里才算「完全抵达 + 稳定驻留 + 目标收敛」，才允许生成下一个探索点。
   ++goals_succeeded_;
   nav_failure_count_ = 0;
   auto_resume_count_ = 0;
@@ -2272,8 +2049,9 @@ void ExplorationCoordinatorNode::tickArrived()
   resetCycleState();
   RCLCPP_INFO(
     get_logger(),
-    "目标收敛完成(偏差 %.2fm 驻留 %.2fs)，累计成功 %" PRIu64 " 个，允许生成下一目标",
-    dxy, dwelled, goals_succeeded_);
+    "目标收敛完成(位置偏差 %.3fm 朝向偏差 %.3frad=%.1f° 驻留 %.2fs)，"
+    "累计成功 %" PRIu64 " 个，允许生成下一目标",
+    dxy, dyaw, dyaw * 180.0 / M_PI, dwelled, goals_succeeded_);
   transitionTo(ExplorationState::kGenNextPoint, "当前目标已完全收敛");
 }
 
@@ -2289,7 +2067,6 @@ void ExplorationCoordinatorNode::tickPaused()
   if (held < pause_cooldown_sec_) {
     return;
   }
-  // 禁止死循环重试：自动恢复有次数上限，超限后只等人工介入。
   if (auto_resume_count_ >= max_auto_resume_attempts_) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
@@ -2297,8 +2074,6 @@ void ExplorationCoordinatorNode::tickPaused()
       max_auto_resume_attempts_);
     return;
   }
-  // 栈还没起齐时的恢复尝试不消耗预算：否则启动阶段几次瞬态就把预算用完，
-  // 之后即使一切正常也只能等人工 ~/resume。
   std::string ready_why;
   const bool ready = stackReady(ready_why);
   if (ready) {
@@ -2327,7 +2102,6 @@ void ExplorationCoordinatorNode::tickCompleted()
     "探索完成，已停止生成新目标(成功 %" PRIu64 " 个目标)", goals_succeeded_);
 }
 
-// ================== 候选生成与未知区域禁行校验 ==================
 
 std::vector<ExplorationCoordinatorNode::GoalCandidatePose>
 ExplorationCoordinatorNode::generateCandidates(
@@ -2344,9 +2118,6 @@ ExplorationCoordinatorNode::generateCandidates(
   search_.search(map, rx, ry, visit_history_, result);
   raw_frontier_cells = result.raw_frontier_cell_count;
 
-  // 前沿块被否的原因做个直方图。「有前沿格但 0 个前沿块通过过滤」时，
-  // 光看总数完全判断不出是哪条约束太紧（面积？可达性？距离？），
-  // 而这恰好是现场最常见的卡点，所以这段统计常开而不是藏在 debug 里。
   if (result.accepted_cluster_count == 0U && !result.clusters.empty()) {
     std::vector<std::pair<std::string, std::size_t>> reason_hist;
     for (const auto & cl : result.clusters) {
@@ -2374,18 +2145,6 @@ ExplorationCoordinatorNode::generateCandidates(
       result.clusters.size(), hist.c_str());
   }
 
-  // 校验1（目标点）就在这里做：前沿搜索只保证「不在膨胀障碍里」，
-  // 它不保证目标点净空半径内没有未知格。未知区禁行是本节点自己的责任。
-  //
-  // 这里用的是**校验图**（默认 global_costmap），不是传进来的 /map。
-  // 两张图对「占据」的定义并不一致，只用 /map 筛会让候选队列装满
-  // 「在 /map 里空闲、但在 costmap 里是致命区」的点，每一个都要白跑一次
-  // ComputePathToPose 才在下发前复检时被否掉。
-  // 实测（净空半径校准到 0.25 之后）：536 次目标复检否决里 514 次（95.9%）
-  // 是「目标格在 costmap 里代价=100(致命)」，正是这一类。
-  //
-  // 前沿**搜索**仍然必须用 /map —— 前沿的定义依赖「未知」这个状态。
-  // 分工不变：/map 找前沿，costmap 判可站。
   std::string screen_why;
   const std::shared_ptr<GridMap> screen_grid = validationGrid(screen_why);
   if (!screen_grid) {
@@ -2402,8 +2161,6 @@ ExplorationCoordinatorNode::generateCandidates(
   std::string goal_reject_sample;
   for (const auto & c : result.candidates) {
     if (!c.valid) {
-      // 前沿搜索自己否掉的候选。必须能看到原因，否则「候选 0 个」这种现象
-      // 只能靠猜是哪一条约束太紧。
       ++dropped_by_search;
       if (search_reject_sample.empty()) {
         search_reject_sample = c.reject_reason;
@@ -2445,16 +2202,11 @@ ExplorationCoordinatorNode::generateCandidates(
     result.raw_frontier_cell_count, result.accepted_cluster_count, out.size(),
     dropped_by_search, dropped_unknown, result.summary.c_str());
   if (out.empty() && dropped_by_search > 0U) {
-    // 「有前沿格但一个候选都留不下」几乎总是某条距离/净空约束设得太紧，
-    // 把首个否决原因抬到 WARN，省得每次都要开 debug 重跑一遍。
     RCLCPP_WARN(
       get_logger(), "全部 %zu 个候选被前沿搜索否决，首个原因: %s",
       dropped_by_search, search_reject_sample.c_str());
   }
   if (out.empty() && dropped_unknown > 0U) {
-    // 同理：被目标校验（在 costmap 上）淘汰光时也要给出首个原因。
-    // 最常见的两条是「目标格在 costmap 里是致命区」（前沿贴墙，被膨胀吃掉）
-    // 和「净空半径内有占据格」（净空半径与控制器容差不匹配）。
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "全部 %zu 个候选被目标校验淘汰，首个原因: %s",
@@ -2479,7 +2231,6 @@ void ExplorationCoordinatorNode::requestPlanForCurrentCandidate()
       "全局规划动作 %s 尚未就绪，等待 Nav2 起来", plan_action_name_.c_str());
     return;
   }
-  // 同一候选只允许有一个校验请求在途。
   bool expected = false;
   if (!plan_request_in_flight_.compare_exchange_strong(expected, true)) {
     return;
@@ -2530,8 +2281,6 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
   plan_request_in_flight_.store(false);
   plan_goal_handle_.reset();
 
-  // ---- 分支一：这次规划是「跟踪中的周期性重规划」，不是候选校验 ----
-  // 两者共用 plan_client_，靠 plan_request_is_replan_ 区分。
   if (plan_request_is_replan_) {
     plan_request_is_replan_ = false;
     if (state_ != ExplorationState::kNavigating) {
@@ -2540,11 +2289,9 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
     if (result.code != rclcpp_action::ResultCode::SUCCEEDED || !result.result ||
       result.result->path.poses.empty())
     {
-      // 重规划请求本身没成。当前路径若还能走就沿用；若已判死则由收口函数计次。
       onReplanProducedNoUsablePath("全局规划失败或返回空路径");
       return;
     }
-    // 新路径同样要过双层校验 —— 否则重规划会变成绕过校验的后门。
     std::string why;
     const std::shared_ptr<GridMap> grid = validationGrid(why);
     if (!grid) {
@@ -2562,9 +2309,6 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
       onReplanProducedNoUsablePath("新路径未通过校验: " + chk.reason);
       return;
     }
-    // 换路径：直接发新的 FollowPath 目标，controller_server 会抢占旧的。
-    // 注意这里**不**走 dispatchFollowPath —— 那个函数带「只允许在 VALIDATING
-    // 下发」的时序锁，而这里本来就在 NAVIGATING，且不该增加 goals_dispatched_。
     if (follow_client_ && follow_client_->action_server_is_ready()) {
       FollowPath::Goal fp;
       fp.path = result.result->path;
@@ -2575,14 +2319,9 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
         [this](const FollowGoalHandle::SharedPtr & h) {onFollowGoalResponse(h);};
       o.result_callback =
         [this](const FollowGoalHandle::WrappedResult & r) {onFollowResult(r);};
-      // 新目标的 id 会在 onFollowGoalResponse 里覆盖 current_follow_goal_id_，
-      // 在那之前旧 id 仍然有效；旧目标被抢占后的结果靠 id 比对被忽略。
       follow_client_->async_send_goal(fp, o);
-      // 换上新路径后必须同步更新记录 —— 否则"剩余段是否还能走"永远在校验那条
-      // 已经被替换掉的旧路径，判据会一直误判、每轮都触发重规划。
       active_path_ = pts;
       active_path_time_ = now();
-      // 换成了一条通过校验的新路径：判死状态与连续计数一起清零。
       active_path_impassable_ = false;
       invalid_replan_count_ = 0;
       RCLCPP_DEBUG(
@@ -2591,8 +2330,6 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
     return;
   }
 
-  // ---- 分支二：候选校验（原有逻辑）----
-  // 迟到的结果：状态早就走开了(比如已被暂停)，直接丢弃，绝不据此下发目标。
   if (state_ != ExplorationState::kValidating) {
     RCLCPP_DEBUG(get_logger(), "收到迟到的规划结果(当前 %s)，已丢弃", toString(state_));
     return;
@@ -2602,16 +2339,9 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
     return;
   }
   if (result.code != rclcpp_action::ResultCode::SUCCEEDED || !result.result) {
-    // 局部/全局无路可走：不是错误，是这个候选点不可达，换下一个。
-    // 把「全局规划失败」拆成两种，因为正确响应完全相反：
-    //   · 起点致命(机器人站在膨胀带里) → 挪机器人，换候选点没用
-    //   · 目标不可达               → 换候选点，挪机器人没用
-    // 改动前两者都归成「全局规划失败(无可行路径)」，实测 25648 次里
-    // 混着 28 次真正的「路径穿越未知/占据区」，根因被这个归类掩盖了。
     std::string esc_why;
     const EscapeVerdict verdict = checkEscapeTrigger(esc_why);
     if (verdict == EscapeVerdict::kBlockedPhysically) {
-      // 🔴 红线：物理真堵。停机告警，绝不尝试脱困。
       RCLCPP_ERROR(get_logger(), "%s", esc_why.c_str());
       escape_last_result_ = esc_why;
       transitionTo(ExplorationState::kPaused, "物理真堵(禁止脱困)");
@@ -2630,28 +2360,6 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
       }
       std::string tgt_why;
       if (!pickEscapeTarget(escape_target_, tgt_why)) {
-        // 选不出脱困目标，**先给自举一个机会**，用尽了才 PAUSED。
-        //
-        // 这里原来是直接 PAUSED，冷启动时必死（2026-09-01 实测）：
-        //   首帧全局代价地图 未知 96.3% 致命 2.9% 空闲 0.8%
-        //   -> 脱困环搜索要求「非致命 且 非未知 且 /map 可站 且 直线可达」，
-        //      96% 未知的图上几乎没有格子合格 -> 脱困无解 -> PAUSED
-        //   -> 自动恢复 -> 地图没变 -> 立刻又无解 -> ... 直到恢复预算用尽
-        //   实测那一轮 131s 就死、到位=0，整轮验收作废。
-        //
-        // 为什么自举是正确的兜底，而不是"再试一次同样的事"：
-        //   1. 原地旋转**不平移**，物理上不可能穿过占据栅格 —— 天然满足红线，
-        //      比脱困本身更安全（脱困要走直线，自举只转）；
-        //   2. 它把未知变已知，正好解决"无解是因为周围全未知"这个根因；
-        //   3. shouldBootstrap 自带全部闸门：次数上限、停滞计时、安全门
-        //      (激光新鲜 + 最近障碍 >=0.44m)、人工暂停中不动、有在途目标不动。
-        //      所以这里不需要再加一层判断，也不会变成死循环重试。
-        //
-        // 注意红线仍然在上面先判：verdict == kBlockedPhysically 时早已 return，
-        // 走到这里意味着**不是**物理真堵。别把这个顺序调过来。
-        //
-        // 与「连续多轮采不到合法候选点」那条路保持同一形状（先自举、后 PAUSED）：
-        // 两条路都是"地图内容不够用"，不该一条有兜底另一条没有。
         std::string boot_why;
         if (shouldBootstrap("脱困选不出目标(疑似周围全未知)", boot_why)) {
           escape_last_result_ = "选不出目标转自举: " + tgt_why;
@@ -2695,10 +2403,6 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
     return;
   }
 
-  // 下发前校验用的栅格图 —— 必须是 planner_server 规划时所用的那一张
-  // （默认全局代价地图），否则两层判据查不同的图，会互相锁死：
-  // 实测用 /map 校验时 631/631 次候选全被否，探索一个目标都发不出去。
-  // 详见 costmap_adapter.hpp 文件头。
   std::string grid_why;
   const std::shared_ptr<GridMap> grid = validationGrid(grid_why);
   if (!grid) {
@@ -2709,18 +2413,12 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
     return;
   }
 
-  // 目标点重新校验一遍：从生成到现在地图可能已经更新，
-  // 原先合法的目标可能已经被新观测判成占据/未知。
   const ValidationResult goal_check = validator_.validateGoal(*grid, candidate.x, candidate.y);
   if (!goal_check.valid) {
     rejectCurrentCandidate("目标点复检未通过: " + goal_check.reason);
     return;
   }
 
-  // 校验2（路径）：逐段插值采样，任何一个采样点落在未知格上就整条否掉。
-  // 终点截断检查(path_endpoint_tolerance)也在 validatePath 内，一并保留——
-  // 它拦的是「规划器把不可达目标尽力靠近后返回半截路径、action 仍报成功」这一类，
-  // 与查哪张图无关，是独立有价值的一条。
   std::vector<PlanarPoint> pts;
   pts.reserve(path.poses.size());
   for (const auto & p : path.poses) {
@@ -2742,8 +2440,6 @@ void ExplorationCoordinatorNode::onPlanResult(const PlanGoalHandle::WrappedResul
     get_logger(),
     "候选 (%.2f, %.2f) 双层校验通过: 路径 %zu 个顶点 / %zu 个采样点全部位于已知可通行区",
     candidate.x, candidate.y, path.poses.size(), path_check.samples_checked);
-  // 需求1：follow_path 模式下把**刚刚通过校验的这条路径**直接交给控制器，
-  // 而不是只发目标点让 BT 再规划一条（那条不曾被校验过）。
   if (dispatch_mode_ == DispatchMode::kFollowPath) {
     dispatchFollowPath(candidate, path);
   } else {
@@ -2756,7 +2452,6 @@ void ExplorationCoordinatorNode::rejectCurrentCandidate(const std::string & reas
   ++candidates_rejected_;
   if (candidate_index_ < candidates_.size()) {
     const auto & c = candidates_[candidate_index_];
-    // 把被拒的点也记入访问历史：否则下一轮采样极可能又把它挑出来，白跑一遍校验。
     recordVisit(c.x, c.y);
     RCLCPP_WARN(
       get_logger(), "丢弃候选 %zu/%zu (%.2f, %.2f): %s",
@@ -2767,57 +2462,26 @@ void ExplorationCoordinatorNode::rejectCurrentCandidate(const std::string & reas
     onCandidatesExhausted(reason);
     return;
   }
-  // 刻意**不**在这里直接调 requestPlanForCurrentCandidate()（原来是这么写的，实测踩坑）。
-  //
-  // 本函数的调用方之一是 onPlanGoalResponse()，它在入口就持有 state_mutex_
-  // （非递归 std::mutex）。在持锁状态下再发一个 action goal，如果这个 goal 又被
-  // 同步拒绝，就会在同一条 io_cb_group_（MutuallyExclusive）上重新进入
-  // onPlanGoalResponse 并二次取同一把锁 —— 整个节点会彻底静默。
-  //
-  // 实测现象（planner_server 因为 Nav2 bringup 卡住而停在 inactive、于是
-  // compute_path_to_pose 同步拒绝每一个 goal）：日志停在
-  //   丢弃候选 1/4 (-0.58, 0.69): 规划请求被拒绝
-  // 之后 283s 零输出 —— 既没有"校验候选 2/4"，也没有本该立刻打印的
-  // "全局规划动作尚未就绪"节流告警，连 0.5s 的 tick 日志都没有
-  // （tick 也要取 state_mutex_，所以锁一挂住就全静默）。
-  //
-  // 不需要在这里重发：tickValidating() 每个节拍都会检查
-  // "校验请求不在途 -> requestPlanForCurrentCandidate()"，
-  // 由定时器入口统一持锁、单层调用，天然不会重入。代价只是每个被拒候选
-  // 多等一个 0.5s 节拍（4 个候选最多 2s），换掉一个能让节点假死的重入路径，
-  // 这个交换很值。
-  //
-  // 不变式（新增的，别再破坏它）：**持有 state_mutex_ 时不得发 action goal**。
-  // 同一风险还存在于 dispatchGoal() 里的 nav_client_->async_send_goal()，
-  // 那条路径上 onNavGoalResponse 只走 registerNavFailure、不再回头发 goal，
-  // 所以目前只差一层、没有闭环重入，但同样不该指望这一点长期成立。
 }
 
 void ExplorationCoordinatorNode::onCandidatesExhausted(const std::string & reason)
 {
   resetCycleState();
-  // 用**校验**预算而不是采样预算。这一路失败的循环是「采样 -> 校验全废 ->
-  // 重采样」，而采样预算在 generateCandidates 采样成功时被清零 —— 也就是这个
-  // 循环里每轮都被清一次，它的上限结构上永不可达（实测 837/837 全是 1/4，
-  // 某轮据此空转 400s）。清零条件见 ExplorationFailureBudget 的注释。
   const bool budget_used_up = failure_budget_.onAllCandidatesInvalid();
   RCLCPP_WARN(
     get_logger(), "本轮候选全部不合法(%s)，连续校验失败 %d/%d",
     reason.c_str(), failure_budget_.validation_failures,
     failure_budget_.max_validation_failures);
   if (budget_used_up) {
-    // 注意：这里是 PAUSED 不是 COMPLETED —— 前沿还在，只是暂时找不到合法通路。
     transitionTo(ExplorationState::kPaused, "连续多轮候选全部不合法");
     return;
   }
   transitionTo(ExplorationState::kGenNextPoint, "重新采样候选点");
 }
 
-// ==================== 导航下发（唯一出口）====================
 
 void ExplorationCoordinatorNode::dispatchNavGoal(const GoalCandidatePose & goal)
 {
-  // ---- 时序锁 1：状态锁。只有校验通过的那一刻(kValidating)才允许下发。----
   if (state_ != ExplorationState::kValidating) {
     RCLCPP_ERROR(
       get_logger(), "试图在 %s 态下发目标，已拦截(下发只允许发生在 VALIDATING)",
@@ -2825,7 +2489,6 @@ void ExplorationCoordinatorNode::dispatchNavGoal(const GoalCandidatePose & goal)
     transitionTo(ExplorationState::kIdle, "非法下发时机");
     return;
   }
-  // ---- 时序锁 2：在途标志。原子 CAS，任何并发下发企图都会失败在这里。----
   bool expected = false;
   if (!nav_goal_in_flight_.compare_exchange_strong(expected, true)) {
     RCLCPP_ERROR(
@@ -2851,9 +2514,6 @@ void ExplorationCoordinatorNode::dispatchNavGoal(const GoalCandidatePose & goal)
   nav_goal.pose.pose.orientation.y = q.y();
   nav_goal.pose.pose.orientation.z = q.z();
   nav_goal.pose.pose.orientation.w = q.w();
-  // 指定行为树：探索场景用把 controller_id 指向 FollowPathExplore 的那一份，
-  // 从而启用三段式跟踪（起步对齐 -> 跟踪 -> **不**对齐终点姿态）。
-  // 留空则走 bt_navigator 默认树，行为与接入前完全一致（一键回退）。
   nav_goal.behavior_tree = nav_behavior_tree_;
 
   rclcpp_action::Client<NavigateToPose>::SendGoalOptions opts;
@@ -2868,9 +2528,6 @@ void ExplorationCoordinatorNode::dispatchNavGoal(const GoalCandidatePose & goal)
   nav_started_time_ = now();
   dwell_active_ = false;
   ++goals_dispatched_;
-  // 校验失败预算只在**目标真的发出去了**才清零 —— 这是走出「采样->校验全废->
-  // 重采样」循环的唯一标志。放到采样成功处清过一版，结果计数器永远是 1
-  // （见 ExplorationFailureBudget 的注释）。
   failure_budget_.onGoalDispatched();
 
   if (goal_pub_) {
@@ -2900,7 +2557,6 @@ void ExplorationCoordinatorNode::onNavGoalResponse(const NavGoalHandle::SharedPt
 void ExplorationCoordinatorNode::dispatchFollowPath(
   const GoalCandidatePose & goal, const nav_msgs::msg::Path & path)
 {
-  // 时序锁与 dispatchNavGoal 完全同构 —— 两条通路都必须保证「同时只有一个目标在飞」。
   if (state_ != ExplorationState::kValidating) {
     RCLCPP_ERROR(
       get_logger(), "试图在 %s 态下发 FollowPath，已拦截(下发只允许发生在 VALIDATING)",
@@ -2946,10 +2602,7 @@ void ExplorationCoordinatorNode::dispatchFollowPath(
   dwell_active_ = false;
   follow_retry_count_ = 0;          // 新目标，重试预算重置
   ++goals_dispatched_;
-  // 与 dispatchNavGoal 同一条不变式：校验失败预算只在目标真的发出去了才清零。
   failure_budget_.onGoalDispatched();
-  // 记下正在跟踪的这条路径。on_invalid 策略靠它判断「还需不需要换路径」，
-  // 没有它就只能退回按时间无条件换路径。
   active_path_.clear();
   active_path_.reserve(path.poses.size());
   for (const auto & p : path.poses) {
@@ -2960,7 +2613,6 @@ void ExplorationCoordinatorNode::dispatchFollowPath(
   replan_forced_ = false;
   active_path_impassable_ = false;
   invalid_replan_count_ = 0;
-  // 成功下发目标说明地图已经够用：清掉自举预算，让后续真的停滞时还能再自举。
   bootstrap_count_ = 0;
   bootstrap_stall_active_ = false;
 
@@ -3007,9 +2659,6 @@ void ExplorationCoordinatorNode::onFollowResult(const FollowGoalHandle::WrappedR
 {
   std::lock_guard<std::mutex> lock(state_mutex_);
 
-  // 只认当前这个目标的结果。被重规划取代的旧目标会以 ABORTED 回来，
-  // 那不是控制器失败，而是我们自己换了路径 —— 当成失败会形成自激循环
-  // （实测：66 个终止结果 vs controller_server 真正 abort 仅 2 次）。
   if (has_current_follow_goal_id_ && result.goal_id != current_follow_goal_id_) {
     RCLCPP_DEBUG(
       get_logger(), "忽略被重规划取代的旧 FollowPath 结果(code=%d)",
@@ -3028,25 +2677,16 @@ void ExplorationCoordinatorNode::onFollowResult(const FollowGoalHandle::WrappedR
 
   switch (result.code) {
     case rclcpp_action::ResultCode::SUCCEEDED:
-      // 与 NavigateToPose 分支一致：控制器报成功只是「它认为到了」，
-      // 仍要走 kArrived 的实测校验。
       transitionTo(ExplorationState::kArrived, "控制器报告成功，待实测校验");
       break;
     case rclcpp_action::ResultCode::ABORTED:
-      // BT 模式下这一步会被 RecoveryNode 吸收一次（清代价地图后重试），
-      // follow_path 模式没有 BT，必须自己重试，否则每次进度停滞都直接判死。
-      // 实测未加重试时：12 次下发全部因 Failed to make progress 判失败、0 次收敛。
       if (follow_retry_count_ < follow_max_retries_) {
         ++follow_retry_count_;
         RCLCPP_WARN(
           get_logger(),
           "FollowPath 中止，对同一目标重试 %d/%d（重新规划后再下发）",
           follow_retry_count_, follow_max_retries_);
-        // 用显式的强制标志触发重规划。
-        // 早先的写法是把 last_replan_time_ 推到过去，那只在 periodic 策略下有效；
-        // on_invalid 策略根本不看时间，那样写会静默地什么都不发生。
         replan_forced_ = true;
-        // 保持 NAVIGATING 与在途标志：这仍然是同一个目标，不是新目标。
         nav_goal_in_flight_.store(true);
         return;
       }
@@ -3063,16 +2703,11 @@ void ExplorationCoordinatorNode::onFollowResult(const FollowGoalHandle::WrappedR
 
 void ExplorationCoordinatorNode::maybeRequestReplan(const rclcpp::Time & now_time)
 {
-  // 只有 follow_path 模式需要自己重规划：navigate_to_pose 模式由 BT 的
-  // RateController(hz=1.0) 负责，本节点不该重复插手。
   if (dispatch_mode_ != DispatchMode::kFollowPath) {
     return;
   }
 
   if (replan_policy_ == ReplanPolicy::kPeriodic) {
-    // ---- 回退策略：无条件周期重规划（旧行为）----
-    // 实测代价：36 个目标下发 393 次 FollowPath，每条路径平均 1.5s 后就被下一条抢占，
-    // 没有一条被跟踪到位。保留它只为一键对比回归。
     if (replan_period_sec_ <= 0.0) {
       return;
     }
@@ -3083,8 +2718,6 @@ void ExplorationCoordinatorNode::maybeRequestReplan(const rclcpp::Time & now_tim
     return;
   }
 
-  // ---- 默认策略 on_invalid：未失效就不换路径 ----
-  // 检查节拍只控制"多久看一眼"，看一眼是纯本地计算，不发 action。
   if ((now_time - last_replan_check_time_).seconds() < replan_check_period_sec_) {
     return;
   }
@@ -3093,7 +2726,6 @@ void ExplorationCoordinatorNode::maybeRequestReplan(const rclcpp::Time & now_tim
   std::string why;
   if (!needsReplan(now_time, why)) {
     RCLCPP_DEBUG(get_logger(), "当前路径仍然有效，继续跟踪(不重规划)");
-    // 路径又变回可通行了（代价地图刷新是常事），把判死状态和计数一起清掉。
     if (active_path_impassable_) {
       RCLCPP_INFO(get_logger(), "当前路径恢复可通行，撤销判死状态");
       active_path_impassable_ = false;
@@ -3101,7 +2733,6 @@ void ExplorationCoordinatorNode::maybeRequestReplan(const rclcpp::Time & now_tim
     }
     return;
   }
-  // 防抖：判据在阈值附近来回跳时，不允许连续换路径。
   const double since_last = (now_time - last_replan_time_).seconds();
   if (!replan_forced_ && since_last < replan_min_interval_sec_) {
     RCLCPP_DEBUG(
@@ -3114,17 +2745,14 @@ void ExplorationCoordinatorNode::maybeRequestReplan(const rclcpp::Time & now_tim
 
 bool ExplorationCoordinatorNode::needsReplan(const rclcpp::Time & now_time, std::string & why)
 {
-  // 1) 控制器已经中止，当前路径事实上作废。
   if (replan_forced_) {
     why = "控制器中止后强制重规划";
     return true;
   }
-  // 2) 没有在途路径（异常兜底：正常情况下 NAVIGATING 一定有路径）。
   if (active_path_.empty()) {
     why = "无在途路径记录";
     return true;
   }
-  // 3) 路径超龄（>0 才启用，纯兜底）。
   if (path_max_age_sec_ > 0.0) {
     const double age = (now_time - active_path_time_).seconds();
     if (age > path_max_age_sec_) {
@@ -3137,8 +2765,6 @@ bool ExplorationCoordinatorNode::needsReplan(const rclcpp::Time & now_time, std:
   double ryaw = 0.0;
   std::string pose_why;
   if (!robotPose(rx, ry, ryaw, pose_why)) {
-    // 取不到位姿时**不**重规划：定位丢失由 tickNavigating 单独处理（转 PAUSED），
-    // 在这里换路径只会拿着一个不可信的起点去规划。
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "重规划判据取不到位姿(%s)，本轮保持当前路径", pose_why.c_str());
@@ -3146,7 +2772,6 @@ bool ExplorationCoordinatorNode::needsReplan(const rclcpp::Time & now_time, std:
   }
   const PlanarPoint robot{rx, ry};
 
-  // 4) 机器人已偏离这条路径 —— 它不再描述机器人的处境。
   const double dev = pathDeviation(active_path_, robot);
   if (dev > path_deviation_limit_m_) {
     why = "已偏离当前路径 " + std::to_string(dev) + "m > " +
@@ -3154,17 +2779,13 @@ bool ExplorationCoordinatorNode::needsReplan(const rclcpp::Time & now_time, std:
     return true;
   }
 
-  // 5) 剩余段是否还可通行。只查剩余段：身后新观测到的障碍与"还能不能继续跟"无关。
   const std::vector<PlanarPoint> rest = remainingPath(active_path_, robot);
   if (rest.size() < 2U) {
-    // 只剩 1 个点 = 已经到路径末端附近。这不是"路径失效"，恰恰是快到了，
-    // 此时换路径会打断收尾。交给抵达判定/goal checker 收口。
     return false;
   }
   std::string grid_why;
   const std::shared_ptr<GridMap> grid = validationGrid(grid_why);
   if (!grid) {
-    // 校验图暂时不可用时不换路径：换了也没法校验新路径，且当前路径此前是通过校验的。
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "重规划判据拿不到校验图(%s)，本轮保持当前路径", grid_why.c_str());
@@ -3174,8 +2795,6 @@ bool ExplorationCoordinatorNode::needsReplan(const rclcpp::Time & now_time, std:
   const ValidationResult chk = validator_.validatePath(*grid, rest, requested);
   if (!chk.valid) {
     why = "剩余段已不可通行: " + chk.reason;
-    // 记下「这条路径已经判死」。后面若重规划也拿不到合法替代，
-    // 就不能再沿用它 —— 那等于明知走不通还继续往里顶。
     active_path_impassable_ = true;
     return true;
   }
@@ -3185,7 +2804,6 @@ bool ExplorationCoordinatorNode::needsReplan(const rclcpp::Time & now_time, std:
 void ExplorationCoordinatorNode::onReplanProducedNoUsablePath(const std::string & detail)
 {
   if (!active_path_impassable_) {
-    // 当前路径还没被判死：这次只是规划请求本身没成，沿用当前路径是对的。
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "跟踪期重规划未取得可用路径(%s)，当前路径仍可通行，继续沿用", detail.c_str());
@@ -3197,11 +2815,8 @@ void ExplorationCoordinatorNode::onReplanProducedNoUsablePath(const std::string 
     "当前路径已判不可通行、重规划也无合法替代(%s)，连续 %d/%d 次",
     detail.c_str(), invalid_replan_count_, max_invalid_replan_attempts_);
   if (invalid_replan_count_ < max_invalid_replan_attempts_) {
-    // 留一点瞬态余量：代价地图偶尔会因为一帧观测把通路刷成占据，下一帧就好了。
     return;
   }
-  // 到这里就是「这个目标现在真的走不通」。撤掉在途目标、交给状态机另选一个，
-  // 而不是继续顶着走 —— 实测顶了 17s 才被 progress checker 救回来。
   RCLCPP_ERROR(
     get_logger(),
     "放弃当前目标(%.2f, %.2f)：路径不可通行且 %d 次重规划都拿不到合法替代",
@@ -3262,7 +2877,6 @@ void ExplorationCoordinatorNode::onNavResult(const NavGoalHandle::WrappedResult 
   switch (result.code) {
     case rclcpp_action::ResultCode::SUCCEEDED:
       if (state_ == ExplorationState::kNavigating) {
-        // Nav2 说到了，但还不算抵达：要进 kArrived 做实测位置+驻留校验。
         RCLCPP_INFO(get_logger(), "Nav2 报告导航成功，进入抵达校验");
         transitionTo(ExplorationState::kArrived, "Nav2 报告成功，待实测校验");
       } else {
@@ -3274,7 +2888,6 @@ void ExplorationCoordinatorNode::onNavResult(const NavGoalHandle::WrappedResult 
       registerNavFailure("Nav2 中止(无法规划或控制失败)");
       break;
     case rclcpp_action::ResultCode::CANCELED:
-      // 主动取消(超时/定位丢失/人工暂停)已经在取消处处理过状态，这里不再叠加失败计数。
       RCLCPP_INFO(get_logger(), "导航目标已取消(当前 %s)", toString(state_));
       has_active_goal_ = false;
       break;
@@ -3291,8 +2904,6 @@ void ExplorationCoordinatorNode::cancelActiveNavGoal(const std::string & reason)
     nav_client_->async_cancel_goal(nav_goal_handle_);
     nav_goal_handle_.reset();
   }
-  // 两条下发通路都要撤。只撤一条会出现「已暂停但机器人还在走」——
-  // 而暂停的语义正是"立刻停止下发并停下来"。
   if (follow_client_ && follow_goal_handle_) {
     RCLCPP_WARN(get_logger(), "取消在途 FollowPath: %s", reason.c_str());
     follow_client_->async_cancel_goal(follow_goal_handle_);
@@ -3301,7 +2912,6 @@ void ExplorationCoordinatorNode::cancelActiveNavGoal(const std::string & reason)
   nav_goal_in_flight_.store(false);
   has_active_goal_ = false;
   dwell_active_ = false;
-  // 目标撤了，路径记录也必须清 —— 留着会让下一次 needsReplan 拿旧路径做判断。
   active_path_.clear();
   replan_forced_ = false;
   active_path_impassable_ = false;
@@ -3310,8 +2920,6 @@ void ExplorationCoordinatorNode::cancelActiveNavGoal(const std::string & reason)
 
 void ExplorationCoordinatorNode::registerNavFailure(const std::string & reason)
 {
-  // 未就绪期间的失败不计数（见 stackReady 文件头）。仍然要清理状态并回到选点，
-  // 只是不消耗"连续失败"预算 —— 否则启动瞬态就能把机器人永久停住。
   std::string ready_why;
   const bool ready = stackReady(ready_why);
   if (!ready) {
@@ -3330,7 +2938,6 @@ void ExplorationCoordinatorNode::registerNavFailure(const std::string & reason)
   }
   ++nav_failure_count_;
   if (has_active_goal_) {
-    // 失败的目标也记入访问历史，避免下一轮又选中同一个走不通的点。
     recordVisit(active_goal_.x, active_goal_.y);
   }
   has_active_goal_ = false;
@@ -3346,14 +2953,12 @@ void ExplorationCoordinatorNode::registerNavFailure(const std::string & reason)
   transitionTo(ExplorationState::kGenNextPoint, "导航失败，重新选点");
 }
 
-// ===================== 状态输出与人工干预 =====================
 
 void ExplorationCoordinatorNode::publishState()
 {
   if (!state_pub_) {
     return;
   }
-  // 单行、字段化，便于 `ros2 topic echo` 直接读，也便于脚本抓取做验证。
   std::string detail = "state=";
   detail += toString(state_);
   detail += " goal_in_flight=";
@@ -3363,8 +2968,6 @@ void ExplorationCoordinatorNode::publishState()
     snprintf(buf, sizeof(buf), " goal=(%.2f,%.2f)", active_goal_.x, active_goal_.y);
     detail += buf;
   }
-  // 缓冲大小要**跟着格式串一起长**：snprintf 超长是静默截断，
-  // 上报里少掉尾巴几个计数器不会报错，只会让排查时看不见。
   char stats[288];
   snprintf(
     stats, sizeof(stats),
@@ -3381,8 +2984,6 @@ void ExplorationCoordinatorNode::publishState()
   if (manually_paused_) {
     detail += " manual_pause=1";
   }
-  // 自举与路径复用状态也要上报：需求「禁止静默失败」——自举被安全门拦下、
-  // 或者转了却没转够，都必须在状态话题上能直接看到，不能只躺在日志里。
   {
     char boot[288];
     snprintf(
@@ -3398,7 +2999,6 @@ void ExplorationCoordinatorNode::publishState()
   msg.data = detail;
   state_pub_->publish(msg);
 
-  // 完成标志只在跳变时发，避免 transient_local 队列被同值刷满。
   const bool done = (state_ == ExplorationState::kCompleted);
   if (done != exploration_complete_) {
     exploration_complete_ = done;
@@ -3444,9 +3044,6 @@ void ExplorationCoordinatorNode::onResumeService(
   }
   std::lock_guard<std::mutex> lock(state_mutex_);
   manually_paused_ = false;
-  // 人工恢复视为一次「重置」：所有失败计数清零，包括自动恢复次数与脱困次数。
-  // 脱困次数必须在这里清：否则「等待人工 ~/resume」这句提示是假的 ——
-  // 操作员调了 resume，下一次脱困仍然立刻撞上次数上限。
   failure_budget_.resetAll();
   nav_failure_count_ = 0;
   auto_resume_count_ = 0;

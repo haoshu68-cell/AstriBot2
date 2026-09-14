@@ -1,34 +1,4 @@
 #!/usr/bin/env bash
-# =====================================================================
-# 只读 SDK 进程的守护（**非对称**：写通路绝不在此列）
-#
-# 为什么需要它 —— 2026-09-01 21:26 实测事件
-# ========================================
-# 按下物理急停 → 厂商控制驱动停 → 我们 3 个持有 SDK 会话的进程在**同一秒**
-# 全部退出，死因一致：
-#     Driver heartbeat timeout detected! Count: 5/5
-#     Driver crashes. Reached timeout threshold (5). Exiting...
-# 三者引用同一个 Last error_code_timestamp，即同一个上游事件。
-#
-# 这三个进程退出本身是**正确**的（fail-fast）。缺陷是**没有一个会自己回来**：
-# 急停是正常操作事件，而它每次都要求人工恢复整栈。
-#
-# 连带后果（逐环实测）：
-#   /joint_states 0Hz → robot_state_publisher 停发连杆 TF
-#     → 自滤逐连杆等满超时 → /scan 掉到 0.56Hz、龄期 2.03s
-#       → nav2 照常规划、照常发速度，零告警
-#
-# ═══════════ 为什么写通路（bridge_container）不在守护列表里 ═══════════
-# 急停之后让写通路自动回来，等于**绕过人按急停这个动作的意图**。
-# 按急停是一个明确的"停止执行"指令；一个自动重启的写通路会在人松开急停时
-# 悄悄恢复下发能力，而人并不知道。
-#
-# 所以本脚本在**结构上**排除它：白名单里根本没有它，而且下面还有一道
-# 显式断言 —— 万一将来有人往 GUARDED 里加了写通路进程，脚本直接拒绝启动，
-# 不靠注释提醒，也不靠人记得。
-#
-# 恢复写通路的正确方式：人工确认后单独执行阶段⑥（见 bringup_stages.sh）。
-# =====================================================================
 set -uo pipefail
 
 WS=/home/astribot/Downloads/astribot_sdk_aarch64/ws_robot
@@ -36,27 +6,16 @@ LOGDIR=/tmp/bringup
 GUARD_LOG="$LOGDIR/guard.log"
 STAGES=/tmp/bringup_stages.sh
 
-# 巡检周期(s)。取 10s 的理由：SDK 看门狗从心跳丢失到退出约 1.2s，
-# 而厂商控制驱动恢复本身要数十秒；巡检快于恢复速度只会白重启。
 INTERVAL="${GUARD_INTERVAL:-10}"
 
-# 单个进程在 WINDOW 秒内最多重启 MAX_RESTARTS 次，超过就放弃并持续告警。
-# 为什么要放弃：控制驱动没回来时重启必然在 1.2s 内再死，无限重启会把
-# 真实故障刷成一片重启日志，反而更难查。
 MAX_RESTARTS="${GUARD_MAX_RESTARTS:-5}"
 WINDOW="${GUARD_WINDOW:-600}"
 
-# ─────────────── 白名单：只读进程 ───────────────
-# 格式：<进程匹配模式>|<阶段号>|<人类可读名>
-# 阶段号复用 bringup_stages.sh，避免这里再抄一份启动命令 ——
-# 抄一份就会与那边漂移，而漂移的那份是"恢复"路径，最不该出错。
 GUARDED=(
   "lib/astribot_trajectory_bridge/state_bridge_node|3|状态桥(只读)"
   "lib/astribot_trajectory_bridge/chassis_odom_node|4|底盘里程计(只读)"
 )
 
-# ─────────── 结构性防呆：写通路绝不允许进白名单 ───────────
-# 这不是注释提醒，是**启动期硬断言**。
 FORBIDDEN=("bridge_container" "arm_traj_bridge" "chassis_cmd_bridge" "gripper")
 for entry in "${GUARDED[@]}"; do
     pat="${entry%%|*}"
@@ -74,17 +33,6 @@ mkdir -p "$LOGDIR"
 
 log() { echo "[$(date '+%F %T')] $*" | tee -a "$GUARD_LOG"; }
 
-# 进程计数。
-#
-# !!! 这个函数有两个独立的自匹配来源，都实测踩过 !!!
-#   ① 同一条命令里既写模式又读 ps → `ps -eo args` 抓到模式串本身
-#   ② **调用方**的命令行里含模式串 → 快照里有调用方那一行
-# ②比①更隐蔽：即使先落快照再读模式，只要外层 shell 的 argv 含模式就照样中招。
-# 实测：`proc_count 'zzz_definitely_not_running_zzz'` 对一个根本不存在的进程
-# 返回 **1** —— 而且偏差方向是"永远只会高"，正好让守护误判"进程还在"而不去
-# 重启。这是最坏的方向。
-#
-# 所以这里显式排除：本进程、父进程、命令行含本脚本名的进程、以及 grep/ps 自身。
 SELF_NAME="$(basename "${BASH_SOURCE[0]}")"
 proc_count() {
     local pat=$1 snap n
@@ -99,9 +47,6 @@ proc_count() {
     echo "${n:-0}"
 }
 
-# 厂商控制驱动是否活着。判据是**话题发布者数**，不是进程在不在 ——
-# 实测过"进程活着而话题 pub 恒 0"（Fast DDS endpoint 级发现失效，已记录未解决）。
-# 控制驱动没回来时重启我们的进程毫无意义：它们会在 1.2s 内以同样原因再退出。
 driver_alive() {
     python3 - <<'PY' 2>/dev/null
 import sys, time
@@ -154,10 +99,6 @@ while true; do
             RESTART_COUNT[$pat]=0
         fi
 
-        # !!! 计"窗口内重启次数"，不是"总次数" !!!
-        # 用总次数的话，机器人跑一整天累计到上限就永久放弃，之后每次真实
-        # 故障都不再自愈。本项目在重试上限那条上已经栽过同一个错
-        # （把成功也计入，误杀了完全走得通的长路径）。
         cnt=${RESTART_COUNT[$pat]:-0}
         if [ "$cnt" -ge "$MAX_RESTARTS" ]; then
             GAVE_UP[$pat]=1

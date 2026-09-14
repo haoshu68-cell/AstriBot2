@@ -46,9 +46,6 @@ def generate_launch_description():
         [FindPackageShare('astribot_s1_gazebo_bringup'),
          'config', 'astribot_s1_controllers.yaml'])
 
-    # 硬件分支不需要 ros2_control/gz 插件生效（没有 Gazebo），但 xacro 本身仍然会把这些
-    # <ros2_control>/<gazebo> 标签写进 URDF 里——robot_state_publisher 只关心
-    # link/joint 几何结构，会自动忽略它不认识的标签，不影响 TF 发布。
     robot_description_content = ParameterValue(
         Command([
             'xacro', ' ', xacro_file, ' ',
@@ -73,9 +70,6 @@ def generate_launch_description():
     def make_livox_driver(side, config_file):
         return Node(
             package='livox_ros_driver2',
-            # 可执行文件名已实测确认(sudo编译安装Livox-SDK2 + colcon build
-            # --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2
-            # -DDISTRO_ROS=humble 之后 `ros2 pkg executables livox_ros_driver2` 的真实输出)。
             executable='livox_ros_driver2_node',
             name=f'livox_lidar_publisher_{side}',
             output='screen',

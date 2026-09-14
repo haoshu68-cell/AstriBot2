@@ -1,7 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// costmap_adapter 的实现。判据本身很短，成本都在边界条件上：
-// 尺寸/长度不一致、分辨率非法、int8_t 溢出，任一漏掉都会变成越界读或静默错判。
 #include "astribot_s1_autonomy/costmap_adapter.hpp"
 
 #include <limits>
@@ -20,16 +17,12 @@ bool validateCostmapAdapterParams(const CostmapAdapterParams & params, std::stri
     return false;
   }
   if (params.lethal_cost_threshold < 1 || params.lethal_cost_threshold > 255) {
-    // 下界取 1 而不是 0：阈值为 0 会把 FREE_SPACE 也判成致命障碍，
-    // 整张图全是障碍，探索必然发不出目标且日志里毫无线索。
     std::ostringstream oss;
     oss << "lethal_cost_threshold 必须在 [1,255] 内，当前 " << params.lethal_cost_threshold;
     error = oss.str();
     return false;
   }
   if (params.lethal_cost_threshold > params.unknown_cost) {
-    // 允许相等（都是 255 时未知优先，见 costmapToGridMap 的判断顺序），
-    // 但阈值高于未知值意味着没有任何代价值会被判成致命障碍。
     std::ostringstream oss;
     oss << "lethal_cost_threshold(" << params.lethal_cost_threshold
         << ") > unknown_cost(" << params.unknown_cost
@@ -72,8 +65,6 @@ bool costmapToGridMap(
     return false;
   }
 
-  // 尺寸乘积可能溢出 size_t 吗？size_x/size_y 都是 uint32，乘积最大约 1.8e19，
-  // 在 64 位 size_t (最大 1.8e19) 上处于边缘。先用 uint64 算再比对，不图省事。
   const uint64_t expected =
     static_cast<uint64_t>(size_x) * static_cast<uint64_t>(size_y);
   if (expected > static_cast<uint64_t>(std::numeric_limits<std::size_t>::max())) {
@@ -100,10 +91,6 @@ bool costmapToGridMap(
 
   for (std::size_t i = 0; i < out.data.size(); ++i) {
     const uint8_t cost = data[i];
-    // 判断顺序有意为之：未知优先于致命。
-    // 两个阈值默认不重叠(255 vs 253)，但配成相等时「255 既是未知又 >= 阈值」，
-    // 此时必须判未知——把未知误判成障碍会让前沿方向全变成墙，
-    // 探索表现为「有路却说被挡住」，比反过来更难排查。
     if (cost == unknown_cost) {
       out.data[i] = static_cast<int8_t>(-1);
     } else if (cost >= lethal_threshold) {

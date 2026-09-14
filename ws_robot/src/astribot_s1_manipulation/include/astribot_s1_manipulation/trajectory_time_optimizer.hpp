@@ -1,33 +1,4 @@
 // Copyright 2026 Astribot
-//
-// 轨迹时间优化（节拍压缩）。
-//
-// 优化的是什么
-// ------------
-// OMPL 给出的是几何路径，路径**形状**已定。时间优化不改形状，只改"沿这条路径
-// 走多快"——即重新分配每个 waypoint 的时间戳。所以它压缩的是纯粹的
-// "无效等待时间"，不会让机器人走一条不同的路（不会引入新的碰撞风险）。
-//
-// 两种参数化器的区别（这是选型的关键）
-// ----------------------------------
-// IPTP (IterativeParabolicTimeParameterization)：
-//   MoveIt 的老牌默认实现。按梯形速度曲线逐段迭代，实现简单、鲁棒，
-//   但它是**保守**的：为了保证不超限，很多段没有把速度跑满，
-//   总时长明显长于理论最优。它是本工程的 baseline。
-//
-// TOTG (TimeOptimalTrajectoryGeneration)：
-//   基于 Kunz & Stilman 的时间最优路径参数化算法。在给定路径与关节
-//   速度/加速度限位下求解**时间最优**的速度剖面，理论上就是节拍下界。
-//   它会把限位真正跑满，所以节拍明显短于 IPTP —— 这正是任务要的"压缩节拍"。
-//   代价：① 对路径点密度敏感，重复点/过密点会让它数值上出问题；
-//        ② 它会重采样路径点（resample_dt），输出的 waypoint 数与输入不同。
-//
-// 为什么必须自己复核限位并保留回退
-// ------------------------------
-// 任务明确要求"优化后仍然超出关节速度/加速度硬限制 -> 回退原始规划轨迹，
-// 告警输出，不输出非法轨迹"。实测 TOTG 在路径含重复点时确实会给出超限结果，
-// 所以不能信任"参数化器应该遵守限位"，必须用 trajectory_metrics 独立复核，
-// 不合法就回退。这是本模块的核心契约。
 
 #ifndef ASTRIBOT_S1_MANIPULATION__TRAJECTORY_TIME_OPTIMIZER_HPP_
 #define ASTRIBOT_S1_MANIPULATION__TRAJECTORY_TIME_OPTIMIZER_HPP_
@@ -122,19 +93,9 @@ public:
   }
 
   /// 对轨迹做时间参数化并尝试压缩节拍。
-  ///
-  /// 流程：
-  ///   1. 复制一份做 IPTP -> baseline（必须成功，否则整个轨迹不可执行）
-  ///   2. 复制一份做 TOTG -> optimized
-  ///   3. 用 evaluateTrajectory 独立复核两者的限位合法性
-  ///   4. optimized 合法且确实更短 -> 采纳；否则回退 baseline 并 WARN
-  ///   5. baseline 也非法 -> 返回 kJointLimitViolation，**不输出轨迹**
-  ///
   /// @param[in,out] trajectory 输入原始几何路径；输出为最终采纳的带时轨迹。
-  ///                失败时不保证内容有意义，调用方应据返回码决定是否使用。
   /// @param[out] result 优化过程与两版指标，供日志与上层判断。
   /// @return kSuccess / kTimeParameterizationFailed / kJointLimitViolation /
-  ///         kInvalidInput / kNotConfigured / kExceptionCaught
   PlanErrorCode optimize(
     robot_trajectory::RobotTrajectory & trajectory,
     OptimizationResult & result) const;

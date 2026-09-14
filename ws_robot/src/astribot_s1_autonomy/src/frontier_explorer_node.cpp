@@ -40,15 +40,11 @@ FrontierExplorerNode::FrontierExplorerNode(const rclcpp::NodeOptions & options)
   }
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
-  // 与感知节点同理：规划跑在独立工作线程里、且带 timeout 查 TF，
-  // 必须让 listener 自带 spin 线程并显式告知 buffer，否则带超时的查询恒失败。
-  // 详见 pointcloud_slice_scan_node.cpp 里同一处的详细踩坑说明。
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, true);
   tf_buffer_->setUsingDedicatedThread(true);
 
   goal_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(goal_topic_, rclcpp::QoS(1));
   status_pub_ = create_publisher<std_msgs::msg::String>(status_topic_, rclcpp::QoS(1));
-  // 完成标志用 transient_local：晚启动的订阅者也能立刻拿到「已探索完成」。
   complete_pub_ = create_publisher<std_msgs::msg::Bool>(
     complete_topic_, rclcpp::QoS(1).transient_local());
   if (publish_markers_) {
@@ -56,8 +52,6 @@ FrontierExplorerNode::FrontierExplorerNode(const rclcpp::NodeOptions & options)
       marker_topic_, rclcpp::QoS(1));
   }
 
-  // slam_toolbox 的 /map 是 transient_local + reliable，订阅端必须匹配，
-  // 否则会出现「话题存在但一直收不到地图」这种最难查的情况。
   rclcpp::QoS map_qos(1);
   map_qos.transient_local().reliable();
   map_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
@@ -123,7 +117,6 @@ void FrontierExplorerNode::declareParameters()
   declare_parameter<int>("visit_history_limit", 50, describe("历史访问记录保留条数上限"));
   declare_parameter<bool>("publish_markers", true, describe("是否发布调试 Marker"));
 
-  // ---- 前沿搜索算法参数 ----
   declare_parameter<int>("search.occupied_threshold", 65, describe("占据判定阈值(0~100)"));
   declare_parameter<int>("search.free_threshold", 25, describe("空闲判定阈值(0~100)"));
   declare_parameter<double>("search.obstacle_inflation_radius", 0.35, describe("障碍膨胀半径(m)"));
@@ -236,7 +229,6 @@ void FrontierExplorerNode::mapCallback(
     return;
   }
 
-  // ---- 地图有效性校验：尺寸、分辨率、data 长度必须自洽 ----
   const std::size_t expected =
     static_cast<std::size_t>(msg->info.width) * static_cast<std::size_t>(msg->info.height);
   if (msg->info.width == 0U || msg->info.height == 0U || expected == 0U) {
@@ -259,7 +251,6 @@ void FrontierExplorerNode::mapCallback(
     return;
   }
 
-  // 回调里只做拷贝，重活交给规划线程。
   auto snapshot = std::make_shared<GridMap>();
   snapshot->width = msg->info.width;
   snapshot->height = msg->info.height;
@@ -282,8 +273,6 @@ bool FrontierExplorerNode::lookupRobotPose(double & x, double & y)
     return false;
   }
   try {
-    // 用 TimePointZero 取最新可用变换：探索规划是低频决策，
-    // 不需要和某一帧点云严格对齐，取最新反而更稳。
     const geometry_msgs::msg::TransformStamped tf = tf_buffer_->lookupTransform(
       map_frame_, robot_base_frame_, tf2::TimePointZero,
       tf2::durationFromSec(tf_timeout_sec_));
@@ -302,15 +291,11 @@ bool FrontierExplorerNode::lookupRobotPose(double & x, double & y)
 int FrontierExplorerNode::searchWithRelaxation(
   const GridMap & map, double robot_x, double robot_y, FrontierSearch::Result & out)
 {
-  // 第 0 级：用 YAML 原始约束。
   search_.search(map, robot_x, robot_y, visit_history_, out);
   if (out.best_candidate_index >= 0) {
     return 0;
   }
 
-  // 逐级放宽：每级把「最小前沿块面积」「最小目标距离」「净空半径」按系数缩小。
-  // 这是为了应对走廊尽头、狭窄空间这类原始约束过严导致采不到点的场景，
-  // 而不是无限重试同一组约束（那才是真正的死循环）。
   for (int level = 1; level <= max_relaxation_level_; ++level) {
     FrontierSearchParams relaxed = search_params_;
     const double scale = std::pow(relaxation_scale_, static_cast<double>(level));
@@ -354,8 +339,6 @@ void FrontierExplorerNode::plannerLoop()
 {
   while (running_.load()) {
     {
-      // 用 condition_variable 定时等待，而不是 sleep：
-      // 这样析构时能立刻被 notify 唤醒退出，不用等满一个周期。
       std::unique_lock<std::mutex> lock(planner_mutex_);
       planner_cv_.wait_for(
         lock, std::chrono::duration<double>(planning_period_sec_),
@@ -376,7 +359,6 @@ void FrontierExplorerNode::plannerLoop()
 
 void FrontierExplorerNode::planOnce()
 {
-  // ---- 1) 地图就绪性检查 ----
   std::shared_ptr<GridMap> map;
   rclcpp::Time map_stamp(0, 0, RCL_ROS_TIME);
   {
@@ -406,7 +388,6 @@ void FrontierExplorerNode::planOnce()
       map_age, map_timeout_sec_);
   }
 
-  // ---- 2) 机器人位姿 ----
   double robot_x = 0.0;
   double robot_y = 0.0;
   if (!lookupRobotPose(robot_x, robot_y)) {
@@ -414,7 +395,6 @@ void FrontierExplorerNode::planOnce()
     return;
   }
 
-  // ---- 3) 搜索（带放宽）----
   FrontierSearch::Result result;
   int relaxation_level = 0;
   {
@@ -426,10 +406,6 @@ void FrontierExplorerNode::planOnce()
     publishMarkers(*map, result, now());
   }
 
-  // ---- 4) 探索完成判定 ----
-  // 「完全没有前沿格」才算真正探索完成；
-  // 「有前沿但都被过滤/采不到点」是另一回事，不能误报完成，
-  // 否则上层会提前停止探索。
   if (result.raw_frontier_cell_count == 0U) {
     if (!exploration_complete_) {
       RCLCPP_INFO(
@@ -443,7 +419,6 @@ void FrontierExplorerNode::planOnce()
     return;
   }
 
-  // 出现新前沿（例如门被打开、SLAM 补上了新区域）时撤销「完成」状态。
   if (exploration_complete_) {
     RCLCPP_INFO(get_logger(), "检测到新的前沿区域，退出探索完成状态，继续探索");
     exploration_complete_ = false;
@@ -459,8 +434,6 @@ void FrontierExplorerNode::planOnce()
         get_logger(),
         "连续 %d 轮采不到有效目标(已放宽到最大等级 %d)。%s",
         consecutive_failure_count_, max_relaxation_level_, result.summary.c_str());
-      // 清空历史访问惩罚：很可能是惩罚项把所有候选都压住了。
-      // 这是「降低采样约束条件，避免死循环」的最后一招。
       if (!visit_history_.empty()) {
         RCLCPP_WARN(
           get_logger(), "清空 %zu 条历史访问记录后重试，解除惩罚项对候选的压制",
@@ -476,18 +449,6 @@ void FrontierExplorerNode::planOnce()
 
   GoalCandidate goal = result.candidates[static_cast<std::size_t>(result.best_candidate_index)];
 
-  // ---- 5) 震荡检测 ----
-  //
-  // !!! 这里的判据有一处很关键的修正（实测发现的设计缺陷）!!!
-  // 最初的写法是「连续 N 次输出同一个目标就判为震荡」，但那是错的：
-  // 本模块以固定周期重复发布目标，而机器人正在赶往该目标的途中，
-  // **反复发布同一个稳定目标恰恰是正常且期望的行为**。
-  // 实测症状：机器人还没动（外部没人执行目标）时，每 2s 就误判一次震荡，
-  // 惩罚无界累加（20→24→25…），代价从 75 涨到 95，日志被刷满，
-  // 而目标其实根本没得换（当时只有 1 个前沿块通过过滤）。
-  //
-  // 真正的病态情形是「目标不变 **且** 机器人没有推进」——那才说明卡住了
-  // （目标不可达 / 执行端没接 / 反复规划失败）。因此判据加上机器人位移条件。
   bool robot_made_progress = true;
   if (has_last_goal_) {
     robot_made_progress =
@@ -498,8 +459,6 @@ void FrontierExplorerNode::planOnce()
   if (isSameAsLastGoal(goal.x, goal.y) && !robot_made_progress) {
     ++same_goal_count_;
     if (same_goal_count_ >= max_same_goal_count_) {
-      // 限流：机器人长时间不动（典型情况是根本没人把目标送进 Nav2）时，
-      // 这个条件会一直成立，不限流会把日志刷满。
       RCLCPP_WARN_THROTTLE(
         get_logger(), *get_clock(), kLogThrottleMs * 5,
         "连续 %d 轮目标停在(%.2f, %.2f)且机器人位移 < %.2fm，判定卡住："
@@ -514,7 +473,6 @@ void FrontierExplorerNode::planOnce()
       visit_history_.push_back(rec);
       same_goal_count_ = 0;
 
-      // 立刻重新搜索一次，这次带上加重后的惩罚，通常会选到别的前沿块。
       FrontierSearch::Result retry;
       {
         std::lock_guard<std::mutex> lock(config_mutex_);
@@ -524,9 +482,6 @@ void FrontierExplorerNode::planOnce()
         const GoalCandidate & alt =
           retry.candidates[static_cast<std::size_t>(retry.best_candidate_index)];
         if (isSameAsLastGoal(alt.x, alt.y)) {
-          // 重采样后还是同一个点，说明当前确实只有这一处可去
-          // （典型情况：只剩一个前沿块通过过滤）。此时再堆惩罚毫无意义，
-          // 只会把代价越推越高并刷日志，因此保持目标不变、降级为提示。
           RCLCPP_WARN_THROTTLE(
             get_logger(), *get_clock(), kLogThrottleMs * 4,
             "重采样后仍是同一目标，当前只有 %zu 个前沿块可用，保持该目标不变",
@@ -550,7 +505,6 @@ void FrontierExplorerNode::planOnce()
   last_plan_robot_x_ = robot_x;
   last_plan_robot_y_ = robot_y;
 
-  // ---- 6) 输出目标 + 记录历史 ----
   publishGoal(goal, now());
 
   const bool goal_changed = !isSameAsLastGoal(goal.x, goal.y);
@@ -559,14 +513,6 @@ void FrontierExplorerNode::planOnce()
   last_goal_y_ = goal.y;
   has_last_goal_ = true;
 
-  // 历史记录的语义是「这个地方我**被派去过几次**」，不是「这个目标我发了几帧」。
-  //
-  // !!! 实测踩坑：最初这里每轮都对命中的记录 ++count，而本节点是周期性重发目标，
-  // 于是同一个目标每 2s 就把 count 加一，惩罚项无界增长
-  // （实测惩罚 20→42、代价 75→163 一路涨不停），
-  // 最终会把这块前沿彻底压死、即使它其实是唯一可去的地方。
-  // 正确做法：只在目标**真正发生变化**时才记一次；重发同一目标不动历史。
-  // 另外对 count 设上限，防止长时间运行下的数值膨胀。
   constexpr unsigned int kMaxVisitCount = 10U;
   if (goal_changed) {
     bool merged = false;
@@ -644,7 +590,6 @@ void FrontierExplorerNode::publishMarkers(
   }
   auto array = std::make_shared<visualization_msgs::msg::MarkerArray>();
 
-  // 先发一个 DELETEALL，避免上一轮残留的前沿块在 RViz 里越积越多。
   {
     visualization_msgs::msg::Marker clear;
     clear.header.stamp = stamp;
@@ -660,7 +605,6 @@ void FrontierExplorerNode::publishMarkers(
 
   int marker_id = 0;
 
-  // ---- 前沿连通域：通过过滤的用彩色、被过滤的用暗灰 ----
   for (std::size_t ci = 0; ci < result.clusters.size(); ++ci) {
     const FrontierCluster & cluster = result.clusters[ci];
     visualization_msgs::msg::Marker m;
@@ -674,7 +618,6 @@ void FrontierExplorerNode::publishMarkers(
     m.scale.y = kFrontierPointScale;
     m.pose.orientation.w = 1.0;
     if (cluster.accepted) {
-      // 每块前沿换一个色调，方便肉眼确认「聚类是否把不同区域分开了」。
       const float t = static_cast<float>(ci % 6U) / 6.0F;
       m.color.r = 0.2F + (0.8F * t);
       m.color.g = 1.0F - (0.7F * t);
@@ -697,7 +640,6 @@ void FrontierExplorerNode::publishMarkers(
     }
     array->markers.push_back(std::move(m));
 
-    // 前沿块信息文字：面积/增益/被拒原因，调参时非常有用。
     visualization_msgs::msg::Marker text;
     text.header.stamp = stamp;
     text.header.frame_id = map_frame_;
@@ -722,7 +664,6 @@ void FrontierExplorerNode::publishMarkers(
     array->markers.push_back(std::move(text));
   }
 
-  // ---- 边界遍历路径：按前沿块顺序连线，直观看到「遍历了哪些边界块」----
   {
     visualization_msgs::msg::Marker path;
     path.header.stamp = stamp;
@@ -752,7 +693,6 @@ void FrontierExplorerNode::publishMarkers(
     }
   }
 
-  // ---- 候选采样点：有效=绿，被拒=红 ----
   {
     visualization_msgs::msg::Marker valid_m;
     valid_m.header.stamp = stamp;
@@ -793,7 +733,6 @@ void FrontierExplorerNode::publishMarkers(
     array->markers.push_back(std::move(rejected_m));
   }
 
-  // ---- 选中的目标点：大箭头，方向即目标朝向 ----
   if (result.best_candidate_index >= 0) {
     const GoalCandidate & best =
       result.candidates[static_cast<std::size_t>(result.best_candidate_index)];
@@ -823,7 +762,6 @@ void FrontierExplorerNode::publishMarkers(
     array->markers.push_back(std::move(m));
   }
 
-  // ---- 历史访问记录：紫色小球，看清「惩罚区」分布 ----
   {
     visualization_msgs::msg::Marker m;
     m.header.stamp = stamp;

@@ -1,47 +1,6 @@
 #!/usr/bin/env bash
-# =============================================================================
-# Astribot S1 实机自主探索建图 —— 一键启停
-#
-#   启动 + 使能（默认，底盘会动）：  s1_hardware_bringup.sh start
-#   启动但不使能（底盘不动）：       s1_hardware_bringup.sh start --no-drive
-#   停止：            s1_hardware_bringup.sh stop
-#   看状态：          s1_hardware_bringup.sh status
-#   只跑判据：        s1_hardware_bringup.sh verify
-#
-#   附加开关：--no-rviz          不起 rviz2
-#             --keep-nav2-yaml   不从快照复原 nav2 参数（调参时用）
-#
-# 口径：局部规划器 MPPI，线速度上限见 AXIS_SPEED_CAP（当前 0.5 m/s，按轴），
-# use_sim_time=false，ROS_DOMAIN_ID=25。
-#
-# ┌───────────────────────────────────────────────────────────────────────────┐
-# │ 使能（默认开）做了什么                                                     │
-# └───────────────────────────────────────────────────────────────────────────┘
-# 默认（无 --no-drive）：向控制权提示回 'yes'。**这会立刻停止机器人当前的运动**
-#   （厂商 SDK 的行为，不是我们的），然后 enable 桥接 + resume 探索，机器人开始走。
-#   跑之前必须确认：周围安全、没有别人在操作、急停可及。
-# 带 --no-drive：底盘桥接**进程照起**（它是非厂商插件，要一并起来），但
-#   ① 控制权提示只回车，不夺权 ② 不调 ~/enable。桥接本身"启动即停用"，
-#   于是 /cmd_vel 有帧、底盘不动。这一档可以随便跑。
-#
-# 不夺权的后果实测过：内环 214.8Hz 照跑、每拍都调 set_joints_position，而 SDK
-# 全部拒掉 —— 日志 1627 条 "You don't have control rights of the robot."，
-# /cmd_vel 非零帧 205/1351、|v| 峰值 0.2085m/s，而机器人净位移 0.0003m（纯噪声）。
-# 也就是说"指令对"完全不等于"机器人动了"：判据必须压在 /odom 位移上。
-#
-# 每一阶段都带判据，判据不过就停在那一阶段并打印实测数字 ——
-# 不做"起完就算成功"。历史上这条链的每一环都出过"进程活着但一帧不流"的假成功：
-#   · QoS 不兼容(BEST_EFFORT 发 / RELIABLE 收)：一帧不到，只有一行 WARN
-#   · use_sim_time=true 而实机无 /clock：节点时钟恒 0，costmap 照发
-#   · 静态层 map_topic 指错：全局图恒 100x100 全未知，只有一行 "no map received"
-#   · 判据数的是日志里的**历史累计值**：数字一轮一轮逐字相同却报 ✔（真实事故）
-# 所以判据一律压在**拍率 / 格数 / 实测位移 / 计数增量**上，不看进程存活。
-# =============================================================================
 set -e   # 刻意不用 -u：source ROS 的 setup.bash 在 set -u 下会静默退出，一个字都不打印
 
-# ---------------------------------------------------------------------------
-# 路径
-# ---------------------------------------------------------------------------
 SDK=/home/astribot/Downloads/astribot_sdk_aarch64
 WS=$SDK/ws_robot
 TOOLS=/home/astribot/s1_tools
@@ -49,45 +8,15 @@ LOG=/tmp/s1_logs
 SHARE=$WS/install/astribot_s1_navigation/share/astribot_s1_navigation
 SELF_TAG=s1_hardware_bringup      # 用来把自己从"要杀的进程"里排除掉，见 ours_pids
 
-# ---------------------------------------------------------------------------
-# 环境：全部集中在这里，别处不再 export
-# ---------------------------------------------------------------------------
 export ROS_DOMAIN_ID=25          # 实机是 25，不是 42；查询侧不带就是"节点全都 Node not found"
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-# 厂商用「多播路由 + iptables」做双网卡隔离，不是 interfaceWhiteList。
-# 别再叠一层白名单：叠了会把雷达那张 192.168.0.x 网卡切掉。
 export FASTRTPS_DEFAULT_PROFILES_FILE=/opt/astribot_ros/robot_system_ctrl/fastdds_udp.xml
 export FASTRTPS_SHM_PERMISSION=UNRESTRICT
-# ROS_LOCALHOST_ONLY 必须不设：雷达在 192.168.0.11 那张网卡上，设 1 就收不到点云。
-# （仿真侧结论相反 —— 那边必须是 1，别把两边搬混。）
 unset ROS_LOCALHOST_ONLY
 export PATH=/opt/ros/humble/bin:$PATH   # 厂商裁剪版 ros2 只有 7 个子命令，必须压下去
 
-# ---- 统一日志时间戳 -------------------------------------------------------
-# 问题：同一次运行的日志里并存五种时间戳，跨模块对齐一个事件要靠人脑换算。
-#   ① ros2 launch 自己的行  [INFO] [launch]: ...            —— 压根没有时间戳
-#   ② 我们的 ROS 节点       [INFO] [1788840911.748911701] [x]: —— rcutils 默认，epoch 纳秒
-#   ③ 厂商 SDK (Python)     [2026-09-08 09:53:47.960][astribot_client.py:44] [INFO]
-#   ④ 厂商 SDK (C++)        [2026-09-08 09:53:48.330023][info][18507][ast_communicator.cpp:121]
-#   ⑤ Voxel-SLAM            2026-09-08 09:53:19.488 [info] [LIDAR] ...
-# 能动的只有 ②（③④⑤ 是厂商自己的 logger，不走 rcutils；① 走 launch.logging）。
-# 于是把 ② 对齐到 ③④⑤ 的形状 —— 这是让最多的行互相可比的唯一改法。
-#
-# 代价：丢掉 epoch 纳秒。可接受 —— ms 分辨率足以区分 250Hz 的相邻拍（周期 4ms），
-# 而真要纳秒对齐消息头 stamp 时，把下面这行注释掉即可回到默认。
 export RCUTILS_CONSOLE_OUTPUT_FORMAT='[{date_time_with_ms}] [{severity}] [{name}]: {message}'
 
-# ---- 线速度上限：全脚本唯一一处 -------------------------------------------
-# 这个数**同时**是 nav2 的 max_linear_speed 和判据 5/7 的越限阈值。原来它以字面量
-# 出现在 9 处（launch 参数 1 处 + 两个判据的 Python 里 3 处 + 说明文字 5 处）——
-# 那种形状下"调速度"必然只改到一部分：改了 launch 没改判据，机器人合法地跑 0.5，
-# 判据却仍按 0.2 判，于是报 "✘ 越过授权上限" 并让整轮验证失败。
-# 判据和被判对象共用同一个变量，才不可能漂开。
-#
-# 口径未变（用户 2026-09-03 决定）：**按轴**独立上限，不是合速度模长上限。
-# 但**不要**据此写"模长上界 = sqrt(2)*cap"：路线A 把 vy_max 钉死为 0.0 且
-# motion_model 是 DiffDrive，MPPI 不输出横向速度，所以模长上界就等于 cap 本身。
-# （脚本尾部「已知未解决」里记着上一版这里的算术是错的，别再犯一次。）
 AXIS_SPEED_CAP=0.5     # 2026-09-08 用户决定由 0.2 提到 0.5
 export AXIS_SPEED_CAP  # 两个判据的 python3 heredoc 是 <<'PY'（不做 shell 展开），
                        # 只能从环境读；读不到就 KeyError 炸掉 —— 刻意不给默认值，
@@ -187,13 +116,12 @@ USE_RVIZ=true
 # 默认**使能写通路**（用户 2026-09-03 明确要求"按流程保证模块全部启动就好，并使能就好"）。
 # 使能 = 底盘真的会动。不想动就显式加 --no-drive。
 DRIVE=true
-RESTORE_YAML=true
 for a in "$@"; do
   case "$a" in
     --no-rviz)         USE_RVIZ=false ;;
     --no-drive)        DRIVE=false ;;
     --drive)           DRIVE=true ;;   # 兼容旧写法，现在是默认值
-    --keep-nav2-yaml)  RESTORE_YAML=false ;;
+    --keep-nav2-yaml)  : ;;  # 兼容旧调用；现在始终保留安装配置。
   esac
 done
 
@@ -235,23 +163,6 @@ print('%.2f' % hz); n.destroy_node(); rclpy.shutdown(); sys.exit(1)
 PY
 }
 
-# =============================================================================
-# 「哪些进程是我们的」—— stop 的全部依据
-# =============================================================================
-# 判别按**可执行文件路径**，不按节点名。实测整棵进程树（86 个 ROS 进程）后确认
-# 这两组路径完全不重叠，比匹配节点名可靠得多：节点名会被 remap，而且厂商和我们
-# 都有叫 robot_state_publisher / static_transform_publisher 的进程。
-#
-# 顺序很重要：**厂商护栏先判且一票否决**。这样即使我们的某条模式意外命中了厂商的
-# 命令行，厂商进程也不会被杀。
-#
-# ⚠️ 三个已经踩过的坑，下面逐条防住了：
-#   ① 绝不用 pkill -f。命令行里含有那个模式时它会连自己的 shell 一起杀掉，
-#      表现是循环从中间静默断掉、日志文件不存在，被误读成"启动失败"。
-#   ② 本脚本自己就装在 $TOOLS 下，而 $TOOLS 是"我们的"判据之一 —— 不排除自己
-#      就是自杀。所以按 PID + 脚本名双重排除自己、父进程和 python 子进程。
-#   ③ pgrep -x / ps comm 只有 15 字符，长可执行名永不匹配；一律走 ps + args 全串。
-# ---------------------------------------------------------------------------
 ours_pids() {   # 打印 "<pid> <cmdline>"，每行一个，只含我们的进程
   ps -eo pid,args --no-headers > /tmp/s1_ps_snap.txt
   SELF_PID=$$ SELF_PPID=$PPID SELF_TAG=$SELF_TAG python3 - <<'PY'
@@ -314,16 +225,9 @@ PY
 ours_pid_list() { ours_pids | awk '{print $1}'; }
 ours_count()    { ours_pids | grep -c . || true; }
 
-# =============================================================================
-# stop —— 按 PID 停掉所有非厂商插件
-# =============================================================================
 do_stop() {
   say "停止所有非厂商插件（厂商 SLAM / 雷达驱动 / 远程桌面不动）"
 
-  # ── 先让底盘停止接收指令，再杀进程 ────────────────────────────────────
-  # 顺序反过来的后果：桥接被 KILL 时内环可能刚下发完一帧位置指令，而 SDK 的
-  # control_way='filter' 还会继续收敛一段（停车距离分两段，积分器那段只占一半）。
-  # 先 disable 让它主动归零再杀，停得干净。
   if ours_pids | grep -q "astribot_trajectory_bridge"; then
     timeout 8 ros2 service call /astribot_bridge_container/disable \
       std_srvs/srv/SetBool "{data: false}" >/dev/null 2>&1 \
@@ -340,16 +244,11 @@ do_stop() {
     printf '  要停的进程 %s 个：\n' "$n"
     printf '%s\n' "$snap" | cut -c1-140 | sed 's/^/    /'
 
-    # 第 1 轮 SIGINT：ros2 launch 收到 INT 会**逐个优雅关闭子节点**。
-    # 直接 KILL 父进程反而留下一堆孤儿节点 —— 孤儿 costmap / bridge 会重连、
-    # 时间回跳清空 TF buffer，表现成"planner 反复 abort 而各模块看着都正常"。
     printf '%s\n' "$snap" | awk '{print $1}' | while read -r p; do
       [ -n "$p" ] && kill -INT "$p" 2>/dev/null || true
     done
     sleep 5
 
-    # 第 2 / 3 轮：重新扫（不复用第 1 轮的快照，PID 可能已经没了），
-    # 逐级升信号，每一级都打印实际发出去的 PID。
     local sig
     for sig in TERM KILL; do
       local rest
@@ -362,7 +261,6 @@ do_stop() {
     done
   fi
 
-  # ── 残留判据：必须真的是 0，不能"发完信号就算停了" ──────────────────
   local left nleft
   left=$(ours_pids || true)
   nleft=$(printf '%s' "$left" | grep -c . || true)
@@ -373,9 +271,6 @@ do_stop() {
     ok "残留 0 个"
   fi
 
-  # ── 共享内存 ──────────────────────────────────────────────────────────
-  # 陈旧 shm + 陈旧 daemon 会伪装成"栈没起来"（实测话题数 2 vs 80）。
-  # ⚠️ 清理模式必须同时含 sem.fastrtps_* 前缀：只删 fastrtps_* 时实测还剩 73 个。
   rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null || true
   rm -f /dev/shm/fastdds_*  /dev/shm/sem.fastdds_*  2>/dev/null || true
   local nshm
@@ -412,12 +307,6 @@ case "$MODE" in
   status) do_status; exit 0 ;;
 esac
 
-# =============================================================================
-# 判据集合（verify 与 start 共用同一份，避免"探针与真跑不同判据"）
-# =============================================================================
-# 历史事故：两轮外部探针白扫，因为探针的判据比真跑少一项 —— 少的那一项上
-# 系统性假阳性。所以这里只有一份 verify_all，start 结尾直接调它。
-# ---------------------------------------------------------------------------
 verify_all() {
   local fail=0 hz
 
@@ -427,12 +316,6 @@ verify_all() {
     || { bad "/map_scan_filtered_prob 只有 $hz Hz（厂商标称 1.0）"; fail=1; }
 
   say "判据 2/7  /scan 干净（自滤没滤错体积）"
-  # 阈值 = 足迹**外接**半径 0.42m，不是 0.6m。
-  # 这一条判的是"自滤有没有把机器人自己漏进来"，而机器人自己只可能落在足迹以内 ——
-  # 0.42m 以外的回波按定义不可能是自体回波，只能是真障碍。
-  # 原来写 0.6m 的后果实测过：机器人停在窄处时真墙就在 0.447~0.479m（同一时刻
-  # /map_nav 在 0.447m 处确有占据格），于是 111 束"越界"，判据把**真墙**报成自滤失效。
-  # 判据超出自己声称要测的几何 = 在那一项上系统性假阳性。
   python3 - <<'PY' || fail=1
 import rclpy, time, math
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
@@ -465,13 +348,6 @@ PY
     && ok "/odom $hz Hz" || { bad "/odom 只有 $hz Hz（要 20Hz）"; fail=1; }
 
   say "判据 4/7  /map_nav 里机器人自身假障碍已清"
-  # 半径必须等于节点的 clear_radius_m(0.25)，而且必须是**圆**不是方框。
-  # 老版本两处都错，叠起来虚报 12 格：
-  #   ① 循环 ±ceil(0.45/res) 的方框却不做距离判定 —— 数的是边长 0.9m 的正方形，
-  #      四角伸到 0.45*sqrt(2)=0.636m，远超足迹。
-  #   ② 0.45 > 节点承诺清理的 0.25 —— 0.25~0.45 那圈**按设计**永远清不掉，
-  #      于是只要附近有真墙判据就必败。
-  # 按真实口径重测同一时刻：0~0.25m 占据 0 格，0.25~0.45m 只有 0.447m 处 1 格（真墙）。
   python3 - <<'PY' || fail=1
 import rclpy, time, math
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
@@ -519,9 +395,6 @@ PY
 
   say "判据 5/7  nav2 活着且吃到地图（MPPI / ${AXIS_SPEED_CAP}m/s 按轴 / 真墙钟）"
   local n_active n_nomap vx
-  # ⚠️ 不能写 `grep -c ... || echo 0`：grep -c 没命中时**既打印 0 又返回 1**，
-  #    于是变量拿到 "0\n0"，后面的 [ -eq ] 直接 "integer expression expected"，
-  #    判据看起来像失败而其实是 0 次。
   n_active=$(grep -c "Managed nodes are active" $LOG/nav2.log 2>/dev/null | head -1); n_active=${n_active:-0}
   n_nomap=$(grep -c "no map received" $LOG/nav2.log 2>/dev/null | head -1); n_nomap=${n_nomap:-0}
   [ "$n_active" -ge 1 ] && ok "生命周期已 active" || { bad "nav2 未 active"; fail=1; }
@@ -529,11 +402,6 @@ PY
     || { bad "静态层报 no map received ×$n_nomap（map_topic 指错了）"; fail=1; }
   grep -oE "Received a [0-9]+ X [0-9]+ map" $LOG/nav2.log 2>/dev/null | tail -1 \
     | sed 's/^/  全局图: /' || true
-  # 时钟必须真的在走：实机无 /clock 发布者，use_sim_time=true 会让六个节点时钟
-  # 恒为 0 永不前进，而 costmap 照发、上面几条判据全过。
-  # 走 rcl_interfaces 服务读，**不用 `ros2 param get`**：实测同一条命令在 bash 里能读到
-  # vx_max，放进 python subprocess 却回空字符串（判据于是印出 "?" 等于没验）。
-  # 除了读参数还要**验时钟真的在走**：参数对但 /clock 有别的发布者时仍可能冻住。
   python3 - <<'PY' || fail=1
 import rclpy
 from rclpy.node import Node
@@ -558,19 +426,6 @@ rclpy.shutdown()
 raise SystemExit(0 if (sim is False and dt > 0.5) else 1)
 PY
   [ $fail -eq 0 ] && ok "use_sim_time=False 且时钟在走（真墙钟）"
-  # 口径已定（用户 2026-09-03 决定）：AXIS_SPEED_CAP 是**各轴独立**上限，不是模长上限。
-  #   => vx_max/vy_max 各 <=cap 就是正确配置。注意路线A 把 vy_max 钉死为 0.0，
-  #      实测峰值 0.2085（1351 帧里 178 帧模长 >0.2）不是越限，不再报 warn。
-  #   注意别和 [[越界判据必须用旋转不变的模长]] 搞混：那条讲的是"判哪一层在开车"，
-  #   要用模长；这里讲的是"限速口径"，按轴。两者不冲突，各自的边界不同。
-  # 按轴口径 => 必须**两轴都查**，只查 vx_max 会漏掉 vy_max 被调高。
-  #
-  # ⚠️ 不要硬编码 `FollowPath.vx_max` 这种键名：FollowPath 现在是三段式控制器，
-  #    MPPI 的限速参数下移到了 `FollowPath.inner.vx_max`，老键**根本不存在**，
-  #    判据于是印 "✘ 读不到 FollowPath.vx_max" —— 看着像限速失效，实际是
-  #    判据在查一个已经不存在的键（2026-09-07 实测：三个控制器全是 0.2，没有越限）。
-  #    改成**枚举** controller_server 里所有 v?_max 参数逐个查，结构再变也不会误判。
-  #    并且必须有"一个都没枚举到就算失败"的守卫，否则 0 个键会静默通过。
   local cap_fail=0
   python3 - <<'PY' || cap_fail=1
 import rclpy
@@ -626,10 +481,6 @@ PY
   n_block=$(grep -c "物理真堵" $LOG/explore.log 2>/dev/null | head -1); n_block=${n_block:-0}
   [ "$n_block" -eq 0 ] && ok "红线未触发（0 次物理真堵）" \
     || { bad "红线触发 ×$n_block —— 机器人所在格又被判占据了，先查 /map_nav"; fail=1; }
-  # ⚠️ 这一条曾经是假过的：老版本 grep 日志里的**历史累计**派发次数，
-  #    于是连续两轮都报 "已派发 ×12" ✔，而调度器其实卡在
-  #    "自动恢复已达上限 3 次，停止重试，等待人工调用 ~/resume"，每 3.5s 复读一次。
-  #    冻结的读数被当成当前值 —— 修法只有一个：读数自带龄期，且看**增量**。
   python3 - "$LOG/explore.log" <<'PY' || fail=1
 import os, re, subprocess, sys, time
 log = sys.argv[1]
@@ -680,10 +531,6 @@ PY
   if [ "$DRIVE" != true ]; then
     warn "带了 --no-drive，写通路没使能 —— 跳过位移判据（此时机器人不动是正确的）"
   else
-    # ⚠️ 判据必须压在 /odom 位移上，不能只比 /cmd_vel。
-    #    实测过：/cmd_vel 非零 205/1351 帧、|v| 峰值 0.2085m/s 全都对，
-    #    而 SDK 因为没有控制权把每一拍都拒掉，机器人净位移 0.0003m。
-    #    "指令对"和"机器人动了"是两件事，e2e 只验前者等于只验证了自己。
     python3 - <<'PY' || fail=1
 import math, time, rclpy, os
 from rclpy.node import Node
@@ -747,9 +594,6 @@ if [ "$MODE" = "verify" ]; then
              || { printf '\n\033[1;31m有判据不过，见上\033[0m\n'; exit 1; }
 fi
 
-# =============================================================================
-# start
-# =============================================================================
 [ "$MODE" = "start" ] || die "未知模式 '$MODE'（可用 start / stop / status / verify）"
 
 if [ "$DRIVE" = true ]; then
@@ -760,44 +604,18 @@ if [ "$DRIVE" = true ]; then
 fi
 
 do_stop     # 干净起点：把上一轮我们的进程全清掉（含重复进程）
-            # 必须在阶段 0 **之前**：阶段 0 会拉起厂商 SLAM，而 do_stop 若排在它后面，
-            # 就会在下一拍把刚拉起的 launcher 一起带走。
 
 say "阶段 0  感知底座：雷达驱动 + 厂商 SLAM（没起就起，已起不动）"
-# 用户 2026-09-04 要求把这两个也纳入脚本。它们仍归类为**厂商侧**：
-#   => start 会起它们，stop **不动**它们。这个不对称是刻意的 ——
-#      SLAM 一杀地图就没了，而 stop 的用途是重启我们这一侧的插件。
-#
-# 磁盘实名（与口头命令有出入，按磁盘为准，两处都实证过）：
-#   · 包名是 voxel_slam（下划线）—— package.xml <name> 与 ament_index 双证，不是 voxel-slam
-#   · livox launch 实名 msg_MID360_launch.py（下划线）—— 不是 msg_MID360.launch.py
-#   · 树上有**两份** livox_ros_driver2，必须用厂商 /opt 那份（见 LIVOX_PREFIX）；
-#     vxlm-slam 自带那份的配置里本机 IP 写着 192.168.1.5，而这台机器是 192.168.0.11
-#     => 驱动起来就 "bind failed / Init lds lidar fail!"。这不是端口占用
-#        （实测 ss -ulnp 查 5610x/5620x/5630x 全空），是本机 IP 在这台机上不存在。
-#   · "无需 source" 只在交互 shell 成立(~/.bashrc 自动 source 了 /opt/ros/humble 与
-#     厂商 robot_env.sh)；非交互 ssh 里连 `ros2` 都不在 PATH，且 ros2launch 包没装
-#     (`ros2 launch --help` 实测 NO) —— 所以只能走 $RL 这个自带 launcher。
 SLAM_WS=/home/astribot/SLAM/vxlm-slam
-# 厂商 livox 前缀：配置里本机 IP=192.168.0.11、两台雷达 192.168.0.12(front)/.13(back)，
-# 实测 ping 双通、驱动起来直接出 /livox/lidar_front 与 /livox/lidar_back。
 LIVOX_PREFIX=/opt/astribot_ros/software/livox_ros_driver2
 [ -f "$SLAM_WS/install/setup.bash" ] || die "找不到 $SLAM_WS/install/setup.bash"
 
-# voxelslam 链接了 GTSAM，而 GTSAM 装在 ThirdParty 下、**既不在 ldconfig 里也不在
-# vxlm-slam 的 setup.bash 里** —— 所以非交互 shell 里必然缺库：
-#   voxelslam: error while loading shared libraries: libmetis-gtsam.so
-# 实测加上这一条后 ldd 的 not-found 从 10 条降到 0，二进制能起来。
 GTSAM_LIB=/home/astribot/SLAM/ThirdParty/GTSAM/install4.1.0/lib
 [ -d "$GTSAM_LIB" ] || warn "$GTSAM_LIB 不存在 —— voxelslam 可能缺 libmetis-gtsam.so"
 
-# 起在子 shell 里：SLAM 工作区的 setup.bash 会改 AMENT_PREFIX_PATH，
-# 不能污染我们自己的环境（我们的包和它同名包一旦串了很难查）。
 launch_vendor() {   # launch_vendor <日志名> <包> <launch 文件> <存活判据模式>
   local tag=$1 pkg=$2 lf=$3 pat=$4
   if [ "$tag" = livox ]; then
-    # 跑着的可能是 vxlm-slam 那份**配置 IP 写错**的构建（192.168.1.5，本机是 .11）：
-    # 它 bind 失败也不退出，于是"已在跑"恒为真而一帧不出。按可执行文件路径认出来就换掉。
     local badpid
     badpid=$(ps -eo pid,args --no-headers \
              | grep -F 'vxlm-slam/install/livox_ros_driver2' | grep -v 'grep -F' | awk '{print $1}')
@@ -813,10 +631,7 @@ launch_vendor() {   # launch_vendor <日志名> <包> <launch 文件> <存活判
   fi
   eval "${tag}_launched=1"   # 记下"本轮是我们起的" —— 否则下面读到的日志是上一轮的
   : > "$LOG/$tag.log"   # 必须清空：不清就会 grep 到上一轮的失败行，把好实例判成坏的
-                        # （实测踩过：日志 09:55、脚本 10:19 在读，见记忆"陈旧读数"）
   ( if [ "$tag" = livox ]; then
-      # 只叠厂商 livox 前缀，**不** source vxlm-slam —— 否则那份错 IP 的同名包
-      # 会按 AMENT_PREFIX_PATH 顺序抢先命中，症状就是 bind failed。
       export AMENT_PREFIX_PATH=$LIVOX_PREFIX:${AMENT_PREFIX_PATH:-}
       export LD_LIBRARY_PATH=$LIVOX_PREFIX/lib:${LD_LIBRARY_PATH:-}
     else
@@ -837,18 +652,11 @@ launch_vendor() {   # launch_vendor <日志名> <包> <launch 文件> <存活判
 }
 
 livox_hz() {   # 只回报拍率，不做判断
-  # CustomMsg 的 python 支持要**两条**路径：PYTHONPATH 找到 _custom_msg.py，
-  # LD_LIBRARY_PATH 找到 liblivox_ros_driver2__rosidl_generator_py.so（只给前者会崩在
-  # UnsupportedTypeSupport，看着像雷达没数据，其实是探针自己起不来 —— 实测踩过）。
   PYTHONPATH=$LIVOX_PREFIX/local/lib/python3.10/dist-packages:${PYTHONPATH:-} \
   LD_LIBRARY_PATH=$LIVOX_PREFIX/lib:${LD_LIBRARY_PATH:-} \
     wait_hz /livox/lidar_front livox_ros_driver2/CustomMsg 1.0 "$1"
 }
 
-# 雷达判据只能是**拍率**，"进程在跑"至少有两种假阳性，两种都实测到过：
-#   1) 配置里本机 IP 写错(192.168.1.5) -> bind failed 但进程不退出
-#   2) 被 SIGTERM 打成半死 -> 进程在、pub=1、一帧不出（实测 PID 16127 活了 12 分钟 0 Hz）
-# 所以验不过就**换掉重起一次**，而不是直接 die —— 只重起一次，避免无限循环。
 for attempt in 1 2; do
   launch_vendor livox livox_ros_driver2 msg_MID360_launch.py livox_ros_driver2_node \
     || die "雷达驱动没起来"
@@ -878,7 +686,6 @@ launch_vendor slam  voxel_slam        vxlm_mid360.launch.py voxel_slam/voxelslam
 NG=$(ps -eo args --no-headers | grep -c "nav_prob_grid_node" || true)
 [ "${NG:-0}" -ge 1 ] && ok "nav_prob_grid_node 在跑" \
   || warn "nav_prob_grid_node 没看到 —— 它由 SLAM launch 带起，下面拍率判据会兜底"
-# 拍率才是判据：进程在≠话题在流（实测过 pub=1 但 0Hz）。SLAM 冷启动要收敛，给足 60s。
 hz=$(wait_hz /map_scan_filtered_prob nav_msgs/OccupancyGrid 0.3 60) \
   || die "/map_scan_filtered_prob 只有 $hz Hz —— SLAM 没在出栅格（看 $LOG/slam.log）"
 ok "/map_scan_filtered_prob $hz Hz"
@@ -886,7 +693,6 @@ ok "/map_scan_filtered_prob $hz Hz"
 say "阶段 1  URDF -> robot_state_publisher + 静态 TF"
 XACRO=$WS/install/astribot_s1_description/share/astribot_s1_description/urdf/astribot_s1.xacro
 [ -f "$XACRO" ] || XACRO=$WS/src/astribot_s1_description/urdf/astribot_s1.xacro
-# xacro 缺任一替换参数就是 Undefined substitution argument
 rm -f /tmp/rsp_params.yaml   # 先删：xacro 失败时残留的旧文件会让下面的判据假过
 python3 - "$XACRO" <<'PY'
 import subprocess, sys, yaml
@@ -904,11 +710,6 @@ PY
 [ -s /tmp/rsp_params.yaml ] || die "URDF 生成失败（xacro 报错见上）"
 nohup setsid /opt/ros/humble/lib/robot_state_publisher/robot_state_publisher \
   --ros-args --params-file /tmp/rsp_params.yaml > $LOG/rsp.log 2>&1 &
-# TF 树： map -> camera_init -> aft_mapped(SLAM 动态) -> astribot_torso_base -> 各 link
-#         map -> odom 恒等别名，让 local_costmap 的 global_frame: odom 可解
-# ⚠️ 根 frame 是 astribot_torso_base，**没有 base_link**。
-# ⚠️ odom 走别名而不是 REP-105 分解：这一版不引入 SDK 里程计，
-#    代价是回环跳变会直接打到 local_costmap 上。已知取舍，不是遗漏。
 nohup setsid $ST --frame-id map --child-frame-id camera_init \
   --x 0 --y 0 --z 0 --roll 0 --pitch 0 --yaw 0 > $LOG/tf_map_ci.log 2>&1 &
 nohup setsid $ST --frame-id camera_init --child-frame-id odom \
@@ -916,10 +717,6 @@ nohup setsid $ST --frame-id camera_init --child-frame-id odom \
 ok "RSP + 2 个静态 TF 已起"
 
 say "阶段 2  固定姿态 /joint_states"
-# 主线只要"连杆 TF 存在"，探索期间手臂不动，所以不接 SDK 关节状态 ——
-# 绕开整条 astribot_msgs / middleware / 控制器存活的依赖。
-# 代价：姿态若与实机实际不符，自滤会滤错体积 -> /scan 冒近距假障碍。
-# 所以判据 2 必须看 /scan 的 <0.6m 束数。
 python3 - <<'PY'
 import yaml
 urdf = yaml.safe_load(open('/tmp/rsp_params.yaml'))['robot_state_publisher']['ros__parameters']['robot_description']
@@ -933,9 +730,6 @@ nohup setsid /opt/ros/humble/lib/joint_state_publisher/joint_state_publisher \
 ok "joint_state_publisher 已起"
 
 say "阶段 3  感知链 -> /scan"
-# aft_mapped -> astribot_torso_base 由 hardware_perception 内部发。
-# 这一层里有 CustomMsg -> PointCloud2 的 C++ 转换节点：Python 反序列化两万点
-# 跟不上 10Hz，会静默丢 60~80% 的帧，同一系统能测出 6%/41%/100% 三个配对率。
 nohup setsid python3 $RL astribot_s1_perception hardware_perception.launch.py \
   use_sim_time:=false > $LOG/perception.log 2>&1 &
 hz=$(wait_hz /scan sensor_msgs/LaserScan 5 45) \
@@ -943,21 +737,11 @@ hz=$(wait_hz /scan sensor_msgs/LaserScan 5 45) \
 ok "/scan $hz Hz"
 
 say "阶段 4  /odom（从 TF 反推）"
-# 不用 astribot_trajectory_bridge 的 chassis_odom_node：那个跑在 SDK 会话里，
-# 而 SDK init 会停在"控制权"交互提示上，/odom 一帧都不发。
-# 探索链里 /odom 只用于停稳判断与 BT 速度反馈，差分 SLAM 位姿足够。
 nohup setsid python3 $TOOLS/tf_to_odom_node.py --ros-args -p use_sim_time:=false > $LOG/odom.log 2>&1 &
 hz=$(wait_hz /odom nav_msgs/Odometry 15 25) || die "/odom 只有 $hz Hz"
 ok "/odom $hz Hz"
 
 say "阶段 5  清机器人自身假障碍 -> /map_nav"
-# 厂商 nav_prob_grid_node 用原始关键帧点云合成栅格、**无任何自滤**，
-# 机器人躯干回波(实测 5 点，水平 0.12~0.20m / z 0.51~0.55m)会把自己所在格投成占据：
-#   -> /map_scan_filtered_prob 该格 100，探索调度器红线"物理真堵"当场触发、无限 PAUSED
-#   -> 静态层继承后该格原始代价 254，规划器必报 Starting point in lethal space
-# 且它跟着机器人走(hit_delta=6/miss_delta=1，每帧在脚下重投)，不是开机残留。
-# nav2 自带的 obstacle_layer.footprint_clearing_enabled 实测已是 True 但救不了：
-# ObstacleLayer::updateCosts 用 updateWithMax 合并，静态层的 254 恒胜。
 nohup setsid python3 $TOOLS/grid_self_clear_node.py --ros-args \
   -p use_sim_time:=false \
   -p input_topic:=/map_scan_filtered_prob -p output_topic:=/map_nav \
@@ -967,39 +751,11 @@ hz=$(wait_hz /map_nav nav_msgs/OccupancyGrid 0.3 25) || die "/map_nav 只有 $hz
 ok "/map_nav $hz Hz"
 
 say "阶段 6  nav2（MPPI，线速度上限 $AXIS_SPEED_CAP m/s 按轴）"
-# install 下的 config 是**真实拷贝**不是符号链接：只改 src 对运行中的节点零效果，
-# 而 colcon build 又会把 install 覆盖回 src 的版本。所以从快照复原，
-# 快照里含三处实机改动：静态层 map_topic=/map_nav、transient_local=False、限速 0.2。
-if [ "$RESTORE_YAML" = true ]; then
-  if [ -f $TOOLS/nav2_params_mppi_hw.yaml ]; then
-    cp $TOOLS/nav2_params_mppi_hw.yaml $SHARE/config/nav2_params_mppi.yaml
-    ok "已从快照复原实机 nav2 参数"
-  else
-    bad "缺 $TOOLS/nav2_params_mppi_hw.yaml —— 静态层可能指向厂商原始栅格"
-  fi
-else
-  warn "--keep-nav2-yaml：不复原，用 install 里当前的 nav2_params_mppi.yaml"
-fi
-# use_sim_time:=false —— 实机无 /clock 发布者，true 会让六个节点时钟恒 0 且永不前进，
-#                        而 costmap 照发、判据照过（nav2 的默认值是 true，最容易踩）
-# posture_normal_height:=0.0 —— 姿态监控**保持开启**，只把基准高度换成实机这个
-#   /odom 源的正确值。0.134 是 Gazebo 的基准（那里 world z=0 不是地面），而实机
-#   /odom 由 tf_to_odom_node 从 SLAM 的 map->astribot_torso_base 导出，z=0 是开机
-#   位姿。给 0.134 的后果实测过：第一帧 |-0.0011-0.1340|=0.1351 > 0.06 -> 止损 ->
-#   /cmd_vel 30s 内 1668 帧全零，而日志只说"请检查 Gazebo 画面"，nav2 侧表现为
-#   Failed to make progress，看起来像局部规划器不行。
-#   ⚠️ 这不是"把安全件关掉"：给对基准后监控是真的在判定的 —— 实测 30s 内
-#      z 峰峰值 0.0034m、roll/pitch < 0.006rad，离 0.06m/0.12rad 还有 17 倍余量。
-#      要关它得显式 enable_posture_monitor:=false，本脚本不这么做。
-#   ⚠️ 残留风险：safety_tripped 目前**没有复位通路**，而 voxel_slam 的位姿会被
-#      GBA 回环修正。z 一次跳超 0.06m 就永久跳闸，只能重启该节点。未修。
-# ⚠️ 走 --path 直指 src 下的 launch 文件，不经 nav2_full_bringup：
-#    launch_arguments 是白名单，那一层曾同时漏掉 max_linear_speed 与
-#    enable_posture_monitor，漏项不报错、子 launch 静默用自己的默认值。
+ok "使用当前安装的 Nav2 配置；实机地图通过 launch 参数指定，不覆盖 YAML"
 nohup setsid python3 $RL \
   --path $WS/src/astribot_s1_navigation/launch/navigation.launch.py \
   controller_plugin:=mppi use_sim_time:=false max_linear_speed:=$AXIS_SPEED_CAP \
-  posture_normal_height:=0.0 \
+  posture_normal_height:=0.0 map_topic:=/map_nav map_transient_local:=false \
   scan_topic:=/scan autostart:=true > $LOG/nav2.log 2>&1 &
 for i in $(seq 1 40); do
   grep -q "Managed nodes are active" $LOG/nav2.log 2>/dev/null && break
@@ -1010,11 +766,6 @@ ok "nav2 全部 active"
 
 if [ "$USE_RVIZ" = true ]; then
   say "阶段 7  rviz2（物理桌面 :0）"
-  # ⚠️ 三个坑：① 必须直接 GLX，ssh -X 转发的 display 建不出 GL 窗口
-  #              （Ogre 重试 100 次后 core dump）；实机只能走 NoMachine/VNC 连 :0
-  #            ② ssh 会透传本机 zh_CN 的 LC_*，实机没生成该 locale，
-  #               rviz2 会在 DISPLAY/OpenGL 自检**全部通过之后**才崩在 std::locale
-  #            ③ setup.py 只 glob rviz/*.rviz，.rviz 放 config/ 下永不安装
   CFG=$SHARE/rviz/nav2_view.rviz
   [ -f "$CFG" ] || die "rviz 配置不存在: $CFG（注意 setup.py 只 glob rviz/*.rviz）"
   env -u LC_ALL -u LC_CTYPE -u LC_NUMERIC -u LC_TIME -u LC_COLLATE -u LC_MONETARY \
@@ -1028,22 +779,8 @@ if [ "$USE_RVIZ" = true ]; then
 fi
 
 say "阶段 8  底盘写通路（astribot_trajectory_bridge）"
-# ┌─ 这一段是整条链唯一"能让机器人动"的地方，四个坑逐条防住 ─────────────┐
-# ① SDK import：必须 source $SDK/env.sh，它提供 PYTHONPATH / LD_LIBRARY_PATH /
-#    ROBOT_TYPE / ASTRIBOT_SDK_ROOT。少 ASTRIBOT_SDK_ROOT 时报的是
-#    "TypeError: str expected, not NoneType"，**报错里不含变量名**。
-# ② env.sh 会**覆盖** FASTRTPS_DEFAULT_PROFILES_FILE：它只在本机 192.168.0.x
-#    地址恰好等于 192.168.0.10 时才跳过覆盖，而这台机器人是 .11，所以它会生成一份
-#    interfaceWhiteList profile 顶掉厂商的。→ source 之后必须**重新钉回**厂商 profile。
-#    （旧结论"不能 source env.sh"过宽：source 是必须的，只是要补钉一下。）
-# ③ SDK 多处用 cwd 相对路径 → 必须 cd $SDK 再起。
-# ④ 控制权提示会阻塞在 stdin：不回就一直卡着（实测卡了 3 小时），话题 pub=1 但一帧不发。
-#    回车 = 不夺权（内环照跑但 SDK 每拍都拒，1627 条 ERROR，机器人不动）；
-#    'yes' = 强夺，**立刻停止机器人当前运动**。由 --drive 决定回哪个。
-# └───────────────────────────────────────────────────────────────────────┘
 ( cd $SDK
   source $SDK/env.sh > $LOG/envsh.log 2>&1
-  # 坑 ② 的补钉，顺序必须在 source 之后
   export FASTRTPS_DEFAULT_PROFILES_FILE=/opt/astribot_ros/robot_system_ctrl/fastdds_udp.xml
   export FASTRTPS_SHM_PERMISSION=UNRESTRICT ROS_DOMAIN_ID=25
   export PATH=/opt/ros/humble/bin:$PATH
@@ -1061,10 +798,6 @@ for i in $(seq 1 45); do
 done
 BP=$(ps -eo pid,args --no-headers | grep "bridge_container" | grep -v grep | awk '{print $1}' | head -1)
 if [ -z "$BP" ]; then
-  # 最常见的原因是**急停按下**：SDK 看不到任何在线部件，报
-  #   "[ERROR] astribot_chassis is not alive"（七个部件各一条）
-  #   "[ERROR] No simulation or real robot is started."
-  # 然后 bridge_container exit 1。这不是脚本的问题 —— 急停生效时写通路本来就该起不来。
   if grep -q "No simulation or real robot is started" $LOG/bridge.log 2>/dev/null; then
     bad "桥接起不来：SDK 报「No simulation or real robot is started」"
     grep -oE "astribot_[a-z_]+ is not alive" $LOG/bridge.log | sort -u | tr '\n' ' ' | sed 's/^/    离线部件: /'
@@ -1085,8 +818,6 @@ else
 fi
 sleep 15
 grep -E "写通路|底盘桥接已启动|桥接容器就绪" $LOG/bridge.log | tail -3 | sed 's/^.*\]: /  /' || true
-# ⚠️ 重新取一次 PID，不复用上面那个：桥接可能在这 15s 里退出了。
-# 老版本在这里无条件打 "桥接在跑但未使能 ✔"，而桥接其实已经 exit 1 —— 假成功。
 BP2=$(ps -eo pid,args --no-headers | grep "bridge_container" | grep -v grep | awk '{print $1}' | head -1)
 NREJ=$(grep -c "control rights of the robot" $LOG/bridge.log 2>/dev/null | head -1); NREJ=${NREJ:-0}
 if [ -z "$BP2" ]; then
@@ -1106,57 +837,23 @@ else
 fi
 
 say "阶段 10  自主探索调度器"
-# ⚠️ 这一阶段**必须排在写通路使能之后**，2026-09-04 实机吃过这个亏。
-#    老顺序是「调度器(8) -> 桥接(9) -> 使能(10)」，于是调度器在写通路活起来之前
-#    就开始派发目标：实测 nav2 六节点 643.4s active、调度器随即开跑，而内环直到
-#    **789.3s** 才真正有帧落地 —— 中间约 130s 里 nav2 一直在对一台聋了的底盘发速度。
-#    机器人不动 -> 控制器判"原地转不动"抛超时 -> Controller patience exceeded ->
-#    Aborting handle -> 上游连败 -> PAUSED -> 自动恢复预算(3 次)烧光 -> 永久 parked。
-#    末尾那次 resume 只能救回一次，救不回"预算在链路还没成型时就被烧掉"这件事。
-#    新顺序让调度器的**第一次**派发就落在一条通的链上。
-# map_topic 必须是 /map_nav，与 nav2 静态层同源 ——
-# 换数据源时判据口径也要跟着换，历史上在这上面栽过（0.42 重复计足迹 / 0.0 导航超时）。
-# map_transient_local:=false —— /map_nav 是 VOLATILE，
-# TRANSIENT_LOCAL 订阅 VOLATILE 发布是不兼容的：一帧都收不到，只有一行 QoS WARN。
 nohup setsid python3 $RL astribot_s1_autonomy exploration_coordinator.launch.py \
   use_sim_time:=false map_topic:=/map_nav odom_topic:=/odom \
   map_transient_local:=false robot_base_frame:=astribot_torso_base > $LOG/explore.log 2>&1 &
 sleep 25
 ok "调度器已起"
 
-# resume 与 enable 必须**分开**：
-#   enable = 底盘写通路，会让机器人真动 —— 默认做，--no-drive 时跳过。
-#   resume = 让调度器继续派发目标，只影响"有没有目标在跑"，不碰底盘。
-# 两者原来绑在同一个 --drive 分支里，于是不带 --drive 时调度器永远停在
-# "自动恢复已达上限"，判据 6（派发增量）必然是 0 —— 那是脚本的分层错误，不是链路问题。
-# 不带 --drive 时 resume 是安全的：写通路停用，nav2 照样规划、/cmd_vel 照发，底盘不动。
 say "恢复探索派发（resume；不使能写通路，机器人仍然不动）"
 timeout 25 ros2 service call /exploration_coordinator_node/resume \
   std_srvs/srv/Trigger "{}" 2>&1 | tail -2 | sed 's/^/  /'
 sleep 5
 
 say "阶段 11  路径跟踪诊断器（只读，唯一记录速度链路的东西）"
-# 为什么必须起它：整条速度链上**没有任何一处**把速度落盘。实测扫过一遍 ——
-#   · 每拍会打的只有 three_phase_controller.cpp:603 的"接近段限速 ‖v‖ x -> y"，
-#     而它只在 D=1.50m 接近段内、且限速真的咬住时才打（上一轮共 24 条）。
-#   · 底盘桥接与 cmd_vel_body_to_world_node 一个速度都不打。
-# 于是"MPPI 根本没发速度"和"发了但底盘没动"在日志上长得一模一样，
-# 上一轮就是卡在这个区分上。这个节点把四段速度 + 实位移一行打全，正好补这个缺口。
-#
-# 只订阅、不发布任何指令 —— 起它不会改变被诊断系统的行为，所以放在使能之后也安全。
-# 走绝对路径而不是 `ros2 run`：阶段 8 在子 shell 里 source 过 env.sh，
-# 别依赖 PATH 里此刻是哪个 ros2。这条路径本身命中 stop 的 OURS 判据，会被一并清掉。
 DIAG=$WS/install/astribot_s1_navigation/lib/astribot_s1_navigation/path_tracking_diagnostics_node
 if [ -x "$DIAG" ]; then
-  # only_when_stuck=false：全量打。正常跑时也要有速度记录，否则事后只有故障期
-  # 的数字、没有基线可比 —— 上一轮复盘就缺这个基线。
   nohup setsid "$DIAG" --ros-args -p use_sim_time:=false \
     -p only_when_stuck:=false -p report_period_sec:=1.0 \
     > $LOG/trackdiag.log 2>&1 &
-  # 判据压在**报告行增量**上，不看进程存活：这个节点即使一个话题都收不到也照样活着，
-  # 而"活着但没在报"与"没起来"的处置完全不同。
-  # ⚠️ 计数一律走 `|| true` + 默认值，不用 `|| echo 0`：grep -c 在"文件存在但零命中"
-  #    时会**既打印 0 又返回 1**，那种写法会让变量变成两行 "0\n0"，$(( )) 直接报错。
   before=$(grep -c '\[跟踪诊断\]' $LOG/trackdiag.log 2>/dev/null || true); before=${before:-0}
   sleep 8
   after=$(grep -c '\[跟踪诊断\]' $LOG/trackdiag.log 2>/dev/null || true); after=${after:-0}
@@ -1164,11 +861,8 @@ if [ -x "$DIAG" ]; then
     ok "诊断器在报（8s 内 +$((after - before)) 行），看 $LOG/trackdiag.log"
     grep '\[跟踪诊断\]' $LOG/trackdiag.log | tail -1 | sed 's/^/  /'
   else
-    # 不 die：诊断器是观测手段，它不出数不影响探索链本身。
     warn "诊断器 8s 内只多了 $((after - before)) 行（期望 >=3），看 $LOG/trackdiag.log"
   fi
-  # 轮速这一段在实机上没有数据源：阶段 2 的 /joint_states 是固定姿态，
-  # velocity 数组为空。节点会把它报成 "n/a" 而不是 0.000 —— 别把 n/a 读成"轮子没转"。
   warn "轮速一段在实机恒为 n/a（/joint_states 无 velocity 字段），这是预期的"
 else
   bad "缺 $DIAG —— 速度链路本轮无任何记录，事后无法区分"
@@ -1184,11 +878,7 @@ cat <<'TAIL'
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 已知未解决（不是本脚本的 bug，是待定的事）                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
-· 0.2 m/s 的口径：**上一版这里的算术是错的**，写的是"各轴独立、模长上界
-  sqrt(0.2²+0.2²)=0.283"。实机快照里 vy_max: 0.0 且 motion_model: "DiffDrive"
-  （nav2_params_mppi_hw.yaml:691/695/710），MPPI 不会输出横向速度 ——
-  所以模长上界就是 0.2，不是 0.283。而实测峰值 0.2085、1351 帧里 178 帧 > 0.2：
-  在只有 vx 的前提下这些帧是**真的越了上限**，比原来那个说法更需要解释。未查。
+· max_linear_speed 是 XY 各轴的上限，全向运动时速度模长可达到轴上限的 sqrt(2) 倍。
 · safety_tripped 无复位通路：voxel_slam 位姿会被 GBA 回环修正，z 一次跳超
   0.06m 就永久跳闸，只能重启 cmd_vel_body_to_world_node。
 · 实测机器人走出 1.23m 后卡在 "Starting point in lethal space"：中心格 253

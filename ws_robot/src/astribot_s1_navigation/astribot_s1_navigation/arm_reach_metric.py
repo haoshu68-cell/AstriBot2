@@ -70,7 +70,6 @@ def is_extended_by_reach(max_reach_m, extended_reach_m,
     """
     reach = float(max_reach_m)
     if was_extended:
-        # 已经在限速中：要低于解除阈值才松开
         return reach > (float(extended_reach_m) - float(hysteresis_m))
     return reach > float(extended_reach_m)
 

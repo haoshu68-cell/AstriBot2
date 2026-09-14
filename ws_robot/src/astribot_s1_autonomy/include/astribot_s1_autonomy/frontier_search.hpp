@@ -1,21 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// 「边界遍历 + 前沿点自适应采样」的纯算法核心。
-//
-// 同样刻意不依赖 ROS 类型：输入是一份自带尺寸/分辨率/原点的栅格快照，
-// 输出是候选目标点列表。节点层负责把 nav_msgs::msg::OccupancyGrid 拷成
-// GridMap、把 TF 里的机器人位姿传进来、把结果转成 PoseStamped 和 Marker。
-//
-// ============================ 算法总览 ============================
-//   栅格预处理  : 去小斑块 → 膨胀障碍物 → 计算可达域(从机器人做自由空间 BFS)
-//   前沿提取    : 自由格 && 邻域含未知格 && 不在膨胀障碍内  ⇒ 前沿格
-//   边界遍历    : 对前沿格做 8 邻域连通域聚类，得到多块前沿区域
-//   前沿块过滤  : 面积过小 / 距离过近 / 不可达(被障碍物包围) ⇒ 丢弃
-//   自适应采样  : 采样数 ∝ 前沿块面积，按空间跨度均匀取点
-//   候选校验    : 落在障碍/膨胀区内、离机器人过近、净空不足、不可达 ⇒ 丢弃
-//   代价评估    : cost = w_dist*距离 + w_visit*历史访问惩罚 - w_gain*未知增益
-//   选最优      : cost 最小者；朝向取「由目标点指向前沿块质心」，让雷达朝未知区看
-// =================================================================
 #ifndef ASTRIBOT_S1_AUTONOMY__FRONTIER_SEARCH_HPP_
 #define ASTRIBOT_S1_AUTONOMY__FRONTIER_SEARCH_HPP_
 
@@ -111,19 +94,16 @@ struct VisitRecord
 /// 全部来自 YAML，禁止硬编码。
 struct FrontierSearchParams
 {
-  // ---- 栅格判定阈值 ----
   /// data 值 >= 该阈值判为占据。
   int occupied_threshold{65};
   /// data 值 <= 该阈值且非负判为空闲。
   int free_threshold{25};
 
-  // ---- 预处理 ----
   /// 障碍物膨胀半径(m)。至少应覆盖机器人半径，否则会采到贴墙走不进去的目标。
   double obstacle_inflation_radius{0.0};
   /// 小于该格数的孤立占据斑块视为噪声，预处理阶段抹掉。
   int min_obstacle_cluster_cells{0};
 
-  // ---- 前沿提取/聚类 ----
   /// 判定「邻域含未知格」时是否用 8 邻域（false 则用 4 邻域）。
   bool use_eight_connectivity{true};
   /// 小于该格数的前沿块直接丢弃。
@@ -131,7 +111,6 @@ struct FrontierSearchParams
   /// 计算未知增益时的邻域窗口半径(m)。
   double gain_window_radius{0.0};
 
-  // ---- 采样 ----
   /// 采样数 = clamp(ceil(前沿格数 * adaptive_sample_gain), min, max)。
   double adaptive_sample_gain{0.0};
   int min_samples_per_cluster{1};
@@ -143,7 +122,6 @@ struct FrontierSearchParams
   /// 目标点离机器人过远则丢弃(m)；<=0 表示不限制。
   double max_goal_distance{0.0};
 
-  // ---- 代价权重 ----
   double weight_distance{1.0};
   double weight_gain{1.0};
   double weight_visit_penalty{1.0};
@@ -205,7 +183,6 @@ private:
   FrontierSearchParams params_;
   bool configured_{false};
 
-  // 内部工作缓冲，按地图尺寸复用，避免每次 search 都重新分配大块内存。
   std::vector<uint8_t> inflated_occupied_;
   std::vector<uint8_t> reachable_;
   std::vector<uint8_t> is_frontier_;

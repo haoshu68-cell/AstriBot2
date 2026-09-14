@@ -28,7 +28,6 @@ from astribot_trajectory_bridge.arm_traj_math import (
     max_abs_error,
 )
 
-# 执行阶段
 PH_IDLE = 'IDLE'
 PH_STREAMING = 'STREAMING'      # 正在按时间轴下发
 PH_SETTLING = 'SETTLING'        # 末点已发完，等实际位置收敛
@@ -37,8 +36,6 @@ PH_DONE = 'DONE'
 PH_ABORTED = 'ABORTED'
 PH_CANCELED = 'CANCELED'
 
-# 结果码。数值语义对齐 control_msgs/FollowJointTrajectory 的 error_code，
-# 便于节点层直接填进 Action Result。
 EC_SUCCESSFUL = 0
 EC_INVALID_GOAL = -1
 EC_INVALID_JOINTS = -2
@@ -46,7 +43,6 @@ EC_OLD_HEADER_TIMESTAMP = -3
 EC_PATH_TOLERANCE_VIOLATED = -4
 EC_GOAL_TOLERANCE_VIOLATED = -5
 
-# 状态位名（与 BridgeStatus.msg 同名，由节点层映射成数字）
 S_OK = 'OK'
 S_SDK_CALL_FAILED = 'SDK_CALL_FAILED'
 S_LIMIT_VIOLATION = 'LIMIT_VIOLATION'
@@ -74,8 +70,6 @@ class ArmBridgeConfig:
         self.stream_freq = float(stream_freq)
         self.control_way = control_way
         self.use_wbc = bool(use_wbc)
-        # !!! SDK 默认是 True（astribot_client.py:704）!!! 默认 True 时只给
-        # arm_left 也会隐式附加躯干默认位姿 -> 躯干会动。这里必须是 False。
         self.add_default_torso = bool(add_default_torso)
         self.interp = interp
         self.max_traj_duration_sec = float(max_traj_duration_sec)
@@ -87,18 +81,10 @@ class ArmBridgeConfig:
         self.abort_on_tracking_error = bool(abort_on_tracking_error)
         self.settle_tolerance_rad = float(settle_tolerance_rad)
         self.settle_timeout_sec = float(settle_timeout_sec)
-        # 取消后保持期的"停稳"判据。全部可配、不硬编码。
-        # epsilon 是单拍位移阈值；ticks_required 是连续多少拍都低于阈值才算停稳
-        # （单拍可能恰好采到小值，只看一拍会在运动中途误判成已停住）。
-        # 25 拍 @250Hz = 0.1s。
         self.hold_still_epsilon_rad = float(hold_still_epsilon_rad)
         self.hold_still_ticks_required = int(hold_still_ticks_required)
         self.hold_timeout_sec = float(hold_timeout_sec)
-        # 允许"起点越限但等于当前实测位置"的恢复轨迹。
-        # 关掉它意味着机器人一旦越限就**再也开不回来**（见 _oob 那段说明）。
-        # 越限的成因很多：外力碰撞、编码器异常、上电初始位姿越界、物理异常。
         self.allow_recovery_from_oob = bool(allow_recovery_from_oob)
-        # 判定"路点 0 确实是当前位置"的容差。给得太大就等于放行任意越限起点。
         self.oob_start_tolerance_rad = float(oob_start_tolerance_rad)
 
         if self.stream_freq <= 0.0:
@@ -132,7 +118,6 @@ class ArmBridgeConfig:
                 'oob_start_tolerance_rad=%r 过大：它是"路点 0 是否确实等于当前实测'
                 '位置"的判据，给大了就等于放行任意越限起点。' % (self.oob_start_tolerance_rad,))
         if self.add_default_torso:
-            # 不拒绝启动（也许有人真的想让 SDK 带躯干），但必须显式知道自己在做什么
             raise ArmConfigError(
                 'add_default_torso=True：SDK 会隐式附加躯干默认位姿，导致'
                 '"只规划了手臂却发现躯干在动"。MoveIt 的躯干由规划器另行管理，'
@@ -216,13 +201,11 @@ class ArmTrajExecutor:
         self._settle_start = None
         self._cancel_requested = False
         self._last_desired = None
-        # HOLDING 期状态
         self._hold_target = None
         self._hold_start = None
         self._hold_last_actual = None
         self._hold_still_ticks = 0
 
-    # ---------------- 事件 ----------------
 
     def _emit(self, code, detail='', m1=0.0, m2=0.0):
         self.events.append(StatusEvent(code, detail, m1, m2))
@@ -237,7 +220,6 @@ class ArmTrajExecutor:
         self.feedbacks = []
         return out
 
-    # ---------------- 限位准备 ----------------
 
     def load_limits(self, urdf_lower=None, urdf_upper=None):
         """取 SDK 限位并自检。返回 (ok, detail)。
@@ -268,7 +250,6 @@ class ArmTrajExecutor:
                     return (False, desc)
         return (True, '')
 
-    # ---------------- 启动 ----------------
 
     def start(self, joint_names, times, positions, velocities=None):
         """校验并进入 STREAMING。返回 (ok, error_code, detail)。"""
@@ -291,7 +272,6 @@ class ArmTrajExecutor:
             return self._reject(EC_INVALID_GOAL,
                                 'times 长度 %d != positions 长度 %d'
                                 % (len(times), len(positions)))
-        # 关节名必须与本组一致（顺序也必须一致 —— 顺序错会让姿态全错而话题格式正常）
         if self.cfg.joint_names and list(joint_names) != self.cfg.joint_names:
             return self._reject(
                 EC_INVALID_JOINTS,
@@ -305,23 +285,6 @@ class ArmTrajExecutor:
                 EC_INVALID_GOAL,
                 '轨迹总时长 %.3fs 超过上限 %.3fs'
                 % (times[-1], self.cfg.max_traj_duration_sec))
-        # ---- 路点限位校验 ----
-        #
-        # !!! 路点 0 要特殊对待，否则机器人一旦越限就彻底动不了 !!!
-        #
-        # 机器人一旦处于越限状态（外力碰撞、编码器异常、上电初始位姿越界、
-        # 物理异常……），上层给任何轨迹，路点 0（= 当前位置）都越限，于是
-        # **每条轨迹都被拒**，而"把手臂开回合法区间"本身也需要一条轨迹 —— 死锁。
-        # 一个用来防止坏指令的保护，把恢复通路也一起堵死了。
-        #
-        # 发现它的那次现场是个假象（当时以为是"重力下沉"，实为仿真进程退化：
-        # 读数超出 MuJoCo 自己的硬限位，物理不可能）。**但缺陷与成因无关** ——
-        # 已在真的越限的机器人上验证：起点 j6=0.7674 越限，放行后回到合法区间。
-        #
-        # 正确的判据：路点 0 是"从哪儿出发"（一个**测量值**），不是我们挑的目标。
-        # 只要它确实等于当前实测位置，且**其余路点全部合法**，这条轨迹就是
-        # 在把机器人**往回**开，应当放行 —— 但必须响亮上报，因为"从非法状态出发"
-        # 绝不是正常工况。
         allow_start_oob = False
         actual_now = self._read_actual()
         for i, q in enumerate(positions):
@@ -349,8 +312,6 @@ class ArmTrajExecutor:
             return self._reject(EC_INVALID_GOAL, '路点 %d 越限：%s' % (i, desc))
 
         if allow_start_oob:
-            # 终点必须落在合法区间内（上面的循环已保证），这里再确认这条轨迹
-            # 确实在**减小**越限量，而不是沿着越限方向继续走。
             worse = _oob_amount(positions[-1], self._lower, self._upper) \
                 > _oob_amount(positions[0], self._lower, self._upper)
             if worse:
@@ -377,7 +338,6 @@ class ArmTrajExecutor:
         """请求取消。方案 B 支持 —— 停发新点即可，天然可取消。"""
         self._cancel_requested = True
 
-    # ---------------- 逐拍执行 ----------------
 
     def step(self):
         """执行一拍。按 cfg.stream_freq 调用。返回当前 phase。"""
@@ -398,14 +358,9 @@ class ArmTrajExecutor:
 
     def _step_streaming(self):
         if self._cancel_requested:
-            # 取消时保持在当前位置，不是立即松手 —— 松手会让手臂受重力下坠。
-            # 进入 HOLDING 而不是直接落 CANCELED：一次 dispatch 抓不住正在运动的
-            # 关节（Gate 1-f 实测漂 0.045~0.37 rad），必须持续重发直到停稳。
             if self._hold_current():
                 self.phase = PH_HOLDING
                 self.detail = '收到取消请求，正在保持当前位置'
-                # 当拍就发出保持指令，不留一拍空档（关节正在运动，
-                # 少发一拍就多漂一段）
                 return self._step_holding()
             self.phase = PH_CANCELED
             self.detail = '收到取消请求，但读不到实际位置、无法保持'
@@ -450,9 +405,6 @@ class ArmTrajExecutor:
                 return self.phase
 
         if t >= self._times[-1]:
-            # 末点已发完 -> 进入收敛等待。**不能直接算成功**：
-            # 已实测"控制器报完成时手臂还在收敛，下一步规划拿到移动中的起点，
-            # 0.53s 后下发即 start point deviates(0.066>0.05)，上层只看到 -4"。
             self.phase = PH_SETTLING
             self._settle_start = self.clock.now()
         return self.phase
@@ -475,7 +427,6 @@ class ArmTrajExecutor:
             self.detail = '收敛判断时无法读取实际关节位置'
             return self.phase
 
-        # 收敛期间持续把末点发下去，否则控制器可能停在中途
         try:
             self.session.set_joints_position(
                 [self.cfg.part_name], [list(target)],
@@ -527,8 +478,6 @@ class ArmTrajExecutor:
         """
         actual = self._read_actual()
         if actual is None:
-            # 读不到实际位置就没法保持。不静默：上报并直接落到终态，
-            # 让上层知道"取消了但没能保持"，而不是假装保持住了。
             self._emit(S_SDK_CALL_FAILED, '取消时读不到实际位置，无法保持')
             return False
         self._hold_target = list(actual)
@@ -569,8 +518,6 @@ class ArmTrajExecutor:
         self._hold_last_actual = list(actual)
         elapsed = self.clock.now() - self._hold_start
 
-        # 静止判据：连续若干拍位移都小于阈值。单拍可能恰好采到一个小值，
-        # 所以要连续计数，否则会在运动中途误判成已停住。
         if moved < self.cfg.hold_still_epsilon_rad:
             self._hold_still_ticks += 1
         else:
@@ -583,8 +530,6 @@ class ArmTrajExecutor:
             return self.phase
 
         if elapsed > self.cfg.hold_timeout_sec:
-            # 超时不代表保持失败，但必须上报：说明关节在保持指令下仍未停住，
-            # 可能是负载/碰撞/限位顶住，运维需要知道。
             self._emit(S_SETTLE_TIMEOUT,
                        '取消后保持 %.3fs 仍未停稳，最近一拍位移 %.4f rad'
                        % (elapsed, moved), elapsed, self.cfg.hold_timeout_sec)
@@ -619,7 +564,6 @@ class WaypointDispatcher:
         error_code_name 用字符串，由节点层映射成 DispatchWaypoints.srv 的常量。
         """
         if not self.enabled:
-            # 显式拒绝，不静默成功 —— 静默成功会让调用方以为机器人动了
             return (False, 'DISABLED_BY_CONFIG',
                     'enable_waypoints_service=false，方案 A 未启用', 0, 0)
         try:

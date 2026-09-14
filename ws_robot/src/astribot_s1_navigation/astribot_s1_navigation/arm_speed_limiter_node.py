@@ -31,6 +31,8 @@ Nav2 侧的落地机制：`nav2_velocity_smoother` 支持订阅 `speed_limit_top
 velocity_smoother 的代码。
 """
 
+import math
+
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
@@ -50,16 +52,11 @@ from astribot_s1_navigation.arm_reach_metric import (
 )
 
 
-# 左右臂关节名，跟 astribot_s1_arm.xacro / arm_left_controller、arm_right_controller
-# 里的关节列表完全一致（astribot_arm_{left,right}_joint_{1..7}）。
-# 换成水平伸展判据后这个列表只有 joint_deviation 回退路径还用得到，但保留着——
-# joint_states 到达仍然是本节点的触发时钟。
 ARM_JOINT_NAMES = (
     [f'astribot_arm_left_joint_{i}' for i in range(1, 8)] +
     [f'astribot_arm_right_joint_{i}' for i in range(1, 8)]
 )
 
-# 实测(URDF 全工作空间采样)水平伸展最大值总是落在双臂 TCP 或夹爪指尖连杆上。
 DEFAULT_MONITORED_LINKS = [
     'astribot_arm_left_tcp_link',
     'astribot_arm_right_tcp_link',
@@ -67,7 +64,6 @@ DEFAULT_MONITORED_LINKS = [
     'astribot_gripper_right_Link_R11',
 ]
 
-# 本机器人根 frame 是 astribot_torso_base，不存在 base_link。
 DEFAULT_CHASSIS_BASE_FRAME = 'astribot_torso_base'
 
 
@@ -80,37 +76,19 @@ class ArmSpeedLimiterNode(Node):
         self.declare_parameter('speed_limit_topic', '/speed_limit')
         self.declare_parameter('check_period', 0.5)
 
-        # ---- 展开判据(默认水平伸展) ----
         self.declare_parameter('extension_metric', METRIC_HORIZONTAL_REACH)
         self.declare_parameter('chassis_base_frame', DEFAULT_CHASSIS_BASE_FRAME)
+        self.declare_parameter('reach_tf_timeout_sec', 0.5)
+        timeout = float(self.get_parameter('reach_tf_timeout_sec').value)
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError('reach_tf_timeout_sec must be finite and positive')
         self.declare_parameter('monitored_links', DEFAULT_MONITORED_LINKS)
-        # 监控连杆相对回转轴的水平距离超过这个值(m)判"展开"，二值砍到 50%。
-        #
-        # 默认 0.64 的来历(不是调出来的，是一条可解释的物理判据)：
-        #   0.42(costmap robot_radius，机械臂伸出规划足迹的起点)
-        # + 0.2163(支撑多边形边中点到回转轴的距离，即倾覆力臂)
-        # = 0.6363 → 取 0.64
-        # 含义：机械臂**伸出足迹之外的那一段**长到跟底盘自己的倾覆力臂相当时，
-        # 才值得动用这个粗粒度的二值保护。
-        #
-        # !!! 为什么不直接取 0.42 !!!：取 0.42 时 ready(伸展 0.479)、实测作业姿态
-        # (0.470)、甚至全 0 姿态(0.4205)全都判"展开"，50% 这一刀等于常开——那还是
-        # C1 要修的那个"限速与风险不成比例"的问题，只是换了个判据而已。真正的连续
-        # 精细调速由 astribot_s1_dynamics_coupling 的耦合节点负责(它在 0.42 以上就
-        # 开始线性介入)，本节点定位是**粗粒度backstop**：耦合节点被关掉
-        # (enable_arm_chassis_coupling:=false)或崩溃重启期间兜住真正危险的姿态。
-        # 两个节点串联叠乘，判据重复计算会把系数乘成 1/7~1/13，见耦合包 README §8。
         self.declare_parameter('extended_reach_m', 0.64)
-        # 迟滞(m)：避免伸展压在阈值上时二值判据来回翻转、SpeedLimit 在 50%/100%
-        # 之间反复跳。见 arm_reach_metric.py 里 is_extended_by_reach 的说明。
         self.declare_parameter('extended_reach_hysteresis_m', 0.03)
 
-        # ---- 旧判据的参数，仅 extension_metric=joint_deviation 时生效 ----
-        # !!! 已被实测证伪，保留只为 A/B 回归对比和一键回退 !!!
         self.declare_parameter('folded_reference_rad', [0.0] * len(ARM_JOINT_NAMES))
         self.declare_parameter('extended_threshold_rad', 0.5)
 
-        # 判定为展开状态时的限速百分比(0~100)，100=不限速。
         self.declare_parameter('extended_speed_limit_pct', 50.0)
 
         self.speed_pub = self.create_publisher(
@@ -119,7 +97,11 @@ class ArmSpeedLimiterNode(Node):
             JointState, self.get_parameter('joint_states_topic').value,
             self.joint_state_callback, 10)
 
-        self.last_extended = None  # 只在状态变化时发布+打日志，避免刷屏
+        self.last_extended = None
+        period = float(self.get_parameter('check_period').value)
+        if not math.isfinite(period) or period <= 0.0:
+            raise ValueError('check_period must be positive')
+        self._limit_timer = self.create_timer(period, self._republish_limit)
         self._metric = self._resolve_metric()
         self._tf_buffer = None
         self._tf_listener = None
@@ -141,6 +123,16 @@ class ArmSpeedLimiterNode(Node):
             '（这是保守的单点判据，不是精确碰撞检测，也不缩小碰撞包络，'
             '详见文件头部说明）。' % (
                 criterion, self.get_parameter('extended_speed_limit_pct').value))
+
+    def _republish_limit(self):
+        if self.last_extended is None:
+            return
+        limit = SpeedLimit()
+        limit.header.stamp = self.get_clock().now().to_msg()
+        limit.percentage = True
+        limit.speed_limit = (self.get_parameter('extended_speed_limit_pct').value
+                             if self.last_extended else 0.0)
+        self.speed_pub.publish(limit)
 
     def _resolve_metric(self):
         """确定实际使用的判据。配置非法时**退回更保守的旧判据**并大声报错，而不是
@@ -172,7 +164,7 @@ class ArmSpeedLimiterNode(Node):
     def _max_horizontal_reach(self):
         """查 TF 求监控连杆里相对底盘回转轴的最大水平伸展(m)，返回 (伸展, 连杆名)。
 
-        全部查不到返回 None，由调用方决定策略(本节点按最保守处理，判"展开")。
+        任一路查不到或陈旧返回 None，由调用方决定策略(本节点按最保守处理，判"展开")。
 
         !!! lookup_transform 传 Time()(=最新可用)且不带 timeout !!!
         项目笔记记过：带 timeout 的动态 TF 查询在非专用线程里必然失败，而 static TF
@@ -189,15 +181,23 @@ class ArmSpeedLimiterNode(Node):
             except TransformException as exc:
                 failures.append('%s(%s)' % (link, type(exc).__name__))
                 continue
+            stamp = Time.from_msg(tf.header.stamp)
+            age = (self.get_clock().now() - stamp).nanoseconds / 1e9
             t = tf.transform.translation
+            # Zero stamp denotes a timeless, entirely static TF chain.
+            if (not all(math.isfinite(v) for v in (t.x, t.y, t.z)) or
+                    (stamp.nanoseconds != 0 and
+                     not 0.0 <= age <= self.get_parameter('reach_tf_timeout_sec').value)):
+                failures.append('%s(stale or invalid TF)' % link)
+                continue
             reach = horizontal_reach(t.x, t.y)
             if best is None or reach > best:
                 best, best_link = reach, link
-        if best is None:
+        if best is None or failures:
             if not self._tf_warned:
                 self._tf_warned = True
                 self.get_logger().warn(
-                    '监控连杆的 TF 全部查不到(%s)，按最保守处理(判为展开、限速)；'
+                    '监控连杆的 TF 不完整或无效(%s)，按最保守处理(判为展开、限速)；'
                     'TF 树建立后自动恢复，此告警只打一次。'
                     % ('; '.join(failures) if failures else 'monitored_links 为空'))
             return None
@@ -208,7 +208,6 @@ class ArmSpeedLimiterNode(Node):
         if self._metric == METRIC_HORIZONTAL_REACH:
             probed = self._max_horizontal_reach()
             if probed is None:
-                # 拿不到机械臂位姿时假设"手臂完全伸出"，不能假设"手臂收着"。
                 is_extended = True
                 detail = 'TF 不可用，按最保守判定'
             else:
@@ -228,7 +227,7 @@ class ArmSpeedLimiterNode(Node):
             detail = '最大关节偏差 %.2frad' % max_dev
 
         if is_extended == self.last_extended:
-            return  # 状态没变化，不重复发布(SpeedLimit 是"持续生效直到下一条"的语义)
+            return  # 定时器负责重发，状态变化日志只记录一次。
 
         self.last_extended = is_extended
         limit = SpeedLimit()

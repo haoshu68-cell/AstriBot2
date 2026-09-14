@@ -76,9 +76,6 @@ class GridSelfClear(Node):
         self.n_cleared_last = 0
         self.n_cleared_total = 0
 
-        # 输出 QoS 刻意与输入一致(RELIABLE + VOLATILE)：
-        # nav2 静态层那侧必须配 map_subscribe_transient_local: False，
-        # 探索调度器那侧必须配 map_transient_local: false。两处口径要与这里一致。
         q = QoSProfile(reliability=ReliabilityPolicy.RELIABLE,
                        durability=DurabilityPolicy.VOLATILE,
                        history=HistoryPolicy.KEEP_LAST, depth=1)
@@ -109,7 +106,6 @@ class GridSelfClear(Node):
                                             xy[1] - self.trail[-1][2]) >= self.sample_d:
                 self.trail.append((now, xy[0], xy[1]))
             else:
-                # 原地不动也要把时间戳续上，否则站久了自己那格会过期变回障碍
                 self.trail[-1] = (now, self.trail[-1][1], self.trail[-1][2])
             self.trail = [s for s in self.trail if now - s[0] <= self.window]
 
@@ -132,12 +128,9 @@ class GridSelfClear(Node):
                 for i in range(cx - rad_cells, cx + rad_cells + 1):
                     if i < 0 or i >= w:
                         continue
-                    # 圆形而不是方框：方框的角比半径远，会多吃 41% 的面积
                     if math.hypot((i - cx) * res, (j - cy) * res) > self.radius:
                         continue
                     k = j * w + i
-                    # 只把"占据"改成"自由"。未知(-1)保持未知 ——
-                    # 把未知改成自由会凭空吃掉前沿，探索会少走地方。
                     if data[k] >= self.occ_th:
                         data[k] = FREE
                         cleared += 1

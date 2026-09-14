@@ -67,8 +67,6 @@ bool CollisionValidator::configure(
     return false;
   }
   if (!params.check_self_collision && !params.check_environment_collision) {
-    // 两个都关掉等于这个校验器什么都不做。任务明确禁止跳过碰撞校验，
-    // 所以这属于配置错误而不是一种合法选项。
     error = "both self and environment collision checks are disabled; "
       "this would skip collision validation entirely";
     return false;
@@ -88,8 +86,6 @@ CollisionReport CollisionValidator::check(
 
   if (!configured_) {
     report.reason = "CollisionValidator not configured";
-    // 未配置时必须报"有问题"而不是"没碰撞"：否则配置失败会静默变成
-    // "所有构型都通过校验"，正好是任务禁止的"跳过碰撞校验"。
     report.collision = true;
     return report;
   }
@@ -99,8 +95,6 @@ CollisionReport CollisionValidator::check(
     return report;
   }
 
-  // RobotState 的 FK 必须是最新的，否则碰撞检测用的是旧的 link 位姿。
-  // 传入的 state 是 const，拷一份来 update。
   moveit::core::RobotState local_state(state);
   local_state.update();
 
@@ -113,7 +107,6 @@ CollisionReport CollisionValidator::check(
     request.group_name = group_name;
   }
 
-  // ---- 自碰撞 ----
   if (params_.check_self_collision) {
     collision_detection::CollisionResult result;
     scene_->checkSelfCollision(request, result, local_state, scene_->getAllowedCollisionMatrix());
@@ -128,10 +121,6 @@ CollisionReport CollisionValidator::check(
     }
   }
 
-  // ---- 环境碰撞 ----
-  // 用 checkCollision 而不是再来一次 checkSelfCollision：前者含环境，
-  // 但也会重复报自碰撞，所以只在自碰撞未命中时把它算作环境碰撞来源，
-  // 或者在 collect_all 模式下用接触对名字区分。
   if (params_.check_environment_collision) {
     collision_detection::CollisionResult result;
     scene_->checkCollision(request, result, local_state, scene_->getAllowedCollisionMatrix());
@@ -139,7 +128,6 @@ CollisionReport CollisionValidator::check(
       std::vector<std::pair<std::string, std::string>> all;
       appendContacts(result, params_.max_contacts, all);
 
-      // 判断接触对里是否含非机器人 link（= 环境物体）。
       const moveit::core::RobotModelConstPtr & model = scene_->getRobotModel();
       bool has_world_contact = false;
       for (const auto & c : all) {
@@ -163,9 +151,6 @@ CollisionReport CollisionValidator::check(
           return report;
         }
       } else if (!report.self_collision) {
-        // checkCollision 报了碰撞，但接触对两边都是机器人 link，
-        // 而自碰撞检测（如果开着）没报 —— 说明自碰撞检测被关了。
-        // 这种情况按自碰撞归类，不能悄悄放过。
         report.collision = true;
         report.self_collision = true;
         report.contacts = all;

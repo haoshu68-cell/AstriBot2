@@ -51,13 +51,6 @@ def generate_launch_description():
                         '要改请直接编辑 config/mapper_params_localization.yaml 里的同名字段'),
     ]
 
-    # !!! 实测踩坑记录 !!!：map_start_pose 是一个 double 数组类型参数，
-    # LaunchConfiguration 解析出来永远是纯字符串（比如字面量文本 "[0.0, 0.0, 0.0]"），
-    # 直接塞进 parameters 覆盖字典会被当成字符串类型参数，与 slam_toolbox 期望的
-    # vector<double> 类型对不上，节点启动时会报参数类型错误。数组类型的参数目前只能走
-    # 静态 yaml 文件生效，所以这里不把 map_start_pose 接入动态覆盖，只透传
-    # map_file_name（纯字符串，没有这个类型坑）。要改起始位姿请直接编辑
-    # config/mapper_params_localization.yaml。
     localization_node = Node(
         package='slam_toolbox',
         executable='localization_slam_toolbox_node',

@@ -16,6 +16,8 @@
 
 &nbsp;
 
+仿真导航的分阶段启动、事件重规划和持续跑机见 [路径跟踪运行说明](docs/PATH_TRACKING_ENDURANCE.md)。
+
 ## 2 · 快速上手
 
 ### 2.1 环境配置
@@ -75,3 +77,7 @@ python3 example/100-get_robot_properties.py
 
 © 2024 Astribot Co., Ltd.  基于 **BSD-3-Clause** 许可证发布。
 
+
+## ROS 2 工作空间
+
+模块与运行链路见 [整体架构](docs/ARCHITECTURE.md)，待处理问题见 [逻辑检查](docs/LOGIC_REVIEW.md)，本轮结果见 [验证记录](docs/CLEANUP_VALIDATION.md)。

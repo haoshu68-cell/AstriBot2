@@ -1,16 +1,4 @@
 // Copyright 2026 Astribot
-//
-// 碰撞校验：自碰撞（双臂互撞、臂撞躯干/轮子/头）+ 环境碰撞。
-//
-// 为什么单独封一层而不直接调 PlanningScene
-// ----------------------------------------
-// 1. 任务要求把"自碰撞"和"环境碰撞"分开返回不同错误码：自碰撞是构型本身的问题
-//    （必须重规划），环境碰撞可能只是场景里多了个临时物体（上层可能选择先清场景）。
-//    PlanningScene 的 checkCollision 把两者混在一起报，需要分别调两个接口。
-// 2. 闭链规划里每个 waypoint 都要校验一次，需要"发现第一个碰撞就返回"的快路径
-//    和"收集全部接触对"的诊断路径两种模式。
-// 3. 接触对名字必须能拿出来打日志 —— 否则现场只知道"碰了"，不知道碰哪儿，
-//    没法判断是 SRDF 该关的对没关，还是真的构型不对。
 
 #ifndef ASTRIBOT_S1_MANIPULATION__COLLISION_VALIDATOR_HPP_
 #define ASTRIBOT_S1_MANIPULATION__COLLISION_VALIDATOR_HPP_

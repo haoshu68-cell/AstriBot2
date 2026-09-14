@@ -24,14 +24,6 @@ import sys
 _REPO = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
-# 找 astribot_s1_navigation 包。**src 优先**，理由与"src 同步了不等于 install
-# 重建了"相反：本工作区是 --symlink-install，install 下只有一个
-# astribot-s1-navigation.egg-link 指向 build/，site-packages 里**没有包目录**，
-# 所以原来那一条 sys.path 永远命中不了 —— 症状就是 ②节恒空报
-# "No module named 'astribot_s1_navigation'"，而脚本其余部分照样出数。
-#
-# 报告是离线复算，口径应当等于**当前源码**的口径；但用了哪一份必须打印出来，
-# 否则读报告的人无从判断这张表是谁的判据算的。
 _PKG_CANDIDATES = (
     os.path.join(_REPO, 'ws_robot', 'src', 'astribot_s1_navigation'),
     os.path.join(_REPO, 'ws_robot', 'build', 'astribot_s1_navigation'),
@@ -57,7 +49,6 @@ def _pick(out_dir, name):
         return direct
     hits = sorted(glob.glob(os.path.join(out_dir, '*_' + name)))
     if len(hits) > 1:
-        # 多个 run_label 混在一个目录里：挑一个就是悄悄丢数据
         raise SystemExit(
             '目录 %s 下有 %d 份 %s：%s\n'
             '这是多个 run_label 的产物混在一起了。请指定单个 run 的目录，'
@@ -106,9 +97,6 @@ def line(ch='-', n=78):
     print(ch * n)
 
 
-# ②和④共用同一张列表：两处各写一份，早晚有一处漏掉新列而没人发现。
-# (列名, 中文标签, 同行的样本数列)
-# 第三项是**区分"0 次"与"没测到"**的依据（纪律 3）。没有伴随计数列的写 None。
 KEY_METRICS = (
     ('arrival_error_xy_m', '到位位置误差(m)', 'pose_samples'),
     ('arrival_error_yaw_rad', '到位航向误差(rad)', 'pose_samples'),
@@ -116,16 +104,10 @@ KEY_METRICS = (
     ('cross_track_p95_m', '横向偏差 p95(m)', 'cross_track_samples'),
     ('cross_track_max_m', '横向偏差 max(m)', 'cross_track_samples'),
     ('duration_s', '单轮时长(s)', None),
-    # 路径长度的列名是 traveled_m，**不叫 path_length_m**。
-    # 报告此前问的是 path_length_m —— 那一列从来不存在，于是恒报
-    # "n=0 没测到"，而 traveled_m 一直有数。列名写错与真的没数据同样是 n=0。
     ('traveled_m', '实走里程(m)', 'pose_samples'),
     ('first_plan_len_m', '首条规划路径长(m)', 'plans_published'),
     ('path_len_ratio_vs_plan', '里程/规划路径', 'pose_samples'),
     ('narrow_success_rate_proxy', '窄段通过率(代理)', 'narrow_episodes'),
-    # 下面四列全部依赖足迹外接半径。published_footprint 是全局系绝对坐标，
-    # 半径必须先平移回对称中心再算 —— 不做这步实测会拿到 6~9m 的外接半径，
-    # 于是 min_clearance = 最近距离 - 9 恒为大负数，整段"净空"结论作废
     ('min_clearance_m', '最小净空(m,按外接)', 'scan_frames'),
     ('nearest_obstacle_m', '最近障碍(m)', 'scan_frames'),
     ('center_bias_abs_max', '居中偏差max(m)', 'scan_frames'),
@@ -186,8 +168,6 @@ def main():
     line('=')
 
     if not rows:
-        # 必须先分清"表根本不存在"和"表在但没有已完成的轮次" ——
-        # 两者 rows 都是空，而结论完全不同
         if rounds_path is None:
             emit('🔴 **在 %s 下找不到 rounds.csv（也没有 *_rounds.csv）**。'
                  % args.out_dir)
@@ -207,20 +187,15 @@ def main():
         write_md(args.md, buf)
         return
 
-    # ---------- ① 先看自检，不通过就把相关列标废 ----------
     emit('\n【① 数据可用性自检】不通过的列，后面的数一律不作为结论')
     line()
     tf_ok = sum(int(num(r.get('tf_lookup_ok')) or 0) for r in rows)
     tf_fail = sum(int(num(r.get('tf_lookup_fail')) or 0) for r in rows)
     mism = [r.get('round_index') for r in rows
             if str(r.get('counter_mismatch')).lower() == 'true']
-    # None/空 表示**没能对账**，与"一致"不是一回事，必须分开报
     nocheck = [r.get('round_index') for r in rows
                if str(r.get('counter_mismatch')).strip().lower()
                in ('', 'none')]
-    # 这份 CSV 是不是老版录制器写的？增量列整列缺失即是。
-    # 不做这个判断，老表会在下面打印 "协调器派发 +None ... 差 >1"，
-    # 那是把"这一列还不存在"说成了"对账失败"，两件事的处置完全不同。
     stale_counter = 'coord_dispatched_delta' not in (rows[0] or {})
     cap_ok = [str(r.get('speed_cap_matches_request')).lower() for r in rows]
     emit(f'  TF 取到/失败            {tf_ok} / {tf_fail}'
@@ -254,17 +229,12 @@ def main():
         emit('  位姿覆盖率              这份 CSV 是老版录制器写的，没有这一列'
              ' ← **未经检查**，不等于合格')
 
-    # ---------- ② 汇总走 summarize()，不另算 ----------
     emit('\n【② 汇总】口径来自 round_metrics.summarize()，本脚本不另算一份')
     line()
     try:
         from astribot_s1_navigation.explore_metrics import round_metrics
-        # 必须先还原类型：CSV 出来全是字符串，'False' 作为非空字符串会被判为真，
-        # success_rate 会**恒为 1.0** 且不报错。summarize() 现在也会显式拦这一道。
         typed = [round_metrics.coerce_csv_row(r) for r in rows]
         s = round_metrics.summarize(typed)
-        # 打真实路径：symlink-install 下 build/ 里那份是指回 src 的软链，
-        # 直接打 __file__ 会让读报告的人以为用的是构建产物而不是当前源码。
         _src = os.path.realpath(round_metrics.__file__)
         emit('  （判据来自 %s）' % os.path.relpath(_src, _REPO))
         emit(f'  {"轮数":<26} {s["rounds"]}')
@@ -286,7 +256,6 @@ def main():
         emit(f'  🔴 无法调用 summarize()：{exc}')
         emit('  ⇒ 不在这里手算替代 —— 两处各算一份必然漂开且不会报错。')
 
-    # ---------- ③ 逐轮明细 ----------
     emit('\n【③ 逐轮明细】不给平均值当结论；样本量少时逐轮看离散度')
     line()
     cols = [('round_index', '轮'), ('outcome', '结果'),
@@ -315,7 +284,6 @@ def main():
         emit('     单个位姿样本算不出"到位"，它只是一张快照；里程会因此偏小到 0.000。')
         emit('     不要拿这几行当跟踪质量的证据 —— 无论数字看起来多好。')
 
-    # ---------- ④ 关键指标的 n/最小/中位/最大 ----------
     emit('\n【④ 关键指标分布】n = **真正有值**的轮数；'
          'n=0 时看"伴随样本"才知道是 0 次事件还是没测到')
     line()
@@ -325,16 +293,10 @@ def main():
         if not n:
             tot = companion_total(rows, comp)
             if key not in (rows[0] or {}):
-                # 列名压根不在表头里。这与"采不到样"是两件事：
-                # 前者是这份 CSV 由老版录制器写的（或列名写错），后者是数据问题。
-                # 报错时混为一谈，就会去查传感器而真因在列名 —— 本项目已中过一次
-                # （报告问 path_length_m / cross_track_p95_m，两列从来不存在）。
                 mark = '   ← 这份 CSV 里**没有这一列**（老版录制器/列名不符），非"没测到"'
             elif comp is None:
                 mark = '   ← 没测到，这一列不可用'
             elif tot == 0:
-                # 纪律 3：0 次事件和没采到样在结论上相反。有伴随计数且为 0，
-                # 说明采集通路是好的、事件确实没发生 —— 这是好消息，不是缺数据。
                 mark = f'   ← {comp}=0 ⇒ **测了，0 次事件**（好消息，不是缺数据）'
             elif tot is None:
                 mark = '   ← 没测到，这一列不可用'
@@ -342,7 +304,6 @@ def main():
                 mark = f'   🔴 {comp}={tot} 有样本却算不出这一列 ⇒ 判据有问题'
         emit(f'  {label:<26} n={n:<3} min={fmt(lo)} med={fmt(med)} max={fmt(hi)}{mark}')
 
-    # ---------- ⑤ 代理量定义原样搬出 ----------
     proxy = run.get('proxy_definitions') or run.get('PROXY_DEFINITIONS') or {}
     if not proxy:
         try:
@@ -359,7 +320,6 @@ def main():
                 if seg.strip():
                     emit(f'      {seg.strip()}。')
 
-    # ---------- ⑥ 环境/足迹/话题 ----------
     if run:
         emit('\n【⑥ 本次运行的环境事实】')
         line()

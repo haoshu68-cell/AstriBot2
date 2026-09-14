@@ -95,20 +95,12 @@ class Pose2D:
         return math.hypot(self.x - other.x, self.y - other.y)
 
 
-#: `map→odom` 单次更新的位移上限（米）。超过就是 SLAM 发生了回环修正。
-#: 那**不是**故障 —— 回环修正本来就该体现在 map→odom 上（这正是 REP-105
-#: 分解的目的：让跳变留在 map→odom，odom→base 保持连续）。但要**上报**，
-#: 因为它会让 global_costmap 整体平移，而这对上层是可见事件。
 DEFAULT_JUMP_REPORT_M = 0.30
 
-#: 源变换的最大可接受龄期（秒）。见 `check_source_age` 的说明。
 DEFAULT_MAX_SOURCE_AGE_SEC = 1.0
 
-#: 允许的负龄期（秒）。PTP 同步下两台机器的时钟差、以及"发布者按采集时刻
-#: 打戳而我们在它到达前就查"都会让龄期略负。超过这个量级才当时钟异常。
 CLOCK_SKEW_TOLERANCE_SEC = 0.05
 
-#: `check_source_age` 的返回。stale=True 时调用方必须丢弃这条变换。
 SourceAge = collections.namedtuple('SourceAge', 'age_sec stale reason')
 
 
@@ -145,8 +137,6 @@ def check_source_age(now_sec, stamp_sec, max_age_sec, label=''):
         return SourceAge(0.0, False, '')
 
     if stamp_sec <= 0.0:
-        # 戳没填。既不能判新也不能判旧 —— 当成不可信，因为"未填戳"这件事
-        # 本身就说明发布方有问题，而放过它等于把龄期检查整个绕过去。
         return SourceAge(
             float('inf'), True,
             f'{label} 的时间戳是 {stamp_sec:g}（未填）。无法判断新旧，按不可信丢弃。'

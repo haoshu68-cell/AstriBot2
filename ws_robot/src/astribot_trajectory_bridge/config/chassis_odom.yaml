@@ -1,52 +1,25 @@
-# chassis_odom_node 参数。**本节点纯只读**，不含任何会让机器人运动的调用。
-#
-# ⚠️ 键名必须是节点的**运行时**名字。launch 里给节点做 `name=` remap 是进程级的，
-# remap 之后 yaml 的键匹配不上，**整份文件静默失效**、所有参数回落到代码里的
-# declare 默认值，且没有任何报错。所以用 `/**:` 通配前缀兜底。
-#
-# ⚠️ 每个 IncludeLaunchDescription 都必须显式传 params_file，否则共享上下文里的
-# 名字会被第一个 include 抢占，后面的节点静默加载错的 yaml。
 
 /**:
   ros__parameters:
-    # 与 chassis_bridge.yaml 的 part 名一致。不一致时读 SDK 会连续失败并退出。
     part_name: "astribot_chassis"
 
-    # 对齐 Gazebo OdometryPublisher 的 50Hz，让下游行为在仿真/真机之间不变。
     publish_rate: 50.0
 
     odom_frame: "odom"
 
-    # 本机器人的根 frame 是 astribot_torso_base，**没有** base_link。
-    # 写成 base_link 不报错，只会让 TF 挂在没人认的 frame 上，
-    # 而 nav2 报的是 "Could not transform" —— 离根因两层远。
     base_frame: "astribot_torso_base"
 
     odom_topic: "/odom"
 
-    # false = 只发话题不发 TF（对照实验用）。
-    # ⚠️ 仿真里 Gazebo 的 OdometryPublisher 已经在发这条边，
-    # 两个源同时发不报错，只让位姿反复跳，看起来像"定位漂移"。
     publish_tf: true
 
-    # 超过这个位移就判为跳变 → WARN + 计数，**不静默平滑掉**。
-    # odom 的契约是允许漂、不允许跳；跳变计数是"SDK 位姿能不能当 odom"
-    # 这个前提的唯一取证手段，平滑掉就把事实藏了起来。
     jump_threshold_m: 0.30
 
-    # SDK 给的 [vx, vy] 是机体系还是世界系。body | world
-    # Odometry.twist 按规定在 child_frame（机体系）里表达，本节点会按此归一化。
-    # 搞反不报错，只让 nav2 的速度前瞻在转向时系统性偏一个旋转。
-    # ⚠️ 这一项**尚未在真机上取证**，上线时请用 §C1 的办法核对：
-    #   手推机器人沿机体 +x 走，看 vx 是否为正且 vy≈0；再原地转 90° 重复一次。
     velocity_frame: "body"
 
     sdk_freq: 250.0
     report_period_sec: 10.0
 
-    # 连续读失败这么多次就非零退出。不静默重试到天荒地老：
-    # 下游会一直等 odom，症状变成"导航卡住"，而原因在这一层。
-    # 25 次 @ 50Hz = 0.5s，足够跨过启动瞬间的偶发失败。
     max_consecutive_read_errors: 25
 
 chassis_odom:

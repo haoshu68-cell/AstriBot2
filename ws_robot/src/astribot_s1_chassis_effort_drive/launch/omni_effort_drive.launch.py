@@ -52,9 +52,6 @@ def generate_launch_description():
                 'cmd_vel_topic': LaunchConfiguration('cmd_vel_topic'),
                 'joint_states_topic': LaunchConfiguration('joint_states_topic'),
                 'effort_command_topic': LaunchConfiguration('effort_command_topic'),
-                # ParameterValue(..., value_type=float)：命令行传进来的 wheel_radius
-                # 本质是字符串，强制转成float，否则跟节点里declare_parameter的
-                # 0.08(float)类型不一致，rclpy会拒绝覆盖并报类型错误。
                 'wheel_radius': ParameterValue(
                     LaunchConfiguration('wheel_radius'), value_type=float),
                 'use_sim_time': LaunchConfiguration('use_sim_time'),

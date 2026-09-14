@@ -72,15 +72,12 @@ def _srv_code(name):
 
 class ArmTrajBridgeNode(Node):
 
-    #: 本节点的回调组，容器据此算线程数。加组只改 callback_layout。
-    #: 'exec' 是可重入组，其余互斥 —— 可重入组不串行，但仍要占线程才能并发。
     CALLBACK_GROUPS = ARM_GROUPS
 
     def __init__(self, session, node_name='arm_traj_bridge'):
         super().__init__(node_name)
         self._declare_params()
         self._session = session
-        # 同上：不能叫 self._clock，会遮蔽 rclpy.Node 的内部时钟（node.py:210）
         self._clock_port = RosClock(self)
         self.status = StatusReporter(self, node_name=node_name)
 
@@ -93,9 +90,6 @@ class ArmTrajBridgeNode(Node):
 
         groups = self.get_parameter('groups').value
         name_map = self._parse_name_map()
-        # 回调组按 callback_layout.ARM_GROUPS 声明式建立。'exec' 必须**可重入**：
-        # cancel 回调要在 execute 还在跑的时候被处理，所以它单独用 Reentrant 建，
-        # 不走 make_groups（后者统一用调用方给的一种 factory）。
         cb_groups = make_groups(
             [g for g in ARM_GROUPS if g != 'exec'],
             MutuallyExclusiveCallbackGroup, 'arm_traj_bridge')
@@ -112,7 +106,6 @@ class ArmTrajBridgeNode(Node):
             ex = ArmTrajExecutor(cfg, session, self._clock_port)
             ok, detail = ex.load_limits()
             if not ok:
-                # 限位加载失败就不该开这个组的 Action —— 否则会拿着 None 限位放行目标
                 self.get_logger().error(
                     '组 %s 限位加载失败，该组 Action 不启动：%s' % (grp, detail))
                 self.status.publish_events(ex.drain_events())
@@ -137,16 +130,6 @@ class ArmTrajBridgeNode(Node):
                             self._srv_dispatch_waypoints,
                             callback_group=srv_group)
 
-        # ---- 夹爪服务 ----
-        #
-        # !!! 单独一个 callback group !!!
-        # 不能和 dispatch_waypoints 共用：那是个可能阻塞整条轨迹时长（数十秒）的
-        # 调用，而抓取动作恰好发生在接近轨迹末端 —— 共用会让夹爪指令排在它后面。
-        # 用 MutuallyExclusive（而不是 Reentrant）是因为夹爪的 open/close 本身
-        # 阻塞，串行化正是我们要的；并发保护另有 BUSY 逻辑兜底。
-        #
-        # 与手臂 Action 的 exec_group 也是分开的，所以"手臂还在走、同时开夹爪"
-        # 在 MultiThreadedExecutor 下可以真正并发。
         grip_group = cb_groups['grip']
         self._gripper = self._build_gripper(session)
         if self._gripper is not None:
@@ -162,7 +145,6 @@ class ArmTrajBridgeNode(Node):
             self.get_logger().error(
                 '没有任何组成功初始化，本节点不会接受任何轨迹。')
 
-    # ------------------------------------------------------------------ 参数
 
     def _declare_params(self):
         d = self.declare_parameter
@@ -192,13 +174,9 @@ class ArmTrajBridgeNode(Node):
         d('hold_still_ticks_required', 25)
         d('hold_timeout_sec', 2.0)
         d('enable_waypoints_service', False)
-        # ---- 夹爪 ----
         d('gripper.enable_service', True)
-        # 夹爪部件名白名单。空数组时从 SDK 的 effector_names 取；
-        # 显式给的好处是"未知夹爪"与"SDK 故障"不会混成一种错误。
         d('gripper.names', [])
         d('gripper.default_duration_sec', 1.0)
-        # <=0 表示不设力，沿用 SDK 默认 48N。注意仿真下设力是空操作。
         d('gripper.default_max_force_n', 0.0)
         d('gripper.settle_extra_sec', 0.0)
         d('gripper.stream_freq', 250.0)
@@ -246,9 +224,6 @@ class ArmTrajBridgeNode(Node):
             self.get_logger().error('[WriteGate] 读机器人模式失败：%s' % exc)
             self.status.publish('SDK_CALL_FAILED', str(exc))
             return False
-        # !!! 不能传 [target] !!! 那等于把"声明"当成"发现结果"，闸门②
-        # （声明与实际一致）就退化成恒真，形同没有校验。这里传 SDK 实测
-        # 报出的后端身份（get_robot_mode，见 write_gate.is_simulation_mode）。
         actual = TARGET_SIM if is_simulation_mode(mode) else TARGET_REAL
         d = evaluate_write_gate([actual], target,
                                self.get_parameter('allow_write_to_real').value,
@@ -259,15 +234,12 @@ class ArmTrajBridgeNode(Node):
             self.status.publish(d.status_code, d.reason)
         return d.allowed
 
-    # ------------------------------------------------------------------ Action
 
     def _make_goal_cb(self, grp):
         def cb(goal_request):
             if not self._write_allowed:
                 self.get_logger().error('写通路准入未通过，拒绝目标')
                 return GoalResponse.REJECT
-            # 同一时刻只允许一条轨迹在执行：并发下发会让两条轨迹互相打断，
-            # 表现为无法解释的抖动。
             if self._goal_lock.locked():
                 self.get_logger().warn('已有轨迹在执行，拒绝新目标')
                 return GoalResponse.REJECT
@@ -300,11 +272,6 @@ class ArmTrajBridgeNode(Node):
 
                 period = 1.0 / ex.cfg.stream_freq
                 rate = self.create_rate(ex.cfg.stream_freq)
-                # !!! 判"是否终态"，不要白名单枚举"进行中"的相位 !!!
-                # 这里原本写 `while ex.phase in (PH_STREAMING, PH_SETTLING)`，
-                # 新增 HOLDING 相位后会**直接跳出循环**，于是 HOLDING 期一拍都
-                # 不会被推进 —— 取消保持的修复等于没生效，而且看不出任何报错。
-                # 改成排除终态：将来再加中间相位不会重犯。
                 while ex.phase not in (PH_DONE, PH_CANCELED, PH_ABORTED):
                     if goal_handle.is_cancel_requested:
                         ex.request_cancel()
@@ -331,15 +298,11 @@ class ArmTrajBridgeNode(Node):
                 return result
         return cb
 
-    # ------------------------------------------------------------------ 方案 A
 
     def _build_gripper(self, session):
         """建夹爪控制器。失败返回 None 并**响亮上报**，不静默跳过。"""
         names = list(self.get_parameter('gripper.names').value or [])
         if not names:
-            # 白名单没配就从 SDK 问一次。问不到就不开服务 ——
-            # 拿一个空白名单开服务，之后每个请求都会报"未知夹爪"，
-            # 那种错误信息会把人指向调用方，而真实原因在这里。
             try:
                 names = list(session.effector_names())
             except Exception as exc:      # noqa: BLE001
@@ -350,15 +313,10 @@ class ArmTrajBridgeNode(Node):
                                     '查询 effector_names 失败：%s' % exc)
                 return None
 
-        # 后端是仿真还是真机，决定 force_applied 能否为 True。
-        # **按实测的机器人模式判定**，不靠配置声明 —— 配置可能写错，
-        # 而谎报 force_applied=True 会让人把仿真里的夹持行为当成"力限已验收"。
         in_sim = True
         try:
             in_sim = is_simulation_mode(session.get_robot_mode())
         except Exception as exc:      # noqa: BLE001
-            # 读不到模式时**保守地当作仿真**：这个方向只会让 force_applied
-            # 偏向 False（少报"力已设上"），是安全方向的错。
             self.get_logger().warning(
                 '读机器人模式失败，force_applied 一律按仿真处理（False）：%s' % exc)
 

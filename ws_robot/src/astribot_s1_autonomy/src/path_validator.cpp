@@ -30,9 +30,6 @@ bool PathValidator::configure(const PathValidatorParams & params, std::string & 
     error = "goal_unknown_clearance_radius 不能为负";
     return false;
   }
-  // 未知净空半径设得比占据净空半径还大，几乎肯定是把两个参数的语义搞反了：
-  // 那会让所有前沿点都不合法、探索永远无法开始。宁可拒绝启动，也不要静默地
-  // 变成一个「永远找不到目标」的节点——那种故障现场极难定位。
   if (params.goal_unknown_clearance_radius > params.goal_clearance_radius) {
     oss << "goal_unknown_clearance_radius(" << params.goal_unknown_clearance_radius
         << ") 不应大于 goal_clearance_radius(" << params.goal_clearance_radius
@@ -60,14 +57,11 @@ double PathValidator::effectiveStep(const GridMap & map) const
   if (params_.path_sample_step > 0.0) {
     return params_.path_sample_step;
   }
-  // 默认取半个栅格：保证任何一格都不会被"跨过去"而漏检。
   return map.resolution * 0.5;
 }
 
 bool PathValidator::isKnownFree(const GridMap & map, double wx, double wy) const
 {
-  // 未配置就一律判不合法。参数校验失败时 validator_ 会停在未配置状态，
-  // 此时若用默认值放行，等于在「参数写错」这种最需要保护的时刻反而失去保护。
   if (!configured_) {
     return false;
   }
@@ -120,20 +114,6 @@ ValidationResult PathValidator::validateGoal(
     return r;
   }
 
-  // 净空邻域检查。这里必须把「占据」和「未知」分成两个半径，原因很关键：
-  //
-  //   探索目标点**天生**紧贴未知区 —— 前沿点的定义就是「空闲格且邻域含未知格」。
-  //   如果要求以 0.42m(机器人外接半径) 为半径的邻域内一个未知格都没有，
-  //   那么任何前沿点都必然不合法，探索在构造上就不可能进行。
-  //   （实测：这一条曾让唯一的有效候选被淘汰，探索永远停在 PAUSED。）
-  //
-  // 正确的语义拆分：
-  //   占据格 —— 用 goal_clearance_radius(机器人外接半径)。机器人停在目标点时
-  //             整个足迹都不能压到障碍物，这是真正的碰撞约束。
-  //   未知格 —— 用 goal_unknown_clearance_radius(一个小余量)。目标点要「踏实地」
-  //             位于已知区内，但不要求整个足迹半径内都已知，否则无法靠近前沿。
-  //             路径不穿未知区由 validatePath 逐点保证，目标点本身已知空闲由上面
-  //             的单格检查保证，需求「不得把未知栅格作为航点」并未被削弱。
   const double occupied_radius = params_.goal_clearance_radius;
   const double unknown_radius = params_.goal_unknown_clearance_radius;
   const double max_radius = std::max(occupied_radius, unknown_radius);
@@ -155,8 +135,6 @@ ValidationResult PathValidator::validateGoal(
         if (nx < 0 || ny < 0 ||
           nx >= static_cast<int>(map.width) || ny >= static_cast<int>(map.height))
         {
-          // 地图数组边界不是物理障碍，只是当前地图范围的尽头。
-          // 但机器人足迹伸出去意味着那片区域根本没有信息，仍按不合法处理。
           r.reason = "目标点净空邻域伸出地图边界";
           r.first_bad_point = {map.worldX(mx), map.worldY(my)};
           return r;
@@ -206,19 +184,15 @@ ValidationResult PathValidator::validatePath(
     return r;
   }
   if (path.empty()) {
-    // 规划器返回空路径 = 规划失败，绝不能当成"路径合法"。
     r.reason = "路径为空(规划失败)";
     return r;
   }
   if (path.size() < 2U) {
-    // 单点路径通常意味着起点=终点或规划器异常，不足以证明可通行。
     r.reason = "路径只有 1 个点，无法证明可通行";
     r.first_bad_point = path.front();
     return r;
   }
 
-  // 终点截断检查：Nav2 的规划器在目标不可达时可能返回一条"尽力靠近"的路径，
-  // action 本身是成功的。若不查这一条，我们会把机器人送到半路然后以为到了目标。
   const PlanarPoint & endp = path.back();
   const double endpoint_err = std::hypot(endp.x - requested_goal.x, endp.y - requested_goal.y);
   if (endpoint_err > params_.path_endpoint_tolerance) {
@@ -237,13 +211,10 @@ ValidationResult PathValidator::validatePath(
     return r;
   }
 
-  // 逐段插值采样。注意每段都包含起点、最后一段额外补上终点，
-  // 保证首尾都被检查到。
   for (std::size_t i = 0; i + 1U < path.size(); ++i) {
     const PlanarPoint & a = path[i];
     const PlanarPoint & b = path[i + 1U];
     const double seg_len = std::hypot(b.x - a.x, b.y - a.y);
-    // ceil 保证步长不超过 step；至少取 1 步以覆盖段起点。
     const auto steps = static_cast<std::size_t>(
       std::max(1.0, std::ceil(seg_len / step)));
 
@@ -283,7 +254,6 @@ ValidationResult PathValidator::validatePath(
     }
   }
 
-  // 补最后一个顶点（上面的循环每段都不含 t=1，故终点未被检查）
   ++r.samples_checked;
   if (!isKnownFree(map, path.back().x, path.back().y)) {
     r.reason = "路径终点所在栅格不是已知空闲";
@@ -299,7 +269,6 @@ ValidationResult PathValidator::validatePath(
   return r;
 }
 
-// ============ 跟踪期的纯几何辅助 ============
 
 std::size_t nearestPathIndex(const std::vector<PlanarPoint> & path, const PlanarPoint & robot)
 {
@@ -307,7 +276,6 @@ std::size_t nearestPathIndex(const std::vector<PlanarPoint> & path, const Planar
     return 0U;
   }
   std::size_t best = 0U;
-  // 比较平方距离即可，省掉每个顶点一次 sqrt（几百个顶点 × 2Hz，不是热点但没必要浪费）。
   double best_d2 = std::numeric_limits<double>::max();
   for (std::size_t i = 0; i < path.size(); ++i) {
     const double dx = path[i].x - robot.x;

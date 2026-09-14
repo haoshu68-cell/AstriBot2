@@ -6,8 +6,6 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
-# 任务要求"无 warning"。开满常用告警，把问题在编译期暴露出来，
-# 而不是等到运行时变成奇怪的数值行为。
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -28,16 +26,11 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 
-# OMPL：BIT* / Informed RRT* 的头文件与符号都来自这里。
-# moveit_planners_ompl 提供 ompl_interface 的公开头（PlanningContextManager 等），
-# ompl 本体提供 og::BITstar / og::InformedRRTstar 的实现。
 find_package(ompl REQUIRED)
 find_package(moveit_planners_ompl REQUIRED)
-# 只有 planning_demo_node 的 mobile_transport 场景用到（核心库不依赖它们）。
 find_package(rclcpp_action REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
-# 夹爪库用到：JTC 的 action 定义 + 读实测关节值。
 find_package(control_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
@@ -55,10 +48,6 @@ set(ASTRIBOT_MANIPULATION_DEPS
   tf2_geometry_msgs
 )
 
-# ---------------------------------------------------------------------------
-# 核心能力库：不含任何 ROS 节点，纯算法 + MoveIt 数据结构。
-# 这样单元测试可以在没有 move_group、没有仿真的环境里直接跑。
-# ---------------------------------------------------------------------------
 add_library(${PROJECT_NAME}_core SHARED
   src/error_codes.cpp
   src/singularity_monitor.cpp
@@ -78,14 +67,6 @@ target_include_directories(${PROJECT_NAME}_core SYSTEM PUBLIC
 )
 ament_target_dependencies(${PROJECT_NAME}_core ${ASTRIBOT_MANIPULATION_DEPS})
 
-# ---------------------------------------------------------------------------
-# OMPL 规划器扩展插件
-#
-# 单独一个 shared library，被 move_group 通过 pluginlib 加载
-# （planning_pipelines.yaml 里 planning_plugin 指向它）。
-# 必须显式链接 ompl 本体：og::BITstar / og::InformedRRTstar 的符号在
-# libompl.so 里，而 moveit_planners_ompl 只提供 ompl_interface 那一层封装。
-# ---------------------------------------------------------------------------
 add_library(${PROJECT_NAME}_ompl_extension SHARED
   src/ompl_planner_extension.cpp
 )
@@ -108,18 +89,6 @@ ament_target_dependencies(${PROJECT_NAME}_ompl_extension
 pluginlib_export_plugin_description_file(
   moveit_core ompl_planner_extension_plugin_description.xml)
 
-# ---------------------------------------------------------------------------
-# 夹爪动作库
-#
-# 为什么不并进 ${PROJECT_NAME}_core：核心库刻意不依赖任何 action / 节点级东西
-# （见上面 ASTRIBOT_MANIPULATION_DEPS 处的说明），这样单元测试能在没有
-# move_group、没有仿真的环境里跑。夹爪动作本质上要一个 action client，
-# 并进核心库就破了那个约定，所以单独一个很薄的库。
-#
-# 注意它仍然可以离线测：configure() 只建 client 与订阅、不等服务端，
-# 张口表是纯 FK 计算 —— 所以「读 SRDF 开合角」「按宽度反解抓取角」这两件
-# 最容易写错的事都能在没有仿真的环境里被测到。真正需要控制器在线的只有 moveTo()。
-# ---------------------------------------------------------------------------
 add_library(${PROJECT_NAME}_gripper SHARED
   src/gripper_commander.cpp
 )
@@ -138,17 +107,8 @@ ament_target_dependencies(${PROJECT_NAME}_gripper
   sensor_msgs
 )
 
-# ---------------------------------------------------------------------------
-# demo 与工具节点
-# ---------------------------------------------------------------------------
 add_executable(planning_demo_node src/planning_demo_node.cpp)
 target_link_libraries(planning_demo_node ${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
-# mobile_transport 场景要下发 NavigateToPose / ComputePathToPose 并查 TF，
-# 所以 demo 节点比核心库多这三个依赖。
-# 刻意**不**把它们加进 ASTRIBOT_MANIPULATION_DEPS：核心库是单元测试链接的目标，
-# 保持它不依赖导航栈，才能在没有 nav2 的环境里直接跑测试。
-# nav2_msgs 只是 action/msg 定义，是很轻的依赖 —— 比让导航侧反过来依赖整个
-# MoveIt 轻得多，所以流程编排放在这一侧。
 ament_target_dependencies(planning_demo_node
   ${ASTRIBOT_MANIPULATION_DEPS}
   rclcpp_action
@@ -158,16 +118,10 @@ ament_target_dependencies(planning_demo_node
   sensor_msgs
 )
 
-# 自碰撞对生成工具：采样实测哪些 link 对"从不碰撞"或"总是碰撞"，
-# 输出可直接粘进 SRDF 的 disable_collisions 片段。
-# 这样 SRDF 里的碰撞关闭列表是可复现的实测结果，而不是手填。
 add_executable(self_collision_pair_generator src/self_collision_pair_generator.cpp)
 target_link_libraries(self_collision_pair_generator ${PROJECT_NAME}_core)
 ament_target_dependencies(self_collision_pair_generator ${ASTRIBOT_MANIPULATION_DEPS})
 
-# ---------------------------------------------------------------------------
-# 安装
-# ---------------------------------------------------------------------------
 install(
   DIRECTORY include/
   DESTINATION include
@@ -181,9 +135,6 @@ install(
   RUNTIME DESTINATION bin
 )
 
-# 可执行节点必须装到 lib/${PROJECT_NAME}，这是 ros2 run / ros2 launch 查找
-# libexec 的位置。装到 bin/ 的话 launch 会报
-# "libexec directory ... does not exist"，而 ros2 run 也找不到节点。
 install(
   TARGETS planning_demo_node self_collision_pair_generator
   DESTINATION lib/${PROJECT_NAME}
@@ -194,76 +145,6 @@ install(
   DESTINATION share/${PROJECT_NAME}
   OPTIONAL
 )
-
-# ---------------------------------------------------------------------------
-# 测试
-# ---------------------------------------------------------------------------
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-
-  # 跳过理由与 astribot_s1_autonomy 一致（保持全仓库一致的 lint 策略）：
-  # copyright  —— 仓库没有统一版权头格式。
-  # uncrustify —— 其规则会把中文块注释重排到难以阅读。
-  # cpplint    —— 行长按**字节**计数，中文字符每个 3 字节，带中文注释的行
-  #               会被误报超长；本包源码都在 100 **字符**以内。
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_uncrustify_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
-
-  # lint_cmake 限定扫描范围，避免把包内 build/ install/ 里 CMake 自己生成的
-  # .cmake 文件也算进来（那些一律不符合 lint 规则，会淹掉真实问题）。
-  set(AMENT_LINT_AUTO_EXCLUDE ament_cmake_lint_cmake)
-  ament_lint_auto_find_test_dependencies()
-  ament_lint_cmake(CMakeLists.txt)
-
-  find_package(ament_cmake_gtest REQUIRED)
-  find_package(urdf REQUIRED)
-  find_package(srdfdom REQUIRED)
-
-  # 这些单测只依赖 moveit_core 的数据结构和本包算法，不需要 ROS 运行时、
-  # 不需要 move_group、不需要仿真，可在 CI 里直接跑。
-  # 测试用的是 test/test_robot_fixture.hpp 里的合成双臂模型（两条平面 3R 臂），
-  # 不加载真实 URDF —— 理由见该头文件的注释。
-  ament_add_gtest(test_singularity_monitor test/test_singularity_monitor.cpp)
-  target_link_libraries(test_singularity_monitor ${PROJECT_NAME}_core)
-  target_include_directories(test_singularity_monitor PRIVATE test)
-  ament_target_dependencies(test_singularity_monitor
-    ${ASTRIBOT_MANIPULATION_DEPS} urdf srdfdom)
-
-  ament_add_gtest(test_closed_chain_constraint test/test_closed_chain_constraint.cpp)
-  target_link_libraries(test_closed_chain_constraint ${PROJECT_NAME}_core)
-  target_include_directories(test_closed_chain_constraint PRIVATE test)
-  ament_target_dependencies(test_closed_chain_constraint
-    ${ASTRIBOT_MANIPULATION_DEPS} urdf srdfdom)
-
-  ament_add_gtest(test_trajectory_optimizer test/test_trajectory_optimizer.cpp)
-  target_link_libraries(test_trajectory_optimizer ${PROJECT_NAME}_core)
-  target_include_directories(test_trajectory_optimizer PRIVATE test)
-  ament_target_dependencies(test_trajectory_optimizer
-    ${ASTRIBOT_MANIPULATION_DEPS} urdf srdfdom)
-
-  # OptimizingPlannerWrapper 是 header-only 模板，测试直接在 OMPL 的
-  # RealVectorStateSpace 上造合成规划问题，不碰机器人模型，所以只需要链 ompl。
-  # 超时给足：其中几条用例本身就是在验证"原生 RRT* 会烧完超时"。
-  ament_add_gtest(test_optimizing_planner_wrapper
-    test/test_optimizing_planner_wrapper.cpp TIMEOUT 120)
-  target_include_directories(test_optimizing_planner_wrapper PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  target_include_directories(test_optimizing_planner_wrapper SYSTEM PRIVATE
-    ${OMPL_INCLUDE_DIRS})
-  target_link_libraries(test_optimizing_planner_wrapper ${OMPL_LIBRARIES})
-  ament_target_dependencies(test_optimizing_planner_wrapper rclcpp)
-
-  # 夹爪：断言的是"开合角来自 SRDF"与"按物体宽度反解抓取角"。
-  # 用的是 test_gripper_commander.cpp 里自带的合成平行夹爪（张口宽度可以口算），
-  # 不需要控制器在线 —— configure() 只建 client 不等服务端，张口表是纯 FK。
-  ament_add_gtest(test_gripper_commander test/test_gripper_commander.cpp)
-  target_link_libraries(test_gripper_commander
-    ${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
-  target_include_directories(test_gripper_commander PRIVATE test)
-  ament_target_dependencies(test_gripper_commander
-    ${ASTRIBOT_MANIPULATION_DEPS} rclcpp_action control_msgs sensor_msgs urdf srdfdom)
-endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)

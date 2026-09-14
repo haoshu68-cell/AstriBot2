@@ -1,73 +1,18 @@
-# =============================================================================
-# 桥接配置（Gate 2：只读状态方向）
-#
-# 本文件的核心是「厂商部件名 -> 我这边逐个关节名」的映射表。它是整条链路上
-# 唯一需要人来断言的东西，所以必须是**数据**而不是代码里的名字拼接：
-# 换机型/换末端只改这里。
-#
-# !!! 为什么部件内的关节顺序必须验证而不能假设 !!!
-# 厂商 SDK 的 get_current_joints_position(names) 返回的是**按部件成组的裸数组**，
-# 数组里第 i 个数对应哪个物理关节，SDK 没有任何地方声明。
-# 而 SDK 的核心是编译好的 astribot_function.so（core/common/util/），
-# 源码不可读 —— 也就是说**读代码得不到答案**。
-#
-# 所以本包提供 joint_map_probe 节点：用 SDK 的 get_joints_position_limit()
-# 拿到每个部件的限位向量，与本映射表指定顺序下的 URDF 限位逐个比对。
-# 臂的 7 个关节限位互不相同（-3.1/3.1、-1.53/0.46、±3.1、-0.06/2.61、
-# ±2.56、±0.76、±1.53），顺序错了限位就对不上 —— 这是个不依赖假设的独立判据。
-# 用法见本包 README。
-# =============================================================================
 /**:
   ros__parameters:
 
     bridge:
-      # 状态发布频率(Hz)。厂商控制频率是 250Hz，但 /joint_states 供
-      # MoveIt/RViz 显示与规划起点用，50Hz 足够且省 CPU。
-      # 与 Gazebo 侧 joint_state_broadcaster 的 state_publish_rate: 50.0 取齐，
-      # 这样从仿真切到厂商栈时上层看到的更新节奏不变。
       publish_rate: 50.0
 
-      # /joint_states 的 header.frame_id。JointState 的 frame_id 实际不被
-      # robot_state_publisher 使用，留空即可；显式写出来是为了不让人误以为漏了。
       frame_id: ""
 
-      # SDK 连接参数。freq 传给 Astribot(freq=...)，是 SDK 内部的控制周期，
-      # 与上面的 publish_rate 是两件事，不要混。
       sdk_freq: 250.0
-      # high_control_rights=false：只读状态不需要控制权。
-      # !!! 这是只读方向的安全边界 !!!：不申请控制权 => 即使代码有 bug
-      # 也不可能下发指令动到机器人。Gate 3 开写通路时才需要改这里。
       sdk_high_control_rights: false
-      # 节点名传给 SDK（它会用来建自己的 ROS2 节点）。
       sdk_node_name: "astribot_state_bridge"
 
-      # SDK 读不到状态时的行为。
-      # 连续这么多个周期拿不到有效数据就报错退出，而不是继续发陈旧值 ——
-      # 发陈旧的关节角比不发更危险：MoveIt 会拿它当规划起点。
       max_consecutive_read_failures: 25
 
-    # =========================================================================
-    # 部件 -> 关节映射
-    #
-    # parts 的**顺序**就是传给 SDK 的 name_list 顺序，SDK 按同样顺序返回。
-    # 每个部件下 joints 的顺序 = 该部件返回数组的下标顺序（待 probe 验证）。
-    #
-    # scale/offset：URDF 值 = scale * SDK 值 + offset。
-    # 手臂/躯干/头部都是弧度对弧度，scale=1。
-    # 夹爪是唯一需要换算的：SDK 侧是 0~100 的抽象量，URDF 侧是 0~0.93 rad
-    # 的主动关节角，scale = 0.93/100 = 0.0093。
-    # 这个 0.0093 不是估的：MuJoCo 的 actuator 是 gainprm=4.65 /
-    # biasprm=(0,-500,-10) 的位置伺服，平衡点 len = 4.65/500 * ctrl = 0.0093*ctrl，
-    # 而 len 是 tendon = 0.5*R1 + 0.5*L1，在 R1=L1 下就等于主动关节角。
-    # =========================================================================
     joint_map:
-      # !!! 不含底盘 !!!
-      # SDK 的 whole_body_names 是
-      #   [astribot_torso, astribot_arm_left, astribot_gripper_left,
-      #    astribot_arm_right, astribot_gripper_right, astribot_head]
-      # 共 4+7+1+7+1+2 = 22 DOF，**没有底盘**（底盘在厂商侧是另外 3 个虚拟关节
-      # astribot_chassis_x/y/z_rot，走 SLAM 世界系的位置指令，不在 whole_body 里）。
-      # 本决策已砍掉导航，底盘不进 /joint_states。
       parts:
         - astribot_torso
         - astribot_arm_left
@@ -97,9 +42,6 @@
         scale: 1.0
         offset: 0.0
 
-      # 夹爪：SDK 侧 1 个抽象自由度(0~100)，URDF 侧就是主动关节 joint_L1。
-      # 另外 5 个 mimic 从动关节**不在这里** —— 它们由 robot_state_publisher
-      # 按 URDF 的 mimic 关系算出来，桥接发了反而会冲突。
       astribot_gripper_left:
         joints:
           - astribot_gripper_left_joint_L1

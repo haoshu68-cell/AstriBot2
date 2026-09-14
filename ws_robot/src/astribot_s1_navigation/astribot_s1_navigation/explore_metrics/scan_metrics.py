@@ -1,45 +1,14 @@
 # Copyright 2026 Astribot.
-#
-# 探索评测的激光量。**纯函数，无 ROS 依赖**。
-#
-# ======================== 读这些数之前必须知道的四件事 ========================
-#
-# ① /scan 是点云的 z 切片，不是全高度扫描
-#   本机的 /scan_from_cloud 由 pointcloud_slice_scan_node 从双 Livox 点云
-#   切片投影而来，保留区间约 [0.05, 1.63] m。
-#   直接后果：**低于 0.05m 的障碍按构造不可见**。
-#   "低矮障碍检出率"这一项因此不能只看 /scan 就下结论，必须外部给真值。
-#
-# ② range 里的无效值有三种，必须分开处理
-#   inf / nan（无回波）、0（部分驱动用 0 表示无效）、超出 [range_min, range_max]。
-#   把 inf 当成"很远、很安全"是对的；把 **0 当成"贴在脸上"是错的** ——
-#   0 是无效标记，当成 0m 障碍会让"最近障碍距离"恒为 0。
-#
-# ③ 居中度在开阔地没有意义
-#   两侧都没有近距回波时，(minL-minR)/(minL+minR) 是在比两个无穷远，
-#   算出来接近 0 会被读成"居中完美"。所以只统计两侧都有 <
-#   corridor_max_range 回波的样本，并且**必须同时报合格样本占比**。
-#
-# ④ 自滤残留：range < 外接半径 在物理上不可能
-#   自滤生效时，机器人自身结构的点已被剔除，不该有任何回波落在自己的外接
-#   包络内。出现即自滤漏了 —— 本项目正是因为夹爪不在自滤链里，
-#   机器人把自己的指尖当障碍，导致 "Starting point in lethal space"、探索 0 次派发。
-#   所以这一项是有实际故障对应的，不是凑数指标。
-# ============================================================================
 import math
 
 import numpy as np
 
-# 扇区定义 (rad)。前向用于刹车响应，左右用于居中度。
 FRONT_HALF_ANGLE = math.radians(30.0)
 SIDE_LO = math.radians(30.0)
 SIDE_HI = math.radians(150.0)
 
-# 只在两侧回波都近于此值时才判"处在通道里"（见文件头 ③）。
 DEFAULT_CORRIDOR_MAX_RANGE = 2.0
 
-# 窄通道宽度阈值 (m)。1.62 是实测值：consider_footprint=true 时，
-# 窄于 1.62m 的通道里 MPPI 的足迹代价恒为 253、梯度为零。
 DEFAULT_NARROW_WIDTH_M = 1.62
 
 
@@ -106,18 +75,6 @@ def frame_stats(ranges, angle_min, angle_increment, range_min, range_max,
             out['in_corridor'] = True
             denom = lm + rm
             out['center_bias'] = float((lm - rm) / denom) if denom > 1e-6 else None
-        # 🔴 净宽 = left_min + right_min，**不能**再加机器人直径。
-        #
-        # left_min/right_min 是从**传感器原点**（≈底盘中心）量到两侧墙的
-        # 距离，两者相加已经是墙到墙的全宽 —— 机器人自己占的那部分本来就
-        # 含在里面了。原式再加 2*外接半径，等于把底盘算了两遍
-        # （同 [[inflated-costmap-plus-footprint-polygon-double-counts-robot]]）。
-        #
-        # 实测（run1 的 3270 帧）：正确口径 min=0.950 中位=2.115，
-        #   <1.62m 的有 1382 帧（42.3%）；原式恒 +0.868m ⇒ min 抬到 1.818，
-        #   <1.62m 的 **0 帧**。narrow_sample_ratio/narrow_episodes/
-        #   narrow_success/narrow_success_rate_proxy 四列因此全是死的 ——
-        #   不是"这张图没有窄通道"，是这个指标测不到任何东西。
         out['free_width'] = float(lm + rm)
     return out
 
@@ -171,9 +128,6 @@ def aggregate(frames, stamps, circumscribed=None,
     bias = [abs(f['center_bias']) for f in frames if f['center_bias'] is not None]
     corridor = sum(1 for f in frames if f['in_corridor'])
 
-    # 只统计"确实算过自滤残留"的帧。拿不到足迹时每帧的 self_residual 都是 None，
-    # 若把它当 0 累加，safe_div(0, total) 会给出 **0.0** ——
-    # 那会被读成"自滤很干净"，而真相是这一项根本没测。
     scored = [f for f in frames if f['self_residual'] is not None]
     residual_beams = sum(f['self_residual'] for f in scored)
     scored_beams = sum(f['n_beams'] for f in scored)
@@ -199,8 +153,6 @@ def aggregate(frames, stamps, circumscribed=None,
         'center_bias_abs_max': signals.stat_or_none(bias, np.max),
         'corridor_sample_ratio': signals.safe_div(corridor, len(frames)),
         'corridor_samples': corridor,
-        # 代理量：理应恒为 0，非 0 即自滤漏了机器人自身结构（见文件头 ④）。
-        # 分母只用"算过的帧"，一帧都没算过时给 None 而不是 0.0。
         'self_filter_residual_ratio_proxy': signals.safe_div(
             residual_beams, scored_beams) if scored else None,
         'self_filter_residual_frames': residual_frames,

@@ -33,6 +33,8 @@ try/except 里，任何一步出错就退回到"这一帧不缩放、原样转�
 不假装是完美的、任何情况下都零感知的故障转移。
 """
 
+import math
+
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
@@ -54,18 +56,11 @@ from astribot_s1_dynamics_coupling.arm_reach_metric import (
 )
 
 
-# 跟 astribot_s1_navigation/arm_speed_limiter_node.py 里用的是同一套命名规范
-# （astribot_arm_{left,right}_joint_{1..7}），但这是本包自己独立维护的一份列表，
-# 不依赖、不import那个包，保持两个包完全解耦（一个是Nav2官方speed_limit机制的
-# 粗粒度静态限速，一个是本包更精细的连续动态耦合限速，互相独立、不共享代码）。
 ARM_JOINT_NAMES = (
     [f'astribot_arm_left_joint_{i}' for i in range(1, 8)] +
     [f'astribot_arm_right_joint_{i}' for i in range(1, 8)]
 )
 
-# 默认监控的连杆:实测(URDF 全工作空间采样)水平伸展最大值总是落在双臂 TCP 或夹爪
-# 指尖连杆上,所以只查这几个 TF 就够,不需要遍历全部连杆。换机型/换夹爪要用
-# monitored_links 参数覆盖这个列表。
 DEFAULT_MONITORED_LINKS = [
     'astribot_arm_left_tcp_link',
     'astribot_arm_right_tcp_link',
@@ -73,8 +68,6 @@ DEFAULT_MONITORED_LINKS = [
     'astribot_gripper_right_Link_R11',
 ]
 
-# 底盘回转轴所在坐标系。伸展量是相对这个 frame 的 xy 距离算的,不是相对某个传感器
-# frame——见项目笔记:本机器人根 frame 是 astribot_torso_base,不存在 base_link。
 DEFAULT_CHASSIS_BASE_FRAME = 'astribot_torso_base'
 
 
@@ -83,50 +76,32 @@ class ArmChassisSpeedCouplingNode(Node):
     def __init__(self):
         super().__init__('arm_chassis_speed_coupling_node')
 
-        # ---- 话题 ----
         self.declare_parameter('input_topic', '/cmd_vel_pre_arm_coupling')
         self.declare_parameter('output_topic', '/cmd_vel')
         self.declare_parameter('joint_states_topic', '/joint_states')
 
-        # ---- 展开幅度限速曲线 ----
-        # C1 修正:默认度量从"关节角相对参考姿态的偏差"换成"监控连杆相对底盘回转轴
-        # 的水平伸展(m)"。换的原因(实测证据)见 arm_reach_metric.py 头部说明——旧度量
-        # 与真实伸展反相关。joint_deviation 保留下来只为 A/B 回归和一键回退。
         self.declare_parameter('extension_metric', METRIC_HORIZONTAL_REACH)
         self.declare_parameter('chassis_base_frame', DEFAULT_CHASSIS_BASE_FRAME)
+        self.declare_parameter('reach_tf_timeout_sec', 0.5)
+        timeout = float(self.get_parameter('reach_tf_timeout_sec').value)
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError('reach_tf_timeout_sec must be finite and positive')
         self.declare_parameter('monitored_links', DEFAULT_MONITORED_LINKS)
-        # 低于这个伸展量记 0 活跃度(默认 = Nav2 的 robot_radius 0.42:机械臂还在底盘
-        # 足迹以内,规划器已经算进去了);达到 reach_full_m 则活跃度封顶 1.0
-        # (默认 0.8865 = 实测全工作空间最大水平伸展)。
         self.declare_parameter('reach_folded_m', 0.42)
         self.declare_parameter('reach_full_m', 0.8865)
-        # TF 查询节流:关节状态可能 100Hz 上来,但机械臂运动相对 20Hz 已经足够慢。
         self.declare_parameter('reach_update_period_sec', 0.05)
 
-        # ---- 旧度量(joint_deviation)的参数,仅在 extension_metric 切回去时生效 ----
-        # 双臂14个关节里,任意一个关节相对"收纳姿态"的偏差(rad)达到这个值,
-        # 就认为展开幅度维度已经"满量程"（貢献1.0的活跃度）。
         self.declare_parameter('folded_reference_rad', [0.0] * len(ARM_JOINT_NAMES))
         self.declare_parameter('extension_full_rad', 1.2)
 
-        # ---- 运动速率限速曲线 ----
-        # 任意一个关节的角速度(rad/s)绝对值达到这个值，就认为速率维度已经"满量程"。
         self.declare_parameter('velocity_full_rad_s', 2.0)
 
-        # ---- 限速系数计算/平滑 ----
-        # 展开幅度和运动速率两个维度取更严格(更慢)的那个，不是加权平均——宁可
-        # 保守，不要因为"平均出来还凑合"而放过一个真正剧烈的运动。
         self.declare_parameter('min_speed_scale', 0.15)  # 满量程活跃度时的限速系数下限
-        # 系数本身做一阶低通平滑，避免关节角度抖动/传感器噪声导致底盘速度一顿一顿。
         self.declare_parameter('scale_smoothing_alpha', 0.25)
 
-        # ---- 数据陈旧/异常降级 ----
-        # /joint_states 超过这么久没更新，判定为"数据陈旧"（比如硬件掉线/节点没启动），
-        # 自动降级为固定安全低速，而不是不限速地放行（也不是直接停机——不中断导航任务）。
         self.declare_parameter('joint_state_timeout_sec', 0.5)
         self.declare_parameter('degraded_scale', 0.3)
 
-        # ---- 日志 ----
         self.declare_parameter('log_throttle_sec', 2.0)
 
         input_topic = self.get_parameter('input_topic').value
@@ -141,7 +116,6 @@ class ArmChassisSpeedCouplingNode(Node):
         self.last_joint_state_time = None  # 用 self.get_clock() 的时间戳，不是wall clock
         self._last_log_time = None
 
-        # ---- 伸展度量的运行时状态 ----
         self._metric = self._resolve_metric()
         self._tf_buffer = None
         self._tf_listener = None
@@ -150,7 +124,6 @@ class ArmChassisSpeedCouplingNode(Node):
         self._last_reach_time = None    # 节流用
         self._tf_warned = False         # TF 尚未就绪的告警只打一次,不刷屏
         if self._metric == METRIC_HORIZONTAL_REACH:
-            # TF 只在真的用 horizontal_reach 时才订阅,回退到旧度量时不白占资源。
             self._tf_buffer = Buffer()
             self._tf_listener = TransformListener(self._tf_buffer, self)
 
@@ -204,16 +177,7 @@ class ArmChassisSpeedCouplingNode(Node):
                 % self.get_parameter('extension_full_rad').value)
 
     def _max_horizontal_reach(self):
-        """查 TF 求监控连杆里相对底盘回转轴的最大水平伸展(m)。
-
-        返回 None 表示这一帧拿不到任何一个监控连杆的 TF(比如 TF 树还没建立起来)，
-        由调用方决定怎么处理——本节点的策略是保持上一次已知值。
-
-        !!! 关键:lookup_transform 传 Time()(=最新可用)且**不带 timeout** !!!
-        项目笔记记过一个坑:带 timeout 的动态 TF 查询在非专用线程里必然失败,而
-        static TF 却能成功,看起来像正常。这里在执行器线程里跑,带 timeout 还会
-        直接阻塞 cmd_vel 转发,所以只取缓冲区里最新的那一帧,查不到就跳过。
-        """
+        """非阻塞查询全部监控 TF；任一路缺失或陈旧均返回 None。"""
         base_frame = self.get_parameter('chassis_base_frame').value
         links = self.get_parameter('monitored_links').value
         best = None
@@ -225,15 +189,23 @@ class ArmChassisSpeedCouplingNode(Node):
             except TransformException as exc:
                 failures.append('%s(%s)' % (link, type(exc).__name__))
                 continue
+            stamp = Time.from_msg(tf.header.stamp)
+            age = (self.get_clock().now() - stamp).nanoseconds / 1e9
             t = tf.transform.translation
+            # Zero stamp denotes a timeless, entirely static TF chain.
+            if (not all(math.isfinite(v) for v in (t.x, t.y, t.z)) or
+                    (stamp.nanoseconds != 0 and
+                     not 0.0 <= age <= self.get_parameter('reach_tf_timeout_sec').value)):
+                failures.append('%s(stale or invalid TF)' % link)
+                continue
             reach = horizontal_reach(t.x, t.y)
             if best is None or reach > best:
                 best, best_link = reach, link
-        if best is None:
+        if best is None or failures:
             if not self._tf_warned:
                 self._tf_warned = True
                 self.get_logger().warn(
-                    '监控连杆的 TF 全部查不到(%s)，伸展维度暂时沿用上一次已知值；'
+                    '监控连杆的 TF 不完整或无效(%s)，伸展维度按满量程保护；'
                     'TF 树建立后会自动恢复，此告警只打一次。'
                     % ('; '.join(failures) if failures else 'monitored_links 为空'))
             return None
@@ -242,10 +214,6 @@ class ArmChassisSpeedCouplingNode(Node):
 
 
     def joint_state_callback(self, msg: JointState):
-        # !!! 任何单次异常都不能让这个回调整体崩溃/退出——按文件头部"静默失效"
-        # 说明，出错时保持上一次已知的 current_scale 不变（不是重置成1.0，因为
-        # 出错时机器人还是应该保持之前的判断，不能因为这一帧解析失败就突然放开
-        # 限速；也不是直接判定成"最危险"，避免噪声/瞬时错误造成不必要的急停）。
         try:
             name_to_pos = dict(zip(msg.name, msg.position))
             has_velocity = len(msg.velocity) == len(msg.name)
@@ -256,7 +224,6 @@ class ArmChassisSpeedCouplingNode(Node):
                 name_to_vel, ARM_JOINT_NAMES,
                 self.get_parameter('velocity_full_rad_s').value)
 
-            # 两个维度取更严格(活跃度更高→限速更多)的那个，不做加权平均。
             activity = max(extension_ratio, velocity_ratio)
             raw_scale = scale_from_activity(
                 activity, self.get_parameter('min_speed_scale').value)
@@ -278,21 +245,21 @@ class ArmChassisSpeedCouplingNode(Node):
                 self.get_parameter('folded_reference_rad').value,
                 self.get_parameter('extension_full_rad').value)
 
-        # TF 查询按 reach_update_period_sec 节流:joint_states 可能 100Hz,而机械臂
-        # 运动相对 20Hz 已经足够慢,没必要每帧查 4 个 TF。
         now = self.get_clock().now()
         period = self.get_parameter('reach_update_period_sec').value
         stale = (self._last_reach_time is None or
-                 (now - self._last_reach_time).nanoseconds >= period * 1e9)
+                 not 0 <= (now - self._last_reach_time).nanoseconds < period * 1e9)
         if stale:
             probed = self._max_horizontal_reach()
             if probed is not None:
                 self._last_reach_m, self._last_reach_link = probed
                 self._last_reach_time = now
+            else:
+                self._last_reach_m = None
+                self._last_reach_link = ''
+                self._last_reach_time = now
 
         if self._last_reach_m is None:
-            # 从没成功查到过 TF。这里返回 1.0(最保守/限速最狠)而不是 0.0——
-            # 拿不到机械臂位姿时假设"手臂完全伸出"，不能假设"手臂收着"。
             return 1.0
         return reach_activity(
             self._last_reach_m,
@@ -318,9 +285,6 @@ class ArmChassisSpeedCouplingNode(Node):
                 (activity, detail, self.current_scale))
 
     def cmd_vel_callback(self, msg: Twist):
-        # !!! 核心"静默失效"逻辑：任何异常都 fall back 到 1.0（原样转发，不限速），
-        # 不是 fall back 到 0（那样反而会让机器人在异常时突然停住，比"不限速"更危险，
-        # 跟任务书"节点异常不影响基础运动能力"的要求相反）。
         try:
             scale = self._get_effective_scale()
         except Exception as exc:  # noqa: BLE001
@@ -340,8 +304,6 @@ class ArmChassisSpeedCouplingNode(Node):
     def _get_effective_scale(self):
         """结合 /joint_states 陈旧检测，返回当前应该使用的限速系数。"""
         if self.last_joint_state_time is None:
-            # 从没收到过关节状态(节点刚启动、或机械臂话题一直没上线)——按"异常场景
-            # 处理规则"要求，降级到固定安全低速，不是不限速也不是完全停机。
             return self.get_parameter('degraded_scale').value
 
         timeout = self.get_parameter('joint_state_timeout_sec').value

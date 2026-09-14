@@ -1,25 +1,4 @@
 // Copyright 2026 Astribot
-//
-// 夹爪动作封装。
-//
-// 为什么单独一层，而不是在 demo 节点里直接发 JTC 目标：
-//   1. 「开」「合」的角度必须来自 SRDF 的 group_state，不能写死。任务明确禁止
-//      硬编码关节极限；夹爪的 0.0/0.93 正是关节极限，写死之后换夹爪就全错。
-//   2. 「按物体宽度闭合」需要正解量张口，那要 RobotModel，不适合塞进节点主流程。
-//   3. 失败必须带原因（见 PlanErrorCode 里 kGripper* 五个码），bool 表达不了
-//      「控制器不在」和「控制器在但没合到位」的区别，而这两者的处置完全不同。
-//
-// 为什么不用 MoveGroupInterface 驱动夹爪：
-//   夹爪只有 1 个主动自由度，走 OMPL 采样 + 时间参数化 + 执行的完整管线纯属绕路，
-//   而且 move_group 对单关节组的规划经常返回退化轨迹。JTC 直连已实测精确
-//   （0.93/0.45/0.00 三个目标的稳态偏差都是 0.0000 rad）。
-//
-// 这一层做不到什么（必须如实知道）：
-//   · 它只驱动**主动关节** joint_L1。从动 mimic 关节在 Gazebo 里有实测 7.79°
-//     稳态误差（从动关节到 0.794 而不是 0.93），而 /joint_states 里根本没有
-//     从动关节，所以这里的「已收敛」判定看不到那个误差。
-//   · 它不产生夹持力，也不判断「是否真的夹住了东西」。仿真里物体是否跟随
-//     由规划场景的 AttachedCollisionObject 决定，不由接触力决定。
 
 #ifndef ASTRIBOT_S1_MANIPULATION__GRIPPER_COMMANDER_HPP_
 #define ASTRIBOT_S1_MANIPULATION__GRIPPER_COMMANDER_HPP_
@@ -96,14 +75,6 @@ struct GripperOutcome
 };
 
 /// 夹爪动作器。
-///
-/// 生命周期：先 configure()（读 SRDF、建 action client 与 /joint_states 订阅），
-/// 之后才能调 open()/closeToWidth()/moveTo()。未 configure 就调一律返回
-/// kNotConfigured，不抛异常。
-///
-/// 线程模型：假定节点已被**别人**的执行器在 spin（demo 节点就是这样，
-/// main() 里起了后台 spin 线程）。因此内部一律用 future.wait_for() 等待，
-/// 绝不调 spin_until_future_complete —— 那会变成两个执行器抢同一个节点。
 class GripperCommander
 {
 public:

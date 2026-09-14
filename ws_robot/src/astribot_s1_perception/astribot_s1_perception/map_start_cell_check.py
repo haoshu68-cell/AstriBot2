@@ -42,8 +42,6 @@ from rclpy.qos import (
 from nav_msgs.msg import OccupancyGrid
 
 
-# OccupancyGrid 的编码：-1 未知，0 自由，100 占据。
-# 阈值取 65 与 nav2 static_layer 的 occupied_thresh 0.65 一致。
 _OCCUPIED_THRESHOLD = 65
 
 
@@ -103,8 +101,6 @@ def check_start_cell(info_width, info_height, resolution, origin_x, origin_y,
             False, '出生点所在栅格是**占据**的（机器人出生在墙里）',
             cell_value=value, grid_xy=(gx, gy), world_xy=world_xy)
 
-    # 净空检查：半径内不允许出现占据栅格。未知在这里**只警告不否决** ——
-    # 出生点自身已经要求已知自由，周围有未知是正常的（地图边缘）。
     if clearance_m > 0.0:
         radius_cells = int(math.ceil(clearance_m / resolution))
         for dy in range(-radius_cells, radius_cells + 1):
@@ -146,16 +142,12 @@ class MapStartCellCheck(Node):
             self.done = True
             return
 
-        # 机器人出生在 odom 原点，所以它在地图里的位置就是 map→odom 的平移。
         self._world_x = float(pose[0])
         self._world_y = float(pose[1])
         self._clearance = float(self.get_parameter('start_cell_clearance_m').value)
         self.verdict = None
         self.done = False
 
-        # /map 是 latched 的，必须 TRANSIENT_LOCAL + RELIABLE。
-        # 用 VOLATILE 订阅一个 latched 话题的后果是**一条都收不到**，
-        # 而且只有一行 QoS 不兼容的 WARN，很容易被读成"地图没发出来"。
         qos = QoSProfile(
             depth=1,
             history=HistoryPolicy.KEEP_LAST,

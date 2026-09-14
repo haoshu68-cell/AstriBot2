@@ -1,10 +1,9 @@
 // Copyright 2026 Astribot. Apache-2.0.
-// 曲率-速度耦合纯函数层实现。推导与取值理由见同名 .hpp 文件头。
-
 #include "astribot_s1_path_tracking/curvature_speed_math.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -37,6 +36,66 @@ bool validate(const Limits & lim, std::string & why)
   return true;
 }
 
+bool validateBrake(double a_brake, std::string & why)
+{
+
+  if (!(a_brake > 0.0) || !std::isfinite(a_brake)) {
+    why = "path_brake_accel 必须 > 0 且有限（当前 " + std::to_string(a_brake) +
+      "）；<=0 会让远处曲率不打折，逐字退回旧的无权重 max 行为（弯一进窗口就阶跃降速"
+      "并平推整个窗口）。要那个行为请显式写一个很小的正数，不要写 0。";
+    return false;
+  }
+  return true;
+}
+
+bool validate(const Lookahead & la, std::string & why)
+{
+  if (!(la.t_react > 0.0)) {
+    why = "path_lookahead_t_react 必须 > 0（当前 " + std::to_string(la.t_react) +
+      "）；置 0 会把前视一路压到下限，前馈项只看锚点脚下那一小段。";
+    return false;
+  }
+  if (!(la.min_dist > 0.0)) {
+    why = "path_lookahead_min_dist 必须 > 0（当前 " + std::to_string(la.min_dist) +
+      "）；见 curvature_speed_math.hpp 文件头关于 0.05m 栅格量化噪声那一段。";
+    return false;
+  }
+  if (!(la.horizon_s > 0.0)) {
+    why = "horizon_s 必须 > 0（当前 " + std::to_string(la.horizon_s) +
+      "）；它等于 time_steps * model_dt，为 0 说明 CriticData 里的时域是空的。";
+    return false;
+  }
+
+  return validateBrake(la.a_brake, why);
+}
+
+LookaheadResult lookaheadDistance(double v_ref, const Lookahead & la)
+{
+  LookaheadResult r;
+
+  if (!(v_ref > 0.0) || !std::isfinite(v_ref)) {
+    r.dist = la.min_dist;
+    r.clamped_to_min = true;
+    return r;
+  }
+
+  double d = v_ref * la.t_react;
+
+  const double horizon_dist = v_ref * la.horizon_s;
+  if (d > horizon_dist) {
+    d = horizon_dist;
+    r.clamped_to_horizon = true;
+  }
+  if (d < la.min_dist) {
+    d = la.min_dist;
+    r.clamped_to_min = true;
+    r.clamped_to_horizon = false;
+  }
+
+  r.dist = d;
+  return r;
+}
+
 double speedForLateralAccel(double a_budget, double kappa, const Limits & lim)
 {
   if (!(kappa > 0.0) || !(a_budget > 0.0)) {
@@ -46,47 +105,18 @@ double speedForLateralAccel(double a_budget, double kappa, const Limits & lim)
   return std::clamp(v, lim.v_min_turn, lim.v_max);
 }
 
-double allowedSpeed(double kappa, const Limits & lim)
-{
-  return speedForLateralAccel(lim.a_lat_max, kappa, lim);
-}
+
 
 double softSpeedCap(double kappa, const Limits & lim)
 {
   return speedForLateralAccel(lim.soft_ratio * lim.a_lat_max, kappa, lim);
 }
 
-double trajectoryCurvature(double v, double wz)
-{
-  const double s = std::fabs(v);
-  if (s < kEpsSpeed) {
-    // 原地旋转：a_lat = v*|wz| 本来就趋 0，这里显式返回 0 是为了不让
-    // kappa 变成一个巨大的数去污染日志与前馈项。
-    return 0.0;
-  }
-  return std::fabs(wz) / s;
-}
 
-double lateralAccelExcess(double v, double wz, const Limits & lim)
-{
-  // 注意这里用恒等式 a_lat = v*|wz|，**不经过 kappa**：
-  // 既省一次除法，也让 v -> 0 时天然为 0，不需要 eps 保护。
-  const double a_lat = std::fabs(v) * std::fabs(wz);
-  const double a_soft = lim.soft_ratio * lim.a_lat_max;
-  const double excess = a_lat - a_soft;
-  if (excess <= 0.0) {
-    return 0.0;
-  }
-  // 归一化到 a_lat_max，使代价量纲无关、权重可跨机型迁移。
-  return excess / lim.a_lat_max;
-}
 
-double speedExcessOverPathCap(double v, double kappa_path, const Limits & lim)
-{
-  const double cap = softSpeedCap(kappa_path, lim);
-  const double excess = std::fabs(v) - cap;
-  return excess > 0.0 ? excess : 0.0;
-}
+
+
+
 
 double mengerCurvature(
   double x0, double y0,
@@ -101,7 +131,6 @@ double mengerCurvature(
   const double lb = std::hypot(bx, by);
   const double lc = std::hypot(cx, cy);
 
-  // 重复点/退化三角形。nav2 的 Path 里确实有重复点，不设这道闸会得到 inf。
   if (la < kEpsLen || lb < kEpsLen || lc < kEpsLen) {
     return 0.0;
   }
@@ -110,30 +139,87 @@ double mengerCurvature(
   return 2.0 * std::fabs(cross) / (la * lb * lc);
 }
 
-double maxCurvatureInWindow(
-  const std::vector<double> & xs,
-  const std::vector<double> & ys,
-  std::size_t start_idx,
-  double lookahead_dist)
+
+
+double brakingWindowDepth(const Limits & lim, double a_brake)
 {
-  const std::size_t n = std::min(xs.size(), ys.size());
-  if (n < 3 || start_idx + 2 >= n) {
+  if (!(a_brake > 0.0) || !std::isfinite(a_brake)) {
+
+    return std::numeric_limits<double>::infinity();
+  }
+
+  const double num = lim.v_max * lim.v_max - lim.v_min_turn * lim.v_min_turn;
+  if (!(num > 0.0)) {
+    return 0.0;
+  }
+  return num / (2.0 * a_brake);
+}
+
+double discountCurvatureByBrakingDistance(
+  double kappa, double arc, const Limits & lim, double a_brake)
+{
+  if (!(kappa > 0.0)) {
     return 0.0;
   }
 
-  double kappa_max = 0.0;
-  double arc = 0.0;
-  for (std::size_t i = start_idx + 1; i + 1 < n; ++i) {
-    kappa_max = std::max(
-      kappa_max,
-      mengerCurvature(xs[i - 1], ys[i - 1], xs[i], ys[i], xs[i + 1], ys[i + 1]));
+  if (!(arc > 0.0) || !(a_brake > 0.0) || !std::isfinite(arc) || !std::isfinite(a_brake)) {
+    return kappa;
+  }
 
-    arc += std::hypot(xs[i + 1] - xs[i], ys[i + 1] - ys[i]);
-    if (arc >= lookahead_dist) {
+  const double a_soft = lim.soft_ratio * lim.a_lat_max;
+
+  const double v_cap = softSpeedCap(kappa, lim);
+  const double v_allow = std::sqrt(v_cap * v_cap + 2.0 * a_brake * arc);
+
+  if (v_allow >= lim.v_max) {
+    return 0.0;
+  }
+  if (!(a_soft > 0.0) || !(v_allow > 0.0)) {
+    return kappa;
+  }
+
+  return a_soft / (v_allow * v_allow);
+}
+
+WindowCurvature bindingCurvatureInWindow(
+  const std::vector<double> & xs,
+  const std::vector<double> & ys,
+  std::size_t start_idx,
+  double lookahead_dist,
+  const Limits & lim,
+  double a_brake)
+{
+  WindowCurvature out;
+
+  const std::size_t n = std::min(xs.size(), ys.size());
+  if (n < 3 || start_idx + 2 >= n) {
+    return out;
+  }
+
+  const double depth = brakingWindowDepth(lim, a_brake);
+  const double scan_dist = std::min(lookahead_dist, depth);
+
+  double arc = std::hypot(xs[start_idx + 1] - xs[start_idx], ys[start_idx + 1] - ys[start_idx]);
+
+  for (std::size_t i = start_idx + 1; i + 1 < n; ++i) {
+    const double kappa = mengerCurvature(
+      xs[i - 1], ys[i - 1], xs[i], ys[i], xs[i + 1], ys[i + 1]);
+    out.kappa_raw_max = std::max(out.kappa_raw_max, kappa);
+
+    const double kappa_eff = discountCurvatureByBrakingDistance(kappa, arc, lim, a_brake);
+    if (kappa_eff > out.kappa_effective) {
+      out.kappa_effective = kappa_eff;
+      out.kappa_raw = kappa;
+      out.bind_arc = arc;
+      out.bind_idx = i;
+    }
+
+    if (arc >= scan_dist) {
       break;
     }
+    arc += std::hypot(xs[i + 1] - xs[i], ys[i + 1] - ys[i]);
   }
-  return kappa_max;
+  return out;
 }
 
 }  // namespace curvature_speed

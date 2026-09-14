@@ -550,7 +550,7 @@ rviz2 -d $(ros2 pkg prefix astribot_s1_autonomy)/share/astribot_s1_autonomy/rviz
 ### 终端诊断脚本（不开 RViz 时）
 
 ```bash
-ros2 run astribot_s1_autonomy scan_slice_debug.py
+ros2 topic echo /scan_from_cloud --once
 ```
 
 输出帧率、有效障碍束占比、各扇区最近距离、**各切片层点数柱状图**、探索状态与目标跳变距离，
@@ -612,7 +612,7 @@ ros2 run astribot_s1_autonomy scan_slice_debug.py
 实测证据：把左臂从收纳摆到大幅伸展（`joint_2 → -1.3`、`joint_4 → +1.2`），
 落在左臂胶囊体内的点数**恒为 0**；而躯干胶囊体内稳定有 664 点（3cm 体素降采样后 131）。
 
-所以这条能力由**单元测试**验证（`test/test_self_filter.cpp`，用真实机器人几何构造点云，
+所以这条能力由**单元测试**验证（清理前的离线回归，用真实机器人几何构造点云，
 覆盖「胶囊内必剔」「胶囊外一点点必不剔」「胶囊随连杆位姿移动」三条）。
 想在仿真里真正跑通这条链路，需要把上游 `range_min` 调小到 0.1 左右
 （代价是会引入更多近距离噪点，需要配合调 `min_points`）。
@@ -764,10 +764,7 @@ ros2 service call /exploration_coordinator_node/resume std_srvs/srv/Trigger
 
 算法核心（切片投影、自身剔除、前沿搜索、未知区校验）都不依赖 ROS 运行时，可以在无仿真环境直接跑：
 
-```bash
-colcon test --packages-select astribot_s1_autonomy
-colcon test-result --test-result-base build/astribot_s1_autonomy --verbose
-```
+单元测试已从仓库删除；历史回归不作为当前可执行入口。
 
 | 测试文件 | 用例数 | 覆盖 |
 |---|---|---|

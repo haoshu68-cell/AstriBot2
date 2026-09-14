@@ -16,6 +16,8 @@
 
 &nbsp;
 
+For staged simulation startup, event-driven replanning, and endurance measurements, see the [path tracking runbook](docs/PATH_TRACKING_ENDURANCE.md).
+
 ## 2 · Quick Start
 
 ###  2.1 Environment Setup
@@ -69,3 +71,7 @@ We provide a **Mujoco-based simulation environment**. Follow read the github rea
 
 ---
 © 2024 Astribot Co., Ltd.  Released under the **BSD-3-Clause** license.
+
+## ROS 2 工作空间
+
+模块与运行链路见 [整体架构](docs/ARCHITECTURE.md)，待处理问题见 [逻辑检查](docs/LOGIC_REVIEW.md)，本轮结果见 [验证记录](docs/CLEANUP_VALIDATION.md)。

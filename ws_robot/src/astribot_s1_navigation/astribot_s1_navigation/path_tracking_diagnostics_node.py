@@ -1,40 +1,4 @@
 # Copyright 2026 Astribot.
-#
-# 路径跟踪诊断器：机器人"有目标但不动"时，定位到底断在哪一段。
-#
-# ==================== 为什么需要它 ====================
-# 从 MPPI 算出速度到轮子真的转，中间有四段转发，任何一段断掉现象都一样
-# （机器人不动），但原因和修法完全不同：
-#
-#   controller_server --cmd_vel_nav_body_raw-->  velocity_smoother
-#     --cmd_vel_nav_body-->  cmd_vel_body_to_world_node
-#     --cmd_vel_pre_arm_coupling-->  arm_chassis_speed_coupling_node
-#     --cmd_vel-->  omni_effort_drive_node  --力矩-->  轮子
-#
-# 实测踩过的坑：曾观察到 /cmd_vel 只有 -0.05m/s、四轮速度 1e-11，一度判成
-# "底盘低速力矩权限不足"，实际是**根本没有在途目标**、没人发速度，
-# 底盘只在执行最后一帧残留力矩。光看某一段会得出完全错误的结论，
-# 必须四段一起看，并且和"有没有在途路径"对齐。
-#
-# ==================== 输出怎么读 ====================
-# 每周期一行，四段各给 频率/滑窗峰值：
-#   raw 无输出 且 无路径        -> 空闲，不是故障（这条最容易误判）
-#   raw 无输出 但 有路径        -> 局部规划器算不出速度
-#   raw 有、smooth 无           -> velocity_smoother 拦截（限加速度/死区）
-#   smooth 有、preCpl 无        -> 车体->世界转换断开（常见于 TF 取不到）
-#   preCpl 有、cmd 无           -> 臂-底盘耦合在限速（检查双臂是否展开）
-#   cmd 有、轮速≈0              -> 底盘不响应：底盘层问题
-#   轮子转了但实速≈0            -> 打滑或被物理卡住
-#   cmd 有、轮速 n/a、实速≈0    -> 有指令但没位移，而轮速这一路**没有数据源**
-#                                  （实机的 /joint_states 是固定姿态，velocity 为空），
-#                                  所以"底盘不响应"和"打滑"区分不了 —— 如实这么报。
-# 峰值取滑窗最大值而非最新值：最新帧可能刚好是 0，会看不出这一路其实有输出。
-#
-# 另外单独报 raw 的实际频率 —— 它就是控制环频率的下界。
-# controller_server 期望 20Hz，明显偏低本身就是一类原因（CPU 吃不住则跟踪恶化）。
-#
-# 只读订阅，不发布任何指令 —— 诊断器绝不能影响被诊断的系统。
-# ====================================================
 import math
 from collections import deque
 
@@ -45,7 +9,6 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import JointState
 
-# 判定结论
 IDLE_NO_GOAL = '空闲(无路径，非故障)'
 PLANNER_NO_OUTPUT = '局部规划器无输出'
 SMOOTHER_BLOCKED = '速度平滑器拦截'
@@ -77,7 +40,6 @@ def classify(snap):
     wheels_turning = snap['wheel_peak'] > snap['wheel_epsilon']
     moving = snap['robot_speed'] > snap['motion_epsilon']
 
-    # 没有路径时全链路静默是正常的，绝不能报成故障。
     if not snap['has_path'] and not raw_active:
         return IDLE_NO_GOAL
     if not raw_active:
@@ -88,10 +50,6 @@ def classify(snap):
         return BODY_TO_WORLD_BLOCKED
     if not cmd_active:
         return ARM_COUPLING_BLOCKED
-    # 轮速这一段可能整段不可测：实机的 /joint_states 由 joint_state_publisher 发
-    # 固定姿态，velocity 数组是**空的**，于是 wheel_peak 恒为 0。照常判就会在每一拍
-    # 都误报"底盘不响应"—— 一个恒真的判据不是判据。不可测时退到 /odom 位移这条
-    # 真能测的判据上，并在结论里明说两种原因区分不了，不替读者猜。
     if not snap['wheel_known']:
         return HEALTHY if moving else CMD_BUT_NO_MOTION
     if not wheels_turning:
@@ -128,11 +86,9 @@ class ChannelMonitor:
         span = self.stamps[-1] - self.stamps[0]
         if span <= 0.0:
             return 0.0
-        # n 个时间戳之间有 n-1 个间隔
         return (len(self.stamps) - 1) / span
 
     def reset_peaks(self):
-        # 峰值按周期清零，否则一次瞬时输出会让后续每个周期都显示"有输出"。
         self.peak_lin = 0.0
         self.peak_ang = 0.0
 
@@ -142,13 +98,11 @@ class PathTrackingDiagnostics(Node):
         super().__init__('path_tracking_diagnostics_node')
         window = self.declare_parameter('window_sec', 3.0).value
         self.period = self.declare_parameter('report_period_sec', 1.0).value
-        # 只在疑似不动时打印，避免正常跑时刷屏；排查阶段设 False 看全量。
         self.only_when_stuck = self.declare_parameter('only_when_stuck', False).value
         self.vel_eps = self.declare_parameter('vel_epsilon', 1e-3).value
         self.wheel_eps = self.declare_parameter('wheel_epsilon', 0.05).value
         self.motion_eps = self.declare_parameter('motion_epsilon', 0.02).value
         self.wheel_prefix = self.declare_parameter('wheel_joint_prefix', 'wheel_').value
-        # /plan 多久没更新就认为没有在途路径
         self.path_stale_sec = self.declare_parameter('path_stale_sec', 2.0).value
 
         raw_t = self.declare_parameter('raw_topic', '/cmd_vel_nav_body_raw').value
@@ -168,8 +122,6 @@ class PathTrackingDiagnostics(Node):
         self.last_path_sec = -1e9
         self.robot_speed = 0.0
         self.wheel_peak = 0.0
-        # 轮速这一路是否**可测**。只有真收到过带 velocity 的轮关节才置 True；
-        # 一直是 False 就说明这一段没有数据源（实机常态），判定要绕过它。
         self.wheel_known = False
 
         self.create_subscription(Twist, raw_t, self._mk(self.raw), 10)
@@ -206,8 +158,6 @@ class PathTrackingDiagnostics(Node):
         n = min(len(msg.name), len(msg.velocity))
         for i in range(n):
             if msg.name[i].startswith(self.wheel_prefix):
-                # 出现过一次带 velocity 的轮关节，这一路就算可测（不再回退）。
-                # n==0 是实机常态（velocity 数组为空），此处一次都进不来。
                 self.wheel_known = True
                 peak = max(peak, abs(msg.velocity[i]))
         self.wheel_peak = peak
@@ -231,8 +181,6 @@ class PathTrackingDiagnostics(Node):
             self._reset()
             return
 
-        # 轮速不可测时打 n/a，不打 0.000 —— 打 0.000 会被读成"轮子没转"，
-        # 而实际上是这一路没有数据源，两件事的处置完全不同。
         wheel_txt = (f'{snap["wheel_peak"]:.3f}rad/s'
                      if snap['wheel_known'] else 'n/a(无 velocity 字段)')
         line = (
@@ -250,7 +198,6 @@ class PathTrackingDiagnostics(Node):
         else:
             self.get_logger().info(line)
 
-        # raw 的实际频率是控制环频率的下界。
         if snap['has_path'] and 0.0 < snap['raw_rate'] < 12.0:
             self.get_logger().warn(
                 f'[跟踪诊断] 局部规划器输出仅 {snap["raw_rate"]:.1f}Hz'

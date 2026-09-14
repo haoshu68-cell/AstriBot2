@@ -1,15 +1,4 @@
 // Copyright 2026 Astribot
-//
-// 规划验证 demo 节点。
-//
-// 它做四件事，对应任务成功判定里的四条：
-//   1. single_arm_*       单臂规划，输出关节轨迹 + 笛卡尔轨迹
-//   2. closed_chain       双臂协同闭链规划，输出残差与奇异余量
-//   3. planner_comparison 同一任务分别用 RRT*/BIT*/Informed RRT* 跑，对比节拍
-//                         —— 这是"三个规划器都真的可用"的自证
-//   4. 全程打印量化指标（总时长、各关节最大速度、优化前后对比）
-//
-// 所有参数从 yaml 读，节点内不写死任何数值。
 
 #include <algorithm>
 #include <array>
@@ -97,7 +86,6 @@ DualArmPlannerParams loadParams(const rclcpp::Node::SharedPtr & node)
   p.already_at_goal_tolerance_rad = loader.get<double>(
     "already_at_goal_tolerance_rad", p.already_at_goal_tolerance_rad);
 
-  // ---- 闭链 ----
   auto & cc = p.closed_chain;
   cc.leader_group = loader.get<std::string>("closed_chain.leader_group", cc.leader_group);
   cc.follower_group =
@@ -141,7 +129,6 @@ DualArmPlannerParams loadParams(const rclcpp::Node::SharedPtr & node)
       rotation.size());
   }
 
-  // ---- 奇异 ----
   auto & sg = p.singularity;
   sg.enabled = loader.get<bool>("singularity.enabled", sg.enabled);
   sg.min_singular_value =
@@ -153,7 +140,6 @@ DualArmPlannerParams loadParams(const rclcpp::Node::SharedPtr & node)
   sg.allow_singular_start =
     loader.get<bool>("singularity.allow_singular_start", sg.allow_singular_start);
 
-  // ---- 碰撞 ----
   auto & col = p.collision;
   col.check_self_collision =
     loader.get<bool>("collision.check_self_collision", col.check_self_collision);
@@ -164,7 +150,6 @@ DualArmPlannerParams loadParams(const rclcpp::Node::SharedPtr & node)
   col.max_contacts = static_cast<std::size_t>(
     loader.get<int64_t>("collision.max_contacts", static_cast<int64_t>(col.max_contacts)));
 
-  // ---- 时间优化 ----
   auto & to = p.time_optimizer;
   to.enable_optimization =
     loader.get<bool>("time_optimizer.enable_optimization", to.enable_optimization);
@@ -218,13 +203,11 @@ void reportResult(
     result.attempts_used, result.message.c_str());
 
   if (result.noActionNeeded()) {
-    // 不走下面的失败分支：这不是故障，没什么要"定位"的。
     RCLCPP_INFO(logger, "无轨迹输出，因为当前构型已经满足目标，无需运动");
     return;
   }
 
   if (!result.succeeded()) {
-    // 失败时也要把已知信息打全，便于定位。
     if (result.ik_failure_count > 0) {
       RCLCPP_WARN(logger, "follower IK 失败点数: %d", result.ik_failure_count);
     }
@@ -243,7 +226,6 @@ void reportResult(
       result.follower_cartesian_path.size());
   }
 
-  // ---- 节拍指标 ----
   RCLCPP_INFO(logger, "节拍指标: %s", result.final_metrics.summary.c_str());
   RCLCPP_INFO(
     logger, "  总运动时长: %.3f s", result.final_metrics.duration);
@@ -263,7 +245,6 @@ void reportResult(
   RCLCPP_INFO(
     logger, "  轨迹合法性: %s", result.final_metrics.isLegal() ? "合法" : "超限");
 
-  // ---- 优化前后对比：任务要求"优化后节拍相比原始规划有缩短" ----
   RCLCPP_INFO(logger, "优化: %s", result.optimization.note.c_str());
   if (result.optimization.optimized_accepted) {
     RCLCPP_INFO(
@@ -273,7 +254,6 @@ void reportResult(
     RCLCPP_WARN(logger, "  已回退到 baseline（优化结果不合法或未更快）");
   }
 
-  // ---- 闭链残差 ----
   if (result.worst_residual.valid) {
     RCLCPP_INFO(
       logger, "闭链残差(全轨迹最差): 位置 %.6f m, 姿态 %.6f rad -> %s",
@@ -281,7 +261,6 @@ void reportResult(
       result.worst_residual.within_tolerance ? "满足约束" : "超出阈值");
   }
 
-  // ---- 奇异余量 ----
   if (result.worst_singularity.valid) {
     RCLCPP_INFO(
       logger, "奇异余量(全轨迹最差): sigma_min=%.6f, 条件数=%.2f",
@@ -293,22 +272,6 @@ void reportResult(
   }
 }
 
-// ==================== 搬运场景 ====================
-//
-// 把一个目标物体从位置 A 搬到位置 B。
-//
-// !!! 这是纯运动学演示，务必看清边界 !!!
-// 本机器人**没有夹爪关节**：两臂止于 link_7，其后只有一个无碰撞体的 tool_link
-// 纯坐标系，SRDF 里刻意没有声明 end_effector（原因见 astribot_s1.srdf 注释）。
-// 所以：
-//   真的   —— 完整搬运动作序列的规划与执行：home -> A上方 -> 降到A -> 抬起
-//             -> B上方 -> 降到B -> 抬起 -> 回home，每步都是笛卡尔位姿目标，
-//             每步都过碰撞与奇异点校验，每步都真实下发到控制器执行
-//   真的   —— 物体是规划场景里的**真实碰撞体**，规划器必须绕开它而不是穿过去
-//   做不到 —— 物体在 Gazebo 里被夹住并跟着走（没有夹爪，物理抓取无法实现）
-//
-// 物体在规划场景里的位置会在"抬起后"从 A 更新到 B，让后续避障用的是新位置 ——
-// 这一步是必要的，否则回程规划仍以为物体在 A，会绕开一个已经不在那儿的障碍。
 
 /// 搬运航路点。名字用于日志与失败定位。
 struct TransportStep
@@ -333,8 +296,6 @@ geometry_msgs::msg::PoseStamped makeTransportPose(
     ps.pose.orientation.z = quat_xyzw[2];
     ps.pose.orientation.w = quat_xyzw[3];
   } else {
-    // 不给姿态时用单位四元数。注意这**不是**"保持当前姿态"，
-    // 而是一个明确的朝向；给不出合理姿态时宁可显式指定，不要留 0000 非法值。
     ps.pose.orientation.w = 1.0;
   }
   return ps;
@@ -379,8 +340,6 @@ moveit_msgs::msg::AttachedCollisionObject makeAttachObject(
   moveit_msgs::msg::AttachedCollisionObject attached;
   attached.link_name = link;
   attached.object.id = id;
-  // header.frame_id 留给 MoveIt 自己处理：ADD 一个已在 world 里的 id 时，
-  // 它取的是场景里那个物体的现有位姿，我们这里给的 pose 不参与。
   attached.object.operation = moveit_msgs::msg::CollisionObject::ADD;
   attached.touch_links = touch_links;
   return attached;
@@ -474,7 +433,6 @@ EndEffectorSpan endEffectorSpan(
     const Eigen::Vector3d center = link->getCenteredBoundingBoxOffset();
     double link_lo = std::numeric_limits<double>::max();
     double link_hi = std::numeric_limits<double>::lowest();
-    // AABB 的 8 个角点：只看中心点会漏掉伸出最远的那个角。
     for (int sx = -1; sx <= 1; sx += 2) {
       for (int sy = -1; sy <= 1; sy += 2) {
         for (int sz = -1; sz <= 1; sz += 2) {
@@ -495,7 +453,6 @@ EndEffectorSpan endEffectorSpan(
     detail = "末端连杆列表里没有任何带碰撞几何的连杆";
     return span;
   }
-  // lo 为负表示几何在 TCP 背后（朝腕部）；setback 取其绝对值。
   span.setback = (lo < 0.0) ? -lo : 0.0;
   span.reach = (hi > 0.0) ? hi : 0.0;
   span.valid = true;
@@ -635,8 +592,6 @@ bool releaseAndDetach(
       opening.elapsed_sec, toString(opening.code),
       opening.detail.empty() ? "" : " | ", opening.detail.c_str());
     if (!opening.ok()) {
-      // 松爪失败仍然要 detach：物体已经放下了，场景里继续挂着它会让
-      // 后续所有规划都以为手上带着东西。但结果要判失败，不能悄悄放过。
       RCLCPP_ERROR(logger, "%s 松爪失败(%s)，仍执行 detach 以免污染场景", tag,
         toString(opening.code));
       ok = false;
@@ -702,17 +657,6 @@ ProbeVerdict probeTcpPose(
   const CollisionValidator & collision,
   const SingularityMonitor & singularity)
 {
-  // !!! 为什么要重试 ik_attempts 次并取"最好的一次" !!!（实测教训）
-  // setFromIK 是随机重启的局部解算器。早先这里只调一次、超时用闭链那套的
-  // 0.01s，结果整张表是个**随机指标**：同一份配置连跑三次得到
-  // 48/80、46/80、47/80，run-to-run 抖动 ±2，足以盖住真实差异。
-  // 我曾拿"可用候选数变化"去判定改限位有没有生效——那是拿噪声当信号，
-  // 判据本身不成立（当时甚至没量过噪声底）。
-  //
-  // 现在的语义变成"**至少存在一个**合法解"：任一次尝试拿到 good() 就立刻返回。
-  // 这把点估计换成了稳定的下界，重复跑收敛得多；代价只是探针慢一些
-  // （探针不在控制环里，慢无所谓）。
-  // 全部失败时返回信息量最大的那一次（有 IK 解的优先于无解的），便于定位原因。
   ProbeVerdict best;
   bool have_any = false;
   const int attempts = std::max(1, ik_attempts);
@@ -722,7 +666,6 @@ ProbeVerdict probeTcpPose(
     if (trial.good()) {
       return trial;
     }
-    // 挑一个"更有信息量"的失败：有 IK 解 > 无 IK 解；同样有解时取 σ 更大的。
     if (!have_any || (trial.ik_ok && !best.ik_ok) ||
       (trial.ik_ok == best.ik_ok && trial.sigma_min > best.sigma_min))
     {
@@ -749,8 +692,6 @@ ProbeVerdict probeTcpPoseOnce(
   }
 
   moveit::core::RobotState state(seed);
-  // 位姿给的是 transport_frame，IK 要的是模型坐标系。用 getFrameTransform 换算，
-  // 不假设两者相同（本机恰好都是 astribot_torso_base，但换模型就未必）。
   Eigen::Isometry3d target;
   tf2::fromMsg(pose.pose, target);
   const Eigen::Isometry3d frame_in_model = state.getFrameTransform(pose.header.frame_id);
@@ -781,15 +722,6 @@ ProbeVerdict probeTcpPoseOnce(
   return verdict;
 }
 
-// ============================================================================
-// mobile_transport 场景用的导航与 TF 辅助
-//
-// 为什么全部用「阻塞 + future.wait_for()」而不是 spin_until_future_complete：
-// 本节点已经由 main() 里的后台线程在 spin 执行器了。再调
-// spin_until_future_complete 会有两个执行器抢同一个节点，行为不可预期。
-// future.wait_for() 只是等，回调仍在 spin 线程上跑完并把 future 置就绪 ——
-// 这才是"节点已被别人 spin"时的正确等待方式。
-// ============================================================================
 
 using NavigateToPose = nav2_msgs::action::NavigateToPose;
 using ComputePathToPose = nav2_msgs::action::ComputePathToPose;
@@ -808,10 +740,6 @@ geometry_msgs::msg::PoseStamped makeNavGoal(
 {
   geometry_msgs::msg::PoseStamped ps;
   ps.header.frame_id = frame;
-  // stamp 刻意留 0（= "用最新可用的变换"）。
-  // 实测踩坑：仿真下用墙钟 now() 打时间戳，planner_server 会报
-  //   Could not transform the start or goal pose in the costmap frame
-  // 因为 tf 里全是 sim time，墙钟戳落在未来。
   ps.pose.position.x = x;
   ps.pose.position.y = y;
   ps.pose.orientation.z = std::sin(0.5 * yaw);
@@ -917,8 +845,6 @@ NavOutcome runNavigation(
       std::chrono::duration_cast<std::chrono::nanoseconds>(budget)) !=
     std::future_status::ready)
   {
-    // 超时必须主动取消，否则机器人会在我们已经放弃之后继续往目标开 ——
-    // 而上层以为流程已经中止，接下来的机械臂动作就发生在一个意料之外的位置。
     client->async_cancel_goal(handle);
     outcome.reason = "导航超过 " + std::to_string(static_cast<int>(timeout_sec)) +
       "s 未结束，已发取消";
@@ -934,8 +860,6 @@ NavOutcome runNavigation(
       outcome.reason = "SUCCEEDED";
       return outcome;
     case rclcpp_action::ResultCode::ABORTED:
-      // 状态码语义容易记错：4=SUCCEEDED / 5=CANCELED / 6=ABORTED。
-      // ABORTED 是 nav2 主动放弃（恢复行为也用尽了），不是我们取消的。
       outcome.reason = "ABORTED（nav2 主动放弃，恢复行为已用尽）";
       return outcome;
     case rclcpp_action::ResultCode::CANCELED:
@@ -991,8 +915,6 @@ int main(int argc, char ** argv)
 
   const rclcpp::Logger logger = node->get_logger();
 
-  // MoveGroupInterface 与 PlanningSceneMonitor 都需要节点被持续 spin，
-  // 否则 action 结果和 /joint_states 回调都进不来（会表现为"规划永远超时"）。
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(node);
   std::thread spin_thread([&executor]() {executor.spin();});
@@ -1006,7 +928,6 @@ int main(int argc, char ** argv)
     DualArmPlanner planner(node);
     std::string error;
     if (!planner.initialize(params, error)) {
-      // URDF/SRDF 加载失败、规划器初始化失败 -> 优雅退出，明确日志，不产生段错误。
       RCLCPP_ERROR(logger, "规划器初始化失败，节点退出: %s", error.c_str());
       executor.cancel();
       if (spin_thread.joinable()) {
@@ -1017,10 +938,6 @@ int main(int argc, char ** argv)
     }
 
     ParameterLoader loader(node);
-    // 末端连杆清单：量"末端相对 TCP 的几何包络"时要遍历哪些连杆。
-    // 从 yaml 读而不是在代码里按名字前缀猜 —— 换夹具/换手（厂商还有一款
-    // brainco 五指手）只改配置。空列表会让 endEffectorSpan 明确报错，
-    // 而不是悄悄算出一个 0 包络然后放行任何 grasp_z_offset。
     const std::vector<std::string> end_effector_links =
       loader.get<std::vector<std::string>>(
       "demo.end_effector_links", std::vector<std::string>{});
@@ -1040,8 +957,6 @@ int main(int argc, char ** argv)
       std::vector<std::string>{"RRTstarConfig", "BITstarConfig", "InformedRRTstarConfig"});
     const bool execute = loader.get<bool>("demo.execute_trajectory", false);
 
-    // ---- 搬运场景参数 ----
-    // 全部从 yaml 读，不硬编码：换物体尺寸/换搬运位置只改 yaml。
     const std::string transport_group =
       loader.get<std::string>("demo.transport_group", std::string("arm_left"));
     const std::string transport_tcp_link =
@@ -1058,24 +973,16 @@ int main(int argc, char ** argv)
       loader.get<double>("demo.transport_grasp_z_offset", 0.0);
     const double transport_approach_height =
       loader.get<double>("demo.transport_approach_height", 0.15);
-    // 腕部碰撞体与物体顶面之间要留的净空。它**只是余量**，
-    // 腕部半径本身由 URDF 现算，不在这个数里。
-    // transport_probe 场景的扫描网格（TCP 抓取点坐标，不是物体中心）。
     const std::vector<double> probe_x_list = loader.get<std::vector<double>>(
       "demo.transport_probe_x_list", std::vector<double>{});
     const std::vector<double> probe_y_list = loader.get<std::vector<double>>(
       "demo.transport_probe_y_list", std::vector<double>{});
     const std::vector<double> probe_z_list = loader.get<std::vector<double>>(
       "demo.transport_probe_z_list", std::vector<double>{});
-    // 探针的 IK 预算。**必须比闭链那套(0.01s/3 次)大得多**：
-    // 探针不在控制环里，慢无所谓，但它的结论要稳定。用小预算时整张表是随机的
-    // （实测同配置连跑三次 48/46/47，抖动 ±2 盖过真实差异）。
     const double probe_ik_timeout =
       loader.get<double>("demo.transport_probe_ik_timeout", 0.05);
     const int probe_ik_attempts = static_cast<int>(
       loader.get<int64_t>("demo.transport_probe_ik_attempts", 20));
-    // 夹爪：开合角不在这里读，由 GripperCommander 从 SRDF 的 group_state 取。
-    // 这里只读"哪个组、哪个 action、拿哪两个 link 量张口"这类配置。
     GripperConfig gripper_config;
     gripper_config.group_name =
       loader.get<std::string>("demo.gripper_group", std::string("gripper_left"));
@@ -1096,7 +1003,6 @@ int main(int argc, char ** argv)
     gripper_config.converge_tolerance_rad =
       loader.get<double>("demo.gripper_converge_tolerance", 0.02);
     gripper_config.grasp_preload_m = loader.get<double>("demo.gripper_grasp_preload", 0.004);
-    // mobile_transport（搬运 -> 导航 -> 搬运）的导航段参数。
     const std::string mobile_map_frame = loader.get<std::string>(
       "demo.mobile_transport_map_frame", std::string("map"));
     const std::string mobile_nav_action = loader.get<std::string>(
@@ -1129,8 +1035,6 @@ int main(int argc, char ** argv)
     RCLCPP_INFO(logger, "  轨迹下发执行: %s", execute ? "开" : "关");
     RCLCPP_INFO(logger, "==================================================");
 
-    // 先摆到 ready：ready 姿态刻意让肘部离开完全伸直的奇异构型
-    // （joint_4 = 1.0），从奇异构型起步会让第一个点就被判奇异。
     if (move_to_ready) {
       for (const std::string & arm :
         {params.closed_chain.leader_group, params.closed_chain.follower_group})
@@ -1148,8 +1052,6 @@ int main(int argc, char ** argv)
       }
     }
 
-    // 夹爪动作器。transport / mobile_transport 都用它，所以建在场景循环外面。
-    // tcp_link 要等各场景解析出自己的 TCP 才知道，所以 configure 延后到用时。
     GripperCommander gripper(node);
     auto configure_gripper =
       [&](const std::string & tcp_link, const char * tag) -> bool {
@@ -1162,8 +1064,6 @@ int main(int argc, char ** argv)
             logger, "%s 夹爪配置失败(%s): %s", tag, toString(code), detail.c_str());
           return false;
         }
-        // 把张口量程打出来。这几个数是后面所有抓取判断的地基，
-        // 不打出来的话"夹不下"或"夹不住"就只能靠猜。
         RCLCPP_INFO(
           logger,
           "%s 夹爪就绪: 组=%s 主动关节=%s 张开角=%.4frad(张口 %.4fm) "
@@ -1177,10 +1077,6 @@ int main(int argc, char ** argv)
 
     for (const std::string & scenario : scenarios) {
       if (scenario == "transport_probe") {
-        // ---- 选点体检：扫一遍候选 A 点，报告 IK / 碰撞 / 奇异 ----
-        // 这个场景不动机器人，只出一张表，用来在配 transport_pick_xyz 之前
-        // 先知道哪些点是真能用的。判据与 transport 真跑完全一致（同一份 yaml、
-        // 同一个 CollisionValidator / SingularityMonitor）。
         if (transport_size.size() != 3U) {
           RCLCPP_ERROR(logger, "跳过 transport_probe: transport_object_size_xyz 必须是 3 个数");
           exit_code = 1;
@@ -1237,8 +1133,6 @@ int main(int argc, char ** argv)
         for (const double px : probe_x_list) {
           for (const double py : probe_y_list) {
             for (const double pz : probe_z_list) {
-              // 物体跟着候选点走：它的中心由抓取高度反推，这样每个候选测的都是
-              // 它自己那套几何关系，而不是拿固定物体位置去套所有候选。
               const std::vector<double> object_center{px, py, pz - transport_grasp_z_offset};
               auto probe_scene = std::make_shared<planning_scene::PlanningScene>(model);
               const moveit_msgs::msg::CollisionObject probe_obj =
@@ -1309,7 +1203,6 @@ int main(int argc, char ** argv)
             transport_grasp_z_offset, best_xyz[2] - transport_grasp_z_offset);
         }
       } else if (scenario == "transport") {
-        // ---- 搬运场景：物体从 A 到 B ----
         if (transport_pick.size() != 3U || transport_place.size() != 3U ||
           transport_size.size() != 3U)
         {
@@ -1324,21 +1217,12 @@ int main(int argc, char ** argv)
 
         const std::string object_id = "transport_target";
 
-        // ---- 抓取高度边界校验 ----
-        // 这道校验是拿实测教训换来的：TCP 只离物体顶面 0.03m 时，腕部那颗
-        // r=0.05 的碰撞球已经嵌进物体，目标状态非法，规划器只会报
-        // RETRIES_EXHAUSTED —— 一个完全看不出根因的错误。宁可在这里带着
-        // 具体数字直接拒绝，也不要让它在第2步失败后让人去猜。
-        // TCP link 的解析规则必须与 planSingleArm 内部**完全一致**，
-        // 否则这里量的是一个 link、规划器用的是另一个，校验就成了摆设。
         const std::string resolved_tcp_link = transport_tcp_link.empty() ?
           (transport_group == params.closed_chain.leader_group ?
           params.closed_chain.leader_tcp_link :
           params.closed_chain.follower_tcp_link) :
           transport_tcp_link;
         std::string span_detail;
-        // 抓取方向：yaml 给的是 TCP 在本体系下的姿态四元数。"朝向物体"就是
-        // 本体系 -z（从上方接近），把它转到 TCP 系下才能和末端几何做投影。
         const Eigen::Quaterniond grasp_q(
           transport_quat[3], transport_quat[0], transport_quat[1], transport_quat[2]);
         const Eigen::Vector3d grasp_dir_in_tcp =
@@ -1353,22 +1237,6 @@ int main(int argc, char ** argv)
           exit_code = 1;
           continue;
         }
-        // 下限交给碰撞校验，这里只查上限 —— 分工的依据是"碰撞检测查得出来吗"。
-        //
-        // 一开始这里也算了个下限（物体半高 - setback + 余量），实测发现它**恒为负**：
-        // setback 量的是"TCP 背后最远的几何"，而 TCP 背后是整条手臂，
-        // 实测 link_7 一项就到 0.2105m，于是下限算出 -0.1305m —— 永远不会触发。
-        // 根子上是把一个三维净空问题压成了一个标量：物体自下往上顶时，真正先撞到的是
-        // **离物体最近**且**横向与物体重叠**的那块几何（张开时两指之间是空的，
-        // 所以物体能一直上到夹爪基座下沿），这不是"最远距离"能表达的。
-        //
-        // 而三维净空正是碰撞检测的本职，夹爪现在已经完整进了碰撞模型，
-        // 每个路点都会真实校验。所以下限不再单独算 —— 它曾经存在只是因为
-        // TCP 坐在腕部球心里那个病（tool_link 与 link_7 原点重合），现在病没了。
-        //
-        // 上限则必须查，因为**碰撞检测查不出来**：夹爪够不到物体时不会发生任何碰撞，
-        // 规划会成功、执行会成功，然后夹爪在物体上方闭合到空气里。
-        // 这是个静默的错误结果，只能靠几何前置判断拦住。
         const double max_grasp_z_offset = 0.5 * transport_size[2] + span.reach;
         RCLCPP_INFO(
           logger,
@@ -1396,8 +1264,6 @@ int main(int argc, char ** argv)
           continue;
         }
 
-        // 场景差分用 transient_local：晚订阅的 PlanningSceneMonitor 也能收到，
-        // 不然一发即丢，物体可能压根没进场景而我们毫不知情。
         auto scene_pub = node->create_publisher<moveit_msgs::msg::PlanningScene>(
           "/planning_scene", rclcpp::QoS(1).transient_local());
 
@@ -1405,7 +1271,6 @@ int main(int argc, char ** argv)
           exit_code = 1;
           continue;
         }
-        // 张合方向上物体有多宽 —— 由抓取姿态决定，不能直接取 size[0]。
         const Eigen::Vector3d jaw_axis_tcp(
           gripper_config.jaw_axis_in_tcp.size() == 3U ?
           gripper_config.jaw_axis_in_tcp[0] : 1.0,
@@ -1415,8 +1280,6 @@ int main(int argc, char ** argv)
           gripper_config.jaw_axis_in_tcp[2] : 0.0);
         const Eigen::Vector3d jaw_axis_in_frame = grasp_q.normalized() * jaw_axis_tcp;
         const double grasp_width = boxWidthAlongDirection(transport_size, jaw_axis_in_frame);
-        // 先确认这个宽度真的夹得住，再开始动 —— 否则会走到第 2 步才发现夹不了，
-        // 那时手已经扎到物体上方了。
         {
           double probe_angle = 0.0;
           std::string why;
@@ -1436,10 +1299,8 @@ int main(int argc, char ** argv)
             grasp_width, probe_angle);
         }
 
-        // 物体先放在 A。它是规划场景里的真实碰撞体，会参与后续每一步的避障。
         publishSceneDiff(
           scene_pub, makeBoxObject(object_id, transport_frame, transport_pick, transport_size));
-        // 给 PlanningSceneMonitor 一点时间把差分吃进去，否则第一步规划时物体还不在场景里。
         std::this_thread::sleep_for(std::chrono::milliseconds(800));
         RCLCPP_INFO(
           logger,
@@ -1449,7 +1310,6 @@ int main(int argc, char ** argv)
           transport_size[0], transport_size[1], transport_size[2],
           transport_frame.c_str(),
           transport_place[0], transport_place[1], transport_place[2]);
-        // 边界如实说清，不含糊：
         RCLCPP_WARN(
           logger,
           "[transport] 抓取语义边界：夹爪**真的**按指令开合，物体**真的**被 attach 到 TCP "
@@ -1457,7 +1317,6 @@ int main(int argc, char ** argv)
           "不产生夹持力 —— 物理夹持受 mimic 从动关节 7.79° 稳态误差与未标定摩擦影响，"
           "是独立课题");
 
-        // 开始之前先张开夹爪。不张开就下扎，指垫会先撞到物体侧面。
         if (execute) {
           const GripperOutcome pre_open = gripper.open();
           RCLCPP_INFO(
@@ -1478,17 +1337,7 @@ int main(int argc, char ** argv)
           transport_grasp_z_offset, transport_approach_height, transport_quat);
 
         bool all_ok = true;
-        // 物体此刻是否挂在手上。收尾时要用它决定该不该发 detach。
-        //
-        // 为什么不能"无条件发一遍 detach 图省事"（实测）：对一个没挂东西的 link
-        // 发 detach，MoveIt 会打
-        //   [ERROR] [moveit_robot_state.robot_state]: Attached body 'xxx' not found
-        // 一条 ERROR。功能上没坏，但日志里凭空多一条 ERROR，
-        // 下次排查时会先去追这条假线索。
         bool object_attached = false;
-        // 逐步量化指标。做求解器横向对比时，光有"6 步全过"是不够的 ——
-        // 必须能比出规划耗时、节拍、最差奇异值，否则"换个求解器也能过"
-        // 说明不了它到底更好还是更差。
         double total_plan_wall = 0.0;
         double total_traj_duration = 0.0;
         double worst_sigma_all = std::numeric_limits<double>::infinity();
@@ -1529,8 +1378,6 @@ int main(int argc, char ** argv)
             result.worst_singularity.min_singular_value : -1.0);
 
           if (!result.succeeded() && !result.noActionNeeded()) {
-            // 中间步失败就中止：继续做下一步会让机器人从一个错误的位姿出发，
-            // 后面的位姿目标都失去意义，且可能撞上物体。
             RCLCPP_ERROR(
               logger, "[transport] 步骤 %s 失败(%s)，中止搬运（不做无意义的后续步骤）",
               step.name.c_str(), toString(result.code));
@@ -1552,11 +1399,6 @@ int main(int argc, char ** argv)
             }
           }
 
-          // ---- 抓取与放置 ----
-          // 以前这里是「抬起之后把物体在场景里从 A 传送到 B」。那是**没有夹爪时代**
-          // 的替代品：物体并不跟着手走，第 4 步横移时避障用的是一个已经不在 A 的障碍，
-          // 同时对手上带着的物体完全无感。现在物体真的挂在 TCP 上，
-          // 位置由正解决定，第 3~5 步的避障自动是对的。
           if (step.name == "2-下降到A") {
             if (!graspAndAttach(
                 logger, gripper, scene_pub, object_id, resolved_tcp_link,
@@ -1571,8 +1413,6 @@ int main(int argc, char ** argv)
             const bool released = releaseAndDetach(
               logger, gripper, scene_pub, object_id, resolved_tcp_link,
               execute, "[transport]");
-            // detach 已经发出去了（releaseAndDetach 里无论松爪成败都发），
-            // 所以无论如何都要清标记，否则收尾会再发一遍。
             object_attached = false;
             if (!released) {
               all_ok = false;
@@ -1582,11 +1422,6 @@ int main(int argc, char ** argv)
           }
         }
 
-        // 收尾：把物体从场景里移掉，避免污染后续场景的规划。
-        //
-        // 只在物体确实还挂着时才 detach。流程中止在"挂着"的时候必须补这一下：
-        // 那时物体属于 robot_state 而不属于 world，直接发 world 的 REMOVE 对它无效，
-        // 物体会一直挂在 TCP 上，污染后面所有场景的规划。
         if (object_attached) {
           publishAttachDiff(scene_pub, makeDetachObject(object_id, resolved_tcp_link));
           std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -1601,7 +1436,6 @@ int main(int argc, char ** argv)
         RCLCPP_INFO(
           logger, "[transport] 搬运序列%s，物体已从规划场景移除",
           all_ok ? "全部完成" : "中止");
-        // 一行汇总，专门给"换求解器再跑一遍"的横向对比用（grep 这一行即可）。
         RCLCPP_INFO(
           logger,
           "[transport][summary] planner=%s 结果=%s 成功步数=%zu/%zu "
@@ -1611,20 +1445,6 @@ int main(int argc, char ** argv)
           std::isfinite(worst_sigma_all) ? worst_sigma_all : -1.0,
           execute ? "true" : "false");
       } else if (scenario == "mobile_transport") {
-        // ---- 移动作业：起始位置取货 -> 底盘导航 -> 目标位置放货 ----
-        //
-        // 关键设计：`buildTransportSteps()` 那六步**一行都不用改**。
-        // 第 4 步"移动到 B 上方"是体系内的横移，底盘挪没挪都成立，
-        // 所以整个流程就是 transport + 在第 3 步(抬起)之后插入一段导航。
-        //
-        // 物体如何跟着走（2026-08-25 改）：物体在第 2 步之后被 attach 到 TCP 上，
-        // 属于机器人状态的一部分，位姿由正解决定 —— 底盘怎么动、手臂收不收，
-        // 物体都跟着对。
-        //
-        // 这里以前依赖的是另一个前提："导航途中机械臂保持抬起姿态不动，
-        // 物体与机器人的相对位姿恒定，所以用体系坐标就够"，并留了一条注释说
-        // 「如果以后要在导航途中收臂，这个前提就破了，必须改成 AttachedCollisionObject」。
-        // 现在已经改成 attach，那个脆弱前提随之解除。
         if (transport_pick.size() != 3U || transport_place.size() != 3U ||
           transport_size.size() != 3U)
         {
@@ -1644,7 +1464,6 @@ int main(int argc, char ** argv)
           continue;
         }
 
-        // 抓取高度下限校验：与 transport 用同一套判据，不另立标准。
         const std::string mobile_tcp_link = transport_tcp_link.empty() ?
           (transport_group == params.closed_chain.leader_group ?
           params.closed_chain.leader_tcp_link :
@@ -1677,7 +1496,6 @@ int main(int argc, char ** argv)
           continue;
         }
 
-        // TF：用来把物体的体系坐标换算到 map 系，证明它真的在世界里被搬走了。
         tf2_ros::Buffer tf_buffer(node->get_clock());
         tf2_ros::TransformListener tf_listener(tf_buffer, node);
 
@@ -1751,11 +1569,8 @@ int main(int argc, char ** argv)
         double mobile_worst_sigma = std::numeric_limits<double>::infinity();
         std::size_t mobile_steps_done = 0U;
         bool mobile_ok = true;
-        // 同 transport：只在真的挂着时才补 detach，避免日志里凭空多一条
-        // "Attached body not found" 的 ERROR 假线索。
         bool mobile_object_attached = false;
 
-        // 一步"规划 + 校验 + 执行"。失败返回 false，由调用处决定中止。
         const auto run_arm_step = [&](std::size_t index) -> bool {
             const TransportStep & step = steps[index];
             SingleArmPlanRequest request;
@@ -1807,12 +1622,9 @@ int main(int argc, char ** argv)
             return true;
           };
 
-        // ---- 阶段 1：起始位置取货（步骤 1~3）----
         RCLCPP_INFO(logger, "[mobile] ===== 阶段 1/3：起始位置取货 =====");
         for (std::size_t i = 0; i < 3U && mobile_ok; ++i) {
           mobile_ok = run_arm_step(i);
-          // 第 2 步下降到 A 之后合爪并 attach，物体从此跟着 TCP 走。
-          // 必须在第 3 步（抬起）之前完成：抬起那一步的规划要知道手上带着东西。
           if (mobile_ok && i == 1U) {
             mobile_ok = graspAndAttach(
               logger, gripper, scene_pub, object_id, mobile_tcp_link,
@@ -1821,8 +1633,6 @@ int main(int argc, char ** argv)
           }
         }
 
-        // 记录物体此刻的 map 系位置。查不到 TF 只降级为 WARN ——
-        // 它只影响"报告世界位移"这一件事，不是流程本身的一环。
         std::array<double, 3> object_map_before{0.0, 0.0, 0.0};
         std::array<double, 3> base_map_before{0.0, 0.0, 0.0};
         bool have_before = false;
@@ -1846,19 +1656,10 @@ int main(int argc, char ** argv)
           }
         }
 
-        // ---- 阶段 2：底盘导航 ----
         NavOutcome nav;
         if (mobile_ok) {
           RCLCPP_INFO(logger, "[mobile] ===== 阶段 2/3：底盘导航 =====");
 
-          // ---- 导航前收臂 ----
-          // 不收臂的实测后果：导航 ABORTED，176.7s 里 controller_server 连报 7 次
-          // `Failed to make progress`。根因不是 nav2 —— 臂-底盘耦合节点把"抬着物体"
-          // 判成展开度 1.00，限速系数落到下限 0.15，那个速度 10s 走不满进度检查器
-          // 要求的 0.5m，于是判卡住、跑恢复行为、用尽、放弃。
-          //
-          // 之所以现在能收臂：物体已 attach 到 TCP，位姿由正解决定，手臂怎么动都对。
-          // 改用 attach 之前物体是体系固定坐标，一收臂物体就留在原地了。
           if (!mobile_carry_pose.empty()) {
             SingleArmPlanRequest carry_request;
             carry_request.group = transport_group;
@@ -1871,8 +1672,6 @@ int main(int argc, char ** argv)
               carry.worst_singularity.valid ?
               carry.worst_singularity.min_singular_value : -1.0);
             if (!carry.succeeded() && !carry.noActionNeeded()) {
-              // 收臂失败要中止，不能"那就伸着走"：已经实测过伸着走一定 ABORTED，
-              // 继续下去只是把 176s 再烧一遍。
               RCLCPP_ERROR(
                 logger,
                 "[mobile] 收臂失败(%s)，中止 —— 伸着手臂导航实测必然 ABORTED。"
@@ -1906,8 +1705,6 @@ int main(int argc, char ** argv)
           if (mobile_verify_reachable) {
             std::string why;
             if (!verifyGoalReachable(node, mobile_plan_action, nav_goal, 30.0, why)) {
-              // 关键：不可达就**不发**导航目标。否则会表现成机器人挣扎很久后
-              // ABORTED，而那看着像"局部规划器走不动"，排查方向完全错。
               RCLCPP_ERROR(
                 logger, "[mobile] 导航目标预检不通过: %s —— 不下发导航目标，中止流程",
                 why.c_str());
@@ -1923,8 +1720,6 @@ int main(int argc, char ** argv)
               logger, "[mobile] 导航结果: %s，耗时 %.1fs",
               nav.reason.c_str(), nav.elapsed_sec);
             if (!nav.succeeded) {
-              // 导航失败绝不能继续放货：机器人不在预期的世界位置上，
-              // 后面那三步会把物体"放"在一个错误的地方，还报成功。
               RCLCPP_ERROR(
                 logger, "[mobile] 导航未成功，中止流程（不在错误的世界位置放货）");
               mobile_ok = false;
@@ -1932,25 +1727,18 @@ int main(int argc, char ** argv)
           }
         }
 
-        // ---- 阶段 3：目标位置放货（步骤 4~6）----
         if (mobile_ok) {
           RCLCPP_INFO(logger, "[mobile] ===== 阶段 3/3：目标位置放货 =====");
-          // 这里以前有一句「物体在场景里更新到 B」的传送。改成 attach 之后必须删掉：
-          // 物体此刻属于 robot_state，位姿由正解决定；再往 world 里发一个同 id 的
-          // ADD，会变成"手上挂着一个、世界里又躺着一个"，两份几何都参与碰撞检测。
           for (std::size_t i = 3U; i < steps.size() && mobile_ok; ++i) {
             mobile_ok = run_arm_step(i);
-            // 第 5 步下降到 B 之后松爪并 detach，MoveIt 按当前实际位姿把物体放回世界。
             if (mobile_ok && i == 4U) {
               mobile_ok = releaseAndDetach(
                 logger, gripper, scene_pub, object_id, mobile_tcp_link, execute, "[mobile]");
-              // detach 已发出（松爪成败都发），无论如何清标记。
               mobile_object_attached = false;
             }
           }
         }
 
-        // ---- 世界位移报告：这才是"真的搬走了"的证据 ----
         if (mobile_ok && have_before) {
           std::array<double, 3> object_map_after{0.0, 0.0, 0.0};
           std::array<double, 3> base_map_after{0.0, 0.0, 0.0};
@@ -1982,8 +1770,6 @@ int main(int argc, char ** argv)
           }
         }
 
-        // 收尾：把物体从场景里移掉，避免污染后续场景。
-        // 只在确实还挂着时才 detach，理由同 transport 场景。
         if (mobile_object_attached) {
           publishAttachDiff(scene_pub, makeDetachObject(object_id, mobile_tcp_link));
           std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -2018,7 +1804,6 @@ int main(int argc, char ** argv)
           std::string message;
           planner.executeTrajectory(single_arm_group, result.trajectory, message);
         }
-        // kAlreadyAtGoal 不是失败：没有轨迹可执行，但状态本身就是想要的结果。
         if (!result.succeeded() && !result.noActionNeeded()) {
           exit_code = 1;
         }
@@ -2036,7 +1821,6 @@ int main(int argc, char ** argv)
           std::string message;
           planner.executeTrajectory(single_arm_group, result.trajectory, message);
         }
-        // kAlreadyAtGoal 不是失败：没有轨迹可执行，但状态本身就是想要的结果。
         if (!result.succeeded() && !result.noActionNeeded()) {
           exit_code = 1;
         }
@@ -2055,19 +1839,10 @@ int main(int argc, char ** argv)
           std::string message;
           planner.executeTrajectory(params.dual_arm_group, result.trajectory, message);
         }
-        // kAlreadyAtGoal 不是失败：没有轨迹可执行，但状态本身就是想要的结果。
         if (!result.succeeded() && !result.noActionNeeded()) {
           exit_code = 1;
         }
       } else if (scenario == "planner_comparison") {
-        // 同一个任务分别用三个规划器跑，对比节拍与成功率。
-        // 这是"三个规划器都真的可用"的自证：如果某个规划器没被注册，
-        // MoveIt 会静默回退到默认规划器，那么它的节拍会与默认规划器一致 ——
-        // 所以要连同 move_group 日志里的实际规划器名一起看。
-        //
-        // 目标优先用关节目标：机器人启动时往往已经在 named target(ready) 上，
-        // 那样规划出来的是"1 个点、时长 0"的退化轨迹，节拍对比毫无意义。
-        // 关节目标保证一定有真实运动可比。
         RCLCPP_INFO(logger, "---------- 规划器对比 ----------");
         if (single_arm_joints.empty()) {
           RCLCPP_WARN(

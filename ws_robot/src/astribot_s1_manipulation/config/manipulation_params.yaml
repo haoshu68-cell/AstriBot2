@@ -1,269 +1,95 @@
-# =============================================================================
-# 双臂运动规划参数
-#
-# 任务要求"规划器参数、闭链约束参数、轨迹优化参数全部外部可配置，不写死在代码"，
-# 这份文件就是唯一的数值来源。C++ 里所有默认值只是"yaml 缺项时的兜底"，
-# 正式运行以本文件为准。
-#
-# 关键量纲提醒（写错单位是最常见的调参事故）：
-#   长度 m，角度 rad，时间 s，速度 rad/s，加速度 rad/s^2
-# =============================================================================
 planning_demo_node:
   ros__parameters:
 
     use_sim_time: true
 
-    # ---------------- 规划组与规划器 ----------------
-    # dual_arm(14 DOF，躯干锁定) 或 dual_arm_with_torso(18 DOF，躯干参与)。
-    # SRDF 里两个都定义好了，切换只改这里，代码不写死组名。
     dual_arm_group: "dual_arm"
 
-    # OMPL 规划器。必须是 ompl_planning.yaml 里定义过的**配置名**，
-    # 不是 OMPL 类名：
-    #   RRTstarConfig          -> geometric::RRTstar         (MoveIt 官方已注册)
-    #   BITstarConfig          -> geometric::BITstar         (本工程插件注册)
-    #   InformedRRTstarConfig  -> geometric::InformedRRTstar (本工程插件注册)
-    #   RRTConnectConfig       -> geometric::RRTConnect      (基线对比用)
-    #
-    # !!! 切换后务必核对 move_group 日志里打印的实际规划器名 !!!
-    # 写了 MoveIt 不认识的名字时它会**静默回退**到组默认规划器而不报错，
-    # 于是"以为在跑 BIT*、实际跑的是别的"完全看不出来。
     planner_id: "RRTstarConfig"
 
     allowed_planning_time: 5.0
 
-    # !!! 必须是 1，不能给更大 !!!（实测踩坑，见 ompl_planning.yaml 里 
-    # InformedRRTstarConfig 那段的完整记录）
-    # >1 时 MoveIt 会走 ompl::tools::ParallelPlan 并行跑多个规划器实例，
-    # 而 InformedRRTstar / BITstar 这类 informed 采样规划器要求创建采样器时
-    # 已经至少有 1 个起点和 1 个目标状态；并行分支下 MoveIt 的懒惰目标采样线程
-    # 常常一次都没跑，于是抛
-    #   PathLengthDirectInfSampler: There must be at least 1 start and 1 goal state
-    # 被 MoveIt 翻译成无信息量的 "Unable to solve the planning problem"。
-    # 设 1 后走单规划器路径，日志出现 "Using informed sampling." 并正常出解。
-    # 需要多次尝试就调下面的 max_replan_attempts（本包自己实现的重试，
-    # 每次都是完整的一轮规划+校验，不走 ParallelPlan）。
     planning_attempts: 1
 
-    # 单次"规划-校验"循环失败后的最大重试次数。
-    # 采样式规划器有随机性，重试确实可能拿到合法解；但必须有上限 ——
-    # 任务明确禁止无限重试死循环。
     max_replan_attempts: 3
 
-    # ---------------- leader 路径加密 ----------------
-    # OMPL 返回的路径点可能极稀（几个点）。闭链场景下 follower 的 IK 是我们
-    # 自己在 waypoint 上算的，两个稀疏点之间 IK 解可能跳变（IK 多解），
-    # 中间构型从未被校验 —— 所以必须加密后逐点投影。
     densify_leader_path: true
-    # 加密后相邻点的最大关节角变化。给太小会让 IK 调用次数爆炸
-    # （总 IK 次数 ≈ 路径弧长 / 本值）。0.05rad ≈ 2.9°。
     densify_max_joint_step: 0.05
-    # 点数上限，防止病态输入把内存打爆。
     densify_max_waypoints: 400
 
-    # "起点已经在目标上"的判定阈值(rad)。leader 每个关节与目标的偏差都在
-    # 这个值以内时，直接返回 ALREADY_AT_GOAL，不调规划器也不重试。
-    #
-    # 为什么需要（Gazebo 实测）：起点==目标时 OMPL 返回一条"2 个相同状态、
-    # 代价 0.00"的退化路径（日志: "Found an initial solution with a cost of 0.00"
-    # + "changed from 2 to 2 states"），加密后有效点数 < 2，
-    # 原先被误判成 PLANNER_FAILED 并白重试 3 次（烧掉 1.5s），
-    # 最后报的还是 "leader path has fewer than 2 waypoints after densification" ——
-    # 把"已经到位了"说成"规划器坏了"，排查方向完全错。
-    #
-    # 取值：要明显大于控制器稳态误差（实测 ~1e-4 rad），
-    # 又要明显小于最小的有意义动作幅度。1e-3 rad ≈ 0.057°，两边各留一个数量级。
     already_at_goal_tolerance_rad: 0.001
 
-
-    # ---------------- 闭链约束 ----------------
     closed_chain:
-      # leader 在自己的 7 维空间里跑 OMPL；follower 逐点 IK 跟随。
-      # 左右互换只改这两行（比如物体偏在右侧时，用右臂当 leader 更容易规划）。
       leader_group: "arm_left"
       follower_group: "arm_right"
 
-      # TCP 坐标系。指向 tcp_link（法兰再往 -y 0.15m，取自厂商
-      # astribot_arm_*.yaml 的 effector_to_tool_pose），**不是** tool_link ——
-      # tool_link 与 link_7 原点完全重合，它是法兰面而不是夹持点，两者差 0.15m。
-      # tcp_link 是纯坐标系、无碰撞几何，适合当 IK/约束的参考系。
-      # 换夹具时只改这里和 URDF 的 tcp_joint，不动 SRDF。
       leader_tcp_link: "astribot_arm_left_tcp_link"
       follower_tcp_link: "astribot_arm_right_tcp_link"
 
-      # T_rel（两 TCP 的相对位姿）来源。
-      # true  = 从当前状态捕获：先把两臂摆到夹持位姿再启动规划。
-      #         **推荐**，因为夹持几何由实际摆位决定，不需要任何人去量尺寸，
-      #         也就不存在"硬编码闭链几何尺寸"的问题。
-      # false = 用下面 relative_* 显式给定（适合已知物体尺寸的标定场景）。
       capture_from_current_state: true
 
-      # 显式模式下的 T_rel。translation 单位 m，rotation 是四元数 (x,y,z,w)。
-      # 下面这组示例含义：follower TCP 在 leader TCP 坐标系的 y 轴负方向 0.4m，
-      # 姿态相同 —— 相当于两手正对夹持一个 0.4m 宽的物体。
       relative_translation: [0.0, -0.4, 0.0]
       relative_rotation_xyzw: [0.0, 0.0, 0.0, 1.0]
 
-      # 残差阈值。位置与姿态量纲不同，必须分开设，不能加成一个标量。
-      # 5mm：对刚性夹持来说，5mm 相对错位已足以在物体上产生明显内力。
       position_tolerance: 0.005
-      # 0.02rad ≈ 1.15°
       orientation_tolerance: 0.02
 
-      # follower 单点 IK 的超时与尝试次数。
-      # 总开销 = 路径点数 × attempts × timeout，所以 timeout 要小、
-      # 靠 attempts 换成功率（单次 IK 要么很快收敛，要么就是真无解，久等无用）。
       ik_timeout: 0.01
       ik_attempts: 3
 
-    # ---------------- 奇异点检测 ----------------
     singularity:
       enabled: true
-      # 最小奇异值下限，量纲 m/rad。低于此值判奇异。
-      # 参考实测量级（合成 3R 臂，臂长 1.2m）：完全伸直 2e-17（精确奇异）、
-      # 几乎伸直 2.4e-3、明显弯曲 0.11。真实 7-DOF 臂正常工作构型在
-      # 0.05~0.3 之间，所以 0.02 能挡住真奇异又不误杀。
       min_singular_value: 0.02
-      # 条件数上限。sigma_max/sigma_min 过大意味着逆解数值病态：
-      # 末端的小位移误差会被放大成巨大关节速度，真机上表现为突然抖动。
       max_condition_number: 80.0
-      # sigma_max 本身的下限。这是**除零保护**而非业务阈值：
-      # sigma_max 都接近 0 说明雅可比整体退化，此时直接判奇异，
-      # 不去算条件数（会除零得到假的有限值）。
       degenerate_jacobian_epsilon: 1.0e-9
-      # 允许**起点**处于奇异构型（默认 true，Gazebo 实测逼出来的）。
-      # 仿真里机器人以全零构型出生，而本机器人全零即肘部完全伸直、精确奇异
-      # (实测 joint_4=0.0008, sigma_min=0.0077 < 阈值 0.02)。
-      # 连起点都拒的话，从奇异构型出发的任何轨迹都会被否决 ——
-      # 机器人被永久锁死，连"挪出去"这唯一出路都堵上了。
-      # 奇异检测该阻止的是"走进"奇异，不是"离开"奇异。
       allow_singular_start: true
 
-    # ---------------- 碰撞检测 ----------------
     collision:
-      # 任务明确禁止跳过碰撞校验。这两个开关不应在正式运行时关闭；
-      # 两个都关会被 configure() 直接拒绝。
       check_self_collision: true
       check_environment_collision: true
-      # 逐点校验时用 false（发现第一对就返回，快）；
-      # 失败后想看全部接触对时临时改 true。
       collect_all_contacts: false
       max_contacts: 16
 
-    # ---------------- 时间参数化与节拍优化 ----------------
     time_optimizer:
       enable_optimization: true
 
-      # baseline 用 IPTP（保守、鲁棒），同时作为节拍对比的分母。
       baseline_velocity_scaling: 0.30
       baseline_acceleration_scaling: 0.30
 
-      # 优化档用 TOTG（时间最优），把限位真正跑满。
-      # 不建议给 1.0：真机要留余量给跟踪误差，否则控制器一滞后就超限报警。
       optimized_velocity_scaling: 0.90
       optimized_acceleration_scaling: 0.90
 
-      # TOTG 的路径几何容差(rad)：允许在拐角处稍微"抹圆"换取更快通过速度。
-      # 给大了会偏离原路径（有碰撞风险，因为碰撞是在原路径上校验的）；
-      # 给 0 会让拐角速度被迫降到 0，节拍反而更差。
       totg_path_tolerance: 0.1
-      # 输出重采样步长(s)。0.05s(20Hz) 与 JointTrajectoryController 的
-      # 100Hz 更新率配合良好（控制器会在点之间自己插值）。
       totg_resample_dt: 0.05
-      # 判定"路径点重复"的最小关节角变化。这一条很关键：OMPL 的路径经常
-      # 含几乎重合的点，不合并会让 TOTG 在这些点上算出巨大速度。
       totg_min_angle_change: 0.001
 
-      # Ruckig 平滑默认关闭：它需要 jerk 限位，而 URDF 和手册都没有本机器人的
-      # jerk 数据，编一个数字进去等于埋一个来源不明的常量。
       enable_ruckig_smoothing: false
 
-      # 限位复核的相对容差。完全零容差会把浮点误差误判为超限。
       limit_tolerance_ratio: 0.001
 
     metrics:
       limit_tolerance_ratio: 0.001
       allow_finite_difference: true
 
-    # ---------------- 执行后等静止 ----------------
-    # 执行完一条轨迹后，等手臂真正停下来再返回。
-    #
-    # !!! 多步动作序列必须有这一步 !!!（Gazebo 实测）
-    # JointTrajectoryController 在轨迹时长走完时就报 "successfully finished"，
-    # 但此时手臂**还在向最后一个设定点收敛**。于是"执行成功"返回后立刻规划下一步，
-    # 起点取的是一个仍在移动的瞬时构型；等这一步规划完（实测 0.53s）再下发，
-    # 真实关节已经又走了一截，move_group 的起点校验直接否掉：
-    #     Invalid Trajectory: start point deviates from current robot state more than 0.05
-    #     joint 'astribot_arm_left_joint_2': expected: -0.963636, current: -1.02968
-    # 偏差 0.066rad，刚好越过默认的 allowed_start_tolerance 0.05，
-    # 报出来的是 MoveItErrorCode=-4，看不出跟"没等静止"有任何关系。
-    #
-    # 不要用放大 allowed_start_tolerance 的办法绕开：那是把"从错误的起点出发"
-    # 合法化，轨迹前段会有一个真实的跳变。
     execution:
-      # 等静止总超时(s)。超时**不算执行失败**（轨迹本身已经跑完了），
-      # 只打 WARN 并继续，否则一个抖动不停的关节会卡死整个序列。
       settle_timeout: 2.0
       settle_poll_interval: 0.02
-      # 关节速度上限(rad/s)。仅当当前状态带速度时启用。
       settle_velocity_threshold: 0.02
-      # 相邻两次采样的位置变化上限(rad)。速度缺失时这是唯一判据。
-      # 0.002rad / 0.02s = 0.1rad/s，与上面的速度阈值同量级。
       settle_position_epsilon: 0.002
-      # 连续几次采样都满足才算静止。取 >1 是为了滤掉换向瞬间速度穿过 0
-      # 造成的假静止。
       settle_stable_samples: 3
 
-    # ---------------- demo 场景 ----------------
     demo:
-      # 依次跑哪些场景。可选：single_arm_joint / single_arm_named /
-      # closed_chain / planner_comparison / transport
       scenarios: ["single_arm_named", "closed_chain", "planner_comparison"]
 
-      # 单臂场景用的组与目标
       single_arm_group: "arm_left"
       single_arm_named_target: "ready"
-      # 关节目标（7 个值，对应 arm_left_joint_1..7），取值必须在 URDF 限位内：
-      # joint_1 [-3.0,3.0] joint_2 [-1.4,0.4] joint_3 [-3.0,1.4] joint_4 [0.0,2.4]
-      # joint_5 [-2.0,2.0] joint_6 [-0.6,0.6] joint_7 [-1.4,1.4]
       single_arm_joint_target: [0.3, -0.6, -0.5, 1.2, 0.2, 0.1, 0.0]
 
-      # 闭链场景：leader 的关节目标（follower 由闭链约束唯一决定，不给目标）。
-      # 这是"两臂夹着物体一起挪动"的动作。
       closed_chain_leader_joint_target: [0.4, -0.7, -0.4, 1.3, 0.1, 0.0, 0.0]
 
-      # planner_comparison 场景依次用这些规划器跑同一个任务并对比节拍与成功率。
-      # 这正是任务成功判定里"可切换 RRT*/BIT*/Informed RRT*"的自证手段。
       comparison_planners: ["RRTstarConfig", "BITstarConfig", "InformedRRTstarConfig"]
 
-      # ---------------- 搬运场景 transport ----------------
-      # 把一个目标物体从 A 搬到 B。
-      #
-      # !!! 边界（2026-08-20 更新：夹爪已建模，但仍未接执行）!!!
-      # 夹爪现在是真实关节了（每侧 1 主动 + 5 mimic，见
-      # astribot_s1_description/urdf/astribot_s1_gripper.xacro），SRDF 也有了
-      # gripper_left/right 组与 end_effector 声明。所以：
-      #   真的   —— 动作序列(接近/下降/抬起/平移/下降/抬起)逐步笛卡尔规划、
-      #             每步过碰撞与奇异点校验、每步真实下发执行
-      #   真的   —— 物体是规划场景里的真实碰撞体，规划器必须绕开它
-      #   真的   —— 碰撞模型里现在**包含夹爪本体**（此前整个夹爪不在碰撞模型里）
-      #   还没做 —— 本场景没有"张开/闭合夹爪 + attach 物体"这两步动作，
-      #             所以物体依然不会在 Gazebo 里被夹住跟着走
-      #
-      # !!! 下面这批实测坐标是在"夹爪不建模"的旧碰撞模型下扫出来的 !!!
-      # 旧模型腕部只有 link_7 的 sphere r=0.05；真实夹爪沿抓取方向还要再伸
-      # 0.15m、张开时横向宽 0.148m。也就是说这些点的**碰撞余量结论已经失效**，
-      # 必须用新模型重跑 transport_probe 再定 A/B 与 grasp_z_offset。
-      # 保留原记录是为了对照（选点方法仍然有效，具体数字不再可信）。
       transport_group: "arm_left"
-      # 末端连杆清单：量"末端几何相对 TCP 伸出多少"时遍历这些连杆。
-      # 必须显式列出，不在代码里按名字前缀猜 —— 换成厂商那款 brainco 五指手时
-      # 只改这里。列空会让 endEffectorSpan 明确报错并跳过场景，
-      # 而不是算出 0 包络后放行任何 grasp_z_offset（那正是 TCP 挪到 tcp_link 后
-      # 老检查静默失效的方式）。
-      #
-      # 左臂一侧：腕部 link_7 + 夹爪基座 + 4 个有碰撞几何的指连杆。
-      # L1/R1 不列：厂商 SDF 里它们本就没有 collision（被基座外壳包住的内部连杆）。
       end_effector_links:
         - "astribot_arm_left_link_7"
         - "astribot_gripper_left_base"
@@ -271,231 +97,40 @@ planning_demo_node:
         - "astribot_gripper_left_Link_L2"
         - "astribot_gripper_left_Link_R11"
         - "astribot_gripper_left_Link_R2"
-      # TCP link；空则用规划组默认 tip。默认即 astribot_arm_left_tcp_link。
       transport_tcp_link: ""
-      # 坐标系：本机没有 base_link，本体系是 astribot_torso_base。
       transport_frame: "astribot_torso_base"
-      # 物体中心在 A / B 的位置。本体系下地面在 z≈-0.095。
-      # !!! 这两个坐标必须落在该臂真实可达域内，否则第一步就 IK 失败 !!!
-      #
-      # 选点方法（仍然有效）：先用 FK 量出该臂某个已知位姿的 TCP，
-      # 再用 transport_probe 在其邻域扫网格，只取实测可用的点。
-      # 凭直觉取值实测失败过两轮 —— 这是个**高位**作业臂，
-      # 凭"桌面高度 0.15m"取值会离可达域差 0.7m。
-      #
-      # 旧的一整套实测数字（(0.149,0.464,0.911) σ=0.1116 选作 A 等等）已删除：
-      # 那些是 TCP 还等于**法兰**时量的。TCP 改到 tcp_link 后，同一个手臂构型
-      # 对应的 TCP 位置整体前移 0.071m、下移 0.132m（实测 ready 位姿：
-      # 法兰 (0.1486,0.3839,0.8609) -> tcp_link (0.2198,0.3759,0.7291)），
-      # 而且腕部碰撞体从一个 r=0.05 的球变成了完整的夹爪，
-      # 所以旧坐标与旧 σ 都不再指向同一件事，留着只会误导。
-      # A/B 由 transport_probe 在**新模型**下重扫后挑的（2026-08-20）。
-      # 挑选依据不是"两个端点 σ 最高"，而是"A->B 之间整条 y 走廊全部可用" ——
-      # 第 4 步是沿 y 平移，端点好而中途有不可用点一样会中断。
-      # 实测各 (x,z) 层的走廊完整性：
-      #   x=0.17 z=0.729  5/5 全可用  σ 0.0931~0.1458  <- 选它，最差 σ 最高
-      #   x=0.22 z=0.729  5/5 全可用  σ 0.0742~0.1346
-      #   x=0.27 z=0.729  5/5 全可用  σ 0.0389~0.1190
-      #   x=0.17 z=0.679  5/5 全可用  σ 0.0399~0.1196
-      #   其余层只有 3~4/5 可用，中途会断
-      # 最差 σ=0.0931 是阈值 0.02 的 4.7 倍，余量充足。
       transport_pick_xyz: [0.170, 0.456, 0.729]
       transport_place_xyz: [0.170, 0.276, 0.729]
       transport_object_size_xyz: [0.06, 0.06, 0.12]
-      # TCP 相对物体中心的抓取高度偏移。
-      #
-      # !!! 这个值的下限依据在 2026-08-20 整体改变了，旧算法已失效 !!!
-      # 旧下限（夹爪不建模时）：TCP 坐在腕部碰撞球心上，所以
-      #     下限 = 物体半高 + 腕部外接半径 + clearance_margin
-      #          = 0.060    + 0.056       + 0.020 = 0.136
-      # 那时 TCP 用的是 tool_link（= 法兰，与 link_7 原点重合），腕部唯一的碰撞体
-      # 是 link_7 的 sphere r=0.05（外接半径 0.056）。
-      #
-      # 现在两件事同时变了：
-      #   1. TCP 改成 tcp_link，在法兰 -y 0.15m 处 —— **不再坐在腕部碰撞体里**。
-      #      实测 tcp_link 落在 link_7 的球(y∈[-0.05,0.05])之外，也在夹爪基座
-      #      碰撞 mesh(y∈[-0.1376,-0.048])之外，张开时两指相距约 105mm、指间是空的。
-      #   2. 碰撞模型里多了整具夹爪，沿抓取方向伸到 y≈-0.20。
-      # 所以"TCP 到物体顶面的距离"不再等于"腕部球心到物体顶面的距离"，
-      # 旧的 0.136 下限既不成立也不再是正确的判据形式。
-      #
-      # 保留的教训（仍然有效）：曾取 0.09 时腕部球嵌进物体 0.026m，目标状态非法，
-      # 规划器只报 RETRIES_EXHAUSTED，根因完全看不出来 —— 所以
-      # planning_demo_node 里那道"跑之前用 RobotModel 现算下限并直接拒绝"的检查
-      # 必须保留，只是它算的量需要跟着新的 TCP/碰撞体重新推导（未完成）。
-      #
-      # 当前值 0.15 是旧模型下选的，配套的 σ 实测值同样出自旧模型：
-      #   TCP z    = 0.761 + 0.15 = 0.911  (旧模型 σ=0.1116)
-      #   接近点 z = 0.911 + 0.10 = 1.011  (旧模型 σ=0.1544)
-      # 奇异性(σ)只取决于手臂 7 个关节，加夹爪不影响，所以 σ 这部分仍可信；
-      # **碰撞部分必须用新模型重扫**。
-      # 当前值 0.10 = 物体半高 0.06 + 指尖行程的一半 0.04，也就是让物体顶面落在
-      # 两指行程的中段（不是贴指根、也不是贴指尖），这样两侧都留余量。
-      # 上限 0.14 由 endEffectorSpan 从 RobotModel 现算（物体半高 + reach 0.08），
-      # 超了会被明确拒绝并说明"会静默空抓"。
-      # 旧值是 0.15 —— 那是 TCP 还等于法兰时选的，换成 tcp_link 后它**超了上限**：
-      # 物体顶面在 TCP 前方 0.09m 而指尖只伸出 0.08m，两指够不到，
-      # 规划和执行都会"成功"然后在物体上方闭合到空气里。
       transport_grasp_z_offset: 0.10
-      # !!! 已删除 transport_clearance_margin !!!（2026-08-25）
-      # 旧含义是"腕部碰撞球与物体顶面之间的净空"，属于**下限**概念。
-      # 下限现在整体交给逐点碰撞校验把关（比一个标量余量准确得多：物体自下往上顶时
-      # 真正先撞到的是横向与物体重叠的那块几何，不是"最远距离"能表达的），
-      # 于是这个参数变成了读进来却没人用的死旋钮 —— 留着只会让人误以为调它有效。
-      # 上限由 endEffectorSpan() 现算的指尖伸出量决定，也不需要这个余量。
 
-      # ---------------- transport_probe 选点体检 ----------------
-      # scenarios 里加 transport_probe 就只扫点、不动机器人，出一张
-      # 「IK / 碰撞 / 奇异」三合一的表。
-      #
-      # 为什么要有这个场景（两轮实测教训，都是"探针与真跑判据不一致"）：
-      #   1. 用 /compute_ik 扫可达域时物体**不在**场景里 —— 扫出的点物体入场后照样碰撞
-      #   2. 外部 python 探针只看 IK、不看 sigma_min —— 选出的点被本工程自己的
-      #      奇异监视器否掉（实测 σ=0.0161 < 阈值 0.02），探针说行、真跑说不行
-      # 现在这个场景与真跑共用同一份 yaml、同一个校验器，判据只有一套。
-      #
-      # 下面是 TCP **抓取点**坐标（不是物体中心；物体中心 = 抓取 z - grasp_z_offset）。
-      # 每个候选按「抓取点 + 接近点(z+approach_height)」成对判定，两点全过才算可用。
-      # 范围取在实测 ready 位姿 TCP=(0.149, 0.384, 0.861) 的邻域。
-      # !!! 网格已随 TCP 改到 tcp_link 整体平移（2026-08-20）!!!
-      # 旧网格是围着**法兰**的可达域取的。TCP 从法兰挪到 tcp_link 之后，
-      # 同一个手臂构型对应的 TCP 位置整体变了：实测 ready 位姿下
-      #   法兰 (0.1486, 0.3839, 0.8609)  ->  tcp_link (0.2198, 0.3759, 0.7291)
-      # 即**前移 0.071m、下移 0.132m**。旧网格套在新 TCP 上等于扫了一块偏离可达域
-      # 0.13m 的区域 —— 实测就是这样第 2 步又报 RETRIES_EXHAUSTED 的。
-      # 新网格按同样的方法围着 tcp_link 在 ready 位姿的实测位置取，
-      # y 跨度保持不变（A->B 平移走廊的长度不变）。
       transport_probe_x_list: [0.170, 0.220, 0.270, 0.320]
       transport_probe_y_list: [0.276, 0.326, 0.376, 0.426, 0.456]
       transport_probe_z_list: [0.579, 0.629, 0.679, 0.729]
 
-      # ---------------- mobile_transport：搬运 -> 导航 -> 搬运 ----------------
-      # 完整移动作业流程：起始位置取货(步骤1~3) -> 底盘导航 -> 目标位置放货(步骤4~6)。
-      #
-      # 六步序列与 transport 完全共用，一行都不改 —— 第 4 步"移动到 B 上方"
-      # 是体系内的横移，底盘挪没挪都成立，所以导航只是插在第 3 步之后。
-      # 取货点/放置点/物体尺寸/grasp_z_offset/姿态全部复用上面的 transport_*，
-      # 不另立一套（两处数值一旦漂移就再也对不上了）。
-      #
-      # 前置条件：nav2 必须已经在跑（定位模式或建图模式都行）。
-      #   终端1: ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py ...
-      #   终端2: ros2 launch astribot_s1_manipulation planning_demo.launch.py \
-      #             scenarios:=mobile_transport execute:=true
       mobile_transport_map_frame: "map"
       mobile_transport_nav_action: "/navigate_to_pose"
       mobile_transport_plan_action: "/compute_path_to_pose"
-      # 导航目标（map 系）。这个点是实测挑的，不是随便取的。
-      #
-      # !!! 2026-08-25 重标定 !!! 旧值 [0.995, 1.712] yaw=-1.673 已作废。
-      # 旧值是在**旧地图**上挑的。现在这张图是自主探索跑出来的
-      # （ws_robot/maps/warehouse_explored_auto，探索自然终止于 80.1% 覆盖：
-      #  剩余 366 个前沿格产生的 23 个候选点全部因"净空半径 0.25m 内有占据栅格"
-      #  被淘汰，即剩下的都在货架缝隙里、机器人没有合法站位）。
-      # 换图不换点就是假前提 —— 目标点在新图上可能落在未知区或障碍里。
-      #
-      # 新值的两项实测依据（换点时这两件事都必须重做）：
-      #   1. 离线净空 3.75m —— 全图最开阔处，远高于 MPPI 足迹代价饱和阈值 1.62m，
-      #      刻意避开已知的"窄通道里代价恒 253、零梯度"问题。
-      #      判据与探索器的目标校验对齐：站位本身是已知自由格，且半径内无占据格。
-      #   2. ComputePathToPose 预检：状态码 4(SUCCEEDED)，路径 140 点 / 7.31m。
-      # yaw 取 0.0：定位模式下机器人从 map 原点、朝向 0 起步，沿用起始朝向，
-      # 省掉一次没有意义的原地转身。A/B 取放点是体系坐标，与底盘朝向无关。
       mobile_transport_nav_goal_xy: [-0.995, -2.425]
       mobile_transport_nav_goal_yaw: 0.0
       mobile_transport_nav_timeout: 180.0
-      # 下发导航前先用 ComputePathToPose 预检可达性。
-      # !!! 正常运行别关 !!! 不预检时"目标本来就不可达"会表现成机器人挣扎很久后
-      # ABORTED，看着像局部规划器走不动，排查方向完全错。留这个开关只为做对照实验。
       mobile_transport_verify_reachable: true
-      # 导航途中把手臂收到这个命名姿态（SRDF 的 group_state 名）。空串 = 不收臂。
-      #
-      # 为什么必须收臂（2026-08-25 实测）：不收臂时导航段 **ABORTED**，
-      # 耗时 176.7s、controller_server 连报 7 次 `Failed to make progress`。
-      # 根因不在 nav2：臂-底盘耦合节点按"展开幅度"限速，抬着物体的姿态被判成
-      # 展开度 1.00，限速系数直接落到下限 **0.15**（min_speed_scale）。
-      # 那个速度下 10s 走不满进度检查器要求的 0.5m（required_movement_radius），
-      # 于是判定卡住 -> 恢复行为 -> 用尽 -> 放弃。
-      # 表面症状是"局部规划器走不动"，真正的瓶颈在另一个包的限速策略里。
-      #
-      # 为什么现在**可以**收臂：物体已经 attach 到 TCP 上，位姿由正解决定，
-      # 手臂怎么动物体都跟着对。这在改用 attach 之前是做不到的 —— 那时物体用的是
-      # 体系固定坐标，一收臂物体就留在原地不动了（旧代码里专门留了一条注释说明
-      # 这个前提，见 planning_demo_node.cpp 的 mobile_transport 段）。
-      #
-      # 用 ready 而不是 home：home 是全零构型，肘部完全伸直、实测 sigma_min=0.0077，
-      # 是奇异位形，规划从那儿起步第一个点就被判奇异。
-      # 注意 ready 的限速系数实测也只有约 0.29（耦合节点拿全零构型当收纳基准，
-      # 这个基准本身不合理）—— 那是另一个包的问题，不在这里绕过。
       mobile_transport_carry_pose: "ready"
-      # 接近/离开时在抓取点上方留的高度。太小会让下降段与物体碰撞校验冲突。
       transport_approach_height: 0.10
-      # TCP 姿态四元数 (x,y,z,w)。
-      # !!! 不要写成空列表 [] !!! ROS2 参数系统无法从空 YAML 序列推断类型，
-      # declare_parameter 会直接抛 InvalidParameterValueException
-      # （"parameter_value_from failed ... No parameter value set"），
-      # 而且异常会连带把 move_group 一起搞崩，报出来的却是
-      # "failed to create guard condition"，看着像资源耗尽，极易误判。
-      # 不想指定姿态就给单位四元数，显式而不是留空。
-      #
-      # !!! 2026-08-20 改：旧值 [0.6227,-0.0410,0.2927,0.7245] 已作废 !!!
-      # 旧值是"照抄 ready 位姿的 TCP 姿态"得来的 —— 那时 TCP 就是法兰，
-      # 姿态只要 IK 能解就行，因为法兰上没有任何几何。现在末端有真实的两根手指，
-      # 姿态直接决定两指怎么落在物体上。
-      # 实测旧值的夹爪接近轴（TCP 系 -y）与竖直方向差 **28.6°**，
-      # 结果是斜着插下去、一根手指扎进物体：transport_probe 80 个候选**全部不可用**，
-      # 失败原因清一色 `environment collision: gripper_left_Link_R11 <-> probe_target`。
-      #
-      # 新值按夹爪几何推导，不是试出来的：
-      #   夹爪接近轴 = TCP 系 -y（基座以 rpy(1.5708,0,0) 装在 link_7 上决定的）
-      #   两指张合轴 = TCP 系 x（实测 L11 在 x∈[+0.055,+0.087]、R11 在 x∈[-0.075,-0.043]）
-      # 要求：接近轴 -> 世界 -z（竖直下扎）；张合轴 -> 世界 x
-      #       （与 A->B 沿 y 的平移方向垂直，平移时不是"用指缝去推物体"）
-      # 满足这两条的旋转就是绕 x 转 +90°，对应四元数 (0.7071, 0, 0, 0.7071)。
-      # 回代验证：接近轴映射到 [0,0,-1]，与竖直夹角 0.0°。
       transport_grasp_orientation_xyzw: [0.70710678, 0.0, 0.0, 0.70710678]
 
-      # ---------------- 夹爪 ----------------
-      # transport / mobile_transport 会真的开合夹爪，并把物体 attach 到 TCP 上。
-      #
-      # 这一段替换掉了以前的做法。以前是「抬起之后把物体在场景里从 A 传送到 B」——
-      # 那是**没有夹爪时代**的替代品，物体并不跟着手走，中途的避障用的是一个
-      # 已经不在那儿的障碍。现在物体真的挂在 TCP 上，碰撞检测把它当机器人的一部分。
-      #
-      # 边界要说清楚（写进日志，不靠读者推断）：
-      #   真的   —— 夹爪按指令开合（Gazebo 里真在动，主动关节实测零稳态误差）；
-      #             物体在**规划场景**里被 attach 到 TCP，规划器必须带着它绕障。
-      #   不是真的 —— Gazebo 里没有这个物体的刚体，不产生夹持力。
-      #             物理夹持另有两个未解决项：mimic 从动关节 7.79° 稳态误差、
-      #             指尖摩擦未标定，属于独立课题。
       gripper_group: "gripper_left"
       gripper_action: "/gripper_left_controller/follow_joint_trajectory"
-      # 开合角从 SRDF 这两个 group_state 读，**不在这里写角度值**。
-      # 任务禁止硬编码关节极限，而 0.0/0.93 正是夹爪的关节极限。
       gripper_open_state: "open"
       gripper_closed_state: "closed"
-      # 量张口用的两个指垫 link。
-      # 选 L11/R11 而不是 L2/R2：它们是远端指垫，真正与物体接触的是这两个。
-      # 实测（写在上面 transport_grasp_orientation 的推导里）：默认张开时
-      # L11 占 x∈[+0.055,+0.087]、R11 占 x∈[-0.075,-0.043]，
-      # 相向面间距 ≈ 0.098 m —— 这就是最大张口，0.06 m 的物体夹得下。
       gripper_left_pad_link: "astribot_gripper_left_Link_L11"
       gripper_right_pad_link: "astribot_gripper_left_Link_R11"
-      # 两指张合方向（TCP 系单位向量）。与 transport_grasp_orientation 的推导同源。
-      # 填错方向会被 GripperCommander 在 configure 阶段拦下（张口行程几乎为 0）。
       gripper_jaw_axis_in_tcp: [1.0, 0.0, 0.0]
       gripper_move_time: 1.2
-      # 控制器报完成后额外驻留多久再读稳态值。
-      # 不是保守起见随手加的：实测过「控制器报完成时还在收敛」。
       gripper_settle_time: 0.8
       gripper_converge_tolerance: 0.02
-      # 抓取预紧：闭合到「物体宽度 − 预紧」，让指垫压进去一点而不是刚好贴上。
       gripper_grasp_preload: 0.004
 
-      # 是否把规划出的轨迹真的下发执行（Gazebo 仿真里机器人会动起来）。
-      # 首次验证建议 false，先看规划指标；确认无误后再开 true。
       execute_trajectory: false
 
-      # 执行前是否先把双臂摆到 SRDF 的 ready 姿态。
-      # 闭链场景强烈建议 true：ready 姿态刻意让肘部离开完全伸直的奇异构型
-      # （joint_4 = 1.0），从奇异构型起步会让第一个点就被判奇异。
       move_to_ready_first: true

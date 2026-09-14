@@ -7,7 +7,7 @@ package_name = 'astribot_s1_perception'
 setup(
     name=package_name,
     version='0.1.0',
-    packages=find_packages(exclude=['test']),
+    packages=find_packages(),
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -28,7 +28,6 @@ setup(
         '（区分仿真/实体硬件两套分支）'
     ),
     license='Apache-2.0',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'livox_preprocess_node = astribot_s1_perception.livox_preprocess_node:main',

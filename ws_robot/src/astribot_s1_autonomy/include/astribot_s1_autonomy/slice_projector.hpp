@@ -1,12 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// 多层高度切片 → 极坐标投影融合 的纯算法核心。
-//
-// 本文件**故意不依赖任何 ROS 类型**（只用 std / 自定义 POD 结构），
-// 目的有三：
-//   1. 满足「算法逻辑与 Gazebo 解耦，物理仿真只作为外部数据源」的约束；
-//   2. 可以脱离 ROS 单独写单元测试；
-//   3. ROS 节点层只负责取数据、给 TF、发话题，算法层保持可移植。
 #ifndef ASTRIBOT_S1_AUTONOMY__SLICE_PROJECTOR_HPP_
 #define ASTRIBOT_S1_AUTONOMY__SLICE_PROJECTOR_HPP_
 
@@ -62,29 +54,6 @@ struct ProjectionResult
 };
 
 /// 多层切片投影器。
-///
-/// 算法流程（对应需求文档「模块1 第5步」）：
-///
-///   for 每个点 p in cloud(base_frame):
-///       r = hypot(p.x, p.y)                      // 水平面投影距离
-///       if r 不在 [range_min, range_max]: 丢弃
-///       theta = atan2(p.y, p.x)
-///       bucket = round((theta - angle_min) / angle_increment)
-///       for 每个 enabled 的切片层 s:
-///           if p.z in [s.z_min, s.z_max) and r <= s.max_range:
-///               slice_min[s][bucket] = min(slice_min[s][bucket], r)
-///               slice_cnt[s][bucket] += 1
-///
-///   // 逐层做「证据数」判决，再跨层取最近，得到最终 scan
-///   for 每个 bucket b:
-///       fused[b] = +inf
-///       for 每个 enabled 的切片层 s:
-///           if slice_cnt[s][b] >= s.min_points:
-///               fused[b] = min(fused[b], slice_min[s][b])
-///
-/// 跨层取 min 的含义：任意高度上出现的最近障碍物都会体现在这一束激光上，
-/// 因此低矮障碍（如托盘、台阶）和悬空障碍（如伸出的货架横梁）都不会丢失
-/// ——这正是「禁止单一 Z 切片」的原因：单层切片必然在层与层之间漏检。
 class SliceProjector
 {
 public:

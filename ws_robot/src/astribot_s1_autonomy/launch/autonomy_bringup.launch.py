@@ -57,7 +57,6 @@ def _build(context, *args, **kwargs):
     enable_explorer = _to_bool(LaunchConfiguration('enable_explorer').perform(context))
     log_level = LaunchConfiguration('log_level').perform(context)
 
-    # 只有显式传了才覆盖 yaml，避免空字符串把配置冲掉。
     perception_overrides = {}
     scan_topic = LaunchConfiguration('output_scan_topic').perform(context)
     if scan_topic != '':
@@ -84,15 +83,6 @@ def _build(context, *args, **kwargs):
     actions = []
 
     if use_composition:
-        # !!! 实测踩坑：不能开 use_intra_process_comms !!!
-        # 开了会在组件构造时直接抛
-        #   "intraprocess communication allowed only with volatile durability"
-        # 原因：进程内通信要求所有收发端都是 volatile durability，而这两个节点
-        # 都要用 TF —— tf2_ros::TransformListener 订阅 /tf_static 必须是
-        # TRANSIENT_LOCAL（否则拿不到启动时就发完的静态变换）。
-        # 探索节点还要以 transient_local 订阅 /map、发布 /explore/complete。
-        # 这些都是功能必需，不能为了零拷贝退让，所以这里不开进程内通信。
-        # 装进同一个容器仍然有价值：少一个进程、共享执行器线程池、便于统一管理。
         composable = []
         if enable_perception:
             composable.append(
@@ -115,8 +105,6 @@ def _build(context, *args, **kwargs):
                 name='astribot_autonomy_container',
                 namespace='',
                 package='rclcpp_components',
-                # 用多线程容器：两个节点各自还有自己的工作线程，
-                # 多线程执行器能让订阅回调和定时器互不阻塞。
                 executable='component_container_mt',
                 composable_node_descriptions=composable,
                 output='screen',

@@ -59,8 +59,6 @@ TrajectoryMetrics evaluateTrajectory(
     return metrics;
   }
   if (count == 1U) {
-    // 单点"轨迹"没有运动，节拍为 0。这是合法的（起点即终点），
-    // 但要显式说明，否则容易被误读成评估失败。
     metrics.valid = true;
     metrics.source = MetricsSource::kFromTrajectory;
     metrics.duration = 0.0;
@@ -82,7 +80,6 @@ TrajectoryMetrics evaluateTrajectory(
     return metrics;
   }
 
-  // 判断数据来源：只要首个非起点 waypoint 带速度，就认为已参数化。
   const moveit::core::RobotState & probe = trajectory.getWayPoint(count > 1U ? 1U : 0U);
   const bool has_velocities = probe.hasVelocities();
   const bool has_accelerations = probe.hasAccelerations();
@@ -114,8 +111,6 @@ TrajectoryMetrics evaluateTrajectory(
       if (has_velocities) {
         velocity = state.getVariableVelocity(variable_name);
       } else if (i + 1U < count) {
-        // 差分估算：dq/dt。dt 取相邻两点的时间间隔；未参数化轨迹 dt 为 0，
-        // 此时无法给出速度（除零），跳过 —— 报告里 source 已标明是差分来源。
         const double dt = trajectory.getWayPointDurationFromPrevious(i + 1U);
         if (dt > 1e-9) {
           const double q0 = state.getVariablePosition(variable_name);
@@ -135,7 +130,6 @@ TrajectoryMetrics evaluateTrajectory(
       }
     }
 
-    // 超限判定带相对容差：见 MetricsParams 里的说明。
     if (peak.velocity_limit > 0.0) {
       const double allowed = peak.velocity_limit * (1.0 + params.limit_tolerance_ratio);
       peak.velocity_violated = peak.max_velocity > allowed;

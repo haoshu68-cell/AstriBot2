@@ -48,10 +48,8 @@ from astribot_trajectory_bridge.chassis_integrator import (
     wrap_angle,
 )
 
-# 外环比例增益硬上限。外环 10 Hz 时增益 1.0 意味着一个周期吃掉全部误差 -> 必然过冲。
 KP_HARD_MAX = 0.5
 
-# 位姿源合法取值
 POSE_SOURCE_SLAM = 'slam'
 POSE_SOURCE_GROUND_TRUTH = 'ground_truth'
 VALID_POSE_SOURCES = (POSE_SOURCE_SLAM, POSE_SOURCE_GROUND_TRUTH)
@@ -217,13 +215,11 @@ def compute_correction(p_des_map, p_slam, kp_xy, kp_theta,
          这保证位姿源发疯时底盘最多蠕动
     """
     err_map = pose_error(p_des_map, p_slam)
-    # map 系误差 -> 本体系（用 SLAM 的绝对朝向）
     err_body_xy = rotate_vec2_transposed(rot_z(p_slam[IDX_THETA]),
                                          (err_map[0], err_map[1]))
     corr_xy = (kp_xy * err_body_xy[0], kp_xy * err_body_xy[1])
     corr_theta = kp_theta * err_map[2]
 
-    # 校正速度限幅：一个外环周期内允许的最大位移 = max_corr_vel / outer_rate
     max_step_xy = max_corr_vel_xy / outer_rate
     norm_xy = math.hypot(corr_xy[0], corr_xy[1])
     if norm_xy > max_step_xy:

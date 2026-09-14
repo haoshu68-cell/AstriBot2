@@ -67,7 +67,6 @@ class StateBridge(Node):
         self._load_params()
         self._robot = None
         self._read_failures = 0
-        # 关节名顺序固定下来，每周期只填数值 —— 名字每次重算既浪费也容易出错。
         self._flat_names = []
         for part in self._parts:
             self._flat_names.extend(self._joint_names[part])
@@ -98,7 +97,6 @@ class StateBridge(Node):
         if self._publish_rate <= 0.0:
             raise ValueError('bridge.publish_rate 必须为正，实际 %r' % self._publish_rate)
         if self._high_rights:
-            # 只读方向拿控制权没有任何用途，只会带来风险。宁可拒绝启动。
             raise ValueError(
                 'bridge.sdk_high_control_rights=true 与只读状态桥接的语义冲突：'
                 '读状态不需要控制权，拿了控制权只会让"绝不会动到机器人"这条边界失效。'
@@ -138,8 +136,6 @@ class StateBridge(Node):
             freq=self._sdk_freq, high_control_rights=self._high_rights,
             node_name=self._sdk_node_name)
 
-        # 启动期就把部件划分对一遍：DOF 不符时立刻失败，而不是每周期发出
-        # 长度不对的 JointState（那会让 MoveIt 报一堆难懂的状态不完整警告）。
         sdk_dofs = dict(zip(self._robot.whole_body_names, self._robot.whole_body_dofs))
         problems = []
         for part in self._parts:
@@ -176,8 +172,6 @@ class StateBridge(Node):
                 return None
             scale = self._scale[part]
             offset = self._offset[part]
-            # URDF 值 = scale * SDK 值 + offset。手臂/躯干/头部 scale=1；
-            # 夹爪 scale=0.0093 把 0~100 的抽象量换成弧度（见 bridge.yaml 推导）。
             flat.extend(scale * float(v) + offset for v in values)
         return flat
 
@@ -191,8 +185,6 @@ class StateBridge(Node):
         if positions is None:
             self._read_failures += 1
             if self._read_failures >= self._max_failures:
-                # 连续读不到就停：继续发陈旧值比不发更危险 ——
-                # MoveIt 会拿陈旧关节角当规划起点。
                 self.get_logger().error(
                     '连续 %d 个周期读不到有效状态，停止发布并退出。'
                     '（宁可让上层看到"没有状态"，也不能给它一份过期的关节角当规划起点）'
@@ -208,9 +200,6 @@ class StateBridge(Node):
         msg.header.frame_id = self._frame_id
         msg.name = self._flat_names
         msg.position = positions
-        # velocity/effort 留空：Gate 2 只做位置。JointState 允许这几个数组
-        # 长度为 0，消费方（robot_state_publisher / MoveIt）按"未提供"处理。
-        # 填一个全零数组会被当成"实测速度为 0"，那是在编造数据。
         self._pub.publish(msg)
 
 

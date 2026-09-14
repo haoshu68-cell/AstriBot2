@@ -50,26 +50,13 @@ class _BootLogger:
 
 
 def main(args=None):
-    # !!! rclpy.init 必须在 open_session **之前** !!!
-    #
-    # 实测（2026-08-26）：
-    #   · 先 rclpy.init() 再 open_session  -> 正常，SDK 不会因重复 init 报错
-    #   · 先 open_session 再 rclpy.init()  -> 抛
-    #     `RuntimeError: Context.init() must only be called once`
-    # 厂商 SDK 构造时自己会初始化 rclpy（它内部要建 ROS 节点）。顺序反了之后
-    # 报错指向 rclpy，而真实原因是"SDK 已经初始化过了" —— 归因方向完全错。
-    #
-    # `if not rclpy.ok()` 这层保护是为了让本函数在**已初始化的进程里**
-    # 也能被调用（测试、或将来被别的入口复用），而不是修顺序问题本身。
     if not rclpy.ok():
         rclpy.init(args=args)
 
-    # 这一步会 setdefault ASTRIBOT_LOG / ROBOT_TYPE 并自检，然后才真正 import SDK
     try:
         session = open_session(freq=250.0, node_name='astribot_bridge_session',
                               logger=_BootLogger)
     except SdkSessionError as exc:
-        # 会话建不起来就**响亮失败**，不进入"看起来在跑但什么都不做"的状态
         _BootLogger.error('SDK 会话建立失败，桥接容器退出：\n%s' % exc)
         rclpy.try_shutdown()
         return 1
@@ -91,15 +78,6 @@ def main(args=None):
         rclpy.try_shutdown()
         return 2
 
-    # 线程数不再硬编码，由每个节点声明的回调组数推出（callback_layout）。
-    #
-    # !!! 为什么不能写 len(nodes) * 常数 !!!
-    # 互斥回调组只保证**组内**串行，不保证组间能并发 —— 线程不够时组照样排队，
-    # 拆组等于没拆。原公式 `len(nodes) * 2 + 2` 在底盘拆出 cmd_group 之后是
-    # 6 线程 / 7 个组，正好卡在不够用的边界上：内环把组占满，`cmd_vel` 回调
-    # 一次都执行不到，机器人静止且**毫无告警**（见 chassis_cmd_bridge_node.py
-    # 里 cmd_group 那段）。改成 `* 4` 只是把数字调大，下次谁加第 5 个组还会再犯。
-    # 现在组数与线程数出自同一份声明，加组会自动加线程。
     num_threads = executor_thread_count(
         [type(n).CALLBACK_GROUPS for n in nodes])
     executor = MultiThreadedExecutor(num_threads=num_threads)

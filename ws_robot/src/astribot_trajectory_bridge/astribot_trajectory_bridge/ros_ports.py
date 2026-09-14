@@ -62,9 +62,6 @@ class TfPosePort(PosePort):
         return ([t.x, t.y, yaw], stamp)
 
 
-# ---------------------------------------------------------------------------
-# 状态码映射
-# ---------------------------------------------------------------------------
 
 def _build_code_map():
     """把核心层用的**字符串**状态名映射成 BridgeStatus 的数字常量。
@@ -105,8 +102,6 @@ def status_code_of(name):
     return STATUS_CODE_MAP[name]
 
 
-#: 会通过 StatusReporter 上报状态的核心层模块。
-#: 新增核心层模块必须加进来，否则它的状态名不受启动期校验保护。
 _CORE_MODULES = ('chassis_bridge_core', 'arm_bridge_core', 'gripper_core')
 
 
@@ -173,10 +168,8 @@ class StatusReporter:
     def __init__(self, node, topic='/astribot/bridge/status', node_name=None):
         self._node = node
         self._name = node_name or node.get_name()
-        # 启动期校验：映射不全就在这里炸，绝不留到故障触发时才炸。
         assert_all_core_names_mappable()
         self._pub = node.create_publisher(BridgeStatus, topic, 10)
-        #: 上报本身失败的累计次数。非零即说明有上报被丢了，日志里有详情。
         self.publish_failures = 0
 
     def publish(self, code_name, detail='', metric_1=0.0, metric_2=0.0):

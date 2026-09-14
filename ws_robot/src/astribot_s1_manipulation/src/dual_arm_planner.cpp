@@ -43,8 +43,6 @@ double maxJointDeviation(
   const moveit::core::JointModelGroup * jmg)
 {
   if (jmg == nullptr) {
-    // 调用方已经校验过组存在；这里返回无穷大保证任何阈值都判为"不相等"，
-    // 也就是宁可多规划一次，绝不误报"已经到位"。
     return std::numeric_limits<double>::infinity();
   }
   double worst = 0.0;
@@ -65,9 +63,6 @@ double maxJointDeviation(
 }
 }  // namespace
 
-// ===========================================================================
-// Impl：所有实现细节。头文件只暴露对外 API。
-// ===========================================================================
 class DualArmPlanner::Impl
 {
 public:
@@ -95,8 +90,6 @@ public:
       move_groups_.emplace(group_name, mgi);
       return mgi;
     } catch (const std::exception & e) {
-      // MoveGroupInterface 构造失败最常见的原因是 move_group 节点没起来，
-      // 或者 SRDF 里没有这个组。两者都要让调用方明确知道。
       error = "failed to create MoveGroupInterface for group '" + group_name +
         "': " + e.what();
       return nullptr;
@@ -148,7 +141,6 @@ public:
       const moveit::core::RobotState & a = trajectory.getWayPoint(i);
       const moveit::core::RobotState & b = trajectory.getWayPoint(i + 1U);
 
-      // 该段里变化最大的那个关节决定需要插几份。
       double max_delta = 0.0;
       for (const std::string & name : names) {
         const double delta =
@@ -159,7 +151,6 @@ public:
       if (max_delta > max_joint_step) {
         steps = static_cast<int>(std::ceil(max_delta / max_joint_step));
       }
-      // 全局点数上限保护：病态输入（例如关节值跳变几十弧度）不能把内存打爆。
       if (max_waypoints > 0 &&
         static_cast<int>(out.size()) + steps > max_waypoints)
       {
@@ -169,7 +160,6 @@ public:
       for (int s = 1; s <= steps; ++s) {
         const double t = static_cast<double>(s) / static_cast<double>(steps);
         moveit::core::RobotState interpolated(a);
-        // 只插值该组的变量，其余关节（躯干/头/轮）保持 a 的取值不变。
         for (const std::string & name : names) {
           const double va = a.getVariablePosition(name);
           const double vb = b.getVariablePosition(name);
@@ -180,7 +170,6 @@ public:
       }
 
       if (max_waypoints > 0 && static_cast<int>(out.size()) >= max_waypoints) {
-        // 达到上限就停止加密，但必须把终点补上，否则轨迹到不了目标。
         if (out.size() > 1U) {
           out.back() = trajectory.getWayPoint(count - 1U);
         }
@@ -218,7 +207,6 @@ public:
   {
     robot_trajectory::RobotTrajectory trajectory(model, group_name);
     for (const moveit::core::RobotState & state : states) {
-      // dt 给 0：真实时间戳由 IPTP/TOTG 计算。
       trajectory.addSuffixWayPoint(state, 0.0);
     }
     return trajectory;
@@ -230,13 +218,9 @@ public:
   move_groups_;
 };
 
-// ===========================================================================
-// 构造 / 析构
-// ===========================================================================
 DualArmPlanner::DualArmPlanner(const rclcpp::Node::SharedPtr & node)
 : node_(node)
 {
-  // node 判空放在 initialize 里报错，构造函数不抛异常。
   if (node_) {
     impl_ = std::make_unique<Impl>(node_, this);
   }
@@ -244,8 +228,6 @@ DualArmPlanner::DualArmPlanner(const rclcpp::Node::SharedPtr & node)
 
 DualArmPlanner::~DualArmPlanner()
 {
-  // PlanningSceneMonitor 内部起了订阅线程，必须显式停掉再析构，
-  // 否则回调可能在成员已销毁后触发（悬空引用）。
   if (scene_monitor_) {
     scene_monitor_->stopSceneMonitor();
     scene_monitor_->stopStateMonitor();
@@ -253,9 +235,6 @@ DualArmPlanner::~DualArmPlanner()
   }
 }
 
-// ===========================================================================
-// 初始化
-// ===========================================================================
 bool DualArmPlanner::initialize(const DualArmPlannerParams & params, std::string & error)
 {
   error.clear();
@@ -270,8 +249,6 @@ bool DualArmPlanner::initialize(const DualArmPlannerParams & params, std::string
     return false;
   }
 
-  // ---- 机器人模型 ----
-  // 任何加载失败都必须让节点优雅退出（任务要求：URDF/SRDF 加载失败不产生段错误）。
   try {
     robot_model_loader::RobotModelLoader::Options options;
     options.robot_description_ = "robot_description";
@@ -287,7 +264,6 @@ bool DualArmPlanner::initialize(const DualArmPlannerParams & params, std::string
     return false;
   }
 
-  // ---- 组存在性校验（早失败，错误信息明确）----
   if (robot_model_->getJointModelGroup(params.dual_arm_group) == nullptr) {
     error = "dual arm group '" + params.dual_arm_group + "' not found in SRDF";
     return false;
@@ -301,7 +277,6 @@ bool DualArmPlanner::initialize(const DualArmPlannerParams & params, std::string
     return false;
   }
 
-  // ---- 场景监视器：提供实时机器人状态与环境物体 ----
   try {
     scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(
       node_, "robot_description");
@@ -317,10 +292,7 @@ bool DualArmPlanner::initialize(const DualArmPlannerParams & params, std::string
   scene_monitor_->startSceneMonitor();
   scene_monitor_->startWorldGeometryMonitor();
 
-  // 等 /joint_states 到齐。拿不到当前状态就没法做 FK/IK，也没法捕获 T_rel。
   if (!scene_monitor_->getStateMonitor()->waitForCompleteState(kSceneWaitTimeoutSec)) {
-    // 这里用 WARN 而不是直接失败：某些场景下部分关节（如轮子）不在
-    // /joint_states 里也能正常规划手臂。但必须让用户看到这条。
     RCLCPP_WARN(
       rclcpp::get_logger(kLoggerName),
       "did not receive a complete robot state within %.1fs; "
@@ -328,15 +300,12 @@ bool DualArmPlanner::initialize(const DualArmPlannerParams & params, std::string
       kSceneWaitTimeoutSec);
   }
 
-  // ---- 各校验模块 ----
   if (!singularity_monitor_.configure(params.singularity, error)) {
     error = "singularity monitor configuration failed: " + error;
     return false;
   }
   {
     planning_scene_monitor::LockedPlanningSceneRO locked_scene(scene_monitor_);
-    // 传给 CollisionValidator 的是场景的 diff 快照。注意：这份快照不会随
-    // 后续世界变化自动更新，所以每次规划时会重新取（见 planSingleArm）。
     if (!collision_validator_.configure(
         planning_scene::PlanningScene::clone(locked_scene), params.collision, error))
     {
@@ -409,9 +378,6 @@ bool DualArmPlanner::getCurrentState(
   return true;
 }
 
-// ===========================================================================
-// 单臂规划
-// ===========================================================================
 PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
 {
   PlanResult result;
@@ -438,8 +404,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
     return result;
   }
 
-  // 关节目标的维度必须与组自由度一致，否则 setJointValueTarget 会静默失败
-  // 或者设成部分关节 —— 这种错误在运行时极难定位，所以在入口就拦住。
   if (!request.use_pose_target && request.named_target.empty() &&
     !request.joint_target.empty() &&
     request.joint_target.size() != jmg->getVariableCount())
@@ -474,7 +438,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
   const std::string planner_id =
     request.planner_id.empty() ? params_.planner_id : request.planner_id;
 
-  // 每次规划前刷新碰撞校验用的场景快照：环境物体可能已经变了。
   {
     planning_scene_monitor::LockedPlanningSceneRO locked_scene(scene_monitor_);
     std::string cfg_error;
@@ -494,8 +457,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
     params_.closed_chain.follower_tcp_link) :
     request.tcp_link;
 
-  // 重试循环：采样式规划器有随机性，同一请求重试可能拿到不同（且合法）的解。
-  // 次数有上限，绝不无限重试。
   for (int attempt = 1; attempt <= params_.max_replan_attempts; ++attempt) {
     result.attempts_used = attempt;
 
@@ -527,7 +488,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
       } else {
         target_ok = move_group->setJointValueTarget(request.joint_target);
         if (!target_ok) {
-          // setJointValueTarget 返回 false 通常意味着目标超出关节限位。
           result.code = PlanErrorCode::kInvalidInput;
           result.message = "joint target rejected (out of joint limits?)";
           RCLCPP_ERROR(rclcpp::get_logger(kLoggerName), "%s", result.message.c_str());
@@ -549,7 +509,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
         continue;
       }
 
-      // ---- 转成 RobotTrajectory 做校验与时间优化 ----
       robot_trajectory::RobotTrajectory trajectory(robot_model_, jmg);
       moveit::core::RobotStatePtr reference_state;
       if (!getCurrentState(reference_state, error)) {
@@ -568,7 +527,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
 
       const std::vector<moveit::core::RobotState> states = impl_->extractStates(trajectory);
 
-      // ---- 碰撞校验（自碰撞 + 臂-底盘 + 环境）----
       std::size_t bad_index = 0;
       const CollisionReport collision =
         collision_validator_.checkStates(states, request.group, &bad_index);
@@ -583,8 +541,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
         continue;
       }
 
-      // ---- 奇异点校验 ----
-      // 只对是链的组做：dual_arm 不是链，雅可比无定义（这里单臂一定是链）。
       if (jmg->isChain()) {
         std::size_t worst_index = 0;
         const SingularityReport singularity =
@@ -612,13 +568,10 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
         }
       }
 
-      // ---- 时间参数化 + 节拍优化（内含超限回退）----
       OptimizationResult optimization;
       const PlanErrorCode opt_code = time_optimizer_.optimize(trajectory, optimization);
       result.optimization = optimization;
       if (opt_code != PlanErrorCode::kSuccess) {
-        // 超限或参数化失败：不输出任何轨迹。这类失败重试无用（同一条路径
-        // 再参数化一次结果一样），所以直接返回。
         result.code = opt_code;
         result.message = optimization.note;
         RCLCPP_ERROR(
@@ -627,11 +580,9 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
         return result;
       }
 
-      // ---- 输出 ----
       MetricsParams metrics_params = params_.metrics;
       result.final_metrics = evaluateTrajectory(trajectory, metrics_params);
       if (!result.final_metrics.isLegal()) {
-        // 双保险：optimize() 已经复核过，这里再确认一次最终交付物。
         result.code = PlanErrorCode::kJointLimitViolation;
         result.message = "final trajectory is illegal: " + result.final_metrics.summary;
         RCLCPP_ERROR(rclcpp::get_logger(kLoggerName), "%s", result.message.c_str());
@@ -651,7 +602,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
         result.final_metrics.summary.c_str());
       return result;
     } catch (const std::exception & e) {
-      // 任何第三方库异常都在这里兜住，转成错误码。
       RCLCPP_ERROR(
         rclcpp::get_logger(kLoggerName),
         "attempt %d/%d: exception during single-arm planning: %s",
@@ -662,7 +612,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
     }
   }
 
-  // 重试用尽。保留最后一次的失败原因，同时标明是重试耗尽。
   const std::string last_reason = result.message;
   result.code = PlanErrorCode::kRetriesExhausted;
   result.message = "all " + std::to_string(params_.max_replan_attempts) +
@@ -672,16 +621,6 @@ PlanResult DualArmPlanner::planSingleArm(const SingleArmPlanRequest & request)
   return result;
 }
 
-// ===========================================================================
-// 双臂协同闭链规划
-//
-// 这是任务的核心场景。再强调一次为什么不能直接对 dual_arm(14维) 调 OMPL：
-// 那样两条臂在各自的子空间里独立探索，相对位姿 T_rel 一路漂移，
-// 被夹持的物体会被拉扯 —— 闭链约束根本不成立。任务明确禁止这种做法。
-//
-// 本实现：leader 单臂规划 -> 加密 -> 逐点 IK 投影出 follower -> 逐点校验。
-// 得到的轨迹在**每一个采样点**上都满足 T_L^{-1}·T_R = T_rel（残差可量化）。
-// ===========================================================================
 PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & request)
 {
   PlanResult result;
@@ -710,9 +649,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
 
   std::string error;
 
-  // ---- 第一步：确定闭链相对位姿 T_rel ----
-  // 捕获模式要求"当前两臂已经夹住物体"。这是推荐做法：夹持几何由实际摆位
-  // 决定，不需要任何人去量尺寸（也就不存在硬编码闭链几何的问题）。
   if (request.capture_relative_pose_now) {
     moveit::core::RobotStatePtr current_state;
     if (!getCurrentState(current_state, error)) {
@@ -736,7 +672,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
     return result;
   }
 
-  // ---- 刷新碰撞场景快照 ----
   {
     planning_scene_monitor::LockedPlanningSceneRO locked_scene(scene_monitor_);
     std::string cfg_error;
@@ -766,7 +701,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
     result.ik_failure_count = 0;
 
     try {
-      // ---- 第二步：leader 单臂规划（7 维，成功率远高于 14 维）----
       leader_move_group->setPlannerId(planner_id);
       leader_move_group->setPlanningTime(params_.allowed_planning_time);
       leader_move_group->setNumPlanningAttempts(params_.planning_attempts);
@@ -842,9 +776,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         continue;
       }
 
-      // ---- 第三步：加密 leader 路径 ----
-      // 不加密的话，两个稀疏点之间 follower 的 IK 解可能跳变（IK 多解），
-      // 中间构型从未被校验 —— 闭链场景下这是不能接受的。
       std::vector<moveit::core::RobotState> leader_states;
       if (params_.densify_leader_path) {
         leader_states = impl_->densify(
@@ -854,12 +785,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         leader_states = impl_->extractStates(leader_trajectory);
       }
       if (leader_states.size() < 2U) {
-        // 到这里只有两种可能，必须分开处理，否则会把"已经到位"误报成
-        // "规划器坏了"并白重试（Gazebo 实测踩过，见 error_codes.hpp 的
-        // kAlreadyAtGoal 说明）：
-        //   ① 起点就在目标上 —— OMPL 返回 2 个相同状态、代价 0.00 的退化路径，
-        //      加密后自然凑不出 2 个有效点。这是确定性结论，重试毫无意义。
-        //   ② 别的原因导致路径退化 —— 那才是真的规划失败，值得重试。
         if (maxJointDeviation(
             leader_trajectory.getWayPoint(0U), leader_trajectory.getLastWayPoint(),
             leader_jmg) <= params_.already_at_goal_tolerance_rad)
@@ -870,8 +795,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
             std::to_string(params_.already_at_goal_tolerance_rad) +
             " rad); no closed-chain motion is needed";
           RCLCPP_INFO(rclcpp::get_logger(kLoggerName), "%s", result.message.c_str());
-          // 刻意不输出轨迹：没有动作可执行，给一条零长度轨迹只会让调用方
-          // 误以为"执行完了这段就到位了"。轨迹为空 + 明确状态码更不容易用错。
           return result;
         }
         result.code = PlanErrorCode::kPlannerFailed;
@@ -880,13 +803,9 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         continue;
       }
 
-      // ---- 第四步：逐点投影 follower + 逐点校验 ----
       std::vector<moveit::core::RobotState> dual_states;
       dual_states.reserve(leader_states.size());
 
-      // 用上一个点的 follower 解作为下一个点 IK 的种子：相邻点的解应该连续，
-      // 从邻近种子出发能大幅提高成功率，也避免 IK 在多解之间跳变
-      // （跳变会让 follower 关节出现瞬时大位移，时间参数化后必然超速）。
       moveit::core::RobotState working_state(*reference_state);
 
       double worst_position_error = 0.0;
@@ -896,14 +815,11 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
       std::size_t failed_index = 0;
 
       for (std::size_t i = 0; i < leader_states.size(); ++i) {
-        // 把 leader 的关节值搬进工作状态，follower 关节保持上一次的解（IK 种子）。
         std::vector<double> leader_positions;
         leader_states[i].copyJointGroupPositions(leader_jmg, leader_positions);
         working_state.setJointGroupPositions(leader_jmg, leader_positions);
         working_state.update();
 
-        // 备份 follower 关节：projectFollower 失败时 state 可能已被
-        // setFromIK 部分修改，需要回滚才能让下一个点的种子保持有效。
         std::vector<double> follower_backup;
         working_state.copyJointGroupPositions(follower_jmg, follower_backup);
 
@@ -931,8 +847,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
           "attempt %d/%d: closed-chain projection failed at waypoint %zu/%zu: %s",
           attempt, params_.max_replan_attempts, failed_index, leader_states.size(),
           projection_error.c_str());
-        // 区分 IK 无解与残差超限：两者的处置不同（前者调 IK 参数/换目标，
-        // 后者调闭链阈值/换 leader 路径），错误码必须分开。
         result.code = projection_error.find("IK failed") != std::string::npos ?
           PlanErrorCode::kIkFailed : PlanErrorCode::kClosedChainResidualTooLarge;
         result.message = projection_error;
@@ -952,11 +866,9 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         result.worst_residual.reason = oss.str();
       }
 
-      // ---- 第五步：合并成 14 维 dual_arm 轨迹 ----
       robot_trajectory::RobotTrajectory dual_trajectory =
         impl_->buildTrajectory(robot_model_, params_.dual_arm_group, dual_states);
 
-      // ---- 第六步：碰撞校验（含双臂互撞）----
       std::size_t bad_index = 0;
       const CollisionReport collision =
         collision_validator_.checkStates(dual_states, params_.dual_arm_group, &bad_index);
@@ -971,9 +883,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         continue;
       }
 
-      // ---- 第七步：奇异点校验（两条臂分别做）----
-      // dual_arm 组不是运动链，雅可比无定义，必须拆开检查 —— 这也是
-      // SingularityMonitor 里显式拦住非链组的原因。
       bool singular = false;
       for (const auto & arm : {
         std::make_pair(leader_jmg, params_.closed_chain.leader_tcp_link),
@@ -995,7 +904,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
           singular = true;
           break;
         }
-        // 记录两条臂里更差的那个，供上层观察闭链构型的奇异余量。
         if (!result.worst_singularity.valid ||
           report.min_singular_value < result.worst_singularity.min_singular_value)
         {
@@ -1006,7 +914,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         continue;
       }
 
-      // ---- 第八步：时间参数化 + 节拍优化 ----
       OptimizationResult optimization;
       const PlanErrorCode opt_code = time_optimizer_.optimize(dual_trajectory, optimization);
       result.optimization = optimization;
@@ -1029,9 +936,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         return result;
       }
 
-      // 时间参数化（尤其 TOTG 的重采样）会改变 waypoint 集合，
-      // 所以闭链残差必须在**最终轨迹**上再复核一遍 —— 重采样插出来的新点
-      // 未必满足闭链约束。这一步不能省，否则交付的轨迹可能在插值点上破坏闭链。
       const std::vector<moveit::core::RobotState> final_states =
         impl_->extractStates(dual_trajectory);
       double final_worst_p = 0.0;
@@ -1066,7 +970,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
         continue;
       }
 
-      // ---- 第九步：输出 ----
       dual_trajectory.getRobotTrajectoryMsg(result.trajectory);
       result.cartesian_path = impl_->computeCartesianPath(
         final_states, params_.closed_chain.leader_tcp_link, robot_model_->getModelFrame());
@@ -1102,9 +1005,6 @@ PlanResult DualArmPlanner::planClosedChain(const ClosedChainPlanRequest & reques
   return result;
 }
 
-// ===========================================================================
-// 轨迹执行
-// ===========================================================================
 PlanErrorCode DualArmPlanner::executeTrajectory(
   const std::string & group_name,
   const moveit_msgs::msg::RobotTrajectory & trajectory,
@@ -1118,8 +1018,6 @@ PlanErrorCode DualArmPlanner::executeTrajectory(
     return PlanErrorCode::kNotConfigured;
   }
   if (trajectory.joint_trajectory.points.empty()) {
-    // 空轨迹不下发。规划失败时返回的就是空轨迹，这里是最后一道防线：
-    // 绝不把空轨迹当成"什么都不用做"而报成功。
     message = "refusing to execute an empty trajectory";
     RCLCPP_ERROR(rclcpp::get_logger(kLoggerName), "%s", message.c_str());
     return PlanErrorCode::kInvalidInput;
@@ -1134,19 +1032,6 @@ PlanErrorCode DualArmPlanner::executeTrajectory(
   }
 
   try {
-    // 用 MoveGroupInterface::execute()（阻塞，内部走 /execute_trajectory action）。
-    //
-    // 曾经怀疑过这个调用本身有并发问题：实测它返回 MoveItErrorCode=-7
-    // (CONTROL_FAILED)，同时日志刷
-    //   [ERROR] [<node>.rclcpp_action]: unknown goal response, ignoring...
-    // 而 move_group 那边却是 "Execution completed: SUCCEEDED"。
-    // 真实原因与本调用无关：当时域内泄漏了 7 个 move_group 进程，
-    // 7 组同名 action server 互相抢答。根治办法在
-    // launch/planning_demo.launch.py 里（demo 节点退出即关闭整个 launch），
-    // 那里有完整的排查记录。单一 move_group 下本调用工作正常。
-    //
-    // 失败时把 MoveItErrorCode 原样打出来：-7 是 CONTROL_FAILED，
-    // -1 是 FAILURE，值本身是定位的第一手线索。
     moveit::planning_interface::MoveGroupInterface::Plan plan;
     plan.trajectory_ = trajectory;
     const moveit::core::MoveItErrorCode code = move_group->execute(plan);
@@ -1170,8 +1055,6 @@ PlanErrorCode DualArmPlanner::executeTrajectory(
 
 void DualArmPlanner::waitUntilSettled(const std::string & group_name)
 {
-  // 等手臂真正静止。存在的理由见 DualArmPlannerParams::ExecutionParams 的注释：
-  // 控制器报"执行完成"时手臂还在收敛，紧接着规划下一步会拿到一个移动中的起点。
   const DualArmPlannerParams::ExecutionParams & cfg = params_.execution;
   if (cfg.settle_timeout <= 0.0 || cfg.settle_stable_samples <= 0) {
     return;   // 显式关闭
@@ -1196,7 +1079,6 @@ void DualArmPlanner::waitUntilSettled(const std::string & group_name)
     moveit::core::RobotStatePtr state;
     std::string error;
     if (!getCurrentState(state, error) || !state) {
-      // 取不到状态就没法判静止。这不是执行失败，睡一轮再试。
       std::this_thread::sleep_for(poll);
       continue;
     }
@@ -1217,8 +1099,6 @@ void DualArmPlanner::waitUntilSettled(const std::string & group_name)
       for (std::size_t i = 0; i < current.size(); ++i) {
         max_delta = std::max(max_delta, std::abs(current[i] - previous[i]));
       }
-      // 位置判据始终生效；速度判据只在状态里真有速度时叠加。
-      // 两者取"与"：位置差小而速度大意味着采样间隔太短，还不能算静止。
       settled = max_delta < cfg.settle_position_epsilon &&
         (!has_velocity || max_speed < cfg.settle_velocity_threshold);
     }
@@ -1231,8 +1111,6 @@ void DualArmPlanner::waitUntilSettled(const std::string & group_name)
     std::this_thread::sleep_for(poll);
   }
 
-  // 超时只警告不失败：轨迹本身已经执行完了，硬报失败会让一个抖动关节
-  // 卡死整个动作序列。但必须说出来 —— 下一步规划的起点可能不准。
   RCLCPP_WARN(
     rclcpp::get_logger(kLoggerName),
     "组 '%s' 在 %.2fs 内没有稳定下来，继续执行后续步骤；"

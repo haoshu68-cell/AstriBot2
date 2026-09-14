@@ -100,7 +100,6 @@ void FrontierSearch::buildObstacleMask(const GridMap & map)
   const int width = static_cast<int>(map.width);
   const int height = static_cast<int>(map.height);
 
-  // ---- 步骤 1：标出原始占据格 ----
   std::vector<uint8_t> raw_occupied(cell_count, 0U);
   for (std::size_t i = 0; i < cell_count; ++i) {
     if (map.data[i] >= static_cast<int8_t>(params_.occupied_threshold)) {
@@ -108,8 +107,6 @@ void FrontierSearch::buildObstacleMask(const GridMap & map)
     }
   }
 
-  // ---- 步骤 2：去掉小于阈值的孤立占据斑块（噪声）----
-  // 对占据格做连通域 BFS，域内格数不足就整块抹掉。
   if (params_.min_obstacle_cluster_cells > 1) {
     visited_.assign(cell_count, 0U);
     std::vector<std::size_t> component;
@@ -151,9 +148,6 @@ void FrontierSearch::buildObstacleMask(const GridMap & map)
     }
   }
 
-  // ---- 步骤 3：膨胀 ----
-  // 用「按半径做方形窗口 + 圆形距离判定」的朴素膨胀。地图分辨率 5cm、
-  // 膨胀半径通常 0.2~0.4m，窗口只有 4~8 格，朴素实现足够快且好读。
   inflated_occupied_ = raw_occupied;
   const int radius_cells = (params_.obstacle_inflation_radius > 0.0 && map.resolution > 0.0) ?
     static_cast<int>(std::ceil(params_.obstacle_inflation_radius / map.resolution)) : 0;
@@ -198,8 +192,6 @@ bool FrontierSearch::buildReachableMask(const GridMap & map, double robot_x, dou
     return false;   // 机器人在地图外，无法确定可达域
   }
 
-  // 机器人所在格可能因为膨胀而被标成障碍（贴墙起步很常见），
-  // 因此向外螺旋找一个「空闲且不在膨胀区」的种子格。
   const int width = static_cast<int>(map.width);
   const int height = static_cast<int>(map.height);
   auto isFreeCell = [&](std::size_t idx) {
@@ -213,7 +205,6 @@ bool FrontierSearch::buildReachableMask(const GridMap & map, double robot_x, dou
   for (int r = 0; r <= kMaxSeedSearchRadiusCells && !seed_found; ++r) {
     for (int dy = -r; dy <= r && !seed_found; ++dy) {
       for (int dx = -r; dx <= r && !seed_found; ++dx) {
-        // 只看当前半径这一圈，避免重复检查内部
         if (std::max(std::abs(dx), std::abs(dy)) != r) {
           continue;
         }
@@ -235,8 +226,6 @@ bool FrontierSearch::buildReachableMask(const GridMap & map, double robot_x, dou
     return false;   // 机器人周围完全没有可用自由格
   }
 
-  // 自由空间 BFS：只穿越「空闲且不在膨胀障碍内」的格。
-  // 结果用来判定前沿块是否被障碍物包围（不可达 ⇒ 无效前沿）。
   bfs_queue_.clear();
   bfs_queue_.push_back(seed);
   reachable_[seed] = 1U;
@@ -282,9 +271,6 @@ std::size_t FrontierSearch::extractFrontierCells(const GridMap & map)
       const std::size_t idx = map.index(
         static_cast<unsigned int>(x), static_cast<unsigned int>(y));
       const int8_t v = map.data[idx];
-      // 前沿格的三个条件：本身空闲、不在膨胀障碍内、邻域里有未知格。
-      // 「不在膨胀障碍内」这一条很关键：贴着墙的空闲格虽然挨着墙后的未知区，
-      // 但机器人开不进去，选成目标只会让 Nav2 反复失败。
       if (v < 0 || v > static_cast<int8_t>(params_.free_threshold)) {
         continue;
       }
@@ -385,8 +371,6 @@ double FrontierSearch::visitPenaltyAt(
     if (d_sq > radius_sq) {
       continue;
     }
-    // 越靠近历史目标点、该点被访问次数越多，惩罚越大。
-    // 归一化到 [0,1] 再乘次数，避免不同地图尺度下权重意义漂移。
     const double closeness = 1.0 - (std::sqrt(d_sq) / params_.visit_penalty_radius);
     penalty += closeness * static_cast<double>(rec.count);
   }
@@ -406,7 +390,6 @@ void FrontierSearch::clusterFrontiers(
       continue;
     }
 
-    // ---- 边界遍历：对相连的前沿格做一次 BFS，得到一整块前沿区域 ----
     FrontierCluster cluster;
     bfs_queue_.clear();
     bfs_queue_.push_back(seed);
@@ -452,19 +435,16 @@ void FrontierSearch::clusterFrontiers(
     cluster.distance_to_robot = std::hypot(
       cluster.centroid_x - robot_x, cluster.centroid_y - robot_y);
 
-    // 未知增益：以质心格为中心统计窗口内未知格数量。
     unsigned int gmx = 0U;
     unsigned int gmy = 0U;
     if (map.worldToMap(cluster.centroid_x, cluster.centroid_y, gmx, gmy)) {
       cluster.unknown_gain = countUnknownAround(map, gmx, gmy);
     }
 
-    // ---- 前沿块过滤 ----
     if (cluster.size < static_cast<std::size_t>(params_.min_frontier_cells)) {
       cluster.accepted = false;
       cluster.reject_reason = "面积过小";
     } else if (!any_reachable) {
-      // 整块前沿都不在可达域里 ⇒ 被障碍物包围（或在墙后的独立空腔里），无效。
       cluster.accepted = false;
       cluster.reject_reason = "被障碍物包围/不可达";
     } else {
@@ -508,8 +488,6 @@ void FrontierSearch::search(
 
   const bool reachable_ok = buildReachableMask(map, robot_x, robot_y);
   if (!reachable_ok) {
-    // 拿不到可达域时不能直接返回「探索完成」——那会让上层误判。
-    // 这里退化成「全部可达」，让后续过滤只依赖几何条件，并在 summary 里说明。
     reachable_.assign(map.data.size(), 1U);
     out.summary = "警告: 机器人周围找不到自由格(可能贴障碍或位姿异常)，本次跳过可达性过滤; ";
   }
@@ -526,9 +504,6 @@ void FrontierSearch::search(
     return;
   }
 
-  // ---- 自适应采样 + 候选校验 + 代价评估 ----
-  // 先求最大未知增益，用于把增益归一化到 [0,1]，
-  // 否则 gain 的量纲(格数)会随窗口半径变化，权重就失去可比性。
   std::size_t max_gain = 1U;
   for (const FrontierCluster & c : out.clusters) {
     if (c.accepted) {
@@ -545,9 +520,6 @@ void FrontierSearch::search(
       continue;
     }
 
-    // 采样数随前沿块面积自适应：大块多采、小块少采，并夹在 [min,max] 内。
-    // 这样既避免小前沿块被过度采样导致候选扎堆，
-    // 也保证大前沿块能覆盖到不同位置而不是只盯着质心。
     const auto raw_samples = static_cast<int64_t>(
       std::ceil(static_cast<double>(cluster.size) * params_.adaptive_sample_gain));
     const auto sample_count = static_cast<std::size_t>(
@@ -557,9 +529,6 @@ void FrontierSearch::search(
         std::min<int64_t>(
           params_.max_samples_per_cluster, static_cast<int64_t>(cluster.size))));
 
-    // 按空间跨度均匀取点：前沿格是 BFS 顺序、空间上连续，
-    // 因此按等间隔 stride 抽取即可让候选点沿前沿铺开，不会堆在一处。
-    // 再叠加一个小的随机抖动，避免每帧都取到完全相同的格子导致目标点抖动性重复。
     const std::size_t stride = std::max<std::size_t>(1U, cluster.size / sample_count);
     std::uniform_int_distribution<std::size_t> jitter(0U, stride > 1U ? (stride - 1U) : 0U);
 
@@ -577,8 +546,6 @@ void FrontierSearch::search(
       cand.cluster_index = ci;
       cand.x = map.worldX(mx);
       cand.y = map.worldY(my);
-      // 朝向：由目标点指向前沿块质心，让机器人到位后雷达正对未知区域，
-      // 单次到达能探明更多新格子。质心与目标点重合时退化为「由机器人看向目标」。
       const double to_centroid_x = cluster.centroid_x - cand.x;
       const double to_centroid_y = cluster.centroid_y - cand.y;
       constexpr double kYawDegenerateEps = 1e-6;
@@ -590,7 +557,6 @@ void FrontierSearch::search(
 
       cand.distance = std::hypot(cand.x - robot_x, cand.y - robot_y);
 
-      // ---- 候选校验：任何一条不过就丢弃并重新采下一个 ----
       if (inflated_occupied_[cell] != 0U) {
         cand.reject_reason = "落在障碍物/膨胀区内";
       } else if (reachable_[cell] == 0U) {
@@ -609,9 +575,6 @@ void FrontierSearch::search(
         cand.gain_normalized = static_cast<double>(cluster.unknown_gain) /
           static_cast<double>(max_gain);
         cand.visit_penalty = visitPenaltyAt(cand.x, cand.y, history);
-        // 代价函数：距离越远代价越高，未知增益越大代价越低，去过的地方代价更高。
-        // 距离项除以 (1+distance) 之外不做归一化——保持米为单位，
-        // 便于直接用「多少米值一个单位增益」的直觉去调权重。
         cand.cost = (params_.weight_distance * cand.distance) +
           (params_.weight_visit_penalty * cand.visit_penalty) -
           (params_.weight_gain * cand.gain_normalized);

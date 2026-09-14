@@ -100,27 +100,13 @@ def generate_launch_description():
                         '那是**后端缺失**，不是桥接的缺陷。'),
     ]
 
-    # ---- 环境变量：必须排在 Node 之前（见文件头部说明）----
     env = [
         SetEnvironmentVariable('ASTRIBOT_LOG', '1'),
         SetEnvironmentVariable('ROBOT_TYPE', LaunchConfiguration('robot_type')),
         SetEnvironmentVariable('ROS_DOMAIN_ID', LaunchConfiguration('domain_id')),
-        # D-1 统一 domain 下跨机通信必须关掉 localhost_only：
-        # 实测 localhost_only=1 与 =0 的参与者**互相发现不了**，
-        # 所以整链必须一致地设成 0，靠 domain 而不是 localhost 做隔离。
         SetEnvironmentVariable('ROS_LOCALHOST_ONLY', '0'),
     ]
 
-    # ---- MuJoCo 后端：target 唯一的作用点 ----
-    #
-    # !!! cwd 必须是仿真仓根目录 !!! astribot_simulation.py 用相对路径找
-    # config/ 与 astribot_descriptions/，从别处调起会找不到模型。
-    #
-    # 条件是 target==sim **且** sim_root 非空。原先这里写死
-    # cmd=['python3','astribot_simulation.py'] 且不带 cwd —— 那个文件根本不在
-    # 本仓库里（仿真是独立仓库 Astribot-Dev/astribot_simulation），
-    # 真跑时会以 "can't open file" 失败，而 SDK 那边只会报
-    # "No simulation or real robot is started."，两条信息都指不到真正的原因。
     mujoco = ExecuteProcess(
         cmd=['python3', 'astribot_simulation.py'],
         cwd=LaunchConfiguration('sim_root'),
@@ -130,9 +116,6 @@ def generate_launch_description():
              LaunchConfiguration('sim_root'), "' != ''"])),
     )
 
-    # ---- 桥接容器：单进程、单 SDK 会话、多节点（方案 S-1）----
-    # !!! 刻意不设 respawn !!! 底盘是位置指令开环积分，重启会重取积分种子并可能
-    # 在一个错误的位置继续积分 —— 比停住更危险。会话建不起来就响亮失败退出。
     container = Node(
         package='astribot_trajectory_bridge',
         executable='bridge_container',

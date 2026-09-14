@@ -1,39 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// Livox CustomMsg → PointCloud2 的**纯逻辑**核心：无效点判定与字段装配。
-// 不 include rclcpp、不 include 任何消息类型，好让判定规则脱离 ROS 单测。
-//
-// ════════════════ 为什么需要这一层转换 ════════════════
-// 实机厂商驱动以 xfer_format=1 发 `livox_ros_driver2/msg/CustomMsg`，
-// 而 SLAM 需要这个格式（mid360.yaml 的 lidar_type=0 要 CustomMsg），不能改。
-// 但我们的感知链（livox_fusion_node → pointcloud_slice_scan_node）订阅的是
-// `sensor_msgs/PointCloud2`。两个 costmap 的 obstacle_layer 唯一数据源是
-// `/scan`，而 `/scan` 由切片链产出 —— 所以这条链断着就等于**没有动态避障**。
-//
-// 早先记录说这是「xfer_format 1-vs-2 互斥、无解」。那个结论是错的：
-// 不是无解，是中间缺一个转换环节。本文件就是那一环的判定部分。
-//
-// ════════════════ 为什么必须是 C++ 而不是 Python ════════════════
-// 实测（同一台机器）：rclpy 反序列化 MID360 的 CustomMsg（每帧约两万点）
-// 一帧要几十毫秒，订阅两路时只能收到 20~40%，而且 BEST_EFFORT 悄悄丢、
-// 不报任何错。同一探针改成 raw=True 只取字节就能满速收到 10Hz。
-// 也就是说 Python 版转换节点会**结构性地跟不上**（需要 20 帧/s 的反序列化预算，
-// 实测只有约 7.7 帧/s），并且它丢帧的方式是静默的。所以这里用 C++。
-//
-// ════════════════ 无效点（假点团）是本文件的重点 ════════════════
-// 雷达无回波时会输出一个零点。而驱动通过 SetLivoxLidarInstallAttitude 把外参
-// **写进了雷达设备**，于是那个零点也被外参一起变换，落在外参平移处：
-//
-//   /livox/lidar_front  外参恒等      → 无效点堆在 (0, 0, 0)          实测占 33.4%
-//   /livox/lidar_back   外参 y=-496mm → 无效点堆在 (0.001,-0.496,0.084) 实测占 34.0%
-//
-// 关键危害：back 那一团距原点 0.496m，**大于** livox_preprocess_node 的
-// range_min=0.35，所以现有的球面距离门限**滤不掉它**。它落在机器人足迹内，
-// 一旦自滤没接上就直接变成障碍物 —— 本项目已经栽过一次同类问题
-// （夹爪不在自滤链里 → 机器人把指尖当障碍 → 探索 0 次派发）。
-//
-// 所以无效点位置是**每路可配的参数**，默认 (0,0,0)；对已在设备内应用了外参的
-// 那一路，必须配成该外参的平移量。判定用一个小半径的球，而不是「距原点很近」。
 #ifndef ASTRIBOT_S1_AUTONOMY__LIVOX_CUSTOM_CONVERT_HPP_
 #define ASTRIBOT_S1_AUTONOMY__LIVOX_CUSTOM_CONVERT_HPP_
 

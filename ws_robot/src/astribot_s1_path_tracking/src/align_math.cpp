@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace astribot_s1_path_tracking
 {
@@ -25,7 +26,6 @@ const char * toString(Phase p)
 
 double normalizeAngle(double a)
 {
-  // atan2(sin, cos) 天然落在 (-pi, pi]，比手写循环减 2pi 稳（不会因大角度死循环）。
   return std::atan2(std::sin(a), std::cos(a));
 }
 
@@ -52,8 +52,6 @@ bool pathStartHeading(
   }
   const double dx = path[idx].x - p0.x;
   const double dy = path[idx].y - p0.y;
-  // 路径整体退化成一个点（所有顶点重合）时无方向可言 —— 明确失败，
-  // 不返回 atan2(0,0)=0 冒充「朝 +x」。
   if (std::hypot(dx, dy) < 1e-9) {
     return false;
   }
@@ -64,8 +62,6 @@ bool pathStartHeading(
 bool isSameGoal(const PlanarPoint & prev_end, const PlanarPoint & cur_end, double eps_m)
 {
   if (!(eps_m > 0.0)) {
-    // 阈值非法时保守判「不同目标」：宁可多做一次起步对齐，
-    // 也不要把新目标误当成旧目标而跳过对齐。
     return false;
   }
   return std::hypot(cur_end.x - prev_end.x, cur_end.y - prev_end.y) <= eps_m;
@@ -85,10 +81,56 @@ double alignAngularVelocity(
   double v = kp * error_rad;
   const double mag = std::fabs(v);
   const double sign = (error_rad >= 0.0) ? 1.0 : -1.0;
-  // 先压下限再压上限：floor 只保证「能动」，绝不允许因此超过 max。
   double out = std::max(mag, std::fabs(floor_vel));
   out = std::min(out, std::fabs(max_vel));
   return sign * out;
+}
+
+double coastAngle(double wz, double lag_s, double decel_rad_s2)
+{
+  if (!(lag_s >= 0.0) || !(decel_rad_s2 > 0.0)) {
+    return 0.0;
+  }
+  const double w = std::fabs(wz);
+  if (!(w > 0.0)) {              // NaN 也走这一支
+    return 0.0;
+  }
+  return w * lag_s + w * w / (2.0 * decel_rad_s2);
+}
+
+double predictedHeadingError(double error_rad, double wz, double lag_s, double decel_rad_s2)
+{
+  const double coast = coastAngle(wz, lag_s, decel_rad_s2);
+  if (!(coast > 0.0)) {
+    return error_rad;
+  }
+  const double dir = (wz > 0.0) ? 1.0 : -1.0;      // wz==0 已被上面挡住
+  return error_rad - dir * coast;
+}
+
+double alignAngularVelocityWithInertia(
+  double error_rad, double wz, double kp, double max_vel, double floor_vel, double tol_rad,
+  double lag_s, double decel_rad_s2)
+{
+  const double e_pred = predictedHeadingError(error_rad, wz, lag_s, decel_rad_s2);
+  if (std::fabs(e_pred) <= tol_rad) {
+    return 0.0;                  // 剩下的角度正好被惯性吃掉：现在就松手
+  }
+  if (e_pred * error_rad <= 0.0) {
+    return 0.0;
+  }
+  return alignAngularVelocity(e_pred, kp, max_vel, floor_vel, tol_rad);
+}
+
+bool headingSettled(double error_rad, double wz, double tol_rad, double settled_wz)
+{
+  if (!(std::fabs(error_rad) <= tol_rad)) {
+    return false;                // NaN 走这一支：判"没到位"，保守方向
+  }
+  if (!(settled_wz > 0.0)) {
+    return true;
+  }
+  return std::fabs(wz) <= settled_wz;
 }
 
 Phase advancePhase(
@@ -101,9 +143,25 @@ Phase advancePhase(
   double start_min_rad,
   bool align_goal_enabled)
 {
+  return advancePhase(
+    current, start_error_rad, goal_error_rad, dist_to_goal_m, xy_tol_m, align_tol_rad,
+    start_min_rad, align_goal_enabled, 0.0, std::numeric_limits<double>::infinity());
+}
+
+Phase advancePhase(
+  Phase current,
+  double start_error_rad,
+  double goal_error_rad,
+  double dist_to_goal_m,
+  double xy_tol_m,
+  double align_tol_rad,
+  double start_min_rad,
+  bool align_goal_enabled,
+  double wz,
+  double settled_wz)
+{
   switch (current) {
     case Phase::kAlignStart:
-      // 已经对上（或本来就不值得转）就进跟踪段。
       if (!needsStartAlign(start_error_rad, start_min_rad) ||
         std::fabs(start_error_rad) <= align_tol_rad)
       {
@@ -115,56 +173,27 @@ Phase advancePhase(
       if (dist_to_goal_m > xy_tol_m) {
         return Phase::kFollow;
       }
-      // 位置到了。探索场景刻意不对齐终点姿态 —— 直接结束。
       if (!align_goal_enabled) {
         return Phase::kDone;
       }
-      return (std::fabs(goal_error_rad) <= align_tol_rad) ? Phase::kDone : Phase::kAlignGoal;
+      return headingSettled(goal_error_rad, wz, align_tol_rad, settled_wz) ?
+             Phase::kDone : Phase::kAlignGoal;
 
     case Phase::kAlignGoal:
-      // 防御：本相位在 align_goal_enabled=false 时不该出现；
-      // 万一出现（例如运行期改参数），立即收敛到 kDone 而不是继续转。
       if (!align_goal_enabled) {
         return Phase::kDone;
       }
-      return (std::fabs(goal_error_rad) <= align_tol_rad) ? Phase::kDone : Phase::kAlignGoal;
+      return headingSettled(goal_error_rad, wz, align_tol_rad, settled_wz) ?
+             Phase::kDone : Phase::kAlignGoal;
 
     case Phase::kDone:
-      // 🔴 kDone **不是吸收态**。这里曾经写成 `return Phase::kDone;`，后果是
-      //    机器人到了路径末端附近就永久停车、整段目标跑到超时。
-      //
-      //    实测证据（远端目标 5.88,-5.86 那一腿）：
-      //      t+45.5s  ALIGN_GOAL -> DONE : 本段完成
-      //      随后 135s 内 /cmd_vel 共 2589 帧，**非零线速度 0 帧**、max‖v‖=0.0000、
-      //      净位移 0.048m；日志里每 ~11s 一轮
-      //        Failed to make progress -> Aborting handle -> 清 costmap + spin 恢复
-      //        -> Received a goal -> setPlan(same_goal=true) 保持相位 -> 又是零速
-      //      共 12 轮，直到调用方 180s 主动取消。日志里 **从未**出现
-      //      "Reached the goal!" —— 即 nav2 的 GoalChecker 一次都没判到位。
-      //
-      //    机制：本控制器的 dist_to_goal 是量到 plan_.poses.back()，只在进入
-      //    kDone 的**那一拍**成立。之后 1Hz 重规划换了 135 次路径、恢复行为还把
-      //    机器人原地转了（|wz| 到 1.5，那是 behavior_server 不是本层），
-      //    机器人早已滑出容差；而 GoalChecker 每拍都在量、每拍都说没到。
-      //    两边判据相同、参照点相同，唯一的差别就是**本层锁存了、它没有**。
-      //
-      //    结论：到位的裁判权在 GoalChecker，本层的 kDone 只是一个意见。
-      //    意见的前提（dist <= xy_tol）不再成立时必须撤回，回到 kFollow 继续开。
-      //
-      //    ⚠️ 退出阈值只能用 xy_tol_m 本身，**不许**为了防抖把它放宽。
-      //       放宽到 exit_tol > xy_tol 会造出死区 (xy_tol, exit_tol]：在那一段里
-      //       本层认为"还算到了"故停车，GoalChecker 认为"没到"故不结束 ——
-      //       正是上面那个死锁原样复现。用同一个阈值时死区为空集。
-      //       边界上的抖动是"贴着容差反复轻推"，那是期望行为（推到 GoalChecker
-      //       认账为止）；与 yaw 闸门那种"两侧都在开车"的自激不是一回事。
-      //       兜底不在本层，而在 nav2 的 controller_server：
-      //       PoseProgressChecker（required_movement_radius 0.5m /
-      //       required_movement_angle 0.10rad / movement_time_allowance 10.0s）
-      //       —— 注意它的量纲与本层完全不同（0.5m 远大于 xy_tol），
-      //       所以它只兜"彻底不动"，兜不住"在容差边界上小幅轻推"。
-      //       后者靠上面"退出阈值 == xy_tol、死区为空集"这一条自己收敛。
       if (dist_to_goal_m > xy_tol_m) {
         return Phase::kFollow;
+      }
+      if (align_goal_enabled &&
+        !headingSettled(goal_error_rad, wz, align_tol_rad, settled_wz))
+      {
+        return Phase::kAlignGoal;
       }
       return Phase::kDone;
   }
@@ -174,8 +203,6 @@ Phase advancePhase(
 double approachSpeedCap(
   double dist_to_goal_m, double approach_dist_m, double v_min, double nominal_speed)
 {
-  // 参数非法 / dist 为 NaN ⇒ 退化成不限速（= 今天的行为），不静默把机器人限到蠕行。
-  // NaN 走的就是这一支：`NaN < D` 为 false。
   if (!(approach_dist_m > 0.0) || !(v_min >= 0.0) || !(nominal_speed > 0.0)) {
     return nominal_speed;
   }
@@ -184,8 +211,6 @@ double approachSpeedCap(
   }
   const double d = std::max(0.0, dist_to_goal_m);
   const double linear = nominal_speed * (d / approach_dist_m);
-  // 先抬下限、再压回 nominal：v_min 只保证「还能动」，绝不允许因此比不限速时更快
-  // （nominal < v_min 的情形 —— 内层本来就在慢速走 —— 必须保持内层的慢）。
   return std::min(std::max(linear, v_min), nominal_speed);
 }
 
@@ -194,7 +219,6 @@ bool shouldRestartPhaseTimer(Phase before, Phase requested, bool is_new_goal)
   if (before != requested) {
     return true;                 // 相位变了，计时器天然要从头算
   }
-  // 相位没变：只有"这是一个新目标"才重置。
   return is_new_goal;
 }
 
@@ -204,12 +228,8 @@ bool isFreshFollowAttempt(bool has_prev_tick, double idle_gap_sec, double gap_th
     return true;                 // 从没 tick 过 = 这是第一次下发，当然是新尝试
   }
   if (!(gap_threshold_sec > 0.0)) {
-    // 阈值非法时**按保守方向**返回 false：宁可少重置一次计时器（对齐段仍会
-    // 在 15s 后正常超时），也不要把每次周期重规划都当成新尝试 ——
-    // 那会让 align_timeout 这道保护永远等不到触发，等于把保护关掉。
     return false;
   }
-  // NaN 会让任何比较都为 false，于是自然落到 "不是新尝试"，与上面同向保守。
   return idle_gap_sec > gap_threshold_sec;
 }
 

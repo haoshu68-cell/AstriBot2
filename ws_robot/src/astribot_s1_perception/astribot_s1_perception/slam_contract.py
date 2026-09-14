@@ -19,12 +19,8 @@
 from dataclasses import dataclass
 
 
-#: 下游硬依赖的取值集合。-1 未知 / 0 空闲 / 100 占据。
-#: 与 `cloud_to_grid.py` 的 CELL_* 常量同一套语义，此处刻意不 import 它，
-#: 避免纯逻辑模块之间产生方向不明的依赖。
 CANONICAL_CELL_VALUES = (-1, 0, 100)
 
-#: 协调器（autonomous_patrol_node）的 map_timeout_sec。心跳周期必须 **严格小于** 它。
 COORDINATOR_MAP_TIMEOUT_SEC = 10.0
 
 
@@ -40,8 +36,6 @@ class MapContract:
     resolution_tol: float = 1e-6
     republish_period_sec: float = 5.0
     max_stamp_future_sec: float = 1.0
-    #: True = data 里只允许出现 CANONICAL_CELL_VALUES；
-    #: False = 放宽到 [-1, 100] 区间（某些 SLAM 用中间值表达占据概率）
     strict_cell_values: bool = True
 
     def __post_init__(self):
@@ -70,9 +64,6 @@ class MapContract:
             problems.extend(self._check_stamp(grid, now_sec))
         return problems
 
-    # -- 逐项检查 ---------------------------------------------------------
-    # 拆成小函数不是为了复用，是为了让每条违规的**措辞**能单独测：
-    # 本仓库的经验是错误信息说不出后果，排查就会停在"它报错了"这一步。
 
     @staticmethod
     def _check_shape(grid):
@@ -158,13 +149,6 @@ class MapContract:
         return []
 
 
-# ---------------------------------------------------------------------------
-# 心跳 / 转发状态机
-#
-# 为什么要心跳：协调器按**本地到达时间**判 /map 超时（不是按 header.stamp）。
-# 外部 SLAM 在场景静止时可能长时间不发新地图 —— 这是它的正常行为，
-# 但在协调器看来就是"地图断了"。所以适配层缓存最后一帧按周期重发。
-# ---------------------------------------------------------------------------
 @dataclass
 class AdapterStats:
     """可观测量。故障时先看这几个数，能立刻分清"没收到"与"收到但被拒"。"""
@@ -197,7 +181,6 @@ class SlamAdapter:
         self._last_good = None
         self._last_emit_sec = None
 
-    # -- 入口 -------------------------------------------------------------
     def on_source_map(self, grid, now_sec):
         """收到一帧源地图。返回要转发的对象，或 None（被拒，不转发）。
 

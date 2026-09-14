@@ -25,9 +25,6 @@ conftest 或 sys.path 技巧共享，容易在 colcon test 与直接 pytest 两�
 import math
 
 
-# ---------------------------------------------------------------------------
-# 端口协议（Python 不强制接口，这里用文档 + 鸭子类型；实现方只要方法名对齐即可）
-# ---------------------------------------------------------------------------
 
 class SessionPort:
     """厂商 SDK 会话端口。方法签名与 examples 里实际调用的形式**逐字对齐**。
@@ -80,16 +77,6 @@ class SessionPort:
     def get_dof(self, names=None):
         raise NotImplementedError
 
-    # ---- 夹爪 ----
-    #
-    # !!! 命令空间 0 = 张开、100 = 闭合，与直觉相反 !!!
-    # open_effector 下发 0.0（astribot_client.py:813/817），
-    # close_effector 下发 100.0（astribot_client.py:836/840）。
-    # 换算与极性一律走 gripper_math，不要在调用点手写系数。
-    #
-    # 这两个方法是**阻塞**的：实测 duration=1.0 时调用阻塞满 1.0s 才返回
-    # 'move to joint position success' —— 与方案 A 同样不可取消，
-    # 所以不要在 250Hz 内环里调它们。
 
     def open_effector(self, names=None, duration=1.0):
         raise NotImplementedError
@@ -127,9 +114,6 @@ class ClockPort:
         raise NotImplementedError
 
 
-# ---------------------------------------------------------------------------
-# 测试替身
-# ---------------------------------------------------------------------------
 
 class FakeClock(ClockPort):
     """可手动推进的时钟。"""
@@ -195,30 +179,15 @@ class FakeSession(SessionPort):
         self._limits = dict(limits or {})
         self._robot_mode = robot_mode
         self._dofs = dict(dofs or {})
-        # 实际位置对指令的跟随比例，每次 set_joints_position 生效一次：
-        #   1.0 = 理想无打滑（current 立即等于指令）
-        #   0.0 = 完全打滑（current 不动）—— 用来测 leash
-        #   0<r<1 = 部分打滑 —— 用来测漂移诊断
-        # !!! 这个旋钮必须存在 !!! 早期版本只更新 _desired 不更新 _current，
-        # 于是"理想跟随"实际表现成"完全打滑"，导致每个移动测试都在 leash 处失败，
-        # 而失败信息指向业务逻辑、真实原因在替身里 —— 极难归因。
         self.follow_ratio = float(follow_ratio)
-        # 调用记录：(names, position, control_way, use_wbc, add_default_torso)
         self.set_position_calls = []
         self.waypoints_calls = []
-        # 夹爪调用记录：('open'|'close', names, duration)
         self.effector_calls = []
-        # set_effector_max_force 的调用记录（仿真下是空操作，但仍记录尝试）
         self.effector_force_calls = []
         self.effector_max_force = None
-        # 仿真语义开关：仿真下 set_effector_max_force 空操作
-        # （astribot_client.py:1139）。默认 True，因为当前唯一可用的后端是仿真；
-        # 想测真机语义就显式传 False。
         self.in_simulation = bool(in_simulation)
-        # {方法名: 剩余成功次数}，减到 0 时抛异常
         self.fail_on = {}
 
-    # -- 故障注入辅助 --
 
     def fail_after(self, method, ok_calls=0):
         """让 ``method`` 在成功 ok_calls 次之后开始抛异常。"""
@@ -230,7 +199,6 @@ class FakeSession(SessionPort):
                 raise SdkCallFailure('FakeSession：%s 被注入为失败' % method)
             self.fail_on[method] -= 1
 
-    # -- 状态设置辅助 --
 
     def set_desired(self, part, values):
         self._desired[part] = list(values)
@@ -245,7 +213,6 @@ class FakeSession(SessionPort):
                                cur[1] + dxy_dtheta[1],
                                cur[2] + dxy_dtheta[2]]
 
-    # -- SessionPort 实现 --
 
     def get_desired_joints_position(self, names):
         self._maybe_fail('get_desired_joints_position')
@@ -256,7 +223,6 @@ class FakeSession(SessionPort):
         return [list(self._current.get(n, [0.0, 0.0, 0.0])) for n in names]
 
     def get_current_joints_velocity(self, names):
-        # 默认全零：静止是最安全的假读数。要测速度就往 self._velocity 里塞。
         self._maybe_fail('get_current_joints_velocity')
         return [list(self._velocity.get(n, [0.0, 0.0, 0.0])) for n in names]
 
@@ -268,8 +234,6 @@ class FakeSession(SessionPort):
              use_wbc, add_default_torso))
         for n, p in zip(names, position):
             self._desired[n] = list(p)
-            # 实际位置按 follow_ratio 跟随指令。ratio=1.0 时立即到位（理想无打滑），
-            # ratio=0.0 时完全不动（完全打滑）。
             cur = self._current.get(n, [0.0] * len(p))
             self._current[n] = [
                 c + self.follow_ratio * (t - c) for c, t in zip(cur, p)]
@@ -302,14 +266,6 @@ class FakeSession(SessionPort):
         keys = names if names is not None else list(self._dofs.keys())
         return [self._dofs.get(k, 7) for k in keys]
 
-    # ---- 夹爪 ----
-    #
-    # 按**实测语义**建模，不按直觉：
-    #   · open  -> 命令 0.0，close -> 命令 100.0（极性是反的）
-    #   · 阻塞、尊重 duration —— 这里不真 sleep（测试不该等），
-    #     但记录 duration 供断言，并返回与真 SDK 一致的字符串
-    #   · set_effector_max_force 在**仿真语义**下是空操作，返回 None
-    #     （astribot_client.py:1139）。要测"真机会真的设力"必须另建 fake。
 
     def open_effector(self, names=None, duration=1.0):
         self._maybe_fail('open_effector')
@@ -331,8 +287,6 @@ class FakeSession(SessionPort):
 
     def set_effector_max_force(self, names, max_force):
         self._maybe_fail('set_effector_max_force')
-        # 仿真语义：空操作。仍然记录调用，让测试能断言"上层确实尝试设了力"，
-        # 同时 in_simulation 标志让测试能区分两种后端语义。
         self.effector_force_calls.append((list(names), list(max_force)))
         if self.in_simulation:
             return None

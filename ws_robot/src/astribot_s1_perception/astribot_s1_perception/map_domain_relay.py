@@ -122,7 +122,6 @@ class _ParamReader(Node):
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
 
-    # ---- 先在本机 context 上读参数 ----
     local_ctx = Context()
     rclpy.init(args=argv, context=local_ctx)
     reader = _ParamReader(local_ctx)
@@ -144,8 +143,6 @@ def main(argv=None):
         rclpy.shutdown(context=local_ctx)
         return 1
 
-    # 本机 context 已经用默认 domain 初始化过了，要按参数指定 domain
-    # 就得重建。先关掉再按 local_domain 重开。
     reader.destroy_node()
     rclpy.shutdown(context=local_ctx)
 
@@ -198,7 +195,6 @@ def main(argv=None):
 
     exit_code = 0
     try:
-        # ---- 等第一张地图。超时必须响亮失败 ----
         started = time.time()
         while remote_ctx.ok() and state['count'] == 0:
             remote_exec.spin_once(timeout_sec=0.2)
@@ -214,7 +210,6 @@ def main(argv=None):
                 exit_code = 1
                 break
 
-        # ---- 拿到第一张之后转入长期中继 ----
         while exit_code == 0 and remote_ctx.ok():
             remote_exec.spin_once(timeout_sec=0.2)
     except KeyboardInterrupt:

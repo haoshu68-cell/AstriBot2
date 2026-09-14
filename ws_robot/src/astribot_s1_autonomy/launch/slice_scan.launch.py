@@ -27,8 +27,6 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-# 支持从命令行覆盖的参数名 → 值类型。
-# 留空（默认值 ''）表示「不覆盖」，从而保留 yaml 里的配置。
 _OVERRIDABLE = {
     'input_cloud_topic': str,
     'output_scan_topic': str,
@@ -66,8 +64,6 @@ def _build_nodes(context, *args, **kwargs):
     use_sim_time = _to_bool(LaunchConfiguration('use_sim_time').perform(context))
     log_level = LaunchConfiguration('log_level').perform(context)
 
-    # parameters 列表按顺序生效，后面的覆盖前面的：
-    # yaml → use_sim_time → 命令行覆盖项
     parameters = [params_file, {'use_sim_time': use_sim_time}]
     if overrides:
         parameters.append(overrides)
@@ -101,7 +97,6 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'log_level', default_value='info',
             description='日志级别 debug/info/warn/error。调切片参数时建议用 debug。'),
-        # 以下留空即「不覆盖 yaml」
         DeclareLaunchArgument(
             'input_cloud_topic', default_value='',
             description='覆盖输入点云话题；留空用 yaml 值。'),

@@ -41,11 +41,9 @@ import math
 from dataclasses import dataclass, field
 
 
-# 与既有 /scan 链一致的默认切片带（见模块头）
 DEFAULT_Z_MIN = -0.05
 DEFAULT_Z_MAX = 0.60
 
-# 标准 ROS 占据栅格三态
 CELL_UNKNOWN = -1
 CELL_FREE = 0
 CELL_OCCUPIED = 100
@@ -66,20 +64,11 @@ class GridConfig:
     resolution: float = 0.05
     z_min: float = DEFAULT_Z_MIN
     z_max: float = DEFAULT_Z_MAX
-    # 单个格子里累计到多少点才算占据。1 = 一个点就算，噪声敏感；
-    # 实测 Voxel-SLAM 的 keyframe 点云每帧约 4000 点，建议 ≥ 2。
     min_points_per_cell: int = 2
-    # 地图外扩边距（m）。留一圈未知，避免机器人贴着地图边界时
-    # 代价地图取不到数据。
     padding_m: float = 1.0
-    # 单张图的格子数上限，防止一个离群点把地图撑到几个 GB。
     max_cells: int = 4_000_000
-    # --- 射线雕刻参数（见 carve_free_space 的复杂度说明）---
-    # 单条射线最长距离（m）。取雷达有效观测的保守值，太大会把未观测区误标成自由。
     carve_max_range_m: float = 8.0
-    # 每个位姿发射的射线条数。360 条 = 1°/条。
     carve_n_rays: int = 360
-    # 位姿抽稀步长。实测相邻关键帧只差 4.7 cm，逐帧发射是纯浪费。
     carve_pose_stride: int = 10
 
     def validate(self) -> None:
@@ -116,7 +105,6 @@ class GridResult:
     origin_x: float
     origin_y: float
     data: list  # 长度必须 == width*height，值域 {-1, 0, 100}
-    # 诊断用，不进消息
     points_used: int = 0
     points_out_of_slab: int = 0
     occupied_cells: int = 0
@@ -140,8 +128,6 @@ def slab_filter(points, z_min: float, z_max: float):
     dropped = 0
     for p in points:
         x, y, z = p[0], p[1], p[2]
-        # NaN/Inf 必须显式丢掉：它们会让后面的 min/max 全变成 NaN，
-        # 而症状是"地图尺寸算出来是 0 或者天文数字"，离根因很远。
         if not (math.isfinite(x) and math.isfinite(y) and math.isfinite(z)):
             dropped += 1
             continue
@@ -206,7 +192,6 @@ def carve_free_space(grid: GridResult, sensor_xy, occupied_cells: set,
 
     carved = 0
     max_cells = int(math.ceil(max_range_m / grid.resolution))
-    # 预算三角函数，避免在内层循环里反复算
     angles = [2.0 * math.pi * k / n_rays for k in range(n_rays)]
     dirs = [(math.cos(a), math.sin(a)) for a in angles]
 
@@ -215,7 +200,6 @@ def carve_free_space(grid: GridResult, sensor_xy, occupied_cells: set,
         s_col, s_row = world_to_cell(grid, sx, sy)
         if s_col is None:
             continue
-        # 传感器所在格本身一定是自由的（机器人就站在那儿）
         idx = grid.index_of(s_col, s_row)
         if grid.data[idx] == CELL_UNKNOWN:
             grid.data[idx] = CELL_FREE
@@ -268,13 +252,6 @@ def project(points, config: GridConfig, sensor_xy=None) -> GridResult:
 
     xy, dropped = slab_filter(points, config.z_min, config.z_max)
 
-    # 边界必须**同时**包含点云和轨迹。
-    #
-    # 第一版只用点云算边界，结果机器人自己的位置可能落在图外 ——
-    # `world_to_cell` 返回 None、射线雕刻整个不生效、自由格数为 0。
-    # 症状是"地图看起来没问题但 nav2 报 Starting point in lethal space"，
-    # 而本仓库已经记过这个坑离根因有三层远（见 map_source.yaml 的
-    # validate_start_cell 注释）。所以这里把轨迹一起算进去。
     extent = list(xy)
     if sensor_xy:
         extent.extend((float(sx), float(sy)) for sx, sy in sensor_xy)
@@ -307,7 +284,6 @@ def project(points, config: GridConfig, sensor_xy=None) -> GridResult:
     )
     grid.points_out_of_slab = dropped
 
-    # 逐格计票，达到阈值才算占据
     counts = {}
     for (x, y) in xy:
         col, row = world_to_cell(grid, x, y)
@@ -337,7 +313,6 @@ def project(points, config: GridConfig, sensor_xy=None) -> GridResult:
     grid.free_cells = sum(1 for v in grid.data if v == CELL_FREE)
     grid.unknown_cells = sum(1 for v in grid.data if v == CELL_UNKNOWN)
 
-    # 契约自检：data 长度必须等于 width*height，否则探索协调器直接 ERROR 丢弃
     if len(grid.data) != grid.width * grid.height:
         raise ValueError(
             'data 长度 %d != width*height %d（内部错误）'

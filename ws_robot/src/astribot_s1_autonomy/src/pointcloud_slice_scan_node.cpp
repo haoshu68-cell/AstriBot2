@@ -1,7 +1,5 @@
 // Copyright 2026 Astribot.
 #include "astribot_s1_autonomy/pointcloud_slice_scan_node.hpp"
-// cpplint 把 Eigen/PCL 的头当作 "C system header"，要求排在 C++ 标准库之前，
-// 因此这里刻意先放它们，再放 <algorithm> 等标准库头。
 #include <Eigen/Geometry>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/statistical_outlier_removal.h>
@@ -50,32 +48,17 @@ PointcloudSliceScanNode::PointcloudSliceScanNode(const rclcpp::NodeOptions & opt
 
   std::string error;
   if (!loadParameters(error)) {
-    // 参数非法时不崩溃：报 ERROR 并保持节点存活，
-    // 让使用者可以用 ros2 param set 改完再热更新（对应「参数读取失败不允许崩溃」）。
     RCLCPP_ERROR(
       get_logger(),
       "参数校验失败，节点将保持空转直到参数被修正: %s", error.c_str());
   }
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
-  // !!! 实测踩坑（非常隐蔽，务必保留这两行的组合）!!!
-  // 本节点在**自己的工作线程**里带 timeout 调 lookupTransform。
-  // 如果 listener 不开独立 spin 线程、且不告诉 buffer「有专线在灌数据」，
-  // tf2 会直接报 "Do not call canTransform or lookupTransform with a timeout
-  // unless you are using another thread for populating data"，并且**每次带超时的
-  // 查询都必然失败**。
-  // 症状极具误导性：/tf_static 里的静态变换（雷达→本体）照样查得到，
-  // 于是点云投影一切正常、scan 有输出；但 robot_state_publisher 发在 /tf 上的
-  // 动态变换（双臂 27 个连杆）100% 查不到，导致自身点剔除形同虚设——
-  // 机械臂在 costmap 里变成幽灵障碍物，而日志只有一条不起眼的 WARN。
-  //   spin_thread=true         : listener 自带线程和执行器，独立灌 buffer
-  //   setUsingDedicatedThread  : 告知 buffer 确有专线，超时语义才生效
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, true);
   tf_buffer_->setUsingDedicatedThread(true);
 
   const std::string filtered_topic = get_parameter("filtered_cloud_topic").as_string();
   if (!filtered_topic.empty()) {
-    // QoS 与点云输入一致(BEST_EFFORT)：这是高频传感器数据，可靠传输只会堆积延迟。
     filtered_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
       filtered_topic, rclcpp::SensorDataQoS());
   }
@@ -112,7 +95,6 @@ PointcloudSliceScanNode::PointcloudSliceScanNode(const rclcpp::NodeOptions & opt
 
 PointcloudSliceScanNode::~PointcloudSliceScanNode()
 {
-  // 先停线程再让成员析构，避免工作线程访问已销毁对象。
   running_.store(false);
   queue_cv_.notify_all();
   if (worker_thread_.joinable()) {
@@ -138,11 +120,6 @@ void PointcloudSliceScanNode::declareParameters()
              "默认值原为 base_link，yaml 静默失效时会回落到它并让 TF 查询全失败。"));
 
   declare_parameter<double>("tf_timeout_sec", 0.05, describe("TF 查询超时(s)"));
-  // 0.06 = 略大于一次 tf_timeout_sec(0.05)。取这个值的含义：
-  // 允许"第一个连杆查失败、等满一次超时"，但**不允许**第二个再等一次。
-  // 于是 TF 整体不可用时，自滤这一级的开销从实测的 1800ms 压到 ~60ms，
-  // 单帧总耗时回到 100ms 量级，/scan 不再产生秒级陈旧。
-  // 上限依据：雷达帧周期 100ms，TF 阶段吃掉超过一半就必然掉帧。
   declare_parameter<double>(
     "tf_total_budget_sec", 0.06,
     describe("单帧所有连杆 TF 查询的总等待预算(s)，防止 N 个连杆把超时线性放大成秒级"));
@@ -161,12 +138,6 @@ void PointcloudSliceScanNode::declareParameters()
   declare_parameter<std::string>(
     "invalid_input_policy", "hold_last",
     describe("输入无效时的策略: hold_last=重发上一帧, stop_output=停止输出"));
-  // 5 帧 @10Hz = 0.5s。取这个值的依据：
-  //   · 下限：要能盖住真实的单帧抖动。实测空点云/时间戳越界都是 1~2 帧的事。
-  //   · 上限：必须小于下游的陈旧判据，否则上限形同虚设。costmap 侧建议
-  //     expected_update_rate=0.2s，而重发期间 costmap **看不出**陈旧
-  //     (时间戳是新的)，所以这里的 0.5s 是真正的"最长隐身时间"。
-  // 超过之后转停止输出 —— 那时 /scan 才真的停，下游超时判据才会响。
   declare_parameter<int>(
     "hold_last_max_frames", 5,
     describe("hold_last 最多连续重发多少帧，超过转为停止输出；<=0 表示不限制(不推荐)"));
@@ -181,7 +152,6 @@ void PointcloudSliceScanNode::declareParameters()
   declare_parameter<bool>("publish_markers", true, describe("是否发布调试 Marker"));
   declare_parameter<int>("marker_point_stride", 3, describe("Marker 点抽稀步长，1=全部发布"));
 
-  // ---- 扫描几何 ----
   declare_parameter<double>("scan.angle_min", -M_PI, describe("扫描起始角(rad)"));
   declare_parameter<double>("scan.angle_max", M_PI, describe("扫描终止角(rad)"));
   declare_parameter<double>("scan.angle_increment", M_PI / 360.0, describe("角度分辨率(rad)"));
@@ -194,14 +164,10 @@ void PointcloudSliceScanNode::declareParameters()
       "某方向无障碍时填什么: range_max=填最大距离(需求规定的默认行为), "
       "infinity=填 inf(与既有 pointcloud_to_laserscan 的 use_inf:=true 行为一致)"));
 
-  // ---- 多层切片 ----
-  // ROS2 参数不支持「字典数组」，因此用「名字列表 + 名字前缀嵌套键」的惯用法，
-  // 这样每一项依然是独立参数，可被 ros2 param set 动态修改。
   declare_parameter<std::vector<std::string>>(
     "slice_names", std::vector<std::string>{"ground_near", "low", "mid", "high"},
     describe("切片层名列表，顺序即融合顺序；至少 2 层"));
 
-  // ---- 自身点剔除 ----
   declare_parameter<bool>("self_filter.footprint.enabled", true, describe("是否启用底盘足迹圆柱剔除"));
   declare_parameter<double>("self_filter.footprint.radius", 0.45, describe("底盘足迹半径(m)"));
   declare_parameter<double>("self_filter.footprint.z_min", -1.0, describe("足迹圆柱下界(m, base_frame)"));
@@ -236,8 +202,6 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
     error = "tf_total_budget_sec 需 >=0（0 表示所有查询都用 0 超时，只吃缓存）";
     return false;
   }
-  // 预算比单次超时还小是配置矛盾：那等于把 tf_timeout_sec 悄悄改小了。
-  // 不静默纠正，直接报错 —— 静默纠正会让人以为 tf_timeout_sec 生效了。
   if (tf_total_budget_sec_ > 0.0 && tf_total_budget_sec_ < tf_timeout_sec_) {
     error = "tf_total_budget_sec(" + std::to_string(tf_total_budget_sec_) +
       ") 小于 tf_timeout_sec(" + std::to_string(tf_timeout_sec_) +
@@ -289,7 +253,6 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
     return false;
   }
 
-  // ---- 切片层：先读名字列表，再按需声明并读取每层的嵌套参数 ----
   const std::vector<std::string> slice_names =
     get_parameter("slice_names").as_string_array();
   if (slice_names.size() < kMinSliceCount) {
@@ -308,8 +271,6 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
   proj_params.angle_increment = get_parameter("scan.angle_increment").as_double();
   proj_params.range_min = get_parameter("scan.range_min").as_double();
   proj_params.range_max = get_parameter("scan.range_max").as_double();
-  // 需求规定：切片后无有效障碍物点时，距离填最大探测距离。
-  // 同时提供 infinity 模式，便于和既有 pointcloud_to_laserscan(use_inf:=true) 对齐行为。
   const std::string no_return_mode = get_parameter("scan.no_return_mode").as_string();
   if (no_return_mode == "range_max") {
     proj_params.no_return_value = static_cast<float>(proj_params.range_max);
@@ -322,7 +283,6 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
 
   for (const std::string & name : slice_names) {
     const std::string prefix = "slices." + name + ".";
-    // 这些嵌套参数在首次见到层名时才声明，因此支持「改 slice_names 加新层」。
     if (!has_parameter(prefix + "z_min")) {
       declare_parameter<double>(prefix + "z_min", 0.0);
       declare_parameter<double>(prefix + "z_max", 0.0);
@@ -346,7 +306,6 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
     return false;
   }
 
-  // ---- 自身点剔除 ----
   FootprintCylinder footprint;
   footprint.enabled = get_parameter("self_filter.footprint.enabled").as_bool();
   footprint.radius = get_parameter("self_filter.footprint.radius").as_double();
@@ -394,8 +353,6 @@ rcl_interfaces::msg::SetParametersResult PointcloudSliceScanNode::onParameterCha
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
 
-  // 话题名/线程相关参数在运行期改动需要重建订阅发布，风险高且收益低，
-  // 这里明确拒绝，并提示改 YAML 后重启（对应「异常场景输出关键上下文」）。
   static const std::vector<std::string> kRestartRequired = {
     "input_cloud_topic", "output_scan_topic", "marker_topic", "watchdog_period_sec"};
   for (const rclcpp::Parameter & p : parameters) {
@@ -408,11 +365,6 @@ rcl_interfaces::msg::SetParametersResult PointcloudSliceScanNode::onParameterCha
     }
   }
 
-  // 逐个「预演」：先校验能否接受，真正生效放在下一帧由工作线程统一重载。
-  // 为什么不在这里直接改成员：本回调运行在执行器线程上，而工作线程可能正在
-  // 用这些参数跑 PCL 滤波；就地修改会撕裂配置（半套新半套旧）。
-  // ROS2 的语义是本回调返回 successful=true 之后，新值才写入参数服务器，
-  // 所以这里只置脏标记，工作线程下一帧调用 loadParameters() 一次性原子换上。
   for (const rclcpp::Parameter & p : parameters) {
     if (p.get_name() == "invalid_input_policy") {
       const std::string v = p.as_string();
@@ -432,7 +384,6 @@ rcl_interfaces::msg::SetParametersResult PointcloudSliceScanNode::onParameterCha
 void PointcloudSliceScanNode::cloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg)
 {
-  // ---- 消息判空 ----
   if (!msg) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs, "收到空的点云消息指针，已丢弃");
@@ -442,7 +393,6 @@ void PointcloudSliceScanNode::cloudCallback(
   last_input_time_ = now();
   input_timeout_warned_ = false;
 
-  // ---- 空点云：不能拿去生成脏 scan ----
   if (msg->width == 0U || msg->height == 0U || msg->data.empty()) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
@@ -452,7 +402,6 @@ void PointcloudSliceScanNode::cloudCallback(
     return;
   }
 
-  // ---- 时间戳校验：与当前时间偏差过大的帧直接丢 ----
   const rclcpp::Time stamp(msg->header.stamp, RCL_ROS_TIME);
   const double age = (now() - stamp).seconds();
   if (std::fabs(age) > max_cloud_age_sec_) {
@@ -464,8 +413,6 @@ void PointcloudSliceScanNode::cloudCallback(
     return;
   }
 
-  // ---- 存入单槽缓冲，唤醒工作线程 ----
-  // 回调到此结束，绝不在这里做 PCL 运算。
   {
     std::lock_guard<std::mutex> lock(queue_mutex_);
     pending_cloud_ = msg;
@@ -491,8 +438,6 @@ void PointcloudSliceScanNode::workerLoop()
       continue;
     }
 
-    // 动态调参在此处统一落地：整套参数一次性重载，避免出现半新半旧的中间状态。
-    // 重载失败（新值组合非法）时保留旧配置继续工作，只报 ERROR，不中断数据流。
     if (config_dirty_.exchange(false)) {
       std::string error;
       if (loadParameters(error)) {
@@ -504,8 +449,6 @@ void PointcloudSliceScanNode::workerLoop()
       }
     }
 
-    // 处理过程中的所有异常都在 processCloud 内部消化，
-    // 这里再兜一层，保证工作线程绝不会因为异常而退出。
     try {
       (void)processCloud(cloud);
     } catch (const std::exception & e) {
@@ -529,7 +472,6 @@ bool PointcloudSliceScanNode::lookupCloudTransform(
       base_frame_, cloud_frame, stamp,
       tf2::durationFromSec(tf_timeout_sec_));
   } catch (const tf2::TransformException & e) {
-    // TF 未就绪/超时/外推失败都走这里：丢弃当前帧、等 TF 恢复，绝不抛出崩溃。
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "TF 查询失败(%s -> %s)，丢弃当前帧: %s",
@@ -537,9 +479,6 @@ bool PointcloudSliceScanNode::lookupCloudTransform(
     return false;
   }
 
-  // 点云时间戳与 TF 时间戳偏差校验：偏差过大说明两者时间错位，
-  // 继续用下去会把「机器人过去的姿态」和「现在的点云」混在一起，
-  // 在 base_frame 里生成位置错误的障碍物。
   const rclcpp::Time tf_stamp(out.header.stamp, RCL_ROS_TIME);
   const double delta = std::fabs((tf_stamp - stamp).seconds());
   if (delta > tf_time_tolerance_sec_) {
@@ -562,16 +501,10 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
 
   std::size_t missing = 0U;
   std::size_t resolved = 0U;
-  // 单帧 TF 总预算的截止时刻。用**稳态时钟**而不是 ROS 时钟：这里量的是
-  // "本函数已经等了多久"，属于真实墙钟耗时，与 use_sim_time / 时钟跳变无关。
-  // 用 now() 的话仿真时钟暂停时预算永远花不完，退化回原来的 N × timeout。
   const auto budget_start = std::chrono::steady_clock::now();
   bool budget_exhausted = false;
 
   for (const SelfFilterChainConfig & chain : self_filter_chains_) {
-    // 先把链上每个 frame 在 base_frame 下的原点位置查出来。
-    // 查不到的 frame 标成无效，后面连线时跳过——机械臂某个连杆的 TF
-    // 偶发丢失时，其余连杆仍然正常剔除。
     std::vector<std::array<float, 3>> origins;
     std::vector<bool> valid;
     origins.reserve(chain.frames.size());
@@ -580,10 +513,6 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
     for (const std::string & frame : chain.frames) {
       std::array<float, 3> p{{0.0F, 0.0F, 0.0F}};
       bool ok = false;
-      // 本次查询能等多久 = min(单次超时, 剩余总预算)。
-      // 预算耗尽后是 0 —— 不是"跳过不查"，而是**仍然查、只是不等**：
-      // 命中 tf 缓存的连杆照样解析成功，所以健康态下这条路径完全不改变行为
-      // （健康态每次查询立即返回，预算根本花不到）。
       const double elapsed = std::chrono::duration<double>(
         std::chrono::steady_clock::now() - budget_start).count();
       const double wait = tfLookupWait(tf_timeout_sec_, tf_total_budget_sec_, elapsed);
@@ -606,7 +535,6 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
     }
 
     if (chain.frames.size() == 1U) {
-      // 单 frame 链退化成球（线段两端重合，pointSegmentDistanceSquared 会自动处理）。
       if (valid.front()) {
         FilterCapsule c;
         c.name = chain.name;
@@ -641,11 +569,6 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
       get_logger(), *get_clock(), kLogThrottleMs,
       "本帧有 %zu 个连杆 TF 查询失败，对应胶囊体已跳过(其余部分仍生效)", missing);
   }
-  // 一个连杆都没解析出来 = TF 整体不可用（RSP 停发 / 上游 /joint_states 断），
-  // 这与"某个连杆偶发丢失"是**性质不同**的两件事，必须让调用方能区分：
-  //   · 偶发丢失：其余胶囊体照常剔除，这一帧仍然可信
-  //   · 整体不可用：自滤等于没做，机器人自己的手臂/夹爪会留在点云里当障碍物
-  // 后者绝不能当成正常帧发出去（实测那次急停：保留 9298 点、自身剔除 0）。
   if (resolved == 0U && !self_filter_chains_.empty()) {
     RCLCPP_ERROR_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
@@ -665,7 +588,6 @@ bool PointcloudSliceScanNode::processCloud(
   }
   const rclcpp::Time stamp(msg->header.stamp, RCL_ROS_TIME);
 
-  // ---- 1) ROS 消息 → PCL ----
   auto cloud_in = std::make_shared<PointCloudXYZ>();
   pcl::fromROSMsg(*msg, *cloud_in);
   if (cloud_in->empty()) {
@@ -675,7 +597,6 @@ bool PointcloudSliceScanNode::processCloud(
     return false;
   }
 
-  // ---- 2) 体素降采样 ----
   auto cloud_work = cloud_in;
   if (enable_voxel_filter_) {
     auto downsampled = std::make_shared<PointCloudXYZ>();
@@ -689,8 +610,6 @@ bool PointcloudSliceScanNode::processCloud(
     }
   }
 
-  // ---- 3) 统计离群点滤波 ----
-  // 放在降采样之后：SOR 要建 kd-tree，先降采样能显著降低耗时。
   if (enable_outlier_filter_ &&
     cloud_work->size() > static_cast<std::size_t>(outlier_mean_k_))
   {
@@ -705,7 +624,6 @@ bool PointcloudSliceScanNode::processCloud(
     }
   }
 
-  // ---- 4) 变换到 base_frame ----
   geometry_msgs::msg::TransformStamped tf_msg;
   if (!lookupCloudTransform(msg->header.frame_id, stamp, tf_msg)) {
     dropped_frame_count_.fetch_add(1U);
@@ -726,7 +644,6 @@ bool PointcloudSliceScanNode::processCloud(
   auto cloud_base = std::make_shared<PointCloudXYZ>();
   pcl::transformPointCloud(*cloud_work, *cloud_base, transform);
 
-  // ---- 5) 自身点剔除（TF 实时驱动）----
   std::vector<SlicePoint> kept;
   std::vector<SlicePoint> self_points;
   std::vector<FilterCapsule> capsules;
@@ -734,9 +651,6 @@ bool PointcloudSliceScanNode::processCloud(
   {
     std::lock_guard<std::mutex> lock(config_mutex_);
     capsules = resolveSelfFilterCapsules(stamp);
-    // 自滤链配了、却一个胶囊体都没解析出来 → TF 整体不可用 → 本帧无效。
-    // 走与 min_valid_points 相同的无效帧路径（含 hold_last 上限），
-    // 不要在这里另起一套策略。
     if (capsules.empty() && !self_filter_chains_.empty()) {
       return handleInvalidFrame("连杆 TF 全部不可用，自滤未生效");
     }
@@ -758,23 +672,15 @@ bool PointcloudSliceScanNode::processCloud(
     }
 
     if (static_cast<int>(kept.size()) < min_valid_points_) {
-      // 注意这里和「切片后无障碍物」是两种不同情况：
-      // 点数过少说明这一帧本身不可信（雷达遮挡/剔除过度），不能当成「前方无障碍」。
       RCLCPP_WARN_THROTTLE(
         get_logger(), *get_clock(), kLogThrottleMs,
         "剔除自身点后仅剩 %zu 点(阈值 %d)，本帧视为无效", kept.size(), min_valid_points_);
       return handleInvalidFrame("剔除后有效点不足");
     }
 
-    // ---- 6) 多层切片投影融合 ----
     projector_.project(kept, result);
   }
 
-  // ---- 7) 输出 ----
-  // 有效帧发布成功 → 重发连击归零。
-  // !!! 必须是"连续"计数而不是"累计" !!! 累计的话，机器人一天里偶发抖动 5 次
-  // 之后上限就永久跳闸，之后每一次真实抖动都变成停止输出。本项目在重试上限
-  // 那条上已经犯过同一个错（把成功也计入，误杀了完全走得通的长路径）。
   hold_last_streak_ = 0;
   publishScan(result, stamp);
   publishFilteredCloud(kept, stamp);
@@ -783,7 +689,6 @@ bool PointcloudSliceScanNode::processCloud(
   }
 
   const uint64_t count = processed_frame_count_.fetch_add(1U) + 1U;
-  // 正常帧只做低频 INFO，避免刷屏；关键统计量都带上便于现场判断。
   RCLCPP_INFO_THROTTLE(
     get_logger(), *get_clock(), 5000,
     "已处理 %" PRIu64 " 帧: 输入 %zu 点 → 保留 %zu 点(自身剔除 %zu) → 占用角度桶 %zu/%zu",
@@ -811,8 +716,6 @@ void PointcloudSliceScanNode::publishScan(
   scan->scan_time = static_cast<float>(get_parameter("scan.scan_time").as_double());
   scan->time_increment = 0.0F;
   scan->ranges = result.ranges;
-  // intensities 留空：本 scan 是点云投影产物，没有真实回波强度，
-  // 填假值会误导下游算法。
 
   scan_pub_->publish(*scan);
   {
@@ -827,8 +730,6 @@ void PointcloudSliceScanNode::publishFilteredCloud(
   if (!filtered_cloud_pub_) {
     return;
   }
-  // 只搬 xyz：下游（pointcloud_to_laserscan）只用 xyz，多带强度/时间戳字段
-  // 除了增加带宽没有别的作用。
   sensor_msgs::msg::PointCloud2 msg;
   msg.header.stamp = stamp;
   msg.header.frame_id = base_frame_;
@@ -867,8 +768,8 @@ bool PointcloudSliceScanNode::handleInvalidFrame(const char * reason)
       RCLCPP_ERROR_THROTTLE(
         get_logger(), *get_clock(), kLogThrottleMs,
         "本帧无效(%s)，且已连续重发 %d 帧(上限 %d)。"
-        "**停止输出** —— 继续重发会让旧数据一直戴着新时间戳，"
-        "下游任何时效性判据都发现不了",
+        "**停止输出** —— 无有效的新采集数据，"
+        "下游需按保留的采集时间判断失效",
         reason, hold_last_streak_, hold_last_max_frames_);
     }
     return false;
@@ -896,19 +797,12 @@ void PointcloudSliceScanNode::republishLastScan()
     }
     copy = std::make_shared<sensor_msgs::msg::LaserScan>(*last_valid_scan_);
   }
-  // 只刷新时间戳，内容保持上一帧。这样 costmap 不会因为「传感器超时」
-  // 把已知障碍物清空，同时下游若关心时效性也能从日志看到我们在保持旧值。
-  copy->header.stamp = now();
   scan_pub_->publish(*copy);
 }
 
 void PointcloudSliceScanNode::watchdogCallback()
 {
   if (last_input_time_.nanoseconds() == 0) {
-    // 从未收到过任何点云。这种情况必须告警——它恰恰是最难查的故障
-    // （上游雷达节点没起来、话题名写错、QoS 不匹配、domain 不同），
-    // 而如果这里保持沉默，节点会一声不响地什么都不干，日志里只有一行启动信息。
-    // 用节点存活时长做判据，超过一个输入超时周期还没有数据就周期性提醒。
     const double alive = (now() - node_start_time_).seconds();
     if (alive > input_timeout_sec_) {
       RCLCPP_WARN_THROTTLE(
@@ -934,8 +828,6 @@ void PointcloudSliceScanNode::watchdogCallback()
     input_timeout_warned_ = true;
   }
   if (invalid_input_policy_ == InvalidInputPolicy::kHoldLast) {
-    // 走统一出口，让"没有输入"也受 hold_last 上限约束 ——
-    // 这是最容易永久隐身的一条路径：上游整个停了，而我们一直发新时间戳。
     handleInvalidFrame("输入超时");
   }
 }
@@ -953,8 +845,6 @@ void PointcloudSliceScanNode::publishSliceMarkers(
   const SliceProjector::Params & p = projector_.params();
   const auto stride = static_cast<std::size_t>(marker_point_stride_);
 
-  // 为每层分配一个固定色，便于在 RViz 里一眼分辨高度层。
-  // 色相按层序均匀铺开（HSV→RGB 的简化版本，只取饱和度/亮度拉满的环）。
   auto sliceColor = [](std::size_t idx, std::size_t total) {
       std_msgs::msg::ColorRGBA c;
       c.a = 1.0F;
@@ -974,7 +864,6 @@ void PointcloudSliceScanNode::publishSliceMarkers(
     };
 
   int marker_id = 0;
-  // ---- 每个切片层一个 POINTS marker ----
   for (std::size_t s = 0; s < p.slices.size(); ++s) {
     const SliceConfig & cfg = p.slices[s];
     visualization_msgs::msg::Marker m;
@@ -987,7 +876,6 @@ void PointcloudSliceScanNode::publishSliceMarkers(
     m.scale.x = 0.03;
     m.scale.y = 0.03;
     m.color = sliceColor(s, p.slices.size());
-    // 未启用的层用半透明显示，一眼能看出「这层没参与融合」。
     if (!cfg.enabled) {
       m.color.a = 0.25F;
     }
@@ -1006,7 +894,6 @@ void PointcloudSliceScanNode::publishSliceMarkers(
     array->markers.push_back(std::move(m));
   }
 
-  // ---- 被判为「自身」的点，灰色显示 ----
   {
     visualization_msgs::msg::Marker m;
     m.header.stamp = stamp;
@@ -1032,7 +919,6 @@ void PointcloudSliceScanNode::publishSliceMarkers(
     array->markers.push_back(std::move(m));
   }
 
-  // ---- 剔除胶囊体的轴线，用粗线表示（线宽≈直径）----
   for (const FilterCapsule & c : capsules) {
     visualization_msgs::msg::Marker m;
     m.header.stamp = stamp;

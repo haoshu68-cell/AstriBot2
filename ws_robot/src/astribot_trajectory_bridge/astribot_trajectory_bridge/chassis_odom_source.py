@@ -51,10 +51,7 @@ class OdomSample:
     vx_body: float
     vy_body: float
     wz: float
-    #: 本帧检测到的位姿跳变距离（米）。0.0 = 没跳。
     jump_m: float = 0.0
-    #: 本帧是否被判为跳变。跳变时节点层要 WARN，但**照常发布**：
-    #: 藏起来会让下游拿不到真实位姿，比让它看到跳变更糟。
     jumped: bool = False
 
     @property
@@ -70,13 +67,10 @@ class OdomStats:
     samples: int = 0
     jumps: int = 0
     max_jump_m: float = 0.0
-    #: 累计行程（米）。跳变**不计入** —— 否则一次重定位就把里程数污染了。
     travelled_m: float = 0.0
     jump_history: list = field(default_factory=list)
 
 
-#: jump_history 最多留这么多条。留个上限是因为这个节点要长跑，
-#: 而"长跑的仿真会退化"那次教训里，无界增长的记录本身就是一个隐患。
 MAX_JUMP_HISTORY = 32
 
 
@@ -123,8 +117,6 @@ class ChassisOdomSource:
             if len(self.stats.jump_history) < MAX_JUMP_HISTORY:
                 self.stats.jump_history.append(round(jump_m, 4))
         elif self._prev_pose is not None:
-            # 跳变的那一段不计入行程：一次重定位能有几十厘米，
-            # 计进去就把里程数污染了，而里程数是判断漂移速率的依据。
             self.stats.travelled_m += jump_m
 
         self._prev_pose = tuple(pose)

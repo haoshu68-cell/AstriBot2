@@ -1,19 +1,6 @@
-# =============================================================================
-# 决策模块参数：边界遍历 + 前沿点自适应采样 自主探索
-#
-# 本节点**只输出目标位姿**到 /explore/goal_pose，不发 Twist、不内置 Nav2 客户端。
-# 由外部（桥接节点 / BT / 脚本）拿这个位姿去调 Nav2 的 NavigateToPose。
-#
-# 坐标系前提：本机器人没有 base_link，本体系是 astribot_torso_base
-# （与 Nav2 的 robot_base_frame 一致）。
-#
-# 尺度前提：SLAM 地图分辨率 0.05 m/格，Nav2 robot_radius = 0.35 m。
-# 下面凡是「格数」的阈值都按 0.05 分辨率给的，换分辨率时要一起调。
-# =============================================================================
 /**:
   ros__parameters:
 
-    # ---------------- 话题与坐标系 ----------------
     map_topic: "/map"                       # slam_toolbox 输出，transient_local QoS
     goal_topic: "/explore/goal_pose"        # geometry_msgs/PoseStamped
     status_topic: "/explore/status"         # std_msgs/String，状态机文本
@@ -22,16 +9,11 @@
     map_frame: "map"
     robot_base_frame: "astribot_torso_base"
 
-    # ---------------- 节拍与容错 ----------------
     tf_timeout_sec: 0.2
     planning_period_sec: 2.0     # 探索是低频决策，2s 一轮足够；太快会在机器人还没动时反复改目标
     map_timeout_sec: 10.0        # 地图超过该时长没更新则告警（但仍用旧图规划，不停机）
 
-    # ---------------- 震荡抑制与死循环保护 ----------------
     goal_same_tolerance: 0.35    # 两次目标点距离小于该值即视为「同一个目标」
-    # 震荡判据 = 目标不变 **且** 机器人没推进。
-    # 只看「目标不变」是错的：本节点周期性重发目标，而机器人正在赶路，
-    # 重复发布同一个稳定目标本来就是正常行为（实测会导致惩罚无界累加+日志刷屏）。
     robot_progress_tolerance: 0.15   # 两轮间位移超过该值即算有推进(m)
     max_same_goal_count: 3       # 目标不变且无推进连续 3 轮 → 加重惩罚并重新全局采样
     max_relaxation_level: 3      # 采不到点时最多放宽 3 级
@@ -41,29 +23,17 @@
 
     publish_markers: true
 
-    # =========================================================================
-    # 前沿搜索算法参数
-    # =========================================================================
     search:
-      # ---- 栅格三态判定（ROS 约定：-1 未知，0 空闲，100 占据）----
       occupied_threshold: 65
       free_threshold: 25
 
-      # ---- 预处理 ----
-      # 膨胀半径必须 >= 机器人半径(0.35)，否则会把「贴着墙、机器人其实进不去」
-      # 的格子当成合法前沿，导致 Nav2 反复规划失败。
       obstacle_inflation_radius: 0.35
       min_obstacle_cluster_cells: 3   # 小于 3 格的孤立占据斑块视为 SLAM 噪声，预处理抹掉
 
-      # ---- 前沿提取与聚类 ----
       use_eight_connectivity: true
       min_frontier_cells: 12          # 0.05m/格 → 12 格约 0.6m 长的前沿才值得跑一趟
       gain_window_radius: 1.5         # 未知增益统计窗口半径(m)
 
-      # ---- 自适应采样 ----
-      # 采样数 = clamp(ceil(前沿格数 * adaptive_sample_gain), min, max)
-      # 0.15 意味着：一段 20 格(1m)的前沿采 3 个点，一段 100 格(5m)的前沿采 8 个（撞上限）。
-      # 这就是「大面积前沿多采样、小面积前沿少采样」，同时上限防止候选点扎堆。
       adaptive_sample_gain: 0.15
       min_samples_per_cluster: 1
       max_samples_per_cluster: 8
@@ -71,15 +41,6 @@
       min_goal_distance: 0.8          # 太近的目标没意义（机器人还没走就到了），过滤
       max_goal_distance: 0.0          # <=0 表示不限制远距离目标
 
-      # ---- 代价函数 ----
-      # cost = weight_distance * 距离(m)
-      #      + weight_visit_penalty * 历史访问惩罚(0~N)
-      #      - weight_gain * 归一化未知增益(0~1)
-      # 取 cost 最小者。
-      #
-      # 调参直觉：weight_gain=6 意味着「增益从 0 涨到满分」值得多走 6 米。
-      # 想让机器人更贪心地扑向大片未知区 → 加大 weight_gain；
-      # 想让它先把近处扫干净 → 加大 weight_distance。
       weight_distance: 1.0
       weight_gain: 6.0
       weight_visit_penalty: 4.0

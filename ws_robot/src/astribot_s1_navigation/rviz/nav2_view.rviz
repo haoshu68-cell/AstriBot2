@@ -136,6 +136,38 @@ Visualization Manager:
           Value: true
       Enabled: true
       Name: Local Costmap
+    # ═══ MPPI 调试可视化（2026-09-09）═══
+    # 上面把 nav2_params_mppi.yaml 里 FollowPath.inner 的 visualize 打开了，
+    # 但**打开发布端不等于看得见** —— rviz 没有对应 Display 就什么都不显示，
+    # 而两边都"配好了"的表象完全一样。所以这两项必须跟着一起加。
+    #
+    # 话题名不是猜的：/trajectories 与 transformed_global_plan 是从
+    # libmppi_controller.so 的字串表里读出来的（Humble 1.1.20）。
+    # /trajectories 是全局话题（前面带 /），**不带实例名前缀** —— 将来若再加
+    # 第二个 MPPI 实例，两者会发到同一条话题上，看不出是哪个实例发的。
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MPPI Trajectories
+      Namespaces: {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /trajectories
+      Value: true
+    # 裁剪后的参考路径带实例名前缀。这里钉的是 FollowPath（探索与点到点都走它）；
+    # 一旦有人把接线换到别的实例名，这一项会**静默空着**。
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: 255; 170; 0
+      Enabled: true
+      Line Style: Lines
+      Name: MPPI Transformed Plan
+      Topic:
+        Value: /controller_server/FollowPath/transformed_global_plan
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 40; 40; 40

@@ -26,7 +26,6 @@ from astribot_trajectory_bridge.gripper_math import (
     validate_grasp_cmd,
 )
 
-# 结果码名。必须与 SetGripper.srv 里的常量**同名**。
 EC_SUCCESS = 'SUCCESS'
 EC_DISABLED_BY_CONFIG = 'DISABLED_BY_CONFIG'
 EC_UNKNOWN_GRIPPER = 'UNKNOWN_GRIPPER'
@@ -35,9 +34,7 @@ EC_SDK_CALL_FAILED = 'SDK_CALL_FAILED'
 EC_WRITE_GATE_DENIED = 'WRITE_GATE_DENIED'
 EC_BUSY = 'BUSY'
 
-# 上报到 BridgeStatus 的状态位名
 S_SDK_CALL_FAILED = 'SDK_CALL_FAILED'
-# 中间开度在超时内没到位。不静默 —— 上层可能正靠这个开度去抓东西。
 S_MID_OPENING_TIMEOUT = 'SETTLE_TIMEOUT'
 
 
@@ -48,21 +45,12 @@ class GripperConfig:
                  default_duration_sec=1.0, default_max_force_n=0.0,
                  settle_extra_sec=0.0, stream_freq=250.0,
                  mid_stream_tolerance=0.5, mid_stream_timeout_sec=3.0):
-        # 合法夹爪名白名单。**必须显式给**，不从 SDK 现场问 ——
-        # 现场问意味着 SDK 挂掉时"未知夹爪"和"SDK 故障"会混成一种错误。
         self.gripper_names = list(gripper_names or [])
         self.enable_service = bool(enable_service)
         self.default_duration_sec = float(default_duration_sec)
-        # <=0 表示不设力，沿用 SDK 默认 48N（109 样例注释）
         self.default_max_force_n = float(default_max_force_n)
-        # open/close 返回后额外等待的时间。SDK 的调用是阻塞的且尊重 duration，
-        # 实测返回时已到位，所以默认 0 —— 保留这个旋钮是为了真机上万一有尾巴。
         self.settle_extra_sec = float(settle_extra_sec)
-        # 中间开度必须**持续重发**才到位（单次下发会冲到完全闭合，实测）。
-        # 这三个参数控制那个重发过程，全部可配、不硬编码。
         self.stream_freq = float(stream_freq)
-        # 到位容差，单位是命令空间（0-100）。实测持续重发的稳态误差 < 0.011，
-        # 所以 0.5 已经很宽松。
         self.mid_stream_tolerance = float(mid_stream_tolerance)
         self.mid_stream_timeout_sec = float(mid_stream_timeout_sec)
 
@@ -129,13 +117,8 @@ class GripperController:
                  in_simulation=True):
         self.cfg = cfg
         self.session = session
-        # 注入 sleep/clock 便于测试：中间开度的重发循环有超时，
-        # 用真时钟测就得真等 3 秒，而且没法确定性地造出"超时"这个分支。
         self._sleep = sleep_fn if sleep_fn is not None else _noop_sleep
         self._clock = clock_fn if clock_fn is not None else _default_clock
-        # 后端是否是仿真。决定 force_applied 能否为 True ——
-        # 仿真下 set_effector_max_force 是空操作，谎报 True 会让人
-        # 把仿真里的夹持行为当成"力限已验收"。
         self.in_simulation = bool(in_simulation)
         self.events = []
         self._busy = set()
@@ -149,7 +132,6 @@ class GripperController:
         self.events = []
         return out
 
-    # ---------------- 解析请求 ----------------
 
     def resolve_names(self, name):
         """把请求里的 name 解析成部件名列表。空串 = 全部。
@@ -191,7 +173,6 @@ class GripperController:
                     '（注意那个空间是 0=张开、100=闭合）。' % (f,))
         return (opening_fraction_to_cmd(f), None)
 
-    # ---------------- 执行 ----------------
 
     def execute(self, name='', opening_fraction=1.0, duration=0.0,
                 use_raw_cmd=False, raw_cmd=0.0, max_force=0.0,
@@ -219,8 +200,6 @@ class GripperController:
         dur = float(duration) if float(duration) > 0.0 \
             else self.cfg.default_duration_sec
 
-        # 并发保护：整组一起占用。部分占用会出现"左手在动、右手请求被放过"
-        # 却又共享同一个阻塞 SDK 调用的情况。
         with self._lock:
             clash = [n for n in names if n in self._busy]
             if clash:
@@ -270,8 +249,6 @@ class GripperController:
                        for v in vals):
                     return (True, last)
             except Exception:      # noqa: BLE001
-                # 读不到就没法判到位。不在这里上报（外层会因超时上报），
-                # 也不提前返回成功 —— 提前返回会把"不知道"当成"到位了"。
                 pass
             if self._clock() >= deadline:
                 return (False, last)
@@ -287,9 +264,6 @@ class GripperController:
             try:
                 self.session.set_effector_max_force(
                     list(names), [force_val] * len(names))
-                # !!! 仿真下绝不报 True !!!
-                # astribot_client.py:1139 在仿真下直接 return，力根本没设上。
-                # 谎报 True 会让人把仿真里的夹持行为当成"力限已验收"。
                 force_applied = not self.in_simulation
             except Exception as exc:      # noqa: BLE001
                 self._emit(S_SDK_CALL_FAILED, '设夹持力失败：%s' % exc)
@@ -298,17 +272,12 @@ class GripperController:
                     '设夹持力失败（未执行开合）：%s' % exc,
                     dispatched_cmd=cmd, dispatched_rad=cmd_to_rad(cmd))
 
-        # 走 open/close_effector 而不是 set_joints_position：
-        # 前者是厂商为夹爪提供的语义化接口，且会尊重 duration 做平滑到位。
-        # 只有端点值才有对应的语义化接口，中间值必须走位置指令。
         try:
             if cmd <= CMD_OPEN:
                 self.session.open_effector(list(names), duration=dur)
             elif cmd >= CMD_CLOSED:
                 self.session.close_effector(list(names), duration=dur)
             else:
-                # 中间开度没有语义化接口，只能用位置指令 —— 而位置指令**必须
-                # 持续重发**，见下面 _stream_to 的说明。
                 reached, last = self._stream_to(names, cmd)
                 if not reached:
                     self._emit(S_MID_OPENING_TIMEOUT,
@@ -332,8 +301,6 @@ class GripperController:
             elif got:
                 actual = float(got[0])
         except Exception as exc:      # noqa: BLE001
-            # 读回失败**不判失败**：动作已经下发出去了。但必须上报，
-            # 否则 actual_cmd=0 会被读成"夹爪在全张开位置"。
             self._emit(S_SDK_CALL_FAILED, '读夹爪实际位置失败：%s' % exc)
             return GripperResult(
                 True, EC_SUCCESS,

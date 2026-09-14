@@ -1,29 +1,7 @@
-# =============================================================================
-# 探索协调器参数：严格时序探索调度 + 未知区域禁行强校验
-#
-# 本节点是「调度器」，不是规划器：
-#   · 必须完全抵达 + 稳定驻留 + 目标收敛，才允许生成下一个探索点
-#   · 目标点与全局路径都必须整体落在已知可通行栅格内
-#   · 只用 Nav2 官方 action（NavigateToPose / ComputePathToPose），不改 Nav2 源码
-#
-# 两张栅格图分工明确，**不要混用**（混用会让探索一个目标都发不出去，
-# 完整机制见 include/astribot_s1_autonomy/costmap_adapter.hpp 文件头）：
-#   /map                        —— 只用于前沿搜索（前沿的定义依赖「未知」这个状态）
-#   /global_costmap/costmap_raw —— 只用于下发前校验（与 planner_server 同一张图）
-#
-# 坐标系前提：本机器人没有 base_link，本体系是 astribot_torso_base。
-# 尺度前提：SLAM 分辨率 0.05 m/格；Nav2 footprint 是边长 0.62m 的正方形
-# （侧向半宽 0.310 / 内切 0.310 / 外接 0.438 m）。
-#   凡是「距离」类阈值都和这两个数字耦合，换机器人/换分辨率必须一起调。
-# =============================================================================
 /**:
   ros__parameters:
 
-    # ---------------- 话题、动作与坐标系 ----------------
     map_topic: "/map"                        # slam_toolbox 输出，transient_local QoS；仅用于前沿搜索
-    # map_topic 订阅的 durability。仿真 slam_toolbox 的 /map 是 transient_local；
-    # 实机的 /map_scan_filtered_prob 实测是 RELIABLE + VOLATILE，必须改成 false，
-    # 否则 QoS 不兼容、一帧都收不到（表现为"尚未收到占据栅格地图"无限刷）。
     map_transient_local: true
     costmap_topic: "/global_costmap/costmap_raw"   # nav2_msgs/Costmap，仅用于下发前校验
     odom_topic: "/odom"                      # 用于「稳定驻留」的速度判定
@@ -37,340 +15,95 @@
     robot_base_frame: "astribot_torso_base"  # 注意：本机没有 base_link
     planner_id: ""                           # 空串 = 用 Nav2 默认全局规划器
 
-    # ---------------- 节拍与超时 ----------------
-    # 0.5s 一拍：探索调度是低频决策，太快只会让日志变噪音。
     control_period_sec: 0.5
     tf_timeout_sec: 0.2
-    # 地图超时给得比 slam_toolbox 的发布间隔宽裕：地图静止时它也会周期重发。
     map_timeout_sec: 10.0
-    # 代价地图超时 5s。global_costmap 的 update_frequency 是 1.0Hz，
-    # 5s 已经是 5 个周期；超时就拒绝下发，**不会**退回用 /map 校验
-    # （退回就又变成两层判据查两张图，那是已知会锁死探索的配置）。
     costmap_timeout_sec: 5.0
-    # 里程计超时 1s：超过即视为里程计丢失，必须冻结目标发布。
     odom_timeout_sec: 1.0
     plan_timeout_sec: 5.0
-    # 单个目标最长 120s。本底盘是力矩驱动全向轮，低速段推进偏慢，
-    # 给太紧会把「还在正常走」误判成被困。
     nav_timeout_sec: 120.0
 
-    # ---------------- 抵达收敛判定（时序约束的核心）----------------
-    # Nav2 报 SUCCEEDED 只是「它认为到了」。这里再做一次实测校验：
-    # 位置偏差、（可选）朝向偏差、速度，三者连续满足 dwell_time_sec 才算收敛。
-    #
-    # arrival_xy_tolerance 必须 >= Nav2 controller 的 xy_goal_tolerance，
-    # 否则 Nav2 报成功而这里判超差，会陷入「成功即失败」的反复重试。
-    #
-    # !!! 2026-08-20 精度收紧：0.30 -> 0.15，配 xy_goal_tolerance 0.10 !!!
-    # 0.15 >= 0.10 满足上面那条约束，且留了 0.05 给蠕行滑行（实测 0.069~0.100m，
-    # 见 P0 扫描）—— 注意余量小于最坏滑行量，接近段必须限速，否则这里会频繁判超差。
     arrival_xy_tolerance: 0.25
-    arrival_yaw_tolerance: 0.25
-    # 探索目标的朝向只是「让雷达看向未知区」的建议值，不是任务约束。
-    # 卡朝向会让机器人在原地反复微调、浪费大量时间，所以默认不卡。
-    #
-    # 因此这里**必须保持 false**：既然不对齐终点姿态，再去卡朝向偏差就是
-    # 让每个目标都必然判失败。搬运等需要卡姿态的场景用另一个控制器实例，
-    # 并在该场景自己的配置里把 check_yaw 打开。
-    check_yaw: false
-    # 稳定驻留 1.5s：足够让 MPPI 的末段振荡衰减掉，又不至于每个点白等太久。
+    arrival_yaw_tolerance: 0.30
+    check_yaw: true
     dwell_time_sec: 1.5
-    # 全向底盘可以纯横移，判定用的是合速度 hypot(vx, vy)，不是只看 vx。
     settle_speed: 0.05
 
-    # ---------------- 下发方式与跟踪期重规划 ----------------
-    # follow_path：把**刚刚通过双层校验的那条路径**直接交给 controller_server 跟踪，
-    #              而不是只发目标点让 bt_navigator 再规划一条（那条不曾被校验过）。
     nav_dispatch_mode: "follow_path"
     follow_action_name: "follow_path"
-    follow_controller_id: "FollowPath"  
-    # 留空 = 用 controller_server 的唯一那个 goal checker。
-    # !!! 别乱填 !!! 该 BT 端口无默认值；goal_checker_plugins 列了多项而这里留空，
-    # 会让每一次 FollowPath 直接 abort（实测踩过：机器人从头到尾不跟踪任何路径）。
-    follow_goal_checker_id: ""
+    follow_controller_id: "FollowPath"
+    follow_goal_checker_id: "precise_goal_checker"
     follow_max_retries: 1                       # 对齐默认行为树 RecoveryNode number_of_retries="1"
-    #
-    # ============ 「未跟踪到位不得规划下一条路径」的关键三项 ============
-    # 实测缺陷（2026-08-28）：replan_policy 原先只有 periodic 一种行为，
-    # 也就是**无条件**每 1.0s 重规划并重发 FollowPath。一轮运行里
-    #   36 个目标 → 393 次 FollowPath 下发，平均每个目标换 10.9 条路径，
-    #   每条路径只被跟踪约 1.5s 就被下一条抢占 —— 没有任何一条被跟踪到位。
-    # 正确判据是「只有当前路径已经不能用了才换」：
     replan_policy: "on_invalid"      # on_invalid=默认；periodic=旧行为，仅供一键回退对比
     replan_check_period_sec: 0.5     # 多久看一眼「当前路径还能不能用」（纯本地计算，不发 action）
     replan_min_interval_sec: 1.0     # 两次重规划的最小间隔，防止判据在阈值附近抖动时连续换路径
-    # 机器人偏离当前路径超过此值 → 这条路径不再描述它的处境 → 重规划。
-    # 必须 > arrival_xy_tolerance(0.25)，否则收尾阶段的正常贴合误差会被判成偏离、
-    # 于是每次快到目标时都换一条新路径 —— 那正是本次要修掉的现象。节点会拒绝启动。
     path_deviation_limit_m: 0.6
-    # 连续这么多次「当前路径已判不可通行 + 重规划也拿不到合法替代」就放弃该目标、
-    # 另选一个前沿点。不能设 0（一帧代价地图抖动就丢目标），也不能设大 ——
-    # 实测：沿用一条刚被判死的路径时机器人原地顶了 17s，直到 progress checker
-    # 才把它救回来，中间白白浪费一个目标的时间预算。
     max_invalid_replan_attempts: 3
-    # 路径寿命兜底，0 = 不启用。正常情况下路径失效应由「剩余段是否可通行」判定，
-    # 而不该由时间判定 —— 一旦设成小值就又退化成周期重规划了。
     path_max_age_sec: 0.0
-    # periodic 策略下才生效（保留是为了能一键回到旧行为做对比）。
     replan_period_sec: 1.0
 
-    # ---------------- 冷启动自举（破 SLAM 冷启动死锁）----------------
-    # 死锁链条（实测）：slam_toolbox 只在机器人移动超过 minimum_travel_heading(0.2rad)
-    # 或 minimum_travel_distance(0.2m) 之后才插入新扫描 → 冷启动时地图一个已知格都没有
-    # → 本节点在地图内容不可用时不下发目标 → 机器人不动 → 地图不长 → 永远不动。
-    # 之前每次冷启动都要人工发 cmd_vel 推一把（实测地图 0 → 26 m²）。
-    #
-    # 只做原地旋转，刻意不提供平移：底盘足迹是外接 0.438 / 内切 0.310 的正方形，
-    # 原地旋转最多扫过 3.2cm 环带，几何上几乎不进入新区域；平移是开环积分推进，
-    # 风险面完全不同。0.2rad 就够触发 SLAM 插入扫描，破环不需要平移。
-    # ================= 膨胀带脱困（ESCAPE）=================
-    #
-    # 与 bootstrap 是**两个不同的死锁**，别混：
-    #   bootstrap 治「地图还没长出来」——机器人不动 → 图不长 → 永远不动
-    #   escape    治「机器人站在膨胀带里」——全局规划器拒绝从这儿起步
-    #
-    # 实测依据（2026-08-31 一次 3h41m 运行）：
-    #   planner_server: "Starting point in lethal space!" **25652 次**
-    #   14 次到位全部集中在开头 2.5 分钟，之后 222 分钟只再到位 1 次
-    # 成因链：SmacPlanner2D 判起点用**单个中心格** cost >= INSCRIBED(253)，
-    # 而 253 是**膨胀层**写的（本机 inflation 从墙面向内吃掉内切半径 0.310m）；
-    # 机器人中心一进这条带，去**任何**目标都被拒。而 nav_dispatch_mode=follow_path
-    # 绕过了 BT，clear_costmap/backup/spin 全部拿不到；本节点的「自动恢复」只是
-    # 状态复位，物理上什么都没做 —— 于是重新校验、重新失败，永久死锁。
-    #
-    # ⚠️ bootstrap 的原地旋转**救不了**这个：判据是单个中心格，转不改变它。
-    #    脱困必须含平移，这是两者不能合并的根本原因。
-    #
-    # 🔴 安全红线：只穿膨胀带，绝不穿真实障碍。
-    #    「规划器视角」用 costmap 三态(阈值 253)，「物理真值」用 /map(不含 nav2 膨胀)。
-    #    /map 判占据**或未知** ⇒ 一律停机告警、禁止脱困。未知不等于可通行。
-    #    这条由 test_escape_logic 的穷举哨兵守着（RedLineSentinel.* 共 7 条）。
     escape_enabled: true                     # false=回退到改动前行为(卡住只能等人工)
     escape_trigger_failures: 5               # 连续「起点致命」次数，避免偶发抖动就动
     escape_search_radius_m: 1.5              # 脱困是短距离动作，不是重规划
-    # 方向约束：拒绝背向任务方向逃逸。趟1(约束内)无解时会放开并 WARN 告警，
-    # 所以这个值收紧不会导致彻底卡死，只会让「往回退」这件事在日志里显式可见。
     escape_heading_tol_rad: 1.5708           # ±90°
-    # 低速是硬要求：脱困是故障恢复态，不是正常导航。代码里 >0.30 直接拒绝启动。
-    # 实测本底盘 0.02m/s 就能动(无静摩擦地板)；0.08 时 4s 滑行 <0.03m，
-    # 远小于 253 带宽 0.310m，所以不会「冲过头又进另一侧的带」。
     escape_linear_vel: 0.08
     escape_angular_vel: 0.20                 # 实测 wz=0.05 就能动，跟踪比 0.73~0.92
     escape_arrive_tol_m: 0.05                # 一个栅格
     escape_align_tol_rad: 0.35               # 容差内 wz 归零，避免在带里原地抖动
-    # 253 带宽=内切半径 0.310m，0.08m/s 走完约 3.9s，留 5 倍余量。
     escape_timeout_sec: 20.0
     escape_max_attempts: 3                   # 数**连续**失败(成功出带/人工 resume 清零)；达上限进 PAUSED
     escape_clear_ticks: 5                    # 连续几拍非致命才算出带，防边界抖动
-    # 来路轨迹：脱困**优先沿来路退**，因为机器人是自己开进来的 ⇒
-    # 来路可通行是**可证明的**，而代价梯度只是启发（且实测足迹代价在窄于
-    # 1.24m 的通道里恒为 253、零梯度，梯度在那里根本不存在）。
-    # 1.24 = 2*(侧向半宽 0.310 + 内切 0.310)；同一公式对八边形给出 1.616，
-    # 与当年的实测 1.62 吻合，所以这个换算可信而不是重新猜的。
     breadcrumb_window_sec: 60.0
     breadcrumb_sample_hz: 2.0
-    # ======================================================
 
     bootstrap_mode: "rotate"                 # rotate | disabled(需人工推)
-    # 发到 controller_server 的输出点，让 velocity_smoother → 倾倒监控 →
-    # 臂-底盘耦合限速 → 力矩闭环 leash 这一整条安全链全部照常生效。
-    # 直发 /cmd_vel 会绕过全部四层，不要那样配。
     bootstrap_cmd_vel_topic: "/cmd_vel_nav_body_raw"
     bootstrap_scan_topic: "/scan_from_cloud"  # 与 nav2 代价地图订阅的是同一条
-    # 量转角用哪个 frame。**默认 odom，不要改成 map**：
-    # map -> odom 是 SLAM 发布的，而真正的冷启动死锁下 SLAM 还没出图 ——
-    # 用 map 会让自举被自己的前置条件挡死（实测连续 71 次「取不到当前朝向」），
-    # 而自举本来就是为破这个死锁而存在的。odom -> base 来自底盘里程计，与 SLAM 无关；
-    # 而且量一次原地小转本该在 odom 系里量（map 系 yaw 含 SLAM 回环修正，会污染测量）。
     bootstrap_yaw_frame: "odom"
     bootstrap_angular_vel: 0.40
-    # 按**最坏情况**的下游限速取：耦合节点 min_speed_scale=0.15，
-    # 0.40*0.15=0.06rad/s，4s 才转出 0.24rad，刚过 minimum_travel_heading(0.2)。
     bootstrap_duration_sec: 4.0
-    # 必须显著高于底盘 cmd_vel_timeout_sec=0.5 的倒数，否则速度被反复超时归零。
-    # 状态机节拍是 0.5s，正好卡在超时边界上，所以自举有独立的高频定时器。
     bootstrap_cmd_rate_hz: 20.0
-    # 不设 0：启动瞬态里地图本来就要几秒才长出来，立刻自举等于抢在 SLAM 前面动。
     bootstrap_trigger_wait_sec: 6.0
-    # 激光超时就拒绝运动。**无数据不得视为「周围没有障碍」** ——
-    # 本项目已在探针脚本上踩过一次（RELIABLE 收不到 BEST_EFFORT 的 scan，盲走 3m）。
     bootstrap_scan_timeout_sec: 1.0
-    # 最近障碍已经进到自己的外接半径以内就不要再转了（正方形的角可能已接触障碍）。
-    # 0.42 -> 0.44：这个值的定义就是足迹外接半径，正方形外接 0.438 比八边形的
-    # 0.420 大，留 0.42 会让「角已经压到障碍」的位形通过自举安全门。
     bootstrap_min_clearance_m: 0.44
-    # 一次自举至少要**实测**转出这么多才算真的动了。必须 >= slam_toolbox 的
-    # minimum_travel_heading(0.2)，否则转了也不插入扫描。达不到会显式报错并指出
-    # 最可能的原因（下游限速），不静默算成功。
     bootstrap_min_yaw_delta: 0.20
     bootstrap_max_attempts: 6                # 每次成功下发目标后清零；有上限=禁止死循环
-    # 地图里至少要有这么多已知格才认为「内容足以做探索决策」。
-    # 这条是 COMPLETED 判定的前置条件：冷启动时地图收到了但全是未知、前沿格也是 0，
-    # 只看前沿格数会把空地图判成「探索完成」。
     min_known_cells_for_decision: 100
 
-    # ---------------- 重试与限次（禁止死循环重试）----------------
-    # 单轮最多校验 5 个候选：候选按代价升序，第 6 个之后的性价比已经很低，
-    # 继续试只是拖长一轮的时间。试完仍无合法点就重新采样。
     max_candidates_per_cycle: 5
-    # 连续 4 轮采不到合法点 → PAUSED。
-    # 注意这不是「探索完成」：前沿格还在，只是暂时找不到合法通路。
     max_sample_failures: 4
-    # 连续 4 轮「采到了候选点但逐个校验全部不合法」→ PAUSED。
-    # 必须与 max_sample_failures **分开计**：这两种失败的循环不同，
-    # 清零条件也不同（采样预算靠"采到候选"清，校验预算只靠"目标真的下发"清）。
-    # 共用过一个计数器，结果是校验预算每轮都被采样成功清掉、上限结构上不可达：
-    # 六轮实测 837 次全部打印 1/4，某轮据此空转 400s、同一候选点被丢弃 760 次，
-    # 机器人一动不动，且 PAUSED→自动恢复→脱困 整条阶梯全部不可达。
     max_validation_failures: 4
-    # 连续 3 次导航失败 → PAUSED（疑似被困）。
     max_consecutive_nav_failures: 3
     pause_cooldown_sec: 10.0
-    # 自动恢复最多 3 次，之后只等人工 ros2 service call ~/resume。
-    # 这一条是「禁止死循环重试」的硬边界。
     max_auto_resume_attempts: 3
     visit_history_limit: 50
 
-    # ---------------- 未知区域禁行校验 ----------------
     validator:
       occupied_threshold: 65
       free_threshold: 25
-      # 【占据】净空半径。**用 costmap 校验时必须为 0**，与下面 validation.use_costmap 联动。
-      #
-      # 为什么不是 0.42：0.42 是按「/map 里的占据格 = 原始障碍本体」标定的 ——
-      # 机器人停在目标点时整个足迹不能压到障碍，所以要留一个外接半径的余量。
-      # 但改用 global_costmap 之后，被判成「占据」的是代价 >=253 的格，
-      # 而 253 = INSCRIBED_INFLATED_OBSTACLE 的语义本身就是
-      # 「机器人中心落在此处 → 足迹必然碰撞」，膨胀余量**已经算进去了**。
-      # 再要求 0.42m 邻域无占据格，等于把足迹半径重复计了一次：
-      #   nav2 内切半径 0.388(inflation_radius=0.65) + 0.42 ≈ 0.81m，   # 八边形时代的数
-      #   （下面这一整段是 2026-08 那轮标定的历史记录，数字按当时的八边形足迹，
-      #    刻意不改成正方形 —— 改了就不是记录了。结论 0.25 与足迹形状无关。）
-      #   目标点得离真实障碍 0.8m 以上才合法，而实际只需要 0.42m。
-      #
-      # 实测证据（方案A 落地后同一轮运行）：18 次成功下发，但目标点复检否决 691 次，
-      # 其中 691/697 = 99.1% 是「净空半径(0.42m)内存在占据栅格」。
-      # 探索能跑，但绝大多数贴墙前沿被白白丢掉，效率被压掉一个数量级。
-      #
-      # 设成 0 后 validateGoal 退化为只检查目标格自己（max_radius>0 的邻域循环整段跳过），
-      # 在 costmap 口径下「目标格非致命」恰好就是精确的**碰撞**判据。
-      #
-      # 但实测证明「不碰撞」不等于「到得了」：0.0 跑了一轮，3 个目标全部校验通过、
-      # Nav2 全部接受，然后**全部导航超时**（120s×3），恢复行为触发 9 次、
-      # 控制器 26 次 "Failed to make progress"、follow_path 反复 Aborting，
-      # 机器人 16s 只挪了 0.2m。原因是目标点正好压在致命区边界上：
-      # 控制器自己有 xy_goal_tolerance=0.25m 的收敛球，球内任何一点都可能让足迹碰撞，
-      # MPPI 的碰撞代价把它往外推，于是在目标附近来回蹭到超时。
-      # 本仓库这张图有 40.5% 的栅格是致命区(inflation_radius=0.65 膨胀所致)，
-      # 自由空间被切成窄通道，这个效应格外明显。
-      #
-      # 所以正确取值是**控制器的收敛容差**，而不是 0、也不是足迹外接半径 0.42：
-      #   goal_clearance_radius >= nav2 controller 的 xy_goal_tolerance
-      # 语义是「以目标为心、控制器容差为半径的球内，足迹处处不碰撞」——
-      # 目标既合法、又真的收敛得进去。换控制器容差时这个值要跟着改。
-      #
-      # !!! 2026-08-20 随精度收紧同步改为 0.10（跟随 xy_goal_tolerance 0.25 -> 0.10）!!!
-      # 已知风险，在线验收必须盯：实测本底盘发零速后仍蠕行，滑行量 0.069~0.100m
-      # （@0.25m/s 0.0688 / @0.40m/s 0.1000，4s 窗口），与本半径 0.10 同量级。
-      # 也就是说「目标点周围 0.10m 无碰撞」不足以保证机器人**实际停住的位置**无碰撞。
-      # 回退值 0.25（= 0.10 容差 + 约 0.10 滑行 + 余量）见 git 历史。
-      # !!! 2026-08-20 实测回退到 0.25，并把"必须等于 xy_goal_tolerance"更正为**下界** !!!
-      # 把它降到 0.18/0.10 会引入一个新故障：robot_radius=0.42 意味着距障碍 0.42m 以内
-      # 的格子全是 253(inscribed lethal)，所以"只要求 0.18m 净空"的目标点**必然落在
-      # 致命膨胀带里**。机器人开过去后就再也规划不出来，报 Starting point in lethal space。
-      # 实测对比：clearance=0.25 -> lethal 0 次；clearance=0.18 -> lethal 2159 次(+67s 起)。
-      # 正确关系是 goal_clearance_radius >= xy_goal_tolerance（下界，不是等式），
-      # 且不能小到让目标点进入 inscribed 带。0.42 也不行(会把几乎所有候选判为不可站)。
       goal_clearance_radius: 0.25
-      # 【未知】净空半径。必须为 0，而且刻意是独立参数。
-      #
-      # 踩过的坑（栽了两次，第二次是数值没到位）：
-      # 这两条原本是同一个 0.42，所有前沿点必然不合法 —— 前沿点的定义就是
-      # 「空闲格且邻域含未知格」，用机器人外接半径要求「周围一个未知格都没有」，
-      # 等于要求前沿点不是前沿点。当时改成 0.10 以为解决了，其实**没有**：
-      #
-      #   0.10m / 0.05m(分辨率) = 2 格。校验按 d_sq <= (0.10/0.05)^2 = 4 遍历邻域，
-      #   而前沿格的未知邻居就在 8 邻域内，d_sq = 1(正交) 或 2(对角)，恒 <= 4。
-      #   所以任何 >= 1 格(0.05m) 的未知净空半径都会否掉**每一个**前沿候选。
-      #
-      # 实测证据（仿真活地图，277x414）：合法前沿候选 6784 个，validateGoal 通过 0 个，
-      # 其中 6775 个(99.87%)死在「未知净空半径(0.1m)内有未知格」这一条；
-      # 把本参数设为 0 后这 6775 个全部通过。现场表现是 dispatched=0、
-      # 机器人一步都没动，而日志只说「目标校验淘汰 106」，不给逐条原因(要 debug 级)。
-      #
-      # 为什么 0 是安全的、而不是放弃「未知区禁行」：
-      #   · 目标格本身已知空闲 —— 由 validateGoal 的单格检查保证（在净空检查之前）
-      #   · 路径不穿未知区     —— 由 validatePath 逐点采样保证(步长 <= 分辨率/2)
-      #   · 机器人不会压到障碍 —— 由上面的 goal_clearance_radius=0.42 保证
-      # 设成 0 时 in_unk 只在 dx=dy=0 成立，即只检查目标格自己，语义正好是注释想要的。
       goal_unknown_clearance_radius: 0.0
-      # 0 = 自动取地图分辨率的一半(0.025m)。
-      # 必须 <= resolution/2，否则单格宽的未知缝隙会被整步跨过去。
       path_sample_step: 0.0
-      # 规划终点与请求目标偏差上限。防止规划器把不可达目标「尽力靠近」后
-      # 返回一条半截路径，也被当成校验通过。
       path_endpoint_tolerance: 0.5
       max_samples: 200000
 
-    # ---------------- 下发前校验用哪张栅格图 ----------------
-    # 这一节是「探索一个目标都发不出去」那个缺陷的正解，改动前务必先看
-    # include/astribot_s1_autonomy/costmap_adapter.hpp 的文件头。
-    #
-    # 实测证据（分阶段启动，状态机健康）：441 个候选、631 次否决，
-    # 100% 是「路径第 N 段穿过未知栅格」，dispatched 恒为 0。
-    # 而失败点只落在 4 个固定位置上，最近的一个在机器人正前方 **0.05m**
-    # （路径第 3 个采样点就非法）—— 任何路径都活不过起步阶段。
-    #
-    # 根因不是判据太严，是**两层判据查了两张不同的图**：
-    #   planner_server 在 global_costmap 上规划，其 obstacle_layer 配了
-    #   clearing:True / raytrace_max_range:6.0，会沿每条扫描射线(含无回波射线)
-    #   把栅格刷成 FREE_SPACE，覆盖掉 NO_INFORMATION；
-    #   而 /map 由 slam_toolbox(Karto) 产出，Karto 丢弃 inf 读数，那些方向永远是未知。
-    #   /scan_from_cloud 约 66% 的束无回波(723 束仅 245 束检出)，
-    #   于是 costmap 自由区 ⊋ /map 自由区 —— 规划器合法穿过的格，校验器一律判未知。
     validation:
-      # true = 用 global_costmap 校验（与规划器同一张图，正解）。
-      # false = 退回用 /map 校验，即上面那个已知会锁死探索的旧行为，只留作对比排查。
       use_costmap: true
-      # nav2 代价值语义(nav2_costmap_2d/cost_values.hpp)：
-      #   255 未知 / 254 障碍本体 / 253 足迹必碰 / 1~252 膨胀梯度(可通行) / 0 自由
       costmap_unknown_cost: 255
-      # 致命障碍下界。253 = INSCRIBED_INFLATED_OBSTACLE，
-      # 语义正好是「机器人中心落此处则足迹必然碰撞」，与校验职责精确对应。
-      #
-      # 不要为了「更安全」调低：1~252 是膨胀梯度，是代价偏好而非不可通行。
-      # 调低会把可通行的膨胀带判成障碍，所有贴墙路径被否决，探索换个理由再锁死一次
-      # （实测 local_costmap 有 27.9% 的栅格带非零代价，目标点本身代价 99 也很常见）。
-      # 真要更保守，应该去调 nav2 inflation_layer 的 inflation_radius，
-      # 让 costmap 自己把致命区扩大，两边判据才不会脱钩。
       costmap_lethal_cost_threshold: 253
 
-    # ---------------- 前沿搜索（与 frontier_explorer 同一套语义）----------------
     search:
       occupied_threshold: 65
       free_threshold: 25
-      # 膨胀半径 0.45 略大于 footprint 外接半径 0.438：
-      # ⚠️ 余量从八边形时代的 30mm 缩到 12mm（0.450-0.438），仍然成立但已经
-      #    小于一个栅格(0.05m)。要再改足迹就得同时抬这个值。
-      # 采出来的点必须是机器人真能站进去的，而不是贴墙的理论自由格。
       obstacle_inflation_radius: 0.45
       min_obstacle_cluster_cells: 3
       use_eight_connectivity: true
-      # 12 → 6：实测本仓库地图的 249 个前沿格碎成 27 个块(均 9.2 格)，
-      # 12 会把其中 23 块判「面积过小」，探索直接无法启动。
       min_frontier_cells: 6
       gain_window_radius: 1.5
       adaptive_sample_gain: 0.15
       min_samples_per_cluster: 1
       max_samples_per_cluster: 8
-      # 0.45 → 0.05：这里是**在膨胀掩码之上**再要求的净空。
-      # obstacle_inflation_radius 已经把机器人外接半径算进去了（0.45 >= 0.438），
-      # 凡是不在膨胀掩码里的格子本身就已经离真实障碍 >=0.45m。
-      # 再叠一个 0.45 等于要求离障碍 0.90m —— 仓库过道里几乎没有这种点，
-      # 实测唯一的候选就是被这一条以「净空不足」否掉的。这里只留一格安全余量。
       required_clearance_radius: 0.05
-      # 最小距离 0.8m：太近的目标 Nav2 往往直接判「已在目标处」，
-      # 于是一次导航什么都没探到，白走一个循环。
       min_goal_distance: 0.8
       max_goal_distance: 0.0          # <=0 不限制
       weight_distance: 1.0

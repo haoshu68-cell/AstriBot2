@@ -108,8 +108,6 @@ def main(argv=None):
         node = JointMapProbe()
         logger = node.get_logger()
 
-        # robot_description 从话题/参数拿：探针必须和真跑用同一份 URDF，
-        # 而不是自己去展开一份 xacro —— 那样比的就不是同一台机器了。
         node.declare_parameter('robot_description', '')
         urdf_text = node.get_parameter('robot_description').value
         if not urdf_text:
@@ -118,8 +116,6 @@ def main(argv=None):
                 '或先起 robot_state_publisher 后用 -p robot_description:="$(xacro ...)"。')
             return 1
 
-        # 与 state_bridge_node 同一个理由：SDK 一被 import 就把进程 fd 1/2
-        # 重定向到 /dev/null，探针的报告会整份消失。必须在 import 前置上。
         import os
         if os.environ.get('ASTRIBOT_LOG', '').lower() not in ('1', 'true', 'on'):
             os.environ['ASTRIBOT_LOG'] = '1'
@@ -132,7 +128,6 @@ def main(argv=None):
         logger.info('SDK whole_body_names = %s' % (robot.whole_body_names,))
         logger.info('SDK whole_body_dofs  = %s' % (robot.whole_body_dofs,))
 
-        # ---- 1. 部件清单与 DOF 数先对上，再谈顺序 ----
         ok = True
         sdk_dofs = dict(zip(robot.whole_body_names, robot.whole_body_dofs))
         for part in node.parts:
@@ -150,14 +145,12 @@ def main(argv=None):
             logger.error('部件清单/DOF 数就不一致，顺序无从谈起。先修 bridge.yaml。')
             return 1
 
-        # ---- 2. 用限位向量当指纹反推顺序 ----
         logger.info('---- 限位指纹比对（判据：URDF 按 bridge.yaml 顺序取出的限位'
                     '必须与 SDK 返回的逐项相等）----')
         undecidable = []
         for part in node.parts:
             names = node.joint_names[part]
             lower, upper = robot.get_joints_position_limit([part])
-            # SDK 按部件成组返回；只问了一个部件，取第 0 组。
             sdk_lo, sdk_up = list(lower[0]), list(upper[0])
             urdf = _urdf_limits(urdf_text, names)
 
@@ -178,7 +171,6 @@ def main(argv=None):
                 u_lo, u_up = urdf[idx]
                 d_lo = abs(u_lo - sdk_lo[idx])
                 d_up = abs(u_up - sdk_up[idx])
-                # 1e-6 只吸收浮点表示误差：两边本该是同一份数据。
                 good = d_lo < 1.0e-6 and d_up < 1.0e-6
                 logger.info(
                     '  [%d] %-34s URDF(%+.4f,%+.4f)  SDK(%+.4f,%+.4f)  %s'
@@ -187,7 +179,6 @@ def main(argv=None):
                 if not good:
                     ok = False
 
-        # ---- 3. 顺带把当前状态读出来，作为 Gate 2 的对照基线 ----
         logger.info('---- 当前关节位置（SDK 原始值，按部件）----')
         positions = robot.get_current_joints_position(node.parts)
         for part, values in zip(node.parts, positions):

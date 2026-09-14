@@ -1,91 +1,18 @@
-# 地图来源与定位方式配置
-#
-# ============================ 为什么是两个正交的轴 ============================
-# 「地图从哪来」和「map→odom 谁发布」是两件独立的事，早先把它们混成一个 mode
-# 参数会导致每加一种组合就要复制一份 launch。拆开之后：
-#
-#   map_source   —— 谁提供 /map
-#   localization —— 谁提供 map→odom
-#
-# 于是"默认走真值定位、需要时再上扫描匹配"只是改一个字段，不用换 launch。
-#
-# ---------------------------- 合法组合只有三个 ----------------------------
-#   sim_slam   + slam          今天的行为。**探索算法只能在这个组合下开发**：
-#                              静态地图里没有前沿，探索协调器无事可做。
-#   real_file  + ground_truth  当前默认。在真机产出的地图上验证规划/导航/搬运。
-#   real_live  + ground_truth  同上，但地图跟着真机实时更新。
-#
-# 其余组合会被 map_provider.launch.py 在启动时拒绝：
-#   sim_slam + ground_truth —— 无意义且有害：既然在建图，map→odom 本来就由
-#       slam_toolbox 发。再加一条静态 TF 会变成一个子帧两个父源，位姿反复跳，
-#       而症状看起来像"定位漂移"，极难归因。
-#   real_* + slam —— 路线 A。扫描匹配要求**仿真几何与地图一致**，
-#       而现在 Gazebo 跑的是 AWS 仓库、地图来自真实场地，两者不匹配时定位必然发散。
-#       等"从占据栅格挤出 Gazebo 世界"的工具做出来再开这个组合。
-#
-# ================== 关于"真机地图"到底是谁产出的（重要） ==================
-# 厂商 SDK **没有**任何地图接口：astribot_msgs 全部 25 个 msg + 7 个 srv 里没有
-# OccupancyGrid、没有 GetMap，SDK API 列表里也没有取地图的函数。真机对外只给
-# 两颗雷达的点云和底盘那个 [x, y, theta]（yaml 里称作 slam pose）。
-#
-# 所以这里说的"真机地图"指的是：**我们自己的 slam_toolbox 跑在真机雷达上**
-# 产出的地图。好处是格式、/scan 处理链、参数都与仿真侧完全同一套，
-# 不依赖一个没文档、行为不可观测的厂商内部件。
-# =============================================================================
 map_provider:
   ros__parameters:
-    # sim_slam | real_file | real_live
-    map_source: "sim_slam"
+    map_source: "real_file"
 
-    # slam | ground_truth
-    localization: "slam"
+    localization: "ground_truth"
 
-    # ---------------- real_file 用 ----------------
-    # nav2_map_server 要的是 **yaml** 路径（不是 pgm），给绝对路径。
-    # 该 yaml 里的 image 字段是相对它自己所在目录解析的。
-    map_yaml_path: ""
+    map_yaml_path: "/home/yjh/WorkSpace/astribot_sdk_ros2/maps/warehouse_baseline.yaml"
 
-    # ---------------- real_live 用 ----------------
-    # 跨机订阅真机 /map。
-    #
-    # !!! real_live 模式下整条栈必须用 ROS_LOCALHOST_ONLY=0 启动 !!!
-    # 实测：localhost_only=1 与 =0 的 DDS 参与者**互相发现不了**（同机同域也不行），
-    # 保持 1 的话中继会"成功发布"到没人听的地方，而 nav2 一直等 /map —— 静默失败。
-    # map_provider.launch.py 会在启动时检查并拒绝，不让它静默跑成那样。
-    #
-    # 关于这两个 domain：**相同即不起中继**（同域下真机 /map 本来就直接可见，
-    # 起中继反而会把同一张图回环发布给自己）。map_provider.launch.py 会在
-    # remote == local 时跳过中继节点并打印说明，而不是拒绝启动。
-    #
-    # !!! 相同的代价是跨域隔离没了 !!!
-    # 原来的隔离依据是实测的"假真机在 domain 25 的私有话题在 domain 42 上不可见，
-    # 而中继是唯一跨域参与者、只单向搬 /map，本机 /cmd_vel 没有通路到真机"。
-    # 两个 domain 相同后这条保护**不再成立** —— 本机的 /cmd_vel、
-    # /wheel_effort_controller/commands 都有通路打到真机上去。
-    # 想要那条网络层保护就把 local_domain_id 改回一个与真机不同的值
-    # （比如 42），并把整条栈也起在那个 domain 上。
     remote_domain_id: 25          # 真机侧 domain（厂商 env.sh 设的是 25）
     local_domain_id: 25           # 本机栈的 domain（全栈统一 25，与真机同域）
     remote_map_topic: "/map"
     local_map_topic: "/map"
-    # 这么久收不到远端地图就打 ERROR 并非零退出，**不允许静默等待**：
-    # 静默等待的表现是"nav2 一直等 /map 不动"，排查方向会完全跑偏。
     relay_timeout_sec: 30.0
 
-    # ---------------- localization: ground_truth 用 ----------------
-    # 仿真的 odom 原点落在这张地图的哪个位姿上，[x, y, z, yaw]。
-    #
-    # 含义要想清楚：机器人在 Gazebo 里出生在 odom 原点，这条变换决定它
-    # 出生在地图的哪个位置。**填错就是"机器人出生在墙里"**，
-    # 而那个症状是规划器每次报 `Starting point in lethal space!`、
-    # 前沿候选全被丢弃 —— 根因离症状有三层远。所以下面那条校验默认开。
     map_to_odom_xyz_yaw: [0.0, 0.0, 0.0, 0.0]
 
-    # 加载地图后校验出生点所在栅格必须是**已知且自由**的，否则拒绝启动。
-    # 关掉它只应该用于做对照实验。
     validate_start_cell: true
-    # 除了出生点本身，还要求周围这个半径内没有占据栅格（m）。
-    # 0 表示只查出生点那一格。默认 0.25 与探索器的目标净空口径一致
-    # （注意：不是 robot_radius 0.42 —— 那个口径会把足迹重复计一遍，
-    #  实测会把几乎所有点都判成不可站）。
     start_cell_clearance_m: 0.25

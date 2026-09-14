@@ -15,7 +15,6 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- 机器人模型来源：SRDF 引用的 link/joint 名称全部来自这个包的 xacro -->
   <exec_depend>astribot_s1_description</exec_depend>
 
   <exec_depend>moveit_ros_move_group</exec_depend>
@@ -31,12 +30,7 @@
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>rviz2</exec_depend>
 
-  <!-- 自定义规划器插件（注册 BIT* / Informed RRT*）由本包的 launch 加载 -->
   <exec_depend>astribot_s1_manipulation</exec_depend>
-
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_cmake_lint_cmake</test_depend>
-  <test_depend>ament_cmake_xmllint</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

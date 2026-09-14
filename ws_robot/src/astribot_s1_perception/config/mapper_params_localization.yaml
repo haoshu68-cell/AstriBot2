@@ -1,11 +1,3 @@
-# SLAM Toolbox —— 纯定位模式参数（对应官方 localization_launch.py 的
-# slam_params_file）。加载一张已经建好的地图，只做定位、不再扩建地图。
-#
-# map_file_name：序列化位姿图的"基础文件名"(不带扩展名)，是 slam_toolbox 自己
-# /slam_toolbox/serialize_map 服务保存出来的 <name>.data / <name>.posegraph 一对文件，
-# 不是 nav2_map_server 那种 .pgm+.yaml 栅格地图！这个参数留空表示不预加载地图，
-# 由 launch 参数 map_file_name 在启动时用 --params-file 覆盖注入具体路径
-# （见 astribot_s1_perception/launch/slam_localization.launch.py）。
 slam_toolbox:
   ros__parameters:
 
@@ -15,7 +7,6 @@ slam_toolbox:
     scan_topic: /scan
     mode: localization
 
-    # 定位模式下这两个由 launch 参数动态覆盖，这里留默认空值占位
     map_file_name: ""
     map_start_pose: [0.0, 0.0, 0.0]
 

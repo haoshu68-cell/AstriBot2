@@ -1,0 +1,16 @@
+uint8 LOCAL=1
+uint8 GLOBAL=2
+uint8 VALIDATE=3
+uint8 mode
+geometry_msgs/PoseStamped goal
+nav_msgs/Path reference_path
+nav_msgs/Path candidate_path
+float64 rejoin_distance_m
+float64 max_local_deviation_m
+---
+bool geometry_valid
+nav_msgs/Path path
+geometry_msgs/PoseStamped evaluated_start
+string reason
+float64 curvature
+float64 curvature_rate

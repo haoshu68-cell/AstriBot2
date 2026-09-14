@@ -30,12 +30,8 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-# 只暴露最常在现场调的几个：其余一律改 yaml。
-# 需求要求所有阈值外置可配置，命令行覆盖是补充手段，不是参数的正式来源。
 _OVERRIDABLE = {
     'map_topic': str,
-    # 实机必须传 false：/map_scan_filtered_prob 是 VOLATILE，
-    # TRANSIENT_LOCAL 订阅它一帧都收不到（只有一条 QoS WARN）。
     'map_transient_local': bool,
     'odom_topic': str,
     'robot_base_frame': str,
@@ -73,16 +69,12 @@ def _build_nodes(context, *args, **kwargs):
     use_sim_time = _to_bool(LaunchConfiguration('use_sim_time').perform(context))
     log_level = LaunchConfiguration('log_level').perform(context)
 
-    # 行为树路径必须在 launch 期算：它依赖 install 位置，写死进 yaml 会绑死机器。
-    # 所以这一项刻意不走 yaml —— 这与「阈值都放 yaml」不矛盾，它不是阈值而是路径。
     bt_arg = LaunchConfiguration('nav_behavior_tree').perform(context)
     if bt_arg == 'default':
         bt_path = os.path.join(
             get_package_share_directory('astribot_s1_navigation'),
             'behavior_trees', 'navigate_to_pose_explore_three_phase.xml')
         if not os.path.isfile(bt_path):
-            # 不静默回落到默认树：那会让「三段式没生效」表现为「朝向还是不准」，
-            # 而根因是一个装漏的文件，两者从现象上完全区分不开。
             raise RuntimeError(
                 f'探索行为树不存在: {bt_path}\n'
                 '请先 colcon build astribot_s1_navigation（它负责安装 behavior_trees/）。'

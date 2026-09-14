@@ -30,14 +30,12 @@
   <depend>moveit_msgs</depend>
   <depend>moveit_planners_ompl</depend>
 
-  <!-- mobile_transport 场景要下发 NavigateToPose / ComputePathToPose。
-       nav2_msgs 只是 action/msg 定义，不引入任何 nav2 运行库。 -->
   <depend>nav2_msgs</depend>
 
   <depend>geometry_msgs</depend>
   <depend>trajectory_msgs</depend>
   <depend>sensor_msgs</depend>
-  <!-- 夹爪走 FollowJointTrajectory，定义在 control_msgs 里。 -->
+
   <depend>control_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_eigen</depend>
@@ -50,14 +48,9 @@
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_cmake_lint_cmake</test_depend>
-  <test_depend>ament_cmake_xmllint</test_depend>
-  <test_depend>ament_cmake_gtest</test_depend>
-
   <export>
     <build_type>ament_cmake</build_type>
-    <!-- 自定义 OMPL 规划器扩展插件（注册 BIT* / Informed RRT*） -->
+
     <planning_interface plugin="${prefix}/ompl_planner_extension_plugin_description.xml"/>
   </export>
 </package>

@@ -1,113 +1,45 @@
-# 机械臂控制桥接参数（Gate 3）。
-#
-# 接口事实来源：
-#   · 流式下发（方案 B，默认）examples/105-set_joint_position_direct.py:53
-#       set_joints_position(names, cmd, control_way="direct", use_wbc=False)
-#     105 头部：control_way="direct" + use_wbc=False 时
-#     "the user's desired value will be directly sent to the robot joints
-#      without any processing"
-#   · 整段下发（方案 A，保留接口）examples/206-move_joints_waypoints.py:45
-#   · 限位 astribot_client.py:141 —— 返回顺序是 (lower, upper)
-#     !!! examples/100:49 的解包顺序是反的，是厂商样例 bug，不要以它为准 !!!
 
-arm_traj_bridge:
+/**:
   ros__parameters:
     groups: ["arm_left", "arm_right"]
     part_name_map:                     # ROS group -> SDK 部件名（astribot_base.py:12-14）
       arm_left: "astribot_arm_left"
       arm_right: "astribot_arm_right"
 
-    # ---- 下发模式 ----
-    # stream(默认，方案 B)：250Hz 流式，支持 cancel 与 feedback。
-    #   MoveIt 的 FollowJointTrajectory 语义要求支持 cancel（本工程的抢占式
-    #   重规划依赖它），方案 A 满足不了，所以 A 不作为"回退实现"。
     dispatch_mode: "stream"
     stream_freq: 250.0                 # examples 全部循环样例一致
     control_way: "direct"              # 105 头部：无任何处理
     use_wbc: false                     # 全部样例默认 False；WBC 作为独立课题
-    # !!! SDK 默认是 True !!! astribot_client.py:704。默认 True 时只给 arm_left
-    # 也会隐式附加躯干默认位姿 → 躯干会动。MoveIt 规划的是 arm_left 组、
-    # 躯干由规划器另行管理，所以必须显式 False。
     add_default_torso: false
 
-    # ---- 方案 A 保留接口（独立 service，不挂在 Action 上）----
-    # A 是阻塞调用、期间不可取消，挂到 Action 上会让上层"以为能取消实际取不了"。
-    # 用途：离线示教回放、点到点标定、G0 阶段最小连通性验证。
     enable_waypoints_service: false     # 默认关闭，调用时显式返回 DISABLED_BY_CONFIG
 
-    # ---- 插值 ----
     interp: "cubic"                     # linear | cubic（cubic 用 MoveIt 自带的
-                                        # velocities 做端点切线，无 velocities 时退化为线性）
-    # 端点钳位，不外推 —— 外推会在轨迹末尾产生超出规划范围的指令
     max_traj_duration_sec: 60.0
 
-    # ---- 限位校验 ----
     limit_margin_rad: 0.0               # >0 时留安全余量，避开限位边缘
-                                        # （已知 joint_4 贴边，SDK 示例里下限就是 0.001）
     cross_check_urdf: true              # 与 URDF 派生限位交叉核对
     limit_cross_check_tol_rad: 0.01
     strict_limit_check: false           # true=不一致即拒绝启动；false=上报
-                                        # LIMIT_SOURCE_MISMATCH 后继续
 
-    # ---- 跟踪与收敛 ----
     max_tracking_error_rad: 0.10
     abort_on_tracking_error: true
-    # 发完末点后额外等实际位置收敛。修一个已实测的坑：控制器报完成时手臂还在
-    # 收敛，下一步规划拿到移动中的起点，0.53s 后下发即 start point deviates
-    # （0.066 > 0.05），而上层只看到 MoveItErrorCode=-4。
     settle_tolerance_rad: 0.02
     settle_timeout_sec: 2.0
 
-    # ---- 取消后的保持（HOLDING 相位）----
-    # 修一个只有真后端才暴露的坑：取消时**只下发一次**保持位置抓不住正在运动的
-    # 关节 —— Gate 1-f 实测实际位置继续漂 0.045~0.37 rad 才停，而 SDK 侧 desired
-    # 明明已经等于我们发的值。以 stream_freq 持续重发则漂移 0.0000 rad。
-    # 对照：正常完成(DONE)后停发只掉 0.0047 rad，因为 settling 本来就在持续重发、
-    # 到 DONE 时关节已静止 —— 同一个 SDK 特性在正常路径无害、在安全路径有害。
-    #
-    # 停稳判据是"实际位置连续 N 拍几乎不动"，不是"实际等于保持点"：
-    # 两者本来就有 0.0047 rad 量级的稳态误差，用后者会永远等不到。
     hold_still_epsilon_rad: 0.001      # 单拍位移阈值
     hold_still_ticks_required: 25      # 连续多少拍低于阈值才算停稳（25@250Hz=0.1s）
     hold_timeout_sec: 2.0              # 仍不停就落终态并上报 SETTLE_TIMEOUT
 
-    # ---- 写通路准入 ----
     declared_target: "sim"
     allow_unsafe_mode: false
 
-    # ---- 夹爪服务（~/set_gripper）----
-    #
-    # !!! 对外接口用 opening_fraction，不用厂商的 0-100 !!!
-    # 厂商命令空间极性与直觉相反（源码逐字）：
-    #   open_effector  -> 0.0    astribot_client.py:813/817
-    #   close_effector -> 100.0  astribot_client.py:836/840
-    # 即 0=张开、100=闭合。直接暴露 0-100 几乎必然被当成"100=全开"用，
-    # 而反过来用的后果是抓取时张开、放置时闭合，**两边都不报错**。
-    # 所以服务对外只收 opening_fraction（1.0=全张开），翻转关在桥接内部。
-    # 换算：rad = 0.0093 * cmd，cmd=100 -> 0.93 rad（正好是关节上限）。
-    # 实测标定：线性度残差 0.0005、回差 0.0000、系数吻合理论值 0.02%。
     gripper:
       enable_service: true
-      # 空数组 = 启动时从 SDK 的 effector_names 取。
-      # 显式列出的好处：SDK 挂掉时"未知夹爪"与"SDK 故障"不会混成一种错误。
       names: []
-      # open/close_effector **阻塞**这么久才返回（实测尊重该参数）。
-      # 所以这个服务不能放在任何要求低延迟的路径上。
       default_duration_sec: 1.0
-      # <=0 表示不设力，沿用 SDK 默认 48N（109 样例注释）。
-      # !!! 仿真下设力是空操作 !!! astribot_client.py:1139
-      # `if self.__in_simulation: return` —— 响应里的 force_applied 会如实
-      # 报 false，别把仿真里的夹持行为当成"力限已验收"。
       default_max_force_n: 0.0
-      # open/close 返回后额外等待。实测返回时已到位，所以默认 0；
-      # 保留旋钮是为了真机上万一有尾巴。
       settle_extra_sec: 0.0
-      # ---- 中间开度的重发 ----
-      # !!! 中间开度必须持续重发，单次下发会冲到完全闭合 !!!
-      # 实测(MuJoCo,从张开位单次下发 cmd=50)：0.1s->91.5、0.5s->99.998，
-      # 要求半开结果全夹紧 —— 真机上手指间有东西就是压碎。
-      # 持续重发：25->25.011、50->50.007、75->75.003(误差<0.011)，
-      # 且到位后停发漂移 0.000（所以只有接近过程需要重发）。
       stream_freq: 250.0
       mid_stream_tolerance: 0.5        # 命令空间容差，实测稳态误差<0.011
       mid_stream_timeout_sec: 3.0      # 超时只上报 SETTLE_TIMEOUT，不判整体失败

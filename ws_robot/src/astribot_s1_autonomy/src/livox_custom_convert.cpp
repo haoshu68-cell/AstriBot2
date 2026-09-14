@@ -1,6 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// livox_custom_convert.hpp 的实现。纯逻辑，不碰 ROS。
 #include "astribot_s1_autonomy/livox_custom_convert.hpp"
 
 #include <cmath>
@@ -68,8 +66,6 @@ bool ConvertedPoint::operator==(const ConvertedPoint & o) const
 bool should_drop(const LivoxPoint & p, const LivoxConvertConfig & cfg,
                  LivoxConvertStats * stats)
 {
-  // 顺序有意为之：先 NaN，再无效点，再距离，最后噪点位。
-  // 这样统计量能指向「最根本」的那个原因，而不是恰好先命中的那个。
   if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) {
     if (stats != nullptr) {
       ++stats->dropped_nonfinite;
@@ -141,16 +137,6 @@ LivoxConvertStats convert_frame(const std::vector<LivoxPoint> & in,
     q.y = p.y;
     q.z = p.z;
     q.intensity = static_cast<float>(p.reflectivity);
-    // timebase 与 header_stamp 谁大都有可能（驱动用到达时刻打戳时 header 会晚于
-    // timebase），所以这里必须允许负数。
-    //
-    // 精确一点说明为什么用 int64 而不是「uint64 相减再转 int64」：后者其实也对
-    // ——补码下 uint64 的模 2^64 回绕再转回 int64 恰好还原出正确的负值
-    //（实测两种写法给出同一个 -999999995）。真正会出事的是**把无符号差值直接
-    // 转成浮点**，例如 `double t = (timebase + offset - header) * 1e-9;`，
-    // 那会得到约 1.8e10 秒（约 585 年），而且不报错、下游只会看到「这一点来自
-    // 遥远未来」。用 int64 全程有符号是为了让这个陷阱压根没有出现的机会，
-    // 而不是因为无符号相减本身错。
     const std::int64_t abs_ns =
       static_cast<std::int64_t>(timebase) + static_cast<std::int64_t>(p.offset_time);
     const std::int64_t rel_ns = abs_ns - static_cast<std::int64_t>(header_stamp_ns);

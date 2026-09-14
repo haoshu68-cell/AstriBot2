@@ -53,10 +53,6 @@ def generate_launch_description():
             description='实机必须 false。仿真里本节点用不到（仿真直接出 PointCloud2）'),
     ]
 
-    # !!! 不在这里用 name= 覆盖节点名 !!!
-    # 本仓库踩过：launch 的 name= 是进程级 remap，会让 yaml 里的键匹配不上，
-    # 参数全部静默回落到代码默认值。yaml 的顶层键就写成节点自己的名字
-    # （livox_custom_to_pc2），这里不改名。
     node = Node(
         package='astribot_s1_autonomy',
         executable='livox_custom_to_pc2_node',

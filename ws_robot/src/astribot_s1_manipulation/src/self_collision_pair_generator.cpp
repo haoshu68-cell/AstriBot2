@@ -1,28 +1,4 @@
 // Copyright 2026 Astribot
-//
-// 自碰撞对生成工具。
-//
-// 用途
-// ----
-// SRDF 的 disable_collisions 列表如果只写"父子相邻对"，会漏掉两类：
-//   · 结构上必然重叠的对（例如两条臂的基座通过一个无碰撞体的 link 挂在
-//     torso_link_4 上，几何上是嵌套的，但它们不是父子关系）
-//   · 在整个可达空间里永远碰不到的对（保留它们只是白白增加碰撞检测开销）
-// 官方做法是用 MoveIt Setup Assistant 的 GUI 生成，但那不可脚本化、不可复现。
-// 本工具用**同一套** moveit collision 检测做随机采样统计，输出可直接粘进
-// SRDF 的片段，让碰撞关闭列表变成可复现的实测结果而不是手填。
-//
-// 判定规则（与 Setup Assistant 一致的语义）
-// --------------------------------------
-//   ALWAYS  在所有采样构型下都碰 -> reason="Default"，必须关掉，否则无法规划
-//   NEVER   在所有采样构型下都不碰 -> reason="Never"，关掉纯粹是省开销
-//   其余    真实可能碰撞的对 -> **不能关**，必须留给运行时检测
-//
-// 用法
-// ----
-//   ros2 run astribot_s1_manipulation self_collision_pair_generator [samples]
-// 需要 robot_description / robot_description_semantic 两个参数可用
-// （即 move_group 或 robot_state_publisher 已在运行）。
 
 #include <algorithm>
 #include <cstdlib>
@@ -63,8 +39,6 @@ int main(int argc, char ** argv)
   auto node = std::make_shared<rclcpp::Node>("self_collision_pair_generator");
   const rclcpp::Logger logger = node->get_logger();
 
-  // 采样数：默认 10000。给太少会把"偶尔才碰"的对误判成 NEVER 而关掉，
-  // 那是**危险**的（运行时真碰了也检测不到）。所以宁可多采。
   std::size_t samples = 10000U;
   if (argc > 1) {
     const long parsed = std::strtol(argv[1], nullptr, 10);
@@ -93,9 +67,6 @@ int main(int argc, char ** argv)
     return 1;
   }
 
-  // 只统计有碰撞几何的 link：没有 collision 的 link 永远不可能碰撞，
-  // 把它们列进 SRDF 只是噪音（本机器人有 3 个这样的 link：两个 tool_link
-  // 和 torso_end_effector）。
   std::vector<std::string> links;
   for (const moveit::core::LinkModel * link : model->getLinkModelsWithCollisionGeometry()) {
     if (link != nullptr) {
@@ -109,18 +80,12 @@ int main(int argc, char ** argv)
   std::map<LinkPair, PairStats> stats;
 
   moveit::core::RobotState state(model);
-  // 固定种子：同样的输入必须给出同样的输出，否则"可复现"就是空话。
   random_numbers::RandomNumberGenerator rng(20260820U);
 
   for (std::size_t s = 0; s < samples; ++s) {
-    // 第一个样本用默认(home)构型：Setup Assistant 的 "Default" 判定就基于它，
-    // 结构上必然重叠的对在这个构型下一定会碰。
     if (s == 0U) {
       state.setToDefaultValues();
     } else {
-      // 逐组随机，覆盖全身活动自由度。
-      // 只对"链"组随机：非链组（如 dual_arm）是若干链的并集，
-      // 对它调 setToRandomPositions 会把同一批关节重复随机，没有额外收益。
       for (const moveit::core::JointModelGroup * jmg : model->getJointModelGroups()) {
         if (jmg != nullptr && jmg->isChain()) {
           state.setToRandomPositions(jmg, rng);
@@ -131,30 +96,10 @@ int main(int argc, char ** argv)
 
     collision_detection::CollisionRequest request;
     request.contacts = true;
-    // max_contacts 必须 >= 所有可能的 link 对数，否则统计会被**截断**成噪音。
-    //
-    // !!! 实测踩坑（加夹爪后暴露）!!!
-    // 原来写死 200。加夹爪后有碰撞几何的 link 从 31 涨到 41，对数从 465 涨到 820，
-    // 200 这个上限开始咬人：单个样本里碰撞对一旦超过 200，FCL 就停止上报，
-    // 哪些对被记下来取决于内部遍历顺序。结果是**同一具夹爪上互为镜像的两对**
-    // 统计结果完全不同：
-    //     R11 <-> R2  碰撞率 100%
-    //     L11 <-> L2  碰撞率 9.32%
-    // 而这两对在几何上严格镜像对称（连碰撞 mesh 的包围盒都是精确镜像：
-    // L2 x∈[-0.0232,+0.0410] / R2 x∈[-0.0410,+0.0232]）。
-    // 一度以为是厂商两个源在 L11 预压角上不一致（MJCF 给 0、SDF 给 -0.03）导致的，
-    // 改成 SDF 的值后碰撞率只从 10.14% 动到 9.32% —— 不对称照旧，
-    // 说明根因不在模型而在**这台仪器**。
-    //
-    // 截断的危害方向：ALWAYS 的对被误判成"有时碰撞"，于是不进 disable 列表，
-    // 起始构型直接判自碰撞、规划根本跑不起来（症状见本工具 usage 里那段说明）。
-    // 所以上限按 link 数现算，不留魔法数字。
     const std::size_t pair_count = links.size() * (links.size() - 1U) / 2U;
     request.max_contacts = pair_count;
     request.max_contacts_per_pair = 1U;
     collision_detection::CollisionResult result;
-    // 注意这里**不传** AllowedCollisionMatrix：本工具的目的就是统计
-    // "如果什么都不关，哪些对会碰"，传了 ACM 就把已关掉的对过滤掉了。
     scene->getCollisionEnv()->checkSelfCollision(request, result, state);
 
     std::vector<LinkPair> collided_now;
@@ -166,7 +111,6 @@ int main(int argc, char ** argv)
     collided_now.erase(
       std::unique(collided_now.begin(), collided_now.end()), collided_now.end());
 
-    // 所有对的 sample_count 都要 +1，否则"从没碰过"的对统计不到分母。
     for (std::size_t i = 0; i < links.size(); ++i) {
       for (std::size_t j = i + 1U; j < links.size(); ++j) {
         PairStats & entry = stats[makeKey(links[i], links[j])];
@@ -181,7 +125,6 @@ int main(int argc, char ** argv)
     }
   }
 
-  // ---- 输出 ----
   std::vector<LinkPair> always_pairs;
   std::vector<LinkPair> never_pairs;
   std::vector<std::pair<LinkPair, double>> sometimes_pairs;
@@ -207,8 +150,6 @@ int main(int argc, char ** argv)
     stats.size(), always_pairs.size(), never_pairs.size(), sometimes_pairs.size());
   RCLCPP_INFO(logger, "以下片段可直接粘进 SRDF 的 <robot> 内 (stdout, 无日志前缀)");
 
-  // 用 printf 到 stdout 而不是 RCLCPP：日志带时间戳前缀，没法直接复制粘贴。
-  // 这是工具的输出产物，不是日志。
   std::printf("  <!-- ALWAYS colliding (%zu pairs): 结构上必然重叠，必须关掉 -->\n",
     always_pairs.size());
   for (const LinkPair & p : always_pairs) {
@@ -224,8 +165,6 @@ int main(int argc, char ** argv)
       p.first.c_str(), p.second.c_str());
   }
 
-  // "有时碰撞"的对**绝对不能**关掉 —— 它们代表真实的碰撞风险，
-  // 必须留给运行时检测。这里只列出来供人工核对。
   std::printf(
     "\n  <!-- 下面 %zu 对「有时碰撞」，绝对不要关闭，必须留给运行时检测： -->\n",
     sometimes_pairs.size());

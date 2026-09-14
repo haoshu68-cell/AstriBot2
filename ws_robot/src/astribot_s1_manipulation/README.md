@@ -89,10 +89,7 @@ source install/setup.bash
 
 跑单元测试（不需要仿真、不需要 move_group）：
 
-```bash
-colcon test --packages-select astribot_s1_manipulation
-colcon test-result --all --verbose
-```
+单元测试已从仓库删除；历史回归不作为当前可执行入口。
 
 ---
 

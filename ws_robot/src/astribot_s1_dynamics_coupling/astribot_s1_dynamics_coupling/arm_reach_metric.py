@@ -24,8 +24,6 @@
     动态范围,而不是铺满一个凭感觉取的角度区间。
 """
 
-# 度量方式取值。joint_deviation 是被证伪的旧度量,保留下来只为 A/B 回归对比和
-# 一键回退,不是推荐值。
 METRIC_HORIZONTAL_REACH = 'horizontal_reach'
 METRIC_JOINT_DEVIATION = 'joint_deviation'
 VALID_METRICS = (METRIC_HORIZONTAL_REACH, METRIC_JOINT_DEVIATION)

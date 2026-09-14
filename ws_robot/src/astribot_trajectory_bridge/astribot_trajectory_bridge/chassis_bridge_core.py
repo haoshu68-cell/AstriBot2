@@ -58,19 +58,12 @@ from astribot_trajectory_bridge.chassis_feedback import (
     validate_leash_config,
 )
 
-# 状态
 ST_DISABLED = 'DISABLED'
 ST_ENABLED = 'ENABLED'
 ST_LEASH_TRIPPED = 'LEASH_TRIPPED'
 ST_STOPPED_NO_POSE = 'STOPPED_NO_POSE'
-#: 因 /scan 持续陈旧而闩锁停车。
-#: 刻意**不复用** ST_STOPPED_NO_POSE：本文件里已有一条同样的教训 ——
-#: 位姿查询失败报 POSE_PORT_FAILED 而不是 SDK_CALL_FAILED，因为"报错类别错了
-#: 会把诊断引向错的子系统"。感知瞎了和定位丢了是两个不同的子系统，混成一个
-#: 状态就等于在最需要分辨的时候丢掉了分辨能力。
 ST_STOPPED_STALE_SCAN = 'STOPPED_STALE_SCAN'
 
-# 上报用的状态位名（与 BridgeStatus.msg 的枚举同名，由节点层映射成数字）
 S_OK = 'OK'
 S_NOT_ENABLED = 'NOT_ENABLED'
 S_SDK_CALL_FAILED = 'SDK_CALL_FAILED'
@@ -83,63 +76,22 @@ S_ODOM_DRIFT_HIGH = 'ODOM_DRIFT_HIGH'
 S_CORRECTION_DEGENERATE = 'CORRECTION_DEGENERATE'
 S_SLAM_LOST_STOPPED = 'SLAM_LOST_STOPPED'
 S_POSE_PORT_FAILED = 'POSE_PORT_FAILED'
-#: /scan 陈旧，本拍速度已置零（可自动恢复）。metric_1=龄期(s)，metric_2=阈值(s)。
 S_SCAN_STALE = 'SCAN_STALE'
-#: /scan 持续陈旧超过宽限期，已闩锁停车（要人介入）。
 S_SCAN_LOST_STOPPED = 'SCAN_LOST_STOPPED'
-#: 从未收到过 /scan。与"收到过但变旧了"分开报 —— 前者通常是话题名/QoS 配错，
-#: 后者是上游故障，两者的排查方向完全不同。本项目已因 QoS 单向不兼容
-#: （BEST_EFFORT 发布 + RELIABLE 订阅，一帧都收不到、只有一条 WARNING）
-#: 浪费过一轮排查，这个区分是为那个场景留的。
 S_SCAN_NEVER_RECEIVED = 'SCAN_NEVER_RECEIVED'
-#: 内环步长被钳位。metric_1=钳位前的实测步长(s)，metric_2=上限(s)。
-#: 偶发说明调度抖动，持续出现说明内环真的跟不上，两种都必须可见 ——
-#: 步长直接乘在速度上，静默钳位等于静默改变底盘速度。
 S_TICK_DT_CLAMPED = 'TICK_DT_CLAMPED'
 
-#: :meth:`ChassisBridgeCore.tick_stats` 的返回值。
-#: ``rate_hz`` 是 count / 墙钟时长，**无偏** —— 与只在超阈时上报的
-#: LOOP_OVERRUN 不同，后者的周期均值是截尾样本，不能当平均周期用。
-#: ``live``：统计窗口是否**正在累积**（核心处于使能态）。停用后 count/rate 会
-#: 停在上一段使能期间的值上，若不带这个标志，陈旧读数与当前读数长得一模一样。
-#: ``max_dt``：本段内**未钳位**的最大拍间隔（秒）。均值查不出瞬时停顿 ——
-#: 2026-09-04 桥接被 EtherCAT 判「电机长时间没有收到指令」而退出时，最后一个
-#: 10s 窗口的均值是 228.7Hz（完全正常），塌陷若发生只能发生在均值抹平的尺度上。
 TickStats = collections.namedtuple(
     'TickStats', 'count mean_dt rate_hz clamp_count clamp_ratio live max_dt')
 
-#: :meth:`ChassisBridgeCore.consume_tick_window_gap` 的返回值。
-#: ``max_dt`` 本窗最大未钳位拍间隔，``at`` 它发生的时刻（秒，单调钟），
-#: ``over_count`` 本窗超过 2× 标称步长的拍数，``ticks`` 本窗拍数。
 TickWindowGap = collections.namedtuple('TickWindowGap', 'max_dt at over_count ticks')
 
-#: :meth:`ChassisBridgeCore.consume_vel_trace` 的返回值 —— 桥接**内部**速度链路。
-#:
-#: 为什么需要它：桥接外面那四段（raw→smooth→preCpl→cmd）已有诊断器在看，而
-#: 进了桥接之后还有五段变换，其中**两段不体现在任何速度话题上**：
-#:
-#:   /cmd_vel ─[看门狗/scan 联锁 置零]→ in ─[clamp 模长限幅]→ clamped
-#:            ─[slew 加速度限幅]→ slewed ─[世界→本体]→ local
-#:            ─[×dt 积分]→ pos_cmd 增量 ─[+外环校正]→ 实发位置 ─[SDK]→ actual
-#:
-#: 「联锁把速度扔了」和「上游根本没发速度」在 /cmd_vel 上长得一样；外环校正是
-#: 直接加在位置上的，它贡献的那部分位移在任何速度量里都查不到。这两件事只能在
-#: 这里看见。
-#:
-#: 口径警告（对比时必须遵守）：``cmd_path`` 是**路径长**（Σ|v|·dt），
-#: ``cmd_net``/``act_net`` 是**净位移**（窗口首末两点直线距离）。拿路径长和净
-#: 位移相比是错的 —— 只有当 ``cmd_path ≈ cmd_net``（即这一窗基本走直线）时，
-#: ``act_net`` 和 ``cmd_net`` 的比较才成立。actual 侧刻意**不**累加逐拍 |δ| 求
-#: 路径长：250Hz 下每拍取绝对值会把编码器抖动整流成单向偏置（±0.1mm 的抖动就是
-#: 0.025m/s 的假速度），那个数会稳定地大于指令值，看着像"底盘超速"。
 VelTrace = collections.namedtuple(
     'VelTrace',
     'ticks wall in_peak clamped_peak slewed_peak local_peak '
     'clamp_bit slew_bit zeroed_ticks '
     'cmd_path cmd_net act_net dtheta_cmd dtheta_act corr_path')
 
-#: 判"某一段有没有真的改动过速度"的死区。这些量都过了浮点乘除，不能用精确相等。
-#: 取 1e-9：比任何真实速度小若干个数量级，又远大于双精度在 O(1) 量级上的舍入。
 VEL_BIT_EPS = 1e-9
 
 
@@ -188,43 +140,14 @@ class ChassisBridgeConfig:
         self.max_vel_theta = float(max_vel_theta)
         self.max_accel_xy = float(max_accel_xy)
         self.max_accel_theta = float(max_accel_theta)
-        #: xy **加速**方向的加速度上限（m/s²）。减速仍走 max_accel_xy。
-        #: None = 退化为对称限幅（旧行为），这是**默认值**。
-        #:
-        #: !!! 代码默认必须是 None，不能是那个实测值 !!!
-        #: 0.39m/s² 是**实机**底盘测出来的数。把它设成构造函数默认值，等于让
-        #: 每一个不读 yaml 的调用方（全部单元测试在内）都吃这个实机数字 ——
-        #: 实测过：默认给 0.35 会让 11 条既有测试变红，其中多数测的是积分器
-        #: 本身（"250 拍走 1 米"之类），它们红了不是发现了缺陷，是前提被这个
-        #: 默认值悄悄改掉了。值在 config/chassis_bridge.yaml 里给
-        #: （仿真与实机**共用同一份**：同一条代码路径两边都在跑，比各给一份
-        #: 更不容易出现"两边前提不同"那类缺陷；代价是仿真加速也变慢，而那
-        #: 反而更接近实机）。
-        #:
-        #: 为什么需要它、0.35 怎么来的，见
-        #: :func:`chassis_integrator.slew_limit_velocity` 的完整推导。
-        #: 一句话：底盘真实加速度实测 ~0.39m/s²，而桥接原来按 2.5 发指令，
-        #: 开环位置链在加速段积下的欠账永不归还，v=0.5 时暂态欠账 0.272m
-        #: **必然**撞开 leash_xy_m=0.25 —— 实机 2026-09-08 就是这么停的
-        #: （实测 0.2509m 对 0.250m，吻合 0.4%）。0.35 = 实测 0.39 留余量。
-        #: theta 刻意不做非对称：同一次日志按**带符号**累加，跳闸时 theta
-        #: 误差只有 0.054rad（预算 0.350，占 15%），不是瓶颈；而压慢旋转
-        #: 会挤压三段式 ALIGN_START 的 15s 对齐预算。
         self.max_accel_xy_up = (None if max_accel_xy_up is None
                                 else float(max_accel_xy_up))
-        # 内环步长上限。默认 0.04s = 标称 4ms 的 10 倍。
-        #
-        # 怎么定的：实测超时周期最大 14.9ms（≈3.7 倍），取 10 倍留足余量，
-        # 正常抖动不会被钳（钳了就等于没修这个缺陷）。上界的物理含义是
-        # **单拍最大位移** = max_vel_xy * max_tick_dt_sec = 1.0 * 0.04 = 0.04m，
-        # 必须远小于 leash_xy_m=0.25 —— 否则一次调度停顿就能把 leash 撞开。
         self.max_tick_dt_sec = float(max_tick_dt_sec)
         self.leash_xy_m = float(leash_xy_m)
         self.leash_theta_rad = float(leash_theta_rad)
         self.require_manual_reset = bool(require_manual_reset)
         self.enable_slam_correction = bool(enable_slam_correction)
         self.pose_source = pose_source
-        # 节点层建 TfPosePort 要用；核心自身不查 TF（由 PosePort 注入）
         self.map_frame = map_frame
         self.base_frame = base_frame
         self.outer_rate = float(outer_rate)
@@ -237,28 +160,6 @@ class ChassisBridgeConfig:
         self.slam_loss_grace_sec = float(slam_loss_grace_sec)
         self.odom_drift_window_sec = float(odom_drift_window_sec)
 
-        # ═══════════════ /scan 时效性联锁 ═══════════════
-        # 为什么必须加在这里，而不是靠 nav2：
-        # nav2 的 obstacle_layer 设了 expected_update_rate 之后**只会告警**。
-        # 实测 controller_server 二进制里没有任何检查 costmap currency 的字符串，
-        # 陈旧时它照样继续发 /cmd_vel。所以"拿着陈旧障碍数据继续走"这件事，
-        # 只有写通路自己能拒绝 —— 这一层是链路上最后一个能说不的地方。
-        #
-        # 为什么现有的两个机制都盖不住这个场景（都实测过）：
-        #   · leash：指令与实测都在动、偏差正常，**不会** trip
-        #   · cmd_vel 看门狗：nav2 一直在发指令，`_last_twist_time` 不为 None，
-        #     走不到"无输入置零"那条分支
-        # 也就是说：上游感知已经瞎了，而这两道保护看到的一切都正常。
-        #
-        # scan_max_age_sec=0.5 的依据（不是拍的）：
-        #   · 健康态实测 /scan 是 9.88~10.04Hz，周期 ~0.1s
-        #   · 上游 pointcloud_slice_scan_node 的 hold_last_max_frames=5，
-        #     也就是它**保证**最多连续重发 5 帧(=0.5s)后就停止输出
-        #   · 两者取同一个值不是巧合：0.5s 正是上游自己放弃的时刻，
-        #     也就是"最长可能隐身时间"。设得比它小会在上游正常保持时误触发，
-        #     设得比它大则这段时间内谁都不管
-        # scan_loss_grace_sec=2.0 与 slam_loss_grace_sec 对齐：短暂陈旧只置零
-        # （可自动恢复），持续陈旧才闩锁停车（要人介入）。
         self.require_fresh_scan = bool(require_fresh_scan)
         self.scan_max_age_sec = float(scan_max_age_sec)
         self.scan_loss_grace_sec = float(scan_loss_grace_sec)
@@ -277,10 +178,6 @@ class ChassisBridgeConfig:
             raise ChassisConfigError(
                 'cmd_vel_timeout_sec=%r 必须为正：看门狗是 cmd_vel 断流时的'
                 '唯一止损，不允许关闭。' % (self.cmd_vel_timeout_sec,))
-        # 步长上限的两条硬约束，任一不满足都直接拒绝启动：
-        #   ① 不能小于标称步长 —— 否则连正常拍都被钳，积分恒等于钳位值；
-        #   ② 单拍最大位移必须远小于 leash —— 否则一次停顿就能把 leash 撞开，
-        #      而 leash 是这条开环位置链路上唯一的硬保护。
         nominal_dt = 1.0 / self.freq if self.freq > 0.0 else float('inf')
         if self.max_tick_dt_sec < nominal_dt:
             raise ChassisConfigError(
@@ -295,9 +192,6 @@ class ChassisBridgeConfig:
                 'leash 是开环位置链路上唯一的硬保护。请减小 max_tick_dt_sec。'
                 % (self.max_vel_xy, self.max_tick_dt_sec, max_tick_disp,
                    self.leash_xy_m))
-        # 非对称加速度限幅的自洽性。给成 > max_accel_xy 就不是"更紧的加速限"
-        # 而是悄悄放宽了加速，与这个参数存在的理由正相反 —— 必须拒绝启动，
-        # 不能留一个"读起来像限了速、实际放宽了"的配置。
         if (self.max_accel_xy_up is not None
                 and self.max_accel_xy_up > self.max_accel_xy):
             raise ChassisConfigError(
@@ -310,10 +204,8 @@ class ChassisBridgeConfig:
         validate_correction_config(self.kp_xy, self.kp_theta,
                                    self.max_corr_vel_xy, self.max_corr_vel_theta,
                                    self.outer_rate, self.freq)
-        # 按位姿源自动失效没有意义的阈值（见 chassis_feedback.effective_thresholds）
         self.slam_jump_threshold_m, self.odom_drift_warn_m = effective_thresholds(
             self.pose_source, float(slam_jump_threshold_m), float(odom_drift_warn_m))
-        # 提前算一次，避免每帧重复校验 input_frame
         to_local_velocity((0.0, 0.0, 0.0), self.input_frame, 0.0)
 
 
@@ -327,16 +219,6 @@ class ChassisBridgeCore:
         self.clock = clock
 
         self.state = ST_DISABLED
-        #: 最近一次"从使能态掉出去"的原因，供周期日志把状态说清楚。
-        #: !!! 为什么必须有这个字段 !!!（2026-09-08 实机排查代价换来的）
-        #: 节点层的周期日志判据是 `TickStats.live`，而 live 的定义是
-        #: `state == ST_ENABLED` —— 于是 DISABLED / LEASH_TRIPPED /
-        #: STOPPED_NO_POSE / STOPPED_STALE_SCAN 四种状态打出**逐字相同**的
-        #: "内环已停用"。真正的原因和 err_xy/err_theta 只进
-        #: /astribot/bridge/status，而实机跑车时没人在录那个话题，
-        #: 于是"机器人为什么不动了"在日志里无从分辨（实机那次是
-        #: leash 跳闸，xy 与 theta 两条都逼近阈值，日志无法区分是哪条）。
-        #: 形如 (state, reason, metric_1, metric_2, stamp)；从未停过则为 None。
         self.last_stop = None
         self.pos_cmd = None
         self.theta_ref = 0.0
@@ -346,52 +228,32 @@ class ChassisBridgeCore:
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
         self._prev_vel_out = (0.0, 0.0, 0.0)
-        #: 最近一次收到 /scan 的时刻。None = 从未收到过。
-        #: **刻意不在 enable() 里清空** —— /scan 是外部持续流，与使能周期无关。
-        #: 清了会导致每次 enable 后头 0.5s 都被判成"从未收到"而拒绝下发。
         self._last_scan_time = None
-        #: /scan 连续陈旧的起始时刻，用于判宽限期。恢复新鲜时归零。
         self._scan_stale_since = None
 
-        # ---- 内环步长与拍率统计 ----
-        # `_tick_count` / `_tick_dt_sum` 是**无偏**计数：每一拍都计，不像
-        # LOOP_OVERRUN 只在超阈时才报。LOOP_OVERRUN 的周期均值是截尾样本的均值，
-        # 拿它反推拍率会算出 91Hz，而时间账反解的下界是 ≥157Hz —— 差 1.7 倍。
-        # 真实拍率至今没有无偏测量值，这两个字段就是为了补上它。
         self._prev_tick_time = None
         self._tick_first_time = None
         self._tick_count = 0
         self._tick_dt_sum = 0.0
         self._tick_clamp_count = 0
-        # 均值查不出**瞬时**停顿：2026-09-04 桥接被 EtherCAT 判「电机长时间没有
-        # 收到指令」而退出时，最后一个 10s 窗口的均值是 228.7Hz —— 完全正常。
-        # 所以另记最大拍间隔：`_tick_max_raw` 跟整段（进 TickStats），
-        # `_tick_win_*` 每次上报后由 consume_tick_window_gap 取走并清零，
-        # 于是每条日志印的是**本窗**极值，不会被历史极值盖住。
         self._tick_max_raw = 0.0
         self._tick_win_max_raw = 0.0
         self._tick_win_max_at = None
         self._tick_win_over_count = 0
         self._tick_win_ticks = 0
 
-        # ---- 桥接内部速度链路的本窗统计（见 VelTrace 的口径说明）----
-        # 全部按窗累积、由 consume_vel_trace 取走并清零。绝不逐拍打日志：
-        # 内环 250Hz，逐拍打等于把日志刷死，诊断器本身会变成被诊断系统的负担。
         self._vel_win = None
         self._reset_vel_window()
 
         self._p_des_map = None
         self._p_slam_prev = None
         self._pose_lost_since = None
-        # 外环用：累积"上一次外环以来的本体位移"，供 advance_desired_pose 推进
         self._body_disp_accum = [0.0, 0.0]
         self._dtheta_accum = 0.0
-        # 漂移诊断窗口：(时刻, sdk_xy, slam_xy)
         self._drift_window = []
 
         self.events = []
 
-    # ---------------- 事件 ----------------
 
     def _emit(self, code, detail='', m1=0.0, m2=0.0):
         self.events.append(StatusEvent(code, detail, m1, m2))
@@ -410,7 +272,6 @@ class ChassisBridgeCore:
         self.events = []
         return out
 
-    # ---------------- 使能/停用 ----------------
 
     def enable(self):
         """使能。返回 (ok, detail)。
@@ -441,28 +302,12 @@ class ChassisBridgeCore:
         self._prev_vel_out = (0.0, 0.0, 0.0)
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
-        # !!! 必须清掉上一次使能留下的时间戳 !!!
-        # 不清的话，disable 停了一段时间再 enable，第一拍算出来的 dt 就是那整段
-        # 停机时长；乘上速度就是一次巨大的位置阶跃。虽然会被 max_tick_dt_sec
-        # 钳住，但那属于"靠钳位兜住逻辑错误"，不是设计意图。置 None 走首拍分支。
         self._prev_tick_time = None
-        # 拍率统计窗口也必须一起重开 —— 2026-09-01 实机踩到的：
-        # 原来只清 _prev_tick_time 而留着 _tick_first_time，于是
-        # rate = count / (_prev_tick_time - _tick_first_time) 的**分母**把
-        # disabled 的那段时长也算进去了。实测表现是 65 拍报成 165.4Hz
-        # （真值 ~238Hz），停得越久报得越低，而且看不出异常。
         self._reset_tick_window()
-        # 速度链路窗口同理必须重开：不清的话，act_net 会拿**停机前**的实际位置
-        # 当窗口起点，而 cmd_net 拿的是刚重取的积分种子 —— 两个口径跨越了停机期，
-        # 报出来就是一个凭空出现的"跟踪误差"。与上面 _tick_first_time 那个坑同型。
         self._reset_vel_window()
         self.corr_per_tick = (0.0, 0.0, 0.0)
         self._p_slam_prev = None
         self._pose_lost_since = None
-        # /scan 陈旧计时也要重开，否则 disable 那段时长会被算进"已持续陈旧"，
-        # 报出来的数字跨越了停机期，与上面 _tick_first_time 那个坑同型。
-        # 清它是安全的：真正阻止运动的是"龄期超阈 → vel_in 置零"那一步，它每拍
-        # 独立判定、与本计时器无关；这个计时器只决定**何时闩锁**。
         self._scan_stale_since = None
         self._body_disp_accum = [0.0, 0.0]
         self._dtheta_accum = 0.0
@@ -480,7 +325,6 @@ class ChassisBridgeCore:
 
         if is_correction_degenerate(self.cfg.pose_source,
                                     self.cfg.enable_slam_correction):
-            # 防止把 ground_truth 下的漂亮数字误当成"闭环有效性已验收"
             self._emit(S_CORRECTION_DEGENERATE,
                        'pose_source=ground_truth：map->odom 是恒等静态 TF，'
                        '外环误差恒≈0，闭环不产生实际校正。仅可用于验证代码路径。')
@@ -502,7 +346,6 @@ class ChassisBridgeCore:
             return (False, '当前状态 %s 不是 LEASH_TRIPPED，无需复位' % self.state)
         return self.enable()
 
-    # ---------------- 输入 ----------------
 
     def submit_twist(self, vx, vy, wz):
         self._last_twist = (float(vx), float(vy), float(wz))
@@ -531,7 +374,6 @@ class ChassisBridgeCore:
             return (float('inf'), True)
         return (self.clock.now() - self._last_scan_time, False)
 
-    # ---------------- 位姿 ----------------
 
     def _lookup_pose_checked(self):
         """查位姿并做龄期检查。返回 (pose_or_None, stamp_or_None)。
@@ -542,11 +384,6 @@ class ChassisBridgeCore:
         try:
             pose, stamp = self.pose.lookup()
         except Exception as exc:      # noqa: BLE001
-            # !!! 这里报 POSE_PORT_FAILED，不是 SDK_CALL_FAILED !!!
-            # 位姿查询不是 SDK 调用；报成 SDK 故障会把诊断引向机器人/SDK，
-            # 而真实故障在 TF/位姿源。也不折进 SLAM_UNAVAILABLE_OPEN_LOOP ——
-            # lookup() 的契约是"查不到返回 (None, None) 而不抛"，抛了就是
-            # 端口实现有缺陷，不能伪装成正常降级工况。
             self._emit(S_POSE_PORT_FAILED,
                        '位姿源实现抛异常（契约要求返回 (None, None) 而非抛）：%s' % exc)
             return (None, None)
@@ -560,7 +397,6 @@ class ChassisBridgeCore:
             return (None, None)
         return (pose, stamp)
 
-    # ---------------- 内环 ----------------
 
     def inner_tick(self):
         """内环一拍（按 cfg.freq 调用）。返回本拍是否真的下发了指令。"""
@@ -568,11 +404,6 @@ class ChassisBridgeCore:
                           ST_STOPPED_STALE_SCAN):
             return False
 
-        # ---- 步长用**实测**值，不用 1/freq ----
-        # 底盘是位置接口：物理速度 = 每拍增量 × 墙钟拍率。按 1/freq 积分而实际
-        # 拍率更低时，底盘只有指令速度的 (实际拍率/freq)。实测拍率下界 ≥157Hz，
-        # 即最多只跑到指令的 63%。改用实测 dt 后拍率快慢不再影响速度。
-        # 钳位是必需的：dt 直接乘在速度上，一次停顿就是一次位置阶跃。
         tick = measure_tick_dt(self.clock.now(), self._prev_tick_time,
                                1.0 / self.cfg.freq, self.cfg.max_tick_dt_sec)
         now_tick = self.clock.now()
@@ -582,9 +413,6 @@ class ChassisBridgeCore:
         dt = tick.dt
         self._tick_count += 1
         self._tick_dt_sum += dt
-        # 最大间隔必须用**未钳位**的 tick.raw：dt 已被 max_tick_dt_sec 削平，
-        # 拿它求最大值永远只能得到钳位上限本身，看不见真实停顿有多长。
-        # 首拍 raw 是 None（没有参照），跳过 —— 不是 0 间隔。
         if tick.raw is not None and tick.raw > 0.0:
             self._tick_win_ticks += 1
             if tick.raw > self._tick_max_raw:
@@ -600,10 +428,6 @@ class ChassisBridgeCore:
                        tick.raw if tick.raw is not None else 0.0,
                        self.cfg.max_tick_dt_sec)
 
-        # 看门狗：只把速度置零，不改状态（cmd_vel 短暂中断是正常工况）
-        # raw_in 是**上游真给过的**最后一帧，vel_in 是被看门狗/联锁处理过之后的。
-        # 两者都留着才分得清「上游没发」和「我们自己扔了」—— 在 /cmd_vel 上这两
-        # 件事长得一模一样，而处置完全不同。
         raw_in = self._last_twist
         vel_in = self._last_twist
         if self._last_twist_time is None:
@@ -616,10 +440,6 @@ class ChassisBridgeCore:
                            '/cmd_vel 已 %.3fs 无输入，速度置零' % idle,
                            idle, self.cfg.cmd_vel_timeout_sec)
 
-        # ---- /scan 时效性联锁 ----
-        # 放在看门狗**之后、限幅之前**：置零要能覆盖 cmd_vel 给的值，
-        # 又要让后面的 slew_limit 把这个零按加速度限幅平滑收下去
-        # （直接把 _prev_vel_out 打成 0 会变成速度阶跃）。
         if self.cfg.require_fresh_scan:
             age, never = self._scan_age()
             if age > self.cfg.scan_max_age_sec:
@@ -639,8 +459,6 @@ class ChassisBridgeCore:
                                '/scan 龄期 %.3fs 超过 %.3fs，速度置零'
                                % (age, self.cfg.scan_max_age_sec),
                                age, self.cfg.scan_max_age_sec)
-                # 持续陈旧超过宽限期 → 闩锁停车，要人介入。
-                # 与 SLAM 丢失那条同构：短暂异常自动恢复，持续异常必须有人看到。
                 if stale_for > self.cfg.scan_loss_grace_sec:
                     self.state = ST_STOPPED_STALE_SCAN
                     self._prev_vel_out = (0.0, 0.0, 0.0)
@@ -660,10 +478,6 @@ class ChassisBridgeCore:
 
         vel = clamp_velocity(vel_in, self.cfg.max_vel_xy, self.cfg.max_vel_theta)
         vel_clamped = vel
-        # !!! 行为变化 !!! 用实测 dt 后，加速度限幅按 a*dt 放行，每秒允许的
-        # 速度变化回到配置的 max_accel；此前按 1/250 计算，实际只放行了
-        # (实际拍率/250) 倍，也就是一直比配置**更保守**。这是有意修正，
-        # 但它会让加速更快 —— 属运动行为变化，必须上机验。
         vel = slew_limit_velocity(vel, self._prev_vel_out,
                                   self.cfg.max_accel_xy, self.cfg.max_accel_theta, dt,
                                   self.cfg.max_accel_xy_up)
@@ -671,24 +485,18 @@ class ChassisBridgeCore:
 
         v_local = to_local_velocity(vel, self.cfg.input_frame,
                                     self.pos_cmd[IDX_THETA] - self.theta_ref)
-        # 窗口起点必须是**积分之前**的 pos_cmd。取积分之后的话，本拍的增量会被
-        # 算进 cmd_path 却不算进 cmd_net，两个累加器之间就差了一拍 ——
-        # 250 拍的窗口里表现为直度恒为 0.996 而非 1.000，看着像轨迹有点弯。
         pos_before = list(self.pos_cmd)
         self.pos_cmd = integrate_step_dt(self.pos_cmd, v_local, dt)
 
-        # 供外环推进 p_des_map 用的本体位移累积
         self._body_disp_accum[0] += v_local[0] * dt
         self._body_disp_accum[1] += v_local[1] * dt
         self._dtheta_accum += v_local[2] * dt
 
-        # 叠加外环校正（已被切成每拍小量）
         if not self.corr_frozen:
             self.pos_cmd = [self.pos_cmd[0] + self.corr_per_tick[0],
                             self.pos_cmd[1] + self.corr_per_tick[1],
                             wrap_angle(self.pos_cmd[2] + self.corr_per_tick[2])]
 
-        # leash（快环，判据 = SDK 实际位置）
         try:
             actual = self.session.get_current_joints_position([self.cfg.part_name])[0]
         except Exception as exc:      # noqa: BLE001
@@ -698,15 +506,10 @@ class ChassisBridgeCore:
         leash = check_leash(self.pos_cmd, actual,
                             self.cfg.leash_xy_m, self.cfg.leash_theta_rad)
 
-        # 本窗速度链路取样。放在**这里**的两个理由：
-        #   · actual 已经读到了（leash 本来就要读），不为诊断多打一次 SDK。
-        #   · 放在 leash 判定**之前** —— leash 跳闸那一拍也要计入，那正是最需要
-        #     知道"当时链路上各段是多少"的一拍。
         self._record_vel(raw_in, vel_in, vel_clamped, vel, v_local, dt,
                          actual, pos_before)
 
         if leash.tripped:
-            # 冻结积分 **和** 校正 —— 只冻结积分等于 leash 没起作用
             self.state = ST_LEASH_TRIPPED
             self.corr_frozen = True
             self.corr_per_tick = (0.0, 0.0, 0.0)
@@ -756,7 +559,6 @@ class ChassisBridgeCore:
         if self._tick_count == 0 or self._tick_first_time is None:
             return TickStats(0, 0.0, 0.0, self._tick_clamp_count, 0.0, live, 0.0)
         elapsed = self._prev_tick_time - self._tick_first_time
-        # 只有一拍时 elapsed=0，此时算不出速率，报 0 而不是除零。
         rate = (self._tick_count / elapsed) if elapsed > 0.0 else 0.0
         return TickStats(
             self._tick_count,
@@ -803,7 +605,6 @@ class ChassisBridgeCore:
         """重置拍率统计窗口。诊断时想看"当前"拍率而非整段使能的均值时用。"""
         self._reset_tick_window()
 
-    # ---------------- 内部速度链路取样 ----------------
 
     def _reset_vel_window(self):
         """重开速度链路统计窗口。"""
@@ -837,9 +638,6 @@ class ChassisBridgeCore:
         w['slewed_peak'] = max(w['slewed_peak'], sl_n)
         w['local_peak'] = max(w['local_peak'], lo_n)
 
-        # 「这一段有没有真的咬住」按**逐轴**比较，不按模长：clamp 是等比缩放
-        # xy，模长会变；而 slew 可能只限住了 wz，模长一点没动 —— 只看模长会漏。
-        # 阈值用 VEL_BIT_EPS 而不是精确相等：这些量都过了浮点乘除。
         if raw_n > VEL_BIT_EPS and in_n <= VEL_BIT_EPS:
             w['zeroed'] += 1
         if any(abs(a - b) > VEL_BIT_EPS
@@ -849,15 +647,12 @@ class ChassisBridgeCore:
                for a, b in zip(vel_clamped, vel_slewed)):
             w['slew_bit'] += 1
 
-        # 指令路径长（Σ|v|·dt）。与净位移是两个口径，见 VelTrace 文档。
         w['cmd_path'] += lo_n * dt
-        # 外环校正贡献的位移：它直接加在位置上，任何速度量里都看不到它。
         if not self.corr_frozen:
             w['corr_path'] += math.hypot(self.corr_per_tick[0],
                                          self.corr_per_tick[1])
 
         if w['cmd_xy0'] is None:
-            # pos_before = 本拍积分**之前**的指令位置，见 inner_tick 里那段注释。
             w['cmd_xy0'] = (pos_before[0], pos_before[1])
             w['cmd_th0'] = pos_before[IDX_THETA]
             w['act_xy0'] = (actual[0], actual[1])
@@ -908,7 +703,6 @@ class ChassisBridgeCore:
         self._reset_vel_window()
         return trace
 
-    # ---------------- 外环 ----------------
 
     def outer_tick(self):
         """外环一拍（按 cfg.outer_rate 调用）。"""
@@ -926,7 +720,6 @@ class ChassisBridgeCore:
             lost = self.clock.now() - self._pose_lost_since
             if (self.cfg.require_slam_to_enable
                     and lost > self.cfg.slam_loss_grace_sec):
-                # 商业化配置：丢位姿超宽限期 → 主动停车，但不冻结 leash、不杀节点
                 self.state = ST_STOPPED_NO_POSE
                 self._prev_vel_out = (0.0, 0.0, 0.0)
                 self._emit(S_SLAM_LOST_STOPPED,
@@ -942,7 +735,6 @@ class ChassisBridgeCore:
 
         self._pose_lost_since = None
 
-        # 跳变检测：重定位事件必须重新对齐，不能当误差施加
         jumped, jump = detect_pose_jump(pose, self._p_slam_prev,
                                         self.cfg.slam_jump_threshold_m)
         self._p_slam_prev = list(pose)
@@ -957,13 +749,11 @@ class ChassisBridgeCore:
             return
 
         if self._p_des_map is None:
-            # 之前一直没有位姿（开环），现在恢复了 -> 以当前位姿重新对齐
             self._p_des_map = list(pose)
             self._reset_accum()
             self.corr_frozen = False
             return
 
-        # 用 SLAM 的绝对朝向把本体位移推进到 map 系
         self._p_des_map = advance_desired_pose(
             self._p_des_map, tuple(self._body_disp_accum),
             self._dtheta_accum, pose[IDX_THETA])

@@ -36,8 +36,6 @@ class SdkSessionError(RuntimeError):
     """会话建立失败。**不做静默降级** —— 会话建不起来时上层必须知道。"""
 
 
-# import 厂商 SDK 必需的 pip 包。**不在这里自动安装** —— 装包是环境动作，
-# 不该由节点在运行期偷偷做；只负责把缺哪个说清楚。
 _REQUIRED_PIP_PKGS = ('filterpy', 'tabulate', 'h5py')
 
 
@@ -149,7 +147,6 @@ class AstribotSession(SessionPort):
     def __init__(self, astribot):
         self._bot = astribot
 
-    # -- 部件名（来自 astribot_base.py:5-15，不硬编码字符串） --
 
     @property
     def chassis_name(self):
@@ -163,7 +160,6 @@ class AstribotSession(SessionPort):
         """按属性名取部件名，例如 part_name('arm_left_name')。"""
         return getattr(self._bot, attr)
 
-    # -- SessionPort --
 
     def get_desired_joints_position(self, names):
         return self._bot.get_desired_joints_position(names)
@@ -222,17 +218,6 @@ class AstribotSession(SessionPort):
     def get_dof(self, names=None):
         return self._bot.get_dof(names)
 
-    # -- 夹爪 --
-    #
-    # !!! 极性与直觉相反：0 = 张开、100 = 闭合 !!!
-    #   open_effector  -> 下发 0.0   （astribot_client.py:813 / 817）
-    #   close_effector -> 下发 100.0 （astribot_client.py:836 / 840）
-    # 换算 rad = 0.0093 * cmd（cmd=100 正好是关节上限 0.93）。
-    # 一律走 gripper_math，不要在调用点手写系数或极性。
-    #
-    # 这两个方法**阻塞**：实测 duration=1.0 时调用阻塞满 1.0s 才返回
-    # 'move to joint position success'（内部走 move_to_joint_position）。
-    # 所以**不能在 250Hz 内环里调**，只能放在 service/动作回调这类允许阻塞的地方。
 
     def open_effector(self, names=None, duration=1.0):
         return self._bot.open_effector(names, duration=duration)
@@ -255,7 +240,6 @@ class AstribotSession(SessionPort):
         """夹爪部件名（astribot_base.py 的 effector_names 属性）。"""
         return list(self._bot.effector_names)
 
-    # -- 急停（999-stop_robot.py:30,34） --
 
     def stop_robot(self):
         return self._bot.stop_robot()
@@ -280,7 +264,6 @@ def open_session(freq=250.0, node_name='astribot_bridge', logger=None,
 
     prewarm_robotics_library_py()
 
-    # 这一行必须在环境自检**之后**（见模块头部说明）
     try:
         from astribot_sdk.core.astribot_api.astribot_client import Astribot
     except Exception as exc:      # noqa: BLE001
@@ -293,8 +276,6 @@ def open_session(freq=250.0, node_name='astribot_bridge', logger=None,
     except Exception as exc:      # noqa: BLE001
         raise SdkSessionError('构造 Astribot 失败：%s' % exc)
 
-    # astribot_client.py:49 —— 构造里已经 wait_for_interface_alive，
-    # 但它的返回值存在 is_alive，这里再确认一次并给出明确失败。
     if not getattr(bot, 'is_alive', True):
         raise SdkSessionError('SDK 接口未就绪（wait_for_interface_alive 失败）')
 

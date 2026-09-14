@@ -1,13 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// 决策模块节点：边界遍历 + 前沿点自适应采样 的自主探索。
-//
-// 明确的职责边界（对应「禁止探索模块直接发布 Twist」）：
-//   本节点**只输出 geometry_msgs/PoseStamped 目标位姿**，不含任何 Nav2 客户端、
-//   不发 Twist、不做路径跟踪。谁去执行、怎么执行，由外部订阅者决定。
-//
-// 线程模型：地图回调只做校验和快照拷贝，规划循环跑在独立工作线程上，
-// 避免大地图的 BFS/膨胀阻塞订阅回调。
 #ifndef ASTRIBOT_S1_AUTONOMY__FRONTIER_EXPLORER_NODE_HPP_
 #define ASTRIBOT_S1_AUTONOMY__FRONTIER_EXPLORER_NODE_HPP_
 
@@ -49,7 +40,6 @@ private:
   void declareParameters();
   bool loadParameters(std::string & error);
 
-  // ---------------- 数据流 ----------------
   void mapCallback(const nav_msgs::msg::OccupancyGrid::ConstSharedPtr & msg);
   /// 规划线程主循环：按 planning_period_sec_ 周期跑一次 planOnce()。
   void plannerLoop();
@@ -67,14 +57,11 @@ private:
   /// 判定新目标是否与上一次目标「实质相同」（用于震荡检测）。
   bool isSameAsLastGoal(double x, double y) const;
 
-  // ---------------- 输出 ----------------
   void publishGoal(const GoalCandidate & goal, const rclcpp::Time & stamp);
   void publishStatus(const std::string & state, const std::string & detail);
   void publishMarkers(
     const GridMap & map, const FrontierSearch::Result & result, const rclcpp::Time & stamp);
 
-  // ---------------- 成员 ----------------
-  // 参数
   std::string map_topic_;
   std::string goal_topic_;
   std::string status_topic_;
@@ -100,7 +87,6 @@ private:
   FrontierSearch search_;
   std::mutex config_mutex_;
 
-  // ROS 句柄
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_pub_;
@@ -109,18 +95,15 @@ private:
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
-  // 地图快照
   std::shared_ptr<GridMap> latest_map_;
   rclcpp::Time latest_map_stamp_;
   std::mutex map_mutex_;
 
-  // 规划线程
   std::atomic<bool> running_{false};
   std::thread planner_thread_;
   std::condition_variable planner_cv_;
   std::mutex planner_mutex_;
 
-  // 状态
   std::vector<VisitRecord> visit_history_;
   bool has_last_goal_{false};
   double last_goal_x_{0.0};

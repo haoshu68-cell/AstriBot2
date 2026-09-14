@@ -41,9 +41,6 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
 
-    # ---------------------------------------------------------------------
-    # 1. 声明所有可调 launch 参数（不写死任何数值/路径）
-    # ---------------------------------------------------------------------
     declare_args = [
         DeclareLaunchArgument(
             'world_name', default_value='small_warehouse',
@@ -83,11 +80,6 @@ def generate_launch_description():
         DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部RGB相机'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='是否使用仿真时钟'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='是否自动打开RViz2'),
-        # !!! 全向轮力控重构方案新增：轮子几何/力矩边界，专门为"改变轮子大小做多轮测试"
-        # 这个扫描场景暴露成 launch 参数，命令行覆盖即可，不用改任何xacro/yaml文件。
-        # 三个值最终会传进 astribot_s1.xacro 的同名 xacro:arg，再分别驱动
-        # astribot_s1_torso_wheel.xacro 的碰撞球半径、轮关节<limit>、
-        # astribot_s1_ros2_control.xacro 的effort command_interface边界。
         DeclareLaunchArgument(
             'wheel_radius', default_value='0.08',
             description='轮子碰撞球半径(m)，同时驱动逆解运动学(与enable_effort_drive节点的'
@@ -156,47 +148,25 @@ def generate_launch_description():
     ros_domain_id = LaunchConfiguration('ros_domain_id')
     localhost_only = LaunchConfiguration('localhost_only')
 
-    # 让本次 launch 拉起的所有子进程都用独占的 ROS_DOMAIN_ID，
-    # 避免和同一台机器上任何其它已经在跑的 ROS2 图（不管是否相关）发生话题/服务撞名。
-    # 必须放在最前面，保证后面所有 Node/IncludeLaunchDescription 都继承到这个环境变量。
     set_ros_domain_id = SetEnvironmentVariable(name='ROS_DOMAIN_ID', value=ros_domain_id)
 
-    # 把话题限制在本机。注意 Domain ID 只是频道号、不具备任何隔离作用：
-    # 同网段任何人 export 相同 Domain ID 就能读写本仿真的话题（包括往 /cmd_vel 发指令），
-    # 所以真正的隔离必须靠下面这几个变量。
-    # 这里在 launch 里再设一遍（env.sh 已经设过），是为了兼顾「只 source 了
-    # install/setup.bash、忘了 source env.sh」的用法——仿真栈节点多，不能漏。
-    # 仿真专属：与实机共用的部分不涉及这些变量。
     set_localhost_env = [
-        # DDS 通道：经实测这一项才是真正生效的开关
         SetEnvironmentVariable(
             name='ROS_LOCALHOST_ONLY', value='1',
             condition=IfCondition(localhost_only)),
-        # Gazebo/ign-transport 通道：独立于 DDS，必须单独封
         SetEnvironmentVariable(
             name='IGN_IP', value='127.0.0.1',
             condition=IfCondition(localhost_only)),
         SetEnvironmentVariable(
             name='GZ_IP', value='127.0.0.1',
             condition=IfCondition(localhost_only)),
-        # 注意：这里**刻意不去动** FASTRTPS_DEFAULT_PROFILES_FILE。
-        # launch 只能 set 不能 unset，而把它 set 成空字符串会让 Fast DDS
-        # 拿空路径去 realpath，每个进程都刷一堆
-        #   [XMLPARSER Error] realpath failed No such file or directory
-        # （实测一次启动刷了 26 条）。清理残留 profile 属于 env.sh 的职责，
-        # 那里可以真正 unset。
     ]
 
-    # ---------------------------------------------------------------------
-    # 2. 依赖包的 share 目录（全部用 FindPackageShare 动态查找，不允许绝对路径）
-    # ---------------------------------------------------------------------
     pkg_warehouse = FindPackageShare('aws_robomaker_small_warehouse_world')
     pkg_description = FindPackageShare('astribot_s1_description')
     pkg_bringup = FindPackageShare('astribot_s1_gazebo_bringup')
     pkg_ros_gz_sim = FindPackageShare('ros_gz_sim')
 
-    # PathJoinSubstitution 拼不出 "<world_name>.world" 这种"变量+固定后缀"的写法，
-    # 用列表把 world_name 和 TextSubstitution(".world") 拼在同一段里。
     world_file = PathJoinSubstitution([
         pkg_warehouse, 'worlds', world_name,
         [world_name, TextSubstitution(text='.world')],
@@ -211,27 +181,6 @@ def generate_launch_description():
     rviz_config = PathJoinSubstitution(
         [pkg_description, 'rviz', 'astribot_s1_view.rviz'])
 
-    # ---------------------------------------------------------------------
-    # 3. 修复"货架/箱子模型不显示、纹理丢失"：
-    #    aws_robomaker_small_warehouse_world 的 README 只给了经典 Gazebo 的
-    #    GAZEBO_MODEL_PATH，没有配新版 Gazebo(Ignition/Gz Sim) 的资源搜索路径，
-    #    这里用 SetEnvironmentVariable 动态拼出 GZ_SIM_RESOURCE_PATH（新命名）
-    #    和 IGN_GAZEBO_RESOURCE_PATH（旧命名，向后兼容）双写，覆盖 Garden/Fortress 两种环境。
-    #
-    #    另外把本包 models/ 目录排在最前面：里面只有 GroundB_01/RoofB_01 两个模型的覆盖版
-    #    model.sdf（修正了官方原始数据里的惯性张量有效性问题，不修改 submodule 原文件，
-    #    见 astribot_s1_gazebo_bringup/models/*/model.sdf 顶部注释），排在前面让
-    #    `model://` 解析优先命中这两个覆盖文件，其余全部模型仍然从 aws 官方 submodule 加载。
-    #
-    #    还有一处容易漏掉：机器人自身 xacro 里的 mesh 用的是
-    #    package://astribot_s1_description/meshes/...，生成 SDF 后 Gazebo GUI 侧会把它
-    #    转成 model://astribot_s1_description/meshes/...，这个 model:// 是靠
-    #    GZ_SIM_RESOURCE_PATH 里某个目录 + "/astribot_s1_description/meshes/..." 拼出来解析的，
-    #    所以必须把 astribot_s1_description 包 share 目录的"父目录"也加进资源路径
-    #    （不是 share/astribot_s1_description 本身，是它的上一级），
-    #    否则机械臂/躯干/头部这些机器人自身的 mesh 会在 GUI 里加载失败（渲染报错，
-    #    但不影响物理仿真本身——因为物理侧走的是 ROS ament 包索引解析，两条路径互不相同）。
-    # ---------------------------------------------------------------------
     bringup_models_path = PathJoinSubstitution([pkg_bringup, 'models'])
     description_share_parent_path = PathJoinSubstitution([pkg_description, os.pardir])
 
@@ -249,16 +198,10 @@ def generate_launch_description():
                warehouse_models_path, os.pathsep, warehouse_worlds_path, os.pathsep,
                description_share_parent_path, os.pathsep, existing_ign_path])
 
-    # ---------------------------------------------------------------------
-    # 4. 启动 Gazebo(Ignition/Gz Sim)，加载仓储世界
-    #    "-r" 表示启动后立即运行仿真（不暂停），来自 ros_gz_sim 官方 gz_sim.launch.py 示例写法
-    # ---------------------------------------------------------------------
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py'])),
         launch_arguments={
-            # headless:=true 时加 "-s"(只跑 server，不起 GUI)。见该参数的声明处说明：
-            # EGL 失败的机器上 GUI 会把 CPU 吃满、把 server 挤到步不动仿真。
             'gz_args': [
                 TextSubstitution(text='-r '),
                 PythonExpression([
@@ -268,12 +211,6 @@ def generate_launch_description():
         }.items(),
     )
 
-    # ---------------------------------------------------------------------
-    # 5. robot_description（xacro 实时展开，参数用 mappings 透传，杜绝硬编码路径/数值）
-    # ---------------------------------------------------------------------
-    # 用 ParameterValue(..., value_type=str) 强制把 xacro 输出当纯字符串传参，
-    # 否则 launch_ros 会尝试把这一大段 XML 当 YAML 解析，直接报错退出
-    # （"Unable to parse the value of parameter robot_description as yaml"）。
     robot_description_content = ParameterValue(
         Command([
             'xacro', ' ',
@@ -299,13 +236,6 @@ def generate_launch_description():
         parameters=[robot_description, {'use_sim_time': use_sim_time}],
     )
 
-    # ---------------------------------------------------------------------
-    # 6. 在 Gazebo 里生成机器人：用 ros_gz_sim 的 create 可执行文件，
-    #    订阅 robot_state_publisher 发布的 /robot_description 话题来生成实体
-    #    （不使用 ROS1 时代的 gazebo_ros/spawn_model 或 spawn_entity.py）。
-    #    出生点：检查惯性参数/碰撞体/初始高度对应任务书"机器人生成后下坠/穿透地面"异常规则，
-    #    spawn_z 默认值已按轮子碰撞体半径计算，见上面 DeclareLaunchArgument 里的说明注释。
-    # ---------------------------------------------------------------------
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
@@ -319,21 +249,6 @@ def generate_launch_description():
         ],
     )
 
-    # ---------------------------------------------------------------------
-    # 7. ros2_control 控制器：joint_state_broadcaster + 4 个 JointTrajectoryController
-    #    + 全向轮力控重构方案新增的 wheel_effort_controller（合计6个）。
-    #    用 OnProcessExit 事件等 spawn_robot 完成后再拉起，避免 controller_manager 服务
-    #    还没起来就报连接失败。
-    #
-    #    !!! 实测踩坑记录 !!!：一开始把 5 个控制器各起一个独立的 `spawner` 进程、
-    #    在同一个 on_exit 回调里"并行"拉起，结果偶发性出现
-    #    "Controller already loaded, skipping load_controller" 后接 "Failed to configure
-    #    controller"——5 个 spawner 进程几乎同时对 controller_manager 的
-    #    load_controller/configure_controller 服务发起调用，服务端处理并发请求时状态互相
-    #    干扰导致偶发失败（复现概率不低，不能当成"抖一下就好了"忽略掉）。
-    #    改成用同一个 `spawner` 进程、一次性传入全部控制器名，
-    #    该工具内部会顺序逐个 load+configure+activate，从根源上消除了并发竞争。
-    # ---------------------------------------------------------------------
     controllers_spawner = Node(
         package='controller_manager',
         executable='spawner',
@@ -345,8 +260,6 @@ def generate_launch_description():
             'arm_left_controller',
             'arm_right_controller',
             'wheel_effort_controller',
-            # 夹爪（每侧 1 个主动关节）。同一个 spawner 进程顺序拉起，
-            # 沿用上面那条"不要并行 spawn"的结论。
             'gripper_left_controller',
             'gripper_right_controller',
             '--controller-manager-timeout', '60',
@@ -360,33 +273,6 @@ def generate_launch_description():
         )
     )
 
-    # !!! 全向轮力控重构方案新增 !!!：VelocityControl/MecanumDrive 已整体移除，
-    # 底盘完全靠 omni_effort_drive_node 算力矩驱动，不然车身没有任何驱动力。
-    # 等 wheel_effort_controller(在controllers_spawner里)加载完成后再拉起，
-    # 避免节点启动瞬间往还没激活的controller发力矩指令(无害但会打日志噪音)。
-    #
-    # !!! 实测踩坑记录：params_file 必须显式传，而且必须 GroupAction(scoped=True) !!!
-    # LaunchConfiguration 是**共享上下文**，不按 include 层级隔离；
-    # 而本 include 被 RegisterEventHandler 延迟到 controllers_spawner 退出之后才求值，
-    # 那时上层(nav2_full_bringup)的 slice_scan / exploration_coordinator 早已把共享的
-    # params_file 占住了。于是 omni_effort_drive.launch.py 里
-    # DeclareLaunchArgument('params_file', default=omni_effort_drive_params.yaml)
-    # 不生效，底盘节点吃到的是**别的节点的 yaml**。
-    #
-    # 后果是三个"看起来无关"的故障，其实是同一个根因（实测全部对上）：
-    #   · 那些 yaml 都是 `/**:` 通配，会被正常加载且不报错。协调器的 yaml 里
-    #     control_period_sec: 0.5 直接把底盘控制周期从 100Hz 改成 2Hz(实测 1.85Hz)。
-    #   · 底盘自己的参数一条都没加载，全部退回代码里的声明默认值 ——
-    #     恰好是重构前那套**已知会发散**的值：pid_kp=2.0(稳定条件要求 <1.0)、
-    #     friction_viscous_nm_s=0.02(该配 1.0，小了 50 倍)。
-    #   · 于是 PID 发散→四轮撞上 ±15N·m 限幅 bang-bang→净旋转力矩 60N·m→
-    #     车身在**没有任何 cmd_vel** 的情况下持续自转 3.3rad/s。
-    #     这又超出 MPPI 的 wz_max=2.0，控制器求解必然失败
-    #     ("Optimizer fail to compute path")，机器人只自转不前进，
-    #     Nav2 进度检查器判"Failed to make progress"，每个目标都在剩 ~1m 处中止。
-    #
-    # 排查手段：pgrep -af omni_effort_drive_node | grep -o "params-file [^ ]*"
-    # 直接看进程实际吃到的是哪个文件；再用 get_parameters 服务核对 pid_kp 是否为 0.4。
     pkg_effort_drive = FindPackageShare('astribot_s1_chassis_effort_drive')
     effort_drive_node = GroupAction(
         scoped=True,
@@ -412,33 +298,12 @@ def generate_launch_description():
         )
     )
 
-    # ---------------------------------------------------------------------
-    # 8. ros_gz_bridge：把 gz 话题桥接成标准 ROS2 话题
-    #    （/clock 必须桥，否则 use_sim_time 的节点全部收不到仿真时间会卡住）
-    #    odometry 的 gz 话题名由 OdometryPublisher 插件按 "/model/<robot_name>/..."
-    #    自动生成（对应 astribot_s1.gazebo.xacro 里的相对话题名配置）。
-    #    !!! 全向轮力控重构方案：cmd_vel 桥已移除 !!!：原来这里桥的
-    #    "/model/<name>/cmd_vel" 是给 VelocityControl/MecanumDrive 两个插件订阅用的
-    #    gz内部话题，现在两个插件都已整体移除，没有任何东西再订阅它——
-    #    新架构里 /cmd_vel 完全走标准 ROS2 话题，直接被
-    #    astribot_s1_chassis_effort_drive 包的 omni_effort_drive_node 订阅，
-    #    不需要、也不应该再经过 ros_gz_bridge 转一趟 gz 内部话题。
-    # ---------------------------------------------------------------------
     bridge_args = [
         '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry')],
-        # !!! 实测踩坑记录 !!!：OdometryPublisher 插件的 TF 等效输出，实际发布的 gz 话题
-        # 名字是 "/model/<name>/pose"（发布 Pose_V 消息），不是直觉上以为的
-        # "/model/<name>/tf"——一开始想当然桥了后者，结果那是个从来没有真实数据源
-        # 发布过的空话题，桥了个寂寞，/tf 上永远等不到 odom -> 机器人根 link 的变换，
-        # RViz 里 Fixed Frame(odom) 报 "does not exist"，整个模型因为挂不到 Fixed Frame
-        # 下而"坍缩"。这里改成订阅插件实际发布的 "/model/<name>/pose"。
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/pose@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V')],
-        # 双 Livox Mid-360（用 gpu_lidar 近似仿真，见 astribot_s1_sensors.xacro 顶部说明）：
-        # gz-sim 的 gpu_lidar 传感器会在 <topic> 后缀 "/points" 上发布点云
-        # （gz.msgs.PointCloudPacked），桥接成标准 sensor_msgs/PointCloud2。
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/livox_mid360_left/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked')],
         [TextSubstitution(text='/model/'), robot_name,
@@ -455,17 +320,8 @@ def generate_launch_description():
         remappings=[
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/odometry')], '/odom'),
-            # !!! 实测踩坑记录 !!!：这一条最容易漏——OdometryPublisher 发布的
-            # odom -> astribot_torso_base 变换实际在 gz 话题 "/model/<name>/pose"
-            # 上（发布 Pose_V 消息，见上面 bridge_args 的注释），必须重映射到标准
-            # /tf，否则 RViz 里 Fixed Frame(odom) 报 "does not exist"，
-            # 整棵模型因为挂不到 Fixed Frame 下而"坍缩成一团"。
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/pose')], '/tf'),
-            # 桥接后的话题名统一成 /livox/lidar_left、/livox/lidar_right——
-            # 和真实 livox_ros_driver2 硬件分支（astribot_s1_perception/launch/
-            # hardware_livox.launch.py）发布的话题名保持一致，这样下游的预处理/融合/
-            # SLAM 节点代码在仿真和实体机器人上完全不用改。
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/livox_mid360_left/points')], '/livox/lidar_left'),
             ([TextSubstitution(text='/model/'), robot_name,
@@ -475,15 +331,6 @@ def generate_launch_description():
         ],
     )
 
-    # ---------------------------------------------------------------------
-    # 9. !!! 实测踩坑记录 !!!：gz-sim 给 camera/gpu_lidar 传感器消息生成的 frame_id
-    #    不是简单的链接名，而是 "<model>/<parent_link>/<sensor_name>" 这种带全路径的字符串
-    #    （实测得到：astribot_s1/astribot_torso_base/livox_mid360_left_sensor），
-    #    这个 frame 在 robot_state_publisher 发布的 TF 树里根本不存在，点云/图像消息的
-    #    header.frame_id 没法直接 tf2 变换。用 static_transform_publisher 做一次
-    #    "零位姿别名"，把这个 gz 生成的长 frame 名字挂到我们真正的传感器 link 下面
-    #    （两者物理上就是同一个位置，零变换是精确的，不是近似）。
-    # ---------------------------------------------------------------------
     def make_sensor_frame_alias(real_link, gz_parent_link, gz_sensor_name):
         return Node(
             package='tf2_ros',
@@ -507,9 +354,6 @@ def generate_launch_description():
     camera_frame_alias = make_sensor_frame_alias(
         'camera_link', 'astribot_head_link_2', 'astribot_camera')
 
-    # ---------------------------------------------------------------------
-    # 10. RViz2（可选），用于离线核对模型外观/TF树是否断裂
-    # ---------------------------------------------------------------------
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',

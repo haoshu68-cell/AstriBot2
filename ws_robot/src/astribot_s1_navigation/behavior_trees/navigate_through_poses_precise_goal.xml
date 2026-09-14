@@ -1,0 +1,12 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <ReactiveSequence>
+      <ReactiveFallback>
+        <KeepSafePath path="{path}" goals="{goals}" remaining_goals="{remaining_goals}"/>
+        <ComputePathThroughPoses goals="{remaining_goals}" path="{path}" planner_id="GridBased"/>
+      </ReactiveFallback>
+      <RemovePassedGoals input_goals="{remaining_goals}" output_goals="{remaining_goals}" radius="0.7" global_frame="map" robot_base_frame="astribot_torso_base"/>
+      <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="precise_goal_checker"/>
+    </ReactiveSequence>
+  </BehaviorTree>
+</root>

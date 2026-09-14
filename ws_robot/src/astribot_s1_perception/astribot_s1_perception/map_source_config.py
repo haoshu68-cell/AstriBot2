@@ -19,12 +19,8 @@ import yaml
 VALID_MAP_SOURCES = ('sim_slam', 'real_file', 'real_live')
 VALID_LOCALIZATION = ('slam', 'ground_truth', 'external')
 
-#: 需要 slam_toolbox 在线建图的地图来源
 SLAM_TOOLBOX_SOURCES = ('sim_slam',)
 
-#: 由外部 SLAM 提供 map→odom 的 localization 取值。
-#: 单独拎出来是因为"谁发 map→odom"这个判断在 launch 里要用三次，
-#: 而写成 `localization == 'external'` 的字面比较迟早会漏掉一处。
 EXTERNAL_LOCALIZATION = 'external'
 
 

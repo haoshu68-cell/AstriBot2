@@ -1,38 +1,12 @@
 # Copyright 2026 Astribot.
-#
-# 探索评测的几何计算。**纯函数，无 ROS 依赖**，可离线复核。
-#
-# 为什么单独成模块：判据留在节点回调里就没有测试覆盖。本包上次的姿态监控
-# 就是这么漏的 —— "先查退化再查越界"的顺序写在回调里，20 条测试全绿，
-# 把顺序调换后仍然全绿。所以凡是"会被人问出一个数"的计算都放在这里。
-#
-# ============================ 两个易错点 ============================
-#
-# ① 横向偏差的规模
-#   30 分钟 @50Hz = 9 万个位姿样本，路径 800 个顶点。写成完整的 M×N 距离矩阵
-#   是 9e4 × 8e2 = 7.2e7 个 float64 = 576MB，会直接把内存打爆或换页到卡死。
-#   所以按查询点分块（_CHUNK），单块 2048×800 = 1.6e6，稳定在几十 MB。
-#   小样本单测测不出这个 —— 本项目已吃过一次"40 个用例全绿、真实规模卡死"。
-#
-# ② 实测轨迹的弧长会被噪声抬高
-#   TF 位姿有抖动，逐点累加 hypot 会把静止时的抖动也算成路程。
-#   实测量级：静置时 50Hz 采样的抖动能累出每分钟几厘米。
-#   所以 traveled_length() 有一个 min_step 门限（默认 2mm），低于门限的
-#   位移不累计。门限值必须跟着数据一起报出去，否则"路径长度比"没法复核。
-# ==================================================================
 import math
 
 import numpy as np
 
-# 分块大小。见文件头 ①。
 _CHUNK = 2048
 
-# 默认位移门限 (m)。见文件头 ②。
 DEFAULT_MIN_STEP_M = 0.002
 
-# 求「路径切向」时的折线抽稀步长 (m)。见 heading_tangent_errors 的说明：
-# 单段方向在 0.05m 点距下量化到 45° 整数倍，必须拉长基线才能当基准。
-# 0.20m = 4 个栅格，与代价地图分辨率同源，不是调出来的。
 DEFAULT_TANGENT_STEP_M = 0.20
 
 
@@ -136,8 +110,6 @@ def cross_track_distances(query, polyline):
     a = poly[:-1]                       # (N,2) 线段起点
     seg = poly[1:] - a                  # (N,2) 线段向量
     seg_len2 = np.einsum('ij,ij->i', seg, seg)      # (N,)
-    # 零长线段（重复顶点）会让 t 变成 0/0。夹一个极小值，t 恒为 0，
-    # 距离退化为到起点的距离 —— 这正是想要的行为。
     safe_len2 = np.where(seg_len2 > 0.0, seg_len2, 1.0)
 
     dist = np.empty(m)
@@ -145,7 +117,6 @@ def cross_track_distances(query, polyline):
     tt = np.empty(m)
     for lo in range(0, m, _CHUNK):
         hi = min(lo + _CHUNK, m)
-        # (m_c, N, 2)
         rel = q[lo:hi, None, :] - a[None, :, :]
         t = np.einsum('ijk,jk->ij', rel, seg) / safe_len2[None, :]
         np.clip(t, 0.0, 1.0, out=t)
@@ -305,7 +276,6 @@ def overshoot(track, goal_xy, tolerance, approach_span_m=0.5):
     after = pts[k:]
     radial = float(np.max(np.hypot(after[:, 0] - gx, after[:, 1] - gy)))
 
-    # 进入前 approach_span_m 里程的净位移方向
     along = None
     if k >= 1:
         seg = pts[:k + 1]

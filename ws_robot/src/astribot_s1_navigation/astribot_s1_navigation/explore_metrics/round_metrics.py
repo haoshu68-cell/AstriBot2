@@ -1,59 +1,32 @@
 # Copyright 2026 Astribot.
-#
-# 一轮探索导航的原始时序 → 一行指标。**纯函数，无 ROS 依赖**。
-#
-# 这里是**唯一的判据出口**：录制节点只负责订阅与落盘，任何"算出一个数"的逻辑
-# 都在这个文件里，因此都能被单测覆盖。上次姿态监控的顺序变异之所以能在
-# 20 条测试下活下来，就是因为判据留在了回调里。
-#
-# ======================== 输出里的命名约定（很重要）========================
-#   xxx                 直接可测量
-#   xxx_proxy           **代理量**：定义写在 PROXY_DEFINITIONS 里，随数据一起落盘
-#   None / 空           没有合格样本。**绝不用 0 代替** ——
-#                       "0 次震荡"和"没测到震荡"在汇总表里必须区分得开
-# ========================================================================
 import math
 
 import numpy as np
 
 from . import geometry, scan_metrics, signals
 
-# ------------------------------------------------------------------ 阈值默认值
-#
-# 每一项都写清来源。没有来源的阈值等于把结论建在猜上。
 DEFAULTS = {
-    # 位移噪声门限：TF 位姿抖动，低于此值的单步不计入里程
     'min_step_m': 0.002,
-    # 实测轨迹算平滑度前的抽稀步长。不抽稀时算出的是传感器噪声
     'track_decimate_m': 0.05,
-    # 超调的"进入方向"取首次进入容差前这么长里程的净位移
     'approach_span_m': 0.5,
-    # 闸门关（只转不走）判据
     'gate_v_eps': 0.02,          # m/s
     'gate_w_eps': 0.05,          # rad/s
-    # 震荡：变号两侧幅值都要超过它，且两次 excursion 间隔不超过窗口
     'osc_w_min': 0.15,           # rad/s
     'osc_v_min': 0.05,           # m/s
     'osc_window_s': 2.0,
-    # 速度跟踪误差的时延搜索上界。本机链路实测滞后约 0.6s，1.5 给足余量
     'max_lag_s': 1.5,
     'lag_grid_dt': 0.02,
-    # 零进展事件：复算 nav2 PoseProgressChecker 的判据。
-    # 默认值取自 nav2_params_mppi.yaml 的 progress_checker
     'progress_radius_m': 0.5,
     'progress_window_s': 10.0,
-    # 动态障碍：前向净空在 dyn_window_s 内跌落超过 dyn_drop_m 视为障碍出现
     'dyn_drop_m': 0.30,
     'dyn_window_s': 0.3,
     'dyn_brake_ratio': 0.8,
-    # 窄通道
     'narrow_width_m': scan_metrics.DEFAULT_NARROW_WIDTH_M,
     'narrow_min_episode_s': 0.5,
     'narrow_min_progress_m': 0.3,
     'corridor_max_range_m': scan_metrics.DEFAULT_CORRIDOR_MAX_RANGE,
 }
 
-# 随数据一起落盘。代理量的定义不跟着数据走，半年后没人能复核这张表。
 PROXY_DEFINITIONS = {
     'narrow_success_rate_proxy':
         '窄段=连续>=narrow_min_episode_s 满足 (left_min+right_min)<narrow_width_m；'
@@ -239,7 +212,6 @@ def _arrival(raw, row):
     row['actual_x'] = _f(ax)
     row['actual_y'] = _f(ay)
     row['actual_yaw'] = _f(ayaw)
-    # 「到位精度差距」与「位置到位误差」是同一个量，只出一列，避免两列不一致
     row['arrival_error_xy_m'] = _f(math.hypot(ax - gx, ay - gy))
     row['arrival_error_yaw_rad'] = _f(geometry.wrap_angle_scalar(ayaw - gyaw))
 
@@ -268,9 +240,6 @@ def _pose_coverage(raw, row):
         row['pose_rate_measured_hz'] = _f(pt.size / row['pose_span_s'])
     if dur and dur > 0.0 and row['pose_span_s'] is not None:
         row['pose_coverage_ratio'] = signals.safe_div(row['pose_span_s'], dur)
-    # 覆盖率 < 0.5 或样本 < 2 ⇒ 到位误差/里程/横偏这一行都不是测量结果。
-    # 阈值 0.5 的来源：低于一半就意味着轮次时长里多数时间没有位姿，
-    # 此时 traveled_m 必然偏小而 arrival_error 退化成快照，两者都会被误读成好成绩。
     row['pose_coverage_suspicious'] = bool(
         pt.size < 2
         or (row['pose_coverage_ratio'] is not None
@@ -287,16 +256,9 @@ def _path_metrics(raw, cfg, row):
     row['traveled_m'] = _f(traveled)
     row['traveled_steps_below_gate'] = int(dropped)
     row['min_step_gate_m'] = _f(cfg['min_step_m'])
-    # 两个口径都给，谁也不必信那个门限。
-    #
-    # 为什么必须这样：门限 2mm、位姿 20Hz、限速档位 0.1m/s 时单步只有 5mm，
-    # 只差 2.5 倍；掉到 50Hz 就是 2mm，与门限**同量级**，此时门限会把
-    # 真实位移当抖动丢掉，"路径长度比"直接变成 0 而看不出原因。
-    # 限速扫描恰恰要往低速档走，所以这个风险是真实的，不是理论上的。
     row['traveled_m_ungated'] = _f(geometry.polyline_length(track))
     n_steps = max(len(track) - 1, 0)
     row['traveled_gate_dropped_ratio'] = signals.safe_div(dropped, n_steps)
-    # 丢弃过半 → 采样密度与门限不匹配，traveled_m 不可用，看 ungated
     row['traveled_gate_suspicious'] = bool(
         n_steps > 0 and dropped > 0.5 * n_steps)
 
@@ -314,7 +276,6 @@ def _path_metrics(raw, cfg, row):
     else:
         row['straight_line_m'] = row['path_len_ratio_vs_straight'] = None
 
-    # 平滑度两组：规划路径不抽稀（顶点是确定值），实测轨迹必须抽稀
     last_plan = plans[-1]['points'] if plans else []
     sp = geometry.smoothness(last_plan, min_step=0.0)
     row['plan_turn_per_m'] = _f(sp['turn_per_m'])
@@ -324,8 +285,6 @@ def _path_metrics(raw, cfg, row):
     row['track_max_turn_rad'] = _f(st['max_turn_rad'])
     row['track_decimate_m'] = _f(cfg['track_decimate_m'])
 
-    # 重规划次数：路径内容变化才算。逐字相同的重复发布不算 ——
-    # nav2 在某些配置下会周期性重发同一条路径，计进去会得出"每秒重规划一次"
     changed = 0
     for i in range(1, len(plans)):
         a, b = plans[i - 1]['points'], plans[i]['points']
@@ -346,29 +305,17 @@ def _path_metrics(raw, cfg, row):
     row['planning_failure_rate'] = signals.safe_div(aborted, len(reqs))
     row['planning_aborted'] = aborted
     if not reqs and plans and len(_seq(raw, 'pose_t')):
-        # 退化口径：拿不到 action 状态时用「下发 → 首条 /plan」。
-        #
-        # 🔴 只能取 goal_stamp **之后**的那条 /plan。nav2 周期性重规划，
-        #    本轮缓冲里的第一条 /plan 完全可能是**上一轮**留下的陈旧路径，
-        #    直接相减就是负数 —— 时长不可能为负。
-        #    实测（首次真机图外的仿真跑，三轮全中）：
-        #      planning_time_median_s = -0.496 / -2.507 / -0.297 s
-        #    即首条 plan 比目标下发早 0.3~2.5s。这一列此前把陈旧读数
-        #    当成了当前值，而 210 条单测全绿 —— 因为测试只喂了目标之后
-        #    的那一条 plan，陈旧分支一次都没被走到。
         after = [p for p in plans if p['stamp'] >= raw['goal_stamp']]
         if after:
             row['planning_time_median_s'] = _f(
                 after[0]['stamp'] - raw['goal_stamp'])
             row['planning_time_source'] = 'fallback:goal_to_first_plan'
         else:
-            # 宁可报"没有"，也不报一个负数。缺这一格比错一格容易发现。
             row['planning_time_median_s'] = None
             row['planning_time_source'] = 'fallback:no_plan_after_goal'
     elif reqs:
         row['planning_time_source'] = 'compute_path_to_pose/_action/status'
     else:
-        # reqs 为空时来源绝不是 action 状态，别贴错标签。
         row['planning_time_source'] = 'none'
 
 
@@ -379,9 +326,6 @@ def _tracking_metrics(raw, cfg, row):
         _seq(raw, 'pose_t'), _seq(raw, 'pose_x'), _seq(raw, 'pose_y'), _seq(raw, 'plans'))
     row['cross_track_max_m'] = _f(signals.stat_or_none(dist, np.max))
     row['cross_track_mean_m'] = _f(signals.weighted_mean(pose_t, dist))
-    # p95 才是能比档位的那个数：max 是单样本极值，一次 TF 抖动就能主导整轮。
-    # 之前报告脚本要 cross_track_p95_m 而这一列从不存在 —— ROS 那边参数写错
-    # 会静默忽略，CSV 这边列名写错则表现为"n=0 没测到"，两者一样不报错。
     row['cross_track_p95_m'] = _f(
         signals.stat_or_none(dist, lambda a: np.percentile(a, 95.0)))
     row['cross_track_samples'] = int(np.count_nonzero(np.isfinite(dist)))
@@ -394,7 +338,6 @@ def _tracking_metrics(raw, cfg, row):
     else:
         row['heading_error_max_rad'] = row['heading_error_mean_rad'] = None
 
-    # 全向底盘可横移：车头误差大**不等于**跟踪差。真正该看的是运动方向。
     ve = _motion_direction_error(raw, tang, cfg)
     row['motion_dir_error_max_rad'] = _f(signals.stat_or_none(ve, np.max))
     row['motion_dir_error_mean_rad'] = _f(signals.weighted_mean(pose_t, ve))
@@ -429,7 +372,6 @@ def _tracking_metrics(raw, cfg, row):
                              '零时延残差主要成分是时延，不是跟踪误差；'
                              'hit_boundary=True 时 best_lag 不可信')
 
-    # 臂-底盘耦合衰减：不记这一列，整个限速扫描是混淆的（耦合实测可压到 15%）
     att = _coupling_attenuation(raw_t, raw_speed, fin_t, fin_speed, cfg)
     row.update(att)
 
@@ -528,17 +470,12 @@ def _scan_and_safety(raw, cfg, row):
 
     row['footprint_inscribed_m'] = _f(inscribed)
     row['footprint_circumscribed_m'] = _f(circumscribed)
-    # 足迹可能被临时缩放过（本项目做过 36% 的临时足迹）。轮内变化必须标出来：
-    # 变了之后净空这一列前后不是同一个口径。
     row['footprint_changed_in_round'] = bool(raw.get('footprint_changed', False))
 
     row.update(scan_metrics.aggregate(
         frames, scan_t, circumscribed=circumscribed,
         narrow_width_m=cfg['narrow_width_m']))
 
-    # 沿路径进展插值到激光时刻，供窄段成功判据用。
-    # np.interp 的 xp 为空时会抛 ValueError("array of sample points is empty")，
-    # 所以必须先判 prog.size —— 一轮位姿采集不全不该让整轮数据全丢。
     prog = cumulative_progress(_seq(raw, 'pose_x'), _seq(raw, 'pose_y'),
                                cfg['min_step_m'])
     pose_t = np.asarray(_seq(raw, 'pose_t'), dtype=float)
@@ -555,7 +492,6 @@ def _scan_and_safety(raw, cfg, row):
         min_progress_m=cfg['narrow_min_progress_m'],
         round_failed=(row['outcome'] != OUTCOME_SUCCESS)))
 
-    # 几何侵入（**不是碰撞**）：最近回波落进内切半径
     if inscribed is not None and frames:
         intr = np.asarray(
             [(f['min_range'] is not None and f['min_range'] < float(inscribed))
@@ -566,7 +502,6 @@ def _scan_and_safety(raw, cfg, row):
     else:
         row['geometric_intrusion_episodes_proxy'] = None
         row['geometric_intrusion_s'] = None
-    # 真实碰撞只能人工填：本机没有碰撞传感器，急停按钮在操作者手里
     row['collisions_manual'] = raw.get('collisions_manual')
 
     row.update(_brake_latency(raw, cfg, frames, scan_t))
@@ -583,7 +518,6 @@ def _brake_latency(raw, cfg, frames, scan_t):
     t = np.asarray(scan_t, dtype=float)
     front = np.asarray([np.nan if f['front_min'] is None else f['front_min']
                         for f in frames], dtype=float)
-    # 前向净空在 dyn_window_s 内跌落超过 dyn_drop_m → 障碍出现
     trig = np.zeros(t.size, dtype=bool)
     lo = np.searchsorted(t, t - float(cfg['dyn_window_s']), side='left')
     for i in range(t.size):
@@ -625,7 +559,6 @@ def compute_round(raw, cfg=None):
         'start_stamp': _f(raw.get('goal_stamp')),
         'end_stamp': _f(raw.get('end_stamp')),
         'duration_s': _f((raw.get('end_stamp') or 0.0) - (raw.get('goal_stamp') or 0.0)),
-        # 限速：**实测**值，来自在线查参，不是回填命令行（见 recorder 的自检）
         'vx_max_measured': _f(raw.get('vx_max_measured')),
         'vx_min_measured': _f(raw.get('vx_min_measured')),
         'smoother_max_velocity_measured': _f(

@@ -69,8 +69,6 @@ class ChassisOdomNode(Node):
         self.declare_parameter('velocity_frame', 'body')
         self.declare_parameter('sdk_freq', 250.0)
         self.declare_parameter('report_period_sec', 10.0)
-        # 连续读失败这么多次就退出。不静默重试到天荒地老：
-        # 下游会一直等 odom，症状变成"导航卡住"，而原因在这一层。
         self.declare_parameter('max_consecutive_read_errors', 25)
 
         self.part_name = str(self.get_parameter('part_name').value)
@@ -81,9 +79,6 @@ class ChassisOdomNode(Node):
             raise OdomSourceError(f'publish_rate={rate} 必须为正')
 
         if self.base_frame == 'base_link':
-            # 本仓库的根 frame 是 astribot_torso_base，**没有** base_link。
-            # 写成 base_link 不会报错，只会让 TF 树多一个孤立分支，
-            # 而 nav2 报的是 "Could not transform"，离根因两层远。
             self.get_logger().warning(
                 'base_frame=base_link：本机器人**没有** base_link，'
                 '根 frame 是 astribot_torso_base。'
@@ -104,7 +99,6 @@ class ChassisOdomNode(Node):
             TransformBroadcaster(self)
             if bool(self.get_parameter('publish_tf').value) else None)
 
-        # 会话在最后建立：前面的参数校验不该等 SDK 连上才报错
         self.session = open_session(
             freq=float(self.get_parameter('sdk_freq').value),
             node_name='chassis_odom_reader',
@@ -124,10 +118,8 @@ class ChassisOdomNode(Node):
             f'  跳变阈值 {self.source.jump_threshold_m}m  '
             f'速度系={self.source.velocity_frame}')
 
-    # -- 周期 -------------------------------------------------------------
     def _tick(self):
         try:
-            # 只读。这两行是本节点与 SDK 的**全部**交互。
             pos = self.session.get_current_joints_position([self.part_name])[0]
             vel = self.session.get_current_joints_velocity([self.part_name])[0]
         except Exception as exc:      # noqa: BLE001
@@ -138,7 +130,6 @@ class ChassisOdomNode(Node):
         try:
             sample = self.source.sample(pos, vel)
         except OdomSourceError as exc:
-            # 形状不对是配置/接口问题，重试不会变好 —— 直接退出
             self.get_logger().error(f'SDK 读数不符合约定，退出：{exc}')
             self.exit_code = 1
             raise SystemExit(1)
@@ -149,7 +140,6 @@ class ChassisOdomNode(Node):
             self._publish_tf(sample, stamp)
 
         if sample.jumped:
-            # 不静默平滑掉：平滑就把"SDK 位姿不能当 odom"这个事实藏了起来
             self.get_logger().warning(
                 f'位姿跳变 {sample.jump_m:.3f}m（阈值 '
                 f'{self.source.jump_threshold_m}m）：'
@@ -173,10 +163,8 @@ class ChassisOdomNode(Node):
                 f'③ ROS_DOMAIN_ID 是否与 SDK 一致（实机是 25，不是 42）。')
             self.exit_code = 1
             raise SystemExit(1)
-        # 前几次只 DEBUG：启动瞬间偶发失败是正常的
         self.get_logger().debug(f'读 SDK 失败（{self._read_errors}）：{exc}')
 
-    # -- 发布 -------------------------------------------------------------
     def _publish_odom(self, sample, stamp):
         msg = Odometry()
         msg.header.stamp = stamp
@@ -187,13 +175,9 @@ class ChassisOdomNode(Node):
         z, w = sample.quaternion_zw
         msg.pose.pose.orientation.z = z
         msg.pose.pose.orientation.w = w
-        # twist 在 child_frame（机体系）里表达 —— 这是 nav_msgs/Odometry 的规定。
-        # 搞反不会报错，只让 nav2 的速度前瞻在转向时系统性偏一个旋转。
         msg.twist.twist.linear.x = sample.vx_body
         msg.twist.twist.linear.y = sample.vy_body
         msg.twist.twist.angular.z = sample.wz
-        # 协方差刻意留全 0：填一个编出来的数会让下游（若将来接 EKF）
-        # 拿假的置信度去融合，比留 0 更危险。真要融合时必须实测标定。
         self.odom_pub.publish(msg)
 
     def _publish_tf(self, sample, stamp):
@@ -203,8 +187,6 @@ class ChassisOdomNode(Node):
         transform.child_frame_id = self.base_frame
         transform.transform.translation.x = sample.x
         transform.transform.translation.y = sample.y
-        # z 留 0：odom 是平面里程计。地面在 z≈-0.095 那件事属于
-        # astribot_torso_base 与地面的静态关系，不该混进 odom→base 这条边。
         z, w = sample.quaternion_zw
         transform.transform.rotation.z = z
         transform.transform.rotation.w = w
@@ -234,9 +216,6 @@ def main(argv=None):
     except SystemExit as exc:
         code = int(exc.code or 0)
     except ExternalShutdownException:
-        # SIGTERM（launch 关停 / systemd stop）的正常表现，不是故障。
-        # 不接住的话 rclpy 会把它抛成一串栈回溯，看起来像崩溃 ——
-        # 而那会掩盖真正的错误，也让 launch 的退出处理器难以区分正常与异常。
         pass
     except KeyboardInterrupt:
         pass

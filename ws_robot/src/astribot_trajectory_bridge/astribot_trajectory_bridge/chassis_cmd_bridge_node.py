@@ -49,7 +49,6 @@ from astribot_trajectory_bridge.write_gate import (
 
 class ChassisCmdBridgeNode(Node):
 
-    #: 本节点的回调组，容器据此算线程数。加组只改 callback_layout。
     CALLBACK_GROUPS = CHASSIS_GROUPS
 
     def __init__(self, session, node_name='chassis_cmd_bridge'):
@@ -57,71 +56,24 @@ class ChassisCmdBridgeNode(Node):
         self._declare_params()
         cfg = self._build_config()
 
-        # !!! 不能叫 self._clock !!! rclpy.Node 在 node.py:210 用 self._clock 存自己的
-        # 时钟，create_timer/get_clock 都读它。取同名会把节点时钟**覆盖掉**，
-        # 报错是 "'RosClock' object has no attribute 'handle'" —— 信息指向时钟对象，
-        # 真实原因是属性遮蔽，极难归因。
         self._clock_port = RosClock(self)
         self._pose = TfPosePort(self, cfg.map_frame, cfg.base_frame)
         self.core = ChassisBridgeCore(cfg, session, self._pose, self._clock_port)
         self.status = StatusReporter(self, node_name=node_name)
 
-        # ---- 写通路准入。D-1 统一 domain 下这是唯一阻止"仿真指令打到真机"的机制 ----
         self._write_allowed = self._check_write_gate(session, cfg)
 
-        # 回调组按 callback_layout.CHASSIS_GROUPS 声明式建立 —— 组数与容器的
-        # 线程数由同一份声明推出，不会再出现"组分开了但线程不够"（见下）。
         groups = make_groups(CHASSIS_GROUPS, MutuallyExclusiveCallbackGroup,
                              'chassis_cmd_bridge')
         inner_group = groups['inner']
         outer_group = groups['outer']
         srv_group = groups['srv']
-        # !!! cmd_vel 订阅必须独立成组，绝不能和内环定时器共用 !!!
-        #
-        # 2026-08-31 实机实测出来的：原来两者共用 inner_group，而
-        # MutuallyExclusiveCallbackGroup 保证组内**串行**。内环每拍要做两次跨进程
-        # SDK 往返（get_current_joints_position 判 leash + set_joints_position 下发），
-        # Python+GIL 下一拍撑不到 4ms（LOOP_OVERRUN 实测周期 6.0~14.9ms），而定时器
-        # 按 freq=250 每 4ms 就排一个 —— 只要**平均**周期 > 4ms，定时器回调就永久积压、
-        # 把组占满，`_on_cmd_vel` **一次都拿不到执行机会**。
-        #
-        # 注：这里只需要"平均周期 > 4ms"这一个条件，不需要知道确切拍率。
-        # 曾在此处写过"一拍 ~10ms"，那是 LOOP_OVERRUN 尾部样本的均值 ——
-        # 该事件只在周期 > 6ms 时上报，天然截尾，不能当平均周期用。
-        # 实际拍率的无偏值至今**未测**，只有下界 ≥157Hz（见 docs/ 复盘）。
-        #
-        # !!! 只拆组是不够的 !!! 互斥组只保证组内串行，不保证组间能并发 ——
-        # 线程不足时组照样排队。所以组数与线程数必须同源，见 callback_layout。
-        #
-        # 后果极其隐蔽，因为每一层看起来都正常：
-        #   · /cmd_vel 实测 26.8Hz、2708 帧非零 —— 消息确实到了订阅端
-        #   · `_last_twist` 恒为初始值 (0,0,0) -> 积分零速度 -> pos_cmd 不变
-        #   · SDK 的 desired 与 actual 6 秒内一个数位都不变
-        #   · leash **不会** trip（指令与实测都不动，偏差恒 0）
-        #   · 看门狗也不报，因为 `_last_twist_time` 是 None，走的是"无输入置零"
-        #     那条不发事件的分支
-        #   · 唯一的可观测量是 LOOP_OVERRUN（实测累计 23195 次）
-        # 表现就是"nav2 一切正常、路径也规划出来了、机器人一动不动"。
         cmd_group = groups['cmd']
 
         self.create_subscription(
             Twist, self.get_parameter('cmd_vel_topic').value,
             self._on_cmd_vel, 10, callback_group=cmd_group)
 
-        # ---- /scan 时效性联锁的输入 ----
-        # !!! QoS 必须用 sensor_data，不能用深度整数 !!!
-        # `create_subscription(..., 10)` 里那个 10 是**深度**，可靠性走默认的
-        # RELIABLE。而 /scan 发布端是 BEST_EFFORT（实测 pointcloud_to_laserscan
-        # 就是 BEST_EFFORT），单向不兼容 = 一帧都收不到，全程只有一条 WARNING。
-        # 本项目已经因为这个组合断过一整条感知链（livox_preprocess_node）。
-        #
-        # 在这里配错的后果**特别隐蔽且危险方向相反**：收不到 /scan 会让本联锁
-        # 判成"从未收到"→ 永久拒绝下发 → 表现为"机器人怎么都不动"，
-        # 而真因是订阅端 QoS 写错了。所以这一行宁可啰嗦也要写清。
-        #
-        # 同时刻意与内环**不共用**回调组：cmd_group 是互斥组，250Hz 内环已经
-        # 饿死过 cmd_vel 回调一次（那次表现是"nav2 正常、机器人一动不动、无告警"）。
-        # 这个订阅只更新一个时间戳，但它一旦被饿死，联锁就会误判成陈旧而拒绝下发。
         if cfg.require_fresh_scan:
             self.create_subscription(
                 LaserScan, self.get_parameter('scan_topic').value,
@@ -146,19 +98,14 @@ class ChassisCmdBridgeNode(Node):
         self.create_service(Trigger, '~/reset_leash', self._srv_reset_leash,
                             callback_group=srv_group)
 
-        # 内环拍率日志：每 10 秒一次（外环 cfg.outer_rate 拍一次）
         self._rate_report_period_ticks = max(1, int(round(cfg.outer_rate * 10.0)))
         self._rate_report_countdown = self._rate_report_period_ticks
 
-        # 桥接内部速度链路日志。刻意取 1Hz（不跟拍率日志的 10s）：
-        # path_tracking_diagnostics_node 也是 1Hz，两边同拍才能逐行对齐 ——
-        # 桥接外面四段和桥接里面五段拼起来才是完整的速度链路。
         vel_period = float(self.get_parameter('vel_trace_period_sec').value)
         self._vel_report_period_ticks = max(
             1, int(round(cfg.outer_rate * vel_period)))
         self._vel_report_countdown = self._vel_report_period_ticks
 
-        # 周期抖动监控
         self._last_inner_time = None
         self._overrun_count = 0
         self._loop_overrun_factor = self.get_parameter('loop_overrun_factor').value
@@ -172,14 +119,13 @@ class ChassisCmdBridgeNode(Node):
                cfg.enable_slam_correction, cfg.pose_source,
                '允许' if self._write_allowed else '被拒绝'))
 
-    # ------------------------------------------------------------------ 参数
 
     def _declare_params(self):
         d = self.declare_parameter
         d('part_name', 'astribot_chassis')
         d('cmd_vel_topic', '/cmd_vel')
         d('odom_topic', '/astribot/chassis/odom_from_sdk')
-        d('freq', 250.0)
+        d('freq', 100.0)
         d('input_frame', 'body')
         d('theta_reference', 'at_enable')
         d('start_disabled', True)
@@ -188,15 +134,7 @@ class ChassisCmdBridgeNode(Node):
         d('max_vel_theta', 2.0)
         d('max_accel_xy', 2.5)
         d('max_accel_theta', 3.2)
-        # xy **加速**方向的加速度上限（m/s²）；减速仍走 max_accel_xy。
-        # 0.0 = 关闭非对称限幅，退化为对称（旧行为），这是默认。
-        # ROS 参数没有 None，所以用 0.0 当哨兵 —— 而 0.0 本身作为"加速度上限"
-        # 是无意义的（永远加不起速），拿它当"关闭"不会与任何有效值撞车。
-        # 为什么需要它、实机为什么必须给 0.35：见 chassis_bridge.yaml 那一段。
         d('max_accel_xy_up', 0.0)
-        # 内环步长上限（秒）。默认 0.04 = 标称 4ms 的 10 倍。
-        # 单拍最大位移 = max_vel_xy * 该值，必须远小于 leash_xy_m，
-        # 构造 ChassisBridgeConfig 时会硬校验，不满足直接拒绝启动。
         d('max_tick_dt_sec', 0.04)
         d('leash_xy_m', 0.25)
         d('leash_theta_rad', 0.35)
@@ -217,18 +155,11 @@ class ChassisCmdBridgeNode(Node):
         d('odom_drift_window_sec', 2.0)
         d('odom_drift_warn_m', 0.15)
         d('loop_overrun_factor', 1.5)
-        # 桥接内部速度链路日志的周期（秒）。设 <=0 关掉这一行日志。
-        # 默认 1.0：与 path_tracking_diagnostics_node 同拍，两边日志能逐行对齐。
         d('vel_trace_period_sec', 1.0)
-        # ---- /scan 时效性联锁 ----
-        # nav2 的 expected_update_rate 只会**告警**（实测 controller_server 里
-        # 没有任何检查 costmap currency 的字符串），所以"感知瞎了还继续走"
-        # 只有写通路能拒绝。参数含义与取值依据见 ChassisBridgeConfig 里的长注释。
         d('scan_topic', '/scan')
         d('require_fresh_scan', True)
         d('scan_max_age_sec', 0.5)
         d('scan_loss_grace_sec', 2.0)
-        # 写通路准入
         d('declared_target', 'sim')
         d('allow_write_to_real', False)
         d('allow_unsafe_mode', False)
@@ -242,8 +173,6 @@ class ChassisCmdBridgeNode(Node):
             cmd_vel_timeout_sec=g('cmd_vel_timeout_sec'),
             max_vel_xy=g('max_vel_xy'), max_vel_theta=g('max_vel_theta'),
             max_accel_xy=g('max_accel_xy'), max_accel_theta=g('max_accel_theta'),
-            # 0.0 哨兵 -> None（对称限幅）。用 > 0.0 判而不是 != 0.0：
-            # 负值同样是"没给有效值"，也该退化成旧行为而不是抛在 250Hz 回调里。
             max_accel_xy_up=(g('max_accel_xy_up')
                              if g('max_accel_xy_up') > 0.0 else None),
             max_tick_dt_sec=g('max_tick_dt_sec'),
@@ -265,7 +194,6 @@ class ChassisCmdBridgeNode(Node):
             scan_max_age_sec=g('scan_max_age_sec'),
             scan_loss_grace_sec=g('scan_loss_grace_sec'))
 
-    # -------------------------------------------------------------- WriteGate
 
     def _check_write_gate(self, session, cfg):
         target = self.get_parameter('declared_target').value
@@ -286,7 +214,6 @@ class ChassisCmdBridgeNode(Node):
                                mode,
                                self.get_parameter('allow_unsafe_mode').value)
         if not d.allowed:
-            # 拒绝时**节点存活并持续上报**，不退出 —— 上层要能看到"为什么写不动"
             self.get_logger().error('[WriteGate] 拒绝开启写通路：%s' % d.reason)
             self.status.publish(d.status_code, d.reason)
         return d.allowed
@@ -312,15 +239,11 @@ class ChassisCmdBridgeNode(Node):
         """
         return [TARGET_SIM if is_simulation_mode(robot_mode) else TARGET_REAL]
 
-    # ---------------------------------------------------------------- 回调
 
     def _on_cmd_vel(self, msg):
         self.core.submit_twist(msg.linear.x, msg.linear.y, msg.angular.z)
 
     def _on_scan(self, msg):      # noqa: ARG002 —— 只关心"来了一帧"，不看内容
-        # 刻意**不**传 msg.header.stamp：上游 hold_last 策略会把旧几何配上
-        # now() 的新时间戳重发，按 header 判龄期正好被它骗过去。
-        # 详见 ChassisBridgeCore.submit_scan_seen 的文档。
         self.core.submit_scan_seen()
 
     def _inner_tick(self):
@@ -375,28 +298,10 @@ class ChassisCmdBridgeNode(Node):
             return
         self._rate_report_countdown = self._rate_report_period_ticks
         st = self.core.tick_stats()
-        # 必须**无条件**取走本窗极值，哪怕这一轮不打印：留着不清，下一条日志
-        # 就会把停用期之前的极值当成本窗的印出来（陈旧读数伪装成当前读数）。
         gap = self.core.consume_tick_window_gap()
         if st.count == 0:
             return
         if not st.live:
-            # !!! 停用期间**绝不能**把上一段的速率再打一遍 !!!
-            # inner_tick 在 ST_DISABLED 提前返回，count/rate 会冻在上一段使能的
-            # 值上。原来这里照打，我因此误判过两次（"内环停了" / "桥接仍是
-            # enabled"）。陈旧读数与当前读数长得一样，是最难查的一类。
-            #
-            # !!! 状态名与停车原因也必须打出来（2026-09-08 实机代价换来的）!!!
-            # st.live 的定义是 `state == ST_ENABLED`，于是 DISABLED /
-            # LEASH_TRIPPED / STOPPED_NO_POSE / STOPPED_STALE_SCAN 四种状态
-            # 打出**逐字相同**的一行。实机那次是 leash 跳闸并因
-            # require_manual_reset=True 闩锁（机器人此后再没动过），而日志里
-            # "跳闸不动了"与"还没使能"长得一模一样；真正的原因和
-            # err_xy/err_theta 只进 /astribot/bridge/status，跑车时没人录那个
-            # 话题。定位这一次停车因此花掉十几轮日志交叉比对，其中最关键的
-            # "是 xy 超限还是 theta 超限"至今无法从日志判定 —— 两条都逼近阈值。
-            # 下面这一行本可以让它变成一次 grep。
-            # 与本文件上面那条教训同源：读数必须自带它自己的处境。
             stop = self.core.last_stop
             if stop is None:
                 why = ('当前状态 %s，本次启动以来未发生过停车事件'
@@ -453,17 +358,12 @@ class ChassisCmdBridgeNode(Node):
         if self._vel_report_countdown > 0:
             return
         self._vel_report_countdown = self._vel_report_period_ticks
-        # 必须**无条件**取走，哪怕这一轮不打印 —— 留着不清，下一条日志就会把
-        # 停用期之前的窗口当成本窗印出来。与 consume_tick_window_gap 同一个理由。
         tr = self.core.consume_vel_trace()
         if tr.ticks == 0:
-            # 刻意不打全 0 那一行：全 0 会被读成"链路上确实全是零"，
-            # 而真相是这一窗内环一拍都没跑（停用/联锁停车）—— 两件事处置不同。
             return
 
         cmd_speed = tr.cmd_path / tr.wall if tr.wall > 0.0 else 0.0
         act_speed = tr.act_net / tr.wall if tr.wall > 0.0 else 0.0
-        # 走得直不直：净位移 / 路径长。接近 1 才允许把 act_net 和 cmd_net 对比。
         straight = tr.cmd_net / tr.cmd_path if tr.cmd_path > 1e-9 else 1.0
         self.get_logger().info(
             '[桥接速度链] %d拍/%.2fs | in %.3f -> clamp %.3f(咬%d拍) -> '
@@ -504,7 +404,6 @@ class ChassisCmdBridgeNode(Node):
         msg.pose.pose.orientation.w = __import__('math').cos(half)
         self._odom_pub.publish(msg)
 
-    # ---------------------------------------------------------------- 服务
 
     def _srv_enable(self, request, response):
         if not self._write_allowed:

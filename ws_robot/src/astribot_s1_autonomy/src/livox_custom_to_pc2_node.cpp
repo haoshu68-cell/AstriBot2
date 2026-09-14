@@ -1,6 +1,4 @@
 // Copyright 2026 Astribot.
-//
-// livox_custom_to_pc2_node.hpp 的实现。
 #include "astribot_s1_autonomy/livox_custom_to_pc2_node.hpp"
 
 #include <algorithm>
@@ -72,10 +70,6 @@ LivoxCustomToPc2Node::LivoxCustomToPc2Node(const rclcpp::NodeOptions & options)
   report_period_sec_ = declare_parameter<double>("report_period_sec", 10.0);
   stale_warn_sec_ = declare_parameter<double>("stale_warn_sec", 2.0);
 
-  // 两路的无效点默认值直接取自厂商 MID360_config.json：
-  //   lidar[0] IP .12 = front，外参全零        → 无效点在 (0,0,0)
-  //   lidar[1] IP .13 = back，外参 (1,-496,84)mm → 无效点在 (0.001,-0.496,0.084)
-  // 这两组默认值就是实机实测到的假点团位置（front 33.4%、back 34.0%）。
   channels_.push_back(declare_channel(
       "front", "/livox/lidar_front", "/livox/lidar_front_pc2",
       0.0, 0.0, 0.0));
@@ -83,8 +77,6 @@ LivoxCustomToPc2Node::LivoxCustomToPc2Node(const rclcpp::NodeOptions & options)
       "back", "/livox/lidar_back", "/livox/lidar_back_pc2",
       0.001, -0.496, 0.084));
 
-  // 传感器数据用 BEST_EFFORT + 小深度：这是点云的惯例，也与驱动的发布 QoS 匹配。
-  // 深度给 5 而不是 1：转换有计算量，留一点缓冲避免抖动时直接丢帧。
   auto qos = rclcpp::SensorDataQoS();
   qos.keep_last(5);
 
@@ -141,7 +133,6 @@ ConvertChannel LivoxCustomToPc2Node::declare_channel(
     declare_parameter<double>(prefix + ".max_range", 0.0));
   ch.cfg.max_spatial_noise = static_cast<std::uint8_t>(
     declare_parameter<int>(prefix + ".max_spatial_noise", 4));
-  // 参数不合法就在构造期抛，不要等到第一帧到了才发现。
   ch.cfg.validate();
   return ch;
 }
@@ -182,7 +173,6 @@ void LivoxCustomToPc2Node::on_cloud(
   ch.dropped_other += st.dropped_range + st.dropped_noise + st.dropped_nonfinite;
 
   sensor_msgs::msg::PointCloud2 out;
-  // frame_id 原样透传：实机是 livox_frame，URDF 里已有对应的恒等边。
   out.header = msg->header;
   out.height = 1;
   out.width = static_cast<std::uint32_t>(out_buf_.size());
@@ -217,7 +207,6 @@ void LivoxCustomToPc2Node::report()
 
   for (const ConvertChannel & ch : channels_) {
     if (ch.frames == 0U) {
-      // 一帧都没收到与「收过但停了」是两种故障，指向的地方不同。
       RCLCPP_WARN(get_logger(),
                   "%s：一帧都没收到。查驱动是否在发、以及 xfer_format 是否为 1"
                   "（CustomMsg）。",
@@ -246,8 +235,6 @@ void LivoxCustomToPc2Node::report()
                   "上面那些计数是历史值，不是当前速率。",
                   ch.in_topic.c_str(), age, stale_warn_sec_);
     }
-    // 无效点比例是个强信号：实测 front≈33%、back≈34%。
-    // 明显偏离说明 null_point 配错了（比如两路配串），那会让假点团漏进 costmap。
     if (null_pct < 5.0) {
       RCLCPP_WARN(get_logger(),
                   "%s 的无效点剔除只有 %.1f%%，实机实测应在 30%% 上下。"

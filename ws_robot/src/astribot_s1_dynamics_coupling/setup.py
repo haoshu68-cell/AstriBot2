@@ -7,7 +7,7 @@ package_name = 'astribot_s1_dynamics_coupling'
 setup(
     name=package_name,
     version='0.1.0',
-    packages=find_packages(exclude=['test']),
+    packages=find_packages(),
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -24,7 +24,6 @@ setup(
         '无侵入中间控制层，解决机械臂运动诱发的倾倒问题'
     ),
     license='Apache-2.0',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'arm_chassis_speed_coupling_node = '
