@@ -1,0 +1,125 @@
+# 架构约束：仅提交任务目标；禁用独立 FollowPath、自举及脱困速度输出。
+/**:
+  ros__parameters:
+
+    map_topic: "/map"                        # slam_toolbox 输出，transient_local QoS；仅用于前沿搜索
+    map_transient_local: true
+    costmap_topic: "/global_costmap/costmap_raw"   # nav2_msgs/Costmap，仅用于下发前校验
+    odom_topic: "/odom"                      # 用于「稳定驻留」的速度判定
+    state_topic: "/exploration/state"        # std_msgs/String，状态机对外唯一状态出口
+
+    complete_topic: "/exploration/complete"  # std_msgs/Bool，transient_local
+    current_goal_topic: "/exploration/current_goal"   # 已下发目标，仅供 RViz 观察
+    nav_action_name: "/exploration/navigate_to_pose"      # Nav2 导航动作
+    plan_action_name: "compute_path_to_pose" # 仅用于取全局路径做校验，不用于控制
+    map_frame: "map"
+    robot_base_frame: "astribot_torso_base"  # 注意：本机没有 base_link
+    planner_id: ""                           # 空串 = 用 Nav2 默认全局规划器
+
+    selection_budget_sec: 8.0
+    path_turn_weight: 0.2
+    failure_cooldown_sec: 20.0
+    failure_radius_m: 0.35
+    search_result_max_age_sec: 2.0
+    search_result_max_displacement_m: 0.25
+    completion_confirmations: 3
+    completion_stable_sec: 2.0
+    control_period_sec: 0.5
+    tf_timeout_sec: 0.2
+    map_timeout_sec: 10.0
+    costmap_timeout_sec: 5.0
+    odom_timeout_sec: 1.0
+    plan_timeout_sec: 5.0
+    nav_timeout_sec: 120.0
+
+    arrival_xy_tolerance: 0.25
+    arrival_yaw_tolerance: 0.30
+    check_yaw: true
+    dwell_time_sec: 1.5
+    settle_speed: 0.05
+
+    nav_dispatch_mode: "navigate_to_pose"
+    # 以下旧跟踪调参仅为配置迁移保留，探索已不使用这些执行参数。
+    follow_action_name: "follow_path"
+    follow_controller_id: "FollowPath"
+    follow_goal_checker_id: "precise_goal_checker"
+    follow_max_retries: 1                       # 对齐默认行为树 RecoveryNode number_of_retries="1"
+    replan_policy: "on_invalid"      # on_invalid=默认；periodic=旧行为，仅供一键回退对比
+    replan_check_period_sec: 0.5     # 多久看一眼「当前路径还能不能用」（纯本地计算，不发 action）
+    replan_min_interval_sec: 1.0     # 两次重规划的最小间隔，防止判据在阈值附近抖动时连续换路径
+    path_deviation_limit_m: 0.6
+    max_invalid_replan_attempts: 3
+    path_max_age_sec: 0.0
+    replan_period_sec: 1.0
+
+    escape_enabled: false                     # 强制 false；恢复由导航策略任务负责
+    escape_trigger_failures: 5               # 连续「起点致命」次数，避免偶发抖动就动
+    escape_search_radius_m: 1.5              # 脱困是短距离动作，不是重规划
+    escape_heading_tol_rad: 1.5708           # ±90°
+    escape_linear_vel: 0.08
+    escape_angular_vel: 0.20                 # 实测 wz=0.05 就能动，跟踪比 0.73~0.92
+    escape_arrive_tol_m: 0.05                # 一个栅格
+    escape_align_tol_rad: 0.35               # 容差内 wz 归零，避免在带里原地抖动
+    escape_timeout_sec: 20.0
+    escape_max_attempts: 3                   # 数**连续**失败(成功出带/人工 resume 清零)；达上限进 PAUSED
+    escape_clear_ticks: 5                    # 连续几拍非致命才算出带，防边界抖动
+    breadcrumb_window_sec: 60.0
+    breadcrumb_sample_hz: 2.0
+
+    bootstrap_mode: "disabled"                 # 强制 disabled；地图不可用时等待，不自行移动
+    bootstrap_cmd_vel_topic: "/cmd_vel_nav_body_raw"
+    bootstrap_scan_topic: "/scan_from_cloud"  # 与 nav2 代价地图订阅的是同一条
+    bootstrap_yaw_frame: "odom"
+    bootstrap_angular_vel: 0.40
+    bootstrap_duration_sec: 4.0
+    bootstrap_cmd_rate_hz: 20.0
+    bootstrap_trigger_wait_sec: 6.0
+    bootstrap_scan_timeout_sec: 1.0
+    bootstrap_min_clearance_m: 0.44
+    bootstrap_min_yaw_delta: 0.20
+    bootstrap_max_attempts: 6                # 每次成功下发目标后清零；有上限=禁止死循环
+    min_known_cells_for_decision: 100
+
+    max_candidates_per_cycle: 5
+    max_sample_failures: 4
+    max_validation_failures: 4
+    max_consecutive_nav_failures: 3
+    pause_cooldown_sec: 10.0
+    max_auto_resume_attempts: 3
+    visit_history_limit: 50
+
+    validator:
+      occupied_threshold: 65
+      free_threshold: 25
+      goal_clearance_radius: 0.25
+      goal_unknown_clearance_radius: 0.0
+      path_sample_step: 0.0
+      path_endpoint_tolerance: 0.5
+      max_samples: 200000
+
+    validation:
+      use_costmap: true
+      costmap_unknown_cost: 255
+      costmap_lethal_cost_threshold: 253
+
+    search:
+      occupied_threshold: 65
+      free_threshold: 25
+      obstacle_inflation_radius: 0.45
+      min_obstacle_cluster_cells: 3
+      use_eight_connectivity: true
+      min_frontier_cells: 6
+      visibility_rays: 72
+      sensor_fov_rad: 6.283185307179586  # 当前全周激光；不同传感器需按实际覆盖配置
+      gain_window_radius: 1.5
+      adaptive_sample_gain: 0.15
+      min_samples_per_cluster: 1
+      max_samples_per_cluster: 8
+      required_clearance_radius: 0.05
+      min_goal_distance: 0.8
+      max_goal_distance: 0.0          # <=0 不限制
+      weight_distance: 1.0
+      weight_gain: 6.0
+      weight_visit_penalty: 4.0
+      visit_penalty_radius: 1.2
+      random_seed: 20260819

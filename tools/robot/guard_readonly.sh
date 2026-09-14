@@ -2,7 +2,8 @@
 set -uo pipefail
 
 WS=/home/astribot/Downloads/astribot_sdk_aarch64/ws_robot
-LOGDIR=/tmp/bringup
+LOGDIR="${ASTRIBOT_LOG_DIR:-${ROS_LOG_DIR:-${HOME}/.ros/log/astribot/hardware}}"
+export ASTRIBOT_LOG_DIR="$LOGDIR" ROS_LOG_DIR="$LOGDIR"
 GUARD_LOG="$LOGDIR/guard.log"
 STAGES=/tmp/bringup_stages.sh
 

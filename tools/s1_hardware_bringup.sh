@@ -1,10 +1,45 @@
 #!/usr/bin/env bash
 set -e   # 刻意不用 -u：source ROS 的 setup.bash 在 set -u 下会静默退出，一个字都不打印
 
+# Parse before ROS setup or file writes, including help and rejected legacy options.
+MODE=start
+CONTROLLER=mppi
+USE_RVIZ=true
+DRIVE=true
+mode_seen=false
+SHOW_HELP=false
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    start|stop|status|verify)
+      [ "$mode_seen" = false ] || { echo "只能指定一个模式" >&2; exit 2; }
+      MODE=$1; mode_seen=true ;;
+    --controller)
+      [ "$#" -ge 2 ] || { echo "--controller 缺少 mppi/rpp" >&2; exit 2; }
+      CONTROLLER=$2; shift ;;
+    --controller=*) CONTROLLER=${1#*=} ;;
+    --no-rviz) USE_RVIZ=false ;;
+    --no-drive) DRIVE=false ;;
+    --drive) DRIVE=true ;;
+    --keep-nav2-yaml)
+      echo "--keep-nav2-yaml 已删除：现在始终保留安装配置，请移除此参数。" >&2; exit 2 ;;
+    --help|-h) SHOW_HELP=true ;;
+    *) echo "未知参数：$1（用 --help 查看用法）" >&2; exit 2 ;;
+  esac
+  shift
+done
+case "$CONTROLLER" in mppi|rpp) ;; *) echo "控制器仅支持 mppi/rpp" >&2; exit 2 ;; esac
+export CONTROLLER
+if [ "$SHOW_HELP" = true ]; then
+  echo "用法：$0 [start|stop|status|verify] [--controller mppi|rpp] [--no-rviz] [--no-drive|--drive]"
+  echo "当前控制器 $CONTROLLER；默认 start、显示 RViz、使能写通路。start 会清理既有实例并自动探索。"
+  exit 0
+fi
+
 SDK=/home/astribot/Downloads/astribot_sdk_aarch64
 WS=$SDK/ws_robot
 TOOLS=/home/astribot/s1_tools
-LOG=/tmp/s1_logs
+LOG="${ASTRIBOT_LOG_DIR:-${ROS_LOG_DIR:-${HOME}/.ros/log/astribot/hardware}}"
+export ASTRIBOT_LOG_DIR="$LOG" ROS_LOG_DIR="$LOG"
 SHARE=$WS/install/astribot_s1_navigation/share/astribot_s1_navigation
 SELF_TAG=s1_hardware_bringup      # 用来把自己从"要杀的进程"里排除掉，见 ours_pids
 
@@ -15,7 +50,7 @@ export FASTRTPS_SHM_PERMISSION=UNRESTRICT
 unset ROS_LOCALHOST_ONLY
 export PATH=/opt/ros/humble/bin:$PATH   # 厂商裁剪版 ros2 只有 7 个子命令，必须压下去
 
-export RCUTILS_CONSOLE_OUTPUT_FORMAT='[{date_time_with_ms}] [{severity}] [{name}]: {message}'
+source "$SDK/ws_robot/src/astribot_logging/env_hook/astribot_logging.sh"
 
 AXIS_SPEED_CAP=0.5     # 2026-09-08 用户决定由 0.2 提到 0.5
 export AXIS_SPEED_CAP  # 两个判据的 python3 heredoc 是 <<'PY'（不做 shell 展开），
@@ -26,45 +61,17 @@ mkdir -p $LOG $TOOLS
 source /opt/ros/humble/setup.bash
 source $WS/install/setup.bash
 
-# 自检：**写错的 token 会被原样打印出来，不报错、不告警**（实测 `{no_such_token}`
-# 打出的就是字面量 `[{no_such_token}]`）。所以这一行不能只"看着对"，必须真跑一次。
-# 用 rclpy.logging 而不是建节点：不 init、不起 DDS participant，毫秒级返回。
-FMT_PROBE=$(RCUTILS_CONSOLE_OUTPUT_FORMAT="$RCUTILS_CONSOLE_OUTPUT_FORMAT" \
-  python3 -c "import rclpy.logging as L; L.get_logger('fmt_probe').info('ok')" 2>&1 | tail -1)
-if ! printf '%s' "$FMT_PROBE" | grep -qE '^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}\] \[INFO\] \[fmt_probe\]: ok$'; then
-  echo "⚠️  日志时间戳格式自检未通过，实际输出: $FMT_PROBE"
-  echo "    → 回退到 rcutils 默认格式（epoch 纳秒），日志仍可用，只是跨模块对齐要手算。"
-  unset RCUTILS_CONSOLE_OUTPUT_FORMAT
-fi
 
 ST=/opt/ros/humble/lib/tf2_ros/static_transform_publisher
 
-# ---------------------------------------------------------------------------
 # launcher：厂商裁剪版 ros2 没有 launch 子命令，而阶段 8 source 完 env.sh 之后
-# PATH 会被换回厂商的 ros2 —— 所以所有 launch 一律走这个 Python 直调。
-#
-# ⚠️ 它**必须放在持久目录**。原来放 /tmp/roslaunch.py，实测机器人一重启 /tmp 就被清空、
-#    全机再无副本，脚本每次重启后必挂在第一个 launch 上。改放 $TOOLS 并在这里自生成，
-#    让脚本自洽（不依赖任何"上次遗留在 /tmp 的文件"）。
-# ---------------------------------------------------------------------------
 RL=$TOOLS/roslaunch.py
 # 每次都重写，不做 "if not exists" —— 否则一个内容已经过时/写坏的旧 launcher
 # 会永远不被覆盖，脚本就和自己的源码脱钩了。
-if true; then
-  cat > "$RL" <<'RLPY'
+cat > "$RL" <<'RLPY'
 #!/usr/bin/env python3
-"""ros2 launch 的最小等价物：
-     roslaunch.py <pkg> <launch_file> [k:=v ...]
-     roslaunch.py --path <绝对路径的 launch 文件> [k:=v ...]
-
-为什么不用 `ros2 launch`：这台机器人上 **ros2launch 这个包没装**
-（dpkg 里 0 个 ros-humble-ros2launch，site-packages 里也没有），所以厂商裁剪版和
-/opt/ros/humble 的 ros2 都没有 launch 子命令。launch / launch_ros 本体是齐的，
-直接用 LaunchService 跑。LaunchService.run() 自带 SIGINT 处理，
-会把子进程按 launch 的关停流程带走 —— 这正是 stop 的 SIGINT 那一轮需要的。
-
---path 模式是必需的，不是可选糖：nav2 要绕过 nav2_full_bringup 直指 src 下的
-navigation.launch.py（那一层的 launch_arguments 白名单会静默吞参数）。
+"""通过 LaunchService 启动包内 launch 或 --path 指定文件。
+用于缺少 ros2launch 的真机环境；SIGINT 由 LaunchService 处理。
 """
 import os, sys
 from launch import LaunchService, LaunchDescription
@@ -105,25 +112,7 @@ svc.include_launch_description(
                                                launch_arguments=args)]))
 raise SystemExit(svc.run())
 RLPY
-  chmod +x "$RL"
-fi
-
-# ---------------------------------------------------------------------------
-# 参数解析
-# ---------------------------------------------------------------------------
-MODE=${1:-start}
-USE_RVIZ=true
-# 默认**使能写通路**（用户 2026-09-03 明确要求"按流程保证模块全部启动就好，并使能就好"）。
-# 使能 = 底盘真的会动。不想动就显式加 --no-drive。
-DRIVE=true
-for a in "$@"; do
-  case "$a" in
-    --no-rviz)         USE_RVIZ=false ;;
-    --no-drive)        DRIVE=false ;;
-    --drive)           DRIVE=true ;;   # 兼容旧写法，现在是默认值
-    --keep-nav2-yaml)  : ;;  # 兼容旧调用；现在始终保留安装配置。
-  esac
-done
+chmod +x "$RL"
 
 say()  { printf '\n\033[1;36m═══ %s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✔\033[0m %s\n' "$*"; }
@@ -131,11 +120,7 @@ bad()  { printf '  \033[31m✘ %s\033[0m\n' "$*"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 die()  { printf '\n\033[31m✗ 判据不过，停在这里：%s\033[0m\n' "$*"; exit 1; }
 
-# ---------------------------------------------------------------------------
 # 拍率判据。判"话题在流"必须看拍率，不能看 count_publishers ——
-# 链上每个节点都有发布者，所以 pub>0 恒为真；实测过 5 个话题全 pub=1 但 0Hz。
-# 订阅端刻意用 BEST_EFFORT：它能收 RELIABLE 也能收 BEST_EFFORT 的发布者，反之不行。
-# ---------------------------------------------------------------------------
 wait_hz() {  # wait_hz <topic> <type> <min_hz> <timeout_s>
   python3 - "$1" "$2" "$3" "$4" <<'PY'
 import importlib, sys, time
@@ -223,7 +208,6 @@ PY
 }
 
 ours_pid_list() { ours_pids | awk '{print $1}'; }
-ours_count()    { ours_pids | grep -c . || true; }
 
 do_stop() {
   say "停止所有非厂商插件（厂商 SLAM / 雷达驱动 / 远程桌面不动）"
@@ -393,7 +377,7 @@ raise SystemExit(1 if nn > 0 else 0)
 PY
   [ $fail -eq 0 ] && ok "/map_nav 清理半径圆内占据格 = 0"
 
-  say "判据 5/7  nav2 活着且吃到地图（MPPI / ${AXIS_SPEED_CAP}m/s 按轴 / 真墙钟）"
+  say "判据 5/7  nav2 活着且吃到地图（${CONTROLLER^^} / ${AXIS_SPEED_CAP}m/s 按轴 / 真墙钟）"
   local n_active n_nomap vx
   n_active=$(grep -c "Managed nodes are active" $LOG/nav2.log 2>/dev/null | head -1); n_active=${n_active:-0}
   n_nomap=$(grep -c "no map received" $LOG/nav2.log 2>/dev/null | head -1); n_nomap=${n_nomap:-0}
@@ -427,18 +411,27 @@ raise SystemExit(0 if (sim is False and dt > 0.5) else 1)
 PY
   [ $fail -eq 0 ] && ok "use_sim_time=False 且时钟在走（真墙钟）"
   local cap_fail=0
-  python3 - <<'PY' || cap_fail=1
+  RPP_YAML="$SHARE/config/nav2_params_rpp.yaml" python3 - <<'PY' || cap_fail=1
 import rclpy
 import os
 from rcl_interfaces.srv import ListParameters, GetParameters
 CAP = float(os.environ['AXIS_SPEED_CAP'])   # 无默认值：见脚本顶部 AXIS_SPEED_CAP
-# 这条判据能抓到"外层 launch 把 max_linear_speed 静默吞了"，靠的是漏传时
-# vx_max 会回落到 yaml 的 1.0 而 1.0 > CAP。所以 CAP 一旦被调到 >= 1.0，
-# 判据就退化成恒真、再也分不清"限速生效"和"参数根本没传下去"。
-if CAP >= 1.0:
-    print('  ✘ AXIS_SPEED_CAP=%.2f >= 1.0：本判据会退化成恒真（yaml 回落值也是 1.0），'
-          '分不清限速生效与参数被吞' % CAP)
-    raise SystemExit(1)
+controller = os.environ['CONTROLLER']
+if controller == 'mppi':
+    if CAP >= 1.0:
+        print('  ✘ CAP >= 1.0：MPPI 回落值判据不能区分参数漏传'); raise SystemExit(1)
+    suffixes = ('.vx_max', '.vy_max')
+else:
+    import re
+    try:
+        txt = open(os.environ['RPP_YAML'], encoding='utf-8').read()
+        fallback = max(float(v) for v in re.findall(
+            r'^\s*desired_linear_vel:\s*([0-9.]+)', txt, re.M))
+    except Exception as exc:
+        print('  ✘ 无法读取 RPP 参数回落值：%s' % exc); raise SystemExit(1)
+    if CAP >= fallback:
+        print('  ! RPP 上限不低于 YAML 回落值：仅验证上界，不能证明参数传递正确')
+    suffixes = ('.desired_linear_vel',)
 rclpy.init()
 n = rclpy.create_node('cap_chk')
 lc = n.create_client(ListParameters, '/controller_server/list_parameters')
@@ -449,9 +442,9 @@ rclpy.spin_until_future_complete(n, f, timeout_sec=20.0)
 if f.result() is None:
     print('  ✘ list_parameters 无响应'); raise SystemExit(1)
 keys = sorted(k for k in f.result().result.names
-              if k.endswith('.vx_max') or k.endswith('.vy_max'))
+              if k.endswith(suffixes))
 if not keys:
-    print('  ✘ 一个 v?_max 参数都没枚举到（判据自身失效，不能算通过）')
+    print('  ✘ 一个控制器限速参数都没枚举到（判据自身失效，不能算通过）')
     raise SystemExit(1)
 gc = n.create_client(GetParameters, '/controller_server/get_parameters')
 if not gc.wait_for_service(timeout_sec=10.0):
@@ -471,7 +464,7 @@ print('  共查 %d 个轴上限，越限 %d 个' % (len(keys), len(over)))
 raise SystemExit(1 if over else 0)
 PY
   if [ $cap_fail -eq 0 ]; then
-    ok "各轴线速度上限 ≤ $AXIS_SPEED_CAP m/s（vy≡0，故模长上界同为 $AXIS_SPEED_CAP）"
+    ok "${CONTROLLER^^} 线速度参数上限 ≤ $AXIS_SPEED_CAP m/s"
   else
     fail=1
   fi
@@ -556,18 +549,12 @@ L = sum(math.dist(P[i], P[i + 1]) for i in range(len(P) - 1))
 net = math.dist(P[0], P[-1]); far = max(math.dist(P[0], p) for p in P)
 vmax = max((math.hypot(v[0], v[1]) for v in V), default=0.0)
 nz = sum(1 for v in V if abs(v[0]) > 1e-4 or abs(v[1]) > 1e-4 or abs(v[2]) > 1e-4)
-# 限速口径 = **各轴** 0.2（已定）。所以越限只能按轴数，不能按模长数：
-# 按模长数在 vy_max>0 的配置下会把合法斜向运动报成越限。（本轮 vy≡0，两者恰好等价，
-# 但判据仍按轴写 —— 一旦哪天放开 vy，按模长的判据会立刻开始假阳性。）
+# 以各轴上限验收；合速度模长仅作为观测值输出。
 axmax = max((max(abs(v[0]), abs(v[1])) for v in V), default=0.0)
 over = sum(1 for v in V if abs(v[0]) > CAP + 1e-4 or abs(v[1]) > CAP + 1e-4)
-# 不要在这里印 sqrt(2)*CAP 当"模长上界" —— 那个算术是错的，脚本尾部
-# 「已知未解决」里已经记了：vy_max 被路线A 钉死为 0.0 且 motion_model 是
-# DiffDrive（navigation.launch.py 强制 'vy_max':'0.0'，yaml 三处也都是 0.0），
-# MPPI 压根不输出横向速度，所以模长上界就等于按轴上限本身。
 print('  /cmd_vel %d 帧，非零 %d，单轴峰值 %.4f m/s（越 %.2f 的帧 %d），'
-      '合速度模长峰值 %.4f m/s（vy≡0，模长上界=按轴上限 %.2f）'
-      % (len(V), nz, axmax, CAP, over, vmax, CAP))
+      '合速度模长峰值 %.4f m/s'
+      % (len(V), nz, axmax, CAP, over, vmax))
 if over:
     print('  ✘ 有 %d 帧单轴超过 %.2f m/s —— 越过授权上限' % (over, CAP)); raise SystemExit(1)
 print('  /odom  %d 帧：净位移 %.4f m，最大离起点 %.4f m，轨迹长 %.4f m' % (len(P), net, far, L))
@@ -750,11 +737,11 @@ nohup setsid python3 $TOOLS/grid_self_clear_node.py --ros-args \
 hz=$(wait_hz /map_nav nav_msgs/OccupancyGrid 0.3 25) || die "/map_nav 只有 $hz Hz"
 ok "/map_nav $hz Hz"
 
-say "阶段 6  nav2（MPPI，线速度上限 $AXIS_SPEED_CAP m/s 按轴）"
+say "阶段 6  nav2（${CONTROLLER^^}，线速度上限 $AXIS_SPEED_CAP m/s 按轴）"
 ok "使用当前安装的 Nav2 配置；实机地图通过 launch 参数指定，不覆盖 YAML"
 nohup setsid python3 $RL \
   --path $WS/src/astribot_s1_navigation/launch/navigation.launch.py \
-  controller_plugin:=mppi use_sim_time:=false max_linear_speed:=$AXIS_SPEED_CAP \
+  controller_plugin:=$CONTROLLER use_sim_time:=false max_linear_speed:=$AXIS_SPEED_CAP \
   posture_normal_height:=0.0 map_topic:=/map_nav map_transient_local:=false \
   scan_topic:=/scan autostart:=true > $LOG/nav2.log 2>&1 &
 for i in $(seq 1 40); do
@@ -837,7 +824,7 @@ else
 fi
 
 say "阶段 10  自主探索调度器"
-nohup setsid python3 $RL astribot_s1_autonomy exploration_coordinator.launch.py \
+nohup setsid python3 $RL astribot_s1_exploration exploration_coordinator.launch.py \
   use_sim_time:=false map_topic:=/map_nav odom_topic:=/odom \
   map_transient_local:=false robot_base_frame:=astribot_torso_base > $LOG/explore.log 2>&1 &
 sleep 25
@@ -866,31 +853,12 @@ if [ -x "$DIAG" ]; then
   warn "轮速一段在实机恒为 n/a（/joint_states 无 velocity 字段），这是预期的"
 else
   bad "缺 $DIAG —— 速度链路本轮无任何记录，事后无法区分"
-  bad "  「MPPI 没发速度」与「发了但底盘没动」。补法：colcon build astribot_s1_navigation"
+  bad "  「控制器没发速度」与「发了但底盘没动」。补法：colcon build astribot_s1_navigation"
 fi
 
 say "全链判据"
 verify_all && printf '\n\033[1;32m═══ 全部判据通过 ═══\033[0m\n' \
            || printf '\n\033[1;31m═══ 有判据不过，见上 ═══\033[0m\n'
 
-cat <<'TAIL'
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 已知未解决（不是本脚本的 bug，是待定的事）                                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-· max_linear_speed 是 XY 各轴的上限，全向运动时速度模长可达到轴上限的 sqrt(2) 倍。
-· safety_tripped 无复位通路：voxel_slam 位姿会被 GBA 回环修正，z 一次跳超
-  0.06m 就永久跳闸，只能重启 cmd_vel_body_to_world_node。
-· 实测机器人走出 1.23m 后卡在 "Starting point in lethal space"：中心格 253
-  （膨胀致命，**不是** 254 真实障碍），最近真实障碍 0.354m，1.0m 内 0 个自由格。
-  按安全红线不算物理堵死，属脱困范畴 —— 但 nav2 默认 BT 的 backup/spin 出不来。
-· 同一类：**开机站位就被围住**，所以派发数常为 0。实测调度器本身是好的
-  （12 次 IDLE->GEN_NEXT_POINT、6 次 PAUSED->IDLE 自动恢复，前沿格 2416 个在），
-  是候选全被否：「目标点净空半径(0.25m)内存在占据栅格」/「距离机器人过近」，
-  连自举旋转都被安全门拦（最近障碍 0.370~0.405m < 要求净空 0.420m）。
-  => 判据 6 只判"调度器是否活着"，派发为 0 时如实归到这一条，等 SLAM。
-
-日志都在 /tmp/s1_logs/：rsp jsp perception odom selfclear nav2 rviz explore bridge trackdiag
-  · trackdiag.log 是**唯一**有速度记录的日志：四段速度链路 + 实位移，1Hz 一行。
-    机器人不动时先看它，它会直接指出断在哪一段。
-TAIL
+printf '\n日志目录：%s\n' "$LOG"
+printf '历史排障说明：docs/legacy/HARDWARE_BRINGUP_NOTES.md\n'

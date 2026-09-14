@@ -3,6 +3,8 @@
 #include <limits>
 #include <mutex>
 #include "astribot_navigation_msgs/srv/plan_candidate.hpp"
+#include "astribot_navigation_msgs/msg/path_risk.hpp"
+#include "astribot_s1_path_tracking/path_risk_distance.hpp"
 #include "astribot_s1_path_tracking/path_quality.hpp"
 #include "nav2_core/exceptions.hpp"
 #include "nav2_smac_planner/smac_planner_2d.hpp"
@@ -30,30 +32,40 @@ public:
     max_k_=load("max_curvature",3.0); max_rate_=load("max_curvature_rate",12.0);
     displacement_=load("max_displacement",0.20);
     quality_pub_=rclcpp::create_publisher<std_msgs::msg::String>(node,"path_tracking/path_quality",10);
+    risk_pub_=rclcpp::create_publisher<astribot_navigation_msgs::msg::PathRisk>(
+      node,"navigation_policy/path_risk",rclcpp::QoS(1));
     candidate_service_=node->create_service<astribot_navigation_msgs::srv::PlanCandidate>(
       "path_tracking/plan_candidate", [this](
         astribot_navigation_msgs::srv::PlanCandidate::Request::SharedPtr req,
         astribot_navigation_msgs::srv::PlanCandidate::Response::SharedPtr res) {candidate(*req,*res);});
     valid_service_=node->create_service<nav2_msgs::srv::IsPathValid>("path_tracking/check_path",
-      [this](nav2_msgs::srv::IsPathValid::Request::SharedPtr req,
+      [this,clock=node->get_clock()](nav2_msgs::srv::IsPathValid::Request::SharedPtr req,
              nav2_msgs::srv::IsPathValid::Response::SharedPtr res) {
+        astribot_navigation_msgs::msg::PathRisk evidence;
+        evidence.stamp=clock->now();evidence.checked_path=req->path;
+        evidence.blocked=true;
         geometry_msgs::msg::PoseStamped robot;
         if (!map_ros_->isCurrent() || !map_ros_->getRobotPose(robot) ||
             req->path.header.frame_id!=map_ros_->getGlobalFrameID() || req->path.poses.empty()) {
-          res->is_valid=false; res->invalid_pose_indices.push_back(-1); return;
+          res->is_valid=false; res->invalid_pose_indices.push_back(-1);
+          risk_pub_->publish(evidence);return;
         }
+        evidence.evaluated_start=robot;
         size_t first=0; double best=std::numeric_limits<double>::infinity();
         for (size_t i=0;i<req->path.poses.size();++i) {
           double d=pathDistance(robot,req->path.poses[i]);
-          if (!std::isfinite(d)) {res->invalid_pose_indices.push_back(-1); return;}
+          if (!std::isfinite(d)) {res->invalid_pose_indices.push_back(-1);risk_pub_->publish(evidence);return;}
           if (d<best) {best=d;first=i;}
         }
         int bad=collisionIndex(req->path,first);
         res->is_valid=bad==-2;
         if (!res->is_valid) {res->invalid_pose_indices.push_back(bad);}
+        evidence.known=bad!=-1;evidence.blocked=!res->is_valid;
+        if (bad>=0) {evidence.distance_m=pathRiskDistance(req->path,first,size_t(bad),best);}
+        risk_pub_->publish(evidence);
       });
   }
-  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);candidate_service_.reset();valid_service_.reset();quality_pub_.reset();map_ros_.reset();SmacPlanner2D::cleanup();}
+  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);candidate_service_.reset();valid_service_.reset();risk_pub_.reset();quality_pub_.reset();map_ros_.reset();SmacPlanner2D::cleanup();}
   nav_msgs::msg::Path createPlan(const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) override
   {
@@ -149,7 +161,9 @@ private:
         while(join+1<req.reference_path.poses.size() && length<req.rejoin_distance_m) {
           length+=pathDistance(req.reference_path.poses[join],req.reference_path.poses[join+1]);++join;
         }
-        if(length<req.rejoin_distance_m) {res.reason="NO_FORWARD_REJOIN";return;}
+        // Near the goal the final pose is a valid rejoin. A coincident or
+        // exhausted reference still cannot define a forward local detour.
+        if(length<0.10 || join==first) {res.reason="NO_FORWARD_REJOIN";return;}
         output=plan(res.evaluated_start,req.reference_path.poses[join],false);
         for(const auto & pose:output.poses) {
           double deviation=std::numeric_limits<double>::infinity();
@@ -166,10 +180,35 @@ private:
         pathDistance(output.poses.front(),res.evaluated_start)>.1) {
         res.reason="INVALID_ENDPOINT_OR_TAKEOVER";return;
       }
-      auto quality=pathQuality(output);res.curvature=quality.curvature;res.curvature_rate=quality.curvature_rate;
+      auto quality=pathQuality(output);
+      if(req.mode==Candidate::Request::LOCAL && !acceptableQuality(quality,max_k_,max_rate_)) {
+        const auto reference=resamplePath(output);auto repaired=reference;
+        for(int iteration=0;iteration<200;++iteration) {
+          smoothPathStep(repaired,reference,displacement_);
+          if(acceptableQuality(pathQuality(repaired),max_k_,max_rate_)) {
+            auto dense=restorePathDensity(repaired,output);
+            if(acceptableQuality(pathQuality(dense),max_k_,max_rate_)) {output=std::move(dense);break;}
+          }
+        }
+        // The bounded smoother may alter the join; the final sweep below must
+        // validate it, and the local corridor bound still applies afterwards.
+        for(const auto & pose:output.poses) {
+          double deviation=std::numeric_limits<double>::infinity();
+          for(const auto & ref:req.reference_path.poses) {deviation=std::min(deviation,pathDistance(pose,ref));}
+          if(deviation>req.max_local_deviation_m) {res.reason="SMOOTHED_LOCAL_CORRIDOR";return;}
+        }
+        quality=pathQuality(output);
+      }
+      res.curvature=quality.curvature;res.curvature_rate=quality.curvature_rate;
       if(!acceptableQuality(quality,max_k_,max_rate_)) {res.reason="CANDIDATE_CURVATURE";return;}
       // Even already-smooth candidates require a full footprint sweep, including the start.
       if(collisionIndex(output,0)!=-2) {res.reason="CANDIDATE_COLLISION_OR_UNKNOWN";return;}
+      nav_msgs::msg::Path rotation;rotation.header=output.header;
+      for(int i=0;i<=64;++i) {
+        auto pose=res.evaluated_start;tf2::Quaternion q;
+        q.setRPY(0,0,2*M_PI*i/64);pose.pose.orientation=tf2::toMsg(q);rotation.poses.push_back(pose);
+      }
+      if(collisionIndex(rotation,0)!=-2) {res.reason="TAKEOVER_ROTATION_COLLISION";return;}
       output.header.stamp=res.evaluated_start.header.stamp;
       res.path=std::move(output);res.geometry_valid=true;res.reason="GEOMETRY_VALID";
     } catch(const std::exception & error) {res.reason=std::string("PLANNING_FAILED: ")+error.what();}
@@ -210,6 +249,7 @@ private:
   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> map_ros_;
   rclcpp::Service<nav2_msgs::srv::IsPathValid>::SharedPtr valid_service_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr quality_pub_;
+  rclcpp::Publisher<astribot_navigation_msgs::msg::PathRisk>::SharedPtr risk_pub_;
 };
 }
 PLUGINLIB_EXPORT_CLASS(astribot_s1_path_tracking::ExactGoalPlanner,nav2_core::GlobalPlanner)

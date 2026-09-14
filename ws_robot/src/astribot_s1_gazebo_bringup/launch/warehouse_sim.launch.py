@@ -34,7 +34,7 @@ from launch.substitutions import (
     PythonExpression,
     TextSubstitution,
 )
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 

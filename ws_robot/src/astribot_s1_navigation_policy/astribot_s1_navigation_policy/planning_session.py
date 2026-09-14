@@ -134,7 +134,7 @@ class PlanningSession:
                 return self._pending
             self._pending = None
             if self._attempts >= self.budget.max_requests_per_goal:
-                raise PlanningBudgetExhausted('TEMPORARILY_BLOCKED: per-goal planning attempts')
+                raise PlanningBudgetExhausted('PLANNING_BUDGET_EXHAUSTED: per-goal planning attempts')
             request = PlanningRequest(
                 f'{self.session_id}:{self._serial + 1}', version, self._episode,
                 observation_seq, kinds, trigger, now,

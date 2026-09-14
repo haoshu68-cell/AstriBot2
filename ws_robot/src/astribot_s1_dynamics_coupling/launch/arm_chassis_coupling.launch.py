@@ -16,7 +16,7 @@ respawn=True：节点进程崩溃时自动重启（见节点文件头部"静默�
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.substitutions import FindPackageShare
 
 

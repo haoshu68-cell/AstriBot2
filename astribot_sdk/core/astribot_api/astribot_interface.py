@@ -86,7 +86,14 @@ class AstribotInterface(AstribotBase):
         self.__astribot_class: AstribotFunction = AstribotFunction(
             astribot_robot_dict, frequency=freq, node=self.node
         )
-        self.logger = self.node.get_logger()
+        self.logger = logger
+        # The vendor wrapper returns a stdlib-backed singleton rather than rclpy's logger.
+        # Redirect that owned logger without editing the distributed vendor package.
+        import logging
+        from astribot_logging import configure_stdlib_logger
+        vendor_logger = getattr(self.node.get_logger(), '_logger', None)
+        if isinstance(vendor_logger, logging.Logger):
+            configure_stdlib_logger(vendor_logger)
 
         self._desired_joint_subscribers = []
         self.__have_control_rights = None

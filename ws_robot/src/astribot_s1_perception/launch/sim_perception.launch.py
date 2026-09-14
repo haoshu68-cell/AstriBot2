@@ -21,7 +21,7 @@ launch/hardware_perception.launch.py 直接 include 本文件并把默认值覆�
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.substitutions import FindPackageShare
 
 

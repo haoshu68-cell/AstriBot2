@@ -1,3 +1,4 @@
+from astribot_logging import get_logger
 import numpy as np
 from sensor_msgs.msg import Joy
 import astribot_ros_middleware as ast_ros_middleware
@@ -26,7 +27,7 @@ class XboxController:
     def check_joy_value(self):
         if not self.have_value:
             self.vel = np.zeros(3)
-            print("Note that no joystick message is received. " \
+            get_logger('astribot.joy_tools').info("Note that no joystick message is received. " \
             "Please check whether rostopic '/astribot_joy' exists, " \
             "whether the joystick driver is started, and whether the joystick is powered.")
 

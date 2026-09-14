@@ -180,3 +180,9 @@ echo "[env.sh] RMW_IMPLEMENTATION = $RMW_IMPLEMENTATION"
 echo "[env.sh] ROS_LOCALHOST_ONLY = $ROS_LOCALHOST_ONLY"
 echo "[env.sh] FASTRTPS_PROFILES  = ${FASTRTPS_DEFAULT_PROFILES_FILE:-<none>}"
 echo "[env.sh] Environment setup completed."
+
+# Shared spdlog policy and SDK Python bridge (also usable without the full overlay).
+source "$SDK_ROOT/ws_robot/src/astribot_logging/env_hook/astribot_logging.sh"
+if [ -f "$SDK_ROOT/ws_robot/install/astribot_logging/local_setup.bash" ]; then
+    source "$SDK_ROOT/ws_robot/install/astribot_logging/local_setup.bash"
+fi

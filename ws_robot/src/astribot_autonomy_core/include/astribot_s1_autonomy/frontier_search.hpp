@@ -1,0 +1,210 @@
+// Copyright 2026 Astribot.
+#ifndef ASTRIBOT_S1_AUTONOMY__FRONTIER_SEARCH_HPP_
+#define ASTRIBOT_S1_AUTONOMY__FRONTIER_SEARCH_HPP_
+
+#include <cstddef>
+#include <functional>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+namespace astribot_s1_autonomy
+{
+
+/// 与 ROS 解耦的占据栅格快照。data 沿用 ROS 的约定：
+/// -1 未知，0 空闲，100 占据（中间值按阈值判定）。
+struct GridMap
+{
+  unsigned int width{0U};
+  unsigned int height{0U};
+  double resolution{0.0};
+  double origin_x{0.0};
+  double origin_y{0.0};
+  std::vector<int8_t> data;
+
+  bool empty() const {return width == 0U || height == 0U || data.empty();}
+  /// data 长度是否和声明的尺寸一致。节点层必须校验，防止越界读。
+  bool consistent() const
+  {
+    return !empty() &&
+           data.size() == static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+  }
+  std::size_t index(unsigned int mx, unsigned int my) const
+  {
+    return (static_cast<std::size_t>(my) * static_cast<std::size_t>(width)) +
+           static_cast<std::size_t>(mx);
+  }
+  /// 栅格中心的世界坐标。
+  double worldX(unsigned int mx) const
+  {
+    return origin_x + ((static_cast<double>(mx) + 0.5) * resolution);
+  }
+  double worldY(unsigned int my) const
+  {
+    return origin_y + ((static_cast<double>(my) + 0.5) * resolution);
+  }
+  /// 世界坐标 → 栅格下标。返回 false 表示落在地图外。
+  bool worldToMap(double wx, double wy, unsigned int & mx, unsigned int & my) const;
+};
+
+/// 一块前沿连通域。
+struct FrontierCluster
+{
+  /// 组成该前沿块的栅格线性下标（BFS 顺序，空间上连续）。
+  std::vector<std::size_t> cells;
+  /// 质心（世界坐标，m）。
+  double centroid_x{0.0};
+  double centroid_y{0.0};
+  /// 前沿格数量，等价于前沿「长度/面积」的度量。
+  std::size_t size{0U};
+  /// 该前沿块候选中最大的可见未知单元数（保守观测收益）。
+  std::size_t unknown_gain{0U};
+  /// 质心到机器人的直线距离(m)。
+  double distance_to_robot{0.0};
+  /// 是否通过了过滤（false 的块依然会发 Marker，用不同颜色标出，便于调参）。
+  bool accepted{false};
+  /// 被过滤掉的原因，便于日志和可视化标注。
+  std::string reject_reason;
+};
+
+/// 一个候选目标点。
+struct GoalCandidate
+{
+  double x{0.0};
+  double y{0.0};
+  double yaw{0.0};
+  std::size_t cluster_index{0U};
+  /// 代价分解，全部留着是为了能在日志/Marker 里解释「为什么选它」。
+  double cost{0.0};
+  double distance{0.0};
+  double gain_normalized{0.0};
+  std::size_t visible_unknown_cells{0U};
+  double visit_penalty{0.0};
+  bool valid{false};
+  std::string reject_reason;
+};
+
+/// 历史访问记录，用于抑制反复往同一个地方跑。
+struct VisitRecord
+{
+  double x{0.0};
+  double y{0.0};
+  /// 该位置被选为目标的次数，次数越多惩罚越大。
+  unsigned int count{1U};
+};
+
+/// 全部来自 YAML，禁止硬编码。
+struct FrontierSearchParams
+{
+  /// data 值 >= 该阈值判为占据。
+  int occupied_threshold{65};
+  /// data 值 <= 该阈值且非负判为空闲。
+  int free_threshold{25};
+
+  /// 障碍物膨胀半径(m)。至少应覆盖机器人半径，否则会采到贴墙走不进去的目标。
+  double obstacle_inflation_radius{0.0};
+  /// 小于该格数的孤立占据斑块视为噪声，预处理阶段抹掉。
+  int min_obstacle_cluster_cells{0};
+
+  /// 判定「邻域含未知格」时是否用 8 邻域（false 则用 4 邻域）。
+  bool use_eight_connectivity{true};
+  /// 小于该格数的前沿块直接丢弃。
+  int min_frontier_cells{0};
+  /// 可见未知增益的射线观测距离上限(m)，0 禁用收益。
+  double gain_window_radius{0.0};
+  int visibility_rays{72};
+  double sensor_fov_rad{6.283185307179586};
+
+  /// 采样数 = clamp(ceil(前沿格数 * adaptive_sample_gain), min, max)。
+  double adaptive_sample_gain{0.0};
+  int min_samples_per_cluster{1};
+  int max_samples_per_cluster{1};
+  /// 候选点必须保证的净空半径(m)：以候选点为心、该半径内不能有膨胀后的障碍。
+  double required_clearance_radius{0.0};
+  /// 目标点离机器人过近则丢弃(m)。
+  double min_goal_distance{0.0};
+  /// 目标点离机器人过远则丢弃(m)；<=0 表示不限制。
+  double max_goal_distance{0.0};
+
+  double weight_distance{1.0};
+  double weight_gain{1.0};
+  double weight_visit_penalty{1.0};
+  /// 历史访问惩罚的作用半径(m)：候选点落在该半径内才会吃到惩罚。
+  double visit_penalty_radius{0.0};
+
+  /// 采样随机数种子。固定种子让复现调试变得可能。
+  unsigned int random_seed{0U};
+};
+
+/// 前沿搜索器。无状态（历史记录由节点层持有并传入），可反复调用。
+class FrontierSearch
+{
+public:
+  enum class Status {kOk, kNotConfigured, kInvalidMap, kResourceLimit, kNoReachableSpace, kCanceled};
+
+  struct Result
+  {
+    Status status{Status::kNotConfigured};
+    std::vector<FrontierCluster> clusters;
+    std::vector<GoalCandidate> candidates;
+    /// 最优候选在 candidates 里的下标；-1 表示本次没有任何有效候选。
+    int best_candidate_index{-1};
+    /// 原始前沿格总数（聚类/过滤之前），用于判断「是否真的探索完了」。
+    std::size_t raw_frontier_cell_count{0U};
+    /// Unfiltered semantic frontiers and unresolved unknowns must not disappear with inflation.
+    std::size_t eligible_frontier_cell_count{0U};
+    std::size_t reachable_frontier_cell_count{0U};
+    std::size_t unknown_cell_count{0U};
+    /// 通过过滤的前沿块数量。
+    std::size_t accepted_cluster_count{0U};
+    /// 人类可读的结论，直接可打日志。
+    std::string summary;
+  };
+
+  FrontierSearch() = default;
+
+  bool configure(const FrontierSearchParams & params, std::string & error);
+  const FrontierSearchParams & params() const {return params_;}
+
+  /// 主入口。map 必须 consistent()，否则直接返回空结果（不抛异常、不崩溃）。
+  void search(
+    const GridMap & map,
+    double robot_x,
+    double robot_y,
+    const std::vector<VisitRecord> & history,
+    Result & out, std::function<bool()> canceled = {});
+
+private:
+  struct SearchCanceled {};
+  void checkpoint() const {
+    if (canceled_ && (++checkpoint_count_ % 1024 == 0) && canceled_()) {throw SearchCanceled{};}
+  }
+  std::function<bool()> canceled_;
+  mutable std::size_t checkpoint_count_{0};
+  /// 预处理：去小斑块 + 膨胀，产出 inflated_occupied_ 掩码。
+  void buildObstacleMask(const GridMap & map);
+  /// 从机器人所在格出发做自由空间 BFS，产出 reachable_ 掩码。
+  /// 机器人位置本身若落在障碍/未知格上，会就近寻找一个自由格作为种子。
+  bool buildReachableMask(const GridMap & map, double robot_x, double robot_y);
+  /// 提取前沿格，写入 is_frontier_。
+  std::size_t extractFrontierCells(const GridMap & map, Result & out);
+  /// 对前沿格做连通域聚类。
+  void clusterFrontiers(const GridMap & map, double robot_x, double robot_y, Result & out);
+  /// 候选点净空校验。
+  bool hasClearance(const GridMap & map, unsigned int mx, unsigned int my) const;
+  /// 计算历史访问惩罚。
+  double visitPenaltyAt(double x, double y, const std::vector<VisitRecord> & history) const;
+
+  FrontierSearchParams params_;
+  bool configured_{false};
+
+  std::vector<uint8_t> inflated_occupied_;
+  std::vector<uint8_t> reachable_;
+  std::vector<uint8_t> is_frontier_;
+  std::vector<uint8_t> visited_;
+  std::vector<std::size_t> bfs_queue_;
+};
+
+}  // namespace astribot_s1_autonomy
+
+#endif  // ASTRIBOT_S1_AUTONOMY__FRONTIER_SEARCH_HPP_

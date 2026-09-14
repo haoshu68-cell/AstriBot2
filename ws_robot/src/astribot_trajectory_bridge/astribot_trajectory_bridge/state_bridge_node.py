@@ -25,6 +25,8 @@ ROS2 侧：逐关节命名的弧度值。
 换算规则（scale/offset）全部从 bridge.yaml 读，本文件里不出现任何数值常量。
 """
 
+from astribot_logging import get_logger
+
 import sys
 
 import rclpy
@@ -220,7 +222,7 @@ def main(argv=None):
         if node is not None:
             node.get_logger().error(msg)
         else:
-            print(msg, file=sys.stderr)
+            get_logger('astribot.state_bridge_node').error(msg)
         code = 1
     finally:
         if node is not None:

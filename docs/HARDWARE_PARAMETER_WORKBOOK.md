@@ -1,14 +1,16 @@
 # 真机参数逐项验证操作手册
 
+当前机器人上的准确路径、环境入口和逐步命令以 [真机底盘测试操作说明（parking_v3）](CHASSIS_AUTOMATED_CHARACTERIZATION.md) 为准。本文保留测量项目与原理；下面所有操作命令均在机器人 SSH 终端执行。
+
 本手册配套 `tools/robot/validate_hardware_params.py`。现有硬件模板全部仍为待测参数；本次只添加验证工具与说明，不修改控制器、启动链或默认控制参数。脚本只有订阅和文件写入，不发布速度、不获取控制权、不发送导航目标、不停止任何机器人进程。
 
 ## 1. 开始前准备
 
-在**真机终端**进入 SDK 仓库根目录，加载真机已有环境。不要在仿真电脑上录一份数据就当成真机结果；两套启动脚本可能均使用 Domain 25。
+在 **SSH 登录后的真机终端**加载当前工具包的环境入口，不依赖当前工作目录。不要在仿真电脑上录一份数据就当成真机结果；两套启动脚本可能均使用 Domain 25。
 
 ```bash
-source tools/robot/env_robot.sh
-python3 tools/robot/validate_hardware_params.py init "$HOME/hardware_validation_case01"
+source /home/astribot/chassis_tests/toolkit_20260914_parking_v3/env_test.sh
+python3 /home/astribot/chassis_tests/toolkit_20260914_parking_v3/tools/robot/validate_hardware_params.py init "$HOME/hardware_validation_case01"
 ```
 
 `init` 拒绝覆盖已有目录。每个机器人版本、运输姿态、载荷、地面工况单独建目录，先填写：
@@ -52,14 +54,14 @@ python3 tools/robot/validate_hardware_params.py init "$HOME/hardware_validation_
 
 ```bash
 CASE="$HOME/hardware_validation_case01"
-python3 tools/robot/validate_hardware_params.py record "$CASE" --item 02_frames --environment hardware --duration 90
+python3 /home/astribot/chassis_tests/toolkit_20260914_parking_v3/tools/robot/validate_hardware_params.py record "$CASE" --item 02_frames --environment hardware --duration 90
 ```
 
 将 `--item` 换成 `01_geometry`、`03_braking`、`04_watchdog`、`05_latency`、`06_coverage`、`07_tracking`、`08_navigation`、`09_avoidance`、`10_narrow` 即可逐项录制。每次自动建时间目录，重复同一项不会覆盖前一次。运行时显示目录，用另一个终端打操作标记：
 
 ```bash
 RUN="$CASE/03_braking/实际输出的时间目录"
-python3 tools/robot/validate_hardware_params.py mark "$RUN" brake_request --notes '前进/本档速度/空载/零命令停车'
+python3 /home/astribot/chassis_tests/toolkit_20260914_parking_v3/tools/robot/validate_hardware_params.py mark "$RUN" brake_request --notes '前进/本档速度/空载/零命令停车'
 ```
 
 按 Ctrl-C 只结束采集，不会替你停车。正常或中断结束均输出：
@@ -74,13 +76,13 @@ python3 tools/robot/validate_hardware_params.py mark "$RUN" brake_request --note
 ## 4. 自动提取与制动分析
 
 ```bash
-python3 tools/robot/validate_hardware_params.py inspect "$RUN" --output "$RUN/inspection.json"
+python3 /home/astribot/chassis_tests/toolkit_20260914_parking_v3/tools/robot/validate_hardware_params.py inspect "$RUN" --output "$RUN/inspection.json"
 ```
 
 提取速度范围、源时间导数、扫描比例以及各命令话题“非零→零”的接收时刻。先查看这些事件，选中**实际驱动输入链路上本次停车对应**的 `t_s`；以下 `12.34` 只是命令格式示例，要换成此次事件值：
 
 ```bash
-python3 tools/robot/validate_hardware_params.py brake "$RUN" \
+python3 /home/astribot/chassis_tests/toolkit_20260914_parking_v3/tools/robot/validate_hardware_params.py brake "$RUN" \
   --event-s 12.34 --event-source '本次最终指令非零转零的接收时间' \
   --output "$RUN/braking.json"
 ```
@@ -104,7 +106,7 @@ trial,reference,goal_x_m,goal_y_m,goal_yaw_deg,actual_x_m,actual_y_m,actual_yaw_
 `reference` 写设备/标定或测量文件路径；位置/角度不确定度填目标与实际测量合并后的保守误差界，不是标准差直接代入。终点采用欧式距离，航向做 ±180° 环绕。
 
 ```bash
-python3 tools/robot/validate_hardware_params.py arrival "$CASE/arrival.csv" --output "$CASE/arrival_result.json"
+python3 /home/astribot/chassis_tests/toolkit_20260914_parking_v3/tools/robot/validate_hardware_params.py arrival "$CASE/arrival.csv" --output "$CASE/arrival_result.json"
 ```
 
 程序逐样本要求 `距离+不确定度≤.03 m` 且 `角差+不确定度≤1.5°`。样本全部达标仅证明填写的样本通过，不代表全部真机功能放行。
@@ -116,3 +118,14 @@ python3 tools/robot/validate_hardware_params.py arrival "$CASE/arrival.csv" --ou
 3. 将 01→`transport_envelope/payload`、03+04→`braking`、05→`latency`、06+07→`sensor_coverage` 证据关联到配置，并检查所有耦合预算。证据字段非空只满足配置结构要求，不能代替工程审核。
 4. 先离线回放，再受控低速闭环，逐档扩大工况。当前 P0–P2 已有仿真证据；P3 及后续完整局部绕行/路径提交/窄通道接线仍需按阶段完成验证，不能把尚未实现的动作视为真机已支持。
 5. 回传整个 CASE 目录及关联的原始 bag/标定/照片，即可按同工况比较并形成正式参数建议。所有脚本输出拒绝覆盖已有同名结果，重新分析需换输出文件名。
+
+## 基于 SDK examples 的主动测试
+
+最小起步/维持速度、速度响应和正常停车的自动激励脚本见 [底盘参数自动测试](CHASSIS_AUTOMATED_CHARACTERIZATION.md)。使用 `chassis_characterization.py`，默认离线预览，显式 `--execute` 才运动；它与本文只读 `validate_hardware_params.py` 是不同入口。
+
+
+## 厂家反馈与 SLAM 参考的区分（v2）
+
+新初始化的 `topics.json` 已加入 `/astribot_chassis/joint_space_states`（厂家主反馈、必需）和 `/astribot_chassis/joint_space_command_recv`（命令回显、可选），每个话题记录 role。`/odom` 仍是同事部署的 SLAM 推导参考，不改其发布逻辑。已有 CASE 不自动覆盖；需人工补上新话题或新建 CASE。
+
+本手册的只读原始采集保留重复帧作为证据；旧 `inspect/brake --odom-topic` 仍是明确的 SLAM 分析入口，会拒绝重复时间的制动证据，不会把它冒充厂家制动数据。厂家主反馈的自动分析请使用 [主动测试工具的 v2 流程](CHASSIS_AUTOMATED_CHARACTERIZATION.md)，它新增 `--probe-only` 只读预检并将两路分别存储。

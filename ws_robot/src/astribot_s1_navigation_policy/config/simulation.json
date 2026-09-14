@@ -38,10 +38,16 @@
     "policy_thresholds": "design proposal simulation starting values; not hardware measurements",
     "scan_health": "simulation assumption: at least 90 percent of rays finite-valid or positive infinity",
     "motion_estimate": "simulation association: five consistent frames over 0.4s; 0.6s fit window, 6cm residual bound based on 3cm voxel resolution",
-    "occupancy_motion": "raw scan segments have no stable object identity: occupancy only; velocity estimation requires tracked-object interface; stationary occupancy uncertainty 0.0004 m2/s2",
+    "occupancy_motion": "Fixed scan cells retain acquisition covariance and remain occupied until fresh free-space coverage clears them; no object motion is inferred from spatial identity. Dynamic tracked-object forecasts retain age and velocity covariance.",
     "angular_motion": "Existing P2 angular cap 1.5 rad/s; nav2_params_mppi.yaml smoother angular acceleration/deceleration magnitude 3.2 rad/s2. Braking is a simulation assumption, requiring hardware evidence.",
     "command_leases": "Existing P2 constraint lease and upstream command expiry 0.3 s; separate from the chassis drive watchdog 0.5 s. Maximum wire lease remains 0.5 s.",
-    "planning_budget": "P3 simulation starting values: 2s request timeout and 5 per-goal attempts follow existing path guard bounds; 30s episode deadline is a simulation assumption, not hardware validation."
+    "planning_budget": "P3 simulation starting values: 2s request timeout and 5 per-goal attempts follow existing path guard bounds; 30s episode deadline is a simulation assumption, not hardware validation.",
+    "path_risk": "Simulation starting value: existing 0.2s path-check period, one missed cycle plus 0.1s transport allowance. Age consumes distance at the enforced profile speed bound; hardware timing remains to be validated.",
+    "local_detour": "P3 simulation corridor: forward rejoin 3m, lateral bound 1.2m; hardware validation reserved.",
+    "planning_takeover": "Simulation admission: stopped <= 2cm/s and 0.03rad/s, start drift <=4cm, no route replacement within 0.6m terminal zone; 0.5s execution context timeout. Hardware thresholds need independent evidence.",
+    "narrow_angular_speed": "P4 simulation initial angular cap; requires independent hardware validation",
+    "narrow_centering": "Simulation-only entrance correction: <=5cm/s, 1cm release, <=30cm lateral sweep; validate swept envelope and latency on hardware.",
+    "scan_obstacle_padding": "Additional padding outside the measured occupancy cell, separate from acquisition covariance and robot clearance. Simulation paired replay removes the previous hardcoded 4cm per side; hardware retains 4cm pending validation."
   },
   "hardware_evidence": {
     "transport_envelope": null,
@@ -51,6 +57,7 @@
     "sensor_coverage": null
   },
   "command_timeout_s": 0.5,
+  "scan_occupancy_resolution_m": 0.05,
   "scan_min_valid_fraction": 0.9,
   "velocity_confirmation_s": 0.4,
   "velocity_fit_window_s": 0.6,
@@ -66,5 +73,20 @@
     "request_timeout_s": 2.0,
     "episode_timeout_s": 30.0,
     "max_requests_per_goal": 5
-  }
+  },
+  "path_risk_timeout_s": 0.5,
+  "local_rejoin_distance_m": 3.0,
+  "local_max_deviation_m": 1.2,
+  "planning_takeover": {
+    "position_tolerance_m": 0.04,
+    "linear_speed_m_s": 0.02,
+    "angular_speed_rad_s": 0.03,
+    "terminal_exclusion_m": 0.6,
+    "context_timeout_s": 0.5
+  },
+  "narrow_angular_speed_rad_s": 0.2,
+  "narrow_centering_speed_m_s": 0.05,
+  "narrow_centering_tolerance_m": 0.01,
+  "narrow_centering_max_offset_m": 0.3,
+  "scan_obstacle_padding_m": 0.0
 }

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import math
 
 from .contracts import finite
+from .motion_geometry import body_pose, stopping_horizon, sampling_margin
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,11 @@ def path_position(path, distance, fallback):
             return a[0]+ratio*(b[0]-a[0]),a[1]+ratio*(b[1]-a[1]),math.atan2(b[1]-a[1],b[0]-a[0])
         distance-=length
     a=path[-1]
+    # Reaching the end of the forecast must not replace the final path tangent
+    # with the robot's earlier approach heading.
+    for before,after in reversed(tuple(zip(path,path[1:]))):
+        if math.dist(before,after)>1e-9:
+            return a[0],a[1],math.atan2(after[1]-before[1],after[0]-before[0])
     return a[0],a[1],fallback.yaw
 
 
@@ -55,46 +61,61 @@ def remaining_path(path, robot):
 
 
 def box_clearance(x,y,yaw,box,profile):
-    # Bounding rectangles remain conservative for a rotated rectangular robot.
-    hx=abs(math.cos(yaw))*profile.half_length_m+abs(math.sin(yaw))*profile.half_width_m
-    hy=abs(math.sin(yaw))*profile.half_length_m+abs(math.cos(yaw))*profile.half_width_m
-    margin=profile.clearance_margin_m+profile.payload_extra_margin_m
-    uncertainty_x=2*math.sqrt(max(0.,box.position_covariance_m2.values[0]))
-    uncertainty_y=2*math.sqrt(max(0.,box.position_covariance_m2.values[4]))
-    dx=abs(x-box.center_m.x)-hx-box.size_m.x/2-margin-uncertainty_x
-    dy=abs(y-box.center_m.y)-hy-box.size_m.y/2-margin-uncertainty_y
-    return math.hypot(max(0.,dx),max(0.,dy)) if dx>0 or dy>0 else max(dx,dy)
+    from .swept_geometry import obstacle_bounds, footprint_clearance
+    lo,hi=obstacle_bounds(box)
+    return footprint_clearance(x,y,yaw,lo,hi,profile)
 
 
-def evaluate_risk(world, robot, path, profile):
+def evaluate_risk(world, robot, path, profile, speed_limit=None):
+    speed=profile.max_speed_m_s if speed_limit is None else speed_limit
+    if not math.isfinite(speed) or not 0<speed<=profile.max_speed_m_s:
+        raise ValueError('risk forecast speed outside profile')
+    # A proposed cap cannot erase motion already present in the measured state.
+    speed=max(speed,math.hypot(robot.vx,robot.vy))
     route=remaining_path(path,robot)
-    minimum=float('inf');first=float('inf');blocked=[];moving=False;immediate=False
-    poses={}
-    c,s=math.cos(robot.yaw),math.sin(robot.yaw)
-    stop_time=profile.reaction_time_s+math.hypot(robot.vx,robot.vy)/profile.brake_deceleration_m_s2
-    for track in world.tracks:
-        current=box_clearance(robot.x,robot.y,robot.yaw,track.geometry,profile)
-        minimum=min(minimum,current)
-        # Real motion sweep must also be checked when it differs from the planned heading.
-        if current<=0:immediate=True
-        hit=False
-        for sample in track.predictions:
-            t=sample.offset_ns*1e-9
-            if sample.offset_ns not in poses:
-                poses[sample.offset_ns]=path_position(route,profile.max_speed_m_s*t,robot)
-            x,y,yaw=poses[sample.offset_ns]
-            gap=box_clearance(x,y,yaw,sample.geometry,profile)
-            if gap<=0 and route:hit=True;first=min(first,t)
-            if t<=stop_time:
-                actual=box_clearance(robot.x+(c*robot.vx-s*robot.vy)*t,
-                                     robot.y+(s*robot.vx+c*robot.vy)*t,
-                                     robot.yaw+robot.wz*t,sample.geometry,profile)
-                if actual<=0:immediate=True
-        if hit or current<=0:
-            blocked.append(track.fused_track_id)
-            if track.predictions:
-                end=track.predictions[-1].geometry.center_m;start=track.geometry.center_m
-                moving |= math.hypot(end.x-start.x,end.y-start.y)>.1
+    import numpy as np
+    from .swept_geometry import bounds_many, clearance_many
+    tracks=world.tracks
+    if not tracks:
+        uncertain=bool(world.unassociated)
+        return Risk(uncertain,False,float('inf'),float('inf'),(),False,uncertain)
+    lower,upper=bounds_many([track.geometry for track in tracks])
+    current=clearance_many(robot.x,robot.y,robot.yaw,lower,upper,profile)
+    minimum=float(np.min(current));immediate=bool(np.any(current<=0))
+    blocked=set(np.flatnonzero(current<=0).tolist());first=float('inf')
+    from .world_geometry import prediction_rows
+    batch=prediction_rows(world)
+    if batch.owners.size:
+        offsets=batch.offsets_ns*1e-9;owners=batch.owners
+        lower,upper=batch.lower,batch.upper
+        unique,inverse=np.unique(batch.offsets_ns,return_inverse=True)
+        poses=np.asarray([path_position(route,speed*(int(offset)*1e-9),robot) for offset in unique])
+        positions=poses[inverse]
+        gaps=clearance_many(positions[:,0],positions[:,1],positions[:,2],lower,upper,profile)
+        hits=(gaps<=0) if route else np.zeros(len(batch.owners),dtype=bool)
+        if np.any(hits):
+            first=float(np.min(offsets[hits]));blocked.update(owners[hits].tolist())
+        command=(robot.vx,robot.vy,robot.wz)
+        stop_time=stopping_horizon(command,profile)
+        active=offsets<=stop_time+profile.prediction_step_s;t=np.minimum(offsets[active],stop_time)
+        swept=prediction_rows(world,swept=True)
+        bx,by,theta=body_pose(command,t,np)
+        c,s=math.cos(robot.yaw),math.sin(robot.yaw)
+        actual=clearance_many(robot.x+c*bx-s*by,robot.y+s*bx+c*by,robot.yaw+theta,
+                             swept.lower[active],swept.upper[active],profile,
+                             sampling_margin(command,profile,profile.prediction_step_s))
+        immediate=immediate or stop_time>profile.prediction_horizon_s or bool(np.any(actual<=0))
+    selected=[tracks[i] for i in sorted(blocked)]
+    def moving_track(track):
+        model=track.prediction_model
+        if model is not None and model.steps:
+            t=model.steps[-1][1];center=track.geometry.center_m
+            return math.hypot((center.x+model.velocity.x*t)-center.x,
+                              (center.y+model.velocity.y*t)-center.y)>.1
+        return bool(track.predictions and
+               math.hypot(track.predictions[-1].geometry.center_m.x-track.geometry.center_m.x,
+                          track.predictions[-1].geometry.center_m.y-track.geometry.center_m.y)>.1)
+    moving=any(moving_track(track) for track in selected)
     uncertain=bool(world.unassociated)
-    # Until camera rays are calibrated into the route frame, unresolved vision must not be labelled clear.
-    return Risk(bool(blocked) or uncertain,immediate,minimum,first,tuple(blocked),moving,uncertain)
+    return Risk(bool(blocked) or uncertain,immediate,minimum,first,
+                tuple(t.fused_track_id for t in selected),moving,uncertain)

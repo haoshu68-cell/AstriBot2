@@ -1,0 +1,10 @@
+string sensor_id
+string state
+string frame_id
+builtin_interfaces/Time capture_stamp
+builtin_interfaces/Time valid_until
+uint64 calibration_epoch
+bool depth_available
+float64[] coverage_yaw
+float64[] coverage_half_angle
+string reason

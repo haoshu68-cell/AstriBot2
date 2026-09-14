@@ -1,0 +1,29 @@
+livox_custom_to_pc2:
+  ros__parameters:
+
+    report_period_sec: 10.0
+    stale_warn_sec: 2.0
+
+    front:
+      input_topic: "/livox/lidar_front"
+      output_topic: "/livox/lidar_front_pc2"
+      null_point:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        radius: 0.005
+      min_range: 0.0
+      max_range: 0.0
+      max_spatial_noise: 4
+
+    back:
+      input_topic: "/livox/lidar_back"
+      output_topic: "/livox/lidar_back_pc2"
+      null_point:
+        x: 0.001
+        y: -0.496
+        z: 0.084
+        radius: 0.005
+      min_range: 0.0
+      max_range: 0.0
+      max_spatial_noise: 4

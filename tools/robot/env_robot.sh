@@ -37,4 +37,7 @@ else
     echo "[env_robot] ws_robot 尚未构建（见 docs/sync_to_aarch64_sdk.md 第 4 节）"
 fi
 
+# Overlay setup files may replace PYTHONPATH; retain the SDK package root for spawned Python workers.
+export PYTHONPATH="${SDK_ROOT}:${SDK_ROOT}/astribot_sdk/core/common:${PYTHONPATH:-}"
+
 echo "[env_robot] DOMAIN=$ROS_DOMAIN_ID  LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY  RMW=$RMW_IMPLEMENTATION"

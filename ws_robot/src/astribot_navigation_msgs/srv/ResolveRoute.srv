@@ -1,0 +1,14 @@
+# The behavior-tree execution owns this token, including cancellation boundaries.
+bool allow_detour
+string session_id
+nav_msgs/Path reference_path
+geometry_msgs/PoseStamped goal
+---
+uint8 KEEP=0
+uint8 COMMIT=1
+uint8 BLOCKED=2
+uint8 disposition
+nav_msgs/Path path
+builtin_interfaces/Time evaluated_at
+string request_id
+string reason

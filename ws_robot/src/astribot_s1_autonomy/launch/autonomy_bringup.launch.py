@@ -32,7 +32,8 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import ComposableNodeContainer, Node
+from astribot_logging import log_level as default_log_level
+from astribot_logging.launch import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
 
@@ -87,7 +88,7 @@ def _build(context, *args, **kwargs):
         if enable_perception:
             composable.append(
                 ComposableNode(
-                    package='astribot_s1_autonomy',
+                    package='astribot_s1_perception_components',
                     plugin='astribot_s1_autonomy::PointcloudSliceScanNode',
                     name='pointcloud_slice_scan_node',
                     parameters=perception_parameters,
@@ -95,7 +96,7 @@ def _build(context, *args, **kwargs):
         if enable_explorer:
             composable.append(
                 ComposableNode(
-                    package='astribot_s1_autonomy',
+                    package='astribot_s1_exploration',
                     plugin='astribot_s1_autonomy::FrontierExplorerNode',
                     name='frontier_explorer_node',
                     parameters=explorer_parameters,
@@ -115,7 +116,7 @@ def _build(context, *args, **kwargs):
         if enable_perception:
             actions.append(
                 Node(
-                    package='astribot_s1_autonomy',
+                    package='astribot_s1_perception_components',
                     executable='pointcloud_slice_scan_node',
                     name='pointcloud_slice_scan_node',
                     output='screen',
@@ -126,7 +127,7 @@ def _build(context, *args, **kwargs):
         if enable_explorer:
             actions.append(
                 Node(
-                    package='astribot_s1_autonomy',
+                    package='astribot_s1_exploration',
                     executable='frontier_explorer_node',
                     name='frontier_explorer_node',
                     output='screen',
@@ -181,7 +182,7 @@ def generate_launch_description():
             'use_rviz', default_value='false',
             description='是否同时开一个预配好所有调试 Marker 的 RViz。'),
         DeclareLaunchArgument(
-            'log_level', default_value='info',
+            'log_level', default_value=default_log_level(),
             description='日志级别 debug/info/warn/error。'),
         DeclareLaunchArgument(
             'output_scan_topic', default_value='',

@@ -75,7 +75,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -109,7 +109,7 @@ def generate_launch_description():
     slice_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
-                [FindPackageShare('astribot_s1_autonomy'),
+                [FindPackageShare('astribot_s1_perception_components'),
                  'launch', 'slice_scan.launch.py'])),
         launch_arguments={
             'use_sim_time': use_sim_time,

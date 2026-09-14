@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.16)
+project(astribot_logging)
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(spdlog REQUIRED)
+
+add_library(astribot_spdlog SHARED src/backend.cpp)
+target_compile_features(astribot_spdlog PRIVATE cxx_std_17)
+target_link_libraries(astribot_spdlog PRIVATE spdlog::spdlog)
+target_compile_options(astribot_spdlog PRIVATE -Wall -Wextra -Wpedantic)
+ament_python_install_package(${PROJECT_NAME})
+ament_get_python_install_dir(PYTHON_INSTALL_DIR)
+install(TARGETS astribot_spdlog LIBRARY DESTINATION lib/${PROJECT_NAME})
+ament_environment_hooks(env_hook/astribot_logging.sh)
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(logging_contract test/test_logging.py
+    APPEND_ENV PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR})
+  ament_add_pytest_test(output_capture test/test_output.py
+    APPEND_ENV PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR})
+endif()
+ament_package()

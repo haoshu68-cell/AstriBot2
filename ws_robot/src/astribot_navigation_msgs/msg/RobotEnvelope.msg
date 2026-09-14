@@ -1,0 +1,15 @@
+builtin_interfaces/Time stamp
+uint64 epoch
+float64 lease_s
+string frame_id
+string posture_id
+bool transport_ready
+float64 half_length_m
+float64 half_width_m
+float64 height_m
+float64 payload_mass_kg
+float64 max_speed_m_s
+float64 max_angular_speed_rad_s
+float64 max_acceleration_m_s2
+float64 brake_deceleration_m_s2
+string reason

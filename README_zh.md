@@ -18,6 +18,9 @@
 
 仿真导航的分阶段启动、事件重规划和持续跑机见 [路径跟踪运行说明](docs/PATH_TRACKING_ENDURANCE.md)。
 
+运行日志统一使用 **spdlog**。首次运行 SDK 前需构建 `astribot_logging`，
+配置、日志目录与轮转范围见 [统一日志说明](docs/LOGGING.md)。
+
 ## 2 · 快速上手
 
 ### 2.1 环境配置
@@ -81,3 +84,5 @@ python3 example/100-get_robot_properties.py
 ## ROS 2 工作空间
 
 模块与运行链路见 [整体架构](docs/ARCHITECTURE.md)，待处理问题见 [逻辑检查](docs/LOGIC_REVIEW.md)，本轮结果见 [验证记录](docs/CLEANUP_VALIDATION.md)。
+
+- [自主感知与探索架构整合](docs/AUTONOMY_ARCHITECTURE_INTEGRATION.md)

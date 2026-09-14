@@ -4,6 +4,7 @@
 
 #include <mutex>
 #include "astribot_s1_path_tracking/policy_lease.hpp"
+#include "astribot_navigation_msgs/msg/corridor_alignment.hpp"
 #include "std_msgs/msg/string.hpp"
 #include <cstdint>
 #include "astribot_s1_path_tracking/three_phase_controller.hpp"
@@ -51,8 +52,17 @@ protected:
 private:
   PolicyLease policy_lease_;
   rclcpp::Subscription<PolicyLease::Message>::SharedPtr policy_sub_;
+  bool policy_takeover_{false};
   bool policy_enabled_{false}, policy_paused_{false};
   double policy_tick_{-1};
+  std::mutex speed_limit_mutex_;
+  double nominal_speed_{0.}, external_speed_limit_{0.};
+  bool external_speed_percentage_{false};
+  using CorridorAlignment = astribot_navigation_msgs::msg::CorridorAlignment;
+  rclcpp::Subscription<CorridorAlignment>::SharedPtr corridor_alignment_sub_;
+  CorridorAlignment::ConstSharedPtr corridor_alignment_;
+  std::mutex corridor_mutex_;
+  std::chrono::steady_clock::time_point corridor_received_;
   nav_msgs::msg::Path tracking_path_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr active_path_pub_;
   double localSharpPathLimit(const geometry_msgs::msg::PoseStamped & pose) const;

@@ -26,6 +26,8 @@ ITEMS = {
     '10_narrow': '已测宽度通道的入口对齐、通行、会车、出口堵塞及退出',
 }
 DEFAULT_TOPICS = [
+    ('/astribot_chassis/joint_space_states', 'astribot_msgs/msg/RobotJointState', True),
+    ('/astribot_chassis/joint_space_command_recv', 'astribot_msgs/msg/RobotJointState', False),
     ('/odom', 'nav_msgs/msg/Odometry', True),
     ('/scan', 'sensor_msgs/msg/LaserScan', True),
     ('/tf', 'tf2_msgs/msg/TFMessage', True),
@@ -97,7 +99,7 @@ def init(args):
     profile = read(args.template)
     write(root / 'hardware.candidate.json', profile)
     write(root / 'topics.json', [{'topic': t, 'type': typ, 'required': req,
-          'transient_local': t == '/tf_static'} for t, typ, req in DEFAULT_TOPICS])
+          'transient_local': t == '/tf_static', 'role': ('manufacturer_feedback' if t == '/astribot_chassis/joint_space_states' else 'command_echo_not_measurement' if t == '/astribot_chassis/joint_space_command_recv' else 'slam_derived_reference' if t == '/odom' else 'auxiliary')} for t, typ, req in DEFAULT_TOPICS])
     write(root / 'conditions.json', {key: '' for key in (
         'robot_serial', 'operator', 'software_revision', 'posture_and_joint_positions',
         'payload_kg_and_shape', 'floor_and_slope', 'battery', 'localization_source',

@@ -24,6 +24,22 @@ public:
     std::lock_guard<std::mutex> lock(mutex_);
     return freshUnlocked(now) && message_.hold && (!no_planning || message_.planning==0);
   }
+  bool alignmentRequired(const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return freshUnlocked(now) && message_.alignment_required;
+  }
+  bool centeringRequired(const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return freshUnlocked(now) && message_.centering_required;
+  }
+  bool corridorTrackingRequired(const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return freshUnlocked(now) && message_.corridor_tracking_required;
+  }
+  double linearSpeedLimit(const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return freshUnlocked(now) && !message_.hold ? message_.max_linear_speed : 0.;
+  }
 private:
   bool freshUnlocked(const rclcpp::Time & now) const {
     if (!seen_) {return false;}

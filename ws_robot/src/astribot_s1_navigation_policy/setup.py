@@ -13,6 +13,8 @@ setup(
     description='Sensor observation and navigation decision contracts.',
     license='Apache-2.0',
     entry_points={'console_scripts': [
+        'envelope_coordinator = astribot_s1_navigation_policy.envelope_node:main',
+        'task_arbiter = astribot_s1_navigation_policy.task_arbiter_node:main',
         'costmap_scan_adapter = astribot_s1_navigation_policy.costmap_scan_node:main',
         'policy_controller = astribot_s1_navigation_policy.policy_node:main',
         'final_protection = astribot_s1_navigation_policy.protection_node:main',

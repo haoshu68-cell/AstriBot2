@@ -24,17 +24,13 @@
     leash_theta_rad: 10.0
     require_manual_reset: true         # true=必须调 ~/reset_leash 才恢复
 
-    enable_slam_correction: true       # false=纯开环+leash，一键回归
+    enable_slam_correction: false      # 兼容参数；true 已拒绝，反馈控制由 Nav2 负责
     pose_source: "slam"
     map_frame: "map"
     base_frame: "astribot_torso_base"  # 本机根 frame，没有 base_link
     outer_rate: 10.0
     slam_max_age_sec: 0.5
     slam_jump_threshold_m: 0.30
-    kp_xy: 0.35
-    kp_theta: 0.40
-    max_corr_vel_xy: 0.10
-    max_corr_vel_theta: 0.20
 
     require_slam_to_enable: false
     slam_loss_grace_sec: 2.0

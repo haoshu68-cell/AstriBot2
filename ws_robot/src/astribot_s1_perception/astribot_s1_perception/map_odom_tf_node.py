@@ -28,6 +28,8 @@ map 原点" —— 只在开机即建图那一种情形下成立，不成立时�
 它不能瞬移）。所以本节点检测到跳变时**上报但照常发布**，绝不平滑掉。
 """
 
+from astribot_logging import get_logger
+
 import sys
 
 import rclpy
@@ -273,7 +275,7 @@ def main(argv=None):
         node = MapOdomTfNode()
         rclpy.spin(node)
     except DecompositionError as exc:
-        print(f'[map_odom_tf] 参数被拒绝：{exc}', file=sys.stderr)
+        get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
         code = 2
     except SystemExit as exc:
         code = int(exc.code or 0)

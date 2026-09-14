@@ -1,5 +1,6 @@
 """Final planar command restriction; a restriction cannot create motion."""
 import math
+from .motion_geometry import body_pose, stopping_horizon, sampling_margin
 
 def scan_usable(ranges, range_min, range_max, angle_min, angle_increment, minimum_fraction):
     if (not ranges or not all(math.isfinite(v) for v in (range_min,range_max,angle_min,angle_increment))
@@ -17,19 +18,17 @@ def costmap_clearing_ranges(ranges, range_max, max_marking_range):
 def swept_point_collision(points, command, profile):
     vx,vy,wz=command
     if not all(math.isfinite(v) for v in command):return True
-    duration=profile.reaction_time_s+math.hypot(vx,vy)/profile.brake_deceleration_m_s2
-    duration=max(duration,profile.reaction_time_s+abs(wz)/profile.angular_brake_deceleration_rad_s2)
+    duration=stopping_horizon(command,profile)
+    error=sampling_margin(command,profile,.05)
     hx=profile.half_length_m+profile.clearance_margin_m+profile.payload_extra_margin_m
     hy=profile.half_width_m+profile.clearance_margin_m+profile.payload_extra_margin_m
+    hx+=error;hy+=error
     radius=math.hypot(vx,vy)*duration+math.hypot(hx,hy)
     points=tuple((x,y) for x,y in points if math.hypot(x,y)<=radius+1e-9)
     if not points:return False
     for i in range(max(1,int(math.ceil(duration/.05)))+1):
-        t=min(duration,i*.05);angle=wz*t
-        if abs(wz)<1e-6:x,y=vx*t,vy*t
-        else:
-            x=(vx*math.sin(angle)+vy*(math.cos(angle)-1))/wz
-            y=(vx*(1-math.cos(angle))+vy*math.sin(angle))/wz
+        t=min(duration,i*.05)
+        x,y,angle=body_pose(command,t)
         c,s=math.cos(angle),math.sin(angle)
         for px,py in points:
             dx,dy=px-x,py-y
@@ -46,7 +45,7 @@ class CommandRestriction:
         if cap<0 or angular_cap<0 or dt<=0:
             self.output=(0.,0.,0.);self.recovering=True;return self.output
         speed=math.hypot(*command[:2]);w=abs(command[2])
-        ratio=min(1.,cap/max(speed,1e-12),angular_cap/max(w,1e-12))
+        ratio=min(1.,cap/speed if speed>0 else 1.,angular_cap/w if w>0 else 1.)
         target=tuple(v*ratio for v in command)
         # Clamp every excess, but floating-point norm roundoff is not a new restriction episode.
         limited=ratio<1.-1e-12

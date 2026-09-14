@@ -23,7 +23,7 @@ frame_id / multi_topic / xfer_format / publish_freq 都是 livox_ros_driver2 的
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 

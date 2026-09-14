@@ -12,7 +12,7 @@ from launch.actions import (
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
@@ -29,6 +29,9 @@ def generate_launch_description():
             description='SLAM 模式：mapping(建图+导航同时进行，对应任务书模式1) 或'
                         'localization(预加载地图+定位+导航，对应任务书模式2)'),
         DeclareLaunchArgument('launch_gazebo', default_value='true'),
+        DeclareLaunchArgument('corridor_file', default_value=''),
+        DeclareLaunchArgument('navigation_policy_stage', default_value='off',
+                              description='透传已有策略阶段；不自动提高阶段放行状态'),
         DeclareLaunchArgument('launch_navigation', default_value='true',
                               description='是否启动 Nav2；false 可将仿真和导航分开启动'),
         DeclareLaunchArgument(
@@ -122,12 +125,12 @@ def generate_launch_description():
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
-                        FindPackageShare('astribot_s1_autonomy'), 'launch',
+                        FindPackageShare('astribot_s1_perception_components'), 'launch',
                         'slice_scan.launch.py'])),
                 launch_arguments={
                     'use_sim_time': use_sim_time_expr,
                     'params_file': PathJoinSubstitution([
-                        FindPackageShare('astribot_s1_autonomy'), 'config',
+                        FindPackageShare('astribot_s1_perception_components'), 'config',
                         'pointcloud_slice_scan_params.yaml']),
                 }.items(),
             ),
@@ -141,12 +144,12 @@ def generate_launch_description():
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
-                        FindPackageShare('astribot_s1_autonomy'), 'launch',
+                        FindPackageShare('astribot_s1_exploration'), 'launch',
                         'exploration_coordinator.launch.py'])),
                 launch_arguments={
                     'use_sim_time': use_sim_time_expr,
                     'params_file': PathJoinSubstitution([
-                        FindPackageShare('astribot_s1_autonomy'), 'config',
+                        FindPackageShare('astribot_s1_exploration'), 'config',
                         'exploration_coordinator_params.yaml']),
                 }.items(),
             ),
@@ -161,6 +164,8 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': use_sim_time_expr,
             'controller_plugin': LaunchConfiguration('controller_plugin'),
+            'navigation_policy_stage': LaunchConfiguration('navigation_policy_stage'),
+            'corridor_file': LaunchConfiguration('corridor_file'),
             'enable_arm_chassis_coupling': LaunchConfiguration('enable_arm_chassis_coupling'),
             'max_linear_speed': LaunchConfiguration('max_linear_speed'),
             'enable_posture_monitor': LaunchConfiguration('enable_posture_monitor'),

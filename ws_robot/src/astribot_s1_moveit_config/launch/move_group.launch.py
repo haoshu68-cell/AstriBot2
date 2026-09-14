@@ -21,6 +21,8 @@
     ros2 launch astribot_s1_moveit_config move_group.launch.py use_rviz:=true
 """
 
+from astribot_logging import get_logger
+
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -28,7 +30,8 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.conditions import IfCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from astribot_logging import log_level as default_log_level
+from astribot_logging.launch import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 import yaml
@@ -43,7 +46,7 @@ def _load_yaml(package_name, relative_path):
         with open(absolute_path, 'r', encoding='utf-8') as handle:
             return yaml.safe_load(handle)
     except (EnvironmentError, yaml.YAMLError) as exc:
-        print(f'[move_group.launch.py] 无法读取 {package_name}/{relative_path}: {exc}')
+        get_logger('astribot.move_group').error(f'[move_group.launch.py] 无法读取 {package_name}/{relative_path}: {exc}')
         return None
 
 
@@ -61,7 +64,7 @@ def generate_launch_description():
             description='规划器插件。默认用本工程的扩展插件（额外注册 BIT*/Informed RRT*）；'
                         '改成 ompl_interface/OMPLPlanner 会让那两个规划器静默失效。'),
         DeclareLaunchArgument(
-            'log_level', default_value='info',
+            'log_level', default_value=default_log_level(),
             description='move_group 日志级别。想看规划器注册细节与每次请求的规划器名用 info；'
                         '想看每个候选点被拒原因用 debug。'),
     ]

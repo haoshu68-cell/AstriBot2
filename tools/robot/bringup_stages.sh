@@ -6,7 +6,8 @@ SDK_ROOT=/home/astribot/Downloads/astribot_sdk_aarch64   # `import astribot_sdk`
 SLAM_WS=/home/astribot/SLAM/vxlm-slam   # voxel_slam 独立工作区，不在 WS 下
 GTSAM_LIB=/home/astribot/SLAM/ThirdParty/GTSAM/install4.1.0/lib
 ENVF=/tmp/robot_env.sh
-LOGDIR=/tmp/bringup
+LOGDIR="${ASTRIBOT_LOG_DIR:-${ROS_LOG_DIR:-${HOME}/.ros/log/astribot/hardware}}"
+export ASTRIBOT_LOG_DIR="$LOGDIR" ROS_LOG_DIR="$LOGDIR"
 DISCOVER_SEC=40          # DDS 发现窗口，别调小
 mkdir -p "$LOGDIR"
 
@@ -55,6 +56,8 @@ load_env() {
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SDK_ROOT/astribot_sdk/core/common/whole_body_control/third_party"
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SDK_ROOT/third_party/drake/lib"
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$SDK_ROOT/third_party/third_pkg"
+    export ASTRIBOT_LOG_DIR="$LOGDIR" ROS_LOG_DIR="$LOGDIR"
+    source "$SDK_ROOT/ws_robot/src/astribot_logging/env_hook/astribot_logging.sh"
     export ROBOT_TYPE="${ROBOT_TYPE:-S1}"
     export ASTRIBOT_SDK_ROOT="${ASTRIBOT_SDK_ROOT:-$SDK_ROOT}"
     set -u
@@ -450,7 +453,7 @@ stage7() {
     #     → pointcloud_slice_scan_node      /livox/cloud_self_filtered（含本体自滤）
     #     → pointcloud_to_laserscan         /scan
     if [ "$(proc_count livox_custom_to_pc2_node)" -eq 0 ]; then
-        launch_bg R7_convert.log ros2 launch astribot_s1_autonomy \
+        launch_bg R7_convert.log ros2 launch astribot_s1_perception_components \
             livox_custom_to_pc2.launch.py use_sim_time:=false
         sleep 12
     else warn "转换节点已在跑"; fi
@@ -469,9 +472,9 @@ stage7() {
     wait_for_rate "⑦b 融合" 5 PointCloud2 /livox/fused_points || return 1
 
     if [ "$(proc_count pointcloud_slice_scan_node)" -eq 0 ]; then
-        launch_bg R7_slice.log ros2 run astribot_s1_autonomy pointcloud_slice_scan_node \
+        launch_bg R7_slice.log ros2 run astribot_s1_perception_components pointcloud_slice_scan_node \
             --ros-args --params-file \
-            "$WS/install/astribot_s1_autonomy/share/astribot_s1_autonomy/config/pointcloud_slice_scan_params.yaml" \
+            "$WS/install/astribot_s1_perception_components/share/astribot_s1_perception_components/config/pointcloud_slice_scan_params.yaml" \
             -p use_sim_time:=false
         sleep 15
     else warn "切片节点已在跑"; fi

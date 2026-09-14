@@ -23,3 +23,5 @@
 这些参数用于异常数据处理，不替换原控制参数。无姿态能力的里程计应显式关闭姿态监控，仍需姿态监控的部署必须配置正确的高度基准。
 
 完整仿真对比、已知限制与证据见 [LOGIC_FIX_VALIDATION.md](LOGIC_FIX_VALIDATION.md)。
+
+2026-09-14 更新：A1～A4 整理后，旧 `--keep-nav2-yaml` 参数明确拒绝；RPP 改为统一入口转发。见 [当前入口说明](HARDWARE_BRINGUP.md)。

@@ -36,6 +36,8 @@ SDK 有 `get_joints_position_limit(names)`（返回 `(lower, upper)`，D6 已定
   所以两条测试是串起来的：Gate 1 保证"限位对"，本探针用"限位对"去反推"顺序对"。
 """
 
+from astribot_logging import get_logger
+
 import sys
 
 import rclpy
@@ -197,8 +199,7 @@ def main(argv=None):
         if node is not None:
             node.get_logger().error('探针失败: %s: %s' % (type(exc).__name__, exc))
         else:
-            print('探针失败（节点都没建起来）: %s: %s' % (type(exc).__name__, exc),
-                  file=sys.stderr)
+            get_logger('astribot.joint_map_probe').error('探针失败（节点都没建起来）: %s: %s' % (type(exc).__name__, exc))
         exit_code = 1
     finally:
         if node is not None:

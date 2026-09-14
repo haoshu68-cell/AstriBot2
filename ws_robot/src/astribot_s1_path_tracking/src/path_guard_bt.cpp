@@ -1,4 +1,7 @@
 #include <chrono>
+#include <atomic>
+#include "behaviortree_cpp_v3/decorator_node.h"
+#include "astribot_s1_path_tracking/route_commit.hpp"
 #include "behaviortree_cpp_v3/bt_factory.h"
 #include "behaviortree_cpp_v3/condition_node.h"
 #include "nav2_behavior_tree/bt_conversions.hpp"
@@ -9,6 +12,27 @@
 #include "astribot_s1_path_tracking/path_quality.hpp"
 
 namespace astribot_s1_path_tracking {
+class PolicyExecution : public BT::DecoratorNode {
+public:
+  PolicyExecution(const std::string & name,const BT::NodeConfiguration & config):BT::DecoratorNode(name,config) {}
+  static BT::PortsList providedPorts() {return {BT::OutputPort<std::string>("session"),BT::InputPort<geometry_msgs::msg::PoseStamped>("goal"),
+    BT::InputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goals")};}
+  BT::NodeStatus tick() override {
+    geometry_msgs::msg::PoseStamped goal;std::vector<geometry_msgs::msg::PoseStamped> goals;
+    if(getInput("goal",goal)) {goals.push_back(goal);} else {getInput("goals",goals);}
+    if(status()==BT::NodeStatus::IDLE || goals!=goals_) {
+      goals_=goals;
+      static std::atomic<uint64_t> serial{0};
+      setOutput("session",std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+":"+std::to_string(++serial));
+    }
+    setStatus(BT::NodeStatus::RUNNING);
+    const auto result=child_node_->executeTick();
+    if(result!=BT::NodeStatus::RUNNING) {resetChild();}
+    return result;
+  }
+private:
+  std::vector<geometry_msgs::msg::PoseStamped> goals_;
+};
 class KeepSafePath : public BT::ConditionNode {
   using Clock=std::chrono::steady_clock;
   using Service=nav2_msgs::srv::IsPathValid;
@@ -27,9 +51,14 @@ public:
       path_risk_publisher_=node_->create_publisher<std_msgs::msg::Bool>(
         "navigation_policy/path_blocked",rclcpp::QoS(1).transient_local());
     }
+    if (!node_->has_parameter("navigation_policy_stage")) {node_->declare_parameter("navigation_policy_stage","off");}
+    const auto stage=node_->get_parameter("navigation_policy_stage").as_string();
+    if(stage=="p3" || stage=="p4" || stage=="p5") {
+      route_=std::make_unique<RouteCommit>(node_,group_);
+    }
   }
   static BT::PortsList providedPorts() {
-    return {BT::InputPort<nav_msgs::msg::Path>("path"),
+    return {BT::BidirectionalPort<nav_msgs::msg::Path>("path"),BT::InputPort<std::string>("session",""),
       BT::InputPort<geometry_msgs::msg::PoseStamped>("goal"),
       BT::InputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goals"),
       BT::OutputPort<std::vector<geometry_msgs::msg::PoseStamped>>("remaining_goals")};
@@ -40,9 +69,12 @@ public:
     geometry_msgs::msg::PoseStamped goal;
     if(getInput("goal",goal)) {goals.push_back(goal);} else {getInput("goals",goals);}
     if(goals.empty()) {throw BT::RuntimeError("PATH_GUARD: missing goal");}
-    bool changed=goals!=goals_;
+    std::string session;getInput("session",session);
+    bool changed=goals!=goals_ || (route_ && session!=session_);
+    session_=session;
     if(changed) {
       if(config().output_ports.count("remaining_goals")) {setOutput("remaining_goals",goals);}
+      if(route_) {route_->reset();}
       goals_=goals;replans_=0; awaiting_=false; known_=false; clearRequest();
       event(path.poses.empty()?"initial_goal":"new_goal");awaiting_=true;previous_=path;
       return BT::NodeStatus::FAILURE;
@@ -58,6 +90,13 @@ public:
 
     }
     executor_.spin_some();
+    if(route_) {
+      std::string reason;
+      if(route_->update(session_,path,goals.back(),goals.size()==1,reason)) {
+        setOutput("path",path);previous_=path;clearRequest();last_good_=now;next_check_=now;
+        publishPathRisk(false);event(reason.c_str());return BT::NodeStatus::SUCCESS;
+      }
+    }
     if(pending_ && future_.wait_for(std::chrono::seconds(0))==std::future_status::ready) {
       auto response=future_.get();pending_=false;
       if(response->is_valid) {last_good_=now;publishPathRisk(false);}
@@ -86,6 +125,8 @@ private:
   void publishPathRisk(bool blocked) {
     if (path_risk_publisher_) {std_msgs::msg::Bool msg;msg.data=blocked;path_risk_publisher_->publish(msg);}
   }
+  std::unique_ptr<RouteCommit> route_;
+  std::string session_;
   bool policy_enabled_{false};
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr path_risk_publisher_;
   void clearRequest() {if(pending_) {client_->remove_pending_request(request_id_);pending_=false;}}
@@ -106,5 +147,6 @@ private:
 };
 }
 BT_REGISTER_NODES(factory) {
+  factory.registerNodeType<astribot_s1_path_tracking::PolicyExecution>("PolicyExecution");
   factory.registerNodeType<astribot_s1_path_tracking::KeepSafePath>("KeepSafePath");
 }

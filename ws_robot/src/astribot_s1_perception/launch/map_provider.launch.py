@@ -39,6 +39,8 @@ README_NAVIGATION.md §4.3 写着"不跑 map_server / amcl"，理由是 slam_too
         map_source:=real_file map_yaml_path:=/abs/path/to/map.yaml
 """
 
+from astribot_logging import get_logger
+
 import os
 
 from launch import LaunchDescription
@@ -46,7 +48,7 @@ from launch.actions import DeclareLaunchArgument, EmitEvent, OpaqueFunction, Reg
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -71,11 +73,11 @@ def _build(context, *args, **kwargs):
     use_sim_time = LaunchConfiguration('use_sim_time').perform(context)
     actions = []
 
-    print(f'[map_provider] 配置文件 = {config_path}')
-    print(f'[map_provider] map_source = {map_source}  localization = {localization}')
+    get_logger('astribot.map_provider').info(f'[map_provider] 配置文件 = {config_path}')
+    get_logger('astribot.map_provider').info(f'[map_provider] map_source = {map_source}  localization = {localization}')
 
     if map_source == 'sim_slam':
-        print('[map_provider] /map 由 slam_toolbox 在线建图提供（本文件不额外起节点）')
+        get_logger('astribot.map_provider').info('[map_provider] /map 由 slam_toolbox 在线建图提供（本文件不额外起节点）')
 
     elif map_source == 'real_file':
         map_yaml = require(params, 'map_yaml_path', str, default='')
@@ -108,7 +110,7 @@ def _build(context, *args, **kwargs):
                 'node_names': ['map_server'],
             }],
         ))
-        print(f'[map_provider] /map 由 map_server 提供: {map_yaml}')
+        get_logger('astribot.map_provider').info(f'[map_provider] /map 由 map_server 提供: {map_yaml}')
 
     else:  # real_live
         transport_reason = check_live_transport_env(
@@ -119,9 +121,9 @@ def _build(context, *args, **kwargs):
         remote_domain = require(params, 'remote_domain_id', int, 25)
         local_domain = require(params, 'local_domain_id', int, 25)
         if remote_domain == local_domain:
-            print(f'[map_provider] /map 由真机直接提供（remote/local 同为 domain '
+            get_logger('astribot.map_provider').info(f'[map_provider] /map 由真机直接提供（remote/local 同为 domain '
                   f'{local_domain}，跳过 map_domain_relay）')
-            print('[map_provider] !!! 跨域隔离已关闭：本机的 /cmd_vel、'
+            get_logger('astribot.map_provider').info('[map_provider] !!! 跨域隔离已关闭：本机的 /cmd_vel、'
                   '/wheel_effort_controller/commands 对真机可见。'
                   '要恢复网络层隔离就把 local_domain_id 改成与真机不同的值，'
                   '并把整条栈起在那个 domain 上 !!!')
@@ -143,7 +145,7 @@ def _build(context, *args, **kwargs):
             actions.append(RegisterEventHandler(OnProcessExit(
                 target_action=relay, on_exit=[EmitEvent(event=Shutdown(
                     reason='map_domain_relay 退出：跨机地图中继失败'))])))
-            print(f'[map_provider] /map 由 map_domain_relay 跨机中继提供: '
+            get_logger('astribot.map_provider').info(f'[map_provider] /map 由 map_domain_relay 跨机中继提供: '
                   f'domain {remote_domain} -> {local_domain}')
 
     if publishes_static_map_to_odom(localization):
@@ -164,7 +166,7 @@ def _build(context, *args, **kwargs):
             ],
             parameters=[{'use_sim_time': use_sim_time == 'true'}],
         ))
-        print(f'[map_provider] map→odom 由静态 TF 提供: '
+        get_logger('astribot.map_provider').info(f'[map_provider] map→odom 由静态 TF 提供: '
               f'xyz=({x}, {y}, {z}) yaw={yaw}')
 
         if params.get('validate_start_cell', True):
@@ -206,10 +208,10 @@ def _build(context, *args, **kwargs):
         actions.append(RegisterEventHandler(OnProcessExit(
             target_action=adapter, on_exit=[EmitEvent(event=Shutdown(
                 reason='slam_adapter_node 退出：外部 SLAM 接入失败（见上面的 ERROR）'))])))
-        print(f'[map_provider] /map 与 map→odom 由外部 SLAM 提供，'
+        get_logger('astribot.map_provider').info(f'[map_provider] /map 与 map→odom 由外部 SLAM 提供，'
               f'经 slam_adapter_node 归一化（参数 {adapter_params}）')
     else:
-        print('[map_provider] map→odom 由 slam_toolbox 提供（扫描匹配）')
+        get_logger('astribot.map_provider').info('[map_provider] map→odom 由 slam_toolbox 提供（扫描匹配）')
 
     return actions
 

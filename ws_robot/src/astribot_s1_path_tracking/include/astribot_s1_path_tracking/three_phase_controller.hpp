@@ -53,6 +53,13 @@ public:
   Phase phase() const {return phase_;}
 
 protected:
+  geometry_msgs::msg::TwistStamped policyAlignment(
+    double error, double measured_wz, const std_msgs::msg::Header & header) {
+    return rotateOnly(error, measured_wz, header);
+  }
+  void preparePolicyTakeover() {
+    if(start_heading_valid_) {enterPhase(Phase::kAlignStart,clock_->now(),"validated policy takeover",true);}
+  }
   virtual bool hasTerminalRefinement() const {return false;}
   void accountPolicyPause(double seconds, const rclcpp::Time & now) {
     phase_started_ = phase_started_ + rclcpp::Duration::from_seconds(seconds);

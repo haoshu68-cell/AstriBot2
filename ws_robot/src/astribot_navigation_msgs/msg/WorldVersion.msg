@@ -1,0 +1,6 @@
+string task_id
+uint64 path_revision
+uint64 map_epoch
+uint64 localization_epoch
+uint64 envelope_epoch
+uint64 clock_epoch

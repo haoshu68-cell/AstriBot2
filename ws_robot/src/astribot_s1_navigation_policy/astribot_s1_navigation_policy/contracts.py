@@ -198,9 +198,15 @@ class Observation:
     class_probabilities: tuple[tuple[str, float], ...]
     provenance: tuple[str, ...]
     velocity_observable: bool = True
+    spatial_occupancy: bool = False
 
     def __post_init__(self):
         require(type(self.velocity_observable) is bool, 'velocity_observable')
+        require(type(self.spatial_occupancy) is bool, 'spatial_occupancy')
+        if self.spatial_occupancy:
+            require(isinstance(self.geometry,MetricBox) and not self.velocity_observable and
+                    self.geometry.velocity_m_s is None and self.source_track_id is not None,
+                    'spatial_occupancy.requires_fixed_metric_cell')
         for field in ('sensor_id', 'measurement_id', 'frame_id'):
             label(getattr(self, field), field)
         if self.source_track_id is not None:
@@ -244,6 +250,7 @@ class Health(str, Enum):
     VALID = 'VALID'
     DEGRADED = 'DEGRADED'
     UNAVAILABLE = 'UNAVAILABLE'
+    STALE = 'STALE'
 
 
 @dataclass(frozen=True)
@@ -277,10 +284,12 @@ class Version:
     path_revision: int
     map_epoch: int
     envelope_epoch: int
+    localization_epoch: int = 0
+    clock_epoch: int = 0
 
     def __post_init__(self):
         label(self.goal_id, 'goal_id')
-        for name in ('path_revision', 'map_epoch', 'envelope_epoch'):
+        for name in ('path_revision', 'map_epoch', 'envelope_epoch', 'localization_epoch', 'clock_epoch'):
             value = getattr(self, name)
             require(type(value) is int and value >= 0, name)
 

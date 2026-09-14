@@ -1,11 +1,13 @@
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
+    <PolicyExecution session="{policy_session}" goal="{goal}">
     <ReactiveSequence>
       <ReactiveFallback>
-        <KeepSafePath path="{path}" goal="{goal}"/>
+        <KeepSafePath session="{policy_session}" path="{path}" goal="{goal}"/>
         <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
       </ReactiveFallback>
       <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="precise_goal_checker"/>
     </ReactiveSequence>
+    </PolicyExecution>
   </BehaviorTree>
 </root>

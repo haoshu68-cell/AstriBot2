@@ -1,3 +1,5 @@
+
+from astribot_logging import get_logger
 # Copyright 2026 Astribot.
 import csv
 import gzip
@@ -976,7 +978,7 @@ def main(args=None):
         try:
             node.finish()
             if ended_by:
-                print('[explore_metrics_recorder] 结束原因：%s' % ended_by, flush=True)
+                get_logger('astribot.explore_metrics_recorder_node').info('[explore_metrics_recorder] 结束原因：%s' % ended_by)
         finally:
             node.destroy_node()
             if rclpy.ok():

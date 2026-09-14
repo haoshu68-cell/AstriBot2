@@ -33,7 +33,7 @@ D-1 下唯一的替代保护是 WriteGate（见 write_gate.py），但它是**�
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, SetEnvironmentVariable, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import (
     EnvironmentVariable,
@@ -41,8 +41,14 @@ from launch.substitutions import (
     PathJoinSubstitution,
     PythonExpression,
 )
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.substitutions import FindPackageShare
+
+
+def _validate_control_ownership(context):
+    if LaunchConfiguration('enable_slam_correction').perform(context).lower() not in ('false', '0'):
+        raise ValueError('enable_slam_correction 已退役，仅允许 false；定位反馈控制由上层 Nav2 负责')
+    return []
 
 
 def generate_launch_description():
@@ -69,15 +75,12 @@ def generate_launch_description():
             description='!!! 打真机的二次授权 !!! 刻意不写进任何 yaml —— '
                         '必须命令行显式给，避免被存进配置后忘记。'),
         DeclareLaunchArgument(
-            'enable_slam_correction', default_value='true',
-            description='底盘位姿反馈闭环。false=纯开环+leash，一键回归。'),
+            'enable_slam_correction', default_value='false',
+            description='兼容参数，仅允许 false；定位反馈控制已移交上层 Nav2。'),
         DeclareLaunchArgument(
             'pose_source', default_value='slam',
             description='slam | ground_truth。必须显式声明，无默认推断。\n'
-                        '!!! ground_truth 下闭环退化 !!! map->odom 是恒等静态 TF，'
-                        '外环误差恒≈0、校正量恒≈0 —— 代码路径在跑但闭环没有作用，'
-                        '此时会上报 CORRECTION_DEGENERATE。'
-                        '它只能验证代码路径，不能作为闭环有效性证据。'),
+                        '用于位姿健康及漂移诊断；不再用于桥接层位置校正。'),
         DeclareLaunchArgument(
             'enable_waypoints_service', default_value='false',
             description='方案 A（move_joints_waypoints，阻塞、不可取消）。'
@@ -138,4 +141,4 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription(declared + env + [mujoco, container])
+    return LaunchDescription(declared + [OpaqueFunction(function=_validate_control_ownership)] + env + [mujoco, container])

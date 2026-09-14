@@ -112,11 +112,11 @@ class ChassisCmdBridgeNode(Node):
 
         self.get_logger().info(
             '底盘桥接已启动：part=%s freq=%.1fHz 外环=%.1fHz 口径=%s '
-            'leash=(%.3fm, %.3frad) 闭环=%s 位姿源=%s 写通路=%s。'
+            'leash=(%.3fm, %.3frad) 反馈控制=上层 位姿源=%s 写通路=%s。'
             '启动即停用，需调 ~/enable。'
             % (cfg.part_name, cfg.freq, cfg.outer_rate, cfg.input_frame,
                cfg.leash_xy_m, cfg.leash_theta_rad,
-               cfg.enable_slam_correction, cfg.pose_source,
+               cfg.pose_source,
                '允许' if self._write_allowed else '被拒绝'))
 
 
@@ -139,17 +139,13 @@ class ChassisCmdBridgeNode(Node):
         d('leash_xy_m', 0.25)
         d('leash_theta_rad', 0.35)
         d('require_manual_reset', True)
-        d('enable_slam_correction', True)
+        d('enable_slam_correction', False)  # 兼容旧 false；true 在配置校验时拒绝
         d('pose_source', 'slam')
         d('map_frame', 'map')
         d('base_frame', 'astribot_torso_base')
         d('outer_rate', 10.0)
         d('slam_max_age_sec', 0.5)
         d('slam_jump_threshold_m', 0.30)
-        d('kp_xy', 0.35)
-        d('kp_theta', 0.40)
-        d('max_corr_vel_xy', 0.10)
-        d('max_corr_vel_theta', 0.20)
         d('require_slam_to_enable', False)
         d('slam_loss_grace_sec', 2.0)
         d('odom_drift_window_sec', 2.0)
@@ -183,9 +179,6 @@ class ChassisCmdBridgeNode(Node):
             map_frame=g('map_frame'), base_frame=g('base_frame'),
             outer_rate=g('outer_rate'), slam_max_age_sec=g('slam_max_age_sec'),
             slam_jump_threshold_m=g('slam_jump_threshold_m'),
-            kp_xy=g('kp_xy'), kp_theta=g('kp_theta'),
-            max_corr_vel_xy=g('max_corr_vel_xy'),
-            max_corr_vel_theta=g('max_corr_vel_theta'),
             require_slam_to_enable=g('require_slam_to_enable'),
             slam_loss_grace_sec=g('slam_loss_grace_sec'),
             odom_drift_window_sec=g('odom_drift_window_sec'),
@@ -344,7 +337,7 @@ class ChassisCmdBridgeNode(Node):
         记录**。其中两段在任何速度话题上都不可见：
 
           · 看门狗/scan 联锁把速度置零 —— 在 /cmd_vel 上和"上游没发"长得一样；
-          · 外环 SLAM 校正直接加在位置上 —— 它贡献的位移不经过任何速度量。
+          · SDK 积分和位置误差闩锁位于桥接内部，上游速度话题无法显示。
 
         于是"底盘为什么没按指令走"在桥接这一层是全黑的。这一行把它点亮。
 
@@ -369,13 +362,13 @@ class ChassisCmdBridgeNode(Node):
             '[桥接速度链] %d拍/%.2fs | in %.3f -> clamp %.3f(咬%d拍) -> '
             'slew %.3f(咬%d拍) -> 本体 %.3f m/s(峰值) | '
             '联锁置零 %d 拍 | 指令路径 %.4fm(净 %.4fm 直度%.2f) '
-            '外环校正另加 %.4fm | 实际净位移 %.4fm | '
+            '实际净位移 %.4fm | '
             '指令均速 %.3f 实际均速 %.3f m/s | dθ 指令 %.4f 实际 %.4f rad'
             % (tr.ticks, tr.wall,
                tr.in_peak, tr.clamped_peak, tr.clamp_bit,
                tr.slewed_peak, tr.slew_bit, tr.local_peak,
                tr.zeroed_ticks,
-               tr.cmd_path, tr.cmd_net, straight, tr.corr_path,
+               tr.cmd_path, tr.cmd_net, straight,
                tr.act_net, cmd_speed, act_speed,
                tr.dtheta_cmd, tr.dtheta_act))
 

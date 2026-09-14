@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Deprecated executable alias. Prefer ros2 run astribot_s1_exploration exploration_coordinator_node."""
+import os
+import sys
+from ament_index_python.packages import get_package_prefix
+path = os.path.join(get_package_prefix('astribot_s1_exploration'), 'lib', 'astribot_s1_exploration', 'exploration_coordinator_node')
+if not os.path.isfile(path):
+    sys.exit('Executable unavailable in target package: ' + path)
+os.execv(path, [path, *sys.argv[1:]])

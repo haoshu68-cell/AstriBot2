@@ -98,6 +98,16 @@ void ArrivalController::configure(
   const std::string p = name + ".arrival.";
   nav2_util::declare_parameter_if_not_declared(node, "navigation_policy_enabled", rclcpp::ParameterValue(false));
   policy_enabled_=node->get_parameter("navigation_policy_enabled").as_bool();
+  nav2_util::declare_parameter_if_not_declared(node,"navigation_policy_stage",rclcpp::ParameterValue("off"));
+  const auto stage=node->get_parameter("navigation_policy_stage").as_string();
+  policy_takeover_=stage=="p3" || stage=="p4" || stage=="p5";
+  if (policy_enabled_ && (stage=="p4" || stage=="p5")) {
+    corridor_alignment_sub_=node->create_subscription<CorridorAlignment>(
+      "navigation_policy/corridor_alignment",1,[this](CorridorAlignment::ConstSharedPtr msg) {
+        std::lock_guard<std::mutex> lock(corridor_mutex_);
+        corridor_alignment_=msg;corridor_received_=std::chrono::steady_clock::now();
+      });
+  }
   if (policy_enabled_) {
     active_path_pub_=rclcpp::create_publisher<nav_msgs::msg::Path>(node,
       "path_tracking/active_path",rclcpp::QoS(1).transient_local());
@@ -141,6 +151,17 @@ void ArrivalController::configure(
       });
   }
   ThreePhaseController::configure(parent, name, tf, costmap);
+  if (policy_enabled_) {
+    for (const auto & suffix : {".inner.vx_max", ".inner.desired_linear_vel"}) {
+      if (node->has_parameter(name+suffix)) {
+        nominal_speed_=node->get_parameter(name+suffix).as_double();break;
+      }
+    }
+    if (!std::isfinite(nominal_speed_) || nominal_speed_<=0.) {
+      throw std::runtime_error("Policy speed composition requires the inner controller nominal speed");
+    }
+    external_speed_limit_=0.;external_speed_percentage_=false;
+  }
 }
 void ArrivalController::publishPhase(const char * phase)
 {
@@ -160,6 +181,8 @@ void ArrivalController::deactivate()
 }
 void ArrivalController::cleanup()
 {
+  corridor_alignment_sub_.reset();
+  {std::lock_guard<std::mutex> lock(corridor_mutex_);corridor_alignment_.reset();}
   tracking_path_ = nav_msgs::msg::Path();
   phase_pub_.reset();
   policy_sub_.reset();
@@ -179,6 +202,10 @@ void ArrivalController::setPlan(const nav_msgs::msg::Path & path)
     if (!validPose(pose.pose) || (!pose.header.frame_id.empty() &&
       pose.header.frame_id != path.header.frame_id)) {fail("INVALID_PATH: invalid pose/frame");}
   }
+  const bool takeover=policy_takeover_ && has_goal_ && !refining_ && path!=tracking_path_ &&
+    path.header.frame_id==goal_.header.frame_id &&
+    distance(path.poses.back().pose,goal_.pose)<1e-4 &&
+    std::abs(yawError(path.poses.back().pose,goal_.pose))<1e-4;
   auto goal = path.poses.back();
   goal.header.frame_id = path.header.frame_id;
   goal.header.stamp = builtin_interfaces::msg::Time();  // fixed world target, latest TF
@@ -192,6 +219,7 @@ void ArrivalController::setPlan(const nav_msgs::msg::Path & path)
   tracking_path_ = path;
   if (active_path_pub_) {active_path_pub_->publish(path);}
   ThreePhaseController::setPlan(path);
+  if(takeover) {preparePolicyTakeover();}
 }
 void ArrivalController::setSpeedLimit(const double & limit, const bool & percentage)
 {
@@ -199,7 +227,12 @@ void ArrivalController::setSpeedLimit(const double & limit, const bool & percent
     fail("INVALID_SPEED_LIMIT");
   }
   speed_scale_ = limit == 0 ? 1.0 : std::min(1.0, percentage ? limit / 100.0 : limit / max_v_);
-  ThreePhaseController::setSpeedLimit(limit, percentage);
+  if (policy_enabled_) {
+    std::lock_guard<std::mutex> lock(speed_limit_mutex_);
+    external_speed_limit_=limit;external_speed_percentage_=percentage;
+  } else {
+    ThreePhaseController::setSpeedLimit(limit, percentage);
+  }
 }
 [[noreturn]] void ArrivalController::fail(const std::string & reason)
 {
@@ -300,6 +333,92 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
       publishPhase("POLICY_HOLD");
       geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
     }
+    const double policy_cap=policy_lease_.linearSpeedLimit(clock_->now());
+    if (policy_cap<=0.) {
+      policy_paused_=true;publishPhase("POLICY_HOLD");
+      geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
+    }
+    std::lock_guard<std::mutex> lock(speed_limit_mutex_);
+    const double external=external_speed_limit_==0. ? nominal_speed_ :
+      (external_speed_percentage_ ? nominal_speed_*external_speed_limit_/100. : external_speed_limit_);
+    const double effective=std::min({nominal_speed_,external,policy_cap});
+    // Reapply each cycle: optimizer recovery may reset its speed constraints.
+    // Zero is Nav2's reset sentinel and must never represent a policy stop.
+    ThreePhaseController::setSpeedLimit(effective,false);
+  }
+  const bool corridor_tracking=policy_enabled_ && policy_lease_.corridorTrackingRequired(clock_->now());
+  geometry_msgs::msg::Pose corridor_heading;
+  if (corridor_tracking) {
+    std::lock_guard<std::mutex> lock(corridor_mutex_);
+    const auto & request=corridor_alignment_;
+    bool valid=false;
+    if (!policy_lease_.centeringRequired(clock_->now()) && !policy_lease_.alignmentRequired(clock_->now()) &&
+        request && request->tracking_required && !request->centering_required &&
+        std::isfinite(request->lease_s) && request->lease_s>0 && request->lease_s<=0.3) {
+      const double age=(clock_->now()-rclcpp::Time(request->stamp,clock_->get_clock_type())).seconds();
+      const double wall_age=std::chrono::duration<double>(std::chrono::steady_clock::now()-corridor_received_).count();
+      valid=age>=0 && age<=request->lease_s && wall_age<=request->lease_s &&
+        request->reference_path==tracking_path_ && validPose(request->anchor.pose) &&
+        request->anchor.header.frame_id==current.header.frame_id;
+      if (valid) {corridor_heading=request->anchor.pose;}
+    }
+    if (!valid) {
+      publishPhase("CORRIDOR_HEADING_PENDING");
+      geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
+    }
+  }
+  if (policy_enabled_ && policy_lease_.centeringRequired(clock_->now())) {
+    std::lock_guard<std::mutex> lock(corridor_mutex_);
+    const auto & request=corridor_alignment_;
+    geometry_msgs::msg::TwistStamped command;command.header=pose.header;
+    if (!refining_ && !policy_lease_.alignmentRequired(clock_->now()) && request &&
+        request->centering_required && !request->tracking_required && std::isfinite(request->lease_s) &&
+        request->lease_s>0 && request->lease_s<=0.3) {
+      const double age=(clock_->now()-rclcpp::Time(request->stamp,clock_->get_clock_type())).seconds();
+      const double wall_age=std::chrono::duration<double>(std::chrono::steady_clock::now()-corridor_received_).count();
+      const auto & a=request->anchor.pose.position;
+      const auto & b=request->target.pose.position;
+      const auto & c=current.pose.position;
+      const double dx=b.x-a.x, dy=b.y-a.y, length=std::hypot(dx,dy);
+      if (age>=0 && age<=request->lease_s && wall_age<=request->lease_s &&
+          request->reference_path==tracking_path_ && validPose(request->anchor.pose) &&
+          validPose(request->target.pose) && request->anchor.header.frame_id==current.header.frame_id &&
+          request->target.header.frame_id==current.header.frame_id && length>1e-6 && length<=0.300001 &&
+          std::hypot(velocity.linear.x,velocity.linear.y)<=0.08 &&
+          std::abs(yawError(current.pose,request->anchor.pose))<=0.05) {
+        const double along=((c.x-a.x)*dx+(c.y-a.y)*dy)/length;
+        const double side=std::abs((c.x-a.x)*dy-(c.y-a.y)*dx)/length;
+        if (along>=-0.04 && along<=length+0.04 && side<=0.04) {
+          const double ex=b.x-c.x, ey=b.y-c.y, remaining=std::hypot(ex,ey);
+          const double scale=remaining>1e-6 ? std::min(0.05,remaining)/remaining : 0.;
+          const auto & q=current.pose.orientation;
+          const double heading=std::atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
+          command.twist.linear.x=scale*(std::cos(heading)*ex+std::sin(heading)*ey);
+          command.twist.linear.y=scale*(-std::sin(heading)*ex+std::cos(heading)*ey);
+          progress_at_=now;publishPhase("CORRIDOR_CENTER");
+          return command;
+        }
+      }
+    }
+    publishPhase("CORRIDOR_CENTER_PENDING");return command;
+  }
+  if (policy_enabled_ && policy_lease_.alignmentRequired(clock_->now())) {
+    std::lock_guard<std::mutex> lock(corridor_mutex_);
+    const auto & request=corridor_alignment_;
+    if (!refining_ && request && !request->centering_required && !request->tracking_required && std::isfinite(request->lease_s) && request->lease_s>0 && request->lease_s<=0.3) {
+      const double age=(clock_->now()-rclcpp::Time(request->stamp,clock_->get_clock_type())).seconds();
+      const double wall_age=std::chrono::duration<double>(std::chrono::steady_clock::now()-corridor_received_).count();
+      if (age>=0 && age<=request->lease_s && wall_age<=request->lease_s &&
+          request->reference_path==tracking_path_ && validPose(request->anchor.pose) &&
+          request->anchor.header.frame_id==current.header.frame_id &&
+          distance(current.pose,request->anchor.pose)<=0.04 &&
+          std::hypot(velocity.linear.x,velocity.linear.y)<=0.02) {
+        progress_at_=now;publishPhase("CORRIDOR_ALIGN");
+        return policyAlignment(yawError(current.pose,request->anchor.pose),velocity.angular.z,pose.header);
+      }
+    }
+    publishPhase("CORRIDOR_ALIGNMENT_PENDING");
+    geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
   }
   if (now - started_at_ > total_timeout_) {fail("GOAL_TIMEOUT");}
   if (!refining_ && distance(current.pose, goal_.pose) <= capture_) {
@@ -320,6 +439,11 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
         const double ratio = cap/speed;
         cmd.twist.linear.x *= ratio;cmd.twist.linear.y *= ratio;cmd.twist.angular.z *= ratio;
         RCLCPP_INFO_THROTTLE(logger_, *clock_, 2000, "PATH_QUALITY_SPEED_LIMIT %.3fm/s", cap);
+      }
+      if (corridor_tracking) {
+        const double angular_cap=std::min(.2,max_w_)*speed_scale_;
+        cmd.twist.angular.z=std::clamp(kp_yaw_*yawError(current.pose,corridor_heading),-angular_cap,angular_cap);
+        if (!safeCommand(pose,cmd.twist,velocity)) {fail("CORRIDOR_TRACKING_BLOCKED: unsafe footprint sweep");}
       }
     }
     publishPhase(toString(phase()));

@@ -18,6 +18,9 @@
 
 For staged simulation startup, event-driven replanning, and endurance measurements, see the [path tracking runbook](docs/PATH_TRACKING_ENDURANCE.md).
 
+Runtime logging uses **spdlog**. Build `astribot_logging` before running the SDK;
+see [logging setup and configuration](docs/LOGGING.md).
+
 ## 2 · Quick Start
 
 ###  2.1 Environment Setup
@@ -75,3 +78,5 @@ We provide a **Mujoco-based simulation environment**. Follow read the github rea
 ## ROS 2 工作空间
 
 模块与运行链路见 [整体架构](docs/ARCHITECTURE.md)，待处理问题见 [逻辑检查](docs/LOGIC_REVIEW.md)，本轮结果见 [验证记录](docs/CLEANUP_VALIDATION.md)。
+
+- [自主感知与探索架构整合](docs/AUTONOMY_ARCHITECTURE_INTEGRATION.md)

@@ -13,7 +13,8 @@ from launch.actions import (
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
-from launch_ros.actions import Node
+from astribot_logging import log_level as default_log_level
+from astribot_logging.launch import Node
 from launch_ros.descriptions import ParameterFile, ParameterValue
 from launch_ros.substitutions import FindPackageShare
 from nav2_common.launch import RewrittenYaml
@@ -29,7 +30,8 @@ def generate_launch_description():
 
     policy_stage = LaunchConfiguration('navigation_policy_stage')
     policy_enabled = PythonExpression(["'", policy_stage, "' != 'off'"])
-    policy_params = {'navigation_policy_enabled': ParameterValue(policy_enabled, value_type=bool)}
+    policy_params = {'navigation_policy_enabled': ParameterValue(policy_enabled, value_type=bool),
+                     'navigation_policy_stage': ParameterValue(policy_stage, value_type=str)}
     namespace = LaunchConfiguration('namespace')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
@@ -80,7 +82,7 @@ def generate_launch_description():
     def smoother_limits(context):
         with open(perform_substitutions(context, [params_file]), encoding='utf-8') as stream:
             config = yaml.safe_load(stream)['velocity_smoother']['ros__parameters']
-        if policy_stage.perform(context) not in ('off', 'p2'):
+        if policy_stage.perform(context) not in ('off', 'p2', 'p3', 'p4', 'p5'):
             raise ValueError('unsupported navigation policy stage')
         cap = float(max_linear_speed.perform(context))
         if policy_stage.perform(context) != 'off' and cap > 0.35:
@@ -127,10 +129,11 @@ def generate_launch_description():
         allow_substs=True)
 
     stdout_linebuf_envvar = SetEnvironmentVariable(
-        'RCUTILS_LOGGING_BUFFERED_STREAM', '1')
+        'RCUTILS_LOGGING_BUFFERED_STREAM', '0')
 
     declare_args = [
         DeclareLaunchArgument('navigation_policy_stage', default_value='off'),
+        DeclareLaunchArgument('corridor_file', default_value=''),
         DeclareLaunchArgument('namespace', default_value='', description='Top-level namespace'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('autostart', default_value='true'),
@@ -149,7 +152,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'posture_normal_height', default_value='0.134',
             description='姿态监控的基准高度，单位 m'),
-        DeclareLaunchArgument('log_level', default_value='info'),
+        DeclareLaunchArgument('log_level', default_value=default_log_level()),
         DeclareLaunchArgument(
             'scan_topic', default_value='/scan',
             description='costmap 障碍层订阅的 LaserScan 话题'),
@@ -229,9 +232,17 @@ def generate_launch_description():
                 respawn=use_respawn,
                 respawn_delay=2.0,
 
-                parameters=[configured_params, policy_params],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings),
+                # BT client nodes keep their root namespace and need their own clock parameters.
+                parameters=[configured_params, ParameterFile(RewrittenYaml(source_file=params_file,
+                    root_key='navigation_executor', param_rewrites=param_substitutions,
+                    convert_types=True), allow_substs=True), policy_params],
+                arguments=['--ros-args', '--log-level', log_level,
+                    '-r', 'bt_navigator:__ns:=/navigation_executor'],
+                remappings=[('/tf','/tf'),('/tf_static','/tf_static'),
+                    ('/navigation_executor/bond','/bond')] + [
+                    ('/navigation_executor/bt_navigator/'+service,'/bt_navigator/'+service)
+                    for service in ('change_state','get_state','get_available_states',
+                        'get_available_transitions','get_transition_graph')]),
             Node(
                 package='nav2_waypoint_follower',
                 executable='waypoint_follower',
@@ -297,10 +308,14 @@ def generate_launch_description():
     for action in declare_args:
         ld.add_action(action)
     ld.add_action(OpaqueFunction(function=costmap_scan_adapter))
+    ld.add_action(Node(package='astribot_s1_navigation_policy', executable='task_arbiter',
+        output='screen', parameters=[{'use_sim_time': use_sim_time}]))
     ld.add_action(load_nodes)
     ld.add_action(arm_chassis_coupling)
-    for executable in ('policy_controller', 'final_protection'):
+    for executable in ('envelope_coordinator', 'policy_controller', 'final_protection'):
         ld.add_action(Node(package='astribot_s1_navigation_policy', executable=executable,
-            output='screen', parameters=[{'use_sim_time': use_sim_time, 'scan_topic': scan_topic}],
+            output='screen', parameters=[{'use_sim_time': use_sim_time, 'scan_topic': scan_topic,
+                                         'navigation_policy_stage': ParameterValue(policy_stage, value_type=str),
+                                         'corridor_file': LaunchConfiguration('corridor_file')}],
             condition=IfCondition(policy_enabled)))
     return ld

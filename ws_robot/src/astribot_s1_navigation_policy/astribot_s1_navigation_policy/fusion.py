@@ -4,7 +4,9 @@ from functools import lru_cache
 import math
 
 from .contracts import Covariance3, MetricBox, Observation, Stamp, Vec3, Version, require
-from .ports import Prediction, TrackedObstacle, WorldSnapshot
+from .ports import Prediction, PredictionModel, TrackedObstacle, WorldSnapshot
+
+ZERO_VELOCITY = Vec3(0., 0., 0.)
 
 
 @lru_cache(maxsize=4096)
@@ -15,10 +17,17 @@ def expanded_covariance(values, extra_variance):
     return Covariance3(tuple(covariance))
 
 
+@lru_cache(maxsize=16384)
 def translate(box, velocity, dt, extra_variance=0.):
     c = box.center_m
-    return replace(box, center_m=Vec3(c.x+velocity.x*dt, c.y+velocity.y*dt, c.z+velocity.z*dt),
+    center = c if velocity == ZERO_VELOCITY else Vec3(c.x+velocity.x*dt, c.y+velocity.y*dt, c.z+velocity.z*dt)
+    return replace(box, center_m=center,
                    position_covariance_m2=expanded_covariance(box.position_covariance_m2.values, extra_variance))
+
+
+@lru_cache(maxsize=256)
+def prediction_model(velocity,variance,steps):
+    return PredictionModel(velocity,variance,steps)
 
 
 @dataclass
@@ -51,10 +60,12 @@ class _AssociationIndex:
         self.tracks=tracks
         self.memory=profile.track_memory_s
         self.cell_size=profile.association_distance_m+.2
-        self.stamp=None;self.cells={};self.track_cells={};self.evidence={}
+        self.stamp=None;self.cells={};self.track_cells={};self.evidence={};self.identities={}
         for identifier,track in tracks.items():self.add_evidence(identifier,track.observation)
 
     def add_evidence(self,identifier,observation):
+        if observation.source_track_id is not None:
+            self.identities.setdefault((observation.sensor_id,observation.source_track_id),set()).add(identifier)
         for provenance in observation.provenance:
             self.evidence.setdefault((observation.capture_stamp,provenance),set()).add(identifier)
 
@@ -66,9 +77,10 @@ class _AssociationIndex:
         center=observation.geometry.center_m
         return any(math.dist((self.tracks[i].observation.geometry.center_m.x,
                               self.tracks[i].observation.geometry.center_m.y),(center.x,center.y))<.05
-                   for i in identifiers)
+                   for i in identifiers if self.tracks[i].observation.spatial_occupancy==observation.spatial_occupancy)
 
     def add_cell(self,identifier,track):
+        if self.stamp is None:return
         dt=self.stamp.since(track.observation.capture_stamp)*1e-9
         if dt<0:return
         center=track.observation.geometry.center_m;t=min(dt,self.memory)
@@ -88,6 +100,11 @@ class _AssociationIndex:
     def remove(self,identifier):
         track=self.tracks.get(identifier)
         if track is not None:
+            obs=track.observation
+            if obs.source_track_id is not None:
+                key=(obs.sensor_id,obs.source_track_id)
+                bucket=self.identities[key];bucket.discard(identifier)
+                if not bucket:del self.identities[key]
             for provenance in track.observation.provenance:
                 key=(track.observation.capture_stamp,provenance)
                 bucket=self.evidence[key];bucket.discard(identifier)
@@ -115,6 +132,7 @@ class ConservativeFusion:
         self.sequence = 0
         self.sensors = ()
         self.version = Version('idle', 0, 0, 0)
+        self.prediction_steps = tuple((int(round(t*1e9)), t) for t in self.prediction_times())
 
     def update(self, observations, now):
         self.ingest(observations, now)
@@ -151,26 +169,33 @@ class ConservativeFusion:
                 continue
             require(obs.frame_id == self.frame_id, 'fusion.requires_capture_time_transform')
             candidates = []
-            for identifier in index.nearby(obs):
-                track=self.tracks[identifier]
-                if identifier in assigned and track.observation.sensor_id == obs.sensor_id:
-                    continue
-                source=track.observation
-                same_source=source.sensor_id==obs.sensor_id
-                if not same_source and source.capture_stamp!=obs.capture_stamp:continue
-                if (same_source and source.source_track_id is not None and obs.source_track_id is not None
-                        and source.source_track_id!=obs.source_track_id):continue
-                dt = obs.capture_stamp.since(track.observation.capture_stamp)*1e-9
-                if dt < 0:
-                    continue
-                center = track.observation.geometry.center_m
-                prediction_dt = min(dt, self.profile.track_memory_s)
-                distance = math.dist((center.x+track.velocity.x*prediction_dt, center.y+track.velocity.y*prediction_dt),
-                                     (obs.geometry.center_m.x, obs.geometry.center_m.y))
-                gate = self.profile.association_distance_m + min(dt, 1.)*.2
-                if distance <= gate:
-                    identity_match=same_source and obs.source_track_id is not None and source.source_track_id==obs.source_track_id
-                    candidates.append((not identity_match,distance, identifier))
+            # A valid exact identity already outranks every proximity match.
+            # If it fails the unchanged gates, fall back to the full search.
+            for exact in (True,False):
+                identifiers=(index.identities.get((obs.sensor_id,obs.source_track_id),())
+                             if exact else index.nearby(obs))
+                for identifier in identifiers:
+                    track=self.tracks[identifier]
+                    if identifier in assigned and track.observation.sensor_id == obs.sensor_id:
+                        continue
+                    source=track.observation
+                    if source.spatial_occupancy!=obs.spatial_occupancy:continue
+                    same_source=source.sensor_id==obs.sensor_id
+                    if not same_source and source.capture_stamp!=obs.capture_stamp:continue
+                    if (same_source and source.source_track_id is not None and obs.source_track_id is not None
+                            and source.source_track_id!=obs.source_track_id):continue
+                    dt = obs.capture_stamp.since(track.observation.capture_stamp)*1e-9
+                    if dt < 0:
+                        continue
+                    center = track.observation.geometry.center_m
+                    prediction_dt = min(dt, self.profile.track_memory_s)
+                    distance = math.dist((center.x+track.velocity.x*prediction_dt, center.y+track.velocity.y*prediction_dt),
+                                         (obs.geometry.center_m.x, obs.geometry.center_m.y))
+                    gate = self.profile.association_distance_m + min(dt, 1.)*.2
+                    if distance <= gate:
+                        identity_match=same_source and obs.source_track_id is not None and source.source_track_id==obs.source_track_id
+                        candidates.append((not identity_match,distance, identifier))
+                if candidates:break
             identifier = min(candidates)[2] if candidates else f'obstacle-{self.next_id}'
             if not candidates:
                 self.next_id += 1
@@ -229,7 +254,7 @@ class ConservativeFusion:
         for identifier, track in list(self.tracks.items()):
             age = now.since(track.observation.capture_stamp)*1e-9
             if age > self.profile.sensor_timeout_s:
-                box = translate(track.observation.geometry,track.velocity,min(age,self.profile.track_memory_s))
+                box = track.observation.geometry if track.observation.spatial_occupancy else translate(track.observation.geometry,track.velocity,min(age,self.profile.track_memory_s))
                 if free_at(box):
                     del self.tracks[identifier]
 
@@ -241,7 +266,7 @@ class ConservativeFusion:
             obs=track.observation
             age=max(0.,now.since(obs.capture_stamp)*1e-9)
             old=age>self.profile.track_memory_s
-            velocity=Vec3(0.,0.,0.) if old else track.velocity
+            velocity=ZERO_VELOCITY if old else track.velocity
             occupancy_only=not obs.velocity_observable and obs.geometry.velocity_m_s is None
             stationary=(len(track.samples)>=5 and track.samples[-1][0]-track.samples[0][0]>=self.profile.velocity_confirmation_s-1e-8
                         and math.hypot(track.velocity.x,track.velocity.y)<self.profile.min_tracked_speed_m_s
@@ -250,8 +275,13 @@ class ConservativeFusion:
             variance=self.profile.stationary_velocity_variance_m2_s2 if occupancy_only or stationary else .01
             if obs.geometry.velocity_covariance_m2_s2 is not None:
                 variance=max(variance,*(obs.geometry.velocity_covariance_m2_s2.values[i] for i in (0,4,8)))
+            # A fixed occupied cell is a statement about space, not the
+            # uncertain identity or velocity of the object that illuminated it.
+            # Retain it until fresh free-space evidence; tracked objects retain
+            # their full age, motion and covariance forecasts.
+            if obs.spatial_occupancy:variance=0.
             age_variance=variance if occupancy_only else max(variance,.04)
-            current=translate(obs.geometry,track.velocity,min(age,self.profile.track_memory_s),min(age,3.)**2*age_variance)
+            current=obs.geometry if obs.spatial_occupancy else translate(obs.geometry,track.velocity,min(age,self.profile.track_memory_s),min(age,3.)**2*age_variance)
             relevant=True
             if region is not None:
                 x,y,travel=region;t=self.profile.prediction_horizon_s
@@ -261,9 +291,8 @@ class ConservativeFusion:
                         2*math.sqrt(2*max(current.position_covariance_m2.values[i]+t*t*variance for i in (0,4)))+
                         math.hypot(velocity.x,velocity.y)*t)
                 relevant=math.hypot(current.center_m.x-x,current.center_m.y-y)<=radius
-            predictions=tuple(Prediction(int(round(t*1e9)),translate(current,velocity,t,t*t*variance))
-                              for t in self.prediction_times()) if relevant else ()
-            tracks.append(TrackedObstacle(track.identifier,self.frame_id,now,current,predictions,obs.provenance))
+            model=prediction_model(velocity,variance,self.prediction_steps) if relevant else None
+            tracks.append(TrackedObstacle(track.identifier,self.frame_id,now,current,(),obs.provenance,model))
         return WorldSnapshot(self.version,now,self.frame_id,tuple(tracks),tuple(self.unassociated.values()),self.sensors,self.sequence)
 
     def prediction_times(self):

@@ -26,6 +26,8 @@ odom 变化"这件事用那份代码做不到。本节点必须独立于写通�
 只让位姿反复跳，症状看起来像"定位漂移"。仿真里请让本节点保持关闭。
 """
 
+from astribot_logging import get_logger
+
 import sys
 
 import rclpy
@@ -208,10 +210,10 @@ def main(argv=None):
         node = ChassisOdomNode()
         rclpy.spin(node)
     except SdkSessionError as exc:
-        print(f'[chassis_odom] SDK 会话建立失败：{exc}', file=sys.stderr)
+        get_logger('astribot.chassis_odom_node').error(f'[chassis_odom] SDK 会话建立失败：{exc}')
         code = 3
     except OdomSourceError as exc:
-        print(f'[chassis_odom] 参数被拒绝：{exc}', file=sys.stderr)
+        get_logger('astribot.chassis_odom_node').error(f'[chassis_odom] 参数被拒绝：{exc}')
         code = 2
     except SystemExit as exc:
         code = int(exc.code or 0)

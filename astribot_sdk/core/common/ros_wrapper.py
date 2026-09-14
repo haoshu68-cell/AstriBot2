@@ -1,4 +1,5 @@
 import os
+from astribot_sdk.core.common.logger import default_logger
 
 try:
     import rospy
@@ -20,11 +21,11 @@ class ROSWrapper:
         self.ros_version = self._detect_ros_version()
         if self.ros_version == 1:
             rospy.init_node(node_name, anonymous=True)
-            print("ROS1 environment initialized successfully.")
+            default_logger.info("ROS1 environment initialized successfully.")
         elif self.ros_version == 2:
             rclpy.init()
             self.node = Node(node_name)
-            print("ROS2 environment initialized successfully.")
+            default_logger.info("ROS2 environment initialized successfully.")
         else:
             raise EnvironmentError("No valid ROS environment detected. Set ROS_DISTRO variable.")
 
@@ -67,7 +68,7 @@ class ROSWrapper:
         elif self.ros_version == 2:
             client = self.node.create_client(srv_type, service_name)
             while not client.wait_for_service(timeout_sec=1.0):
-                print(f"Waiting for service '{service_name}'...")
+                default_logger.info(f"Waiting for service '{service_name}'...")
             return client
 
     def call_service(self, client, request):
@@ -109,12 +110,12 @@ def main():
     publisher = ros_wrapper.create_publisher("/example_topic", String)
 
     def callback(msg):
-        print(f"Received message: {msg.data}")
+        default_logger.info(f"Received message: {msg.data}")
 
     ros_wrapper.create_subscriber("/example_topic", String, callback)
 
     def handle_service(request):
-        print("Received a service request.")
+        default_logger.info("Received a service request.")
         response = TriggerResponse(success=True, message="Service handled successfully.")
         return response
 
@@ -125,11 +126,11 @@ def main():
     def call_service_example():
         request = TriggerRequest()
         response = ros_wrapper.call_service(client, request)
-        print(f"Service response: {response.message}")
+        default_logger.info(f"Service response: {response.message}")
 
     call_service_example()
 
-    print("Publishing messages to '/example_topic'...")
+    default_logger.info("Publishing messages to '/example_topic'...")
 
     try:
         if ros_wrapper.ros_version == 1:
@@ -145,11 +146,11 @@ def main():
                 msg = String()
                 msg.data = f"Hello from ROS2! Count: {count}"
                 publisher.publish(msg)
-                print(f"Published: {msg.data}")
+                default_logger.info(f"Published: {msg.data}")
                 sleep(1)
                 count += 1
     except KeyboardInterrupt:
-        print("Shutting down...")
+        default_logger.info("Shutting down...")
     finally:
         ros_wrapper.shutdown()
 

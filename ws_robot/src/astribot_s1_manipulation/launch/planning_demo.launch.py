@@ -43,7 +43,8 @@ from launch.events import Shutdown
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from astribot_logging import log_level as default_log_level
+from astribot_logging.launch import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 import yaml
@@ -218,7 +219,7 @@ def generate_launch_description():
             'move_to_ready', default_value='',
             description='是否先把双臂摆到 ready 姿态(true/false)。留空用 yaml 值。'),
         DeclareLaunchArgument(
-            'log_level', default_value='info',
+            'log_level', default_value=default_log_level(),
             description='demo 节点日志级别。'),
     ]
 

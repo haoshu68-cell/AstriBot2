@@ -4,7 +4,7 @@ from typing import Generic, Protocol, TypeVar
 
 from .contracts import (
     CameraCalibration, Decision, MetricBox, Observation, SensorHealth, Stamp, Version,
-    immutable_tuple, label, require,
+    immutable_tuple, label, require, Vec3, finite,
 )
 
 
@@ -19,6 +19,28 @@ class Prediction:
 
 
 @dataclass(frozen=True)
+class PredictionModel:
+    """Exact constant-velocity forecast, without allocating one box per time step."""
+    velocity: Vec3
+    variance_m2_s2: float
+    steps: tuple[tuple[int, float], ...]
+
+    def __post_init__(self):
+        require(isinstance(self.velocity, Vec3), 'prediction_model.velocity')
+        finite(self.variance_m2_s2, 'prediction_model.variance', 0)
+        immutable_tuple(self.steps, 'prediction_model.steps')
+        previous=0
+        for item in self.steps:
+            immutable_tuple(item, 'prediction_model.step')
+            require(len(item)==2, 'prediction_model.step_size')
+            ns,t=item
+            require(type(ns) is int and ns>previous, 'prediction_model.time_order')
+            finite(t, 'prediction_model.time', 0)
+            require(abs(t-ns*1e-9)<=1e-9, 'prediction_model.time_units')
+            previous=ns
+
+
+@dataclass(frozen=True)
 class TrackedObstacle:
     fused_track_id: str
     frame_id: str
@@ -26,6 +48,7 @@ class TrackedObstacle:
     geometry: MetricBox
     predictions: tuple[Prediction, ...]
     provenance: tuple[str, ...]
+    prediction_model: PredictionModel | None = None
 
     def __post_init__(self):
         label(self.fused_track_id, 'fused_track_id')
@@ -33,6 +56,9 @@ class TrackedObstacle:
         require(isinstance(self.stamp, Stamp) and isinstance(self.geometry, MetricBox), 'track.geometry/time')
         immutable_tuple(self.predictions, 'predictions')
         require(all(isinstance(p, Prediction) for p in self.predictions), 'predictions.types')
+        require(self.prediction_model is None or isinstance(self.prediction_model, PredictionModel),
+                'predictions.model_type')
+        require(not self.predictions or self.prediction_model is None, 'predictions.single_representation')
         offsets = [p.offset_ns for p in self.predictions]
         require(all(a < b for a, b in zip(offsets, offsets[1:])), 'predictions.order')
         immutable_tuple(self.provenance, 'track.provenance')
@@ -89,7 +115,7 @@ class FusionEngine(Protocol):
 
 
 class WorldModelReader(Protocol):
-    def snapshot(self) -> WorldSnapshot: ...
+    def snapshot(self, now: Stamp) -> WorldSnapshot: ...
 
 
 class NavigationPolicy(Protocol):

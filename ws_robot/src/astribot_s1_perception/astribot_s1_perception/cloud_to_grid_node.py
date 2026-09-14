@@ -30,6 +30,8 @@
    走 adapter 只在"想让契约校验单独成一层"时才有意义。
 """
 
+from astribot_logging import get_logger
+
 import sys
 
 import rclpy
@@ -417,7 +419,7 @@ def main(argv=None):
         node = CloudToGridNode()
         rclpy.spin(node)
     except GridConfigError as exc:
-        print(f'[cloud_to_grid] 投影配置被拒绝：{exc}', file=sys.stderr)
+        get_logger('astribot.cloud_to_grid_node').error(f'[cloud_to_grid] 投影配置被拒绝：{exc}')
         code = 2
     except SystemExit as exc:
         code = int(exc.code or 0)

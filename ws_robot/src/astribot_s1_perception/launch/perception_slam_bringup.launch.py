@@ -34,6 +34,8 @@ map_provider.launch.py 的文件头。它与这里的 `mode` 是这样对应的�
 所以**不传这个参数时行为与以前完全一致**。
 """
 
+from astribot_logging import get_logger
+
 import os
 
 from launch import LaunchDescription
@@ -46,7 +48,7 @@ from launch.actions import (
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
-from launch_ros.actions import Node
+from astribot_logging.launch import Node
 from launch_ros.substitutions import FindPackageShare
 
 from astribot_s1_perception.map_source_config import needs_slam_toolbox, resolve
@@ -67,7 +69,7 @@ def _resolve_map_source(context, *args, **kwargs):
     }
     config_file = LaunchConfiguration('map_source_file').perform(context) or None
     _, _, map_source, localization = resolve(config_file, overrides)
-    print(f'[perception_slam_bringup] 生效的 map_source={map_source} '
+    get_logger('astribot.perception_slam_bringup').info(f'[perception_slam_bringup] 生效的 map_source={map_source} '
           f'localization={localization}')
     return [
         SetLaunchConfiguration('map_source_resolved', map_source),

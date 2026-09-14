@@ -28,6 +28,8 @@ odom 要求局部连续不跳变，两者不是同一个量，不能拿一个冒
 只在开机即建图那一种情形下成立，不成立时地图与激光整体错位且零报错。已删除。
 """
 
+from astribot_logging import get_logger
+
 import sys
 
 import rclpy
@@ -239,7 +241,7 @@ def main(argv=None):
         node = SlamAdapterNode()
         rclpy.spin(node)
     except ContractViolation as exc:
-        print(f'[slam_adapter] 配置被拒绝：{exc}', file=sys.stderr)
+        get_logger('astribot.slam_adapter_node').error(f'[slam_adapter] 配置被拒绝：{exc}')
         code = 2
     except SystemExit as exc:
         code = int(exc.code or 0)

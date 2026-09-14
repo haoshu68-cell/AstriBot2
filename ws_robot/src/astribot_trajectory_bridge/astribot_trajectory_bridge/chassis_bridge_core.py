@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """底盘桥接的控制核心（状态机）。**不依赖 rclpy、不依赖厂商 SDK。**
 
-依赖全部通过端口注入（见 ports.py），所以使能/leash/闭环/异常这些分支可以在
+依赖全部通过端口注入（见 ports.py），所以使能/leash/观测/异常这些分支可以在
 离线环境里全部跑通 —— 这是本模块不必等真机就能被验证的前提。
 
 状态机
@@ -22,8 +22,8 @@
 * **积分种子每次使能重取**（202:44 / 203:43）。复用旧 pos_cmd 的后果：两次使能
   之间机器人被推动或自行漂移，积分起点与真实位置有偏差，一使能就是一个**阶跃
   位置指令** → 底盘猛冲。
-* **leash 触发时必须同时冻结积分与校正**。只冻结积分而让外环继续推，校正会持续
-  把指令往外拽，等于 leash 没起作用。
+* **leash 触发时必须同时冻结积分**。位姿反馈控制由上层 Nav2 负责，
+  桥接不额外叠加位置修正。
 * **异常绝不吞**。任何 SDK 调用失败都转成状态位，由调用方上报；桥接不因单次
   失败退出（退出会让 /cmd_vel 彻底断流，比继续上报更糟）。
 * **看门狗只把速度置零，不改状态**。cmd_vel 短暂中断是正常工况（Nav2 到点后
@@ -45,16 +45,11 @@ from astribot_trajectory_bridge.chassis_integrator import (
 )
 from astribot_trajectory_bridge.chassis_feedback import (
     POSE_SOURCE_GROUND_TRUTH,
-    advance_desired_pose,
     check_leash,
-    compute_correction,
     detect_pose_jump,
     effective_thresholds,
-    is_correction_degenerate,
     leash_recover_command,
     odom_drift,
-    slice_correction,
-    validate_correction_config,
     validate_leash_config,
 )
 
@@ -73,7 +68,6 @@ S_SLAM_UNAVAILABLE_OPEN_LOOP = 'SLAM_UNAVAILABLE_OPEN_LOOP'
 S_SLAM_STALE = 'SLAM_STALE'
 S_SLAM_RELOCALIZED = 'SLAM_RELOCALIZED'
 S_ODOM_DRIFT_HIGH = 'ODOM_DRIFT_HIGH'
-S_CORRECTION_DEGENERATE = 'CORRECTION_DEGENERATE'
 S_SLAM_LOST_STOPPED = 'SLAM_LOST_STOPPED'
 S_POSE_PORT_FAILED = 'POSE_PORT_FAILED'
 S_SCAN_STALE = 'SCAN_STALE'
@@ -120,12 +114,10 @@ class ChassisBridgeConfig:
                  max_accel_xy_up=None,
                  leash_xy_m=0.25, leash_theta_rad=0.35,
                  require_manual_reset=True,
-                 enable_slam_correction=True, pose_source='slam',
+                 enable_slam_correction=False, pose_source='slam',
                  map_frame='map', base_frame='astribot_torso_base',
                  outer_rate=10.0, slam_max_age_sec=0.5,
                  slam_jump_threshold_m=0.30,
-                 kp_xy=0.35, kp_theta=0.40,
-                 max_corr_vel_xy=0.10, max_corr_vel_theta=0.20,
                  require_slam_to_enable=False, slam_loss_grace_sec=2.0,
                  odom_drift_window_sec=2.0, odom_drift_warn_m=0.15,
                  max_tick_dt_sec=0.04,
@@ -146,16 +138,14 @@ class ChassisBridgeConfig:
         self.leash_xy_m = float(leash_xy_m)
         self.leash_theta_rad = float(leash_theta_rad)
         self.require_manual_reset = bool(require_manual_reset)
-        self.enable_slam_correction = bool(enable_slam_correction)
+        if enable_slam_correction:
+            raise ChassisConfigError(
+                "enable_slam_correction 已退役：定位反馈控制由上层 Nav2 负责")
         self.pose_source = pose_source
         self.map_frame = map_frame
         self.base_frame = base_frame
         self.outer_rate = float(outer_rate)
         self.slam_max_age_sec = float(slam_max_age_sec)
-        self.kp_xy = float(kp_xy)
-        self.kp_theta = float(kp_theta)
-        self.max_corr_vel_xy = float(max_corr_vel_xy)
-        self.max_corr_vel_theta = float(max_corr_vel_theta)
         self.require_slam_to_enable = bool(require_slam_to_enable)
         self.slam_loss_grace_sec = float(slam_loss_grace_sec)
         self.odom_drift_window_sec = float(odom_drift_window_sec)
@@ -201,9 +191,9 @@ class ChassisBridgeConfig:
                 '悄悄放宽加速，与它存在的理由正相反。'
                 % (self.max_accel_xy_up, self.max_accel_xy))
         validate_leash_config(self.leash_xy_m, self.leash_theta_rad)
-        validate_correction_config(self.kp_xy, self.kp_theta,
-                                   self.max_corr_vel_xy, self.max_corr_vel_theta,
-                                   self.outer_rate, self.freq)
+        if not (math.isfinite(self.freq) and math.isfinite(self.outer_rate) and
+                0 < self.outer_rate <= self.freq):
+            raise ChassisConfigError('要求 0 < outer_rate <= freq，且频率为有限值')
         self.slam_jump_threshold_m, self.odom_drift_warn_m = effective_thresholds(
             self.pose_source, float(slam_jump_threshold_m), float(odom_drift_warn_m))
         to_local_velocity((0.0, 0.0, 0.0), self.input_frame, 0.0)
@@ -222,8 +212,6 @@ class ChassisBridgeCore:
         self.last_stop = None
         self.pos_cmd = None
         self.theta_ref = 0.0
-        self.corr_per_tick = (0.0, 0.0, 0.0)
-        self.corr_frozen = True
 
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
@@ -245,11 +233,8 @@ class ChassisBridgeCore:
         self._vel_win = None
         self._reset_vel_window()
 
-        self._p_des_map = None
         self._p_slam_prev = None
         self._pose_lost_since = None
-        self._body_disp_accum = [0.0, 0.0]
-        self._dtheta_accum = 0.0
         self._drift_window = []
 
         self.events = []
@@ -305,37 +290,16 @@ class ChassisBridgeCore:
         self._prev_tick_time = None
         self._reset_tick_window()
         self._reset_vel_window()
-        self.corr_per_tick = (0.0, 0.0, 0.0)
         self._p_slam_prev = None
         self._pose_lost_since = None
         self._scan_stale_since = None
-        self._body_disp_accum = [0.0, 0.0]
-        self._dtheta_accum = 0.0
         self._drift_window = []
-
-        if pose is not None and self.cfg.enable_slam_correction:
-            self._p_des_map = list(pose)
-            self.corr_frozen = False
-        else:
-            self._p_des_map = None
-            self.corr_frozen = True
-            if pose is None:
-                self._emit(S_SLAM_UNAVAILABLE_OPEN_LOOP,
-                           '位姿源不可用，退化为纯开环 + leash')
-
-        if is_correction_degenerate(self.cfg.pose_source,
-                                    self.cfg.enable_slam_correction):
-            self._emit(S_CORRECTION_DEGENERATE,
-                       'pose_source=ground_truth：map->odom 是恒等静态 TF，'
-                       '外环误差恒≈0，闭环不产生实际校正。仅可用于验证代码路径。')
 
         self.state = ST_ENABLED
         return (True, 'enabled')
 
     def disable(self):
         self.state = ST_DISABLED
-        self.corr_frozen = True
-        self.corr_per_tick = (0.0, 0.0, 0.0)
         self._emit(S_NOT_ENABLED, '已停用')
         self._note_stop(ST_DISABLED, '外部调用 ~/disable 主动停用')
         return (True, 'disabled')
@@ -488,14 +452,6 @@ class ChassisBridgeCore:
         pos_before = list(self.pos_cmd)
         self.pos_cmd = integrate_step_dt(self.pos_cmd, v_local, dt)
 
-        self._body_disp_accum[0] += v_local[0] * dt
-        self._body_disp_accum[1] += v_local[1] * dt
-        self._dtheta_accum += v_local[2] * dt
-
-        if not self.corr_frozen:
-            self.pos_cmd = [self.pos_cmd[0] + self.corr_per_tick[0],
-                            self.pos_cmd[1] + self.corr_per_tick[1],
-                            wrap_angle(self.pos_cmd[2] + self.corr_per_tick[2])]
 
         try:
             actual = self.session.get_current_joints_position([self.cfg.part_name])[0]
@@ -511,8 +467,6 @@ class ChassisBridgeCore:
 
         if leash.tripped:
             self.state = ST_LEASH_TRIPPED
-            self.corr_frozen = True
-            self.corr_per_tick = (0.0, 0.0, 0.0)
             self.pos_cmd = leash_recover_command(actual)
             self._prev_vel_out = (0.0, 0.0, 0.0)
             self._emit(S_LEASH_TRIPPED, leash.reason, leash.err_xy, leash.err_theta)
@@ -648,10 +602,6 @@ class ChassisBridgeCore:
             w['slew_bit'] += 1
 
         w['cmd_path'] += lo_n * dt
-        if not self.corr_frozen:
-            w['corr_path'] += math.hypot(self.corr_per_tick[0],
-                                         self.corr_per_tick[1])
-
         if w['cmd_xy0'] is None:
             w['cmd_xy0'] = (pos_before[0], pos_before[1])
             w['cmd_th0'] = pos_before[IDX_THETA]
@@ -705,16 +655,12 @@ class ChassisBridgeCore:
 
 
     def outer_tick(self):
-        """外环一拍（按 cfg.outer_rate 调用）。"""
+        """低频位姿健康检查和漂移诊断；不修改位置指令。"""
         if self.state != ST_ENABLED:
-            return
-        if not self.cfg.enable_slam_correction:
             return
 
         pose, stamp = self._lookup_pose_checked()
         if pose is None:
-            self.corr_frozen = True
-            self.corr_per_tick = (0.0, 0.0, 0.0)
             if self._pose_lost_since is None:
                 self._pose_lost_since = self.clock.now()
             lost = self.clock.now() - self._pose_lost_since
@@ -739,39 +685,12 @@ class ChassisBridgeCore:
                                         self.cfg.slam_jump_threshold_m)
         self._p_slam_prev = list(pose)
         if jumped:
-            self._p_des_map = list(pose)
-            self.corr_per_tick = (0.0, 0.0, 0.0)
-            self._reset_accum()
+            self._drift_window = []
             self._emit(S_SLAM_RELOCALIZED,
-                       '位姿跳变 %.4fm 超过阈值 %.4fm，已重新对齐期望位姿'
-                       % (jump, self.cfg.slam_jump_threshold_m),
+                       '位姿跳变 %.4fm，重置诊断窗口；桥接不校正位置指令' % jump,
                        jump, self.cfg.slam_jump_threshold_m)
             return
-
-        if self._p_des_map is None:
-            self._p_des_map = list(pose)
-            self._reset_accum()
-            self.corr_frozen = False
-            return
-
-        self._p_des_map = advance_desired_pose(
-            self._p_des_map, tuple(self._body_disp_accum),
-            self._dtheta_accum, pose[IDX_THETA])
-        self._reset_accum()
-
-        corr = compute_correction(self._p_des_map, pose,
-                                  self.cfg.kp_xy, self.cfg.kp_theta,
-                                  self.cfg.max_corr_vel_xy,
-                                  self.cfg.max_corr_vel_theta,
-                                  self.cfg.outer_rate)
-        self.corr_per_tick = slice_correction(corr, self.cfg.freq, self.cfg.outer_rate)
-        self.corr_frozen = False
-
         self._update_drift(pose)
-
-    def _reset_accum(self):
-        self._body_disp_accum = [0.0, 0.0]
-        self._dtheta_accum = 0.0
 
     def _update_drift(self, pose):
         """打滑诊断：窗口内两个位移源的模长差，frame 无关（见 odom_drift 说明）。"""

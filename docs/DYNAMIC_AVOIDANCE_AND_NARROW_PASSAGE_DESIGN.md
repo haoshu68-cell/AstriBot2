@@ -1,6 +1,6 @@
 # 动态避障、事件重规划与窄通道设计
 
-日期：2026-09-13。按用户最新要求，先用现有仿真配置参数化全部阶段，仿真验证通过即可顺序推进。P0–P2 已通过，P3 开始实施，P4/P5 尚未放行。真机实测不阻塞仿真开发，但真机放行仍需独立证据。实施状态见[阶段记录](NAVIGATION_POLICY_IMPLEMENTATION.md)。
+日期：2026-09-13；整体复审更新：2026-09-14。现有阶段记录包含 P0–P2 验证、P3 功能闭环和 P4/P5 指定场景专项通过，但 P3 质量待办及原完整目标失败尚未关闭，当前 P5 不满足用户“不低于引入窄通道前表现”的要求。暂停以专项通过扩展整体放行，按[窄通道整体复审](NARROW_PASSAGE_REVIEW_20260914.md)重新核对基线、实时性、判据与控制干预。真机实测不阻塞仿真开发，但真机放行仍需独立证据。历史实施过程见[阶段记录](NAVIGATION_POLICY_IMPLEMENTATION.md)。
 
 ## 1. 设计结论和基线
 
@@ -278,7 +278,7 @@ stateDiagram-v2
 ### 8.1 建议目录和契约
 
 ```text
-astribot_s1_navigation_policy/        # 后续新增，当前未创建
+astribot_s1_navigation_policy/        # 逻辑职责示意；当前已有 Python 实现，见下方整合记录
   include/.../domain/                # WorldSnapshot、Risk、Decision、Corridor
   include/.../ports/                 # 小接口，领域层不依赖 ROS
   src/policies/                      # Normal、Yield、Detour、Narrow
@@ -348,3 +348,9 @@ P0 同时定版视觉观测/健康接口和统一决策契约；P1 接入可用�
 必须在真机参数定版前实测：运输姿态全身尺寸、负载种类/摆动、雷达和深度覆盖/延迟、最差停止包络、定位与跟踪误差界、目标门洞/走廊宽度、是否允许受控后退。未确定时用保守运输包络并拒绝无法证明可通行的窄通道；不能臆造机器人尺寸或通道阈值。
 
 本提案的设计决策：保留当前跟踪器；采用事件重规划；短暂风险优先等待；动态包络和末级防护独立于策略；先人工定义窄通道；用组合接入新能力；所有候选统一后验验证；不以导航完成时间作为优化目标。若后续选择更复杂的规划器，需记录替代方案、原因、控制接口影响和回退条件，保持架构决策可追溯。
+
+## 11. 自主感知与探索的代码整合
+
+`astribot_s1_autonomy` 已迁为兼容门面。纯算法归 `astribot_autonomy_core`，点云/Livox 适配归 `astribot_s1_perception_components`，前沿任务归 `astribot_s1_exploration`；已有 Python 感知和策略包继续保持建制。探索通过 NavigateToPose 进入既有策略行为树，停止直接 FollowPath、自举和脱困速度输出。上述目录草图是逻辑职责建议，不要求把已有 Python 实现改写为 C++。
+
+关注点、开发/运行视图、八项原则映射、设计决策、迁移路径与可测质量要求见 [整合记录](AUTONOMY_ARCHITECTURE_INTEGRATION.md)。本次只有构建和离线证据，不提高 P3–P5 或真机的放行状态。
