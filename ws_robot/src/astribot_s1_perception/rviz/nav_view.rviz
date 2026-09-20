@@ -35,7 +35,6 @@ Visualization Manager:
         map: {Value: true}
         odom: {Value: true}
         astribot_torso_base: {Value: true}
-        camera_init: {Value: true}
         aft_mapped: {Value: true}
     - Class: rviz_default_plugins/RobotModel
       # 需要 /robot_description + /joint_states，两者都由 state_bridge.launch.py 提供。
@@ -83,15 +82,16 @@ Visualization Manager:
       Color Scheme: costmap
       Alpha: 0.6
     - Class: rviz_default_plugins/PointCloud2
-      Name: SLAM Scan (/map_scan_filtered)
+      Name: Navigation Cloud (/livox/cloud_self_filtered)
       Enabled: true
       Topic:
-        Value: /map_scan_filtered
+        Value: /livox/cloud_self_filtered
         Reliability Policy: Best Effort
         Durability Policy: Volatile
         History Policy: Keep Last
         Depth: 2
       Style: Points
+      Decay Time: 0
       Size (Pixels): 2
       Color Transformer: AxisColor
       Axis: Z

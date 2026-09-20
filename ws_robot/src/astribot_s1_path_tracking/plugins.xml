@@ -12,6 +12,12 @@
     <description>Smac planning with the original continuous goal as the terminal pose.</description>
   </class>
   <class type="astribot_s1_path_tracking::PolicyProgressChecker" base_class_type="nav2_core::ProgressChecker">
-    <description>Original pose progress checks with explicit policy hold time excluded.</description>
+    <description>Pose progress checks with policy holds and bounded arrival settling excluded.</description>
+  </class>
+  <class type="astribot_s1_path_tracking::ExactHybridPlanner" base_class_type="nav2_core::GlobalPlanner">
+    <description>Evaluation candidate: Hybrid search with exact goal and full polygon verification.</description>
+  </class>
+  <class type="astribot_s1_path_tracking::ExactLatticePlanner" base_class_type="nav2_core::GlobalPlanner">
+    <description>Evaluation candidate: SE2 lattice search preserving primitive headings.</description>
   </class>
 </library>

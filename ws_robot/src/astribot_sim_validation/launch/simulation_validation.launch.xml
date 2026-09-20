@@ -1,0 +1,25 @@
+<launch>
+ <!-- Dedicated acceptance graph; never joins the default domain 25 stack. -->
+ <set_env name="ROS_DOMAIN_ID" value="213"/>
+ <set_env name="ROS_LOCALHOST_ONLY" value="1"/>
+ <set_env name="IGN_PARTITION" value="astribot_operator_validation_213"/>
+ <set_env name="GZ_PARTITION" value="astribot_operator_validation_213"/>
+ <set_env name="IGN_IP" value="127.0.0.1"/>
+ <set_env name="GZ_IP" value="127.0.0.1"/>
+ <let name="ros_domain_id" value="213"/>
+ <arg name="headless" default="true"/>
+ <arg name="map_yaml_path" description="Absolute baseline map YAML matching the warehouse world"/>
+ <include file="$(find-pkg-share astribot_s1_navigation)/launch/nav2_full_bringup.launch.py">
+  <arg name="env" value="sim"/>
+  <arg name="ros_domain_id" value="213"/>
+  <arg name="launch_navigation" value="false"/>
+  <arg name="navigation_geometry_mode" value="fixed_v2"/>
+  <arg name="launch_gazebo" value="true"/>
+  <arg name="headless" value="$(var headless)"/>
+  <arg name="use_rviz" value="false"/>
+  <arg name="slam_backend" value="static_map"/>
+  <arg name="map_source" value="real_file"/>
+  <arg name="localization" value="ground_truth"/>
+  <arg name="map_yaml_path" value="$(var map_yaml_path)"/>
+ </include>
+</launch>

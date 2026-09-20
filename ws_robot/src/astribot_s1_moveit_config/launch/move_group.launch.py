@@ -52,9 +52,13 @@ def _load_yaml(package_name, relative_path):
 
 def generate_launch_description():
     declared_args = [
+        DeclareLaunchArgument('extra_capabilities', default_value=''),
+        DeclareLaunchArgument('disable_capabilities', default_value=''),
         DeclareLaunchArgument(
             'use_sim_time', default_value='true',
             description='仿真必须 true，否则轨迹时间戳与 /clock 不一致，执行会立刻超时。'),
+        DeclareLaunchArgument('camera_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_generic.yaml'])),
         DeclareLaunchArgument(
             'use_rviz', default_value='false',
             description='是否同时拉起带 MoveIt 显示插件的 RViz。'),
@@ -76,6 +80,7 @@ def generate_launch_description():
         PathJoinSubstitution([
             FindPackageShare('astribot_s1_description'), 'urdf', 'astribot_s1.xacro']),
         ' robot_name:=astribot_s1',
+        ' camera_profile:=', LaunchConfiguration('camera_profile'),
     ])
     robot_description = {
         'robot_description': ParameterValue(robot_description_content, value_type=str),
@@ -127,6 +132,8 @@ def generate_launch_description():
             planning_pipeline,
             controllers,
             {'use_sim_time': use_sim_time},
+            {'capabilities': LaunchConfiguration('extra_capabilities'),
+             'disable_capabilities': LaunchConfiguration('disable_capabilities')},
             {'publish_robot_description_semantic': True},
             {'publish_planning_scene': True},
             {'publish_geometry_updates': True},

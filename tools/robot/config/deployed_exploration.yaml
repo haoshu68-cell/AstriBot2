@@ -1,0 +1,22 @@
+# Applied over the repository coordinator defaults; navigation owns all chassis commands.
+/**:
+  ros__parameters:
+    use_sim_time: false
+    map_topic: /map
+    map_transient_local: true
+    map_frame: map
+    odom_topic: /odom
+    robot_base_frame: astribot_torso_base
+    nav_action_name: /exploration/navigate_to_pose
+    plan_action_name: /compute_path_to_pose
+    nav_behavior_tree: ""
+    arrival_xy_tolerance: 0.03
+    arrival_yaw_tolerance: 0.02617993877991494
+    check_yaw: true
+    dwell_time_sec: 1.5
+    nav_timeout_sec: 300.0
+    nav_dispatch_mode: navigate_to_pose
+    replan_policy: on_invalid
+    path_max_age_sec: 0.0
+    escape_enabled: false
+    bootstrap_mode: disabled

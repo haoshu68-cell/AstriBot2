@@ -6,20 +6,79 @@
 ## 控制职责调整（2026-09-14）
 
 桥接层已删除 SLAM 比例校正、期望地图位姿积分及校正量切片叠加。
-定位反馈与到点控制由上层 Nav2/ThreePhaseController 负责，SDK 桥接不再额外追赶一条
-内部积分轨迹。`enable_slam_correction` 默认 false；旧 false 调用保持兼容，true 明确拒绝。
+路径与到点控制由上层 Nav2/ThreePhaseController 负责。SDK 桥接的 x/y/yaw
+按下面的逐帧 pose 规则同步积分。`enable_slam_correction` 默认 false；
+它只兼容已删除的比例校正开关，不控制新的 pose 基准机制；true 明确拒绝。
 旧校正增益参数已从配置中删除。`VelTrace.corr_path` 暂保留兼容字段，固定为零。
 
-桥接保留 SDK 位置积分、坐标适配、指令超时、硬限幅、非对称加速度限制、扫描时效联锁、
-位置误差 leash、使能与身份写入闸门。上层逐轴平滑不等价于这些驱动边界保护；真机入口
-默认也没有启用新策略的 final_protection，不能据其代码存在便删除底层扫描联锁。
+2026-09-15 起，底盘速度限幅与加减速限制统一由导航控制器和 velocity_smoother 执行。
+桥接已移除 `max_vel_xy`、`max_vel_theta`、`max_accel_xy`、`max_accel_xy_up`、
+`max_accel_theta` 及对应限幅函数，不再二次限制上游速度指令。真机和仿真使用导航基线运动参数，
+到位运动参数共享 `astribot_s1_navigation/config/arrival_motion.yaml`，
+到位阈值通过 `arrival_precision_hardware.yaml` / `arrival_precision_sim.yaml` 区分定位源。
+
+桥接保留 SDK 位置积分、坐标适配、指令超时、扫描时效联锁、位置误差 leash、
+使能与身份写入闸门，以及调度停顿时的积分步长保护。上游应发送已经过导航平滑器
+处理的速度；直接向桥接输入速度时，不再有桥接层的速度和加速度限幅。
 低频 tick 只做位姿健康检查与漂移诊断，不再改写位置指令；其检查不再受旧校正开关影响，
 `require_slam_to_enable=true` 时定位丢失的停车闩锁仍有效。
 
-本轮通过纯 Python 假 SDK/时钟的 700 拍差分回归（与旧 correction=false 指令一致），
+此前删除 SLAM 校正时通过纯 Python 假 SDK/时钟的 700 拍差分回归（与旧 correction=false 指令一致），
 并检查定位扰动不叠加位置、位姿丢失、扫描丢失、指令超时、leash、停用、SDK 读失败及
 退役参数拒绝。证据在 `/tmp/astribot-bridge-dedup/`；没有启动机器人或发送 ROS 运动指令。
 下面为历史验证记录，不代表本轮真机复验。
+
+## 逐帧 pose 三轴积分（2026-09-15）
+
+使能时，读取 SDK **实际** `[x,y,yaw]` 和 TF `map → astribot_torso_base`，建立反馈基准。
+正常运动时，`SDK 目标 = 最新反馈基准 + 有界(本帧速度积分 + 速度 × 前瞻时间)`，
+yaw 做角度归一化。前瞻用于适配厂家 `set_joints_position(control_way='filter')` 的跟随响应。
+桥接每拍按实测 dt 积分三个轴，收到源时间戳严格递增的新 pose 时，三个轴的指令积分
+在同一次操作中清零。相同时间戳的数据即使数值不同，也不重复换帧；乱序帧不刷新有效期。
+延迟帧从被接收这一拍开始积分，不补算传输期间的历史指令。
+
+SDK 示例按机器人局部方向累加 x/y，不能直接写入 SLAM 的 map 绝对坐标。
+映射时将相邻 SLAM pose 的实测位移转换成本体行程，加入 SDK 反馈基准；yaw 仍使用
+`wrap(SLAM yaw + 使能时角度零点差)`。帧间转弯按恒定本体 twist 的 SE(2) 对数映射处理，
+避免将弧线的弦长当作行程。反馈基准随**测量位移**变化，上一帧未完成的**指令积分**不进入基准。
+这个映射遵循仓库现有 SDK 示例口径，尚未通过转向后的真机位移复验；轴向和单位仍需一致。
+两帧间快速往返或复杂转向无法仅凭端点恢复。重新使能应在静止时进行；
+定位重置后应停用并重新使能，不能把新的地图零点当成真实位移。
+
+启用前瞻的轴收到零速度时，先用 SDK 实际位置一次性撤掉提前量，之后保持该目标，
+避免继续追赶旧位置或被 SLAM 静态噪声驱动。换向会丢弃本帧该轴旧方向的积分。
+
+SDK 的 theta 是连续位置坐标。使能种子、历史插值、积分、零速保持及故障恢复均保留
+其圈数，不能归一化到 ±π；否则跨界时会向位置接口发送近 2π 的反向阶跃。
+SDK leash 使用连续目标与实际坐标之差；SLAM 帧间朝向及导航几何误差仍取最短角差。
+原本零速的轴重新起动时，以 SDK 实际位置重新对齐该轴接口基准，避免很小的新指令
+释放保持阶段积累的定位偏差；已在运动的其他轴不改基准。
+缺失、过期、非有限或时间超前的 pose，以及控制时钟不前进时，三个轴均停止积累；
+定位丢失的原有停车状态机继续生效。即使 `require_slam_to_enable=false` 允许无定位使能，
+也不能无定位累计指令。SDK 读写失败的拍不提交三个轴的积分。
+
+每秒的桥接速度链日志分别记录目标角变化 `dθ 指令`、厂家实际角变化、输入角速度积分、
+`pose换帧`次数、三个轴的`本帧积分=(dx,dy,dtheta)`以及目标相对 SDK 实测位置的
+`目标领先峰值`。换帧后的目标变化包含基准更新，
+不能当成纯速度积分。
+
+| 前瞻参数 | 初始值 | 含义 |
+| --- | --- | --- |
+| `pose_preview_xy_sec` | 0.5 s | 平移位置前馈时间，x/y 共用 |
+| `pose_preview_theta_sec` | 0.5 s | 角度位置前馈时间 |
+| `pose_preview_max_xy_m` | 0.20 m | 相对 pose 反馈基准的平移提前量欧式上界 |
+| `pose_preview_max_theta_rad` | 0.34 rad | 相对 pose 反馈基准的角度提前量上界 |
+
+有效提前量上界同时不超过对应 leash 的 95%，为测量误差留出余量；增大 leash
+不会自动增大上述前瞻空间上界。前瞻时间设为 0 时，该轴回到此前仅本帧积分、零速保持旧目标的行为。
+这些是位置接口的适配参数，不代替导航运动参数。本轮真机原地试验中，0.1 / 0.3 rad/s
+输入的实际速度接近指令；0.6 rad/s 短平台实测约 0.55–0.57 rad/s。0.02 rad/s 能产生旋转，
+但存在低速波动，区间平均约 0.012–0.014 rad/s。x/y 的前瞻响应仍只有离线验证。
+定角度试验和位移指标的适用范围、原始数据见
+`runs/bridge_preview_20260915_191703/REPORT.md`；此前纯逐帧积分的诊断见
+`runs/hardware_inspect_20260915_190625/REPORT.md`。
+
+指令超时仍逐拍检查；相同超时状态每秒报告一次，收到新指令后重新允许立即报告。
 
 ## 历史状态（2026-08-27）
 
@@ -44,7 +103,7 @@
 | Service | `~/set_gripper`（`SetGripper`） | 对外用 `opening_fraction`（**1.0 = 全张开**），厂商的 0-100 极性翻转关在桥接内部 |
 | Service | `~/dispatch_waypoints`（`DispatchWaypoints`） | 方案 A：`move_joints_waypoints`，**阻塞且不可取消**。默认关闭 |
 | Service | `chassis ~/enable` / `~/disable` / `~/reset_leash` | 底盘使能与 leash 复位 |
-| Topic | `/cmd_vel` → 底盘 | 位置积分开环 + leash |
+| Topic | `/cmd_vel` → 底盘 | x/y/yaw 按同一 pose 帧同步重置指令积分 + leash |
 | Topic | `/astribot/bridge/status` | 结构化故障上报，**不要只看日志**（见下） |
 | Topic | `/astribot/chassis/odom_from_sdk` | `frame_id` 刻意是 `sdk_chassis` 而非 `odom` —— 漂移特性未取证前**不要接进 Nav2** |
 
@@ -180,3 +239,18 @@ rviz2                                      # 模型姿态应与 MuJoCo 画面一
 | `tabulate` | 示例 101 用 |
 | `tf_transformations` | SDK 核心 .so 的硬依赖，**不在 PyPI**，只能 `sudo apt install ros-humble-tf-transformations`（已装） |
 | `filterpy` | SDK 的 `whole_body_control.py:3123` 硬依赖。缺它时报的是 `No module named 'meta'`（**完全误导的名字**）。装时必须 `--no-deps`，否则会顶掉本项目钉住的 numpy 1.21.5 |
+
+### 桥接周期与 SDK 耗时
+
+使能期间用单调墙钟采集内环回调间隔、回调总耗时、控制锁等待、SDK 读/写调用耗时。
+每约 10 秒在统一 `session.log` 输出一条 `BRIDGE_TIMING`，包括样本数、均值、P50/P95/P99、
+最大值及有界缓冲丢样数。停用后保留的最后一个窗口会标明当时状态。
+这些观测不改变积分使用的 ROS 时间或速度指令；SDK 调用耗时不等于底盘机械响应延迟。
+
+`LOOP_OVERRUN` 仅统计使能期间，并在原有外环约每秒汇总次数及最大间隔，避免在 250 Hz
+回调中逐条发布。停用时仍周期发布 `NOT_ENABLED`。周期统计中的窗口分位数不能直接当作
+整段运行的分位数；汇总可使用：
+
+```bash
+python3 tools/robot/analyze_bridge_timing.py /path/to/session.log --output timing.json
+```

@@ -1,5 +1,7 @@
 # 整合后架构审查与改进方案
 
+> 后续变更（2026-09-17）：旧 `astribot_s1_autonomy` 包已退役，当前源码为 19 个包。下文拆分/兼容验收是当时记录；当前入口见[包退役迁移说明](AUTONOMY_PACKAGE_RETIREMENT_20260917.md)。
+
 日期：2026-09-14。性质：当前源码静态审查与设计建议，不是阶段放行或真机安全认证。本轮不修改运行算法、控制参数或启动中的仿真。
 
 ## 结论与范围
@@ -24,7 +26,7 @@
 | `astribot_s1_autonomy` | 作为旧入口门面合理 | 只做兼容转发，新业务直接依赖新归属；不要再向门面添加业务实现 |
 | dynamics/manipulation/trajectory bridge | 保留专门执行与硬件适配职责 | 增加姿态、载荷、执行状态契约，与导航共享约束和任务归属，而不是互相读取私有字段 |
 
-依据：[纯算法构建](../ws_robot/src/astribot_autonomy_core/CMakeLists.txt)、[感知构建](../ws_robot/src/astribot_s1_perception_components/CMakeLists.txt)、[探索构建](../ws_robot/src/astribot_s1_exploration/CMakeLists.txt)、[兼容门面](../ws_robot/src/astribot_s1_autonomy/CMakeLists.txt)。拆分后编译依赖方向已改善；“类和运行交互也完全解耦”则尚未成立。
+依据：[纯算法构建](../ws_robot/src/astribot_autonomy_core/CMakeLists.txt)、[感知构建](../ws_robot/src/astribot_s1_perception_components/CMakeLists.txt)、[探索构建](../ws_robot/src/astribot_s1_exploration/CMakeLists.txt)、[旧兼容门面的退役说明](AUTONOMY_PACKAGE_RETIREMENT_20260917.md)。拆分后编译依赖方向已改善；“类和运行交互也完全解耦”则尚未成立。
 
 ## 2. 具体缺口及处理优先级
 

@@ -11,7 +11,8 @@ class Selection:
     episode: int = 0
 
 def requires_stop(risk, profile):
-    stop_time=profile.reaction_time_s+profile.max_speed_m_s/profile.brake_deceleration_m_s2
+    from .motion_geometry import stopping_horizon
+    stop_time=stopping_horizon((profile.max_speed_m_s,0.,0.),profile)
     return (risk.immediate or risk.uncertain or
             (risk.blocked and not risk.conflict_time_s>stop_time+.5))
 

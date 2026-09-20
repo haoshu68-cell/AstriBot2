@@ -129,3 +129,8 @@ python3 /home/astribot/chassis_tests/toolkit_20260914_parking_v3/tools/robot/val
 新初始化的 `topics.json` 已加入 `/astribot_chassis/joint_space_states`（厂家主反馈、必需）和 `/astribot_chassis/joint_space_command_recv`（命令回显、可选），每个话题记录 role。`/odom` 仍是同事部署的 SLAM 推导参考，不改其发布逻辑。已有 CASE 不自动覆盖；需人工补上新话题或新建 CASE。
 
 本手册的只读原始采集保留重复帧作为证据；旧 `inspect/brake --odom-topic` 仍是明确的 SLAM 分析入口，会拒绝重复时间的制动证据，不会把它冒充厂家制动数据。厂家主反馈的自动分析请使用 [主动测试工具的 v2 流程](CHASSIS_AUTOMATED_CHARACTERIZATION.md)，它新增 `--probe-only` 只读预检并将两路分别存储。
+
+
+## 2026-09-14 六向测量结果
+
+最低维持速度、response 增益、正常停车尾程已整理至 [六向参数与到位精度预算](CHASSIS_CALIBRATION_AND_ARRIVAL_PRECISION_20260914.md)，机器可读记录为 `tools/robot/config/chassis_measured_parameters_20260914.json`。请使用该表区分实测参数、带偏置的候选判定和仍未测量的安全参数；这些结果尚不构成独立物理到位精度验证。

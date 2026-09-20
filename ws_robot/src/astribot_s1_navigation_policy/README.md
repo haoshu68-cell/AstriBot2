@@ -9,11 +9,16 @@
 - `behavior.py` / `policy_node.py`：减速、让行、确认恢复和阻塞 episode；P2 不发动态绕行请求。
 - `path_evidence.py`：当前路径身份、碰撞段距离和证据有效期；远处占据允许谨慎接近，未知或过期占据不能获得慢行权限。
 - `protection.py` / `protection_node.py`：独立扫描扫掠、输入及墙钟看门狗、约束汇总与末级速度输出。正常许可稳定后原样传递未受约束的指令；安全停车优先，恢复限制加速度。
+- `control_time.py`：仿真按 ROS 物理时间检查采集龄期、租约和恢复加速度，独立墙钟检测仿真停滞。普通暂停保留仍有效的观测，撤销旧运动授权；恢复首帧正常接收，时间回跳才重建观测时间线。真机仍同时检查采集龄期和墙钟接收龄期。
+- `continuous_sweep.py`：候选起始转向、实际运动预测与末级扫描防护共用的连续区间证明。外接圆能证明安全时直接通过，否则细分边界区间；达到细分上限仍无法证明安全时拒绝，保留原机身、观测不确定性和安全间距。
+- `start_maneuver.py` / `start_maneuver_adapter.py`：P3 及之后的起步恢复。完整转向通过现有扫掠判据时，由原跟踪器转向；不通过则停稳并规划 x− 倒退退出，退出停稳后重新判定完整转向。恢复期间接管停车和低速倒退；转向许可不占用路由协调器，原路径有风险时仍可检查和重规划。
 - `planning_session.py`：P3 请求所有权、版本与预算管理，由 `route_coordinator.py` 接入 P3 异步联合决策。几何候选服务返回 `geometry_valid`，不能直接作为执行许可。
 
 P3 仿真入口：`--navigation-policy p3 --max-linear-speed .32`。`candidate_safety.py` 复核停止与不同可达速度下的预测占据；`ResolveRoute` 把经过验证的候选交回 BT 提交，不能直接发布底盘指令。单目标执行的局部/全局候选共用有界请求，完整阶段回归通过前不开放 P4/P5。
 
 P2 的命令链：现有跟踪器 → 现有速度平滑与姿态/双臂约束 → `/cmd_vel_policy_input` → `final_protection` → `/cmd_vel`。最终约束使用 `astribot_navigation_msgs/MotionConstraint`；ArrivalController 与 PoseProgressChecker 的适配层排除显式让行时间，保留原控制和检查逻辑。
+
+起步恢复参数在 `start_maneuver` 配置中：仿真倒退速度最多 0.05 m/s、退出搜索范围 2 m，横向偏离最多 3 cm、航向偏离最多 0.03 rad，总时限 120 s、无进展时限 15 s。退出时的小幅姿态修正只在实测向后运动中启用，不能用零平移的旋转指令试探通行。静态地图、未知区域和保留不确定性的预测观测共同参与完整倒退扫掠，后向观测覆盖不可缺失；末级保护和控制器局部足迹检查继续生效。`StartManeuverRequest` 携带实际起步航向及路径，许可绑定本次控制器尝试并限制为 0.3 s；换路径、过期和位姿不匹配均不能沿用旧许可。真机模板默认关闭此能力，启用须补充 `hardware_evidence.start_maneuver`。85 cm 通道闭环及终点禁止转向属于后续验收，不能由理想几何验证替代。
 
 ## 视觉接口
 

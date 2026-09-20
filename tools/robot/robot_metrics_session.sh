@@ -44,7 +44,7 @@ set -e
 
 BAG_TOPICS=(
   /tf /tf_static /odom /joint_states
-  /map_nav /map_scan_filtered_prob
+  /map /map_scan_filtered /slam/pose /slam/status
   /scan /scan_from_cloud
   /cmd_vel /cmd_vel_nav_body /cmd_vel_nav_body_raw /cmd_vel_pre_arm_coupling
   /speed_limit

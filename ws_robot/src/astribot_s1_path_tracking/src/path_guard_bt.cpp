@@ -10,8 +10,39 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "astribot_s1_path_tracking/path_quality.hpp"
+#include "astribot_s1_path_tracking/corridor_route.hpp"
 
 namespace astribot_s1_path_tracking {
+class RequireCorridorRoute : public BT::ConditionNode {
+public:
+  RequireCorridorRoute(const std::string & name,const BT::NodeConfiguration & config):BT::ConditionNode(name,config) {}
+  static BT::PortsList providedPorts() {
+    return {BT::InputPort<nav_msgs::msg::Path>("path"),BT::InputPort<std::string>("session"),
+      BT::InputPort<std::string>("frame"),BT::InputPort<double>("entry_x"),BT::InputPort<double>("entry_y"),
+      BT::InputPort<double>("exit_x"),BT::InputPort<double>("exit_y"),BT::InputPort<double>("width")};
+  }
+  BT::NodeStatus tick() override {
+    nav_msgs::msg::Path path;std::string session,frame;RoutePoint entry{},exit{};double width=0.;
+    if(!getInput("path",path) || !getInput("session",session) || session.empty() ||
+      !getInput("frame",frame) || frame.empty() || !getInput("entry_x",entry.x) ||
+      !getInput("entry_y",entry.y) || !getInput("exit_x",exit.x) ||
+      !getInput("exit_y",exit.y) || !getInput("width",width)) {
+      throw BT::RuntimeError("CORRIDOR_ROUTE_INVALID_INTENT");
+    }
+    if(path.header.frame_id!=frame)throw BT::RuntimeError("CORRIDOR_ROUTE_FRAME_MISMATCH");
+    std::vector<RoutePoint> points;
+    for(const auto & p:path.poses) {
+      if(p.header.frame_id!=frame)throw BT::RuntimeError("CORRIDOR_ROUTE_FRAME_MISMATCH");
+      points.push_back({p.pose.position.x,p.pose.position.y});
+    }
+    if(!pathTraversesCorridor(points,entry,exit,width,session!=session_)) {
+      throw BT::RuntimeError("PLANNED_ROUTE_BYPASSES_CORRIDOR");
+    }
+    session_=session;return BT::NodeStatus::SUCCESS;
+  }
+private:
+  std::string session_;
+};
 class PolicyExecution : public BT::DecoratorNode {
 public:
   PolicyExecution(const std::string & name,const BT::NodeConfiguration & config):BT::DecoratorNode(name,config) {}
@@ -53,7 +84,8 @@ public:
     }
     if (!node_->has_parameter("navigation_policy_stage")) {node_->declare_parameter("navigation_policy_stage","off");}
     const auto stage=node_->get_parameter("navigation_policy_stage").as_string();
-    if(stage=="p3" || stage=="p4" || stage=="p5") {
+    if (!node_->has_parameter("social_navigation_enabled")) {node_->declare_parameter("social_navigation_enabled",false);}
+    if(stage=="p3" || stage=="p4" || stage=="p5" || node_->get_parameter("social_navigation_enabled").as_bool()) {
       route_=std::make_unique<RouteCommit>(node_,group_);
     }
   }
@@ -75,7 +107,7 @@ public:
     if(changed) {
       if(config().output_ports.count("remaining_goals")) {setOutput("remaining_goals",goals);}
       if(route_) {route_->reset();}
-      goals_=goals;replans_=0; awaiting_=false; known_=false; clearRequest();
+      goals_=goals;replans_=0; rejected_=nav_msgs::msg::Path(); awaiting_=false; known_=false; clearRequest();
       event(path.poses.empty()?"initial_goal":"new_goal");awaiting_=true;previous_=path;
       return BT::NodeStatus::FAILURE;
     }
@@ -99,15 +131,18 @@ public:
     }
     if(pending_ && future_.wait_for(std::chrono::seconds(0))==std::future_status::ready) {
       auto response=future_.get();pending_=false;
-      if(response->is_valid) {last_good_=now;publishPathRisk(false);}
+      if(response->is_valid) {last_good_=now;rejected_=nav_msgs::msg::Path();publishPathRisk(false);}
       else if(!response->invalid_pose_indices.empty() && response->invalid_pose_indices.front()>=0) {
         publishPathRisk(true);
         if (policy_enabled_) {
           last_good_=now;next_check_=now+std::chrono::milliseconds(200);
           return BT::NodeStatus::SUCCESS;
         }
+        if (sameGeometry(path,rejected_)) {
+          throw BT::RuntimeError("PATH_GUARD: replanner returned the same blocked path");
+        }
         if(++replans_>5) {throw BT::RuntimeError("PATH_GUARD: repeated collision replans exhausted");}
-        event("collision");awaiting_=true;return BT::NodeStatus::FAILURE;
+        rejected_=path;event("collision");awaiting_=true;return BT::NodeStatus::FAILURE;
       }
       next_check_=now+std::chrono::milliseconds(200);
     }
@@ -122,6 +157,13 @@ public:
     return BT::NodeStatus::SUCCESS;
   }
 private:
+  static bool sameGeometry(const nav_msgs::msg::Path & a,const nav_msgs::msg::Path & b) {
+    if (a.header.frame_id!=b.header.frame_id || a.poses.size()!=b.poses.size()) {return false;}
+    for (size_t i=0;i<a.poses.size();++i) {
+      if (a.poses[i].pose!=b.poses[i].pose) {return false;}
+    }
+    return !a.poses.empty();
+  }
   void publishPathRisk(bool blocked) {
     if (path_risk_publisher_) {std_msgs::msg::Bool msg;msg.data=blocked;path_risk_publisher_->publish(msg);}
   }
@@ -142,11 +184,12 @@ private:
   std::shared_future<Service::Response::SharedPtr> future_;
   int64_t request_id_{0}; bool pending_{false},awaiting_{false},known_{false};int replans_{0};
   Clock::time_point last_good_,next_check_;
-  nav_msgs::msg::Path previous_;
+  nav_msgs::msg::Path previous_,rejected_;
   std::vector<geometry_msgs::msg::PoseStamped> goals_;
 };
 }
 BT_REGISTER_NODES(factory) {
+  factory.registerNodeType<astribot_s1_path_tracking::RequireCorridorRoute>("RequireCorridorRoute");
   factory.registerNodeType<astribot_s1_path_tracking::PolicyExecution>("PolicyExecution");
   factory.registerNodeType<astribot_s1_path_tracking::KeepSafePath>("KeepSafePath");
 }

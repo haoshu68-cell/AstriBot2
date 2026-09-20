@@ -1,0 +1,21 @@
+# Evaluation inputs only. Do not override the running planner until SE(2) path
+# yaw/reverse semantics have passed policy, controller and stopping regression.
+# Instantiate one planner at a time (shared candidate/check services).
+planner_server:
+  ros__parameters:
+    navigation_geometry_mode: fixed_v2
+    planner_evaluation_only: true
+    GridBased:
+      # Alternatives: ExactGoalPlanner / ExactHybridPlanner / ExactLatticePlanner
+      plugin: astribot_s1_path_tracking::ExactHybridPlanner
+      downsample_costmap: false
+      angle_quantization_bins: 72
+      motion_model_for_search: REEDS_SHEPP
+      minimum_turning_radius: 0.5
+      tolerance: 0.0
+      allow_unknown: false
+      smooth_path: false
+      # Lattice evaluation must resolve this from nav2_smac_planner's package share:
+      # sample_primitives/5cm_resolution/0.5m_turning_radius/omni/output.json
+      # Its 16 nonuniform headings are NOT equivalent to the Hybrid 72 bins.
+      allow_reverse_expansion: true

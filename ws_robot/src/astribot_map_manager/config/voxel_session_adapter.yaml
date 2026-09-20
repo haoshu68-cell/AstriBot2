@@ -1,0 +1,13 @@
+map_session_adapter:
+  ros__parameters:
+    # Deployment must explicitly select sim or hardware and own the Voxel stack.
+    profile: ""
+    allow_navigation_reconfigure: false
+    asset_root: /tmp/astribot_map_catalog/assets
+    runtime_root: /tmp/astribot_voxel_activation
+    map_topic: /map
+    odom_topic: /odom
+    odom_frame: odom
+    robot_base_frame: astribot_torso_base
+    navigation_manager: /lifecycle_manager_navigation/manage_nodes
+    # Hardware requires all seven calibrated launch_arguments documented below.

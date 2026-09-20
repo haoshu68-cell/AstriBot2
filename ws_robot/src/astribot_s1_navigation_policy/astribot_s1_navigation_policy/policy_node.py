@@ -1,5 +1,6 @@
 """Stage P2 adapter: shared observations, one leased constraint output."""
 import json
+import math
 import time
 import threading
 from dataclasses import asdict, replace
@@ -37,14 +38,25 @@ class PolicyNode(PolicyObserver):
         self.state=self.create_publisher(String,'/navigation_policy/state',10)
         self.typed_state=self.create_publisher(NavigationPolicyStatus,'/navigation/policy_status',10)
         self.coordinator=None
+        self.start_maneuver=None
         if stage in ('p3','p4','p5'):
             from .route_coordinator import RouteCoordinator
+            from .start_maneuver_adapter import StartManeuverAdapter
             self.coordinator=RouteCoordinator(self)
+            self.start_maneuver=StartManeuverAdapter(self)
         self.corridor=None
         if stage in ('p4','p5'):
             from .corridor_adapter import CorridorAdapter
             self.corridor=CorridorAdapter(self)
             self.alignment_pub=self.create_publisher(CorridorAlignment,'/navigation_policy/corridor_alignment',1)
+        self.declare_parameter('social_navigation_stage','off')
+        social_stage=self.get_parameter('social_navigation_stage').value
+        if social_stage not in ('off','h2'):raise ValueError('unsupported social navigation stage')
+        self.social=None
+        if social_stage=='h2':
+            if stage!='p2':raise ValueError('H2 uses P2 waiting without route replacement')
+            from .social_adapter import SocialAdapter
+            self.social=SocialAdapter(self)
 
     def path_risk(self,msg):
         self.path_blocked=msg.data
@@ -113,9 +125,12 @@ class PolicyNode(PolicyObserver):
 
     def tick(self):
         processing_start=time.monotonic()
+        processing_cpu_start=time.thread_time()
         super().tick()
+        observer_done=time.monotonic()
         self.process_path_report()
         if self.coordinator is not None:self.coordinator.process_route()
+        route_done=time.monotonic()
         now=self.stamp();seconds=now.ns*1e-9
         valid=bool(self.path) and self.last_inputs_valid and self.last_evaluation_epoch==now.epoch
         risk=self.last_risk
@@ -124,6 +139,9 @@ class PolicyNode(PolicyObserver):
         if path_risk.blocked and risk is not None:
             risk=replace(risk,blocked=True,conflict_time_s=min(risk.conflict_time_s,path_risk.conflict_time_s))
         robot=self.last_robot
+        # Observer health is published before risk evaluation. Preserve the
+        # decision-time snapshot too, so an expired lease is visible in replay.
+        coverage_health=self.health_registry.health(now)
         coverage_ok=self.health_registry.allows_motion(now,robot.vx,robot.vy,robot.wz) if robot else False
         valid=valid and coverage_ok
         slow_original=False
@@ -138,12 +156,23 @@ class PolicyNode(PolicyObserver):
             selection=replace(selection,motion='SLOW',speed=self.profile.narrow_speed_m_s,
                               reason='ORIGINAL_PATH_SLOW_SAFE')
         if not coverage_ok:selection=replace(selection,motion='HOLD',speed=0.,reason='REQUIRED_COVERAGE_UNAVAILABLE')
-        passage=self.corridor.advance(selection,valid,time.monotonic()) if self.corridor else None
+        if self.social is not None:
+            selection=self.social.apply(selection,valid,now)
+        start_active=False
+        start_evaluation=time.monotonic()
+        if self.start_maneuver:
+            selection,start_active=self.start_maneuver.advance(selection,valid)
+        start_done=time.monotonic()
+        passage=self.corridor.advance(selection,valid,seconds) if self.corridor and not start_active else None
+        corridor_done=time.monotonic()
         if passage is not None and passage.state!='NORMAL':
             selection=passage.selection
             # A constrained passage owns waiting; no candidate may turn inside it.
             self.coordinator.cancel()
             if passage.failure:self.coordinator.failure=passage.failure
+        elif start_active:
+            self.coordinator.cancel()
+            self.coordinator.blocked_since=None
         elif self.coordinator is not None:
             selection=self.coordinator.advance(selection,risk,valid)
         if passage is not None and passage.tracking_heading is not None:
@@ -165,7 +194,23 @@ class PolicyNode(PolicyObserver):
         status.motion=selection.motion;status.reason=selection.reason;status.inputs_valid=valid
         status.lease_s=msg.lease_s;self.typed_state.publish(status)
         self.state.publish(String(data=json.dumps(dict(asdict(selection),stamp_ns=now.ns,
+            coverage_ok=coverage_ok,
+            coverage_motion={'vx':robot.vx,'vy':robot.vy,'wz':robot.wz} if robot else None,
+            coverage_health=[{'sensor_id':h.sensor_id,
+                              'required':h.sensor_id in self.health_registry.required,
+                              'state':h.health.value,'reason':h.reason,
+                              'capture_ns':h.stamp.ns,'valid_until_ns':h.valid_until.ns,
+                              'depth_available':h.depth_available,
+                              'coverage_yaw':[math.atan2(c.direction.y,c.direction.x) for c in h.coverage],
+                              'coverage_half_angle':[c.half_angle_rad for c in h.coverage]}
+                             for h in coverage_health],
             processing_wall_s=time.monotonic()-processing_start,
+            processing_cpu_s=time.thread_time()-processing_cpu_start,
+            processing_stages_s={'observation':observer_done-processing_start,
+                                 'route_mailbox':route_done-observer_done,
+                                 'start_maneuver':start_done-start_evaluation,
+                                 'corridor':corridor_done-start_done,
+                                 'arbitration':time.monotonic()-route_done},
             corridor_state=passage.state if passage else 'DISABLED',
             corridor_id=passage.corridor_id if passage else '',
             corridor_permit=list(passage.permit) if passage else [],
@@ -173,6 +218,7 @@ class PolicyNode(PolicyObserver):
             corridor_error=self.corridor.last_error if self.corridor else '',
             path_risk_status=path_risk.status,path_distance_m=path_risk.distance_m,
             original_path_admission='SLOW_EXECUTABLE' if slow_original else 'STANDARD',
+            start_maneuver=self.start_maneuver.status if self.start_maneuver else {},
             candidate_audit=self.coordinator.audit[-12:] if self.coordinator else [],
             candidate_safety_evidence=self.coordinator.safety_evidence[-12:] if self.coordinator else []))))
 

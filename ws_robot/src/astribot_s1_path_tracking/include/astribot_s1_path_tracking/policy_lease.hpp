@@ -3,12 +3,15 @@
 #include <chrono>
 #include <mutex>
 #include <cmath>
+#include <string>
+#include <optional>
 #include "rclcpp/rclcpp.hpp"
 #include "astribot_navigation_msgs/msg/motion_constraint.hpp"
 namespace astribot_s1_path_tracking {
 class PolicyLease {
 public:
   using Message = astribot_navigation_msgs::msg::MotionConstraint;
+  enum class Status {Fresh, WaitForClock, Invalid};
   void receive(const Message & msg) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!std::isfinite(msg.lease_s) || msg.lease_s<=0 || msg.lease_s>0.5 ||
@@ -19,6 +22,29 @@ public:
   }
   bool fresh(const rclcpp::Time & now) const {
     std::lock_guard<std::mutex> lock(mutex_); return freshUnlocked(now);
+  }
+  // Future-stamped input grants no motion. Allow a bounded zero-command wait
+  // for independently delivered /clock and constraint messages to catch up.
+  Status status(const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (freshUnlocked(now)) {return Status::Fresh;}
+    if (!seen_) {return Status::Invalid;}
+    const auto wall_now=std::chrono::steady_clock::now();
+    const double age=(now-rclcpp::Time(message_.stamp,now.get_clock_type())).seconds();
+    const double wall_age=std::chrono::duration<double>(wall_now-received_).count();
+    if (!(age<0 && -age<=message_.lease_s && wall_age<=message_.lease_s)) {return Status::Invalid;}
+    if (!clock_wait_started_) {clock_wait_started_=wall_now;}
+    return std::chrono::duration<double>(wall_now-*clock_wait_started_).count()<=message_.lease_s ? Status::WaitForClock : Status::Invalid;
+  }
+  bool waitingForClock(const rclcpp::Time & now) const {return status(now)==Status::WaitForClock;}
+  std::string freshnessDetail(const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!seen_) {return "no_constraint_received";}
+    const double age=(now-rclcpp::Time(message_.stamp,now.get_clock_type())).seconds();
+    const double wall_age=std::chrono::duration<double>(std::chrono::steady_clock::now()-received_).count();
+    return "source_age_s="+std::to_string(age)+" wall_age_s="+std::to_string(wall_age)+
+      " lease_s="+std::to_string(message_.lease_s)+" epoch="+std::to_string(message_.epoch)+
+      " sequence="+std::to_string(message_.sequence);
   }
   bool held(const rclcpp::Time & now, bool no_planning=false) const {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -45,12 +71,15 @@ private:
     if (!seen_) {return false;}
     double age=(now-rclcpp::Time(message_.stamp,now.get_clock_type())).seconds();
     double wall_age=std::chrono::duration<double>(std::chrono::steady_clock::now()-received_).count();
-    return age>=0 && age<=message_.lease_s && wall_age<=message_.lease_s;
+    const bool valid=age>=0 && age<=message_.lease_s && wall_age<=message_.lease_s;
+    if (valid) {clock_wait_started_.reset();}
+    return valid;
   }
   mutable std::mutex mutex_;
   Message message_;
   bool seen_{false};
   std::chrono::steady_clock::time_point received_;
+  mutable std::optional<std::chrono::steady_clock::time_point> clock_wait_started_;
 };
 }
 #endif

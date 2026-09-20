@@ -1,0 +1,36 @@
+{
+  "id": "H2-04",
+  "scene": "ws_robot/src/astribot_s1_gazebo_bringup/config/social/h2_stop_ahead.yaml",
+  "people": [
+    "social_person_1"
+  ],
+  "initial_people": {
+    "social_person_1": [
+      1.1,
+      -0.9
+    ]
+  },
+  "route": [
+    [
+      2.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "start_robot_x": 0.2,
+  "start_after_s": 20,
+  "goal_timeout_s": 180,
+  "duration_s": 420,
+  "expect_conflict": true,
+  "pause": {
+    "stop_contract": "source_hold_budget_v2",
+    "person_x_at_least": 1.45,
+    "person_y_within": 0.25,
+    "duration_s": 3.0
+  }
+}

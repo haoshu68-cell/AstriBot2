@@ -1,5 +1,7 @@
 # 统一日志：spdlog
 
+路径跟踪与到位诊断通过 `TRACKING_METRICS`、`ARRIVAL_METRICS`、`ARRIVAL_REACHED` 汇入当前会话的 `session.log`。周期诊断默认 2 Hz，稳定到位事件立即记录；投影计算也按该频率降采样。字段、统计口径及调频方法见 [路径跟踪评价与日志](PATH_TRACKING_METRICS.md)。
+
 仓库使用 spdlog 作为运行日志后端。公共包位于 `ws_robot/src/astribot_logging`。
 
 | 来源 | 接口 | 文件后端 |
@@ -226,3 +228,63 @@ supervisor 启动时立即打印 `session.log` 的绝对路径，不再需要等
 2026-09-14 本轮定位：运行中的 supervisor 显式使用 `--log-dir /tmp/astribot_door_fix`，
 进程映射包含 `libastribot_spdlog.so`，文件描述符指向该目录的 `session.log`。
 因此本轮是自定义路径缺少默认目录索引，不是 spdlog 未加载。此次添加索引和即时路径提示。
+
+## SLAM、建图与感知日志统一（2026-09-19）
+
+Voxel-SLAM 的 `LOG_*` 宏现在转发到实际节点的 ROS logger，保留
+`LIDAR/IMU/EKF/LOOP/BACKEND/MAP/PERF/INIT/SYS/CAMERA` 标签和原有计数节流。
+`LOG_STARTUP` 遵循 INFO 级别；`LOG_DECISION` 仍为 WARN。
+Release 构建也支持运行时 DEBUG。logger 使用实际节点名称，支持节点重命名、
+ROS 命名级别覆盖和 `/rosout`。不再创建自己的异步队列、默认 spdlog logger、
+50 MiB × 10 文件 sink，也不调用全局 `spdlog::shutdown()`。
+
+统一链路为：Voxel-SLAM / nav_prob_grid / map_odom_tf / 切片组件的 ROS 日志
+→ 公共 launch 控制台收集 → supervisor 的 spdlog `session.log`。
+独立 `nav_prob_grid.launch.py` 同样使用公共 Node。SLAM 与建图包显式依赖
+`astribot_logging`，避免只构建这些包时漏装收集组件。
+
+```bash
+# 仿真入口：同一 log_level 应用于 SLAM、栅格、TF 适配及导航
+bash tools/launch_sim_stack.sh --mode mapping --log-level info
+# 独立 SLAM launch：采用公共 launch 的轮转文件策略，不自动创建 supervisor 会话
+ros2 launch astribot_s1_perception voxel_slam.launch.py log_level:=debug
+```
+
+独立 launch 与直接 `ros2 run` 的文件归属仍遵循本文前述边界。
+只有经 supervisor 纳管的进程自动汇总到该会话的 `session.log`；
+另开终端运行保存工具不会自动向已有会话跨进程追加。
+`slam_session save` 的 FINALIZING/SAVED 及失败堆栈使用公共 Python logger，
+独立运行时进入该工具的逐进程日志，纳管运行时进入父收集器；
+`slam_session inspect` 的 stdout 仍为 JSON。
+
+### 轨迹与地图数据
+
+`highrate_tf.txt` 原先每次启动截断覆盖。现在保存为
+`<日志目录>/artifacts/highrate_tf_<PID>_<单调时钟纳秒>.txt`，启动时打印绝对路径；
+目录按 `ASTRIBOT_LOG_DIR > ROS_LOG_DIR > ROS_HOME/log/astribot > ~/.ros/log/astribot`
+解析，创建失败会报告 ERROR。它保留原 TUM 列格式和采样行为，是轨迹数据，
+**不受 session.log 的大小轮转约束**，应随会话归档。
+地图、关键帧、图像、位姿文本及 manifest 仍写入显式保存会话，不能改写为日志行。
+旧 `voxelslam.log` 和旧轨迹文件不自动删除。
+
+### 回归验证
+
+SLAM 包新增 `slam_logging_contract`，使用 Release C++ 进程和真实 spdlog 收集器，
+检查 INFO 不遗漏、DEBUG 过滤时不计算参数、Release DEBUG、命名级别覆盖、
+启动信息过滤、模块标签、计数节流、线程输出、尾行与单文件无重复，并实际订阅 `/rosout`。
+测试不启动传感器、Gazebo 或运动节点。构建/测试应使用独立安装目录，
+不得覆盖正在运行的 SLAM 库；部署后仍需在新会话进行实际 SLAM 运行验收。
+
+本轮已在 `/tmp/astribot_slam_logging_validation` 独立构建 7 个包；公共日志 17 项与
+SLAM 专项 3 项检查通过（CTest 汇总另计 3 个测试包装项，共 23、0 失败）。
+验证日志：`/tmp/astribot_slam_logging_test_result.log`；C++ 无传感器日志样例：
+`/tmp/astribot_slam_logging_validation/evidence/session.log`。未运行 Gazebo/真实建图，
+未覆盖当前 `ws_robot/install` 或重启现有会话，不能视为实机性能验收。
+下一次由会话所有者正常结束旧仿真后，可用本轮独立构建启动验证：
+
+```bash
+ASTRIBOT_OVERLAY_SETUP=/tmp/astribot_slam_logging_validation/install/local_setup.bash \
+  bash tools/launch_sim_stack.sh --mode mapping --log-level info
+```
+
+该 `/tmp` 覆盖层是本次验证产物，正式部署需从源码重新构建；不应作为新机器部署依赖。

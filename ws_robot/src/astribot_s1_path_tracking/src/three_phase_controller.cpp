@@ -740,6 +740,11 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
   }
 }
 
+double ThreePhaseController::translationApproachLimit(double distance,double maximum) const
+{
+  return approach_enabled_ ? approachSpeedCap(distance,approach_dist_m_,approach_v_min_,maximum) : maximum;
+}
+
 void ThreePhaseController::applyApproachCap(
   geometry_msgs::msg::TwistStamped & cmd, double dist_to_goal_m)
 {
@@ -754,7 +759,7 @@ void ThreePhaseController::applyApproachCap(
     return;                       // 内层已经在发零速，没有可限的东西
   }
 
-  const double cap = approachSpeedCap(dist_to_goal_m, approach_dist_m_, approach_v_min_, speed);
+  const double cap = translationApproachLimit(dist_to_goal_m, speed);
   if (!(cap < speed)) {
     return;                       // 收敛区之外，或内层本来就比上限慢
   }

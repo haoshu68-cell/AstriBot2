@@ -22,6 +22,10 @@ omni_effort_drive_node:
     wheel_effort_limit_nm: 15.0
     wheel_velocity_limit_rad_s: 40.0
 
+    # Simulation-only opt-in; never changes the SDK chassis control mode.
+    idle_position_hold: false
+    idle_position_kp: 3.0
+
     cmd_vel_timeout_sec: 0.5
     joint_state_timeout_sec: 0.3
     control_period_sec: 0.01  # 100Hz，对齐astribot_chassis.yaml的frequency:100

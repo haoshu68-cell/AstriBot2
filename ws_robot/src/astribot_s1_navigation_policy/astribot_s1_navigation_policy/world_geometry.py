@@ -14,20 +14,28 @@ class PredictionRows:
 
 def prediction_rows(world, include_current=False, swept=False):
     groups={};owners=[];times=[];lower=[];upper=[]
+    explicit_owners=[];explicit_times=[];boxes=[];previous_boxes=[]
     for i,track in enumerate(world.tracks):
         model=track.prediction_model
         if model is not None:
             groups.setdefault(model.steps,[]).append((i,track))
         else:
             previous=track.geometry
-            pairs=([(0,previous,previous)] if include_current else [])
+            if include_current:
+                explicit_owners.append(i);explicit_times.append(0)
+                boxes.append(previous)
+                if swept:previous_boxes.append(previous)
             for sample in track.predictions:
-                pairs.append((sample.offset_ns,sample.geometry,previous));previous=sample.geometry
-            if pairs:
-                lo,hi=bounds_many([row[1] for row in pairs],
-                                  [row[2] for row in pairs] if swept else None)
-                owners.append(np.full(len(pairs),i,dtype=np.int64));times.append(np.array([row[0] for row in pairs],dtype=np.int64))
-                lower.append(lo);upper.append(hi)
+                explicit_owners.append(i);explicit_times.append(sample.offset_ns)
+                boxes.append(sample.geometry)
+                if swept:previous_boxes.append(previous)
+                previous=sample.geometry
+    # Batch explicit boxes without changing their owner/time order or sweep pairing.
+    if boxes:
+        lo,hi=bounds_many(boxes,previous_boxes if swept else None)
+        owners.append(np.asarray(explicit_owners,dtype=np.int64))
+        times.append(np.asarray(explicit_times,dtype=np.int64))
+        lower.append(lo);upper.append(hi)
     for steps,tracks in groups.items():
         offsets=np.array([0,*(step[0] for step in steps)],dtype=np.int64)
         t=np.array([0.,*(step[1] for step in steps)])

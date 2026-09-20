@@ -1,5 +1,7 @@
 # 自主探索优化实施记录
 
+> 后续变更（2026-09-17）：旧 `astribot_s1_autonomy` 包已退役，当前源码为 19 个包。下文拆分/兼容验收是当时记录；当前入口见[包退役迁移说明](AUTONOMY_PACKAGE_RETIREMENT_20260917.md)。
+
 本轮在 `astribot_autonomy_core` 与 `astribot_s1_exploration` 落地探索正确性和选点质量优化。保持现有架构边界：探索只提交 NavigateToPose 任务；候选规划仅供比较和校验，不直接执行返回路径，不增加速度发布者。本文记录代码与离线证据，不代表真机或标准符合性认证。
 
 ## 1. 正确性与进度语义

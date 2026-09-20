@@ -3,26 +3,11 @@
 """地图来源分发：按 config/map_source.yaml 决定 /map 与 map→odom 谁来提供。
 
 ============================ 两个正交的轴 ============================
-    map_source   —— 谁提供 /map        : sim_slam | real_file | real_live
+    map_source   —— 谁提供静态 /map    : real_file | real_live
     localization —— 谁提供 map→odom    : slam | ground_truth
 
-与已有 `mode:={mapping,localization}` 的关系（**刻意不改那个参数的语义**）：
-
-    map_source=sim_slam   ≡  原来的 mode:=mapping     （slam_toolbox 在线建图）
-    map_source=real_file  ─┐
-    map_source=real_live  ─┴─ 新分支，不走 slam_toolbox
-
-原来的 `mode:=localization`（slam_toolbox 加载 posegraph 做扫描匹配定位）
-仍然保留、语义不变，它对应的是"用我们自己建的图 + 真扫描匹配"，
-即 map_source=real_file 配 localization=slam 那条路线（路线 A）的前身。
-路线 A 现在**暂时拒绝**：扫描匹配要求仿真几何与地图一致，而 Gazebo 里跑的是
-AWS 仓库、地图来自真实场地，不匹配时定位必然发散。等"从占据栅格挤出 Gazebo
-世界"的工具做出来再开。
-
 ========================= 为什么这里可以跑 map_server =========================
-README_NAVIGATION.md §4.3 写着"不跑 map_server / amcl"，理由是 slam_toolbox
-自己发 /map 和 map→odom，再跑一套会抢发布权。**那个理由成立，但适用条件是
-"slam_toolbox 在跑"。** real_* 模式下 slam_toolbox 不启动，于是：
+静态地图模式只启动一个地图发布者，并由本模块负责必要的 map→odom：
 
     /map      由 map_server（real_file）或 map_domain_relay（real_live）提供
     map→odom  由静态 TF 提供（ground_truth）
@@ -55,7 +40,6 @@ from ament_index_python.packages import get_package_share_directory
 from astribot_s1_perception.map_source_config import (
     MapSourceConfigError,
     check_live_transport_env,
-    needs_slam_adapter,
     publishes_static_map_to_odom,
     require,
     resolve,
@@ -76,10 +60,7 @@ def _build(context, *args, **kwargs):
     get_logger('astribot.map_provider').info(f'[map_provider] 配置文件 = {config_path}')
     get_logger('astribot.map_provider').info(f'[map_provider] map_source = {map_source}  localization = {localization}')
 
-    if map_source == 'sim_slam':
-        get_logger('astribot.map_provider').info('[map_provider] /map 由 slam_toolbox 在线建图提供（本文件不额外起节点）')
-
-    elif map_source == 'real_file':
+    if map_source == 'real_file':
         map_yaml = require(params, 'map_yaml_path', str, default='')
         if not map_yaml:
             raise MapSourceConfigError(
@@ -190,28 +171,8 @@ def _build(context, *args, **kwargs):
                     [EmitEvent(event=Shutdown(
                         reason='出生点栅格校验未通过（见上面的 ERROR）'))]
                     if event.returncode != 0 else []))))
-    elif needs_slam_adapter(localization):
-        adapter_params = os.path.join(
-            get_package_share_directory('astribot_s1_perception'),
-            'config', 'slam_adapter_params.yaml')
-        adapter = Node(
-            package='astribot_s1_perception',
-            executable='slam_adapter_node',
-            output='screen',
-            parameters=[
-                adapter_params,
-                {'use_sim_time': use_sim_time == 'true',
-                 'map_topic': require(params, 'local_map_topic', str, '/map')},
-            ],
-        )
-        actions.append(adapter)
-        actions.append(RegisterEventHandler(OnProcessExit(
-            target_action=adapter, on_exit=[EmitEvent(event=Shutdown(
-                reason='slam_adapter_node 退出：外部 SLAM 接入失败（见上面的 ERROR）'))])))
-        get_logger('astribot.map_provider').info(f'[map_provider] /map 与 map→odom 由外部 SLAM 提供，'
-              f'经 slam_adapter_node 归一化（参数 {adapter_params}）')
     else:
-        get_logger('astribot.map_provider').info('[map_provider] map→odom 由 slam_toolbox 提供（扫描匹配）')
+        get_logger('astribot.map_provider').info('[map_provider] 外部定位负责 map→odom')
 
     return actions
 
@@ -223,7 +184,7 @@ def generate_launch_description():
             description='地图来源配置文件路径。留空用包内 config/map_source.yaml'),
         DeclareLaunchArgument(
             'map_source', default_value='',
-            description='覆盖配置里的 map_source（sim_slam|real_file|real_live）。'
+            description='覆盖配置里的 map_source（real_file|real_live）。'
                         '留空则用配置文件的值'),
         DeclareLaunchArgument(
             'localization', default_value='',

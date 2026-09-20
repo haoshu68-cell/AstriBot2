@@ -14,6 +14,7 @@ import time
 
 from astribot_logging import log_directory, log_level
 from astribot_logging.output import SessionLog, SessionHandler, ProcessOutput, publish_session_link
+from sim_isolation import SimulationIsolation,is_stack_process
 
 
 def process_identity(pid):
@@ -64,15 +65,28 @@ def finish_descendants(identities,term_timeout=3.):
 
 def arguments():
     p = argparse.ArgumentParser()
+    p.add_argument('--instance',default='',help='Opt-in isolated copy of the same canonical world')
+    p.add_argument('--ros-domain-id',type=int,default=25)
+    p.add_argument('--spawn-x',type=float,default=0.,help='Initial Gazebo X in metres')
+    p.add_argument('--spawn-y',type=float,default=0.,help='Initial Gazebo Y in metres')
+    p.add_argument('--spawn-yaw',type=float,default=0.,help='Initial Gazebo heading in radians; simulation fixture only')
     p.add_argument('--mode', choices=['mapping', 'explore', 'localize', 'baseline'], default='mapping')
-    p.add_argument('--map', default='')
+    p.add_argument('--map', default='', help='Voxel session directory for localization')
+    p.add_argument('--save-session', default='', help='new Voxel session directory to save')
+    p.add_argument('--match-threshold', type=float, default=0.3)
     p.add_argument('--map-yaml', default='')
+    p.add_argument('--navigation-geometry-mode', choices=['legacy','fixed_v2'], default='legacy')
     p.add_argument('--navigation-policy', choices=['off', 'p2', 'p3', 'p4', 'p5'], default='off')
     p.add_argument('--corridor-file', default='', help='Map-frame corridor annotations for P4')
+    p.add_argument('--social-scenario', default='', help='Optional HuNav YAML in the baseline world; behavior is enabled separately')
+    p.add_argument('--social-policy', choices=['off','h2'], default='off',
+                   help='H2 social waiting and speed selection; simulation truth is explicitly marked')
     p.add_argument('--tracker', choices=['mppi', 'rpp'], default='mppi')
     p.add_argument('--max-linear-speed', type=float, default=0.35)
     p.add_argument('--scan-source', choices=['slice_scan', 'laserscan'], default='slice_scan')
     p.add_argument('--headless', action='store_true')
+    p.add_argument('--real-time-factor', type=float, default=1.0,
+                   help='Gazebo simulation/wall time ratio, (0, 1]; preserves the navigation world and sensor timestamps')
     p.add_argument('--no-rviz', action='store_true')
     p.add_argument('--nav-transport', choices=['udp', 'default'], default='udp')
     p.add_argument('--nav-attempts', type=int, choices=range(1,4), default=2)
@@ -88,24 +102,51 @@ def arguments():
                    help='managed output log backup count (default: 5)')
     p.add_argument('--dry-run', action='store_true')
     a = p.parse_args()
+    if not all(float('-inf') < value < float('inf') for value in (a.spawn_x,a.spawn_y)):
+        p.error('--spawn-x and --spawn-y must be finite')
+    if not -3.141592653589793<=a.spawn_yaw<=3.141592653589793:
+        p.error('--spawn-yaw must be finite and within [-pi,pi]')
+    try:SimulationIsolation(a.instance,a.ros_domain_id)
+    except ValueError as error:p.error(str(error))
     if a.log_max_bytes <= 0 or a.log_backup_count <= 0:
         p.error('log-max-bytes and log-backup-count must be positive')
     if not 0 < a.max_linear_speed <= 1.5 or a.ready_timeout <= 0:
         p.error('speed must be in (0, 1.5] and readiness timeout must be positive')
     if a.navigation_policy == 'p4' and (not a.corridor_file or not Path(a.corridor_file).is_file()):
         p.error('P4 requires --corridor-file')
+    if not 0 < a.real_time_factor <= 1.0:
+        p.error('--real-time-factor must be in (0,1]')
     if a.mode == 'localize' and not a.map:
-        p.error('--mode localize requires --map (serialized SLAM map base path)')
+        p.error('--mode localize requires --map (Voxel session directory)')
+    if not 0 < a.match_threshold < 1:
+        p.error('--match-threshold must be in (0, 1)')
+    if a.map and not (Path(a.map)/'alidarState.txt').is_file():
+        p.error('--map must contain alidarState.txt and kf/')
+    if a.save_session and Path(a.save_session).exists():
+        p.error('--save-session must be a new directory')
+    if a.mode == 'localize' and a.save_session and Path(a.save_session).resolve().parent != Path(a.map).resolve().parent:
+        p.error('loaded and saved sessions must share a parent directory')
+    if a.mode == 'baseline' and (a.map or a.save_session):
+        p.error('baseline uses a static YAML and cannot load/save a Voxel session')
+    if a.map and a.save_session and Path(a.save_session).resolve().parent != Path(a.map).resolve().parent:
+        p.error('loaded and saved Voxel sessions must have the same parent directory')
+    if a.map_yaml and a.mode != 'baseline':
+        p.error('--map-yaml is only for --mode baseline; localization requires --map')
     if a.map_yaml and not Path(a.map_yaml).is_file():
         p.error('--map-yaml does not exist')
+    if a.social_scenario and (a.mode != 'baseline' or not Path(a.social_scenario).is_file()):
+        p.error('--social-scenario requires baseline mode and an existing YAML file')
+    if a.social_policy != 'off':
+        if not a.social_scenario or a.navigation_policy not in ('off','p2'):
+            p.error('H2 requires --social-scenario and P2 (or default off) navigation policy')
+        a.navigation_policy='p2'
     return a
 
 
 def main():
     a = arguments()
-    # warehouse_sim.launch.py fixes this domain; probes must share it.
-    os.environ['ROS_DOMAIN_ID'] = '25'
-    os.environ['ROS_LOCALHOST_ONLY'] = '1'
+    isolation=SimulationIsolation(a.instance,a.ros_domain_id)
+    os.environ.update(isolation.environment())
     os.environ['ASTRIBOT_LOG_LEVEL'] = a.log_level
     os.environ['ASTRIBOT_LOG_MAX_BYTES'] = str(a.log_max_bytes)
     os.environ['ASTRIBOT_LOG_BACKUP_COUNT'] = str(a.log_backup_count)
@@ -114,43 +155,80 @@ def main():
     run = Path(a.log_dir or (log_root / f'sim_{time.strftime("%Y%m%d_%H%M%S")}_{os.getpid()}')).resolve()
     sim = ['ros2', 'launch', 'astribot_s1_navigation', 'nav2_full_bringup.launch.py',
            'env:=sim', 'launch_gazebo:=true', 'launch_navigation:=false',
+           f'navigation_geometry_mode:={a.navigation_geometry_mode}',
            f'mode:={"localization" if a.mode == "localize" else "mapping"}',
            f'exploration:={str(a.mode == "explore").lower()}',
            f'scan_source:={a.scan_source}', f'headless:={str(a.headless).lower()}',
            f'use_rviz:={str(not a.no_rviz).lower()}']
+    sim += [f'ros_domain_id:={a.ros_domain_id}', f'spawn_x:={a.spawn_x}',
+            f'spawn_y:={a.spawn_y}', f'spawn_yaw:={a.spawn_yaw}']
+    if a.instance:
+        sim += [f'save_path:={run}/slam_sessions/']
     if a.map:
-        sim += [f'map_file_name:={a.map}']
+        session = Path(a.map).expanduser().resolve()
+        sim += [f'previous_map:={session.name}:{a.match_threshold}', f'save_path:={session.parent}/']
+    if a.social_scenario:
+        sim += ['social_scenario:=' + str(Path(a.social_scenario).resolve())]
+    if a.save_session:
+        session = Path(a.save_session).expanduser().resolve()
+        sim += [f'save_path:={session.parent}/', f'map_name:={session.name}', 'save_map:=1']
     if a.mode == 'baseline':
-        sim += ['map_source:=real_file', 'localization:=ground_truth',
+        sim += ['slam_backend:=static_map',
                 'map_yaml_path:=' + (a.map_yaml or str(repo / 'maps/warehouse_baseline.yaml'))]
-    elif a.map_yaml:
-        sim += ['map_source:=real_file', f'map_yaml_path:={a.map_yaml}']
     nav = ['ros2', 'launch', 'astribot_s1_navigation', 'navigation.launch.py',
            'use_sim_time:=true', f'controller_plugin:={a.tracker}',
            f'max_linear_speed:={a.max_linear_speed}', f'navigation_policy_stage:={a.navigation_policy}',
+           f'navigation_geometry_mode:={a.navigation_geometry_mode}',
            'scan_topic:=' + ('/scan_from_cloud' if a.scan_source=='slice_scan' else '/scan')]
+    if a.mode == 'baseline':
+        nav += ['arrival_precision_profile:=simulation_precision']
+    if a.social_scenario:
+        nav += ['obstacle_layer_plugin:=astribot_s1_autonomy::ObservedRayObstacleLayer']
+    if a.social_policy != 'off':
+        nav += ['social_navigation_stage:='+a.social_policy,'social_allow_simulation_truth:=true']
     if a.corridor_file:nav += ['corridor_file:=' + str(Path(a.corridor_file).resolve())]
+    if a.instance:
+        nav += ['map_manager_params_file:='+str(run/'map_manager.yaml'),
+                'operator_runtime_params_file:='+str(run/'mapping_runtime.yaml'),
+                'enable_voxel_adapter:=true',
+                'voxel_adapter_params_file:='+str(run/'voxel_session_adapter.yaml')]
     if a.dry_run:
         print(json.dumps({'simulation': sim, 'navigation': nav, 'logs': str(run),
+                          'isolation':isolation.environment(),'locks':isolation.lock_paths(),
+                          'real_time_factor': a.real_time_factor,
                           'nav_transport': a.nav_transport,
                           'logging': {'layout': 'unified', 'file': str(run / 'session.log'), 'level': a.log_level, 'max_bytes': a.log_max_bytes,
                                       'backup_count': a.log_backup_count}}, indent=2))
         return
-    lock = open('/tmp/astribot_sim_domain25.lock', 'a')
-    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    locks=[]
+    for path in isolation.lock_paths():
+        lock=open(path,'a');fcntl.flock(lock,fcntl.LOCK_EX | fcntl.LOCK_NB);locks.append(lock)
     # Detect direct executables, without matching shell command text or killing other sessions.
     for proc in Path('/proc').iterdir():
         if not proc.name.isdigit():
             continue
         try:
             args = (proc / 'cmdline').read_bytes().split(b'\0')
-            if args and Path(os.fsdecode(args[0])).name in ('controller_server', 'robot_state_publisher'):
-                env = (proc / 'environ').read_bytes().split(b'\0')
-                if b'ROS_DOMAIN_ID=25' in env:
-                    raise RuntimeError(f'existing stack PID {proc.name}; stop its owner before starting another')
+            if is_stack_process([os.fsdecode(arg) for arg in args]):
+                env=dict(item.decode().split('=',1) for item in (proc/'environ').read_bytes().split(b'\0') if b'=' in item)
+                conflict=isolation.conflict(env)
+                if conflict:
+                    raise RuntimeError(f'{conflict}: existing stack PID {proc.name}; select an unused isolated identity')
         except (FileNotFoundError, PermissionError, ProcessLookupError):
             continue
     run.mkdir(parents=True, exist_ok=False)
+    if a.instance:
+        # JSON is valid YAML; paths are quoted without shell interpolation.
+        (run/'map_manager.yaml').write_text(json.dumps({'map_manager':{'ros__parameters':{
+            'storage_root':str(run/'map_catalog'),'import_root':str(run/'slam_sessions')}}}))
+        (run/'mapping_runtime.yaml').write_text(json.dumps({'mapping_runtime':{'ros__parameters':{
+            'profile':'','save_path':str(run/'slam_sessions')}}}))
+        (run/'voxel_session_adapter.yaml').write_text(json.dumps({'map_session_adapter':{'ros__parameters':{
+            'profile':'sim', 'allow_navigation_reconfigure':True,
+            'asset_root':str(run/'map_catalog/assets'),
+            'runtime_root':str(run/'voxel_activation'),
+            'map_topic':'/map', 'odom_topic':'/odom',
+            'odom_frame':'odom', 'robot_base_frame':'astribot_torso_base'}}}))
     os.environ['ASTRIBOT_LOG_DIR'] = str(run)
     os.environ['ROS_LOG_DIR'] = str(run)
     os.environ['ASTRIBOT_LOG_CAPTURE'] = '1'
@@ -162,7 +240,8 @@ def main():
     # Print before readiness probes, even when the configured severity hides INFO.
     print(f'统一日志（spdlog）：{output_path}', file=sys.stderr, flush=True)
     try:
-        latest = publish_session_link(log_root, run)
+        # Keep another owner's default latest_sim index stable.
+        latest = publish_session_link(log_root / a.instance if a.instance else log_root, run)
         print(f'最新仿真日志索引：{latest / "session.log"}', file=sys.stderr, flush=True)
     except OSError as exc:
         logger.warning('Unable to publish latest_sim log index: %s', exc)
@@ -171,6 +250,7 @@ def main():
     def remember_children():
         owned_processes.update(owned_descendants([c.pid for c in children]))
     manifest = {'supervisor_pid': os.getpid(), 'started': time.time(), 'state': 'starting',
+                'isolation':isolation.environment(),'locks':isolation.lock_paths(),
                 'children': [], 'logging_backend': 'spdlog', 'log_layout': 'unified',
                 'unified_log': str(output_path), 'log_files': {}}
     def save():
@@ -213,12 +293,21 @@ def main():
                 raise RuntimeError('simulation launch exited')
         else:
             raise RuntimeError('Gazebo physics did not advance; inspect session.log [simulation]')
+        if a.real_time_factor != 1.0:
+            physics = subprocess.run(['ign', 'service', '-s', '/world/default/set_physics',
+                '--reqtype', 'ignition.msgs.Physics', '--reptype', 'ignition.msgs.Boolean',
+                '--timeout', '3000', '--req', f'real_time_factor: {a.real_time_factor} max_step_size: 0.001'],
+                capture_output=True, text=True, timeout=5.)
+            if physics.returncode or 'data: true' not in physics.stdout:
+                raise RuntimeError('Gazebo rejected the requested real-time factor: ' + physics.stderr)
+            manifest['real_time_factor'] = a.real_time_factor
+            save()
         def probe(phase, env):
             cmd = ['python3', str(repo/'tools/sim_stack_probe.py'), '--phase', phase,
                    '--timeout', str(a.ready_timeout), '--scan',
                    '/scan_from_cloud' if a.scan_source=='slice_scan' else '/scan']
             if phase=='navigation' and a.navigation_policy!='off':
-                cmd+=['--costmap-scan','/navigation_policy/costmap_scan']
+                cmd+=['--costmap-scan','/navigation_policy/costmap_scan','--require-policy']
             log = SessionLog(output_path, f'probe_{phase}')
             process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE, text=True, start_new_session=True)
@@ -255,10 +344,15 @@ def main():
         env = os.environ.copy()
         if a.nav_transport == 'udp':
             profile = run / 'nav_udp.xml'
-            profile.write_text('''<?xml version="1.0"?><profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles"><transport_descriptors><transport_descriptor><transport_id>nav_udp</transport_id><type>UDPv4</type></transport_descriptor></transport_descriptors><participant profile_name="nav" is_default_profile="true"><rtps><userTransports><transport_id>nav_udp</transport_id></userTransports><useBuiltinTransports>false</useBuiltinTransports></rtps></participant></profiles>''')
+            profile.write_text('''<?xml version="1.0"?><profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles"><transport_descriptors><transport_descriptor><transport_id>nav_udp</transport_id><type>UDPv4</type><interfaceWhiteList><address>127.0.0.1</address></interfaceWhiteList></transport_descriptor></transport_descriptors><participant profile_name="nav" is_default_profile="true"><rtps><userTransports><transport_id>nav_udp</transport_id></userTransports><useBuiltinTransports>false</useBuiltinTransports></rtps></participant></profiles>''')
             env['FASTRTPS_DEFAULT_PROFILES_FILE'] = str(profile)
+            # Humble rmw_fastrtps appends a SHM transport when this is 1,
+            # even when XML disables built-ins. The explicit interface whitelist
+            # above preserves localhost isolation while making --nav-transport=udp
+            # actually UDP-only. Do not clean shared /dev/shm state to recover it.
+            env['ROS_LOCALHOST_ONLY'] = '0'
         # Queries use the exact environment given to this owned navigation process.
-        (run / 'env.sh').write_text('source /opt/ros/humble/setup.bash\nsource ' + shlex.quote(str(repo/'ws_robot/install/setup.bash')) + '\n' + ''.join('export '+k+'='+shlex.quote(v)+'\n' for k,v in env.items() if k in ('ROS_DOMAIN_ID','ROS_LOCALHOST_ONLY','RMW_IMPLEMENTATION','FASTRTPS_DEFAULT_PROFILES_FILE','IGN_IP','GZ_IP')))
+        (run / 'env.sh').write_text('source /opt/ros/humble/setup.bash\nsource ' + shlex.quote(str(repo/'ws_robot/install/setup.bash')) + '\n' + ''.join('export '+k+'='+shlex.quote(v)+'\n' for k,v in env.items() if k in ('ROS_DOMAIN_ID','ROS_LOCALHOST_ONLY','RMW_IMPLEMENTATION','FASTRTPS_DEFAULT_PROFILES_FILE','IGN_IP','GZ_IP','IGN_PARTITION','GZ_PARTITION','IGN_DISCOVERY_MSG_PORT','IGN_DISCOVERY_SRV_PORT','ASTRIBOT_SIM_INSTANCE')))
         for attempt in range(1, a.nav_attempts+1):
             child = spawn(f'navigation_{attempt}', nav, env)
             measured = probe('navigation', env)

@@ -6,7 +6,8 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/astribot_s1_navigation_policy']),
         ('share/astribot_s1_navigation_policy', ['package.xml', 'README.md']),
-        ('share/astribot_s1_navigation_policy/config', ['config/simulation.json', 'config/hardware.template.json']),
+        ('share/astribot_s1_navigation_policy/config', ['config/simulation.json', 'config/hardware.template.json', 'config/social.json',
+            'config/h2_simulation.json', 'config/measured_stop_reference_20260915.json']),
     ],
     install_requires=['setuptools'], zip_safe=True,
     maintainer='astribot-dev', maintainer_email='astribot-dev@astribot.com',

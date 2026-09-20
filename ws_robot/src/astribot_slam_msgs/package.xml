@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_slam_msgs</name>
+  <version>0.0.0</version>
+  <description>
+    Message definitions for exposing voxel_slam's own keyframe poses (as
+    corrected by its BTC loop closure, GTSAM/ISAM2 pose-graph optimization,
+    and HBA global bundle adjustment) to downstream consumers such as
+    nav_prob_grid — a Cartographer-style submap: each keyframe's point cloud
+    is sent once, in its own local frame; its pose is republished whenever
+    voxel_slam's own backend corrects it, without resending the cloud.
+  </description>
+
+  <maintainer email="feng.pan@xtalpi.com">xtalpi-pf</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -55,6 +55,24 @@ PointcloudSliceScanNode::PointcloudSliceScanNode(const rclcpp::NodeOptions & opt
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, true);
   tf_buffer_->setUsingDedicatedThread(true);
+  attached_filter_enabled_=get_parameter("self_filter.attached.enabled").as_bool();
+  if(attached_filter_enabled_) {
+    if(!get_parameter("use_sim_time").as_bool()) throw std::invalid_argument("attached filter awaits hardware validation");
+    attached_ack_=create_publisher<std_msgs::msg::String>("/navigation/attachment_filter_applied",10);
+    attached_sub_=create_subscription<moveit_msgs::msg::PlanningScene>("/navigation/attached_geometry",10,
+      [this](moveit_msgs::msg::PlanningScene::ConstSharedPtr msg) {
+        std::lock_guard<std::mutex> lock(attached_mutex_);
+        const rclcpp::Time source(msg->robot_state.joint_state.header.stamp);
+        if(!attached_snapshot_ || msg->name!=attached_snapshot_->name ||
+           source<rclcpp::Time(attached_snapshot_->robot_state.joint_state.header.stamp)) {
+          attached_changed_=source;
+          attached_confirmation_.invalidate();
+        }
+        attached_snapshot_=msg;
+      });
+    attached_ack_timer_=create_wall_timer(std::chrono::milliseconds(100),
+      [this]() {publishAttachmentConfirmation();});
+  }
 
   const std::string filtered_topic = get_parameter("filtered_cloud_topic").as_string();
   if (!filtered_topic.empty()) {
@@ -104,6 +122,80 @@ PointcloudSliceScanNode::~PointcloudSliceScanNode()
   }
 }
 
+void PointcloudSliceScanNode::invalidateAttachmentConfirmation()
+{
+  std::lock_guard<std::mutex> lock(attached_mutex_);
+  attached_confirmation_.invalidate();
+}
+
+void PointcloudSliceScanNode::publishAttachmentConfirmation()
+{
+  if(!attached_ack_)return;
+  std::lock_guard<std::recursive_mutex> config_lock(config_mutex_);
+  std::lock_guard<std::mutex> lock(attached_mutex_);
+  if(!attached_snapshot_)return;
+  const auto & scene=*attached_snapshot_;
+  const double wall=std::chrono::duration<double>(
+    std::chrono::steady_clock::now().time_since_epoch()).count();
+  if(attached_confirmation_.current(scene.name,
+    rclcpp::Time(scene.robot_state.joint_state.header.stamp).seconds(),
+    !scene.name.empty() && !scene.is_diff && !scene.robot_state.is_diff,
+    attached_changed_.seconds(),now().seconds(),wall,max_cloud_age_sec_)) {
+    std_msgs::msg::String ack;ack.data=scene.name;attached_ack_->publish(ack);
+  }
+}
+
+bool PointcloudSliceScanNode::resolveAttachedBodies(const rclcpp::Time & stamp,
+  std::vector<AttachedBody> & bodies,std::string & revision)
+{
+  if(!attached_filter_enabled_)return true;
+  moveit_msgs::msg::PlanningScene::ConstSharedPtr scene;
+  rclcpp::Time changed(0,0,RCL_ROS_TIME);
+  {std::lock_guard<std::mutex> lock(attached_mutex_);scene=attached_snapshot_;changed=attached_changed_;}
+  // Bringup may precede MoveGroup. No exclusion is made or acknowledged before
+  // the first authoritative snapshot; navigation stays held by GeometryState.
+  if(!scene)return true;
+  const auto source=rclcpp::Time(scene->robot_state.joint_state.header.stamp);
+  const double age=(now()-source).seconds();
+  if(scene->name.empty() || scene->is_diff || scene->robot_state.is_diff ||
+     age<0 || age>.5 || stamp<changed)return false;
+  const auto budget_start=std::chrono::steady_clock::now();
+  try {
+    for(const auto & item:scene->robot_state.attached_collision_objects) {
+      const auto & o=item.object;
+      if(item.link_name.empty() || (!o.header.frame_id.empty() && o.header.frame_id!=item.link_name) ||
+         !o.meshes.empty() || !o.planes.empty() || o.primitives.empty() ||
+         o.primitives.size()!=o.primitive_poses.size())return false;
+      // The cloud can precede its joint-derived TF by one broadcaster period.
+      // This runs on the cloud worker; the dedicated TF listener keeps filling
+      // the buffer. Bound all attachment lookups by the existing frame budget,
+      // and retain the acquisition time instead of substituting latest TF.
+      const double elapsed=std::chrono::duration<double>(
+        std::chrono::steady_clock::now()-budget_start).count();
+      const double wait=tfLookupWait(tf_timeout_sec_,tf_total_budget_sec_,elapsed);
+      const auto tf=tf_buffer_->lookupTransform(base_frame_,item.link_name,stamp,tf2::durationFromSec(wait));
+      geometry_msgs::msg::Pose link;link.position.x=tf.transform.translation.x;
+      link.position.y=tf.transform.translation.y;link.position.z=tf.transform.translation.z;
+      link.orientation=tf.transform.rotation;
+      const auto origin=rigidPose(link)*rigidPose(o.pose);
+      for(size_t i=0;i<o.primitives.size();++i) {
+        AttachedBody::validate(o.primitives[i]);
+        bodies.push_back({o.primitives[i],(origin*rigidPose(o.primitive_poses[i])).inverse()});
+      }
+    }
+  } catch(const std::exception & e) {
+    RCLCPP_WARN_THROTTLE(get_logger(),*get_clock(),kLogThrottleMs,"Attached filter unavailable: %s",e.what());
+    return false;
+  }
+  // Waiting must not turn an expired snapshot or changed attachment into a
+  // successful filter acknowledgement.
+  {std::lock_guard<std::mutex> lock(attached_mutex_);
+    if(!attached_snapshot_ || attached_snapshot_->name!=scene->name)return false;}
+  if((now()-source).seconds()<0 || (now()-source).seconds()>.5 ||
+     (now()-stamp).seconds()>max_cloud_age_sec_)return false;
+  revision=scene->name;return true;
+}
+
 void PointcloudSliceScanNode::declareParameters()
 {
   auto describe = [](const std::string & text) {
@@ -113,6 +205,9 @@ void PointcloudSliceScanNode::declareParameters()
     };
 
   declare_parameter<std::string>("input_cloud_topic", "/lidar/points", describe("输入点云话题"));
+  auto attached_descriptor=describe("逐附着实体自过滤，仅 fixed_v2 仿真启用；需重启切换");
+  attached_descriptor.read_only=true;
+  declare_parameter<bool>("self_filter.attached.enabled",false,attached_descriptor);
   declare_parameter<std::string>(
     "output_scan_topic", "/scan_from_cloud", describe("输出 LaserScan 话题"));
   declare_parameter<std::string>("marker_topic", "~/debug_markers", describe("调试 Marker 话题"));
@@ -120,6 +215,10 @@ void PointcloudSliceScanNode::declareParameters()
     "base_frame", "astribot_torso_base",
     describe("投影所在的本体坐标系。**本机器人没有 base_link** —— "
              "默认值原为 base_link，yaml 静默失效时会回落到它并让 TF 查询全失败。"));
+  declare_parameter<std::string>(
+    "cloud_pose_frame", "",
+    describe("点云定位器的本体位姿帧；须与 base_frame 具有相同本体原点和轴向。"
+             "留空使用 base_frame，仅独立真值基线需要覆盖。"));
 
   declare_parameter<double>("tf_timeout_sec", 0.05, describe("TF 查询超时(s)"));
   declare_parameter<double>(
@@ -224,6 +323,10 @@ PointcloudSliceScanNode::Configuration PointcloudSliceScanNode::parseConfigurati
   if (candidate.base_frame_.empty()) {
     error = "base_frame 不能为空";
     throw std::invalid_argument(error);
+  }
+  candidate.cloud_pose_frame_ = parameter("cloud_pose_frame").as_string();
+  if (candidate.cloud_pose_frame_.empty()) {
+    candidate.cloud_pose_frame_ = candidate.base_frame_;
   }
 
   candidate.tf_timeout_sec_ = parameter("tf_timeout_sec").as_double();
@@ -384,6 +487,7 @@ bool PointcloudSliceScanNode::loadParameters(std::string & error)
     output_scan_topic_=std::move(candidate.output_scan_topic_);
     marker_topic_=std::move(candidate.marker_topic_);
     base_frame_=std::move(candidate.base_frame_);
+    cloud_pose_frame_=std::move(candidate.cloud_pose_frame_);
     tf_timeout_sec_=std::move(candidate.tf_timeout_sec_);
     tf_total_budget_sec_=std::move(candidate.tf_total_budget_sec_);
     max_cloud_age_sec_=std::move(candidate.max_cloud_age_sec_);
@@ -449,6 +553,7 @@ void PointcloudSliceScanNode::cloudCallback(
 {
   std::lock_guard<std::recursive_mutex> config_lock(config_mutex_);
   if (!msg) {
+    invalidateAttachmentConfirmation();
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs, "收到空的点云消息指针，已丢弃");
     return;
@@ -469,6 +574,7 @@ void PointcloudSliceScanNode::cloudCallback(
   const rclcpp::Time stamp(msg->header.stamp, RCL_ROS_TIME);
   const double age = (now() - stamp).seconds();
   if (std::fabs(age) > max_cloud_age_sec_) {
+    invalidateAttachmentConfirmation();
     dropped_frame_count_.fetch_add(1U);
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
@@ -514,8 +620,9 @@ void PointcloudSliceScanNode::workerLoop()
     }
 
     try {
-      (void)processCloud(cloud);
+      if(!processCloud(cloud))invalidateAttachmentConfirmation();
     } catch (const std::exception & e) {
+      invalidateAttachmentConfirmation();
       RCLCPP_ERROR_THROTTLE(
         get_logger(), *get_clock(), kLogThrottleMs,
         "处理点云时发生未预期异常，已忽略本帧: %s", e.what());
@@ -533,13 +640,13 @@ bool PointcloudSliceScanNode::lookupCloudTransform(
   }
   try {
     out = tf_buffer_->lookupTransform(
-      base_frame_, cloud_frame, stamp,
+      cloud_pose_frame_, cloud_frame, stamp,
       tf2::durationFromSec(tf_timeout_sec_));
   } catch (const tf2::TransformException & e) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs,
       "TF 查询失败(%s -> %s)，丢弃当前帧: %s",
-      cloud_frame.c_str(), base_frame_.c_str(), e.what());
+      cloud_frame.c_str(), cloud_pose_frame_.c_str(), e.what());
     return false;
   }
 
@@ -711,6 +818,10 @@ bool PointcloudSliceScanNode::processCloud(
   std::vector<SlicePoint> kept;
   std::vector<SlicePoint> self_points;
   std::vector<FilterCapsule> capsules;
+  std::vector<AttachedBody> attached_bodies;
+  std::string attached_revision;
+  if(!resolveAttachedBodies(stamp,attached_bodies,attached_revision))
+    return handleInvalidFrame("附着物过滤版本、时间或 TF 不可用");
   ProjectionResult result;
   {
     std::lock_guard<std::recursive_mutex> lock(config_mutex_);
@@ -726,7 +837,9 @@ bool PointcloudSliceScanNode::processCloud(
       sp.x = p.x;
       sp.y = p.y;
       sp.z = p.z;
-      if (self_filter_.isSelfPoint(sp)) {
+      const bool attached=std::any_of(attached_bodies.begin(),attached_bodies.end(),
+        [&](const AttachedBody & body){return body.contains(sp.x,sp.y,sp.z);});
+      if (self_filter_.isSelfPoint(sp) || attached) {
         if (publish_markers_) {
           self_points.push_back(sp);
         }
@@ -751,6 +864,14 @@ bool PointcloudSliceScanNode::processCloud(
     publishScan(result, stamp);
   }
   publishFilteredCloud(kept, stamp);
+  if(attached_ack_ && !attached_revision.empty()) {
+    {
+      std::lock_guard<std::mutex> lock(attached_mutex_);
+      if(attached_snapshot_ && attached_snapshot_->name==attached_revision &&
+         stamp>=attached_changed_)attached_confirmation_.applied(attached_revision,stamp.seconds());
+    }
+    publishAttachmentConfirmation();
+  }
   if (publish_markers_) {
     publishSliceMarkers(kept, self_points, capsules, stamp);
   }
@@ -823,6 +944,7 @@ void PointcloudSliceScanNode::publishFilteredCloud(
 bool PointcloudSliceScanNode::handleInvalidFrame(const char * reason)
 {
   std::lock_guard<std::recursive_mutex> config_lock(config_mutex_);
+  invalidateAttachmentConfirmation();
   const bool hold = invalid_input_policy_ == InvalidInputPolicy::kHoldLast;
   const HoldLastAction action =
     holdLastDecision(hold, hold_last_streak_, hold_last_max_frames_);

@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_mapping</name>
+  <version>0.0.0</version>
+  <description>
+    Cartographer-style submap-based global occupancy grid for navigation.
+    Subscribes to voxel_slam's own keyframe interface (astribot_slam_msgs):
+    each keyframe's local-frame cloud is ray-cast into its own frozen local
+    submap grid exactly once, and every keyframe's pose (as corrected by
+    voxel_slam's own BTC loop closure / GTSAM pose-graph optimization / HBA
+    global BA) is used to place that submap in the world when compositing
+    the published map — so loop-closure corrections move whole submaps
+    rigidly, without needing to re-insert their points. Also bridges the
+    gap while voxel_slam isn't producing new keyframes (it only does so
+    once the robot has moved far enough — standing still stops them
+    entirely): a dedicated "stall submap" ray-casts voxel_slam's raw
+    /map_scan_filtered against its continuous TF until a real keyframe
+    resumes, so the published map keeps reflecting nearby dynamic obstacles
+    even while stationary. Entirely downstream of voxel_slam — no further
+    changes to that package are needed for this node to exist.
+  </description>
+
+  <maintainer email="feng.pan@xtalpi.com">xtalpi-pf</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>astribot_slam_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+
+  <exec_depend>astribot_logging</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

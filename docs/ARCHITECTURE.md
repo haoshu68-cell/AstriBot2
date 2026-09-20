@@ -1,8 +1,15 @@
 # 仓库结构与运行链路
 
+当前版本的完整架构与接口参考见 [架构设计参考手册](manuals/ARCHITECTURE_REFERENCE.md)，配套 [仿真及真机操作手册](manuals/README.md)。下文保留模块划分及既有整合说明。
+
+整机任务、双臂运输和模块整合/拆分建议见 [2026-09-17 整体架构审查](WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)；这些建议与当前实现分开记录。
+
 当前架构由纯算法、感知适配、探索任务、任务仲裁、导航策略和路径执行组成。
 跟踪控制公式与参数保持既有基线；本次修改集中在运行时事务、任务与世界状态契约。
 七项修复的接口、验证和部署边界见 [架构修复记录](ARCHITECTURE_FIXES_20260914.md)。
+工作空间各包的在用、可选、兼容和退役状态见 [模块清单](WS_ROBOT_MODULE_AUDIT_20260915.md)。
+
+旧 `astribot_s1_autonomy` 兼容包已删除，组合启动/RViz 已迁入探索包；[迁移与验证记录](AUTONOMY_PACKAGE_RETIREMENT_20260917.md)。
 
 ## 模块边界
 
@@ -16,7 +23,6 @@
 | `astribot_autonomy_core` | 不依赖 ROS 的感知几何与探索算法 |
 | `astribot_s1_perception_components` | 点云切片、自身剔除、ROS/PCL 适配与配置事务 |
 | `astribot_s1_exploration` | 可取消的候选搜索、探索状态机、导航任务提交 |
-| `astribot_s1_autonomy` | 旧包入口兼容转发 |
 | `astribot_s1_navigation_policy` | 任务仲裁、观测与健康、世界版本、让行/绕行及包络协调 |
 | `astribot_navigation_msgs` | 跨模块任务、策略、健康、包络与候选接口 |
 | `astribot_s1_navigation` | Nav2 参数、行为树、速度链路、姿态监控、运行指标 |

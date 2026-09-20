@@ -2,8 +2,9 @@
 
 ## 项目链路
 
-`astribot_s1_perception` 提供雷达、地图和定位；`astribot_s1_autonomy` 提供扫描切片、探索目标
-及调度；本包负责 Nav2 配置、行为树、速度链路和 RViz。
+`astribot_s1_perception` 提供雷达、地图和定位；`astribot_s1_perception_components` 提供扫描切片；
+`astribot_s1_exploration` 生成探索任务；`astribot_s1_navigation_policy` 负责仲裁和导航策略。
+旧 `astribot_s1_autonomy` 兼容包已删除。本包负责 Nav2 配置、行为树、速度链路和 RViz。
 `astribot_s1_path_tracking` 提供精确终点规划、路径跟踪和到位精调。
 底盘命令由仿真驱动或 `astribot_trajectory_bridge` 执行。
 
@@ -22,8 +23,9 @@ ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
   controller_plugin:=mppi exploration:=false
 ```
 
-也可运行 `tools/launch_sim_stack.sh`。该脚本只负责启动；不自动清理进程、重启、修复生命周期
-或下发测试目标。启动前应明确停止已有仿真，避免重复的时钟和速度发布者。
+推荐通过仓库根目录的 `bash tools/launch_sim_stack.sh --mode baseline` 启动受监督仿真。
+启动器先检查仿真数据，再启动导航并验证生命周期，保存独立会话日志；不会自行发送导航目标。
+启动前应明确停止已有仿真，避免重复的时钟和速度发布者。
 
 | 参数 | 用途 |
 |---|---|
@@ -49,7 +51,7 @@ ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
 - `config/nav2_params_mppi.yaml`、`nav2_params_rpp.yaml`：完整节点参数。
 - `launch/nav2_full_bringup.launch.py`：仿真/感知/Nav2/RViz 总入口。
 - `launch/navigation.launch.py`：Nav2 生命周期节点及速度链路。
-- `behavior_trees/`：周期规划、FollowPath 和有限恢复行为。
+- `behavior_trees/`：目标变化或路径碰撞触发的规划、FollowPath 和有界异常处理；不做全局定时重规划。
 - `rviz/nav2_view.rviz`：地图、足迹、全局路径与局部轨迹。
 - `astribot_s1_navigation/`：速度坐标转换、机械臂展开限速及运行诊断。
 

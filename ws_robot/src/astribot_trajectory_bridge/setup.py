@@ -20,8 +20,7 @@ setup(
     maintainer='astribot-dev',
     maintainer_email='dev@astribot.local',
     description=(
-        '厂商 SDK 与 ROS2 规划栈之间的唯一桥接层。Gate 2 只做状态方向：'
-        'SDK 按部件读关节状态 -> 展开成逐关节 /joint_states'
+        '厂商 SDK 与 ROS2 的状态、里程计、轨迹 action 和底盘命令桥接'
     ),
     license='Apache-2.0',
     entry_points={

@@ -1,0 +1,27 @@
+hunav_loader:
+  ros__parameters:
+    yaml_base_name: h1_agents
+    simulator: Gazebo Fortress
+    map: small_warehouse
+    publish_people: false
+    global_goals:
+      1: {x: 1.5, y: 1.5}
+      2: {x: 1.5, y: -1.5}
+    agents: [social_person_1]
+    social_person_1:
+      id: 1
+      group_id: -1
+      skin: 0
+      max_vel: 0.6
+      radius: 0.3
+      goal_radius: 0.15
+      cyclic_goals: true
+      init_pose: {x: 1.5, y: -1.5, z: 1.25, h: 1.5707963267948966}
+      behavior:
+        type: Regular
+        configuration: 1
+        goal_force_factor: 2.0
+        obstacle_force_factor: 10.0
+        social_force_factor: 5.0
+        other_force_factor: 20.0
+      goals: [1, 2]

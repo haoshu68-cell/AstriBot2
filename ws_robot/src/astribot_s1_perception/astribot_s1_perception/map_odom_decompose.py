@@ -5,7 +5,7 @@
 ════════════════ 这一层解决什么问题 ════════════════
 TF 要求每个子帧**恰好一个**父源。而我们有两个独立的位姿来源：
 
-    外部 SLAM   camera_init → aft_mapped      （全局，会被 GBA 修正而跳变）
+    Voxel-SLAM   map → aft_mapped             （全局，会被 GBA 修正而跳变）
     SDK 里程计   odom → astribot_torso_base    （局部连续，允许漂但不跳）
 
 两者说的是**同一个物理点**（底盘中心）—— 这一条是决策"以 aft_mapped 为准"
@@ -113,7 +113,7 @@ def check_source_age(now_sec, stamp_sec, max_age_sec, label=''):
     `lookup_transform(target, source, Time())` 的语义是"最新可用的"——
     于是它会一直、成功地、无警告地返回那条陈旧记录。
 
-    对本节点的后果特别恶劣：若 SLAM 挂了，`camera_init→aft_mapped` 冻结在
+    对本节点的后果特别恶劣：若 SLAM 挂了，`map→aft_mapped` 冻结在
     最后一帧，而 `odom→base` 仍在更新，于是 map→odom 会被算成
     "冻结的全局位姿 ∘ 活着的里程计的逆" —— 一个随机器人移动而**反向漂移**的
     变换。TF 链完好、没有任何报错、nav2 也照常规划，只是定位是错的。

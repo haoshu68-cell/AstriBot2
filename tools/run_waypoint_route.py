@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+import signal
 from pathlib import Path
 import statistics
 import time
@@ -195,15 +196,21 @@ def metrics(rows):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--route', help='JSON array of [x, y, yaw_radians] in map frame')
+    parser.add_argument('--through-poses', action='store_true', help='Execute each cycle as one NavigateThroughPoses task; verify ordered passage near every intermediate point')
+    parser.add_argument('--via-tolerance', type=float, help='Optional stricter intermediate-point tolerance; default comes from the active ThroughPoses BT')
     parser.add_argument('--short-route', action='store_true')
-    parser.add_argument('--duration', type=float, default=7200, help='wall-clock seconds; cancels active goal at deadline')
+    parser.add_argument('--duration', type=float, default=7200, help='seconds in timeout-clock; cancels active goal at deadline')
     parser.add_argument('--cycles', type=int, default=0, help='0: limited only by duration')
     parser.add_argument('--timeout', type=float, default=300)
+    parser.add_argument('--timeout-clock', choices=('wall','sim'), default='wall',
+                        help='Clock for route, goal and settle budgets; sim excludes Gazebo slowdown')
+    parser.add_argument('--wall-watchdog', type=float, default=3600,
+                        help='Independent wall-clock ceiling when timeout-clock=sim')
     parser.add_argument('--settle', type=float, default=2)
     parser.add_argument('--output', default=f'/tmp/astribot_route_{time.strftime("%Y%m%d_%H%M%S")}')
     parser.add_argument('--dry-run', action='store_true', help='check all route legs using the planner; no movement')
     args = parser.parse_args()
-    if not all(math.isfinite(v) and v>0 for v in (args.duration,args.timeout,args.settle)) or args.cycles<0:
+    if not all(math.isfinite(v) and v>0 for v in (args.duration,args.timeout,args.settle,args.wall_watchdog)) or args.cycles<0:
         parser.error('duration, timeout, settle must be positive; cycles must be nonnegative')
     route = json.loads(Path(args.route).read_text()) if args.route else SHORT_ROUTE if args.short_route else DEFAULT_ROUTE
     if not route or any(len(p)!=3 or not all(isinstance(v,(float,int)) and math.isfinite(v) for v in p) for p in route):
@@ -214,9 +221,9 @@ def main():
     from rclpy.parameter import Parameter, parameter_value_to_python
     from rclpy.qos import qos_profile_sensor_data
     from rclpy.signals import SignalHandlerOptions
-    from rcl_interfaces.srv import GetParameters
+    from rcl_interfaces.srv import GetParameters, ListParameters
     from nav_msgs.msg import Path as RosPath, Odometry
-    from nav2_msgs.action import NavigateToPose, ComputePathToPose
+    from nav2_msgs.action import NavigateToPose, NavigateThroughPoses, ComputePathToPose, ComputePathThroughPoses
     from action_msgs.msg import GoalStatusArray
     from geometry_msgs.msg import PoseStamped, Twist
     from std_msgs.msg import String
@@ -229,11 +236,21 @@ def main():
     node = rclpy.create_node('waypoint_endurance', parameter_overrides=[Parameter('use_sim_time',value=True)])
     buffer = Buffer(); listener = TransformListener(buffer,node)
     state = {'odom': None, 'odom_at': 0., 'phase': 'UNKNOWN', 'phase_at':0., 'path': [], 'revision': 0,
+             'phase_sim_at_ns':0, 'protection_sim_at_ns':0,
              'cmd': Twist(), 'final_cmd':Twist(), 'protection':{}, 'protection_at':0.,
              'events': [], 'quality': [], 'active_other': False, 'recording': False, 'rows': [],
              'anchor': None, 'invalid_samples':0, 'last_valid':time.monotonic()}
     status = {'state':'preflight', 'pid':os.getpid(), 'started':time.time(), 'route':route, 'completed_goals':0,
               'deadline':time.time()+args.duration, 'output':str(output)}
+    interruption = {'requested': False, 'canceling': False}
+    def request_stop(signum, frame):
+        # Raising through rclpy's pybind message conversion can poison its
+        # executor. Defer the interruption until spin_once has returned.
+        interruption['requested'] = True
+    previous_signals = {sig: signal.signal(sig, request_stop) for sig in (signal.SIGINT, signal.SIGTERM)}
+    def check_stop():
+        if interruption['requested'] and not interruption['canceling']:
+            raise KeyboardInterrupt
     def save_status():
         status['updated'] = time.time()
         tmp = output/'status.tmp';tmp.write_text(json.dumps(status,indent=2));tmp.replace(output/'status.json')
@@ -252,7 +269,7 @@ def main():
         with open(output/'plans.jsonl','a') as f:
             f.write(json.dumps({'wall_s':time.time(),'cycle':status.get('cycle'),'goal_index':status.get('goal_index'),'revision':state['revision'],'frame':msg.header.frame_id,'poses':[[p.pose.position.x,p.pose.position.y,yaw(p.pose.orientation)] for p in msg.poses]})+'\n')
     def phase(msg):
-        state.update(phase=msg.data,phase_at=time.monotonic())
+        state.update(phase=msg.data,phase_at=time.monotonic(),phase_sim_at_ns=node.get_clock().now().nanoseconds)
     def event(msg, key):
         if state['recording']:
             try:
@@ -260,7 +277,7 @@ def main():
             except ValueError:
                 state[key].append({'invalid':msg.data})
     def protection(msg):
-        try:state.update(protection=json.loads(msg.data),protection_at=time.monotonic())
+        try:state.update(protection=json.loads(msg.data),protection_at=time.monotonic(),protection_sim_at_ns=node.get_clock().now().nanoseconds)
         except (ValueError,TypeError):pass
     node.create_subscription(Odometry,'/odom',odom,qos_profile_sensor_data)
     node.create_subscription(RosPath,'/plan',plan,10)
@@ -270,37 +287,52 @@ def main():
     node.create_subscription(Twist,'/cmd_vel_nav_body_raw',lambda m:state.update(cmd=m),10)
     node.create_subscription(Twist,'/cmd_vel',lambda m:state.update(final_cmd=m),10)
     node.create_subscription(String,'/navigation_policy/protection_state',protection,10)
-    node.create_subscription(GoalStatusArray,'/navigate_to_pose/_action/status',
-        lambda m:state.update(active_other=any(s.status in (1,2,3) for s in m.status_list)),10)
+    active_actions={}
+    def action_status(name,message):
+        active_actions[name]=any(s.status in (1,2,3) for s in message.status_list)
+        state['active_other']=any(active_actions.values())
+    for name in ('navigate_to_pose','navigate_through_poses'):
+        node.create_subscription(GoalStatusArray,'/'+name+'/_action/status',
+            lambda m,n=name:action_status(n,m),10)
     def pose():
         tf = buffer.lookup_transform('map','astribot_torso_base',rclpy.time.Time())
         age = node.get_clock().now().nanoseconds/1e9-(tf.header.stamp.sec+tf.header.stamp.nanosec/1e9)
         if not -.05<=age<=.3 or time.monotonic()-state['odom_at']>.3:
             raise RuntimeError('stale TF or odometry')
+        state['pose_stamp_s']=tf.header.stamp.sec+tf.header.stamp.nanosec*1e-9
         t = tf.transform.translation
         return t.x,t.y,yaw(tf.transform.rotation)
     csv_file = open(output/'samples.csv','w',newline=''); writer = None
     last_sample = 0.;last_status = 0.
     def spin():
         nonlocal writer,last_sample,last_status
+        check_stop()
         rclpy.spin_once(node,timeout_sec=.02)
+        check_stop()
         now = time.monotonic()
         if state['recording'] and now-last_sample>=.05:
             last_sample=now
             try:
                 x,y,theta=pose()
-                sim=node.get_clock().now().nanoseconds/1e9
+                sim_ns=node.get_clock().now().nanoseconds
+                sim=sim_ns/1e9
+                def fresh_status(kind):
+                    if args.timeout_clock=='sim':
+                        return 0<=sim_ns-state[kind+'_sim_at_ns']<300_000_000 and now-state[kind+'_at']<2.
+                    return now-state[kind+'_at']<.3
                 od=state['odom'].twist.twist; speed=math.hypot(od.linear.x,od.linear.y)
                 row={'cycle':status.get('cycle',0),'goal_index':status.get('goal_index',0),
                      'goal_distance_m':math.hypot(x-status['goal'][0],y-status['goal'][1]),'terminal_heading_radius':terminal_heading_radius,
-                     'wall_s':time.time(),'sim_s':sim,
+                     'wall_s':time.time(),'sim_s':sim,'pose_stamp_s':state['pose_stamp_s'],
                      'velocity_stamp_s':state['odom'].header.stamp.sec+state['odom'].header.stamp.nanosec/1e9,'x':x,'y':y,'yaw':theta,'speed':speed,'wz':od.angular.z,
                      'cmd_vx':state['cmd'].linear.x,'cmd_vy':state['cmd'].linear.y,'cmd_wz':state['cmd'].angular.z,
                      'final_cmd_vx':state['final_cmd'].linear.x,'final_cmd_vy':state['final_cmd'].linear.y,
                      'final_cmd_wz':state['final_cmd'].angular.z,
-                     'policy_hold':state['protection'].get('hold') if now-state['protection_at']<.3 else None,
-                     'policy_reason':state['protection'].get('reason','UNKNOWN') if now-state['protection_at']<.3 else 'UNKNOWN',
-                     'phase':state['phase'] if now-state['phase_at']<.3 else 'UNKNOWN','revision':state['revision'],
+                     'policy_hold':state['protection'].get('hold') if fresh_status('protection') else None,
+                     'policy_reason':state['protection'].get('reason','UNKNOWN') if fresh_status('protection') else 'UNKNOWN',
+                     'phase':state['phase'] if fresh_status('phase') else 'UNKNOWN','revision':state['revision'],
+                     'phase_received_ros_ns':state['phase_sim_at_ns'],
+                     'phase_age_ns':sim_ns-state['phase_sim_at_ns'],
                      'cross_track_m':None,'heading_error_deg':None,'progress_m':None,'reference_curvature':None}
                 pr=project(state['path'],x,y,state['anchor'])
                 if pr:
@@ -350,13 +382,32 @@ def main():
         p=PoseStamped();p.header.frame_id='map';p.header.stamp=node.get_clock().now().to_msg()
         p.pose.position.x,p.pose.position.y=point[:2];p.pose.orientation.z=math.sin(point[2]/2);p.pose.orientation.w=math.cos(point[2]/2)
         return p
-    handle = result_future = None
+    handle = result_future = pending_goal = None
+    def send_goal(client, request):
+        nonlocal handle, result_future, pending_goal
+        check_stop()
+        handle = result_future = None
+        pending_goal = client.send_goal_async(request)
+        handle = wait(pending_goal,10)
+        pending_goal = None
+        if handle.accepted:
+            result_future = handle.get_result_async()
+        return handle
     def cancel():
-        if handle is not None and result_future is not None and not result_future.done():
-            # Stop recording so missing measurement cannot interrupt cancellation.
-            state['recording']=False
-            wait(handle.cancel_goal_async(),10)
-            status['cancel_action_status'] = wait(result_future,15).status
+        nonlocal handle, result_future, pending_goal
+        interruption['canceling'] = True
+        try:
+            state['recording'] = False
+            if pending_goal is not None:
+                handle = wait(pending_goal,10)
+                pending_goal = None
+                if handle.accepted:
+                    result_future = handle.get_result_async()
+            if handle is not None and result_future is not None and not result_future.done():
+                wait(handle.cancel_goal_async(),10)
+                status['cancel_action_status'] = wait(result_future,15).status
+        finally:
+            interruption['canceling'] = False
     try:
         params=node.create_client(GetParameters,'/controller_server/get_parameters')
         if not params.wait_for_service(timeout_sec=20):
@@ -369,7 +420,14 @@ def main():
             raise RuntimeError('this runner requires a simulation stack (use_sim_time=true)')
         xy_limit,yaw_limit=values[1].double_value,values[2].double_value
         terminal_heading_radius=max(values[3].double_value,values[4].double_value,.3)
-        (output/'metadata.json').write_text(json.dumps({'arguments':vars(args),'script_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'xy_limit':xy_limit,'yaw_limit':yaw_limit,'terminal_heading_radius':terminal_heading_radius,'controller_parameters':dict(zip(keys,[parameter_value_to_python(v) for v in values])),'ros_domain':os.environ.get('ROS_DOMAIN_ID')},indent=2))
+        listing=node.create_client(ListParameters,'/controller_server/list_parameters')
+        if not listing.wait_for_service(timeout_sec=10):
+            raise RuntimeError('controller parameter inventory unavailable')
+        all_keys=sorted(wait(listing.call_async(ListParameters.Request(depth=0)),10).result.names)
+        all_values=wait(params.call_async(GetParameters.Request(names=all_keys)),10).values
+        if len(all_values)!=len(all_keys) or not set(keys)<=set(all_keys):
+            raise RuntimeError('controller parameter inventory incomplete')
+        (output/'metadata.json').write_text(json.dumps({'arguments':vars(args),'script_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'xy_limit':xy_limit,'yaw_limit':yaw_limit,'terminal_heading_radius':terminal_heading_radius,'controller_parameters':dict(zip(keys,[parameter_value_to_python(v) for v in values])),'controller_parameters_all':dict(zip(all_keys,[parameter_value_to_python(v) for v in all_values])),'ros_domain':os.environ.get('ROS_DOMAIN_ID')},indent=2))
         if not 0<xy_limit<=.03 or not 0<yaw_limit<=math.radians(1.5)+1e-9:
             raise RuntimeError(f'arrival limits too loose/missing: {xy_limit}, {yaw_limit}')
         end=time.monotonic()+2
@@ -383,9 +441,9 @@ def main():
         for index,point in enumerate(route):
             request=ComputePathToPose.Goal();request.start=make_pose(start);request.goal=make_pose(point)
             request.use_start=True;request.planner_id='GridBased'
-            handle=wait(planner.send_goal_async(request),10)
+            handle=send_goal(planner,request)
             if not handle.accepted:raise RuntimeError('preflight goal rejected')
-            result_future=handle.get_result_async();res=wait(result_future,30)
+            res=wait(result_future,30)
             ok=res.status==4 and bool(res.result.path.poses)
             preflight.append({'index':index,'goal':point,'status':res.status,'poses':len(res.result.path.poses)})
             (output/'preflight.json').write_text(json.dumps(preflight,indent=2))
@@ -394,40 +452,88 @@ def main():
         # Include the cycle seam, including non-origin route files.
         if args.cycles != 1:
             request.start=make_pose(route[-1]);request.goal=make_pose(route[0])
-            handle=wait(planner.send_goal_async(request),10);result_future=handle.get_result_async();res=wait(result_future,30)
+            handle=send_goal(planner,request);res=wait(result_future,30)
             if res.status!=4 or not res.result.path.poses:raise RuntimeError('cycle seam is not safely plannable')
+        if args.through_poses:
+            import xml.etree.ElementTree as ET
+            bt_params=node.create_client(GetParameters,'/navigation_executor/bt_navigator/get_parameters')
+            if not bt_params.wait_for_service(timeout_sec=10):raise RuntimeError('BT parameters unavailable')
+            bt_file=Path(wait(bt_params.call_async(GetParameters.Request(names=['default_nav_through_poses_bt_xml'])),10).values[0].string_value)
+            radii={float(n.attrib['radius']) for n in ET.parse(bt_file).iter('RemovePassedGoals')}
+            if len(radii)!=1:raise RuntimeError('ThroughPoses passage-radius contract unavailable')
+            contract_radius=radii.pop()
+            if args.via_tolerance is None:args.via_tolerance=contract_radius
+            if not math.isfinite(args.via_tolerance) or not 0<args.via_tolerance<=contract_radius:
+                raise ValueError('via tolerance must be positive and cannot exceed active BT radius')
+            metadata=json.loads((output/'metadata.json').read_text())
+            metadata['through_contract']=dict(bt_file=str(bt_file),bt_sha256=hashlib.sha256(bt_file.read_bytes()).hexdigest(),
+                passage_radius_m=contract_radius,measurement_radius_m=args.via_tolerance)
+            (output/'metadata.json').write_text(json.dumps(metadata,indent=2))
+            through_planner=ActionClient(node,ComputePathThroughPoses,'/compute_path_through_poses')
+            wait_action_server(through_planner,15,'through planner')
+            request=ComputePathThroughPoses.Goal();request.start=make_pose(fresh_pose())
+            request.goals=[make_pose(p) for p in route];request.use_start=True;request.planner_id='GridBased'
+            handle=send_goal(through_planner,request)
+            if not handle.accepted:raise RuntimeError('through preflight rejected')
+            res=wait(result_future,30)
+            if res.status!=4 or not res.result.path.poses:raise RuntimeError('complete through route is not safely plannable')
+            (output/'through_preflight.json').write_text(json.dumps({'status':res.status,'poses':len(res.result.path.poses)}))
         if args.dry_run:
             status['state']='preflight_passed';return
         drain=time.monotonic()+.5
         while time.monotonic()<drain:spin()
-        nav=ActionClient(node,NavigateToPose,'/navigate_to_pose')
+        action_type=NavigateThroughPoses if args.through_poses else NavigateToPose
+        nav=ActionClient(node,action_type,'/navigate_through_poses' if args.through_poses else '/navigate_to_pose')
         wait_action_server(nav,15,'navigation')
-        deadline=time.monotonic()+args.duration;status['deadline']=time.time()+args.duration;status['state']='running'
+        budget_now = (lambda: node.get_clock().now().nanoseconds*1e-9) if args.timeout_clock=='sim' else time.monotonic
+        last_budget = [budget_now()]
+        wall_deadline = time.monotonic()+args.wall_watchdog
+        def motion_time():
+            now=budget_now()
+            if now<last_budget[0]:raise RuntimeError('measurement clock moved backwards during route')
+            if args.timeout_clock=='sim' and time.monotonic()>=wall_deadline:
+                raise TimeoutError('simulation route exceeded independent wall-clock watchdog')
+            last_budget[0]=now
+            return now
+        deadline=motion_time()+args.duration
+        status.update(deadline=deadline if args.timeout_clock=='sim' else time.time()+args.duration,
+                      deadline_clock=args.timeout_clock,state='running')
         cycle=0
-        while time.monotonic()<deadline and (not args.cycles or cycle<args.cycles):
-            for index,point in enumerate(route):
-                if time.monotonic()>=deadline:break
+        while motion_time()<deadline and (not args.cycles or cycle<args.cycles):
+            for index,point in enumerate([route[-1]] if args.through_poses else route):
+                if motion_time()>=deadline:break
                 status.update(cycle=cycle+1,goal_index=index,goal=point);save_status()
                 state.update(recording=True,rows=[],events=[],quality=[],invalid_samples=0,last_valid=time.monotonic(),phase='UNKNOWN',path=[],anchor=None)
-                begin=time.monotonic();began_at=time.time();revision=state['revision']
+                begin=time.monotonic();motion_begin=motion_time();began_at=time.time();revision=state['revision']
                 if state['active_other']:raise RuntimeError('another navigation goal became active; refusing preemption')
-                request=NavigateToPose.Goal();request.pose=make_pose(point)
-                handle=wait(nav.send_goal_async(request),10)
+                request=action_type.Goal()
+                if args.through_poses:request.poses=[make_pose(p) for p in route]
+                else:request.pose=make_pose(point)
+                handle=send_goal(nav,request)
                 if not handle.accepted:raise RuntimeError('navigation goal rejected')
-                result_future=handle.get_result_async()
-                while not result_future.done() and time.monotonic()<min(deadline,begin+args.timeout):spin()
+                while not result_future.done() and motion_time()<min(deadline,motion_begin+args.timeout):spin()
                 if not result_future.done():
                     cancel()
-                    if time.monotonic()>=deadline:
+                    if motion_time()>=deadline:
                         status['state']='duration_complete';return
-                    raise TimeoutError(f'goal {index} exceeded {args.timeout}s')
+                    raise TimeoutError(f'goal {index} exceeded {args.timeout}s ({args.timeout_clock})')
                 result=result_future.result()
-                settle_end=time.monotonic()+args.settle
-                while time.monotonic()<settle_end:spin()
+                settle_end=motion_time()+args.settle
+                while motion_time()<settle_end:spin()
                 actual=pose();odom=state['odom'].twist.twist
                 xy=math.hypot(actual[0]-point[0],actual[1]-point[1]);angle=abs(wrap(actual[2]-point[2]))
                 quality=metrics(state['rows'])
                 passed=result.status==4 and xy<=xy_limit and angle<=yaw_limit and math.hypot(odom.linear.x,odom.linear.y)<=.01 and abs(odom.angular.z)<=.01
+                via=[];cursor=0
+                if args.through_poses:
+                    for intermediate in route[:-1]:
+                        matched=next((i for i in range(cursor,len(state['rows']))
+                            if math.hypot(state['rows'][i]['x']-intermediate[0],state['rows'][i]['y']-intermediate[1])<=args.via_tolerance),None)
+                        closest=min((math.hypot(r['x']-intermediate[0],r['y']-intermediate[1]) for r in state['rows'][cursor:]),default=None)
+                        via.append({'point':intermediate,'observed':matched is not None,'closest_m':closest,'tolerance_m':args.via_tolerance})
+                        if matched is None:break
+                        cursor=matched+1
+                    passed=passed and len(via)==len(route)-1 and all(v['observed'] for v in via)
                 warnings=[]
                 if quality['cross_track_m']['p95'] is not None and quality['cross_track_m']['p95']>.10:warnings.append('cross_track_p95_over_10cm')
                 if quality['travel_heading_over_30deg_s']>1:warnings.append('front_heading_over_30deg')
@@ -435,9 +541,11 @@ def main():
                 if state['invalid_samples']:warnings.append('measurement_gaps')
                 if quality['longest_follow_stall_s']>2:warnings.append('follow_stall_over_2s')
                 row={'started_at':began_at,'finished_at':time.time(),'cycle':cycle+1,'index':index,'goal':point,'actual':actual,'action_status':result.status,'passed':passed,
-                     'xy_m':xy,'yaw_deg':math.degrees(angle),'elapsed_s':time.monotonic()-begin,'metrics':quality,
+                     'xy_m':xy,'yaw_deg':math.degrees(angle),'elapsed_s':time.monotonic()-begin,
+                     'budget_elapsed_s':motion_time()-motion_begin,'budget_clock':args.timeout_clock,'metrics':quality,
                      'path_revisions':state['revision']-revision,'replan_events':state['events'],'path_quality':state['quality'],
                      'invalid_samples':state['invalid_samples'],'warnings':warnings}
+                if args.through_poses:row['ordered_via_points']=via
                 with open(output/'results.jsonl','a') as f:f.write(json.dumps(row)+'\n')
                 print(json.dumps(row),flush=True)
                 status.update(completed_goals=status['completed_goals']+1,last_result=row);state['recording']=False;save_status()
@@ -452,6 +560,7 @@ def main():
         try:cancel()
         except Exception as exc:status['cancel_error']=str(exc)
         status['ended']=time.time();save_status();csv_file.close();node.destroy_node();rclpy.shutdown()
+        for sig, previous in previous_signals.items():signal.signal(sig, previous)
 
 if __name__=='__main__':
     main()

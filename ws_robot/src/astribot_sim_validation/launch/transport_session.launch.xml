@@ -1,0 +1,14 @@
+<launch>
+ <set_env name="ROS_DOMAIN_ID" value="213"/>
+ <set_env name="ROS_LOCALHOST_ONLY" value="1"/>
+ <set_env name="IGN_PARTITION" value="astribot_operator_validation_213"/>
+ <set_env name="GZ_PARTITION" value="astribot_operator_validation_213"/>
+ <arg name="output_root" default="/tmp/astribot_sim_sessions"/>
+ <arg name="scenario" default="$(find-pkg-share astribot_s1_transport)/config/warehouse_transfer.json"/>
+ <node pkg="astribot_sim_validation" exec="transport_session" name="simulation_transport" output="screen">
+  <param name="use_sim_time" value="true"/>
+  <param name="navigation_geometry_mode" value="fixed_v2"/>
+  <param name="output_root" value="$(var output_root)"/>
+  <param name="scenario" value="$(var scenario)"/>
+ </node>
+</launch>

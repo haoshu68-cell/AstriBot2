@@ -1,0 +1,44 @@
+<launch>
+ <arg name="profile" default="sim"/>
+ <arg name="save_path"/>
+ <arg name="map_name"/>
+ <arg name="use_sim_time" default="true"/>
+ <arg name="lidar_topic" default="/livox/lidar_left"/>
+ <arg name="lidar_topic_back" default="/livox/lidar_right"/>
+ <arg name="imu_topic" default="/livox/imu"/>
+ <arg name="point_notime" default="1"/>
+ <arg name="imu_extrinsic_tran" default="0,0,0"/>
+ <arg name="back_extrinsic_tran" default="0.00099903,-0.49599628,0.084"/>
+ <arg name="back_extrinsic_rota" default="-0.9994599973,0.0315070538,0.0093284204,-0.0314947541,-0.9995028471,0.0014625345,0.0093698629,0.0011679485,0.9999554198"/>
+ <arg name="map_topic" default="/map"/>
+ <arg name="odom_topic" default="/odom"/>
+ <arg name="robot_base_frame" default="astribot_torso_base"/>
+ <include file="$(find-pkg-share astribot_s1_perception)/launch/voxel_slam.launch.py">
+  <arg name="use_sim_time" value="$(var use_sim_time)"/>
+  <arg name="save_path" value="$(var save_path)"/>
+  <arg name="map_name" value="$(var map_name)"/>
+  <arg name="save_map" value="1"/>
+  <arg name="lidar_topic" value="$(var lidar_topic)"/>
+  <arg name="lidar_topic_back" value="$(var lidar_topic_back)"/>
+  <arg name="imu_topic" value="$(var imu_topic)"/>
+  <arg name="point_notime" value="$(var point_notime)"/>
+  <arg name="imu_extrinsic_tran" value="$(var imu_extrinsic_tran)"/>
+  <arg name="back_extrinsic_tran" value="$(var back_extrinsic_tran)"/>
+  <arg name="back_extrinsic_rota" value="$(var back_extrinsic_rota)"/>
+  <arg name="map_topic" value="$(var map_topic)"/>
+
+ </include>
+ <node pkg="astribot_s1_exploration" exec="exploration_coordinator_node" name="exploration_coordinator_node" output="screen">
+  <param from="$(find-pkg-share astribot_s1_exploration)/config/exploration_coordinator_params.yaml"/>
+  <param name="use_sim_time" value="$(var use_sim_time)"/>
+  <param name="start_paused" value="true"/>
+  <param name="map_topic" value="$(var map_topic)"/>
+  <param name="odom_topic" value="$(var odom_topic)"/>
+  <param name="robot_base_frame" value="$(var robot_base_frame)"/>
+ </node>
+ <node pkg="astribot_s1_exploration" exec="mapping_session_node" name="mapping_session" output="screen">
+  <param from="$(find-pkg-share astribot_s1_exploration)/config/exploration_coordinator_params.yaml"/>
+  <param name="odom_topic" value="$(var odom_topic)"/>
+  <param name="use_sim_time" value="$(var use_sim_time)"/>
+ </node>
+</launch>

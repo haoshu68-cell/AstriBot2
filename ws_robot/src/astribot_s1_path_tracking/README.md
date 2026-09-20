@@ -123,11 +123,14 @@ precise_goal_checker:
 | NO_MOTION_PROGRESS | 跟踪阶段持续无实测运动 |
 | REFINEMENT_NO_PROGRESS | 精调阶段联合误差持续无改善 |
 | REFINEMENT_TIMEOUT / GOAL_TIMEOUT | 精调或目标尝试超过预算 |
+| START_HEADING_UNREACHABLE | 起步完整转向不安全，且倒退退出无安全路径、缺少后向覆盖、偏离限制或超过恢复预算 |
 
 同目标周期重规划不会重置预算。Humble Controller 接口不提供 Action UUID，因此同目标
 重新尝试以控制拍空档超过 0.5 秒识别；紧密重试可能共用预算。
 碰撞检查使用导航位姿注册的局部代价地图，检查当前速度与指令速度的 1 秒足迹扫掠。
 它判定局部不可执行，不证明目标在全局永久不可达。
+
+P3 及之后启用起步动作通道：ThreePhaseController 提供实际起步目标航向，ArrivalController 在原地转向前请求短时许可。完整转向可行时执行原转向控制；不可行时只执行经策略验证的低速 x− 退出指令，退出停稳并重新通过扫掠检查后恢复原转向。FOLLOW、MPPI/RPP 及到位精调控制律不变，恢复期间暂停原进度计时，独立恢复预算仍有效。动作消息不直接发布底盘速度，外部限速、局部足迹检查和末级保护继续约束输出。具体原因见 `START_HEADING_UNREACHABLE` 后缀及策略状态中的 `start_maneuver`；仿真参数和真机验证开关见导航策略包。
 
 ## 构建与仿真
 
@@ -143,3 +146,28 @@ ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
 
 本轮一次性验证程序及原测试备份放在 `/tmp/astribot_cleanup_validation`，不安装进运行包。
 仿真验证不能替代真实 SLAM/视觉噪声、外参和底盘制动条件下的实机验收。
+
+### Ground-truth 仿真精度档位（2026-09-14）
+
+`tools/launch_sim_stack.sh --mode baseline` 自动启用 `simulation_precision`；独立 navigation launch 可传 `arrival_precision_profile:=simulation_precision`，要求 `use_sim_time:=true`。参数集中在 `astribot_s1_navigation/config/arrival_precision_sim.yaml`，验收为欧式 2 mm / 0.1°；SLAM 仿真和硬件默认 `standard`，保留原验收阈值。
+
+末端 XY/yaw 分别以 `stop_tolerance_ratio` 进入零指令保持，超过 `resume_tolerance_ratio` 才恢复修正。`settle_drift_ratio` 限制连续稳定窗口的位姿漂移；源时间必须推进。精度档位用 `translation_yaw_tolerance` 在平移中保留粗航向控制，XY 保持后再完成精细航向对准，最终始终按严格容差验收。`min_linear_speed` / `min_angular_speed` 默认 0，仅用于已标定执行模型的低速摩擦补偿，仍服从速度上限与碰撞检查。
+
+停稳依据所选定位源的位姿窗口，Nav2 位姿来自 SLAM 时也适用。每个轴只收集该轴输出零指令之后的位姿，至少 3 个不同时间戳，时间跨度达到 `settle_time`；采用窗口最小二乘速度和首尾平均速度的较大值，与 Checker 的 `stopped_linear_velocity` / `stopped_angular_velocity` 比较。XY 包围盒对角线及解缠 yaw 范围不得超过 `settle_drift_ratio` × 相应到位容差。非零指令、倒退/异常时间戳、数据中断清除证据。COAST 与到位确认共用该窗口，Checker 接受控制器的短时有效确认，不再叠加单帧 odom 速度判定。主动纠偏制动及碰撞预测仍使用原速度反馈，探索层的观测驻留不变。
+
+`ARRIVAL_METRICS` 保留原始 `speed_mps` / `wz_radps`，新增 `stop_source=pose_window`、`stop_xy/yaw`、`stop_span_xy/yaw_s`、`stop_speed_mps` / `stop_wz_radps`、`stop_drift_m/rad`，便于区分单帧速度噪声、真实漂移与证据不足；仍按原采样频率记录。
+
+实测来源、精度预算和限制见仓库 `docs/CHASSIS_CALIBRATION_AND_ARRIVAL_PRECISION_20260914.md`。精度档位不等于真机已验证能力。
+
+运行日志默认以 `FollowPath.metrics.sample_hz=2.0` 采样横向误差和精调误差，`ARRIVAL_REACHED` 每次稳定到位立即记录。`metrics.terminal_exclusion_radius=0.5` 仅标记行进段统计范围。完整公式、字段和查看命令见仓库 `docs/PATH_TRACKING_METRICS.md`；诊断参数不影响控制/到位判定，修改后重新配置导航插件生效。
+
+
+### 真机到位制动
+
+真机与仿真精度档共用导航包的 `arrival_motion.yaml`，正常 FOLLOW / ALIGN_START 使用相同基线参数。真机 SLAM 判据为 3 cm / 1.5°，仿真真值定位为 2 mm / 0.1°。
+
+`arrival.linear_braking_time` / `angular_braking_time` 是终点的执行器响应适配，默认 0 保持原行为；硬件档为 1.5 s。非零时，用误差减去当前速度对应的预测余移提前减速；预测越点或方向反转先输出零，等待连续新位姿时间戳下的停稳，再按当前误差修正。XY 方向在目标坐标系比较，避免机器人转动造成体坐标方向误判。重复或倒序反馈不能推进停稳计时，新目标或重新配置清除制动状态。
+
+进展指标和到位确认都计入残余运动裕量，避免运动中过零被误判为最佳收敛、或刚进入容差就结束后继续漂出。制动转换记录 `ARRIVAL_COAST`，精调指标仍按 2 Hz 输出。模型与 Gazebo 结果不替代真机负载、地面和定位扰动下的复测。
+
+低速平移的 SLAM/厂家反馈同窗对比与有限补偿由 `SlipMonitor` / `LinearSlip` 提供，集成在 `ArrivalController`。真机配置当前为 `monitor`，保持基线指令；可选的 `compensate` 需要真实测量时间有效。参数、输入坐标要求及验收步骤见 [低速打滑补偿说明](../../../docs/LINEAR_SLIP_COMPENSATION_20260917.md)。

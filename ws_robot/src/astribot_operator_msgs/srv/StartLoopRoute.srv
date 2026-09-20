@@ -1,0 +1,13 @@
+# Client-generated idempotency key. A duplicate current request never restarts the route.
+string request_id
+# Required: boot_id read from /loop_route_executor/status. Never retry across boots.
+string expected_boot_id
+geometry_msgs/PoseStamped[] waypoints
+float64 dwell_sec
+---
+bool accepted
+string route_id
+string reason
+string boot_id
+bool active
+string state

@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>astribot_s1_slam</name>
+  <version>0.0.0</version>
+  <description>AstriBot Voxel-SLAM backend for shared simulation and hardware mapping.</description>
+
+  <maintainer email="feng.pan@xtalpi.com">xtalpi-pf</maintainer>
+
+  <license>GPL-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>astribot_eigen_vendor</depend>
+
+  <depend>rclcpp</depend>
+  <depend>astribot_autonomy_core</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>pcl_conversions</depend>
+  <depend>libpcl-all-dev</depend>
+  <depend>visualization_msgs</depend>
+  <depend>astribot_slam_msgs</depend>
+  <depend>libspdlog-dev</depend>
+  <depend>libopencv-dev</depend>
+
+  <exec_depend>libpcl-all</exec_depend>
+
+  <exec_depend>astribot_logging</exec_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

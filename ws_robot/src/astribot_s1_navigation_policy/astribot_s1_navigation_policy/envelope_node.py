@@ -23,6 +23,13 @@ class EnvelopeNode(Node):
         self.declare_parameter('profile',get_package_share_directory('astribot_s1_navigation_policy')+'/config/simulation.json')
         self.profile=Profile.load(self.get_parameter('profile').value)
         self.profile.require_environment(self.get_parameter('use_sim_time').value)
+        self.declare_parameter('navigation_geometry_mode','legacy')
+        mode=self.get_parameter('navigation_geometry_mode').value
+        if mode=='fixed_v2':
+            from .fixed_envelope_node import FixedEnvelopeAdapter
+            self.adapter=FixedEnvelopeAdapter(self,self.profile)
+            return
+        if mode!='legacy':raise ValueError('invalid navigation_geometry_mode')
         self.tf=Buffer();self.listener=TransformListener(self.tf,self)
         self.envelope=RobotEnvelope();self.envelope.epoch=time.monotonic_ns()
         self.envelope.frame_id=self.profile.base_frame;self.envelope.posture_id='simulation_transport' if self.profile.environment=='simulation' else 'validated_transport'

@@ -1,3 +1,8 @@
+#include "astribot_s1_path_tracking/envelope_guard.hpp"
+#include "astribot_s1_path_tracking/corridor_refinement.hpp"
+#include "nav2_smac_planner/smac_planner_hybrid.hpp"
+#include "nav2_smac_planner/smac_planner_lattice.hpp"
+#include <type_traits>
 // Copyright 2026 Astribot. Apache-2.0.
 #include <cmath>
 #include <limits>
@@ -15,14 +20,27 @@
 #include "rclcpp/create_publisher.hpp"
 
 namespace astribot_s1_path_tracking {
-class ExactGoalPlanner : public nav2_smac_planner::SmacPlanner2D {
+template<class Search>
+class ExactGoalPlannerBase : public Search {
+  using Search::_costmap;
+  using Search::_logger;
 public:
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent, std::string name,
     std::shared_ptr<tf2_ros::Buffer> tf,
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap) override
   {
-    SmacPlanner2D::configure(parent,name,tf,costmap); map_ros_=costmap;
+    Search::configure(parent,name,tf,costmap); map_ros_=costmap;
     auto node=parent.lock();
+    if constexpr (!std::is_same_v<Search,nav2_smac_planner::SmacPlanner2D>) {
+      nav2_util::declare_parameter_if_not_declared(node,"planner_evaluation_only",rclcpp::ParameterValue(false));
+      if(!node->get_parameter("planner_evaluation_only").as_bool()) {
+        throw std::invalid_argument("SE2 planners require planner_evaluation_only; execution acceptance pending");
+      }
+    }
+    geometry_guard_.configure(node,costmap,"planner");
+    nav2_util::declare_parameter_if_not_declared(node,"navigation_policy_stage",rclcpp::ParameterValue("off"));
+    const auto stage=node->get_parameter("navigation_policy_stage").as_string();
+    corridor_direct_=stage=="p4" || stage=="p5";
     auto load=[&](const std::string & key,double fallback) {
       nav2_util::declare_parameter_if_not_declared(node,name+".quality."+key,rclcpp::ParameterValue(fallback));
       double v=node->get_parameter(name+".quality."+key).as_double();
@@ -65,7 +83,7 @@ public:
         risk_pub_->publish(evidence);
       });
   }
-  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);candidate_service_.reset();valid_service_.reset();risk_pub_.reset();quality_pub_.reset();map_ros_.reset();SmacPlanner2D::cleanup();}
+  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);geometry_guard_.cleanup();candidate_service_.reset();valid_service_.reset();risk_pub_.reset();quality_pub_.reset();map_ros_.reset();Search::cleanup();}
   nav_msgs::msg::Path createPlan(const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) override
   {
@@ -79,14 +97,62 @@ private:
     auto emit=[&](const char * action,const PathQuality & before,const PathQuality & after) {
       if(diagnostics) {report(action,before,after);}
     };
-    auto path=SmacPlanner2D::createPlan(start,goal);
+    if (!geometry_guard_.ready()) {throw nav2_core::PlannerException("ENVELOPE_V2_NOT_READY");}
+    auto path=Search::createPlan(start,goal);
     if (path.poses.empty()) {return path;}
     if (pathDistance(path.poses.back(),goal)>std::sqrt(2.0)*_costmap->getResolution()) {
       throw nav2_core::PlannerException("Requested goal unavailable: planner returned a substitute endpoint");
     }
     path.poses.back()=goal;path.poses.back().header=path.header;
     auto before=pathQuality(path);
-    if (acceptableQuality(before,max_k_,max_rate_)) {emit("accepted",before,before);return path;}
+    // Curvature and clearance are independent: Smac2D checks the centre, while
+    // execution checks the swept footprint (including unknown cells).
+    const int original_collision=collisionIndex(path,0);
+    if (original_collision==-1) {
+      throw nav2_core::PlannerException("PATH_CHECK_UNAVAILABLE: costmap unavailable during planning");
+    }
+    if constexpr (!std::is_same_v<Search,nav2_smac_planner::SmacPlanner2D>) {
+      // SE(2) primitive headings and reverse cusps must survive postprocessing.
+      if(original_collision!=-2) {throw nav2_core::PlannerException("SE2_SWEEP_UNSAFE");}
+      emit("se2_validated",before,before);return path;
+    }
+    // Grid centres can introduce a lateral bend at an exact aligned endpoint.
+    // For fixed V2 or corridor stages, consider the exact straight segment
+    // within the existing displacement budget and validate its entire sweep.
+    // Opposed endpoint headings and SE(2) primitive paths keep their semantics.
+    if (geometry_guard_.enabled() || corridor_direct_) {
+      const double dx=goal.pose.position.x-start.pose.position.x;
+      const double dy=goal.pose.position.y-start.pose.position.y;
+      const double length=std::hypot(dx,dy),heading=std::atan2(dy,dx);
+      const auto aligned=[&](const geometry_msgs::msg::PoseStamped & p) {
+        return directCandidateHeadingCompatible(tf2::getYaw(p.pose.orientation),heading,geometry_guard_.enabled());
+      };
+      bool nearby=length>1e-6 && length<100. && aligned(start) && aligned(goal);
+      if (nearby) {
+        for (const auto & p:path.poses) {
+          const double x=p.pose.position.x-start.pose.position.x,y=p.pose.position.y-start.pose.position.y;
+          const double f=std::clamp((x*dx+y*dy)/(length*length),0.,1.);
+          if(std::hypot(x-f*dx,y-f*dy)>displacement_) {nearby=false;break;}
+        }
+      }
+      if (nearby) {
+        nav_msgs::msg::Path direct;direct.header=path.header;
+        const int steps=std::max(1,int(std::ceil(length/(_costmap->getResolution()*.5))));
+        for(int i=0;i<=steps;++i) {
+          auto p=start;p.header=direct.header;const double f=double(i)/steps;
+          p.pose.position.x+=f*dx;p.pose.position.y+=f*dy;
+          p.pose.orientation.x=p.pose.orientation.y=0.;
+          p.pose.orientation.z=std::sin(heading/2);p.pose.orientation.w=std::cos(heading/2);
+          direct.poses.push_back(p);
+        }
+        direct.poses.front()=start;direct.poses.back()=goal;
+        direct.poses.front().header=direct.poses.back().header=direct.header;
+        if(collisionIndex(direct,0,true)==-2) {emit("aligned_direct_validated",before,pathQuality(direct));return direct;}
+      }
+    }
+    if (acceptableQuality(before,max_k_,max_rate_) && original_collision==-2) {
+      emit("accepted",before,before);return path;
+    }
     auto reference=resamplePath(path);auto candidate=reference;
     for (int iteration=1;iteration<=200;++iteration) {
       smoothPathStep(candidate,reference,displacement_);
@@ -106,7 +172,9 @@ private:
     }
     if (collisionIndex(path,0)==-2) {emit("speed_limited",before,before);return path;}
     emit("rejected",before,pathQuality(candidate));
-    throw nav2_core::PlannerException("PATH_QUALITY_UNSAFE: cannot smooth curvature within collision-free corridor");
+    throw nav2_core::PlannerException(
+      "PATH_QUALITY_UNSAFE: candidate footprint touches obstacle, unknown or map boundary; segment="+
+      std::to_string(original_collision));
   }
 private:
   using Candidate=astribot_navigation_msgs::srv::PlanCandidate;
@@ -204,18 +272,20 @@ private:
       // Even already-smooth candidates require a full footprint sweep, including the start.
       if(collisionIndex(output,0)!=-2) {res.reason="CANDIDATE_COLLISION_OR_UNKNOWN";return;}
       nav_msgs::msg::Path rotation;rotation.header=output.header;
+      const double initial=tf2::getYaw(res.evaluated_start.pose.orientation);
+      const double turn=geometry_guard_.enabled() ? std::remainder(tf2::getYaw(output.poses.front().pose.orientation)-initial,2*M_PI) : 2*M_PI;
       for(int i=0;i<=64;++i) {
         auto pose=res.evaluated_start;tf2::Quaternion q;
-        q.setRPY(0,0,2*M_PI*i/64);pose.pose.orientation=tf2::toMsg(q);rotation.poses.push_back(pose);
+        q.setRPY(0,0,initial+turn*i/64);pose.pose.orientation=tf2::toMsg(q);rotation.poses.push_back(pose);
       }
       if(collisionIndex(rotation,0)!=-2) {res.reason="TAKEOVER_ROTATION_COLLISION";return;}
       output.header.stamp=res.evaluated_start.header.stamp;
       res.path=std::move(output);res.geometry_valid=true;res.reason="GEOMETRY_VALID";
     } catch(const std::exception & error) {res.reason=std::string("PLANNING_FAILED: ")+error.what();}
   }
-  int collisionIndex(const nav_msgs::msg::Path & path,size_t first)
+  int collisionIndex(const nav_msgs::msg::Path & path,size_t first,bool continuous=false)
   {
-    if (!map_ros_->isCurrent()) {return -1;}
+    if (!geometry_guard_.ready() || !map_ros_->isCurrent()) {return -1;}
     std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*_costmap->getMutex());
     auto footprint=map_ros_->getRobotFootprint();
     nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *> checker(_costmap);
@@ -229,6 +299,11 @@ private:
       for(int j=0;j<=steps;++j) {
         double f=double(j)/steps,x=a.pose.position.x+f*(b.pose.position.x-a.pose.position.x),
           y=a.pose.position.y+f*(b.pose.position.y-a.pose.position.y);
+        if (geometry_guard_.enabled() || continuous) {
+          const double bound=(d+astribot_s1_robot_geometry::radius(footprint)*std::abs(dyaw))/(2*steps);
+          if(astribot_s1_robot_geometry::collision(*_costmap,footprint,x,y,yaw+f*dyaw,bound)) {return int(i);}
+          continue;
+        }
         unsigned int mx,my;
         double cost=checker.footprintCostAtPose(x,y,yaw+f*dyaw,footprint);
         if (!_costmap->worldToMap(x,y,mx,my) || cost<0 || cost>=254 || _costmap->getCost(mx,my)>=253) {return int(i);}
@@ -243,6 +318,8 @@ private:
       ",\"after_dk\":"+std::to_string(after.curvature_rate)+"}";
     quality_pub_->publish(msg);RCLCPP_INFO(_logger,"PATH_QUALITY %s",msg.data.c_str());
   }
+  EnvelopeGuard geometry_guard_;
+  bool corridor_direct_{false};
   std::recursive_mutex planning_mutex_;
   rclcpp::Service<Candidate>::SharedPtr candidate_service_;
   double max_k_{3},max_rate_{12},displacement_{.2};
@@ -251,5 +328,10 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr quality_pub_;
   rclcpp::Publisher<astribot_navigation_msgs::msg::PathRisk>::SharedPtr risk_pub_;
 };
+class ExactGoalPlanner : public ExactGoalPlannerBase<nav2_smac_planner::SmacPlanner2D> {};
+class ExactHybridPlanner : public ExactGoalPlannerBase<nav2_smac_planner::SmacPlannerHybrid> {};
+class ExactLatticePlanner : public ExactGoalPlannerBase<nav2_smac_planner::SmacPlannerLattice> {};
 }
 PLUGINLIB_EXPORT_CLASS(astribot_s1_path_tracking::ExactGoalPlanner,nav2_core::GlobalPlanner)
+PLUGINLIB_EXPORT_CLASS(astribot_s1_path_tracking::ExactHybridPlanner,nav2_core::GlobalPlanner)
+PLUGINLIB_EXPORT_CLASS(astribot_s1_path_tracking::ExactLatticePlanner,nav2_core::GlobalPlanner)

@@ -1,0 +1,148 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "case": "empty",
+      "state": "CRUISE",
+      "reason": "SOCIAL_CLEAR",
+      "candidates": [],
+      "stationary_conflict": false
+    },
+    {
+      "case": "far",
+      "state": "CRUISE",
+      "reason": "SOCIAL_CLEAR",
+      "candidates": [
+        {
+          "motion": "CONTINUE",
+          "speed": 0.35,
+          "admissible": true,
+          "conflict_s": null,
+          "social_work": 3.090570637950843e-08,
+          "cost": 3.090570637950843e-08
+        },
+        {
+          "motion": "SLOW",
+          "speed": 0.15,
+          "admissible": true,
+          "conflict_s": null,
+          "social_work": 1.818544914834356e-08,
+          "cost": 0.17142858961402055
+        }
+      ],
+      "stationary_conflict": false
+    },
+    {
+      "case": "left_crossing",
+      "state": "WAIT",
+      "reason": "SOCIAL_YIELD",
+      "candidates": [
+        {
+          "motion": "CONTINUE",
+          "speed": 0.35,
+          "admissible": false,
+          "conflict_s": 0.6000000000000001,
+          "social_work": null,
+          "cost": null
+        },
+        {
+          "motion": "SLOW",
+          "speed": 0.15,
+          "admissible": false,
+          "conflict_s": 1.4000000000000001,
+          "social_work": null,
+          "cost": null
+        }
+      ],
+      "stationary_conflict": false
+    },
+    {
+      "case": "right_crossing",
+      "state": "WAIT",
+      "reason": "SOCIAL_YIELD",
+      "candidates": [
+        {
+          "motion": "CONTINUE",
+          "speed": 0.35,
+          "admissible": false,
+          "conflict_s": 0.6000000000000001,
+          "social_work": null,
+          "cost": null
+        },
+        {
+          "motion": "SLOW",
+          "speed": 0.15,
+          "admissible": false,
+          "conflict_s": 1.4000000000000001,
+          "social_work": null,
+          "cost": null
+        }
+      ],
+      "stationary_conflict": false
+    },
+    {
+      "case": "stopped_ahead",
+      "state": "WAIT",
+      "reason": "SOCIAL_YIELD",
+      "candidates": [
+        {
+          "motion": "CONTINUE",
+          "speed": 0.35,
+          "admissible": false,
+          "conflict_s": 0.6000000000000001,
+          "social_work": null,
+          "cost": null
+        },
+        {
+          "motion": "SLOW",
+          "speed": 0.15,
+          "admissible": false,
+          "conflict_s": 1.4000000000000001,
+          "social_work": null,
+          "cost": null
+        }
+      ],
+      "stationary_conflict": false
+    },
+    {
+      "case": "noncooperative_headon",
+      "state": "WAIT",
+      "reason": "STATIONARY_CONFLICT",
+      "candidates": [
+        {
+          "motion": "CONTINUE",
+          "speed": 0.35,
+          "admissible": false,
+          "conflict_s": 0.4,
+          "social_work": null,
+          "cost": null
+        },
+        {
+          "motion": "SLOW",
+          "speed": 0.15,
+          "admissible": false,
+          "conflict_s": 0.5,
+          "social_work": null,
+          "cost": null
+        }
+      ],
+      "stationary_conflict": true
+    },
+    {
+      "case": "occluded_input",
+      "state": "CRUISE",
+      "reason": "SOCIAL_CLEAR",
+      "candidates": [],
+      "stationary_conflict": false
+    }
+  ],
+  "additional_checks": [
+    "lease_loss",
+    "clear_confirmation",
+    "bounded_failure",
+    "clock_reset",
+    "never_override_existing_hold_or_cap",
+    "goal_occupied_timeout",
+    "no_safe_maneuver_timeout"
+  ]
+}

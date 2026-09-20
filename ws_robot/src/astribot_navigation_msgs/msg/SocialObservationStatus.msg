@@ -1,0 +1,11 @@
+std_msgs/Header header
+uint64 observer_epoch
+uint64 accepted_frames
+uint64 rejected_frames
+bool input_valid
+bool simulation_truth
+float64 sample_age_s
+uint32 observed_count
+uint32 occluded_count
+uint32 lost_count
+string reason

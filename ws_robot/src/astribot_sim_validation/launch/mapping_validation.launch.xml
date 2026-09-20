@@ -1,0 +1,37 @@
+<launch>
+ <set_env name="ROS_DOMAIN_ID" value="213"/>
+ <set_env name="ROS_LOCALHOST_ONLY" value="1"/>
+ <set_env name="IGN_PARTITION" value="astribot_operator_validation_213"/>
+ <set_env name="GZ_PARTITION" value="astribot_operator_validation_213"/>
+ <set_env name="IGN_IP" value="127.0.0.1"/>
+ <set_env name="GZ_IP" value="127.0.0.1"/>
+ <let name="ros_domain_id" value="213"/>
+ <arg name="save_path" default="/tmp/astribot_validation_213/slam_sessions"/>
+ <arg name="map_name" description="Unique, previously unused Voxel session name"/>
+ <!-- Replaces the baseline world; never run both world launches together. -->
+ <include file="$(find-pkg-share astribot_s1_navigation)/launch/nav2_full_bringup.launch.py">
+  <arg name="env" value="sim"/>
+  <arg name="ros_domain_id" value="213"/>
+  <arg name="navigation_geometry_mode" value="fixed_v2"/>
+  <arg name="launch_navigation" value="false"/>
+  <arg name="launch_gazebo" value="true"/>
+  <arg name="headless" value="true"/>
+  <arg name="use_rviz" value="false"/>
+  <arg name="slam_backend" value="voxel"/>
+  <arg name="mode" value="mapping"/>
+  <arg name="save_path" value="$(var save_path)"/>
+  <arg name="map_name" value="$(var map_name)"/>
+  <arg name="save_map" value="1"/>
+  <arg name="exploration" value="false"/>
+ </include>
+ <node pkg="astribot_s1_exploration" exec="exploration_coordinator_node" name="exploration_coordinator_node" output="screen">
+  <param from="$(find-pkg-share astribot_s1_exploration)/config/exploration_coordinator_params.yaml"/>
+  <param name="use_sim_time" value="true"/>
+  <param name="start_paused" value="true"/>
+  <param name="require_fixed_envelope" value="true"/>
+ </node>
+ <node pkg="astribot_s1_exploration" exec="mapping_session_node" name="mapping_session" output="screen">
+  <param from="$(find-pkg-share astribot_s1_exploration)/config/exploration_coordinator_params.yaml"/>
+  <param name="use_sim_time" value="true"/>
+ </node>
+</launch>

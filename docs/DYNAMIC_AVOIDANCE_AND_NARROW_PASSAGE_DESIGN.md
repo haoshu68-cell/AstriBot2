@@ -1,5 +1,7 @@
 # 动态避障、事件重规划与窄通道设计
 
+后续与社会导航的整合以 [多场景决策规控整合方案](UNIFIED_SOCIAL_NAVIGATION_DECISION_CONTROL_DESIGN_20260919.md) 为准，统一任务与路线所有权、等待计时、候选选择和分阶段验收；本文保留原设计及历史实施边界。
+
 日期：2026-09-13；整体复审更新：2026-09-14。现有阶段记录包含 P0–P2 验证、P3 功能闭环和 P4/P5 指定场景专项通过，但 P3 质量待办及原完整目标失败尚未关闭，当前 P5 不满足用户“不低于引入窄通道前表现”的要求。暂停以专项通过扩展整体放行，按[窄通道整体复审](NARROW_PASSAGE_REVIEW_20260914.md)重新核对基线、实时性、判据与控制干预。真机实测不阻塞仿真开发，但真机放行仍需独立证据。历史实施过程见[阶段记录](NAVIGATION_POLICY_IMPLEMENTATION.md)。
 
 ## 1. 设计结论和基线
@@ -33,7 +35,7 @@
 | [KeepSafePath](../ws_robot/src/astribot_s1_path_tracking/src/path_guard_bt.cpp)：约每 200 ms 检查路径，碰撞即重规划，每目标最多 5 次；检查不可用持续 2 s 则失败 | 没有动态目标身份、速度、预计清空时间；人穿过路径也可能消耗重规划预算。2 s 是服务故障阈值，不是允许继续向障碍运动的时间 | 保留静态路径检查契约，增加结构化风险和决策层，不把全部策略塞进 BT 条件节点 |
 | [ExactGoalPlanner](../ws_robot/src/astribot_s1_path_tracking/src/exact_goal_planner.cpp)：Smac2D 搜索、精确终点、曲率检查和有限平滑 | 搜索没有显式动态目标时间预测；曲率可接受分支直接返回，其他分支有 footprint 复查，后验验证入口不统一 | 所有候选统一经过完整轮廓、时空风险及连续性验证，之后才提交执行 |
 | [代价地图配置](../ws_robot/src/astribot_s1_navigation/config/nav2_params_mppi.yaml)：固定 ±0.31 m 方形 footprint；局部更新 5 Hz、全局 1 Hz | 0.62 m 是配置轮廓，不等于所有双臂姿态的外包络；地图更新不能充当快速防碰撞链路 | 增加带版本的全身包络，快速原始观测防护独立于全局地图 |
-| [点云切片配置](../ws_robot/src/astribot_s1_autonomy/config/pointcloud_slice_scan_params.yaml)：多高度切片；scan 最小距离 0.35 m；低层自身过滤半径 0.44 m | 已有多高度感知基础，但 2D scan 丢失高度归属；近距离过滤和手臂遮挡需专门验证 | 复用 3D 自滤点云并校核过滤范围；不能直接把规划 scan 当作无盲区的紧急防护输入 |
+| [点云切片配置](../ws_robot/src/astribot_s1_perception_components/config/pointcloud_slice_scan_params.yaml)：多高度切片；scan 最小距离 0.35 m；低层自身过滤半径 0.44 m | 已有多高度感知基础，但 2D scan 丢失高度归属；近距离过滤和手臂遮挡需专门验证 | 复用 3D 自滤点云并校核过滤范围；不能直接把规划 scan 当作无盲区的紧急防护输入 |
 | [机械臂限速](../ws_robot/src/astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py)及 [动态耦合](../ws_robot/src/astribot_s1_dynamics_coupling/astribot_s1_dynamics_coupling/arm_chassis_speed_coupling_node.py) | 伸展/活动可限速，但限速不缩小几何轮廓；新增速度发布者会与现有限速争用 | 单一约束汇总出口，输入包括双臂和载荷限制；几何包络另行管理 |
 | [ArrivalController](../ws_robot/src/astribot_s1_path_tracking/src/arrival_controller.cpp)：无运动进展、总预算、精调预算；setPlan 空档识别新尝试 | 主动让行可能误触发 NO_MOTION_PROGRESS；取消后重发会影响相位和预算 | 增加显式、可审计的 hold/resume 契约，区分运动时间和合法等待时间 |
 | [ThreePhaseController](../ws_robot/src/astribot_s1_path_tracking/src/three_phase_controller.cpp)：同目标重规划保持相位 | FOLLOW 中突然换成相反方向路径不会自动完成安全预对齐；窄通道内原地旋转可能碰壁 | 路径接管检查决定连续切换或停车预对齐，预对齐仅能在全身旋转空间足够时执行 |
@@ -351,6 +353,6 @@ P0 同时定版视觉观测/健康接口和统一决策契约；P1 接入可用�
 
 ## 11. 自主感知与探索的代码整合
 
-`astribot_s1_autonomy` 已迁为兼容门面。纯算法归 `astribot_autonomy_core`，点云/Livox 适配归 `astribot_s1_perception_components`，前沿任务归 `astribot_s1_exploration`；已有 Python 感知和策略包继续保持建制。探索通过 NavigateToPose 进入既有策略行为树，停止直接 FollowPath、自举和脱困速度输出。上述目录草图是逻辑职责建议，不要求把已有 Python 实现改写为 C++。
+`astribot_s1_autonomy` 曾作为兼容门面，已于 2026-09-17 [退役](AUTONOMY_PACKAGE_RETIREMENT_20260917.md)。纯算法归 `astribot_autonomy_core`，点云/Livox 适配归 `astribot_s1_perception_components`，前沿任务归 `astribot_s1_exploration`；已有 Python 感知和策略包继续保持建制。探索通过 NavigateToPose 进入既有策略行为树，停止直接 FollowPath、自举和脱困速度输出。上述目录草图是逻辑职责建议，不要求把已有 Python 实现改写为 C++。
 
 关注点、开发/运行视图、八项原则映射、设计决策、迁移路径与可测质量要求见 [整合记录](AUTONOMY_ARCHITECTURE_INTEGRATION.md)。本次只有构建和离线证据，不提高 P3–P5 或真机的放行状态。

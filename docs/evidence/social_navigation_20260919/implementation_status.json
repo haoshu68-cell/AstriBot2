@@ -1,0 +1,75 @@
+{
+  "status": "H0_H1_H2_basic_matrix_passed_on_frozen_overlay_merged_source_regression_pending",
+  "current_runtime_changed": false,
+  "baseline_gazebo": "five_goals_passed",
+  "H1": {
+    "interfaces_build": "passed",
+    "upstream_build": "passed",
+    "isolated_message_service_checks": "70_assertions_passed",
+    "gazebo_actor_integration": "running_observe_only",
+    "scan_visibility": "1127_of_1127_valid_associations_detected_person",
+    "independent_collision_oracle": "41_geometries_valid_no_unsupported_geometry_shallow_overlap_positive_control_passed",
+    "pause_reset_repeatability": "passed_person_trajectory_two_runs_identical",
+    "observation_contract": "valid_in_all_final_status_samples",
+    "lidar_ghost_returns": "source_fixed_actor_skin_excluded_from_gpu_lidar_proxy_retained",
+    "gui": "paired Gazebo/RViz snapshots reviewed; default odometry trail hidden",
+    "navigation_regression": "two_goals_passed_after_ray_fix_max_1.102mm_0.0785deg",
+    "limitations": [
+      "Single configured cyclic crossing scene",
+      "Geometry clearance is a conservative bound, not physical contact depth",
+      "Clock-reset/penetration fixtures require cold stack and UI restart afterwards",
+      "Historical SLAM map_cmap retains its window history; dynamic grid mapping was not exercised"
+    ],
+    "costmap_residue": "post_navigation_local_2_to_0_global_2_to_0_observed_ray_traversal",
+    "ray_geometry": "15013_cases_passed_against_segment_rectangle_oracle"
+  },
+  "validation_directory": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919",
+  "production_motion_parameters_changed": false,
+  "control_hashes_unchanged_since_H0": "Frozen runtime libraries and copied Python/config retained; concurrent arrival/planner/envelope source changes not covered",
+  "upstream_patches": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/dependencies/compatibility.patch",
+  "current_session": null,
+  "H2": {
+    "implementation": "original_path_speed_scoring_yield_wait_timeout",
+    "validated_cases": [
+      "H2-00",
+      "H2-01",
+      "H2-02",
+      "H2-03",
+      "H2-04",
+      "H2-05",
+      "H2-06",
+      "H2-07"
+    ],
+    "stage_passed": true,
+    "remaining": "Merged-source regression required before next phase",
+    "validated_cases_before_stop_reference": [
+      "H2-01",
+      "H2-02",
+      "H2-03",
+      "H2-04",
+      "H2-05",
+      "H2-06",
+      "H2-07"
+    ],
+    "stop_reference": "SLAM peak 16 historical samples; simulation-only; not current hardware certification",
+    "empty_AB": "three_pairs_passed_12_goals_no_midroute_hold",
+    "scope": "H2 basic matrix on frozen simulation overlay, excluding concurrently changed merged workspace",
+    "summary": {
+      "goals_passed": 26,
+      "goals_executed_in_accepted_runs": 26,
+      "max_arrival_xy_mm": 1.4397091905767119,
+      "max_arrival_yaw_deg": 0.08806832316610277,
+      "overlap_steps": 0,
+      "min_person_clearance_lower_bound_m": 0.149978364106,
+      "max_follow_spin_s": 0,
+      "max_backtracking_m": 0
+    },
+    "next_stage_enabled": false
+  },
+  "H3_to_H5": "designed_not_implemented_or_enabled",
+  "last_session": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_head_on_run2/stack/session.log",
+  "runtime_manifests": [
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json"
+  ]
+}

@@ -1,0 +1,859 @@
+{
+  "stage_passed": true,
+  "automated_checks_passed": true,
+  "reason": "Eight basic scenario types, three paired empty regressions, raw geometry and paired GUI reviewed",
+  "stop_model": "slam_peak_20260915_four_directions_16_samples",
+  "scope": "H2 basic matrix on frozen simulation overlay, excluding concurrently changed merged workspace",
+  "empty_AB": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/social_navigation_20260919/empty_ab_comparison.json",
+  "cases": [
+    {
+      "case": "H2-01",
+      "status": "completed",
+      "expected_policy": "h2",
+      "navigation_returncode": 0,
+      "events": [
+        {
+          "command": "start",
+          "ros_s": 14.886000000000001
+        }
+      ],
+      "all_goals_passed": true,
+      "arrivals": [
+        {
+          "xy_m": 0.0006550893807346489,
+          "yaw_deg": 0.004456844136322414,
+          "passed": true
+        },
+        {
+          "xy_m": 0.0009490262734204481,
+          "yaw_deg": 0.057695250522445084,
+          "passed": true
+        }
+      ],
+      "collision_geometry_valid": true,
+      "overlap_steps": 0,
+      "clearance_lower_bound_m": 0.472761263851,
+      "social_reasons": {
+        "CLEAR_CONFIRMATION": 4,
+        "SOCIAL_CLEAR": 190,
+        "SOCIAL_SLOW": 7,
+        "SOCIAL_YIELD": 1,
+        "SOCIAL_CLEAR_CONFIRMATION": 2,
+        "ORIGINAL_PATH_SLOW_SAFE": 2,
+        "YIELD": 5
+      },
+      "conflict_samples": 8,
+      "recoveries_after_conflict": 185,
+      "replan_events": [
+        {
+          "reason": "initial_goal"
+        },
+        {
+          "reason": "new_goal"
+        }
+      ],
+      "social_processing_max_s": 0.014310191007098183,
+      "boundary": "Passed basic scenario assertions plus GUI review; frozen simulation overlay only",
+      "checks": {
+        "arrivals": true,
+        "geometry": true,
+        "episode_ack": true,
+        "input_fresh": true,
+        "conflict_exercised": true,
+        "recovery_exercised": true,
+        "event_only_planning": true,
+        "policy_observed": true,
+        "human_moved": true
+      },
+      "scenario_passed": true,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_cross_left_run1/episode",
+      "review": {
+        "geometry_samples": 2487,
+        "social_samples": 211,
+        "input_age_p95_s": 0.047,
+        "processing_p99_ms": 12.435485902824439,
+        "wait_events": [
+          {
+            "reason": "CLEAR_CONFIRMATION",
+            "start": 11.804,
+            "duration_s": 0.5970000000000013,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "SOCIAL_YIELD",
+            "start": 15.114,
+            "duration_s": 0.793000000000001,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "YIELD",
+            "start": 17.214000000000002,
+            "duration_s": 3.0060000000000002,
+            "settled_motion_max_m_s": 0.0007025973498130611,
+            "settled_rotation_max_rad_s": 0.0002716397489166411
+          }
+        ],
+        "goals": [
+          {
+            "passed": true,
+            "xy_mm": 0.6550893807346488,
+            "yaw_deg": 0.004456844136322414,
+            "follow_p95_mm": 49.73159754773002,
+            "heading_p95_deg": 4.8313697544696,
+            "actual_jerk_p95": 0.20821926392063075,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          },
+          {
+            "passed": true,
+            "xy_mm": 0.9490262734204481,
+            "yaw_deg": 0.057695250522445084,
+            "follow_p95_mm": 14.913785737740138,
+            "heading_p95_deg": 9.251522123851942,
+            "actual_jerk_p95": 0.24673655674397785,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          }
+        ]
+      },
+      "paired_gui_reviewed": true,
+      "runtime_control_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+      "runtime_python_config_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json"
+    },
+    {
+      "case": "H2-02",
+      "status": "completed",
+      "expected_policy": "h2",
+      "navigation_returncode": 0,
+      "events": [
+        {
+          "command": "start",
+          "ros_s": 16.802
+        }
+      ],
+      "all_goals_passed": true,
+      "arrivals": [
+        {
+          "xy_m": 0.0009838053753067253,
+          "yaw_deg": 0.021417177258405636,
+          "passed": true
+        },
+        {
+          "xy_m": 6.857781239407831e-05,
+          "yaw_deg": 0.04538970834515099,
+          "passed": true
+        }
+      ],
+      "collision_geometry_valid": true,
+      "overlap_steps": 0,
+      "clearance_lower_bound_m": 0.444110079273,
+      "social_reasons": {
+        "CLEAR_CONFIRMATION": 4,
+        "SOCIAL_CLEAR": 143,
+        "SOCIAL_SLOW": 8,
+        "SOCIAL_YIELD": 1,
+        "SOCIAL_CLEAR_CONFIRMATION": 2,
+        "ORIGINAL_PATH_SLOW_SAFE": 1,
+        "YIELD": 5
+      },
+      "conflict_samples": 9,
+      "recoveries_after_conflict": 138,
+      "replan_events": [
+        {
+          "reason": "initial_goal"
+        },
+        {
+          "reason": "new_goal"
+        }
+      ],
+      "social_processing_max_s": 0.011798669002018869,
+      "boundary": "Passed basic scenario assertions plus GUI review; frozen simulation overlay only",
+      "checks": {
+        "arrivals": true,
+        "geometry": true,
+        "episode_ack": true,
+        "input_fresh": true,
+        "conflict_exercised": true,
+        "recovery_exercised": true,
+        "event_only_planning": true,
+        "policy_observed": true,
+        "human_moved": true
+      },
+      "scenario_passed": true,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_cross_right_run1/episode",
+      "review": {
+        "geometry_samples": 1972,
+        "social_samples": 164,
+        "input_age_p95_s": 0.049,
+        "processing_p99_ms": 11.570265782647766,
+        "wait_events": [
+          {
+            "reason": "CLEAR_CONFIRMATION",
+            "start": 13.611,
+            "duration_s": 0.6920000000000002,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "SOCIAL_YIELD",
+            "start": 17.113,
+            "duration_s": 0.708000000000002,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "YIELD",
+            "start": 19.129,
+            "duration_s": 2.9819999999999993,
+            "settled_motion_max_m_s": 0.0015709465624759397,
+            "settled_rotation_max_rad_s": 0.002088969677060959
+          }
+        ],
+        "goals": [
+          {
+            "passed": true,
+            "xy_mm": 0.9838053753067253,
+            "yaw_deg": 0.021417177258405636,
+            "follow_p95_mm": 56.40050193476097,
+            "heading_p95_deg": 5.415894430595325,
+            "actual_jerk_p95": 0.2000110656417181,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          },
+          {
+            "passed": true,
+            "xy_mm": 0.06857781239407831,
+            "yaw_deg": 0.04538970834515099,
+            "follow_p95_mm": 69.87534015806176,
+            "heading_p95_deg": 9.998626726107684,
+            "actual_jerk_p95": 0.21429556182692916,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          }
+        ]
+      },
+      "paired_gui_reviewed": true,
+      "runtime_control_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+      "runtime_python_config_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json"
+    },
+    {
+      "case": "H2-03",
+      "status": "completed",
+      "expected_policy": "h2",
+      "navigation_returncode": 0,
+      "events": [
+        {
+          "command": "start",
+          "ros_s": 15.088000000000001
+        }
+      ],
+      "all_goals_passed": true,
+      "arrivals": [
+        {
+          "xy_m": 0.0008606332994304778,
+          "yaw_deg": 0.05692798598556622,
+          "passed": true
+        },
+        {
+          "xy_m": 0.001157501819773666,
+          "yaw_deg": 0.012567474313224906,
+          "passed": true
+        }
+      ],
+      "collision_geometry_valid": true,
+      "overlap_steps": 0,
+      "clearance_lower_bound_m": 0.28220638035,
+      "social_reasons": {
+        "CLEAR_CONFIRMATION": 4,
+        "SOCIAL_SLOW": 16,
+        "SOCIAL_YIELD": 2,
+        "YIELD": 7,
+        "SOCIAL_CLEAR": 197
+      },
+      "conflict_samples": 10,
+      "recoveries_after_conflict": 197,
+      "replan_events": [
+        {
+          "reason": "initial_goal"
+        },
+        {
+          "reason": "new_goal"
+        }
+      ],
+      "social_processing_max_s": 0.018381820991635323,
+      "boundary": "Passed basic scenario assertions plus GUI review; frozen simulation overlay only",
+      "checks": {
+        "arrivals": true,
+        "geometry": true,
+        "episode_ack": true,
+        "input_fresh": true,
+        "conflict_exercised": true,
+        "recovery_exercised": true,
+        "event_only_planning": true,
+        "policy_observed": true,
+        "human_moved": true
+      },
+      "scenario_passed": true,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_two_cross_run1/episode",
+      "review": {
+        "geometry_samples": 2712,
+        "social_samples": 226,
+        "input_age_p95_s": 0.048,
+        "processing_p99_ms": 17.105012004321907,
+        "wait_events": [
+          {
+            "reason": "CLEAR_CONFIRMATION",
+            "start": 11.409,
+            "duration_s": 0.7070000000000007,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "SOCIAL_YIELD",
+            "start": 16.336000000000002,
+            "duration_s": 5.305,
+            "settled_motion_max_m_s": 0.0030503020131897054,
+            "settled_rotation_max_rad_s": 4.955127974604068e-08
+          }
+        ],
+        "goals": [
+          {
+            "passed": true,
+            "xy_mm": 0.8606332994304777,
+            "yaw_deg": 0.05692798598556622,
+            "follow_p95_mm": 58.45690072542603,
+            "heading_p95_deg": 2.959999039208591,
+            "actual_jerk_p95": 0.16102153705293873,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          },
+          {
+            "passed": true,
+            "xy_mm": 1.1575018197736662,
+            "yaw_deg": 0.012567474313224906,
+            "follow_p95_mm": 23.174338496412975,
+            "heading_p95_deg": 10.802875501661648,
+            "actual_jerk_p95": 0.2303775276843737,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          }
+        ]
+      },
+      "paired_gui_reviewed": true,
+      "runtime_control_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+      "runtime_python_config_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json"
+    },
+    {
+      "case": "H2-04",
+      "status": "completed",
+      "expected_policy": "h2",
+      "navigation_returncode": 0,
+      "events": [
+        {
+          "command": "start",
+          "ros_s": 22.385
+        },
+        {
+          "command": "pause",
+          "ros_s": 25.102
+        },
+        {
+          "command": "start",
+          "ros_s": 28.102
+        }
+      ],
+      "all_goals_passed": true,
+      "arrivals": [
+        {
+          "xy_m": 0.00029028675080345793,
+          "yaw_deg": 0.03635825494264094,
+          "passed": true
+        },
+        {
+          "xy_m": 0.001125546999397985,
+          "yaw_deg": 0.052625323503400774,
+          "passed": true
+        }
+      ],
+      "collision_geometry_valid": true,
+      "overlap_steps": 0,
+      "clearance_lower_bound_m": 0.217355422693,
+      "social_reasons": {
+        "CLEAR_CONFIRMATION": 3,
+        "SOCIAL_CLEAR": 200,
+        "SOCIAL_YIELD": 3,
+        "STATIONARY_CONFLICT": 1,
+        "SOCIAL_CLEAR_CONFIRMATION": 2,
+        "SOCIAL_SLOW": 11,
+        "YIELD": 13,
+        "ORIGINAL_PATH_SLOW_SAFE": 5
+      },
+      "conflict_samples": 19,
+      "recoveries_after_conflict": 185,
+      "replan_events": [
+        {
+          "reason": "initial_goal"
+        },
+        {
+          "reason": "new_goal"
+        }
+      ],
+      "social_processing_max_s": 0.012853400985477492,
+      "boundary": "Passed basic scenario assertions plus GUI review; frozen simulation overlay only",
+      "checks": {
+        "arrivals": true,
+        "geometry": true,
+        "episode_ack": true,
+        "input_fresh": true,
+        "conflict_exercised": true,
+        "recovery_exercised": true,
+        "event_only_planning": true,
+        "policy_observed": true,
+        "human_moved": true,
+        "pause_and_resume": true,
+        "human_stopped": true
+      },
+      "scenario_passed": true,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_stop_run1/episode",
+      "review": {
+        "geometry_samples": 2842,
+        "social_samples": 238,
+        "input_age_p95_s": 0.049,
+        "processing_p99_ms": 12.024073069624137,
+        "wait_events": [
+          {
+            "reason": "CLEAR_CONFIRMATION",
+            "start": 14.101,
+            "duration_s": 0.6999999999999993,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "SOCIAL_YIELD",
+            "start": 22.726000000000003,
+            "duration_s": 1.097999999999999,
+            "settled_motion_max_m_s": 0.0033750401401776283,
+            "settled_rotation_max_rad_s": 3.5440428369781785e-09
+          },
+          {
+            "reason": "SOCIAL_YIELD",
+            "start": 24.223000000000003,
+            "duration_s": 8.315999999999999,
+            "settled_motion_max_m_s": 0.0,
+            "settled_rotation_max_rad_s": 0.0
+          }
+        ],
+        "goals": [
+          {
+            "passed": true,
+            "xy_mm": 0.29028675080345795,
+            "yaw_deg": 0.03635825494264094,
+            "follow_p95_mm": 64.86688986702985,
+            "heading_p95_deg": 10.083463396502777,
+            "actual_jerk_p95": 0.21907291950246208,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          },
+          {
+            "passed": true,
+            "xy_mm": 1.125546999397985,
+            "yaw_deg": 0.052625323503400774,
+            "follow_p95_mm": 29.63696758726235,
+            "heading_p95_deg": 12.57830206377634,
+            "actual_jerk_p95": 0.216555939279278,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          }
+        ]
+      },
+      "paired_gui_reviewed": true,
+      "runtime_control_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+      "runtime_python_config_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json",
+      "additional_pause_check": {
+        "wait_during_pause": true,
+        "motion_samples": 75,
+        "max_stopped_v": 0.0,
+        "max_stopped_w": 0.0,
+        "passed": true
+      }
+    },
+    {
+      "case": "H2-05",
+      "status": "completed",
+      "expected_policy": "h2",
+      "navigation_returncode": 0,
+      "events": [
+        {
+          "command": "start",
+          "ros_s": 16.6
+        }
+      ],
+      "all_goals_passed": true,
+      "arrivals": [
+        {
+          "xy_m": 0.001439709190576712,
+          "yaw_deg": 0.02312724138619993,
+          "passed": true
+        },
+        {
+          "xy_m": 0.0007536103602487943,
+          "yaw_deg": 0.030256428953670273,
+          "passed": true
+        }
+      ],
+      "collision_geometry_valid": true,
+      "overlap_steps": 0,
+      "clearance_lower_bound_m": 0.149978364106,
+      "social_reasons": {
+        "CLEAR_CONFIRMATION": 4,
+        "SOCIAL_SLOW": 10,
+        "SOCIAL_YIELD": 4,
+        "YIELD": 9,
+        "IMMEDIATE_RISK": 3,
+        "ORIGINAL_PATH_SLOW_SAFE": 1,
+        "SOCIAL_CLEAR": 140
+      },
+      "conflict_samples": 15,
+      "recoveries_after_conflict": 140,
+      "replan_events": [
+        {
+          "reason": "initial_goal"
+        },
+        {
+          "reason": "new_goal"
+        }
+      ],
+      "social_processing_max_s": 0.014290162012912333,
+      "boundary": "Passed basic scenario assertions plus GUI review; frozen simulation overlay only",
+      "checks": {
+        "arrivals": true,
+        "geometry": true,
+        "episode_ack": true,
+        "input_fresh": true,
+        "conflict_exercised": true,
+        "recovery_exercised": true,
+        "event_only_planning": true,
+        "policy_observed": true,
+        "human_moved": true
+      },
+      "scenario_passed": true,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_head_on_run2/episode",
+      "review": {
+        "geometry_samples": 2052,
+        "social_samples": 171,
+        "input_age_p95_s": 0.05,
+        "processing_p99_ms": 13.282470416743308,
+        "wait_events": [
+          {
+            "reason": "CLEAR_CONFIRMATION",
+            "start": 13.001000000000001,
+            "duration_s": 0.6069999999999993,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "SOCIAL_YIELD",
+            "start": 17.121000000000002,
+            "duration_s": 8.099,
+            "settled_motion_max_m_s": 0.0005528420470301475,
+            "settled_rotation_max_rad_s": 1.4780203450026619e-08
+          }
+        ],
+        "goals": [
+          {
+            "passed": true,
+            "xy_mm": 1.4397091905767119,
+            "yaw_deg": 0.02312724138619993,
+            "follow_p95_mm": 148.8457270042305,
+            "heading_p95_deg": 13.167124792869986,
+            "actual_jerk_p95": 0.40654916050485956,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          },
+          {
+            "passed": true,
+            "xy_mm": 0.7536103602487942,
+            "yaw_deg": 0.030256428953670273,
+            "follow_p95_mm": 16.987256543246826,
+            "heading_p95_deg": 10.941918992379733,
+            "actual_jerk_p95": 0.22011525528714054,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          }
+        ]
+      },
+      "paired_gui_reviewed": true,
+      "runtime_control_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+      "runtime_python_config_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json"
+    },
+    {
+      "case": "H2-06",
+      "status": "completed",
+      "expected_policy": "h2",
+      "navigation_returncode": 0,
+      "events": [
+        {
+          "command": "start",
+          "ros_s": 15.896
+        },
+        {
+          "observation_mode": "drop",
+          "ros_s": 16.396
+        },
+        {
+          "observation_mode": "repeat",
+          "ros_s": 19.396
+        },
+        {
+          "observation_mode": "normal",
+          "ros_s": 22.396
+        }
+      ],
+      "all_goals_passed": true,
+      "arrivals": [
+        {
+          "xy_m": 0.0009268809637326118,
+          "yaw_deg": 0.006422251287532762,
+          "passed": true
+        },
+        {
+          "xy_m": 0.0011394715691379416,
+          "yaw_deg": 0.06044112790549929,
+          "passed": true
+        }
+      ],
+      "collision_geometry_valid": true,
+      "overlap_steps": 0,
+      "clearance_lower_bound_m": null,
+      "social_reasons": {
+        "CLEAR_CONFIRMATION": 2,
+        "SOCIAL_CLEAR": 182,
+        "SAMPLE_TIME_INVALID": 11,
+        "SOCIAL_CLEAR_CONFIRMATION": 2
+      },
+      "conflict_samples": 0,
+      "recoveries_after_conflict": 0,
+      "replan_events": [
+        {
+          "reason": "initial_goal"
+        },
+        {
+          "reason": "new_goal"
+        }
+      ],
+      "social_processing_max_s": 0.00013102000229991972,
+      "boundary": "Passed basic scenario assertions plus GUI review; frozen simulation overlay only",
+      "checks": {
+        "arrivals": true,
+        "geometry": true,
+        "episode_ack": true,
+        "conflict_exercised": true,
+        "recovery_exercised": true,
+        "event_only_planning": true,
+        "policy_observed": true,
+        "fault_sequence_completed": true,
+        "lease_expired": true,
+        "stopped_on_expired_input": true,
+        "fresh_recovery": true
+      },
+      "scenario_passed": true,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_input_loss_run1/episode",
+      "review": {
+        "geometry_samples": 2438,
+        "social_samples": 197,
+        "input_age_p95_s": 0.049,
+        "processing_p99_ms": 0.06518887705169613,
+        "wait_events": [
+          {
+            "reason": "CLEAR_CONFIRMATION",
+            "start": 12.701,
+            "duration_s": 0.7040000000000006,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "SAMPLE_TIME_INVALID",
+            "start": 16.712,
+            "duration_s": 6.396000000000001,
+            "settled_motion_max_m_s": 0.005682790815749427,
+            "settled_rotation_max_rad_s": 0.0033935176134036737
+          }
+        ],
+        "goals": [
+          {
+            "passed": true,
+            "xy_mm": 0.9268809637326118,
+            "yaw_deg": 0.006422251287532762,
+            "follow_p95_mm": 62.284782424011404,
+            "heading_p95_deg": 4.401700047365071,
+            "actual_jerk_p95": 0.20455399865405793,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          },
+          {
+            "passed": true,
+            "xy_mm": 1.1394715691379416,
+            "yaw_deg": 0.06044112790549929,
+            "follow_p95_mm": 14.092788796344603,
+            "heading_p95_deg": 9.900967159817379,
+            "actual_jerk_p95": 0.22342085737414333,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          }
+        ]
+      },
+      "paired_gui_reviewed": true,
+      "runtime_control_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+      "runtime_python_config_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json"
+    },
+    {
+      "case": "H2-07",
+      "status": "completed",
+      "expected_policy": "h2",
+      "navigation_returncode": 0,
+      "events": [
+        {
+          "command": "start",
+          "ros_s": 12.409
+        },
+        {
+          "command": "pause",
+          "ros_s": 15.593000000000002
+        },
+        {
+          "command": "start",
+          "ros_s": 20.595000000000002
+        }
+      ],
+      "all_goals_passed": true,
+      "arrivals": [
+        {
+          "xy_m": 0.0012669622960461019,
+          "yaw_deg": 0.005671742061240346,
+          "passed": true
+        },
+        {
+          "xy_m": 0.0012930018059987098,
+          "yaw_deg": 0.028450932667934675,
+          "passed": true
+        }
+      ],
+      "collision_geometry_valid": true,
+      "overlap_steps": 0,
+      "clearance_lower_bound_m": 0.818056096863,
+      "social_reasons": {
+        "CLEAR_CONFIRMATION": 5,
+        "SOCIAL_CLEAR": 169,
+        "SOCIAL_SLOW": 15,
+        "PREDICTED_CONFLICT": 3,
+        "YIELD": 13
+      },
+      "conflict_samples": 12,
+      "recoveries_after_conflict": 167,
+      "replan_events": [
+        {
+          "reason": "initial_goal"
+        },
+        {
+          "reason": "new_goal"
+        }
+      ],
+      "social_processing_max_s": 0.013879906007787213,
+      "boundary": "Passed basic scenario assertions plus GUI review; frozen simulation overlay only",
+      "checks": {
+        "arrivals": true,
+        "geometry": true,
+        "episode_ack": true,
+        "input_fresh": true,
+        "conflict_exercised": true,
+        "recovery_exercised": true,
+        "event_only_planning": true,
+        "policy_observed": true,
+        "human_moved": true,
+        "pause_and_resume": true,
+        "human_stopped": true,
+        "wait_during_person_stop": true,
+        "robot_stopped_during_person_stop": true,
+        "goal_actually_occupied": true
+      },
+      "scenario_passed": true,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_goal_occupied_run1/episode",
+      "review": {
+        "geometry_samples": 2435,
+        "social_samples": 205,
+        "input_age_p95_s": 0.049,
+        "processing_p99_ms": 11.986961043439807,
+        "wait_events": [
+          {
+            "reason": "CLEAR_CONFIRMATION",
+            "start": 11.406,
+            "duration_s": 0.6980000000000004,
+            "settled_motion_max_m_s": null,
+            "settled_rotation_max_rad_s": null
+          },
+          {
+            "reason": "YIELD",
+            "start": 16.303,
+            "duration_s": 7.128,
+            "settled_motion_max_m_s": 0.0025650841235965154,
+            "settled_rotation_max_rad_s": 4.814408316455854e-08
+          }
+        ],
+        "goals": [
+          {
+            "passed": true,
+            "xy_mm": 1.2669622960461018,
+            "yaw_deg": 0.005671742061240346,
+            "follow_p95_mm": 57.23847405316826,
+            "heading_p95_deg": 2.8961175116790625,
+            "actual_jerk_p95": 0.156918298068626,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          },
+          {
+            "passed": true,
+            "xy_mm": 1.2930018059987098,
+            "yaw_deg": 0.028450932667934675,
+            "follow_p95_mm": 23.838059723021892,
+            "heading_p95_deg": 10.668125501262276,
+            "actual_jerk_p95": 0.22439935158958943,
+            "follow_spin_s": 0.0,
+            "backtracking_m": 0.0
+          }
+        ]
+      },
+      "paired_gui_reviewed": true,
+      "runtime_control_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_control_binary_manifest.json",
+      "runtime_python_config_manifest": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/runtime_python_config_manifest.json"
+    }
+  ],
+  "summary": {
+    "goals_passed": 26,
+    "goals_executed_in_accepted_runs": 26,
+    "max_arrival_xy_mm": 1.4397091905767119,
+    "max_arrival_yaw_deg": 0.08806832316610277,
+    "overlap_steps": 0,
+    "min_person_clearance_lower_bound_m": 0.149978364106,
+    "max_follow_spin_s": 0,
+    "max_backtracking_m": 0
+  },
+  "next_stage_enabled": false,
+  "next_stage_prerequisite": "Merged-source regression for concurrent arrival, planner and envelope geometry changes",
+  "failed_runs": [
+    {
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_h2_head_on_run1",
+      "reason": "DDS get_parameters response send timeout before any navigation goal; cold retry completed",
+      "goals_executed": 0
+    }
+  ],
+  "limitations": [
+    "Historical stopping reference only, not current hardware calibration",
+    "Cooperative oblique head-on; noncooperative NO_SAFE_MANEUVER timeout checked offline only",
+    "Transient goal occupation tested in Gazebo; GOAL_OCCUPIED timeout checked offline only",
+    "Head-on outbound FOLLOW lateral P95 14.885 cm and heading P95 13.167 deg remain quality limitations",
+    "Residue checks cover stated ROI/time windows; not whole SLAM map proof",
+    "H3 persistent following and queues, H4 active bypass/overtake, H5 social narrow passage remain designed, not implemented/enabled"
+  ]
+}

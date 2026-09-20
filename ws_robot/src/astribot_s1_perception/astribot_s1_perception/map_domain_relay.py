@@ -20,7 +20,7 @@ remote_domain_id == local_domain_id == 25，map_provider.launch.py 在同域时
 只搬一个话题、单向**，也就是本文件：
 
     真机 domain(remote)                          本机 domain(local)
-     /map (slam_toolbox on real robot)
+     /map (external map provider on real robot)
           │ 订阅 context_remote
           ▼
       map_domain_relay ──发布 context_local──▶ /map
@@ -202,7 +202,7 @@ def main(argv=None):
                 logger.error(
                     f'{timeout_sec:.0f}s 内没在 domain {remote_domain} 上收到 '
                     f'{remote_topic}。逐条查：'
-                    '(1) 真机侧的 slam_toolbox 起了吗；'
+                    '(1) 真机侧的地图提供进程是否已启动；'
                     '(2) 本进程的 ROS_LOCALHOST_ONLY 是 0 吗（=1 时跨机永远发现不了）；'
                     '(3) 两台机器网络互通吗；'
                     '(4) 远端发布者的 QoS 是 TRANSIENT_LOCAL 吗'

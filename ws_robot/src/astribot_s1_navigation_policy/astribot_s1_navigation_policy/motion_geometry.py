@@ -4,7 +4,10 @@ import math
 
 def stopping_horizon(command, profile):
     vx,vy,wz=command
-    return profile.reaction_time_s+max(math.hypot(vx,vy)/profile.brake_deceleration_m_s2,
+    linear=math.hypot(vx,vy)
+    linear_tail=(linear/profile.brake_deceleration_m_s2+
+                 getattr(profile,'linear_stop_delay_s',0.)) if linear>0 else 0.
+    return profile.reaction_time_s+max(linear_tail,
                                        abs(wz)/profile.angular_brake_deceleration_rad_s2)
 
 

@@ -9,9 +9,9 @@
  且 Python 在本包内只用于调试可视化脚本）。README「如何驱动机器人」一节给了具体做法。
 
 用法示例：
-    ros2 launch astribot_s1_autonomy frontier_explore.launch.py
-    ros2 launch astribot_s1_autonomy frontier_explore.launch.py planning_period_sec:=1.0
-    ros2 launch astribot_s1_autonomy frontier_explore.launch.py params_file:=/path/to/my.yaml
+    ros2 launch astribot_s1_exploration frontier_explore.launch.py
+    ros2 launch astribot_s1_exploration frontier_explore.launch.py planning_period_sec:=1.0
+    ros2 launch astribot_s1_exploration frontier_explore.launch.py params_file:=/path/to/my.yaml
 """
 
 from launch import LaunchDescription

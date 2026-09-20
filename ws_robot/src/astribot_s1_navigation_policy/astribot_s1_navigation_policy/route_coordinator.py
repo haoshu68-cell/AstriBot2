@@ -34,6 +34,7 @@ class RouteCoordinator:
     def steady(self):return Stamp(time.monotonic_ns(),'steady',self.node.epoch)
 
     def cancel(self):
+        with self.mailbox_lock:self.route_response=None
         if self.future is not None:
             self.client.remove_pending_request(self.future);self.future.cancel()
         self.future=None;self.request=None;self.options=[];self.chosen=None;self.ready=None;self.holding=False

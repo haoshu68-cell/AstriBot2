@@ -1,0 +1,10 @@
+builtin_interfaces/Time stamp
+builtin_interfaces/Time joint_stamp
+builtin_interfaces/Time base_stamp
+string context_id
+bool active
+bool healthy
+string reason
+float64 maximum_joint_error_rad
+float64 base_translation_m
+float64 base_rotation_rad

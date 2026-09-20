@@ -249,14 +249,19 @@ class ConservativeFusion:
             if obs is not None and capture.since(obs.capture_stamp) > 0:
                 del self.unassociated[key]
 
-    def clear_observed_free(self, now, free_at):
+    def clear_observed_free(self, now, free_at=None, *, free_many=None):
         """free_at(box) must establish fresh free-space coverage of the entire box."""
-        for identifier, track in list(self.tracks.items()):
+        pending=[]
+        for identifier, track in self.tracks.items():
             age = now.since(track.observation.capture_stamp)*1e-9
             if age > self.profile.sensor_timeout_s:
                 box = track.observation.geometry if track.observation.spatial_occupancy else translate(track.observation.geometry,track.velocity,min(age,self.profile.track_memory_s))
-                if free_at(box):
-                    del self.tracks[identifier]
+                pending.append((identifier,box))
+        if not pending:return
+        flags=free_many([box for _,box in pending]) if free_many else [free_at(box) for _,box in pending]
+        require(len(flags)==len(pending),'clearance.batch_size')
+        for (identifier,_),free in zip(pending,flags):
+            if free:del self.tracks[identifier]
 
     def snapshot(self, now, region=None):
         if self.epoch is not None and self.epoch != (now.clock, now.epoch):

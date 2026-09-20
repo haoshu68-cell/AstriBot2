@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "model_id": "slam_peak_20260915_four_directions_16_samples",
+  "hardware_validated": false,
+  "quantity": "peak_excursion",
+  "measurement_source": "SLAM source-time position; not manufacturer twist or external physical truth",
+  "stop_mode": "preview_0.5s_zero_edge_actual_position_hold",
+  "actual_speed_range_m_s": [
+    0.05275005723772591,
+    0.2487537720685542
+  ],
+  "polynomial": {
+    "nominal_linear_s": 0.08578601301469622,
+    "nominal_quadratic_s2_per_m": 0.9211742630016313,
+    "engineering_scale": 1.25,
+    "additive_margin_m": 0.0067361394110366625,
+    "formula": "B_peak(v)=1.25*(a*v+b*v*v)+margin for calibrated range; empirical candidate only"
+  },
+  "source_file": "runs/bridge_stopping_20260915_201114/summary_006_010_020_035/control_design_candidate.json",
+  "source_sha256": "b8c3d26f808fc92c73260a6568c3d96c9d4d5776016e9cbcaa1e2ade18c1d8b2",
+  "limitations": [
+    "Lower three command levels precede activation reanchor change; highest level follows it. Recalibration on one version required.",
+    "One sample per direction and command level; no statistical confidence bound",
+    "Current bridge, normal smoothed stop, compound translation, turning, payload and floor require new validation",
+    "Outside measured actual-speed range: simulation analytical extension only, no hardware coverage claim"
+  ],
+  "samples": {
+    "x+": [
+      {
+        "command_mps": 0.06,
+        "actual_mps": 0.05527921690276132,
+        "peak_m": 0.00810550970333164,
+        "settled_residual_m": 0.003720584357212557,
+        "rebound_m": 0.004384925346119083,
+        "trial": "linear_sweep/000_xpos_0.060"
+      },
+      {
+        "command_mps": 0.1,
+        "actual_mps": 0.0892993390074005,
+        "peak_m": 0.014398179350145424,
+        "settled_residual_m": 0.0027517138387160413,
+        "rebound_m": 0.011646465511429383,
+        "trial": "linear_sweep/004_xpos_0.100"
+      },
+      {
+        "command_mps": 0.2,
+        "actual_mps": 0.160526667154106,
+        "peak_m": 0.03555920036671173,
+        "settled_residual_m": 0.004129676794485981,
+        "rebound_m": 0.03142952357222575,
+        "trial": "linear_sweep/008_xpos_0.200"
+      },
+      {
+        "command_mps": 0.35,
+        "actual_mps": 0.2487537720685542,
+        "peak_m": 0.07672939615867291,
+        "settled_residual_m": 0.011338069937444717,
+        "rebound_m": 0.0653913262212282,
+        "trial": "four_directions_035/000_xpos_0.350"
+      }
+    ],
+    "x-": [
+      {
+        "command_mps": 0.06,
+        "actual_mps": 0.05275005723772591,
+        "peak_m": 0.0078032623541178375,
+        "settled_residual_m": 0.0021316727084233224,
+        "rebound_m": 0.005671589645694515,
+        "trial": "linear_sweep/001_xneg_0.060"
+      },
+      {
+        "command_mps": 0.1,
+        "actual_mps": 0.08148560073743266,
+        "peak_m": 0.014415985848980156,
+        "settled_residual_m": 0.0012157999386984198,
+        "rebound_m": 0.013200185910281737,
+        "trial": "linear_sweep/005_xneg_0.100"
+      },
+      {
+        "command_mps": 0.2,
+        "actual_mps": 0.15225221047473173,
+        "peak_m": 0.0360578112303348,
+        "settled_residual_m": 0.006199441419315005,
+        "rebound_m": 0.029858369811019796,
+        "trial": "linear_sweep/009_xneg_0.200"
+      },
+      {
+        "command_mps": 0.35,
+        "actual_mps": 0.24413191657755848,
+        "peak_m": 0.07393528538977212,
+        "settled_residual_m": 0.005386504399824843,
+        "rebound_m": 0.06854878098994728,
+        "trial": "four_directions_035/001_xneg_0.350"
+      }
+    ],
+    "y+": [
+      {
+        "command_mps": 0.06,
+        "actual_mps": 0.056138850546380833,
+        "peak_m": 0.006298348702698894,
+        "settled_residual_m": 0.0016504053797871023,
+        "rebound_m": 0.004647943322911792,
+        "trial": "linear_sweep/002_ypos_0.060"
+      },
+      {
+        "command_mps": 0.1,
+        "actual_mps": 0.0927812834157029,
+        "peak_m": 0.015205611021307033,
+        "settled_residual_m": 0.0036293419437170822,
+        "rebound_m": 0.011576269077589952,
+        "trial": "linear_sweep/006_ypos_0.100"
+      },
+      {
+        "command_mps": 0.2,
+        "actual_mps": 0.15957929247030786,
+        "peak_m": 0.037645686341251094,
+        "settled_residual_m": 0.0057151817303138395,
+        "rebound_m": 0.03193050461093726,
+        "trial": "linear_sweep/010_ypos_0.200"
+      },
+      {
+        "command_mps": 0.35,
+        "actual_mps": 0.24054708369640052,
+        "peak_m": 0.07767352844253939,
+        "settled_residual_m": 0.0096200676714971,
+        "rebound_m": 0.06805346077104228,
+        "trial": "four_directions_035/002_ypos_0.350"
+      }
+    ],
+    "y-": [
+      {
+        "command_mps": 0.06,
+        "actual_mps": 0.05409273652057512,
+        "peak_m": 0.007053837753541015,
+        "settled_residual_m": 0.0023494726751402293,
+        "rebound_m": 0.004704365078400785,
+        "trial": "linear_sweep/003_yneg_0.060"
+      },
+      {
+        "command_mps": 0.1,
+        "actual_mps": 0.08890934421464051,
+        "peak_m": 0.014262159598354418,
+        "settled_residual_m": 0.0020922090785461672,
+        "rebound_m": 0.01216995051980825,
+        "trial": "linear_sweep/007_yneg_0.100"
+      },
+      {
+        "command_mps": 0.2,
+        "actual_mps": 0.1603138250534234,
+        "peak_m": 0.037865813070828314,
+        "settled_residual_m": 0.007126774755684901,
+        "rebound_m": 0.030739038315143415,
+        "trial": "linear_sweep/011_yneg_0.200"
+      },
+      {
+        "command_mps": 0.35,
+        "actual_mps": 0.2452866270353514,
+        "peak_m": 0.0763709830019923,
+        "settled_residual_m": 0.007828190582878125,
+        "rebound_m": 0.06854279241911418,
+        "trial": "four_directions_035/003_yneg_0.350"
+      }
+    ]
+  }
+}

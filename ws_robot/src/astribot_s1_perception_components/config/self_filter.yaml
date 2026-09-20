@@ -1,0 +1,72 @@
+# Shared by SLAM input and navigation projection. Geometry is in the chassis frame.
+/**:
+  ros__parameters:
+    self_filter:
+      footprint:
+        enabled: true
+        radius: 0.44
+        z_min: -0.2
+        z_max: 0.2
+      chain_names:
+      - torso
+      - head
+      - arm_left
+      - arm_right
+      - gripper_left
+      - gripper_right
+      chains:
+        torso:
+          radius: 0.2
+          frames:
+          - astribot_torso_base
+          - astribot_torso_link_1
+          - astribot_torso_link_2
+          - astribot_torso_link_3
+          - astribot_torso_link_4
+          - astribot_torso_end_effector
+        head:
+          radius: 0.18
+          frames:
+          - astribot_head_base_link
+          - astribot_head_link_1
+          - astribot_head_link_2
+        arm_left:
+          radius: 0.15
+          frames:
+          - astribot_arm_left_base_link
+          - astribot_arm_left_link_1
+          - astribot_arm_left_link_2
+          - astribot_arm_left_link_3
+          - astribot_arm_left_link_4
+          - astribot_arm_left_link_5
+          - astribot_arm_left_link_6
+          - astribot_arm_left_link_7
+          - astribot_arm_left_tool_link
+        arm_right:
+          radius: 0.15
+          frames:
+          - astribot_arm_right_base_link
+          - astribot_arm_right_link_1
+          - astribot_arm_right_link_2
+          - astribot_arm_right_link_3
+          - astribot_arm_right_link_4
+          - astribot_arm_right_link_5
+          - astribot_arm_right_link_6
+          - astribot_arm_right_link_7
+          - astribot_arm_right_tool_link
+        gripper_left:
+          radius: 0.1
+          frames:
+          - astribot_arm_left_link_7
+          - astribot_gripper_left_base
+          - astribot_gripper_left_Link_L11
+          - astribot_gripper_left_Link_R11
+          - astribot_arm_left_tcp_link
+        gripper_right:
+          radius: 0.1
+          frames:
+          - astribot_arm_right_link_7
+          - astribot_gripper_right_base
+          - astribot_gripper_right_Link_L11
+          - astribot_gripper_right_Link_R11
+          - astribot_arm_right_tcp_link

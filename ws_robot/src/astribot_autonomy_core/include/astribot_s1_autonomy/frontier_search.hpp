@@ -3,6 +3,7 @@
 #define ASTRIBOT_S1_AUTONOMY__FRONTIER_SEARCH_HPP_
 
 #include <cstddef>
+#include <array>
 #include <functional>
 #include <cstdint>
 #include <string>
@@ -73,6 +74,9 @@ struct GoalCandidate
   double x{0.0};
   double y{0.0};
   double yaw{0.0};
+  double frontier_x{0.0};
+  double frontier_y{0.0};
+  double retreat_distance{0.0};
   std::size_t cluster_index{0U};
   /// 代价分解，全部留着是为了能在日志/Marker 里解释「为什么选它」。
   double cost{0.0};
@@ -121,6 +125,11 @@ struct FrontierSearchParams
   int max_samples_per_cluster{1};
   /// 候选点必须保证的净空半径(m)：以候选点为心、该半径内不能有膨胀后的障碍。
   double required_clearance_radius{0.0};
+  /// Padded Nav2 footprint in body coordinates; never relaxed with search thresholds.
+  std::vector<std::array<double, 2>> goal_footprint{
+    {0.32, 0.32}, {-0.32, 0.32}, {-0.32, -0.32}, {0.32, -0.32}};
+  double goal_footprint_margin{0.05};
+  double goal_retreat_radius{0.8};
   /// 目标点离机器人过近则丢弃(m)。
   double min_goal_distance{0.0};
   /// 目标点离机器人过远则丢弃(m)；<=0 表示不限制。
@@ -165,6 +174,7 @@ public:
 
   bool configure(const FrontierSearchParams & params, std::string & error);
   const FrontierSearchParams & params() const {return params_;}
+  bool goalFootprintIsKnownFree(const GridMap & map, double x, double y, double yaw) const;
 
   /// 主入口。map 必须 consistent()，否则直接返回空结果（不抛异常、不崩溃）。
   void search(
@@ -192,6 +202,8 @@ private:
   void clusterFrontiers(const GridMap & map, double robot_x, double robot_y, Result & out);
   /// 候选点净空校验。
   bool hasClearance(const GridMap & map, unsigned int mx, unsigned int my) const;
+  bool retreatGoal(const GridMap & map, unsigned int mx, unsigned int my,
+    double robot_x, double robot_y, GoalCandidate & candidate) const;
   /// 计算历史访问惩罚。
   double visitPenaltyAt(double x, double y, const std::vector<VisitRecord> & history) const;
 

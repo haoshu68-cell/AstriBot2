@@ -1,5 +1,6 @@
 // Copyright 2026 Astribot.
 #include "astribot_s1_autonomy/frontier_explorer_node.hpp"
+#include "astribot_s1_autonomy/frontier_goal_parameters.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -119,6 +120,7 @@ void FrontierExplorerNode::declareParameters()
   declare_parameter<int>("visit_history_limit", 50, describe("历史访问记录保留条数上限"));
   declare_parameter<bool>("publish_markers", true, describe("是否发布调试 Marker"));
 
+  declareFrontierGoalParameters(*this);
   declare_parameter<int>("search.occupied_threshold", 65, describe("占据判定阈值(0~100)"));
   declare_parameter<int>("search.free_threshold", 25, describe("空闲判定阈值(0~100)"));
   declare_parameter<double>("search.obstacle_inflation_radius", 0.35, describe("障碍膨胀半径(m)"));
@@ -197,6 +199,7 @@ bool FrontierExplorerNode::loadParameters(std::string & error)
   publish_markers_ = get_parameter("publish_markers").as_bool();
 
   FrontierSearchParams sp;
+  if (!loadFrontierGoalParameters(*this,sp,error)) {return false;}
   sp.occupied_threshold = static_cast<int>(get_parameter("search.occupied_threshold").as_int());
   sp.free_threshold = static_cast<int>(get_parameter("search.free_threshold").as_int());
   sp.obstacle_inflation_radius = get_parameter("search.obstacle_inflation_radius").as_double();

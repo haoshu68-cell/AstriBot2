@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SDK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WS="${SDK_ROOT}/ws_robot"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+WS="${PROJECT_ROOT}/ws_robot"
 ROS_UNDERLAY=/opt/ros/humble
 VENDOR_ROS=/opt/astribot_ros/middle_ware
 
@@ -54,7 +54,7 @@ missing=()
 for p in ament_cmake ament_cmake_python rosidl_default_generators \
          rclcpp rclpy tf2_ros nav_msgs sensor_msgs geometry_msgs \
          nav2_costmap_2d nav2_msgs moveit_core moveit_ros_planning_interface \
-         pointcloud_to_laserscan control_msgs; do
+         control_msgs; do
     [ -d "${ROS_UNDERLAY}/share/$p" ] || missing+=("$p")
 done
 if [ ${#missing[@]} -gt 0 ]; then
@@ -64,8 +64,8 @@ fi
 ok "构建必需包齐全（14 项）"
 
 IGNORE=(
-    livox_ros_driver2
     astribot_s1_gazebo_bringup
+    aws_robomaker_small_warehouse_world
 )
 
 CLEAN=0
@@ -76,6 +76,11 @@ for arg in "$@"; do
         *) COLCON_EXTRA+=("$arg") ;;
     esac
 done
+
+SLAM_DEP_PREFIX="${ASTRIBOT_SLAM_DEP_PREFIX:-$PROJECT_ROOT/ws_robot/deps/gtsam}"
+bash "$WS/src/astribot_s1_perception/scripts/prepare_livox_driver2.sh"
+bash "$PROJECT_ROOT/tools/robot/build_slam_dependencies.sh"
+export CMAKE_PREFIX_PATH="$SLAM_DEP_PREFIX:${CMAKE_PREFIX_PATH:-}"
 
 cd "$WS" || die "找不到工作空间 $WS"
 
@@ -92,9 +97,11 @@ echo "  不构建   : ${IGNORE[*]}"
 echo
 
 set +e
-colcon build --symlink-install \
+colcon build --base-paths src --symlink-install \
     --packages-ignore "${IGNORE[@]}" \
     --cmake-args -DCMAKE_BUILD_TYPE=Release \
+    -DROS_EDITION=ROS2 -DDISTRO_ROS="${ROS_DISTRO:-humble}" \
+    -DGTSAM_DIR="$SLAM_DEP_PREFIX/lib/cmake/GTSAM" \
     "${COLCON_EXTRA[@]}"
 rc=$?
 set -e
@@ -115,7 +122,7 @@ if [ -n "$cache" ]; then
     ok "CMakeCache 未引用厂商 ROS"
 fi
 
-ok "构建完成。运行前请 source ${SDK_ROOT}/env_robot.sh（那才是运行环境）"
+ok "构建完成。运行前请 source ${PROJECT_ROOT}/tools/robot/env_deployed.sh（真机部署环境）"
 echo
 echo "  提醒：构建用 ${ROS_UNDERLAY}，运行用 env_robot.sh（厂商栈 + 我们的 overlay）。"
 echo "        这两个环境**刻意不同**，不要在同一个终端里混用。"

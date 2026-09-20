@@ -11,6 +11,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(astribot_eigen_vendor REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
 
@@ -33,8 +34,10 @@ find_package(nav2_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(control_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(astribot_transport_msgs REQUIRED)
 
 set(ASTRIBOT_MANIPULATION_DEPS
+  astribot_eigen_vendor
   rclcpp
   pluginlib
   moveit_core
@@ -62,9 +65,6 @@ target_include_directories(${PROJECT_NAME}_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_include_directories(${PROJECT_NAME}_core SYSTEM PUBLIC
-  ${EIGEN3_INCLUDE_DIRS}
-)
 ament_target_dependencies(${PROJECT_NAME}_core ${ASTRIBOT_MANIPULATION_DEPS})
 
 add_library(${PROJECT_NAME}_ompl_extension SHARED
@@ -76,7 +76,6 @@ target_include_directories(${PROJECT_NAME}_ompl_extension PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 target_include_directories(${PROJECT_NAME}_ompl_extension SYSTEM PUBLIC
-  ${EIGEN3_INCLUDE_DIRS}
   ${OMPL_INCLUDE_DIRS}
 )
 target_link_libraries(${PROJECT_NAME}_ompl_extension
@@ -95,9 +94,6 @@ add_library(${PROJECT_NAME}_gripper SHARED
 target_include_directories(${PROJECT_NAME}_gripper PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-)
-target_include_directories(${PROJECT_NAME}_gripper SYSTEM PUBLIC
-  ${EIGEN3_INCLUDE_DIRS}
 )
 target_link_libraries(${PROJECT_NAME}_gripper ${PROJECT_NAME}_core)
 ament_target_dependencies(${PROJECT_NAME}_gripper
@@ -119,6 +115,11 @@ ament_target_dependencies(planning_demo_node
 )
 
 add_executable(self_collision_pair_generator src/self_collision_pair_generator.cpp)
+add_executable(transport_skill_planner src/transport_skill_planner.cpp)
+target_link_libraries(transport_skill_planner ${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
+ament_target_dependencies(transport_skill_planner
+  ${ASTRIBOT_MANIPULATION_DEPS} astribot_transport_msgs control_msgs sensor_msgs rclcpp_action)
+astribot_target_eigen(transport_skill_planner)
 target_link_libraries(self_collision_pair_generator ${PROJECT_NAME}_core)
 ament_target_dependencies(self_collision_pair_generator ${ASTRIBOT_MANIPULATION_DEPS})
 
@@ -136,7 +137,7 @@ install(
 )
 
 install(
-  TARGETS planning_demo_node self_collision_pair_generator
+  TARGETS planning_demo_node self_collision_pair_generator transport_skill_planner
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -148,7 +149,18 @@ install(
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
-ament_export_dependencies(${ASTRIBOT_MANIPULATION_DEPS})
+ament_export_dependencies(astribot_eigen_vendor ${ASTRIBOT_MANIPULATION_DEPS})
 ament_export_targets(export_${PROJECT_NAME})
 
+astribot_target_eigen(${PROJECT_NAME}_core)
+astribot_target_eigen(${PROJECT_NAME}_ompl_extension)
+astribot_target_eigen(${PROJECT_NAME}_gripper)
+astribot_target_eigen(planning_demo_node)
+astribot_target_eigen(self_collision_pair_generator)
+find_package(moveit_ros_move_group REQUIRED)
+add_library(astribot_cancellable_execution SHARED src/cancellable_execution.cpp)
+ament_target_dependencies(astribot_cancellable_execution rclcpp rclcpp_action pluginlib moveit_ros_move_group moveit_ros_planning moveit_ros_planning_interface moveit_msgs)
+astribot_target_eigen(astribot_cancellable_execution)
+pluginlib_export_plugin_description_file(moveit_ros_move_group cancellable_execution_plugins.xml)
+install(TARGETS astribot_cancellable_execution LIBRARY DESTINATION lib)
 ament_package()

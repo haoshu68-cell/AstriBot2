@@ -23,6 +23,8 @@ from launch.actions import (
     IncludeLaunchDescription,
     SetEnvironmentVariable,
     RegisterEventHandler,
+    OpaqueFunction,
+    SetLaunchConfiguration,
 )
 from launch.event_handlers import OnProcessExit
 from launch.conditions import IfCondition
@@ -39,9 +41,47 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
+def _prepare_social(context, base_world):
+    scenario = LaunchConfiguration('social_scenario').perform(context)
+    if not scenario:
+        return [SetLaunchConfiguration('active_warehouse_world', base_world),
+                SetLaunchConfiguration('social_gui_args', '')]
+    from pathlib import Path
+    from ament_index_python.packages import get_package_prefix, get_package_share_directory
+    from astribot_s1_social_navigation.scenario import prepare_world, prepare_gui_config
+    from astribot_logging import log_directory
+    base = base_world.perform(context)
+    output = Path(log_directory()) / 'social_world.sdf'
+    world = prepare_world(base, scenario, output,
+                          get_package_prefix('hunav_gazebo_fortress_wrapper'),
+                          get_package_prefix('astribot_s1_gazebo_bringup'))
+    gui_config = prepare_gui_config(scenario, output.with_name('social_gui.config'),
+                                   get_package_prefix('astribot_s1_gazebo_bringup'))
+    return [SetLaunchConfiguration('active_warehouse_world', world),
+            SetEnvironmentVariable('IGN_GUI_PLUGIN_PATH',
+                get_package_prefix('astribot_s1_gazebo_bringup') + '/lib' + os.pathsep +
+                os.environ.get('IGN_GUI_PLUGIN_PATH', '')),
+            SetLaunchConfiguration('social_gui_args', f'--gui-config "{gui_config}" '),
+            IncludeLaunchDescription(PythonLaunchDescriptionSource(
+                get_package_share_directory('astribot_s1_gazebo_bringup') + '/launch/hunav_agents.launch.py'),
+                launch_arguments={'scenario': scenario}.items()),
+            IncludeLaunchDescription(PythonLaunchDescriptionSource(
+                get_package_share_directory('astribot_s1_social_navigation') + '/launch/observe.launch.py'),
+                launch_arguments={'source': 'hunav_truth', 'use_sim_time': 'true',
+                                  'hunav_input_topic': '/simulation/hunav_actor_states'}.items()),
+            Node(package='tf2_ros', executable='static_transform_publisher', output='screen',
+                 arguments=['--frame-id', 'odom', '--child-frame-id', 'social_sim_world'],
+                 parameters=[{'use_sim_time': True}]),
+            Node(package='ros_gz_bridge', executable='parameter_bridge', output='screen',
+                 arguments=['/social_sim/state@std_msgs/msg/String[gz.msgs.StringMsg'],
+                 parameters=[{'use_sim_time': True}])]
+
+
 def generate_launch_description():
 
     declare_args = [
+        DeclareLaunchArgument('navigation_geometry_mode', default_value='legacy'),
+        DeclareLaunchArgument('social_scenario', default_value='', description='Optional HuNav scene in the same warehouse'),
         DeclareLaunchArgument(
             'world_name', default_value='small_warehouse',
             description='aws_robomaker_small_warehouse_world 里的世界名，'
@@ -78,6 +118,9 @@ def generate_launch_description():
         DeclareLaunchArgument('spawn_yaw', default_value='0.0', description='出生朝向 yaw (rad)'),
         DeclareLaunchArgument('use_lidar', default_value='true', description='是否挂载双Livox Mid-360激光雷达'),
         DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部RGB相机'),
+        DeclareLaunchArgument('camera_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_rgbd_transport.yaml']),
+            description='Camera model, intrinsics and mounting profile; simulation provenance required'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='是否使用仿真时钟'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='是否自动打开RViz2'),
         DeclareLaunchArgument(
@@ -167,10 +210,11 @@ def generate_launch_description():
     pkg_bringup = FindPackageShare('astribot_s1_gazebo_bringup')
     pkg_ros_gz_sim = FindPackageShare('ros_gz_sim')
 
-    world_file = PathJoinSubstitution([
+    default_world_file = PathJoinSubstitution([
         pkg_warehouse, 'worlds', world_name,
         [world_name, TextSubstitution(text='.world')],
     ])
+    world_file = LaunchConfiguration('active_warehouse_world')
 
     warehouse_models_path = PathJoinSubstitution([pkg_warehouse, 'models'])
     warehouse_worlds_path = PathJoinSubstitution([pkg_warehouse, 'worlds'])
@@ -206,6 +250,7 @@ def generate_launch_description():
                 TextSubstitution(text='-r '),
                 PythonExpression([
                     "'-s ' if '", LaunchConfiguration('headless'), "' == 'true' else ''"]),
+                LaunchConfiguration('social_gui_args'),
                 world_file,
             ],
         }.items(),
@@ -218,6 +263,7 @@ def generate_launch_description():
             'robot_name:=', robot_name, ' ',
             'use_lidar:=', use_lidar, ' ',
             'use_camera:=', use_camera, ' ',
+            'camera_profile:=', LaunchConfiguration('camera_profile'), ' ',
             'controllers_config:=', controllers_yaml, ' ',
             'wheel_radius:=', wheel_radius, ' ',
             'wheel_effort_limit:=', wheel_effort_limit, ' ',
@@ -233,7 +279,12 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='screen',
-        parameters=[robot_description, {'use_sim_time': use_sim_time}],
+        parameters=[robot_description, {'use_sim_time': use_sim_time,
+            # Match the 100 Hz measured joints for the fixed-body simulation
+            # contract. Keep source stamps; do not mask delay with receipt time.
+            'publish_frequency': ParameterValue(PythonExpression([
+                "100.0 if '", LaunchConfiguration('navigation_geometry_mode'),
+                "' == 'fixed_v2' else 20.0"]), value_type=float)}],
     )
 
     spawn_robot = Node(
@@ -309,7 +360,15 @@ def generate_launch_description():
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/livox_mid360_right/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked')],
         [TextSubstitution(text='/model/'), robot_name,
+         TextSubstitution(text='/livox_mid360_imu@sensor_msgs/msg/Imu[gz.msgs.IMU')],
+        [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image')],
+        [TextSubstitution(text='/model/'), robot_name,
+         TextSubstitution(text='/camera/image@sensor_msgs/msg/Image[gz.msgs.Image')],
+        [TextSubstitution(text='/model/'), robot_name,
+         TextSubstitution(text='/camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image')],
+        [TextSubstitution(text='/model/'), robot_name,
+         TextSubstitution(text='/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo')],
     ]
 
     ros_gz_bridge = Node(
@@ -327,7 +386,15 @@ def generate_launch_description():
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/livox_mid360_right/points')], '/livox/lidar_right'),
             ([TextSubstitution(text='/model/'), robot_name,
+              TextSubstitution(text='/livox_mid360_imu')], '/livox/imu'),
+            ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/camera/image_raw')], '/image_raw'),
+            ([TextSubstitution(text='/model/'), robot_name,
+              TextSubstitution(text='/camera/image')], '/camera/color/image_raw'),
+            ([TextSubstitution(text='/model/'), robot_name,
+              TextSubstitution(text='/camera/depth_image')], '/camera/depth/image_raw'),
+            ([TextSubstitution(text='/model/'), robot_name,
+              TextSubstitution(text='/camera/camera_info')], '/camera/color/camera_info'),
         ],
     )
 
@@ -352,7 +419,7 @@ def generate_launch_description():
     livox_right_frame_alias = make_sensor_frame_alias(
         'livox_mid360_right', 'astribot_torso_base', 'livox_mid360_right_sensor')
     camera_frame_alias = make_sensor_frame_alias(
-        'camera_link', 'astribot_head_link_2', 'astribot_camera')
+        'camera_optical_frame', 'astribot_head_link_2', 'astribot_camera')
 
     rviz_node = Node(
         package='rviz2',
@@ -367,6 +434,7 @@ def generate_launch_description():
         set_ros_domain_id,
         set_gz_resource_path,
         set_ign_resource_path,
+        OpaqueFunction(function=_prepare_social, args=[default_world_file]),
         gz_sim,
         robot_state_publisher,
         spawn_robot,

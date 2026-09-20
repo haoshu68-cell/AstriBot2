@@ -1,0 +1,14 @@
+std_msgs/Header header
+uint64 envelope_epoch
+string installed_geometry_hash
+string corridor_id
+float64 width_m
+float64 left_clearance_m
+float64 right_clearance_m
+float64 lateral_target_m
+float64 heading_min_rad
+float64 heading_max_rad
+bool in_place_rotation_allowed
+bool reverse_allowed
+string decision
+string reason

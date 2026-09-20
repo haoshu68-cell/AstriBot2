@@ -117,6 +117,10 @@ class OmniEffortDriveNode(Node):
         self.declare_parameter('wheel_effort_limit_nm', 15.0)
         self.declare_parameter('wheel_velocity_limit_rad_s', 40.0)
 
+        self.declare_parameter('idle_position_hold', False)
+        self.declare_parameter('idle_position_kp', 3.0)
+        self._idle_reference = None
+        self._wheel_positions_valid = False
         self.declare_parameter('cmd_vel_timeout_sec', 0.5)
         self.declare_parameter('joint_state_timeout_sec', 0.3)
         self.declare_parameter('control_period_sec', 0.01)  # 100Hz，对齐astribot_chassis.yaml
@@ -212,6 +216,10 @@ class OmniEffortDriveNode(Node):
         try:
             name_to_vel = dict(zip(msg.name, msg.velocity)) if len(msg.velocity) == len(msg.name) else {}
             name_to_pos = dict(zip(msg.name, msg.position)) if len(msg.position) == len(msg.name) else {}
+            self._wheel_positions_valid = all(
+                j in name_to_pos and j in name_to_vel and
+                math.isfinite(name_to_pos[j]) and math.isfinite(name_to_vel[j])
+                for j in JOINT_NAMES)
             updated = False
             for joint in JOINT_NAMES:
                 if joint in name_to_vel:
@@ -277,6 +285,17 @@ class OmniEffortDriveNode(Node):
         tau_max = self._safe_param('wheel_effort_limit_nm', 15.0)
         warn_ratio = self._safe_param('warn_effort_ratio', 0.9)
 
+        # Optional simulation brake: latch only after the wheels have settled.
+        # Motion or stale feedback releases the reference, never pulls back to an
+        # old navigation stop. This is wheel torque control, not a pose teleport.
+        idle = (self._safe_param('idle_position_hold', False) and
+                max(abs(vx), abs(vy), abs(wz)) <= 1e-9 and not feedback_stale and self._wheel_positions_valid and
+                all(math.isfinite(self._wheel_position[j]) for j in JOINT_NAMES))
+        if not idle:
+            self._idle_reference = None
+        elif self._idle_reference is None and all(abs(self._wheel_velocity[j]) < .05 for j in JOINT_NAMES):
+            self._idle_reference = dict(self._wheel_position)
+
         efforts = []
         for joint in JOINT_NAMES:
             target = targets.get(joint, 0.0)
@@ -294,6 +313,11 @@ class OmniEffortDriveNode(Node):
             measured = self._wheel_velocity[joint]
             tau, error = self._loops[joint].update(
                 clamped_target, measured, kp, ki, kd, tau_c, tau_v, deadband, tau_max, dt)
+            if self._idle_reference is not None:
+                gain = self._safe_param('idle_position_kp', 3.0)
+                if not math.isfinite(gain) or not 0.0 <= gain <= 10.0:
+                    gain = 0.0
+                tau = _clamp(tau + gain * (self._idle_reference[joint] - self._wheel_position[joint]), -tau_max, tau_max)
             efforts.append(tau)
 
             if abs(tau) > warn_ratio * tau_max:

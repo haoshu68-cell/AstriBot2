@@ -89,6 +89,7 @@
            "我们自己机器人模型"的 <gazebo> 标签下——gz-sim 的 Sensors 系统一旦在
            场景里任意实体上加载成功，就会全局接管整个仿真里所有传感器的渲染，
            不需要非挂在 world 实体上不可，这是应对"不能改 world 文件"场景的标准做法。 -->
+      <plugin filename="ignition-gazebo-imu-system" name="gz::sim::systems::Imu"/>
       <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
         <!-- 兼容提示：ignition-gazebo-sensors-system / ignition::gazebo::systems::Sensors -->
         <render_engine>ogre2</render_engine>

@@ -1,0 +1,155 @@
+/**:
+  ros__parameters:
+    # Master switch. false = node does no work and never publishes on
+    # output_topic — downstream nav then simply doesn't see anything there.
+    # Which topic nav actually subscribes to is decided in nav's own
+    # launch/remap config, not here.
+    enable: true
+
+    # Historical layer: voxel_slam's Cartographer-submap-style keyframe
+    # interface (astribot_slam_msgs). submap_topic carries each keyframe's own
+    # local-frame cloud + pose, sent once per keyframe. pose_array_topic
+    # carries bulk pose-only updates for every currently-known keyframe,
+    # sent whenever voxel_slam's own loop closure / pose-graph optimization
+    # / HBA corrects one or more of them. Active always — it's the ONLY
+    # thing removing dynamic obstacles while the robot is MOVING (see the
+    # module comment in nav_prob_grid_node.cpp for why the live layer below
+    # is gated to stationary periods only, not both always).
+    submap_topic: "/voxel_slam/keyframe_submap"
+    pose_array_topic: "/voxel_slam/keyframe_pose_array"
+
+    # Live layer: voxel_slam's per-scan interface, NOT the keyframe one.
+    # Published every LIO scan regardless of keyframe activity, already
+    # height-ROI-filtered, in world_frame coordinates already (no per-scan
+    # pose needed to place the points themselves). chassis_frame is the TF
+    # child frame voxel_slam broadcasts continuously (same per-scan
+    # cadence, pub_odom_func() in voxelslam.cpp) from world_frame — used
+    # both as each scan's ray-casting ORIGIN and, differenced scan to scan,
+    # as the velocity estimate deciding whether the robot is stationary
+    # (stationary_lin_vel_thresh/stationary_ang_vel_thresh below). Active
+    # ONLY while stationary: its verdict for any cell it's touched
+    # overrides the historical layer outright, but only then — while
+    # moving, the historical layer's own cross-submap scoring (hit_delta/
+    # miss_delta/dwell_cluster_* below) is fully responsible instead. See
+    # the module comment in nav_prob_grid_node.cpp for why.
+    raw_scan_topic: "/map_scan_filtered"
+    chassis_frame: "aft_mapped"
+
+    # A hit still marks a cell occupied immediately (one scan is enough —
+    # safety-first), but a miss only clears a cell after
+    # live_clear_min_duration_sec of REAL elapsed time with no intervening
+    # hit, not just a handful of scan callbacks. Counting scans instead of
+    # time was tried first and rejected: a single scan's own point yield
+    # is sparse, and MID360's non-repetitive pattern only fills those gaps
+    # in given enough integration TIME — several scan callbacks can fire
+    # close enough together that the same coverage gap simply hasn't had
+    # a chance to be resampled yet, which would have thinned or broken a
+    # genuinely solid, thick wall one cell at a time. Requiring real
+    # wall-clock duration instead gives the sensor's own integration time
+    # to actually fill the gap if the obstruction is real, independent of
+    # however fast onScan() happens to be called. Does NOT help the one
+    # specific failure mode already found and accepted (a real 3D->2D
+    # flattening ambiguity that repeats identically forever, not just
+    # briefly, so no amount of waiting tells it apart from genuine
+    # clearing) — this is just an extra margin on top of that, for
+    # ordinary transient/sparse-coverage noise.
+    live_clear_min_duration_sec: 0.5
+
+    # Real-time stationary/moving decision, straight off the live TF (see
+    # raw_scan_topic/chassis_frame above) — nothing to do with keyframe
+    # cadence. Below both thresholds = stationary = the live layer takes
+    # over; above either = moving = back to the historical layer alone.
+    stationary_lin_vel_thresh: 0.02  # m/s
+    stationary_ang_vel_thresh: 0.05  # rad/s
+
+    # This node's own accumulated output.
+    output_topic: "/map"
+
+    # Frame label on the published grid — voxel_slam's keyframe poses already
+    # arrive in this world frame ("map", each keyframe's own raw IMU
+    # pose — not chassis-center), so this is just what gets stamped on the
+    # outgoing message header, not something this node needs to look up via
+    # tf for the historical layer (the live layer does need tf, see above).
+    world_frame: "map"
+
+    # Cell size for both each submap's own local grid and the composited
+    # global grid.
+    resolution: 0.05
+
+    # How often the composited global map is published — independent of how
+    # often submaps/pose updates/scans arrive (a wall timer). Every publish
+    # cycle re-composites every known submap's local cells into world
+    # coordinates using that submap's current pose from scratch (no
+    # incremental caching yet); at 1 Hz this is cheap even for a long
+    # session's worth of keyframes, but revisit this if it ever isn't.
+    publish_rate_hz: 1.0
+
+    # Per-cell integer score in [score_min, score_max], accumulated once per
+    # submap's own local grid (built exactly once, from that keyframe's own
+    # cloud — never touched again). Each ray's endpoint gets +hit_delta;
+    # every cell the ray passed through on the way there gets -miss_delta,
+    # UNLESS that same cell was itself hit by another point in the same
+    # frame (a real hit always wins over a same-frame miss that merely
+    # grazed past it — see raycastLocalMiss). hit_delta > miss_delta
+    # (mirrors hit_probability > 0.5 > miss_probability in a Bayesian
+    # log-odds grid), and deliberately by a wide margin: while MOVING, this
+    # score is what the historical layer sums across submaps to clear a
+    # dynamic obstacle (the live layer is stationary-only, see
+    # raw_scan_topic above) — miss_delta needs to stay small relative to
+    # hit_delta, otherwise ordinary raycasting noise can erode a genuinely
+    # static occupied cell instead of only the transient/dynamic ones it's
+    # meant for.
+    #
+    # Published output follows Cartographer's occupancy-grid convention:
+    # int8[] data, -1 unknown (neither layer has ever touched that world
+    # cell), 0 free, 100 occupied.
+    hit_delta: 3
+    miss_delta: 1
+    score_min: -100
+    score_max: 100
+    occ_threshold: 0
+
+    # Submaps aren't independent observations just because they're separate
+    # keyframes — dwelling near one spot produces a burst of submaps from
+    # nearly the same viewpoint, and every one of those near-duplicate
+    # submaps voting the same way would erode a genuinely static cell not
+    # from independently-confirmed disagreement, but from loitering long
+    # enough to rack up correlated votes. publish() walks submaps in
+    # (session, keyframe_id) order and folds consecutive ones whose CURRENT
+    # world pose stays within dwell_cluster_radius (meters) /
+    # dwell_cluster_angle_deg of each other into one cluster; each cluster
+    # casts at most one hit_delta/miss_delta vote per world cell no matter
+    # how many member submaps it has.
+    dwell_cluster_radius: 0.3
+    dwell_cluster_angle_deg: 15.0
+
+    # A scan's raw point yield still leaves some 0.05m cells with zero
+    # points no matter how many scans accumulate (confirmed against
+    # voxelslam.cpp: MID360's real density limit at exactly this
+    # resolution — see the module comment in nav_prob_grid_node.cpp),
+    # leaving classic salt-and-pepper unknown speckle in otherwise-open
+    # free space. publish() patches it directly: an unknown cell is
+    # promoted to free only if, within a (2*unknown_fill_radius+1)^2
+    # neighborhood, at least unknown_fill_min_free_frac of the surrounding
+    # cells are free AND NONE are occupied (the occupied veto means this
+    # can never turn unknown space next to a real obstacle into free
+    # space — no safety margin is ever eroded). A genuinely unexplored
+    # region, mostly ringed by other unknown cells rather than free ones,
+    # won't hit the free-fraction threshold and is left alone.
+    # unknown_fill_radius: 0 disables this pass entirely.
+    unknown_fill_radius: 1
+    unknown_fill_min_free_frac: 0.6
+
+    # One-shot final export: whenever voxel_slam's own keyframe_pose_array
+    # arrives with is_final true and save_dir non-empty (sent exactly once,
+    # right after voxel_slam's HBA finishes correcting every keyframe's
+    # pose, when General.is_save_map && General.mapname is non-empty over
+    # there — see onPoseArray()/save_grid_to_disk() in
+    # nav_prob_grid_node.cpp), this node writes its own current composite
+    # grid (the exact same one publish() was already showing) to
+    # <save_dir><map_name>.pgm + .yaml — a standard ROS map_server/Nav2
+    # "trinary" map pair. These three are that yaml's own metadata fields,
+    # not consulted by any of the grid-building params above.
+    negate: 0
+    occupied_thresh: 0.65
+    free_thresh: 0.25

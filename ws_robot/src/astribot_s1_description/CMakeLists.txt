@@ -43,4 +43,8 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}/meshes
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(gripper_mimic_interfaces test/test_gripper_mimic_interfaces.py)
+endif()
 ament_package()

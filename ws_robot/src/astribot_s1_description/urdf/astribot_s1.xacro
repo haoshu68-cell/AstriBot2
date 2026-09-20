@@ -16,6 +16,7 @@
   <xacro:arg name="robot_name" default="astribot_s1"/>
   <xacro:arg name="use_lidar" default="true"/>
   <xacro:arg name="use_camera" default="true"/>
+  <xacro:arg name="camera_profile" default="$(find astribot_s1_description)/config/camera_generic.yaml"/>
   <!-- use_gripper：是否把平行夹爪作为真实关节模块建模。
        true（默认，与真机一致）：加载 astribot_s1_gripper.xacro，两臂末端各挂
          7 个 link / 6 个关节（1 主动 + 5 mimic），法兰 tool_link 的集中惯量清零。
@@ -49,7 +50,7 @@
 
        命名注意：URDF 沿用 left/right，实机话题叫 front/back，对应关系是
        **left = front = IP 192.168.0.12**，**right = back = IP 192.168.0.13**。
-       改名会牵动自滤配置、gazebo 传感器名与 livox_fusion_node，故本次只改数值。
+       改名会牵动自滤配置与 Gazebo 传感器名，故本次只改数值。
        坐标约定：torso_base 局部系 +x 朝前、+y 朝左。 -->
   <xacro:arg name="livox_left_xyz" default="0.17393 0.16893 0.082"/>
   <xacro:arg name="livox_left_rpy" default="0 0 -0.800058"/>
@@ -120,7 +121,7 @@
       xyz="$(arg livox_right_xyz)" rpy="$(arg livox_right_rpy)"/>
   </xacro:if>
   <xacro:if value="${use_camera_prop}">
-    <xacro:astribot_s1_camera parent="astribot_head_link_2" robot_name="${robot_name_prop}"/>
+    <xacro:astribot_s1_camera parent="astribot_head_link_2" robot_name="${robot_name_prop}" profile="$(arg camera_profile)"/>
   </xacro:if>
 
   <!-- ============ ros2_control + gz_ros2_control 插件 ============ -->

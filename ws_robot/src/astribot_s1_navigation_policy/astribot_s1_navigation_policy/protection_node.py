@@ -15,33 +15,35 @@ from tf2_ros import Buffer,TransformListener
 from ament_index_python.packages import get_package_share_directory
 from astribot_navigation_msgs.msg import MotionConstraint, RobotEnvelope
 from .profile import Profile
-from .robot_envelope import EnvelopeProfile
+from .robot_envelope import configure_envelope_input
 from .observer_node import rotate, yaw
 from .sensor_health import scan_coverage, movement_directions, coverage_allows_motion
 from .contracts import Vec3, Stamp
 from .protection import CommandRestriction,swept_point_collision,scan_usable
+from .control_time import ControlTime
 
 class FinalProtection(Node):
     def __init__(self):
         super().__init__('navigation_final_protection')
         self.declare_parameter('profile',get_package_share_directory('astribot_s1_navigation_policy')+'/config/simulation.json')
         self.declare_parameter('scan_topic','/scan_from_cloud')
-        self.profile=EnvelopeProfile(Profile.load(self.get_parameter('profile').value))
+        self.profile,self.envelope_ack=configure_envelope_input(self,Profile.load(self.get_parameter('profile').value),self.envelope,'protection')
         self.profile.require_environment(self.get_parameter('use_sim_time').value)
+        self.control_time=ControlTime(self.profile.environment=='simulation',self.profile.command_timeout_s)
         self.tf=Buffer();self.listener=TransformListener(self.tf,self)
-        self.command=(0.,0.,0.);self.command_at=-math.inf
+        self.command=(0.,0.,0.);self.command_at=-math.inf;self.command_ros_at=-math.inf
         self.measured=(0.,0.,0.);self.odom_at=-math.inf;self.odom_stamp=-math.inf
         self.coverage=()
         self.points=();self.scan_at=-math.inf;self.scan_stamp=-math.inf
         self.pending_scans=[];self.scan_received=0;self.scan_transformed=0
         self.scan_invalid=0;self.scan_tf_waits=0;self.scan_expired=0;self.last_scan_error=""
         self.proposal=None;self.proposal_at=-math.inf;self.sequence=0;self.epoch=time.monotonic_ns()
-        self.last_ros=None;self.last_wall=time.monotonic();self.clear_at=None
+        self.control_time.advance(self.get_clock().now().nanoseconds*1e-9,time.monotonic())
+        self.clear_at=None
         self.restriction=CommandRestriction(self.profile)
         self.output=self.create_publisher(Twist,'/cmd_vel',10)
         self.constraint=self.create_publisher(MotionConstraint,'/navigation_policy/constraint',10)
         self.diagnostics=self.create_publisher(String,'/navigation_policy/protection_state',10)
-        self.create_subscription(RobotEnvelope,'/navigation/robot_envelope',self.envelope,10)
         self.create_subscription(Twist,'/cmd_vel_policy_input',self.velocity,10)
         self.create_subscription(Odometry,'/odom',self.odom,qos_profile_sensor_data)
         self.create_subscription(LaserScan,self.get_parameter('scan_topic').value,self.scan,qos_profile_sensor_data)
@@ -52,20 +54,25 @@ class FinalProtection(Node):
         return Stamp(self.get_clock().now().nanoseconds,'ros',self.epoch)
 
     def envelope(self,msg):
-        try:self.profile.accept(msg,self.envelope_stamp())
+        try:
+            if self.profile.accept(msg,self.envelope_stamp()) and self.envelope_ack:self.envelope_ack(msg)
         except ValueError as error:self.get_logger().warning(str(error))
 
     def velocity(self,msg):
         self.command=(msg.linear.x,msg.linear.y,msg.angular.z);self.command_at=time.monotonic()
+        self.command_ros_at=self.get_clock().now().nanoseconds*1e-9
         # Validate each new command immediately; the wall timer still enforces
         # expiry when commands stop. Avoid adding one timer period to tracking.
         self.tick()
 
     def odom(self,msg):
+        capture=msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9
+        if not self.control_time.accepts(capture):return
         self.measured=(msg.twist.twist.linear.x,msg.twist.twist.linear.y,msg.twist.twist.angular.z)
-        self.odom_at=time.monotonic();self.odom_stamp=msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9
+        self.odom_at=time.monotonic();self.odom_stamp=capture
 
     def propose(self,msg):
+        if not self.control_time.accepts(msg.stamp.sec+msg.stamp.nanosec*1e-9):return
         if self.proposal and msg.epoch==self.proposal.epoch and msg.sequence<=self.proposal.sequence:return
         if not all(math.isfinite(v) for v in (msg.lease_s,msg.max_linear_speed,msg.max_angular_speed)):return
         if not 0<msg.lease_s<=.5 or min(msg.max_linear_speed,msg.max_angular_speed)<0:return
@@ -85,6 +92,7 @@ class FinalProtection(Node):
         pending=[]
         for msg in self.pending_scans:
             capture=msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9
+            if not self.control_time.accepts(capture):continue
             if capture<=self.scan_stamp:continue
             if seconds-capture>self.profile.sensor_timeout_s:
                 self.scan_expired+=1
@@ -111,17 +119,23 @@ class FinalProtection(Node):
 
     def tick(self):
         wall=time.monotonic();ros=self.get_clock().now();seconds=ros.nanoseconds*1e-9
-        dt=wall-self.last_wall;self.last_wall=wall
-        if self.last_ros is not None and seconds<self.last_ros:
+        timing=self.control_time.advance(seconds,wall)
+        if timing.reset:
             self.epoch+=1;self.proposal=None;self.scan_at=-math.inf;self.odom_at=-math.inf
-            self.scan_stamp=-math.inf;self.pending_scans=[]
-        self.last_ros=seconds
+            self.scan_stamp=-math.inf;self.odom_stamp=-math.inf;self.pending_scans=[]
+            self.command=(0.,0.,0.);self.command_at=self.command_ros_at=-math.inf
+            self.clear_at=None
+        elif timing.stop_commands:
+            # Retain observations that are still fresh in physical time. Revoke
+            # motion authorization once, without discarding the first resume scan.
+            self.proposal=None;self.command=(0.,0.,0.)
+            self.command_at=self.command_ros_at=-math.inf;self.clear_at=None
         self.process_scans(seconds)
         p=self.profile;m=self.proposal
-        fresh=(wall-self.scan_at<=p.sensor_timeout_s and 0<=seconds-self.scan_stamp<=p.sensor_timeout_s and
-               wall-self.odom_at<=p.sensor_timeout_s and 0<=seconds-self.odom_stamp<=p.sensor_timeout_s)
-        lease=bool(m and wall-self.proposal_at<=m.lease_s and
-                   0<=seconds-(m.stamp.sec+m.stamp.nanosec*1e-9)<=m.lease_s)
+        fresh=(self.control_time.fresh(self.scan_stamp,self.scan_at,p.sensor_timeout_s,seconds,wall) and
+               self.control_time.fresh(self.odom_stamp,self.odom_at,p.sensor_timeout_s,seconds,wall))
+        lease=bool(m and self.control_time.fresh(m.stamp.sec+m.stamp.nanosec*1e-9,
+                                               self.proposal_at,m.lease_s,seconds,wall))
         reason='INPUT_UNAVAILABLE' if not fresh else ('POLICY_UNAVAILABLE' if not lease else m.reason)
         independent_stop=not fresh or not lease
         if not self.profile.ready(self.envelope_stamp()):
@@ -132,19 +146,23 @@ class FinalProtection(Node):
         if fresh and (swept_point_collision(self.points,self.command,p) or
                       swept_point_collision(self.points,self.measured,p)):
             independent_stop=True;reason='INDEPENDENT_SWEEP_RISK'
+        if not timing.running:
+            independent_stop=True;reason='SIM_CLOCK_STALLED'
         # Confirm local safety while the policy is still yielding. Policy HOLD
         # remains authoritative, but does not restart an already-clear guard.
         if independent_stop:self.clear_at=None
         else:
-            if self.clear_at is None:self.clear_at=wall
+            if self.clear_at is None:self.clear_at=timing.now
         stop=independent_stop or m.hold
-        if not stop and wall-self.clear_at<p.clear_hold_s:
+        if not stop and timing.now-self.clear_at<p.clear_hold_s:
             stop=True;reason='PROTECTION_CLEAR_CONFIRMATION'
-        command=self.command if wall-self.command_at<=p.input_command_timeout_s else (0.,0.,0.)
+        command=self.command if self.control_time.command_fresh(self.command_ros_at,self.command_at,
+                      p.input_command_timeout_s,seconds,wall) else (0.,0.,0.)
         if lease and m.alignment_required:command=(0.,0.,command[2])
         if lease and m.centering_required:command=(command[0],command[1],0.)
         output=self.restriction.apply(command,min(p.max_speed_m_s,m.max_linear_speed) if lease else 0.,
-                                      m.max_angular_speed if lease else 0.,stop,dt)
+                                      m.max_angular_speed if lease else 0.,stop,timing.dt,
+                                      allow_zero_dt=self.control_time.simulated)
         msg=Twist();msg.linear.x,msg.linear.y,msg.angular.z=output;self.output.publish(msg)
         self.sequence+=1;c=MotionConstraint();c.stamp=ros.to_msg();c.epoch=self.epoch
         c.sequence=self.sequence;c.lease_s=p.constraint_lease_s;c.hold=stop;c.reason=reason
@@ -160,7 +178,9 @@ class FinalProtection(Node):
                 'reason':reason,'hold':stop,'scan_age_s':age(seconds-self.scan_stamp),
                 'scan_wall_age_s':age(wall-self.scan_at),'odom_age_s':age(seconds-self.odom_stamp),
                 'odom_wall_age_s':age(wall-self.odom_at),'policy_wall_age_s':age(wall-self.proposal_at),
-                'loop_wall_dt_s':dt,'points':len(self.points),
+                'loop_wall_dt_s':timing.wall_dt,'loop_control_dt_s':timing.dt,
+                'time_domain':'simulation' if self.control_time.simulated else 'wall',
+                'clock_running':timing.running,'points':len(self.points),
                 'scan_received':self.scan_received,'scan_transformed':self.scan_transformed,
                 'scan_invalid':self.scan_invalid,'scan_tf_waits':self.scan_tf_waits,
                 'scan_expired':self.scan_expired,'pending_scans':len(self.pending_scans),

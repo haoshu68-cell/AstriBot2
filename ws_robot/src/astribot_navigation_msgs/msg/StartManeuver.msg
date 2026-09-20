@@ -1,0 +1,11 @@
+uint8 WAIT=0
+uint8 TURN=1
+uint8 REVERSE=2
+uint8 FAILED=3
+builtin_interfaces/Time stamp
+uint64 request_id
+float64 lease_s
+uint8 mode
+geometry_msgs/PoseStamped evaluated_pose
+geometry_msgs/Twist command
+string reason

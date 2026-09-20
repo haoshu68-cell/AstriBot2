@@ -1,0 +1,32 @@
+# Shared by simulation_precision and hardware; keep motion tuning in one place.
+FollowPath.arrival.kp_xy: 0.5
+FollowPath.arrival.kp_yaw: 0.8
+FollowPath.arrival.max_linear_speed: 0.06
+FollowPath.arrival.max_angular_speed: 0.15
+FollowPath.arrival.stop_tolerance_ratio: 0.65
+FollowPath.arrival.resume_tolerance_ratio: 0.9
+FollowPath.arrival.settle_drift_ratio: 0.2
+FollowPath.arrival.min_linear_speed: 0.008
+FollowPath.arrival.min_angular_speed: 0.02
+FollowPath.arrival.translation_yaw_tolerance: 0.01
+FollowPath.arrival.normal_acceleration: 0.25
+FollowPath.arrival.normal_jerk: 0.5
+FollowPath.arrival.normal_angular_acceleration: 0.6
+FollowPath.arrival.normal_angular_jerk: 1.2
+FollowPath.arrival.refine_timeout: 135.0
+
+# Shared low-speed response detection; profiles choose off/monitor/compensate.
+FollowPath.slip.window_s: 1.5
+FollowPath.slip.confirm_s: 1.5
+FollowPath.slip.max_age_s: 0.3
+FollowPath.slip.min_speed: 0.008
+FollowPath.slip.max_speed: 0.06
+FollowPath.slip.max_angular: 0.03
+FollowPath.slip.max_curvature: 0.3
+FollowPath.slip.min_command_distance: 0.01
+FollowPath.slip.low_ratio: 0.35
+FollowPath.slip.recovery_ratio: 0.65
+FollowPath.slip.max_extra_speed: 0.01
+FollowPath.slip.max_extra_ratio: 0.35
+FollowPath.slip.ramp_acceleration: 0.01
+FollowPath.slip.attempt_s: 2.0

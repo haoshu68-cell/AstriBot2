@@ -1,3 +1,5 @@
+> 2026-09-17：旧 ROS 包已删除，旧命令不再支持；见[当前迁移说明](../AUTONOMY_PACKAGE_RETIREMENT_20260917.md)。
+
 > 历史参考，已被 [当前架构与迁移说明](../AUTONOMY_ARCHITECTURE_INTEGRATION.md) 取代。下文的包内路径、直控、自举、FollowPath 配置和测试数量均为拆分前记录，不能作为当前启动或验收依据。
 
 # astribot_s1_autonomy

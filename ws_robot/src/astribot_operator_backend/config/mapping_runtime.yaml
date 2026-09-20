@@ -1,0 +1,8 @@
+mapping_runtime:
+  ros__parameters:
+    # Empty disables new-session creation. Use sim only for a simulation deployment.
+    profile: ""
+    save_path: /tmp/astribot_slam_sessions
+    # Hardware requires every documented calibrated topic/extrinsic argument;
+    # do not copy the simulation defaults onto a physical robot.
+    # launch_arguments is omitted here; the C++ default is an empty string array.

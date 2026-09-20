@@ -9,6 +9,7 @@ from rclpy.qos import qos_profile_sensor_data
 from rosgraph_msgs.msg import Clock
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import String
 from lifecycle_msgs.srv import GetState
 from rcl_interfaces.srv import GetParameters
 from tf2_ros import Buffer, TransformListener
@@ -17,7 +18,8 @@ from tf2_ros import Buffer, TransformListener
 def main():
     p=argparse.ArgumentParser();p.add_argument('--phase',choices=['data','navigation'],required=True)
     p.add_argument('--timeout',type=float,default=120);p.add_argument('--scan',default='/scan_from_cloud')
-    p.add_argument('--costmap-scan');a=p.parse_args();costmap_scan=a.costmap_scan or a.scan
+    p.add_argument('--costmap-scan');p.add_argument('--require-policy',action='store_true')
+    a=p.parse_args();costmap_scan=a.costmap_scan or a.scan
     rclpy.init();n=rclpy.create_node('sim_startup_probe',parameter_overrides=[Parameter('use_sim_time',value=True)])
     counts={'clock':0,'odom':0,'scan':0};received={};ticks=[]
     def data(key,msg):
@@ -28,6 +30,18 @@ def main():
     if a.phase=='navigation' and costmap_scan!=a.scan:
         counts['costmap_scan']=0
         n.create_subscription(LaserScan,costmap_scan,lambda m:data('costmap_scan',m),qos_profile_sensor_data)
+    policy_stamp=None
+    if a.require_policy:
+        counts['policy']=0
+        def policy(msg):
+            nonlocal policy_stamp
+            try:
+                value=json.loads(msg.data)['stamp_ns']
+                age=n.get_clock().now().nanoseconds-value
+                if isinstance(value,int) and value>0 and 0<=age<=500_000_000:
+                    policy_stamp=value;data('policy',msg)
+            except (ValueError,KeyError,TypeError):pass
+        n.create_subscription(String,'/navigation_policy/state',policy,10)
     buffer=Buffer();listener=TransformListener(buffer,n)
     names=['controller_server','smoother_server','planner_server','behavior_server','bt_navigator','waypoint_follower','velocity_smoother'] if a.phase=='navigation' else []
     clients={name:n.create_client(GetState,'/'+name+'/get_state') for name in names};pending={};states={};next_call={}
@@ -63,6 +77,8 @@ def main():
             ready=(now-start>=3 and counts['scan']>=10 and counts['odom']>=30 and len(ticks)>10 and ticks[-1]>ticks[0]
                    and -.05<=age<.5 and len(received)==len(counts) and all(now-v<.5 for v in received.values())
                    and counts.get('costmap_scan',10)>=10
+                   and (not a.require_policy or (counts['policy']>=2 and policy_stamp is not None
+                        and 0<=n.get_clock().now().nanoseconds-policy_stamp<=500_000_000))
                    and all(states.get(name)=='active' for name in names)
                    and all(scan_values.get(name)==costmap_scan for name in scan_clients))
         except Exception:
@@ -84,6 +100,7 @@ def main():
                       for action in ('navigate_to_pose','navigate_through_poses'))
         if ready:break
     print(json.dumps({'ready':ready,'phase':a.phase,'sample_seconds':time.monotonic()-start,'counts':counts,
+                      'policy_stamp_ns':policy_stamp,
                       'execution_nodes':execution_nodes,'bt_clock_nodes':bt_clock_nodes,'task_endpoint_owners':owners,'tf_age':age,'scan_topics':scan_values,'clock_range':[ticks[0],ticks[-1]] if ticks else [],'lifecycle':states}),flush=True)
     n.destroy_node();rclpy.shutdown()
     return 0 if ready else 1

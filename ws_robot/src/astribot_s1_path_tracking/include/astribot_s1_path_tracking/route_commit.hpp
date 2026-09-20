@@ -33,6 +33,10 @@ public:
           path=result->path;reference_=path;reason=result->reason;next_=now;
           return true;
         }
+      } else {
+        RCLCPP_WARN_THROTTLE(node_->get_logger(),*node_->get_clock(),1000,
+          "POLICY_ROUTE_RESPONSE_REJECTED age_s=%.6f roundtrip_ms=%.3f",age,
+          std::chrono::duration<double,std::milli>(now-sent_).count());
       }
       next_=now+std::chrono::milliseconds(100);
     }

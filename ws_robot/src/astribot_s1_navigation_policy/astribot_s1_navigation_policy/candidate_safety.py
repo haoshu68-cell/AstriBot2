@@ -3,6 +3,7 @@ import math
 import numpy as np
 from .swept_geometry import clearance_many, path_samples
 from .world_geometry import prediction_rows
+from .continuous_sweep import motion_clearance
 
 
 def candidate_clearance(world, robot, route, profile, evidence=None):
@@ -30,6 +31,11 @@ def candidate_clearance(world, robot, route, profile, evidence=None):
         lower,upper=rows.lower[offset:end],rows.upper[offset:end]
         gaps=clearance_many(poses[:,:,1],poses[:,:,2],poses[:,:,3],
                             lower[:,None,:],upper[:,None,:],profile,poses[:,:,4])
+        rotation_check=np.any(gaps[:,:len(initial)]<=0,axis=1)
+        if np.any(rotation_check):
+            rotation=motion_clearance((0.,0.,turn),0.,1.,lower[rotation_check],
+                                      upper[rotation_check],profile,(robot.x,robot.y,robot.yaw))
+            gaps[rotation_check,:len(initial)]=rotation[:,None]
         gaps[np.arange(count)[None,:]>=lengths[ids,None]]=np.inf
         failed=np.flatnonzero(gaps<=0)
         if failed.size:
@@ -39,7 +45,12 @@ def candidate_clearance(world, robot, route, profile, evidence=None):
                 track=world.tracks[int(rows.owners[offset+row])].fused_track_id
                 t=int(rows.offsets_ns[offset+row])*1e-9;distance,x,y,yaw,_=poses[row,column]
                 evidence.update(track=track,prediction_s=t,position=[float(x),float(y)],clearance_m=float(gaps[row,column]))
-                if column<len(initial):evidence['phase']='TAKEOVER_ROTATION'
+                if column<len(initial):
+                    evidence.update(phase='TAKEOVER_ROTATION',start_heading_rad=robot.yaw,
+                                    target_heading_rad=heading,obstacle_lower=lower[row].tolist(),
+                                    obstacle_upper=upper[row].tolist(),
+                                    clearance_margin_m=profile.clearance_margin_m+profile.payload_extra_margin_m,
+                                    check='CONTINUOUS_SWEEP_LOWER_BOUND')
                 else:evidence.update(route_distance_m=float(distance),obstacle_lower=lower[row].tolist(),
                                      obstacle_upper=upper[row].tolist(),footprint_yaw_rad=float(yaw),
                                      clearance_margin_m=profile.clearance_margin_m+profile.payload_extra_margin_m+step/2)

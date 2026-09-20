@@ -1,0 +1,18 @@
+<launch>
+ <set_env name="ROS_DOMAIN_ID" value="213"/>
+ <set_env name="ROS_LOCALHOST_ONLY" value="1"/>
+ <set_env name="IGN_PARTITION" value="astribot_operator_validation_213"/>
+ <set_env name="GZ_PARTITION" value="astribot_operator_validation_213"/>
+ <include file="$(find-pkg-share astribot_s1_navigation)/launch/navigation.launch.py">
+  <arg name="use_sim_time" value="true"/>
+  <arg name="controller_plugin" value="mppi"/>
+  <arg name="max_linear_speed" value="0.2"/>
+  <arg name="navigation_policy_stage" value="p5"/>
+  <arg name="navigation_geometry_mode" value="fixed_v2"/>
+  <arg name="scan_topic" value="/scan_from_cloud"/>
+  <arg name="arrival_precision_profile" value="simulation_precision"/>
+  <arg name="map_manager_params_file" value="$(find-pkg-share astribot_sim_validation)/config/map_manager.yaml"/>
+  <arg name="enable_voxel_adapter" value="true"/>
+  <arg name="voxel_adapter_params_file" value="$(find-pkg-share astribot_map_manager)/config/voxel_session_adapter_sim.yaml"/>
+ </include>
+</launch>

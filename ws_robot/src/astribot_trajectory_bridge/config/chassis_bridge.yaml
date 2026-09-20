@@ -2,7 +2,7 @@
 /**:
   ros__parameters:
     part_name: "astribot_chassis"      # astribot_base.py:11
-    freq: 100.0
+    freq: 250.0
 
     input_frame: "body"
     theta_reference: "at_enable"        # 203:39-42，以使能时刻 theta 为零点
@@ -10,13 +10,6 @@
     start_disabled: true               # 启动后不自动使能，需显式调 ~/enable
 
     cmd_vel_timeout_sec: 0.3           # 超时立即速度置零
-
-    max_vel_xy: 1.0
-    max_vel_theta: 2.0
-    max_accel_xy: 2.5
-    max_accel_theta: 3.2
-
-    max_accel_xy_up: 0.35
 
     max_tick_dt_sec: 0.04
 

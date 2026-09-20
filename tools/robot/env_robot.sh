@@ -30,8 +30,9 @@ export PYTHONPATH="${SDK_ROOT}/astribot_sdk/core/common:${PYTHONPATH}"
 export ASTRIBOT_LOG=1
 export ROBOT_TYPE="${ROBOT_TYPE:-S1}"   # 非 S1 时底盘自由度是 2，enable 会被拒
 
-if [ -f "${SDK_ROOT}/ws_robot/install/setup.bash" ]; then
-    source "${SDK_ROOT}/ws_robot/install/setup.bash"
+_ENV_ROBOT_PROJECT_ROOT="${ASTRIBOT_PROJECT_ROOT:-$SDK_ROOT}"
+if [ -f "${_ENV_ROBOT_PROJECT_ROOT}/ws_robot/install/setup.bash" ]; then
+    source "${_ENV_ROBOT_PROJECT_ROOT}/ws_robot/install/setup.bash"
     echo "[env_robot] ws_robot overlay 已挂载"
 else
     echo "[env_robot] ws_robot 尚未构建（见 docs/sync_to_aarch64_sdk.md 第 4 节）"

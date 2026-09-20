@@ -30,6 +30,24 @@
     </joint>
   </xacro:macro>
 
+  <!-- Only the master has a controller command interface. Humble's Gazebo
+       adapter requires explicit mimic parameters on the follower entries. -->
+  <xacro:macro name="astribot_s1_gripper_sim_mimics" params="side">
+    <xacro:astribot_s1_sim_mimic_joint side="${side}" suffix="L11" ratio="1"/>
+    <xacro:astribot_s1_sim_mimic_joint side="${side}" suffix="L2" ratio="-1"/>
+    <xacro:astribot_s1_sim_mimic_joint side="${side}" suffix="R1" ratio="1"/>
+    <xacro:astribot_s1_sim_mimic_joint side="${side}" suffix="R11" ratio="-1"/>
+    <xacro:astribot_s1_sim_mimic_joint side="${side}" suffix="R2" ratio="1"/>
+  </xacro:macro>
+  <xacro:macro name="astribot_s1_sim_mimic_joint" params="side suffix ratio">
+    <joint name="astribot_gripper_${side}_joint_${suffix}">
+      <param name="mimic">astribot_gripper_${side}_joint_L1</param>
+      <param name="multiplier">${ratio}</param>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
   <!-- 轮子effort硬件接口。
        !!! 实测踩坑记录(本次任务新增)!!!：最初按 gz_ros2_control 官方文档示例写法，
        在 <command_interface name="effort"> 下加了 <param name="min">/<param name="max">
@@ -92,21 +110,13 @@
       <xacro:astribot_s1_effort_wheel_joint name="wheel_RR_Joint"/>
       <xacro:astribot_s1_effort_wheel_joint name="wheel_LR_Joint"/>
 
-      <!-- 夹爪：每侧只声明**主动关节** joint_L1。
-           另外 5 个是 URDF mimic 关节，它们的位置由 robot_state_publisher 从主动
-           关节算出，既不该有 command_interface，也不该进 /joint_states ——
-           声明了反而会出现"同一个自由度被下发两次"。
-
-           !!! 不声明会怎样（实测）!!!
-           只把夹爪加进 URDF、不加到这里，move_group 会一直刷：
-             The complete state of the robot is not yet known.
-             Missing astribot_gripper_left_joint_L1, astribot_gripper_right_joint_L1
-           **拿不到完整机器人状态 => 规划完全不可用**。也就是说加夹爪这件事一旦
-           只做了模型那一半，现有的所有手臂 demo 会全部停摆，且报错信息指向
-           "状态未知"而不是"你漏配了控制器"，很容易查错方向。 -->
+      <!-- 主动关节由夹爪控制器驱动；从动关节仅交给Gazebo适配器的mimic
+           支路，不导出独立command interface。URDF mimic仍供MoveIt/TF使用。 -->
       <xacro:if value="${use_gripper}">
         <xacro:astribot_s1_position_joint name="astribot_gripper_left_joint_L1"/>
         <xacro:astribot_s1_position_joint name="astribot_gripper_right_joint_L1"/>
+        <xacro:astribot_s1_gripper_sim_mimics side="left"/>
+        <xacro:astribot_s1_gripper_sim_mimics side="right"/>
       </xacro:if>
     </ros2_control>
 

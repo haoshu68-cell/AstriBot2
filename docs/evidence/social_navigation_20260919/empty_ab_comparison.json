@@ -1,0 +1,164 @@
+{
+  "passed": true,
+  "checks": {
+    "three_pairs": true,
+    "same_route": true,
+    "same_recorded_motion_parameters": true,
+    "expected_modes": true,
+    "all_arrivals": true,
+    "all_episode_checks": true,
+    "event_only_planning": true,
+    "no_extra_midroute_hold": true,
+    "control_regression": true
+  },
+  "comparisons": [
+    {
+      "goal": [
+        2.0,
+        0.0,
+        0.0
+      ],
+      "metric": "lateral_p95_m",
+      "off": [
+        0.05298381976858774,
+        0.05399704082100286,
+        0.054215057421641955
+      ],
+      "on": [
+        0.05445287162596665,
+        0.05184102090922692,
+        0.05364563661251796
+      ],
+      "off_median": 0.05399704082100286,
+      "on_median": 0.05364563661251796,
+      "limit": 0.05939674490310315,
+      "passed": true
+    },
+    {
+      "goal": [
+        2.0,
+        0.0,
+        0.0
+      ],
+      "metric": "heading_p95_deg",
+      "off": [
+        5.435849755220097,
+        5.505505831323316,
+        5.01320891007867
+      ],
+      "on": [
+        5.1271256714806865,
+        5.604034894514093,
+        5.516099073940931
+      ],
+      "off_median": 5.435849755220097,
+      "on_median": 5.516099073940931,
+      "limit": 6.435849755220097,
+      "passed": true
+    },
+    {
+      "goal": [
+        2.0,
+        0.0,
+        0.0
+      ],
+      "metric": "actual_jerk_p95_m_s3",
+      "off": [
+        0.1643124901391709,
+        0.15360165865798614,
+        0.17093732180528556
+      ],
+      "on": [
+        0.1773116409665281,
+        0.1786054393335377,
+        0.15849749553534628
+      ],
+      "off_median": 0.1643124901391709,
+      "on_median": 0.1773116409665281,
+      "limit": 0.2643124901391709,
+      "passed": true
+    },
+    {
+      "goal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "metric": "lateral_p95_m",
+      "off": [
+        0.017766820964282008,
+        0.013652918980072185,
+        0.01786202461073233
+      ],
+      "on": [
+        0.018773766126674085,
+        0.023780133394298145,
+        0.014377731274824638
+      ],
+      "off_median": 0.017766820964282008,
+      "on_median": 0.018773766126674085,
+      "limit": 0.02276682096428201,
+      "passed": true
+    },
+    {
+      "goal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "metric": "heading_p95_deg",
+      "off": [
+        11.20162353023192,
+        12.062685353691288,
+        10.639126884182247
+      ],
+      "on": [
+        11.089638384749096,
+        10.503454699364562,
+        11.489462092811799
+      ],
+      "off_median": 11.20162353023192,
+      "on_median": 11.089638384749096,
+      "limit": 12.321785883255112,
+      "passed": true
+    },
+    {
+      "goal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "metric": "actual_jerk_p95_m_s3",
+      "off": [
+        0.22470197284494084,
+        0.20508423930200603,
+        0.20477352796602868
+      ],
+      "on": [
+        0.215391232394675,
+        0.2024177418435479,
+        0.20221597615851106
+      ],
+      "off_median": 0.20508423930200603,
+      "on_median": 0.2024177418435479,
+      "limit": 0.305084239302006,
+      "passed": true
+    }
+  ],
+  "off": [
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_off_1/episode",
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_off_2/episode",
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_off_3/episode"
+  ],
+  "on": [
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_h2_1/episode",
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_h2_2/episode",
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_h2_3/episode"
+  ],
+  "midroute_holds": {
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_h2_1/episode": [],
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_h2_2/episode": [],
+    "/home/yjh/WorkSpace/astribot_validation/social_navigation_20260919/h2/measured_empty_h2_3/episode": []
+  },
+  "boundary": "Simulation truth and FOLLOW-only control metrics; total duration is not scored"
+}

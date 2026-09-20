@@ -1,5 +1,7 @@
 # 自主感知与探索的架构整合
 
+> 后续变更（2026-09-17）：旧 `astribot_s1_autonomy` 包已退役，当前源码为 19 个包。下文拆分/兼容验收是当时记录；当前入口见[包退役迁移说明](AUTONOMY_PACKAGE_RETIREMENT_20260917.md)。
+
 日期：2026-09-14。状态：代码拆分、离线验证；未进行仿真闭环或真机放行。
 
 本记录落实 [动态避障与窄通道设计](DYNAMIC_AVOIDANCE_AND_NARROW_PASSAGE_DESIGN.md) 第 4、8、9 节。按 [ISO/IEC/IEEE 42010:2022 公开说明](https://www.iso.org/standard/74393.html) 组织利益相关方、关注点、视图与决策；按 [ISO/IEC 25010:2023 公开说明](https://www.iso.org/standard/78176.html) 建立可测质量要求。没有访问标准全文，也不声称完成标准符合性评定。标准不指定避障算法或统一的“八大原则”。分层与依赖倒置参考 [Microsoft 架构原则](https://learn.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/architectural-principles)。
@@ -120,7 +122,7 @@ flowchart TD
 - 前沿建议：`astribot_s1_exploration / frontier_explore.launch.py`
 - 探索任务：`astribot_s1_exploration / exploration_coordinator.launch.py`
 
-旧包的同名 launch、ros2 run 名称、配置路径仍有兼容入口。旧单体 `astribot_s1_autonomy_components` 库已经停止构建；二进制依赖方必须重新构建并链接相应新导出目标。兼容配置在源码中用相对符号链接，在安装时通过目标包实际配置路径安装，避免孤立 install prefix 下的断链。
+2026-09-17 起不再提供旧包的 launch、ros2 run 和配置别名；组合启动迁入探索包，配置直接使用各实现包。以下构建命令已去掉旧包。旧单体 `astribot_s1_autonomy_components` 库已经停止构建；二进制依赖方必须重新构建并链接相应新导出目标。原兼容配置链接随旧包退役删除，各实现包仍保留其配置。
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -128,7 +130,7 @@ source ws_robot/install/local_setup.bash
 colcon build --base-paths ws_robot/src --build-base ws_robot/build \
   --install-base ws_robot/install --symlink-install \
   --packages-select astribot_autonomy_core astribot_s1_perception_components \
-  astribot_s1_exploration astribot_s1_autonomy \
+  astribot_s1_exploration \
   astribot_s1_perception astribot_s1_navigation
 ```
 

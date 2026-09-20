@@ -36,8 +36,8 @@ def _start(context):
     os.environ['ASTRIBOT_LOG_CAPTURE'] = '1'
     configure_launch_logging()
     command = [sys.executable, '-u', str(supervisor)]
-    for name in ('mode', 'map', 'map_yaml', 'navigation_policy', 'corridor_file', 'tracker',
-                 'max_linear_speed', 'scan_source', 'nav_transport', 'nav_attempts',
+    for name in ('instance','ros_domain_id','spawn_x','spawn_y','spawn_yaw','mode', 'map', 'map_yaml', 'navigation_policy', 'navigation_geometry_mode', 'corridor_file', 'social_scenario', 'tracker',
+                 'max_linear_speed', 'real_time_factor', 'scan_source', 'nav_transport', 'nav_attempts',
                  'ready_timeout', 'log_dir', 'log_level', 'log_max_bytes', 'log_backup_count'):
         value = LaunchConfiguration(name).perform(context)
         if value:
@@ -55,14 +55,22 @@ def _start(context):
 
 def generate_launch_description():
     defaults = {
+        'instance': ('', 'Opt-in isolated copy of the canonical warehouse'),
+        'ros_domain_id': ('25', 'Isolated instances require an unused domain in 1-101 except 25'),
+        'spawn_x': ('0.0', 'Initial Gazebo X in metres'),
+        'spawn_y': ('0.0', 'Initial Gazebo Y in metres'),
+        'spawn_yaw': ('0.0', 'Initial Gazebo heading in radians'),
         'repo_dir': (_repository(), 'Repository root containing tools/; required for this workspace launcher'),
         'mode': ('mapping', 'mapping / explore / localize / baseline'),
         'map': ('', 'Serialized SLAM map base path'),
         'map_yaml': ('', 'Optional occupancy map YAML'),
         'navigation_policy': ('off', 'Existing policy stage: off / p2 / p3 / p4 / p5'),
+        'navigation_geometry_mode': ('legacy', 'legacy / fixed_v2'),
         'corridor_file': ('', 'P4 map-frame corridor annotation JSON'),
+        'social_scenario': ('', 'Optional H1 HuNav YAML; baseline simulation only'),
         'tracker': ('mppi', 'mppi / rpp'),
         'max_linear_speed': ('0.35', 'Existing simulation speed limit; unchanged'),
+        'real_time_factor': ('1.0', 'Gazebo simulation/wall time ratio in (0,1]'),
         'scan_source': ('slice_scan', 'slice_scan / laserscan'),
         'headless': ('false', 'Disable Gazebo GUI'),
         'no_rviz': ('false', 'Disable RViz'),

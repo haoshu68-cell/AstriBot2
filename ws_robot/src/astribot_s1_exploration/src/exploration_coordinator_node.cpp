@@ -1,5 +1,6 @@
 // Copyright 2026 Astribot.
 #include "astribot_s1_autonomy/exploration_coordinator_node.hpp"
+#include "astribot_s1_autonomy/frontier_goal_parameters.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -11,6 +12,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <random>
+#include <sstream>
 
 
 #include "rcl_interfaces/msg/parameter_descriptor.hpp"
@@ -46,18 +49,11 @@ bool isTransitionAllowed(ExplorationState from, ExplorationState to)
   }
   switch (from) {
     case ExplorationState::kIdle:
-      return to == ExplorationState::kGenNextPoint || to == ExplorationState::kCompleted ||
-             to == ExplorationState::kBootstrap;
-    case ExplorationState::kBootstrap:
-      return to == ExplorationState::kIdle;
-    case ExplorationState::kEscape:
-      return to == ExplorationState::kGenNextPoint;
+      return to == ExplorationState::kGenNextPoint || to == ExplorationState::kCompleted;
     case ExplorationState::kGenNextPoint:
-      return to == ExplorationState::kValidating || to == ExplorationState::kCompleted ||
-             to == ExplorationState::kBootstrap;
+      return to == ExplorationState::kValidating || to == ExplorationState::kCompleted;
     case ExplorationState::kValidating:
-      return to == ExplorationState::kNavigating || to == ExplorationState::kGenNextPoint ||
-             to == ExplorationState::kEscape;
+      return to == ExplorationState::kNavigating || to == ExplorationState::kGenNextPoint;
     case ExplorationState::kNavigating:
       return to == ExplorationState::kArrived || to == ExplorationState::kGenNextPoint;
     case ExplorationState::kArrived:
@@ -74,34 +70,19 @@ bool isTransitionAllowed(ExplorationState from, ExplorationState to)
 ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions & options)
 : rclcpp::Node("exploration_coordinator_node", options),
   state_entered_time_(0, 0, RCL_ROS_TIME),
-  active_path_time_(0, 0, RCL_ROS_TIME),
-  last_replan_check_time_(0, 0, RCL_ROS_TIME),
-  last_replan_time_(0, 0, RCL_ROS_TIME),
   nav_started_time_(0, 0, RCL_ROS_TIME),
   plan_requested_time_(0, 0, RCL_ROS_TIME),
   dwell_started_time_(0, 0, RCL_ROS_TIME),
   latest_map_time_(0, 0, RCL_ROS_TIME),
   latest_costmap_time_(0, 0, RCL_ROS_TIME),
-  latest_odom_time_(0, 0, RCL_ROS_TIME),
-  bootstrap_started_time_(0, 0, RCL_ROS_TIME),
-  bootstrap_stall_since_(0, 0, RCL_ROS_TIME),
-  escape_started_time_(0, 0, RCL_ROS_TIME),
-  last_breadcrumb_time_(0, 0, RCL_ROS_TIME),
-  latest_scan_time_(0, 0, RCL_ROS_TIME)
+  latest_odom_time_(0, 0, RCL_ROS_TIME)
 {
   declareParameters();
+  manually_paused_ = declare_parameter("start_paused", false);
 
   std::string error;
   if (!loadParameters(error)) {
     throw std::invalid_argument("探索参数校验失败: " + error);
-  }
-
-  if (dispatch_mode_ != DispatchMode::kNavigateToPose || escape_enabled_ ||
-    bootstrap_mode_ != BootstrapMode::kDisabled)
-  {
-    throw std::invalid_argument(
-      "探索只允许 nav_dispatch_mode=navigate_to_pose, escape_enabled=false, "
-      "bootstrap_mode=disabled；局部绕行及恢复由统一导航策略负责");
   }
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
@@ -113,6 +94,51 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
   io_cb_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
   state_pub_ = create_publisher<std_msgs::msg::String>(state_topic_, rclcpp::QoS(1));
+  std::random_device entropy;
+  std::ostringstream identity; identity << std::hex << entropy() << entropy() << entropy();
+  operator_boot_ = identity.str();
+  operator_status_pub_ = create_publisher<std_msgs::msg::String>("~/operator_status", rclcpp::QoS(1).transient_local());
+  operator_events_pub_ = create_publisher<std_msgs::msg::String>("~/command_events", rclcpp::QoS(100));
+  operator_command_ = create_service<OperatorCommand>("~/command",
+    [this](OperatorCommand::Request::SharedPtr req, OperatorCommand::Response::SharedPtr res) {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      struct Audit {std::function<void()> record; ~Audit() {try {record();} catch (...) {}}};
+      Audit audit{[this,req,res] {
+        std_msgs::msg::String event;
+        event.data = nlohmann::json({{"schema_version",1},{"kind","exploration_command_response"},
+          {"command_id",req->command_id.substr(0,128)},{"operation",req->operation.substr(0,64)},
+          {"expected_boot_id",req->expected_boot_id.substr(0,128)},{"expected_revision",req->expected_revision},
+          {"boot_id",operator_boot_},{"revision",res->revision},{"accepted",res->accepted},
+          {"reason_code",res->reason_code},{"message",res->message}}).dump();
+        operator_events_pub_->publish(event);
+        RCLCPP_INFO(get_logger(), "operator_command %s", event.data.c_str());
+      }};
+      const auto snapshot = operatorStatus();
+      res->boot_id = operator_boot_; res->revision = operator_revision_;
+      auto reject = [&](const std::string & code) {res->accepted = false; res->reason_code = code; res->message = code;};
+      if (req->expected_boot_id != operator_boot_) {reject("REQUEST.BOOT_MISMATCH"); return;}
+      if (req->command_id.empty() || req->command_id.size() > 128) {reject("REQUEST.INVALID_ID"); return;}
+      const auto fingerprint = nlohmann::json({req->operation,req->expected_revision}).dump();
+      auto previous = operator_requests_.find(req->command_id);
+      if (previous != operator_requests_.end()) {
+        if (previous->second.first != fingerprint) {reject("REQUEST.CONFLICT"); return;}
+        *res = previous->second.second; return;
+      }
+      if (operator_requests_.size() >= 4096) {reject("REQUEST.CAPACITY"); return;}
+      if (req->expected_revision != operator_revision_) {reject("STATE.REVISION_MISMATCH"); return;}
+      const std::string capability = req->operation == "pause" ? "can_pause" :
+        req->operation == "resume" ? "can_resume" : req->operation == "cancel_save" ? "can_cancel_save" : "";
+      if (capability.empty()) {reject("REQUEST.UNSUPPORTED"); return;}
+      if (!snapshot.at(capability).get<bool>()) {reject("EXPLORATION.OPERATION_BLOCKED"); return;}
+      std_srvs::srv::Trigger::Response legacy;
+      applyOperatorOperation(req->operation, legacy);
+      res->accepted = legacy.success; res->message = legacy.message;
+      res->reason_code = legacy.success ? "COMMAND.ACCEPTED" : "EXPLORATION.OPERATION_BLOCKED";
+      operatorStatus(); res->revision = operator_revision_;
+      operator_requests_.emplace(req->command_id, std::make_pair(fingerprint,*res));
+      publishState();
+    }, rmw_qos_profile_services_default, command_cb_group_);
+
   complete_pub_ = create_publisher<std_msgs::msg::Bool>(
     complete_topic_, rclcpp::QoS(1).transient_local());
   goal_pub_ = create_publisher<geometry_msgs::msg::PoseStamped>(
@@ -151,11 +177,6 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
     this, nav_action_name_, io_cb_group_);
   plan_client_ = rclcpp_action::create_client<ComputePathToPose>(
     this, plan_action_name_, io_cb_group_);
-  last_replan_time_ = now();
-  last_replan_check_time_ = now();
-  active_path_time_ = now();
-  bootstrap_stall_since_ = now();
-  bootstrap_started_time_ = now();
 
 
   pause_srv_ = create_service<std_srvs::srv::Trigger>(
@@ -170,6 +191,25 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
       const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
       std::shared_ptr<std_srvs::srv::Trigger::Response> res) {onResumeService(req, res);},
     rmw_qos_profile_services_default, command_cb_group_);
+
+  finalize_on_completion_ = declare_parameter("finalize_on_completion", true);
+  rcl_interfaces::msg::ParameterDescriptor envelope_descriptor;
+  envelope_descriptor.read_only = true;
+  require_fixed_envelope_ = declare_parameter("require_fixed_envelope", false, envelope_descriptor);
+  if (require_fixed_envelope_) {
+    fixed_envelope_sub_ = create_subscription<astribot_navigation_msgs::msg::NavigationEnvelopeV2>(
+      "/navigation/envelope_v2", 10,
+      [this](astribot_navigation_msgs::msg::NavigationEnvelopeV2::ConstSharedPtr message) {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        fixed_envelope_ = std::move(message);
+      }, sub_opts);
+  }
+  cancel_srv_ = create_service<std_srvs::srv::Trigger>("~/cancel",
+    [this](std_srvs::srv::Trigger::Request::SharedPtr,
+      std_srvs::srv::Trigger::Response::SharedPtr res) {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      applyOperatorOperation("cancel_save", *res);
+    }, rmw_qos_profile_services_default, command_cb_group_);
 
   execution_status_sub_ = create_subscription<astribot_navigation_msgs::msg::NavigationExecutionStatus>(
     "/navigation/execution_status", rclcpp::QoS(10).transient_local(),
@@ -248,9 +288,8 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<std::string>("map_topic", "/map", describe("输入占据栅格话题(仅用于前沿搜索)"));
   declare_parameter<bool>(
     "map_transient_local", true,
-    describe("map_topic 订阅是否用 TRANSIENT_LOCAL。仿真的 slam_toolbox /map 是 "
-             "transient_local 必须为 true；实机 /map_scan_filtered_prob 是 VOLATILE，"
-             "必须为 false，否则 QoS 不兼容、一帧都收不到"));
+    describe("map_topic 订阅是否用 TRANSIENT_LOCAL。统一 Voxel 栅格 /map "
+             "在仿真和真机均为 transient_local，应保持 true"));
   declare_parameter<std::string>(
     "costmap_topic", "/global_costmap/costmap_raw",
     describe("全局代价地图话题(nav2_msgs/Costmap，仅用于下发前校验)"));
@@ -277,103 +316,11 @@ void ExplorationCoordinatorNode::declareParameters()
     describe(
       "仅允许 navigate_to_pose：探索提交任务，由导航策略统一规划及执行。"
       "旧 follow_path 模式已退役，配置该值会拒绝启动"));
+  // Migration guards only: exploration never executes these retired modes.
   declare_parameter<bool>(
-    "escape_enabled", false,
-    describe("是否启用膨胀带脱困。false=回退到改动前行为(卡住只能等人工)"));
-  declare_parameter<int>(
-    "escape_trigger_failures", 5,
-    describe("连续多少次「起点致命」才触发脱困。避免偶发抖动就让机器人动起来"));
-  declare_parameter<double>(
-    "escape_search_radius_m", 1.5,
-    describe("脱困目标搜索半径(m)。脱困是短距离动作，不是重规划"));
-  declare_parameter<double>(
-    "escape_heading_tol_rad", 1.5708,
-    describe("方向约束：候选目标方位与参考朝向的最大夹角(rad)。默认 ±90°，"
-             "拒绝背向任务方向逃逸；趟1无解时会放开并告警"));
-  declare_parameter<double>(
-    "escape_linear_vel", 0.08,
-    describe("脱困线速度上限(m/s)。实测本底盘 0.02m/s 就能动(无静摩擦地板)，"
-             "0.08 时 4s 滑行 <0.03m，远小于 253 带宽 0.310m"));
-  declare_parameter<double>(
-    "escape_angular_vel", 0.20,
-    describe("脱困角速度上限(rad/s)。实测 wz=0.05 就能动，跟踪比 0.73~0.92"));
-  declare_parameter<double>(
-    "escape_arrive_tol_m", 0.05,
-    describe("到目标多近算本段走完(m)。取一个栅格"));
-  declare_parameter<double>(
-    "escape_align_tol_rad", 0.35,
-    describe("航向对齐容差(rad)。误差在此内 wz 归零，避免在带里原地抖动"));
-  declare_parameter<double>(
-    "escape_timeout_sec", 20.0,
-    describe("单次脱困超时(s)。253 带宽=内切半径 0.310m，0.08m/s 走完约 3.9s，留 5 倍余量"));
-  declare_parameter<int>(
-    "escape_max_attempts", 3,
-    describe("**连续**脱困失败次数上限(成功出带或人工 resume 会清零)。达上限后进 PAUSED 等人工，禁止死循环脱困"));
-  declare_parameter<int>(
-    "escape_clear_ticks", 5,
-    describe("连续多少拍读到非致命才算真出带。防栅格边界抖动导致状态来回跳"));
-  declare_parameter<double>(
-    "breadcrumb_window_sec", 60.0,
-    describe("来路轨迹保留时长(s)。脱困优先沿来路退，因为来路可通行是可证明的"));
-  declare_parameter<double>(
-    "breadcrumb_sample_hz", 2.0,
-    describe("来路轨迹采样频率(Hz)"));
-
+    "escape_enabled", false, describe("旧脱困模式已退役；仅允许 false，恢复由导航策略负责"));
   declare_parameter<std::string>(
-    "follow_action_name", "follow_path", describe("controller_server 的 FollowPath 动作名"));
-  declare_parameter<std::string>(
-    "follow_controller_id", "FollowPath",
-    describe(
-      "FollowPath 用哪个控制器实例。必须真的在 controller_plugins 里，"
-      "否则每次 FollowPath 直接 abort（yaml 没加载时用的就是这个默认值）"));
-  declare_parameter<std::string>(
-    "follow_goal_checker_id", "",
-    describe(
-      "FollowPath 用哪个 goal checker。留空=用 controller_server 的唯一那个。"
-      "!!! 只有在 goal_checker_plugins 列了多项时才需要填 !!! "
-      "该端口无默认值，列表有多项而这里留空会让每次 FollowPath 直接 abort"));
-  declare_parameter<int>(
-    "follow_max_retries", 1,
-    describe(
-      "follow_path 模式下 FollowPath 中止后对同一目标的重试次数。"
-      "0=不重试(每次进度停滞都直接判失败，实测会让探索几乎无法完成)。"
-      "默认 1，与默认行为树 RecoveryNode number_of_retries=\"1\" 对齐"));
-  declare_parameter<double>(
-    "replan_period_sec", 1.0,
-    describe(
-      "follow_path 模式下的重规划周期(s)。**只有 replan_policy=periodic 时才生效**。"
-      "0=不重规划(路径失效只能等超时)。取 1.0 与 nav2 默认行为树的 RateController hz=1.0 一致"));
-  declare_parameter<std::string>(
-    "replan_policy", "on_invalid",
-    describe(
-      "跟踪期重规划策略。on_invalid(默认)=只在当前路径失效时才换路径，"
-      "满足「未跟踪到位不得规划下一条路径」；periodic=旧的无条件周期重规划，"
-      "只保留作一键回退(实测该策略下 36 个目标换了 393 条路径，无一条被跟踪到位)"));
-  declare_parameter<double>(
-    "replan_check_period_sec", 0.5,
-    describe(
-      "on_invalid 策略下检查「当前路径是否还能用」的节拍(s)。"
-      "纯本地几何+栅格校验，不发任何 action"));
-  declare_parameter<double>(
-    "replan_min_interval_sec", 1.0,
-    describe("两次重规划请求的最小间隔(s)，防止判据在阈值附近抖动导致连续换路径"));
-  declare_parameter<double>(
-    "path_max_age_sec", 0.0,
-    describe(
-      "当前路径的最大寿命(s)，>0 才启用，纯兜底。"
-      "0=不因为「路径旧」而换路径 —— 正常情况下路径失效由剩余段校验判定，"
-      "而不该由时间判定，否则又退化成周期重规划"));
-  declare_parameter<int>(
-    "max_invalid_replan_attempts", 3,
-    describe(
-      "连续多少次「当前路径已判不可通行 + 重规划也拿不到合法替代」就放弃该目标。"
-      "不能是 0(那会让一帧代价地图抖动就丢目标)，也不能很大 —— "
-      "实测沿用一条已判死的路径会让机器人原地顶 17s 才被 progress checker 救回来"));
-  declare_parameter<double>(
-    "path_deviation_limit_m", 0.6,
-    describe(
-      "机器人偏离当前路径多远就认为这条路径不再描述它的处境(m)、需要重规划。"
-      "必须 > 抵达容差与控制器横向误差量级，否则正常跟踪抖动就会触发换路径"));
+    "bootstrap_mode", "disabled", describe("旧自举模式已退役；仅允许 disabled，地图不可用时等待"));
   declare_parameter<std::string>("map_frame", "map", describe("地图坐标系"));
   declare_parameter<std::string>(
     "robot_base_frame", "astribot_torso_base",
@@ -456,6 +403,7 @@ void ExplorationCoordinatorNode::declareParameters()
       "语义是「机器人中心在此则足迹必然碰撞」。不要调低：调低会把可通行的膨胀带"
       "判成障碍，贴墙路径全被否决，探索重新锁死"));
 
+  declareFrontierGoalParameters(*this);
   declare_parameter<int>("search.occupied_threshold", 65, describe("占据判定阈值(0~100)"));
   declare_parameter<int>("search.free_threshold", 25, describe("空闲判定阈值(0~100)"));
   declare_parameter<double>("search.obstacle_inflation_radius", 0.45, describe("障碍膨胀半径(m)"));
@@ -479,68 +427,6 @@ void ExplorationCoordinatorNode::declareParameters()
   declare_parameter<double>("search.visit_penalty_radius", 1.2, describe("历史访问惩罚作用半径(m)"));
   declare_parameter<int>("search.random_seed", 20260819, describe("采样随机种子"));
 
-  declare_parameter<std::string>(
-    "bootstrap_mode", "disabled",
-    describe(
-      "冷启动自举方式。rotate(默认)=只原地旋转；disabled=关闭自举(需人工推一把)。"
-      "刻意不提供平移：底盘足迹是外接半径 0.438 / 内切 0.310 的正方形，"
-      "原地旋转最多扫过 3.2cm 环带，几何上几乎不进入新区域；平移是开环积分推进，"
-      "风险面完全不同"));
-  declare_parameter<std::string>(
-    "bootstrap_cmd_vel_topic", "/cmd_vel_nav_body_raw",
-    describe(
-      "自举速度指令发到哪个话题。默认取 controller_server 的输出点，"
-      "这样 velocity_smoother -> cmd_vel_body_to_world(倾倒监控) -> 臂-底盘耦合限速 "
-      "-> 力矩闭环 leash 这一整条安全链全部照常生效。"
-      "直发 /cmd_vel 会绕过全部四层，不要那样配"));
-  declare_parameter<std::string>(
-    "bootstrap_yaw_frame", "odom",
-    describe(
-      "自举量转角用哪个 frame。**默认 odom，不要改成 map**："
-      "map -> odom 由 SLAM 发布，而真正的冷启动死锁下 SLAM 还没出图，"
-      "用 map 会让自举被自己的前置条件挡死(实测连续 71 次取不到朝向)——"
-      "那正是它要破的死锁。而且 map 系 yaw 含 SLAM 回环修正，会污染测量"));
-  declare_parameter<std::string>(
-    "bootstrap_scan_topic", "/scan_from_cloud",
-    describe("自举安全门所用激光话题。应与 nav2 代价地图订阅的是同一条"));
-  declare_parameter<double>(
-    "bootstrap_angular_vel", 0.40,
-    describe("自举原地旋转角速度(rad/s)。会被下游耦合限速再缩放，实际值可能小得多"));
-  declare_parameter<double>(
-    "bootstrap_duration_sec", 4.0,
-    describe(
-      "单次自举旋转时长(s)。要按**最坏情况**的下游限速取：耦合节点 min_speed_scale=0.15，"
-      "0.40*0.15=0.06rad/s，4s 才转出 0.24rad，刚过 minimum_travel_heading(0.2)"));
-  declare_parameter<double>(
-    "bootstrap_cmd_rate_hz", 20.0,
-    describe(
-      "自举期间速度指令重发频率(Hz)。必须显著高于底盘 cmd_vel_timeout_sec=0.5 的倒数，"
-      "否则速度会被反复超时归零。不能靠 0.5s 的状态机节拍来发"));
-  declare_parameter<double>(
-    "bootstrap_trigger_wait_sec", 6.0,
-    describe(
-      "地图内容持续不可用/采不到候选多久后才自举(s)。"
-      "不设 0：启动瞬态里地图本来就要几秒才长出来，立刻自举等于抢在 SLAM 前面动"));
-  declare_parameter<double>(
-    "bootstrap_scan_timeout_sec", 1.0,
-    describe("激光多久未更新就拒绝自举(s)。无数据必须拒绝运动，不得当成「周围没有障碍」"));
-  declare_parameter<double>(
-    "bootstrap_min_clearance_m", 0.44,
-    describe(
-      "自举前要求的最小周边净空(m)，取机器人外接半径。"
-      "语义：如果最近障碍已经进到自己的足迹半径以内，就不要再转了 —— "
-      "此时正方形的角可能已经接触障碍"));
-  declare_parameter<double>(
-    "bootstrap_min_yaw_delta", 0.20,
-    describe(
-      "一次自举至少要实际转出多少角度才算「真的动了」(rad)。"
-      "必须 >= slam_toolbox 的 minimum_travel_heading(0.2)，否则转了也不插入扫描。"
-      "达不到时会显式告警并指出最可能的原因(下游限速)，不静默算成功"));
-  declare_parameter<int>(
-    "bootstrap_max_attempts", 6,
-    describe(
-      "自举次数上限(每次成功下发目标后清零)。6 次 × 0.24rad(最坏)~1.6rad(不限速) "
-      "覆盖从小半圈到多圈；有上限是为了禁止死循环重试"));
   declare_parameter<int>(
     "min_known_cells_for_decision", 100,
     describe(
@@ -551,6 +437,14 @@ void ExplorationCoordinatorNode::declareParameters()
 
 bool ExplorationCoordinatorNode::loadParameters(std::string & error)
 {
+  if (get_parameter("nav_dispatch_mode").as_string() != "navigate_to_pose" ||
+    get_parameter("escape_enabled").as_bool() ||
+    get_parameter("bootstrap_mode").as_string() != "disabled")
+  {
+    error = "旧探索执行模式已退役：仅允许 nav_dispatch_mode=navigate_to_pose, "
+      "escape_enabled=false, bootstrap_mode=disabled；路径跟踪、绕行与恢复请配置统一导航策略";
+    return false;
+  }
   selection_budget_sec_ = get_parameter("selection_budget_sec").as_double();
   path_turn_weight_ = get_parameter("path_turn_weight").as_double();
   failure_cooldown_sec_ = get_parameter("failure_cooldown_sec").as_double();
@@ -580,116 +474,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   current_goal_topic_ = get_parameter("current_goal_topic").as_string();
   nav_action_name_ = get_parameter("nav_action_name").as_string();
   nav_behavior_tree_ = get_parameter("nav_behavior_tree").as_string();
-  const std::string mode_str = get_parameter("nav_dispatch_mode").as_string();
-  if (mode_str == "follow_path") {
-    dispatch_mode_ = DispatchMode::kFollowPath;
-  } else if (mode_str == "navigate_to_pose") {
-    dispatch_mode_ = DispatchMode::kNavigateToPose;
-  } else {
-    throw std::runtime_error(
-      "nav_dispatch_mode 非法: '" + mode_str + "'，只接受 follow_path / navigate_to_pose");
-  }
-  escape_enabled_ = get_parameter("escape_enabled").as_bool();
-  escape_trigger_failures_ = static_cast<int>(get_parameter("escape_trigger_failures").as_int());
-  escape_search_radius_m_ = get_parameter("escape_search_radius_m").as_double();
-  escape_heading_tol_rad_ = get_parameter("escape_heading_tol_rad").as_double();
-  escape_linear_vel_ = get_parameter("escape_linear_vel").as_double();
-  escape_angular_vel_ = get_parameter("escape_angular_vel").as_double();
-  escape_arrive_tol_m_ = get_parameter("escape_arrive_tol_m").as_double();
-  escape_align_tol_rad_ = get_parameter("escape_align_tol_rad").as_double();
-  escape_timeout_sec_ = get_parameter("escape_timeout_sec").as_double();
-  escape_max_attempts_ = static_cast<int>(get_parameter("escape_max_attempts").as_int());
-  escape_clear_ticks_ = static_cast<int>(get_parameter("escape_clear_ticks").as_int());
-  breadcrumb_window_sec_ = get_parameter("breadcrumb_window_sec").as_double();
-  breadcrumb_sample_hz_ = get_parameter("breadcrumb_sample_hz").as_double();
-  if (escape_enabled_) {
-    if (escape_trigger_failures_ < 1) {
-      throw std::runtime_error("escape_trigger_failures 必须 >= 1");
-    }
-    if (!(escape_search_radius_m_ > 0.0)) {
-      throw std::runtime_error("escape_search_radius_m 必须 > 0");
-    }
-    if (!(escape_linear_vel_ > 0.0) || !(escape_angular_vel_ > 0.0)) {
-      throw std::runtime_error("escape_linear_vel / escape_angular_vel 必须 > 0");
-    }
-    if (!(escape_timeout_sec_ > 0.0)) {
-      throw std::runtime_error("escape_timeout_sec 必须 > 0");
-    }
-    if (escape_clear_ticks_ < 1) {
-      throw std::runtime_error("escape_clear_ticks 必须 >= 1");
-    }
-    if (escape_max_attempts_ < 1) {
-      throw std::runtime_error("escape_max_attempts 必须 >= 1");
-    }
-    if (!(breadcrumb_sample_hz_ > 0.0) || !(breadcrumb_window_sec_ > 0.0)) {
-      throw std::runtime_error("breadcrumb_sample_hz / breadcrumb_window_sec 必须 > 0");
-    }
-    if (escape_linear_vel_ > 0.30) {
-      throw std::runtime_error(
-        "escape_linear_vel 不得超过 0.30 m/s：脱困必须低速(见 escape_logic.hpp 文件头)");
-    }
-  }
-  follow_action_name_ = get_parameter("follow_action_name").as_string();
-  follow_controller_id_ = get_parameter("follow_controller_id").as_string();
-  follow_goal_checker_id_ = get_parameter("follow_goal_checker_id").as_string();
-  replan_period_sec_ = get_parameter("replan_period_sec").as_double();
-  const std::string policy_str = get_parameter("replan_policy").as_string();
-  if (policy_str == "on_invalid") {
-    replan_policy_ = ReplanPolicy::kOnInvalid;
-  } else if (policy_str == "periodic") {
-    replan_policy_ = ReplanPolicy::kPeriodic;
-  } else {
-    throw std::runtime_error(
-      "replan_policy 非法: '" + policy_str + "'，只接受 on_invalid / periodic");
-  }
-  replan_check_period_sec_ = get_parameter("replan_check_period_sec").as_double();
-  replan_min_interval_sec_ = get_parameter("replan_min_interval_sec").as_double();
-  path_max_age_sec_ = get_parameter("path_max_age_sec").as_double();
-  path_deviation_limit_m_ = get_parameter("path_deviation_limit_m").as_double();
-  if (replan_check_period_sec_ <= 0.0) {
-    throw std::runtime_error("replan_check_period_sec 必须 > 0");
-  }
-  if (replan_min_interval_sec_ < 0.0 || path_max_age_sec_ < 0.0) {
-    throw std::runtime_error("replan_min_interval_sec / path_max_age_sec 不能为负");
-  }
-  if (!(path_deviation_limit_m_ > 0.0)) {
-    throw std::runtime_error("path_deviation_limit_m 必须 > 0");
-  }
-  max_invalid_replan_attempts_ =
-    static_cast<int>(get_parameter("max_invalid_replan_attempts").as_int());
-  if (max_invalid_replan_attempts_ < 1) {
-    throw std::runtime_error(
-      "max_invalid_replan_attempts 必须 >=1：0 等于允许无限期跟踪一条已判死的路径");
-  }
-  follow_max_retries_ = static_cast<int>(get_parameter("follow_max_retries").as_int());
-  if (follow_max_retries_ < 0) {
-    throw std::runtime_error("follow_max_retries 不能为负");
-  }
-  if (replan_period_sec_ < 0.0) {
-    throw std::runtime_error("replan_period_sec 不能为负");
-  }
-  if (dispatch_mode_ == DispatchMode::kFollowPath) {
-    if (follow_action_name_.empty() || follow_controller_id_.empty()) {
-      throw std::runtime_error(
-        "follow_path 模式下 follow_action_name / follow_controller_id 不能为空");
-    }
-    if (replan_policy_ == ReplanPolicy::kPeriodic && replan_period_sec_ == 0.0) {
-      RCLCPP_WARN(
-        get_logger(),
-        "follow_path 模式且 replan_policy=periodic + replan_period_sec=0：不做重规划。"
-        "路径中途失效时只能等 nav_timeout_sec(%.1fs) 超时，"
-        "而 BT 的 1Hz 重规划与恢复行为在本模式下都拿不到",
-        nav_timeout_sec_);
-    }
-    if (replan_policy_ == ReplanPolicy::kPeriodic) {
-      RCLCPP_WARN(
-        get_logger(),
-        "replan_policy=periodic 是回退配置：会无条件每 %.1fs 换一条路径，"
-        "没有任何一条会被跟踪到位(实测 36 个目标换了 393 条)。"
-        "正常运行请用 on_invalid",
-        replan_period_sec_);
-    }
-  }
   plan_action_name_ = get_parameter("plan_action_name").as_string();
   map_frame_ = get_parameter("map_frame").as_string();
   robot_base_frame_ = get_parameter("robot_base_frame").as_string();
@@ -725,12 +509,6 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
     dwell_time_sec_ < 0.0 || settle_speed_ < 0.0)
   {
     error = "抵达判定参数非法：容差>0, dwell_time_sec>=0, settle_speed>=0";
-    return false;
-  }
-  if (path_deviation_limit_m_ <= arrival_xy_tolerance_) {
-    error = "path_deviation_limit_m(" + std::to_string(path_deviation_limit_m_) +
-      ") 必须 > arrival_xy_tolerance(" + std::to_string(arrival_xy_tolerance_) +
-      ")，否则收尾阶段的正常贴合误差会被判成偏离路径、反复换路径";
     return false;
   }
 
@@ -807,6 +585,7 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   }
 
   FrontierSearchParams sp;
+  if (!loadFrontierGoalParameters(*this,sp,error)) {return false;}
   sp.occupied_threshold = static_cast<int>(get_parameter("search.occupied_threshold").as_int());
   sp.free_threshold = static_cast<int>(get_parameter("search.free_threshold").as_int());
   sp.obstacle_inflation_radius = get_parameter("search.obstacle_inflation_radius").as_double();
@@ -837,63 +616,12 @@ bool ExplorationCoordinatorNode::loadParameters(std::string & error)
   }
   search_params_ = sp;
 
-  const std::string boot_str = get_parameter("bootstrap_mode").as_string();
-  if (boot_str == "rotate") {
-    bootstrap_mode_ = BootstrapMode::kRotate;
-  } else if (boot_str == "disabled") {
-    bootstrap_mode_ = BootstrapMode::kDisabled;
-  } else {
-    error = "bootstrap_mode 非法: '" + boot_str + "'，只接受 rotate / disabled";
-    return false;
-  }
-  bootstrap_cmd_vel_topic_ = get_parameter("bootstrap_cmd_vel_topic").as_string();
-  bootstrap_scan_topic_ = get_parameter("bootstrap_scan_topic").as_string();
-  bootstrap_yaw_frame_ = get_parameter("bootstrap_yaw_frame").as_string();
-  bootstrap_angular_vel_ = get_parameter("bootstrap_angular_vel").as_double();
-  bootstrap_duration_sec_ = get_parameter("bootstrap_duration_sec").as_double();
-  bootstrap_cmd_rate_hz_ = get_parameter("bootstrap_cmd_rate_hz").as_double();
-  bootstrap_trigger_wait_sec_ = get_parameter("bootstrap_trigger_wait_sec").as_double();
-  bootstrap_scan_timeout_sec_ = get_parameter("bootstrap_scan_timeout_sec").as_double();
-  bootstrap_min_clearance_m_ = get_parameter("bootstrap_min_clearance_m").as_double();
-  bootstrap_min_yaw_delta_ = get_parameter("bootstrap_min_yaw_delta").as_double();
-  bootstrap_max_attempts_ = static_cast<int>(get_parameter("bootstrap_max_attempts").as_int());
   const auto known_cells = get_parameter("min_known_cells_for_decision").as_int();
   if (known_cells < 1) {
     error = "min_known_cells_for_decision 必须 >=1";
     return false;
   }
   min_known_cells_for_decision_ = static_cast<std::size_t>(known_cells);
-  if (bootstrap_mode_ != BootstrapMode::kDisabled) {
-    if (bootstrap_cmd_vel_topic_.empty() || bootstrap_scan_topic_.empty() ||
-      bootstrap_yaw_frame_.empty())
-    {
-      error = "自举已启用但 bootstrap_cmd_vel_topic / bootstrap_scan_topic / "
-        "bootstrap_yaw_frame 为空";
-      return false;
-    }
-    if (!(bootstrap_angular_vel_ > 0.0) || !(bootstrap_duration_sec_ > 0.0) ||
-      !(bootstrap_cmd_rate_hz_ > 0.0) || bootstrap_trigger_wait_sec_ < 0.0 ||
-      !(bootstrap_scan_timeout_sec_ > 0.0) || !(bootstrap_min_clearance_m_ > 0.0) ||
-      !(bootstrap_min_yaw_delta_ > 0.0) || bootstrap_max_attempts_ < 1)
-    {
-      error = "自举参数非法：角速度/时长/频率/超时/净空/最小转角 均须 >0，次数上限 >=1";
-      return false;
-    }
-    constexpr double kChassisCmdVelTimeoutSec = 0.5;
-    if (bootstrap_cmd_rate_hz_ < 2.0 / kChassisCmdVelTimeoutSec) {
-      error = "bootstrap_cmd_rate_hz 太低(" + std::to_string(bootstrap_cmd_rate_hz_) +
-        ")：底盘 cmd_vel_timeout_sec=0.5，至少要 4Hz 才不会被反复超时归零";
-      return false;
-    }
-    if (bootstrap_angular_vel_ * bootstrap_duration_sec_ < bootstrap_min_yaw_delta_) {
-      error = "自举配置自相矛盾：即使完全不限速，"
-        "bootstrap_angular_vel * bootstrap_duration_sec = " +
-        std::to_string(bootstrap_angular_vel_ * bootstrap_duration_sec_) +
-        "rad 也达不到 bootstrap_min_yaw_delta=" + std::to_string(bootstrap_min_yaw_delta_) + "rad";
-      return false;
-    }
-  }
-
   error.clear();
   return true;
 }
@@ -1071,6 +799,11 @@ bool ExplorationCoordinatorNode::mapUsable(const GridMap & map, std::size_t & kn
 
 bool ExplorationCoordinatorNode::stackReady(std::string & why)
 {
+  if (require_fixed_envelope_) {
+    why = fixedEnvelopeReadiness(fixed_envelope_.get(), now().nanoseconds(),
+      fixed_envelope_sub_->get_publisher_count());
+    if (!why.empty()) return false;
+  }
   if (!mapReady(why)) {
     return false;
   }
@@ -1187,20 +920,14 @@ void ExplorationCoordinatorNode::resetCycleState()
   candidates_.clear();
   evaluated_candidates_.clear();
   candidate_index_ = 0U;
-  active_path_.clear();
-  replan_forced_ = false;
-  active_path_impassable_ = false;
-  invalid_replan_count_ = 0;
 }
 
 
 void ExplorationCoordinatorNode::transitionTo(ExplorationState next, const std::string & why)
 {
+  transition_reason_ = why;
   if (state_ == next) {
     return;                                   // 空转换不刷新计时，避免驻留/冷却计时被反复重置
-  }
-  if (drivesChassisDirectly(state_) && !drivesChassisDirectly(next)) {
-    publishBootstrapCmd(true);
   }
   if (!isTransitionAllowed(state_, next)) {
     RCLCPP_ERROR(
@@ -1222,6 +949,26 @@ void ExplorationCoordinatorNode::controlTick()
 {
   std::lock_guard<std::mutex> lock(state_mutex_);
 
+  if (session_ending_) {
+    if (!finalize_client_) {
+      finalize_client_ = create_client<std_srvs::srv::Trigger>(
+        session_end_reason_ == "COMPLETED" ? "/mapping_session/finalize_completed" : "/mapping_session/finalize_canceled",
+        rmw_qos_profile_services_default, io_cb_group_);
+    }
+    progress_detail_ = session_end_reason_ + std::string(nav_goal_in_flight_.load() ?
+      "_WAIT_NAV_TERMINAL" : "_WAIT_MAP_SAVE");
+    if (!nav_goal_in_flight_.load() && !finalize_requested_ && finalize_client_->service_is_ready()) {
+      finalize_requested_ = true;
+      finalize_client_->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>(),
+        [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+          const auto response = future.get();
+          RCLCPP_INFO(get_logger(), "建图收尾请求 accepted=%d: %s",
+            response->success, response->message.c_str());
+        });
+    }
+    publishState();
+    return;
+  }
   if (pending_nav_failure_) {
     if (std::chrono::steady_clock::now() < failure_classification_at_) {return;}
     pending_nav_failure_ = false;
@@ -1233,12 +980,6 @@ void ExplorationCoordinatorNode::controlTick()
       break;
     case ExplorationState::kGenNextPoint:
       tickGenNextPoint();
-      break;
-    case ExplorationState::kBootstrap:
-      tickBootstrap();
-      break;
-    case ExplorationState::kEscape:
-      tickEscape();
       break;
     case ExplorationState::kValidating:
       tickValidating();
@@ -1254,6 +995,9 @@ void ExplorationCoordinatorNode::controlTick()
       break;
     case ExplorationState::kCompleted:
       tickCompleted();
+      break;
+    default:
+      transitionTo(ExplorationState::kPaused, "非法或已退役的探索状态");
       break;
   }
 
@@ -1277,10 +1021,6 @@ void ExplorationCoordinatorNode::tickIdle()
   if (!mapReady(why)) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), kLogThrottleMs, "等待地图就绪: %s", why.c_str());
-    std::string boot_why;
-    if (shouldBootstrap("地图未就绪", boot_why)) {
-      beginBootstrap(boot_why);
-    }
     return;
   }
   double x = 0.0;
@@ -1308,45 +1048,12 @@ void ExplorationCoordinatorNode::tickIdle()
         get_logger(), *get_clock(), kLogThrottleMs,
         "地图已收到但内容不足以决策：已知格 %zu < %zu(min_known_cells_for_decision)",
         known, min_known_cells_for_decision_);
-      std::string boot_why;
-      if (shouldBootstrap("地图已知格不足以做探索决策", boot_why)) {
-        beginBootstrap(boot_why);
-      }
       return;
     }
   }
   transitionTo(ExplorationState::kGenNextPoint, "地图/定位/里程计均就绪");
 }
 
-
-bool ExplorationCoordinatorNode::shouldBootstrap(
-  const std::string & context, std::string & why)
-{
-  (void)context;
-  why = "探索不再拥有自举权限，等待有效地图或上层恢复任务";
-  return false;
-}
-
-void ExplorationCoordinatorNode::beginBootstrap(const std::string & why)
-{
-  (void)why;
-  transitionTo(ExplorationState::kPaused, "探索无自举权限");
-}
-
-void ExplorationCoordinatorNode::publishBootstrapCmd(bool zero)
-{
-  (void)zero;  // Retired: exploration has no velocity publisher.
-}
-
-void ExplorationCoordinatorNode::tickEscape()
-{
-  transitionTo(ExplorationState::kPaused, "旧运动状态已退役，等待上层恢复任务");
-}
-
-void ExplorationCoordinatorNode::tickBootstrap()
-{
-  transitionTo(ExplorationState::kPaused, "旧运动状态已退役，等待上层恢复任务");
-}
 
 void ExplorationCoordinatorNode::tickGenNextPoint()
 {
@@ -1450,8 +1157,9 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
     if (raw_frontier_cells == 0 || reachable_frontiers_ == 0) {return;}
     result.candidates.erase(std::remove_if(result.candidates.begin(), result.candidates.end(),
       [&](const GoalCandidate & candidate) {
-        return !isCurrentFrontier(*map, candidate.x, candidate.y,
-          search_params_.free_threshold, search_params_.use_eight_connectivity);
+        return !isCurrentFrontier(*map, candidate.frontier_x, candidate.frontier_y,
+          search_params_.free_threshold, search_params_.use_eight_connectivity) ||
+          !search_.goalFootprintIsKnownFree(*map,candidate.x,candidate.y,candidate.yaw);
       }), result.candidates.end());
   }
   if (raw_frontier_cells == 0U) {
@@ -1482,6 +1190,11 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
       completed_map_revision_ = revision;
       progress_detail_ = "CURRENT_MAP_COMPLETE";
       transitionTo(ExplorationState::kCompleted, "当前地图已知区域连续确认无前沿及未知格");
+      if (finalize_on_completion_) {
+        session_ending_ = true;
+        session_end_reason_ = "COMPLETED";
+        manually_paused_ = true;
+      }
     }
     return;
   }
@@ -1510,18 +1223,11 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
       raw_frontier_cells, failure_budget_.sample_failures,
       failure_budget_.max_sample_failures);
     if (budget_used_up) {
-      std::string boot_why;
-      if (shouldBootstrap("连续多轮采不到合法候选点", boot_why)) {
-        beginBootstrap(boot_why);
-        return;
-      }
       transitionTo(ExplorationState::kPaused, "连续多轮无合法候选点");
     }
     return;
   }
 
-  bootstrap_stall_active_ = false;
-  bootstrap_count_ = 0;
   failure_budget_.onCandidatesSampled();
   evaluated_candidates_.clear();
   selection_started_ = std::chrono::steady_clock::now();
@@ -1813,6 +1519,8 @@ ExplorationCoordinatorNode::generateCandidates(const FrontierSearch::Result & re
       continue;
     }
     GoalCandidatePose g;
+    g.frontier_x = c.frontier_x;
+    g.frontier_y = c.frontier_y;
     g.x = c.x;
     g.y = c.y;
     g.yaw = c.yaw;
@@ -1820,6 +1528,9 @@ ExplorationCoordinatorNode::generateCandidates(const FrontierSearch::Result & re
     g.euclidean_distance = c.distance;
     g.cluster_index = c.cluster_index;
     out.push_back(g);
+    RCLCPP_INFO(get_logger(),
+      "FRONTIER_RETREAT frontier=(%.3f,%.3f) goal=(%.3f,%.3f) yaw=%.3f retreat_m=%.3f",
+      c.frontier_x,c.frontier_y,c.x,c.y,c.yaw,c.retreat_distance);
   }
 
   std::sort(
@@ -2038,7 +1749,9 @@ bool ExplorationCoordinatorNode::dispatchBestValidatedGoal()
   if (!grid || !map || !stackReady(why)) {return false;}
   for (const auto & candidate : evaluated_candidates_) {
     const auto & g = candidate.goal;
-    if (!isCurrentFrontier(*map, g.x, g.y, search_params_.free_threshold, search_params_.use_eight_connectivity) ||
+    if (!isCurrentFrontier(*map, g.frontier_x, g.frontier_y,
+      search_params_.free_threshold, search_params_.use_eight_connectivity) ||
+      !search_.goalFootprintIsKnownFree(*map, g.x, g.y, g.yaw) ||
       !validator_.validateGoal(*grid, g.x, g.y).valid ||
       !validator_.validatePath(*grid, candidate.path, PlanarPoint{g.x, g.y}).valid) {continue;}
     dispatchNavGoal(g);  // Only submit the task; the policy chain still validates the executed path.
@@ -2214,10 +1927,6 @@ void ExplorationCoordinatorNode::cancelActiveNavGoal(const std::string & reason)
   // Keep in-flight set until rejection or terminal result, including late acceptance.
   has_active_goal_ = false;
   dwell_active_ = false;
-  active_path_.clear();
-  replan_forced_ = false;
-  active_path_impassable_ = false;
-  invalid_replan_count_ = 0;
 }
 
 void ExplorationCoordinatorNode::registerNavFailure(const std::string & reason)
@@ -2253,6 +1962,75 @@ void ExplorationCoordinatorNode::registerNavFailure(const std::string & reason)
   transitionTo(ExplorationState::kGenNextPoint, "导航失败，重新选点");
 }
 
+
+nlohmann::json ExplorationCoordinatorNode::operatorStatus()
+{
+  std::string readiness;
+  bool ready = stackReady(readiness);
+  if (ready) {
+    std::lock_guard<std::mutex> lock(map_mutex_);
+    size_t known = 0;
+    if (!latest_map_ || !mapUsable(*latest_map_, known)) {
+      ready = false; readiness = "地图已知区域不足，不能决策";
+    }
+  }
+  const bool in_flight = nav_goal_in_flight_.load();
+  const bool paused = state_ == ExplorationState::kPaused || manually_paused_;
+  const bool cancel_pending = in_flight && !has_active_goal_;
+  const bool can_pause = !session_ending_ && !manually_paused_;
+  const bool can_resume = !session_ending_ && paused && ready && !in_flight;
+  std::string code = session_ending_ ? "EXPLORATION.ENDING" :
+    cancel_pending ? "NAV.CANCEL_UNCONFIRMED" : !ready ? "EXPLORATION.NOT_READY" :
+    paused ? (manually_paused_ ? "EXPLORATION.PAUSED" : "EXPLORATION.RETRY_WAIT") : "EXPLORATION.RUNNING";
+  nlohmann::json status = {{"schema_version",1},{"boot_id",operator_boot_},
+    {"state",toString(state_)},{"reason_code",code},{"ready",ready},
+    {"readiness_detail",readiness},{"transition_reason",transition_reason_},
+    {"progress",progress_detail_},{"manual_pause",manually_paused_},
+    {"session_ending",session_ending_},{"end_reason",session_end_reason_},
+    {"goal_in_flight",in_flight},{"cancel_pending",cancel_pending},
+    {"can_pause",can_pause},{"can_resume",can_resume},{"can_cancel_save",!session_ending_},
+    {"can_start_new_session",false},{"completion_scope","current_map"}};
+  // Revision covers command preconditions, not continuously changing diagnostics.
+  const auto signature = nlohmann::json({toString(state_),code,ready,manually_paused_,
+    session_ending_,in_flight,can_pause,can_resume}).dump();
+  if (signature != operator_signature_) {operator_signature_ = signature; ++operator_revision_;}
+  status["revision"] = operator_revision_;
+  status["raw_frontiers"] = raw_frontiers_;
+  status["reachable_frontiers"] = reachable_frontiers_;
+  status["unknown_cells"] = unresolved_unknown_;
+  status["auto_resume_count"] = auto_resume_count_;
+  status["max_auto_resume_attempts"] = max_auto_resume_attempts_;
+  return status;
+}
+
+// Caller owns state_mutex_; legacy and versioned services share these mutations.
+void ExplorationCoordinatorNode::applyOperatorOperation(
+  const std::string & operation, std_srvs::srv::Trigger::Response & response)
+{
+  if (operation == "cancel_save") {
+    if (!session_ending_) {
+      session_ending_ = true; session_end_reason_ = "CANCELED"; manually_paused_ = true;
+      cancelActiveNavGoal("取消探索并保存建图"); resetCycleState();
+      transitionTo(ExplorationState::kPaused, "探索取消，等待导航终态后保存地图");
+    }
+    response.success = true;
+    response.message = "取消已受理；等待导航终态、停稳与保存结果，不等于已保存";
+    return;
+  }
+  if (session_ending_) {
+    response.success = false; response.message = "会话已收尾；不能恢复，需创建新的 SLAM 和探索会话"; return;
+  }
+  if (operation == "pause") {
+    manually_paused_ = true; cancelActiveNavGoal("人工暂停"); resetCycleState();
+    transitionTo(ExplorationState::kPaused, "收到人工暂停请求");
+    response.success = true; response.message = "暂停已受理，目标发布已冻结；仍需等待导航终态";
+  } else if (operation == "resume") {
+    manually_paused_ = false; failure_budget_.resetAll(); nav_failure_count_ = 0;
+    auto_resume_count_ = 0; resetCycleState();
+    transitionTo(ExplorationState::kIdle, "收到人工恢复请求");
+    response.success = true; response.message = "探索已恢复；实际派发仍由就绪检查决定";
+  } else {response.success = false; response.message = "不支持的操作";}
+}
 
 void ExplorationCoordinatorNode::publishState()
 {
@@ -2292,20 +2070,12 @@ void ExplorationCoordinatorNode::publishState()
   if (manually_paused_) {
     detail += " manual_pause=1";
   }
-  {
-    char boot[288];
-    snprintf(
-      boot, sizeof(boot),
-      " bootstrap=%d/%d bootstrap_result=%s path_pts=%zu replan_policy=%s",
-      bootstrap_count_, bootstrap_max_attempts_, bootstrap_last_result_.c_str(),
-      active_path_.size(),
-      replan_policy_ == ReplanPolicy::kOnInvalid ? "on_invalid" : "periodic");
-    detail += boot;
-  }
 
   std_msgs::msg::String msg;
   msg.data = detail;
   state_pub_->publish(msg);
+  std_msgs::msg::String operator_msg; operator_msg.data = operatorStatus().dump();
+  operator_status_pub_->publish(operator_msg);
 
   const bool done = (state_ == ExplorationState::kCompleted);
   if (done != exploration_complete_) {
@@ -2333,13 +2103,7 @@ void ExplorationCoordinatorNode::onPauseService(
     return;
   }
   std::lock_guard<std::mutex> lock(state_mutex_);
-  manually_paused_ = true;
-  cancelActiveNavGoal("人工暂停");
-  resetCycleState();
-  transitionTo(ExplorationState::kPaused, "收到人工暂停请求");
-  response->success = true;
-  response->message = "探索已暂停，目标发布已冻结";
-  RCLCPP_WARN(get_logger(), "收到人工暂停请求，已冻结目标发布");
+  applyOperatorOperation("pause", *response);
 }
 
 void ExplorationCoordinatorNode::onResumeService(
@@ -2351,16 +2115,7 @@ void ExplorationCoordinatorNode::onResumeService(
     return;
   }
   std::lock_guard<std::mutex> lock(state_mutex_);
-  manually_paused_ = false;
-  failure_budget_.resetAll();
-  nav_failure_count_ = 0;
-  auto_resume_count_ = 0;
-  escape_count_ = 0;
-  resetCycleState();
-  transitionTo(ExplorationState::kIdle, "收到人工恢复请求");
-  response->success = true;
-  response->message = "探索已恢复，计数器已重置";
-  RCLCPP_INFO(get_logger(), "收到人工恢复请求，失败计数已重置");
+  applyOperatorOperation("resume", *response);
 }
 
 }  // namespace astribot_s1_autonomy

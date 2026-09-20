@@ -1,31 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""发布 `map→odom`：把外部 SLAM 的全局位姿与 SDK 里程计做 REP-105 分解。
+"""Decompose SLAM map→aft_mapped and odom→base into map→odom.
 
-════════════════ 为什么单独一个节点 ════════════════
-`map→odom` 既不属于"地图中继"也不属于"里程计发布"，它是两者的**函数**：
-
-    SLAM        camera_init → aft_mapped      （全局，带 GBA 修正会跳）
-    SDK 里程计   odom → astribot_torso_base    （局部连续，允许漂不允许跳）
-    本节点       map → odom = (map→base) ∘ (odom→base)⁻¹
-
-塞进任何一边都会让那一边在对方没起来时发出错的变换。而 `slam_adapter_node`
-之前就是这么错的：它在拿不到 odom 时发**单位变换**，等于宣称"odom 原点就是
-map 原点" —— 只在开机即建图那一种情形下成立，不成立时地图与激光整体错位，
-且**不会有任何报错**。那段已经删掉，改由本节点负责。
-
-════════════════ "以 aft_mapped 为准"是本节点的前提 ════════════════
-分解成立的必要条件是：`aft_mapped` 与 `astribot_torso_base` 指同一个物理点
-（底盘中心）。这是**决策给定的**，不是本节点能验证的。
-
-若这个前提不成立（两个"底盘中心"差一个固定偏移），后果是地图与机器人
-系统性偏移一个常量 —— 症状看起来像"定位有固定误差"。本节点会在启动日志里
-把这条前提写出来，好让排查时第一眼就能怀疑到它。
-
-════════════════ 跳变是正常的 ════════════════
-回环修正**应该**体现在 `map→odom` 上 —— 这正是 REP-105 分解的目的：
-让跳变留在 map→odom，odom→base 保持连续（local_costmap 用 odom，
-它不能瞬移）。所以本节点检测到跳变时**上报但照常发布**，绝不平滑掉。
+aft_mapped and astribot_torso_base must represent the same chassis origin.
+Reject stale inputs; preserve loop-closure corrections in the global edge.
 """
 
 from astribot_logging import get_logger
@@ -41,7 +19,6 @@ from tf2_ros import (
     ConnectivityException,
     ExtrapolationException,
     LookupException,
-    StaticTransformBroadcaster,
     TransformBroadcaster,
     TransformListener,
 )
@@ -63,7 +40,7 @@ class MapOdomTfNode(Node):
     def __init__(self):
         super().__init__('map_odom_tf')
 
-        self.declare_parameter('slam_world_frame', 'camera_init')
+        self.declare_parameter('slam_world_frame', 'map')
         self.declare_parameter('slam_base_frame', 'aft_mapped')
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('odom_frame', 'odom')
@@ -72,7 +49,6 @@ class MapOdomTfNode(Node):
         self.declare_parameter('tf_timeout_sec', 0.2)
         self.declare_parameter('jump_report_m', 0.30)
         self.declare_parameter('max_tilt_rad', 0.10)
-        self.declare_parameter('publish_map_to_slam_world', True)
         self.declare_parameter('source_timeout_sec', 60.0)
         self.declare_parameter('report_period_sec', 10.0)
         self.declare_parameter('max_source_age_sec', DEFAULT_MAX_SOURCE_AGE_SEC)
@@ -86,6 +62,9 @@ class MapOdomTfNode(Node):
         self.source_timeout = float(self.get_parameter('source_timeout_sec').value)
         self.max_source_age = float(self.get_parameter('max_source_age_sec').value)
 
+        if self.slam_world != self.map_frame:
+            raise DecompositionError('SLAM 必须直接使用 map_frame；不支持恒等别名补偿')
+
         rate = float(self.get_parameter('publish_rate').value)
         if not rate > 0.0:
             raise DecompositionError(f'publish_rate={rate} 必须为正')
@@ -97,15 +76,14 @@ class MapOdomTfNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.tf_broadcaster = TransformBroadcaster(self)
-        self.static_broadcaster = StaticTransformBroadcaster(self)
 
+        self._height = {'slam': 0.0, 'odom': 0.0}
         self._miss = {'slam': 0, 'odom': 0}
         self._stale = {'slam': 0, 'odom': 0}
         self.exit_code = 0
         self._start_sec = self._now()
 
-        if bool(self.get_parameter('publish_map_to_slam_world').value):
-            self._send_map_to_slam_world()
+
 
         self.create_timer(1.0 / rate, self._tick)
         self.create_timer(2.0, self._tick_watchdog)
@@ -164,9 +142,7 @@ class MapOdomTfNode(Node):
                 self.get_logger().warning(
                     f'取不到 {target}→{source}（第 {n} 次）：{exc}\n'
                     + (f'  → 外部 SLAM 没在发 TF。确认 Voxel-SLAM 进程在跑，'
-                       f'且它真的收到了雷达数据'
-                       f'（mid360.yaml 的 lidar_type=0 要 CustomMsg，'
-                       f'而厂商驱动 xfer_format=0 发 PointCloud2 —— 类型不匹配就是零数据）。'
+                       f'且它真的收到了标准 PointCloud2 雷达数据。'
                        if kind == 'slam' else
                        f'  → chassis_odom_node 没在发。它需要厂商本体运动服务已启动，'
                        f'否则 SDK 报 "No simulation or real robot is started" 并非零退出。'))
@@ -184,6 +160,7 @@ class MapOdomTfNode(Node):
             return None
 
         t = tf.transform.translation
+        self._height[kind] = float(t.z)
         q = tf.transform.rotation
         tilt = self.decomposer.check_planar(q.x, q.y, f'{target}→{source}')
         if tilt is not None:
@@ -204,38 +181,12 @@ class MapOdomTfNode(Node):
         tf.child_frame_id = self.odom_frame
         tf.transform.translation.x = pose.x
         tf.transform.translation.y = pose.y
+        tf.transform.translation.z = self._height['slam'] - self._height['odom']
         z, w = quaternion_from_yaw(pose.theta)
         tf.transform.rotation.z = z
         tf.transform.rotation.w = w
         self.tf_broadcaster.sendTransform(tf)
 
-    def _send_map_to_slam_world(self):
-        """`map → camera_init` 恒等变换，把两套命名接起来。
-
-        走 **static** 广播器（`/tf_static`，TRANSIENT_LOCAL 即 latched）：
-        这条边永远不变，且必须让**晚启动的**消费者也能拿到。
-        早先这里用动态广播器且只发一次，后果是 nav2 / rviz / cloud_to_grid
-        只要启动得比这一刻晚，就永远看不到这条边。
-
-        仍然由本节点独占这条边（不用 static_transform_publisher），
-        以免出现"静态和动态两个源"。恒等意味着 map 与 camera_init 数值上
-        同一个系，只是名字不同 —— camera_init 的原点是**底盘启动位姿**，
-        所以这等于宣称"开机点即地图原点"。
-        """
-        if self.map_frame == self.slam_world:
-            return          # 同名就不用接
-        tf = TransformStamped()
-        tf.header.stamp = self.get_clock().now().to_msg()
-        tf.header.frame_id = self.map_frame
-        tf.child_frame_id = self.slam_world
-        tf.transform.rotation.w = 1.0
-        self.static_broadcaster.sendTransform(tf)
-        self.get_logger().info(
-            f'已发 {self.map_frame}→{self.slam_world} 恒等静态变换。'
-            f'含义：开机点即地图原点（{self.slam_world} 的原点是底盘启动位姿）。\n'
-            f'  这条边**不等**里程计就绪就发 —— /map 的 frame_id 是 '
-            f'{self.slam_world}，缺这条边时以 {self.map_frame} 为全局系的'
-            f'消费者会整个显示不出地图。')
 
     def _tick_watchdog(self):
         if self.decomposer.stats.updates > 0:

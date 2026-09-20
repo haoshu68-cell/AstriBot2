@@ -22,8 +22,9 @@
 * **积分种子每次使能重取**（202:44 / 203:43）。复用旧 pos_cmd 的后果：两次使能
   之间机器人被推动或自行漂移，积分起点与真实位置有偏差，一使能就是一个**阶跃
   位置指令** → 底盘猛冲。
-* **leash 触发时必须同时冻结积分**。位姿反馈控制由上层 Nav2 负责，
-  桥接不额外叠加位置修正。
+* **x/y/yaw 只积到下一帧 pose**。Nav2 负责导航误差反馈，
+  桥接将每帧实测位移映射到 SDK 口径，不叠加第二套比例控制。
+* **leash 触发时必须同时冻结积分**。
 * **异常绝不吞**。任何 SDK 调用失败都转成状态位，由调用方上报；桥接不因单次
   失败退出（退出会让 /cmd_vel 彻底断流，比继续上报更糟）。
 * **看门狗只把速度置零，不改状态**。cmd_vel 短暂中断是正常工况（Nav2 到点后
@@ -32,14 +33,18 @@
 
 import collections
 import math
+import threading
+from time import perf_counter
+from functools import wraps
+
+from astribot_trajectory_bridge.loop_timing import LoopTiming
 
 from astribot_trajectory_bridge.chassis_integrator import (
     ChassisConfigError,
     IDX_THETA,
-    clamp_velocity,
-    integrate_step_dt,
+    PoseFrameIntegrator,
+    SdkPoseHistory,
     measure_tick_dt,
-    slew_limit_velocity,
     to_local_velocity,
     wrap_angle,
 )
@@ -82,11 +87,24 @@ TickWindowGap = collections.namedtuple('TickWindowGap', 'max_dt at over_count ti
 
 VelTrace = collections.namedtuple(
     'VelTrace',
-    'ticks wall in_peak clamped_peak slewed_peak local_peak '
-    'clamp_bit slew_bit zeroed_ticks '
-    'cmd_path cmd_net act_net dtheta_cmd dtheta_act corr_path')
+    'ticks wall in_peak local_peak in_wz_peak local_wz_peak zeroed_ticks '
+    'cmd_path cmd_net act_net dtheta_cmd dtheta_act corr_path '
+    'dtheta_integrated pose_rebases frame_dx frame_dy frame_dtheta '
+    'lead_xy_peak lead_theta_peak')
 
 VEL_BIT_EPS = 1e-9
+
+
+def _serialized(method):
+    """使能、停车和两路 timer 共用状态；不能在 SDK 写入途中重置角度基准。"""
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        started = perf_counter() if method.__name__ == 'inner_tick' else None
+        with self._control_lock:
+            if started is not None and self.state == ST_ENABLED:
+                self.timing.add('control_lock_wait', perf_counter() - started)
+            return method(self, *args, **kwargs)
+    return call
 
 
 class StatusEvent:
@@ -109,9 +127,6 @@ class ChassisBridgeConfig:
     def __init__(self, part_name='astribot_chassis', freq=250.0,
                  input_frame='body', theta_reference='at_enable',
                  cmd_vel_timeout_sec=0.3,
-                 max_vel_xy=1.0, max_vel_theta=2.0,
-                 max_accel_xy=2.5, max_accel_theta=3.2,
-                 max_accel_xy_up=None,
                  leash_xy_m=0.25, leash_theta_rad=0.35,
                  require_manual_reset=True,
                  enable_slam_correction=False, pose_source='slam',
@@ -122,22 +137,29 @@ class ChassisBridgeConfig:
                  odom_drift_window_sec=2.0, odom_drift_warn_m=0.15,
                  max_tick_dt_sec=0.04,
                  require_fresh_scan=True, scan_max_age_sec=0.5,
-                 scan_loss_grace_sec=2.0):
+                 scan_loss_grace_sec=2.0,
+                 pose_preview_xy_sec=0.5, pose_preview_theta_sec=0.5,
+                 pose_preview_max_xy_m=0.20, pose_preview_max_theta_rad=0.34):
         self.part_name = part_name
         self.freq = float(freq)
         self.input_frame = input_frame
         self.theta_reference = theta_reference
         self.cmd_vel_timeout_sec = float(cmd_vel_timeout_sec)
-        self.max_vel_xy = float(max_vel_xy)
-        self.max_vel_theta = float(max_vel_theta)
-        self.max_accel_xy = float(max_accel_xy)
-        self.max_accel_theta = float(max_accel_theta)
-        self.max_accel_xy_up = (None if max_accel_xy_up is None
-                                else float(max_accel_xy_up))
         self.max_tick_dt_sec = float(max_tick_dt_sec)
         self.leash_xy_m = float(leash_xy_m)
         self.leash_theta_rad = float(leash_theta_rad)
         self.require_manual_reset = bool(require_manual_reset)
+        self.pose_preview_xy_sec = float(pose_preview_xy_sec)
+        self.pose_preview_theta_sec = float(pose_preview_theta_sec)
+        self.pose_preview_max_xy_m = float(pose_preview_max_xy_m)
+        self.pose_preview_max_theta_rad = float(pose_preview_max_theta_rad)
+        if not all(math.isfinite(v) and 0.0 <= v <= 2.0 for v in
+                   (self.pose_preview_xy_sec, self.pose_preview_theta_sec)):
+            raise ChassisConfigError('pose_preview_*_sec 必须在 [0, 2] 秒内')
+        if not (math.isfinite(self.pose_preview_max_xy_m) and self.pose_preview_max_xy_m > 0
+                and math.isfinite(self.pose_preview_max_theta_rad)
+                and 0 < self.pose_preview_max_theta_rad < math.pi):
+            raise ChassisConfigError('前瞻位移上界必须为有限正数，角度上界必须小于 pi')
         if enable_slam_correction:
             raise ChassisConfigError(
                 "enable_slam_correction 已退役：定位反馈控制由上层 Nav2 负责")
@@ -146,6 +168,8 @@ class ChassisBridgeConfig:
         self.base_frame = base_frame
         self.outer_rate = float(outer_rate)
         self.slam_max_age_sec = float(slam_max_age_sec)
+        if not math.isfinite(self.slam_max_age_sec) or self.slam_max_age_sec <= 0:
+            raise ChassisConfigError('slam_max_age_sec 必须为有限正数')
         self.require_slam_to_enable = bool(require_slam_to_enable)
         self.slam_loss_grace_sec = float(slam_loss_grace_sec)
         self.odom_drift_window_sec = float(odom_drift_window_sec)
@@ -174,22 +198,6 @@ class ChassisBridgeConfig:
                 'max_tick_dt_sec=%r 小于标称步长 1/freq=%r：那样每一拍都会被钳位，'
                 '积分恒等于钳位值，等于没修"按标称频率积分"这个缺陷。'
                 % (self.max_tick_dt_sec, nominal_dt))
-        max_tick_disp = self.max_vel_xy * self.max_tick_dt_sec
-        if max_tick_disp >= self.leash_xy_m:
-            raise ChassisConfigError(
-                'max_vel_xy=%r × max_tick_dt_sec=%r = %.4fm，已达到 leash_xy_m=%r。'
-                '单拍位移必须远小于 leash，否则一次调度停顿就能把 leash 撞开 —— '
-                'leash 是开环位置链路上唯一的硬保护。请减小 max_tick_dt_sec。'
-                % (self.max_vel_xy, self.max_tick_dt_sec, max_tick_disp,
-                   self.leash_xy_m))
-        if (self.max_accel_xy_up is not None
-                and self.max_accel_xy_up > self.max_accel_xy):
-            raise ChassisConfigError(
-                'max_accel_xy_up=%r 大于 max_accel_xy=%r：这个参数的用途是把'
-                '**加速**方向限得比减速更紧（底盘真实加速度只有 ~0.39m/s²，'
-                '开环位置链在加速段积下的欠账永不归还）。给成更大的值等于'
-                '悄悄放宽加速，与它存在的理由正相反。'
-                % (self.max_accel_xy_up, self.max_accel_xy))
         validate_leash_config(self.leash_xy_m, self.leash_theta_rad)
         if not (math.isfinite(self.freq) and math.isfinite(self.outer_rate) and
                 0 < self.outer_rate <= self.freq):
@@ -207,15 +215,20 @@ class ChassisBridgeCore:
         self.session = session
         self.pose = pose_port
         self.clock = clock
+        self._control_lock = threading.RLock()
+        self.timing = LoopTiming()
 
         self.state = ST_DISABLED
         self.last_stop = None
         self.pos_cmd = None
         self.theta_ref = 0.0
+        self._pose_integrator = None
+        self._sdk_history = SdkPoseHistory(cfg.slam_max_age_sec + 0.2)
+        self._accepted_pose = None
+        self._applied_velocity = (0.0, 0.0, 0.0)
 
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
-        self._prev_vel_out = (0.0, 0.0, 0.0)
         self._last_scan_time = None
         self._scan_stale_since = None
 
@@ -238,9 +251,17 @@ class ChassisBridgeCore:
         self._drift_window = []
 
         self.events = []
+        self._repeat_event_at = {}
 
 
     def _emit(self, code, detail='', m1=0.0, m2=0.0):
+        # 保护判定仍逐拍执行；无输入等持续状态只需低频报告。
+        if code == S_CMD_VEL_TIMEOUT:
+            now = self.clock.now()
+            previous = self._repeat_event_at.get(code)
+            if previous is not None and 0.0 <= now - previous < 1.0:
+                return
+            self._repeat_event_at[code] = now
         self.events.append(StatusEvent(code, detail, m1, m2))
 
     def _note_stop(self, state, reason, m1=0.0, m2=0.0):
@@ -258,16 +279,19 @@ class ChassisBridgeCore:
         return out
 
 
+    @_serialized
     def enable(self):
         """使能。返回 (ok, detail)。
 
         每次使能都**重取积分种子**，绝不复用旧 pos_cmd（202:44 / 203:43）。
         """
         try:
-            seed = self.session.get_desired_joints_position([self.cfg.part_name])[0]
+            seed = self.session.get_current_joints_position([self.cfg.part_name])[0]
+            if not all(math.isfinite(v) for v in seed):
+                raise ValueError('SDK 实际位置必须为有限数值')
         except Exception as exc:      # noqa: BLE001 —— 禁止吞异常，转状态位
             self._emit(S_SDK_CALL_FAILED, '使能时取积分种子失败：%s' % exc)
-            return (False, 'get_desired_joints_position 失败：%s' % exc)
+            return (False, 'get_current_joints_position 失败：%s' % exc)
 
         if len(seed) != 3:
             self._emit(S_SDK_CALL_FAILED,
@@ -275,18 +299,24 @@ class ChassisBridgeCore:
                        '（astribot_base.py:36-38）' % len(seed))
             return (False, '底盘自由度不是 3')
 
+        self._accepted_pose = None
         pose, stamp = self._lookup_pose_checked()
         if pose is None and self.cfg.require_slam_to_enable:
             self._emit(S_SLAM_UNAVAILABLE_OPEN_LOOP,
                        'require_slam_to_enable=true 且位姿源不可用，拒绝使能')
             return (False, '位姿源不可用且 require_slam_to_enable=true')
 
-        self.pos_cmd = [seed[0], seed[1], wrap_angle(seed[2])]
+        self._pose_integrator = (PoseFrameIntegrator(pose, stamp, seed)
+                                 if pose is not None else None)
+        self._sdk_history = SdkPoseHistory(self.cfg.slam_max_age_sec + 0.2)
+        self._sdk_history.append(self.clock.now(), seed)
+        self.pos_cmd = list(seed)
         self.theta_ref = (self.pos_cmd[IDX_THETA]
                           if self.cfg.theta_reference == 'at_enable' else 0.0)
-        self._prev_vel_out = (0.0, 0.0, 0.0)
         self._last_twist = (0.0, 0.0, 0.0)
         self._last_twist_time = None
+        self._applied_velocity = (0.0, 0.0, 0.0)
+        self._repeat_event_at.clear()
         self._prev_tick_time = None
         self._reset_tick_window()
         self._reset_vel_window()
@@ -295,15 +325,19 @@ class ChassisBridgeCore:
         self._scan_stale_since = None
         self._drift_window = []
 
+        self.timing.reset()
         self.state = ST_ENABLED
+        self._emit(S_OK, 'enabled')
         return (True, 'enabled')
 
+    @_serialized
     def disable(self):
         self.state = ST_DISABLED
         self._emit(S_NOT_ENABLED, '已停用')
         self._note_stop(ST_DISABLED, '外部调用 ~/disable 主动停用')
         return (True, 'disabled')
 
+    @_serialized
     def reset_leash(self):
         """leash 复位。只在 LEASH_TRIPPED 态有效，且会重取种子。"""
         if self.state != ST_LEASH_TRIPPED:
@@ -314,6 +348,7 @@ class ChassisBridgeCore:
     def submit_twist(self, vx, vy, wz):
         self._last_twist = (float(vx), float(vy), float(wz))
         self._last_twist_time = self.clock.now()
+        self._repeat_event_at.pop(S_CMD_VEL_TIMEOUT, None)
 
     def submit_scan_seen(self, stamp=None):
         """上报"刚收到一帧 /scan"。节点层在 /scan 订阅回调里调用。
@@ -353,15 +388,30 @@ class ChassisBridgeCore:
             return (None, None)
         if pose is None:
             return (None, None)
+        try:
+            if len(pose) != 3 or not all(math.isfinite(v) for v in pose):
+                raise ValueError('pose 必须为 3 个有限数值')
+            if not math.isfinite(stamp):
+                raise ValueError('pose 时间戳必须为有限数值')
+        except (ValueError, TypeError) as exc:
+            self._emit(S_POSE_PORT_FAILED, str(exc))
+            return (None, None)
+        if stamp > self.clock.now():
+            self._emit(S_SLAM_STALE, '位姿时间戳超前于控制时钟')
+            return (None, None)
+        if self._accepted_pose is not None and stamp <= self._accepted_pose[1]:
+            pose, stamp = self._accepted_pose
         age = self.clock.now() - stamp
-        if age > self.cfg.slam_max_age_sec:
+        if age < 0.0 or age > self.cfg.slam_max_age_sec:
             self._emit(S_SLAM_STALE,
                        '位姿龄期 %.3fs 超过阈值 %.3fs' % (age, self.cfg.slam_max_age_sec),
                        age, self.cfg.slam_max_age_sec)
             return (None, None)
+        self._accepted_pose = (list(pose), stamp)
         return (pose, stamp)
 
 
+    @_serialized
     def inner_tick(self):
         """内环一拍（按 cfg.freq 调用）。返回本拍是否真的下发了指令。"""
         if self.state in (ST_DISABLED, ST_LEASH_TRIPPED, ST_STOPPED_NO_POSE,
@@ -425,7 +475,6 @@ class ChassisBridgeCore:
                                age, self.cfg.scan_max_age_sec)
                 if stale_for > self.cfg.scan_loss_grace_sec:
                     self.state = ST_STOPPED_STALE_SCAN
-                    self._prev_vel_out = (0.0, 0.0, 0.0)
                     self._emit(S_SCAN_LOST_STOPPED,
                                '/scan 已持续陈旧 %.2fs 超过宽限 %.2fs，已停车。'
                                '感知失效期间继续行走等于拿旧障碍图开车'
@@ -440,46 +489,90 @@ class ChassisBridgeCore:
             else:
                 self._scan_stale_since = None
 
-        vel = clamp_velocity(vel_in, self.cfg.max_vel_xy, self.cfg.max_vel_theta)
-        vel_clamped = vel
-        vel = slew_limit_velocity(vel, self._prev_vel_out,
-                                  self.cfg.max_accel_xy, self.cfg.max_accel_theta, dt,
-                                  self.cfg.max_accel_xy_up)
-        self._prev_vel_out = vel
-
-        v_local = to_local_velocity(vel, self.cfg.input_frame,
-                                    self.pos_cmd[IDX_THETA] - self.theta_ref)
-        pos_before = list(self.pos_cmd)
-        self.pos_cmd = integrate_step_dt(self.pos_cmd, v_local, dt)
-
-
         try:
-            actual = self.session.get_current_joints_position([self.cfg.part_name])[0]
+            with self.timing.measure('sdk_read'):
+                actual = self.session.get_current_joints_position([self.cfg.part_name])[0]
+            if len(actual) != 3 or not all(math.isfinite(v) for v in actual):
+                raise ValueError('SDK 实际位置必须为 3 个有限数值')
         except Exception as exc:      # noqa: BLE001
             self._emit(S_SDK_CALL_FAILED, '读实际位置失败：%s' % exc)
             return False
 
-        leash = check_leash(self.pos_cmd, actual,
-                            self.cfg.leash_xy_m, self.cfg.leash_theta_rad)
+        pose, stamp = self._lookup_pose_checked()
+        self._sdk_history.append(self.clock.now(), actual)
+        if pose is None:
+            vel_in = (0.0, 0.0, 0.0)
+        elif self._pose_integrator is None:
+            self._pose_integrator = PoseFrameIntegrator(pose, stamp, actual)
+        elif self._pose_integrator.observe(pose, stamp):
+            self._vel_win['pose_rebases'] += 1
+            # Navigation closes the SLAM loop. Express this frame's finite lead
+            # in time-aligned SDK coordinates, not a session-long SLAM/SDK offset.
+            reference = self._sdk_history.at(stamp)
+            for i, horizon in enumerate((self.cfg.pose_preview_xy_sec,
+                                          self.cfg.pose_preview_xy_sec,
+                                          self.cfg.pose_preview_theta_sec)):
+                if horizon > 0.0:
+                    self._pose_integrator.reanchor_axis(i, reference[i])
+        if tick.raw is not None and tick.raw <= 0.0:
+            vel_in = (0.0, 0.0, 0.0)
 
-        self._record_vel(raw_in, vel_in, vel_clamped, vel, v_local, dt,
-                         actual, pos_before)
+        heading = self.pos_cmd[IDX_THETA]
+        if self._pose_integrator is not None:
+            heading = (self._pose_integrator.anchor[IDX_THETA] +
+                       self._pose_integrator.integral[IDX_THETA])
+        v_local = to_local_velocity(vel_in, self.cfg.input_frame,
+                                    heading - self.theta_ref)
+        pos_before = list(self.pos_cmd)
+        candidate = list(self.pos_cmd)
+        preview_times = (self.cfg.pose_preview_xy_sec, self.cfg.pose_preview_xy_sec,
+                         self.cfg.pose_preview_theta_sec)
+        if self._pose_integrator is not None:
+            # A held axis may have accumulated localization offset while its SDK
+            # target stayed fixed. Re-align its interface zero when it starts,
+            # so a tiny new command cannot release that old position discrepancy.
+            for i, (v, h) in enumerate(zip(v_local, preview_times)):
+                if h > 0.0 and v != 0.0 and self._applied_velocity[i] == 0.0:
+                    self._pose_integrator.reanchor_axis(i, actual[i])
+            predicted = self._pose_integrator.preview_target(
+                v_local, dt, preview_times,
+                min(self.cfg.pose_preview_max_xy_m, 0.95 * self.cfg.leash_xy_m),
+                min(self.cfg.pose_preview_max_theta_rad, 0.95 * self.cfg.leash_theta_rad))
+            legacy = self._pose_integrator.target(v_local, dt)
+            for i, v in enumerate(v_local):
+                if v != 0.0:
+                    candidate[i] = predicted[i] if preview_times[i] > 0.0 else legacy[i]
+                elif preview_times[i] > 0.0 and self._applied_velocity[i] != 0.0:
+                    candidate[i] = actual[i]
+        # 零速边沿撤掉提前量，之后保持不动，不把静态定位噪声变成目标。
+
+        leash = check_leash(candidate, actual,
+                            self.cfg.leash_xy_m, self.cfg.leash_theta_rad)
 
         if leash.tripped:
             self.state = ST_LEASH_TRIPPED
             self.pos_cmd = leash_recover_command(actual)
-            self._prev_vel_out = (0.0, 0.0, 0.0)
             self._emit(S_LEASH_TRIPPED, leash.reason, leash.err_xy, leash.err_theta)
             self._note_stop(ST_LEASH_TRIPPED, leash.reason,
                             leash.err_xy, leash.err_theta)
             return False
 
         try:
-            self.session.set_joints_position(
-                [self.cfg.part_name], [list(self.pos_cmd)])
+            with self.timing.measure('sdk_write'):
+                self.session.set_joints_position(
+                    [self.cfg.part_name], [list(candidate)])
         except Exception as exc:      # noqa: BLE001
             self._emit(S_SDK_CALL_FAILED, '下发位置失败：%s' % exc)
             return False
+        self.pos_cmd = candidate
+        if self._pose_integrator is not None:
+            before = list(self._pose_integrator.integral)
+            self._pose_integrator.commit_preview(v_local, dt)
+            for i, h in enumerate(preview_times):
+                if h == 0.0:
+                    self._pose_integrator.integral[i] = before[i] + v_local[i] * dt
+        self._applied_velocity = tuple(v_local)
+        self._record_vel(raw_in, vel_in, v_local, dt, actual, pos_before)
         return True
 
     def tick_stats(self):
@@ -564,16 +657,16 @@ class ChassisBridgeCore:
         """重开速度链路统计窗口。"""
         self._vel_win = {
             'ticks': 0, 't0': None, 't1': None,
-            'in_peak': 0.0, 'clamped_peak': 0.0, 'slewed_peak': 0.0,
-            'local_peak': 0.0,
-            'clamp_bit': 0, 'slew_bit': 0, 'zeroed': 0,
+            'in_peak': 0.0, 'local_peak': 0.0,
+            'in_wz_peak': 0.0, 'local_wz_peak': 0.0, 'zeroed': 0,
             'cmd_path': 0.0, 'corr_path': 0.0,
+            'dtheta_integrated': 0.0, 'pose_rebases': 0,
+            'lead_xy_peak': 0.0, 'lead_theta_peak': 0.0,
             'cmd_xy0': None, 'cmd_th0': None, 'cmd_xy1': None, 'cmd_th1': None,
             'act_xy0': None, 'act_th0': None, 'act_xy1': None, 'act_th1': None,
         }
 
-    def _record_vel(self, raw_in, vel_in, vel_clamped, vel_slewed,
-                    v_local, dt, actual, pos_before):
+    def _record_vel(self, raw_in, vel_in, v_local, dt, actual, pos_before):
         """记一拍速度链路。纯累加，不打日志（内环 250Hz）。"""
         w = self._vel_win
         now = self.clock.now()
@@ -584,24 +677,22 @@ class ChassisBridgeCore:
 
         raw_n = math.hypot(raw_in[0], raw_in[1])
         in_n = math.hypot(vel_in[0], vel_in[1])
-        cl_n = math.hypot(vel_clamped[0], vel_clamped[1])
-        sl_n = math.hypot(vel_slewed[0], vel_slewed[1])
         lo_n = math.hypot(v_local[0], v_local[1])
-        w['in_peak'] = max(w['in_peak'], in_n)
-        w['clamped_peak'] = max(w['clamped_peak'], cl_n)
-        w['slewed_peak'] = max(w['slewed_peak'], sl_n)
+        w['in_peak'] = max(w['in_peak'], raw_n)
+        w['in_wz_peak'] = max(w['in_wz_peak'], abs(raw_in[2]))
         w['local_peak'] = max(w['local_peak'], lo_n)
+        w['local_wz_peak'] = max(w['local_wz_peak'], abs(v_local[2]))
 
-        if raw_n > VEL_BIT_EPS and in_n <= VEL_BIT_EPS:
+        if (max(raw_n, abs(raw_in[2])) > VEL_BIT_EPS and
+                max(in_n, abs(vel_in[2])) <= VEL_BIT_EPS):
             w['zeroed'] += 1
-        if any(abs(a - b) > VEL_BIT_EPS
-               for a, b in zip(vel_in, vel_clamped)):
-            w['clamp_bit'] += 1
-        if any(abs(a - b) > VEL_BIT_EPS
-               for a, b in zip(vel_clamped, vel_slewed)):
-            w['slew_bit'] += 1
 
         w['cmd_path'] += lo_n * dt
+        w['dtheta_integrated'] += v_local[IDX_THETA] * dt
+        w['lead_xy_peak'] = max(w['lead_xy_peak'], math.hypot(
+            self.pos_cmd[0] - actual[0], self.pos_cmd[1] - actual[1]))
+        w['lead_theta_peak'] = max(w['lead_theta_peak'], abs(wrap_angle(
+            self.pos_cmd[IDX_THETA] - actual[IDX_THETA])))
         if w['cmd_xy0'] is None:
             w['cmd_xy0'] = (pos_before[0], pos_before[1])
             w['cmd_th0'] = pos_before[IDX_THETA]
@@ -612,6 +703,7 @@ class ChassisBridgeCore:
         w['act_xy1'] = (actual[0], actual[1])
         w['act_th1'] = actual[IDX_THETA]
 
+    @_serialized
     def consume_vel_trace(self):
         """取走并清零**本窗**的速度链路取样。
 
@@ -640,20 +732,26 @@ class ChassisBridgeCore:
 
         trace = VelTrace(
             ticks=w['ticks'], wall=wall,
-            in_peak=w['in_peak'], clamped_peak=w['clamped_peak'],
-            slewed_peak=w['slewed_peak'], local_peak=w['local_peak'],
-            clamp_bit=w['clamp_bit'], slew_bit=w['slew_bit'],
+            in_peak=w['in_peak'], local_peak=w['local_peak'],
+            in_wz_peak=w['in_wz_peak'], local_wz_peak=w['local_wz_peak'],
             zeroed_ticks=w['zeroed'],
             cmd_path=w['cmd_path'],
             cmd_net=_net(w['cmd_xy0'], w['cmd_xy1']),
             act_net=_net(w['act_xy0'], w['act_xy1']),
             dtheta_cmd=_dth(w['cmd_th0'], w['cmd_th1']),
             dtheta_act=_dth(w['act_th0'], w['act_th1']),
-            corr_path=w['corr_path'])
+            corr_path=w['corr_path'],
+            dtheta_integrated=w['dtheta_integrated'],
+            pose_rebases=w['pose_rebases'],
+            frame_dx=self._pose_integrator.integral[0] if self._pose_integrator else 0.0,
+            frame_dy=self._pose_integrator.integral[1] if self._pose_integrator else 0.0,
+            frame_dtheta=self._pose_integrator.integral[2] if self._pose_integrator else 0.0,
+            lead_xy_peak=w['lead_xy_peak'], lead_theta_peak=w['lead_theta_peak'])
         self._reset_vel_window()
         return trace
 
 
+    @_serialized
     def outer_tick(self):
         """低频位姿健康检查和漂移诊断；不修改位置指令。"""
         if self.state != ST_ENABLED:
@@ -667,7 +765,6 @@ class ChassisBridgeCore:
             if (self.cfg.require_slam_to_enable
                     and lost > self.cfg.slam_loss_grace_sec):
                 self.state = ST_STOPPED_NO_POSE
-                self._prev_vel_out = (0.0, 0.0, 0.0)
                 self._emit(S_SLAM_LOST_STOPPED,
                            '位姿源丢失 %.2fs 超过宽限 %.2fs，已停车'
                            % (lost, self.cfg.slam_loss_grace_sec),
@@ -687,7 +784,7 @@ class ChassisBridgeCore:
         if jumped:
             self._drift_window = []
             self._emit(S_SLAM_RELOCALIZED,
-                       '位姿跳变 %.4fm，重置诊断窗口；桥接不校正位置指令' % jump,
+                       '位姿跳变 %.4fm，重置诊断窗口；请检查定位坐标是否重置' % jump,
                        jump, self.cfg.slam_jump_threshold_m)
             return
         self._update_drift(pose)

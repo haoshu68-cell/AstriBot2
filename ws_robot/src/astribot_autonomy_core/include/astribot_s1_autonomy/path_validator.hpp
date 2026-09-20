@@ -25,10 +25,7 @@ struct PathValidatorParams
   int occupied_threshold{65};
   int free_threshold{25};
   /// 目标点【占据】净空半径(m)：该半径内不允许有占据格。
-  /// 这是碰撞约束。⚠️ 别按足迹外接半径(本机 0.438)取：代价地图里 >=253 的格
-  /// 已经含了足迹半径，再叠一个外接半径等于重复计一次，2026-08 实测会把
-  /// 99% 的贴墙前沿误否决。正确取值是控制器的 xy_goal_tolerance(本项目 0.25)。
-  /// 这里的默认值只是历史遗留，实际由 yaml 覆盖成 0.25。
+  /// 使用膨胀代价地图时避免重复叠加足迹半径；当前探索 YAML 覆盖为 0.25 m。
   double goal_clearance_radius{0.42};
   /// 目标点【未知】净空半径(m)：该半径内不允许有未知格。
   double goal_unknown_clearance_radius{0.10};
@@ -88,18 +85,11 @@ private:
 /// 路径上距 robot 最近的顶点下标。路径为空时返回 0（调用方必须自己先判空）。
 std::size_t nearestPathIndex(const std::vector<PlanarPoint> & path, const PlanarPoint & robot);
 
-/// robot 到路径最近顶点的距离(m)。
-///
-/// 路径为空时返回 **-1.0**，不是 0.0：返回 0 会让「根本没有路径」被读成
-/// 「完美贴合路径」，从而永远不触发重规划 —— 这正是「无数据当成安全」那一类
-/// 错误（本项目已在探针脚本上踩过一次：没收到 scan 被当成前方无障碍）。
+/// robot 到路径最近顶点的距离(m)。空路径返回 -1.0，不能视为零偏差。
 double pathDeviation(const std::vector<PlanarPoint> & path, const PlanarPoint & robot);
 
-/// 剩余段：从距 robot 最近的顶点一直到路径终点。路径为空返回空 vector。
-///
-/// 只校验剩余段而不是整条路径：已经走过的那一段是否仍可通行与「还能不能继续
-/// 跟踪」无关，拿整条路径去校验会因为身后新出现的障碍（比如刚被观测到的墙）
-/// 而反复误判成需要重规划。
+/// 从距 robot 最近的顶点截取剩余路径；空路径返回空 vector。
+/// 只校验剩余段，避免身后障碍触发无关的重规划。
 std::vector<PlanarPoint> remainingPath(
   const std::vector<PlanarPoint> & path, const PlanarPoint & robot);
 

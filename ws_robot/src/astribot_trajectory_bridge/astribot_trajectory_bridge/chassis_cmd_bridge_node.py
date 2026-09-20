@@ -10,13 +10,16 @@
 
 为什么内外环用两个独立的 MutuallyExclusiveCallbackGroup
 ====================================================
-内环 250Hz（4ms）与外环 10Hz 都要读 SDK。放同一个 group 会串行化：外环那次
-TF 查询 + 两次 SDK 读会挤掉内环的节拍。分到两个 group、配
-MultiThreadedExecutor，两者可并行。
+内环 250Hz（4ms）与外环 10Hz 分组调度，命令订阅也有独立的回调组。
+核心状态更新和使能/停用操作用同一把锁串行，防止换帧积分与停车服务交错；
+外环的 ROS 发布和日志在核心锁外执行。
 
 但 GIL 仍在 —— 这是单进程多节点方案（S-1）的真实代价，不是能靠分组消除的。
 所以内环额外监控实际周期，超阈上报 LOOP_OVERRUN，让抖动可见而不是靠感觉。
 """
+
+import json
+from time import perf_counter
 
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -100,6 +103,8 @@ class ChassisCmdBridgeNode(Node):
 
         self._rate_report_period_ticks = max(1, int(round(cfg.outer_rate * 10.0)))
         self._rate_report_countdown = self._rate_report_period_ticks
+        self._state_report_period_ticks = max(1, int(round(cfg.outer_rate)))
+        self._state_report_countdown = self._state_report_period_ticks
 
         vel_period = float(self.get_parameter('vel_trace_period_sec').value)
         self._vel_report_period_ticks = max(
@@ -112,10 +117,14 @@ class ChassisCmdBridgeNode(Node):
 
         self.get_logger().info(
             '底盘桥接已启动：part=%s freq=%.1fHz 外环=%.1fHz 口径=%s '
-            'leash=(%.3fm, %.3frad) 反馈控制=上层 位姿源=%s 写通路=%s。'
+            'leash=(%.3fm, %.3frad) 导航反馈=上层 x/y/yaw积分=逐帧pose同步重置 '
+            '有限前瞻=(xy %.3fs, yaw %.3fs; 上界 %.3fm/%.3frad) 位姿源=%s 写通路=%s。'
             '启动即停用，需调 ~/enable。'
             % (cfg.part_name, cfg.freq, cfg.outer_rate, cfg.input_frame,
                cfg.leash_xy_m, cfg.leash_theta_rad,
+               cfg.pose_preview_xy_sec, cfg.pose_preview_theta_sec,
+               min(cfg.pose_preview_max_xy_m, 0.95 * cfg.leash_xy_m),
+               min(cfg.pose_preview_max_theta_rad, 0.95 * cfg.leash_theta_rad),
                cfg.pose_source,
                '允许' if self._write_allowed else '被拒绝'))
 
@@ -125,17 +134,16 @@ class ChassisCmdBridgeNode(Node):
         d('part_name', 'astribot_chassis')
         d('cmd_vel_topic', '/cmd_vel')
         d('odom_topic', '/astribot/chassis/odom_from_sdk')
-        d('freq', 100.0)
+        d('freq', 250.0)
         d('input_frame', 'body')
         d('theta_reference', 'at_enable')
         d('start_disabled', True)
         d('cmd_vel_timeout_sec', 0.3)
-        d('max_vel_xy', 1.0)
-        d('max_vel_theta', 2.0)
-        d('max_accel_xy', 2.5)
-        d('max_accel_theta', 3.2)
-        d('max_accel_xy_up', 0.0)
         d('max_tick_dt_sec', 0.04)
+        d('pose_preview_xy_sec', 0.5)
+        d('pose_preview_theta_sec', 0.5)
+        d('pose_preview_max_xy_m', 0.20)
+        d('pose_preview_max_theta_rad', 0.34)
         d('leash_xy_m', 0.25)
         d('leash_theta_rad', 0.35)
         d('require_manual_reset', True)
@@ -167,11 +175,11 @@ class ChassisCmdBridgeNode(Node):
             part_name=g('part_name'), freq=g('freq'),
             input_frame=g('input_frame'), theta_reference=g('theta_reference'),
             cmd_vel_timeout_sec=g('cmd_vel_timeout_sec'),
-            max_vel_xy=g('max_vel_xy'), max_vel_theta=g('max_vel_theta'),
-            max_accel_xy=g('max_accel_xy'), max_accel_theta=g('max_accel_theta'),
-            max_accel_xy_up=(g('max_accel_xy_up')
-                             if g('max_accel_xy_up') > 0.0 else None),
             max_tick_dt_sec=g('max_tick_dt_sec'),
+            pose_preview_xy_sec=g('pose_preview_xy_sec'),
+            pose_preview_theta_sec=g('pose_preview_theta_sec'),
+            pose_preview_max_xy_m=g('pose_preview_max_xy_m'),
+            pose_preview_max_theta_rad=g('pose_preview_max_theta_rad'),
             leash_xy_m=g('leash_xy_m'), leash_theta_rad=g('leash_theta_rad'),
             require_manual_reset=g('require_manual_reset'),
             enable_slam_correction=g('enable_slam_correction'),
@@ -242,18 +250,16 @@ class ChassisCmdBridgeNode(Node):
     def _inner_tick(self):
         if not self._write_allowed:
             return
-        now = self._clock_port.now()
-        if self._last_inner_time is not None:
+        now = perf_counter()
+        enabled = self.core.state == ST_ENABLED
+        if enabled and self._last_inner_time is not None:
             period = now - self._last_inner_time
+            self.core.timing.add('callback_period', period)
             target = 1.0 / self.core.cfg.freq
             if period > target * self._loop_overrun_factor:
                 self._overrun_count += 1
-                self.status.publish(
-                    'LOOP_OVERRUN',
-                    '内环周期 %.4fs 超过目标 %.4fs 的 %.1f 倍（累计 %d 次）'
-                    % (period, target, self._loop_overrun_factor, self._overrun_count),
-                    period, target)
-        self._last_inner_time = now
+                self.core.timing.overrun(period)
+        self._last_inner_time = now if enabled else None
 
         try:
             self.core.inner_tick()
@@ -261,6 +267,8 @@ class ChassisCmdBridgeNode(Node):
             self.get_logger().error('内环异常：%s' % exc)
             self.status.publish('SDK_CALL_FAILED', '内环异常：%s' % exc)
         self.status.publish_events(self.core.drain_events())
+        if enabled:
+            self.core.timing.add('callback_work', perf_counter() - now)
 
     def _outer_tick(self):
         if not self._write_allowed:
@@ -274,6 +282,29 @@ class ChassisCmdBridgeNode(Node):
         self._publish_odom()
         self._report_tick_rate()
         self._report_vel_trace()
+        self._state_report_countdown -= 1
+        if self._state_report_countdown <= 0:
+            self._state_report_countdown = self._state_report_period_ticks
+            count, peak = self.core.timing.consume_overruns()
+            if count:
+                self.status.publish(
+                    'LOOP_OVERRUN',
+                    '使能期间内环超期 %d 次，窗口最大 %.4fs（累计 %d 次）'
+                    % (count, peak, self._overrun_count), peak, 1.0 / self.core.cfg.freq)
+            self._report_control_state()
+
+    def _report_control_state(self):
+        """Refresh the existing status channel so late subscribers see a latched stop."""
+        if self.core.state == 'ENABLED':
+            self.status.publish('OK', 'enabled')
+            return
+        codes = {'DISABLED': 'NOT_ENABLED', 'LEASH_TRIPPED': 'LEASH_TRIPPED',
+                 'STOPPED_NO_POSE': 'SLAM_LOST_STOPPED', 'STOPPED_STALE_SCAN': 'SCAN_LOST_STOPPED'}
+        code = codes.get(self.core.state)
+        if code:
+            stopped = self.core.last_stop
+            self.status.publish(code, stopped[1] if stopped else 'disabled',
+                                stopped[2] if stopped else 0.0, stopped[3] if stopped else 0.0)
 
     def _report_tick_rate(self):
         """周期性打印内环**实测**拍率。
@@ -290,6 +321,13 @@ class ChassisCmdBridgeNode(Node):
         if self._rate_report_countdown > 0:
             return
         self._rate_report_countdown = self._rate_report_period_ticks
+        timing = self.core.timing.consume()
+        if timing:
+            self.get_logger().info('BRIDGE_TIMING ' + json.dumps(
+                {'state': self.core.state, 'clock': 'monotonic_wall',
+                 'target_hz': self.core.cfg.freq,
+                 'window': 'since_previous_report_or_enable', 'timing': timing},
+                separators=(',', ':')))
         st = self.core.tick_stats()
         gap = self.core.consume_tick_window_gap()
         if st.count == 0:
@@ -329,22 +367,7 @@ class ChassisCmdBridgeNode(Node):
                gap.over_count, st.max_dt))
 
     def _report_vel_trace(self):
-        """周期性打印桥接**内部**的速度链路。
-
-        为什么值得单独一行：在这行之前，整条速度链路上唯一落盘的东西是
-        path_tracking_diagnostics_node 的四段（raw→smooth→preCpl→cmd），
-        而它看到的最后一段就是 /cmd_vel —— 进了桥接之后的五段变换**一个都没有
-        记录**。其中两段在任何速度话题上都不可见：
-
-          · 看门狗/scan 联锁把速度置零 —— 在 /cmd_vel 上和"上游没发"长得一样；
-          · SDK 积分和位置误差闩锁位于桥接内部，上游速度话题无法显示。
-
-        于是"底盘为什么没按指令走"在桥接这一层是全黑的。这一行把它点亮。
-
-        口径（照抄 VelTrace 的约定，读的时候必须守）：cmd_path 是路径长，
-        cmd_net/act_net 是净位移。只有 cmd_path≈cmd_net（这一窗基本走直线）时，
-        act_net 和 cmd_net 的比较才有意义 —— 否则那个"误差"是口径差，不是跟踪差。
-        """
+        """记录输入、转换后的积分速度及停车置零；路径长和净位移分开统计。"""
         if self._vel_report_period_ticks <= 0:
             return
         self._vel_report_countdown -= 1
@@ -359,18 +382,22 @@ class ChassisCmdBridgeNode(Node):
         act_speed = tr.act_net / tr.wall if tr.wall > 0.0 else 0.0
         straight = tr.cmd_net / tr.cmd_path if tr.cmd_path > 1e-9 else 1.0
         self.get_logger().info(
-            '[桥接速度链] %d拍/%.2fs | in %.3f -> clamp %.3f(咬%d拍) -> '
-            'slew %.3f(咬%d拍) -> 本体 %.3f m/s(峰值) | '
+            '[桥接速度链] %d拍/%.2fs | 输入 %.3f -> 积分 %.3f m/s(峰值) | '
+            '角速度 输入 %.3f -> 积分 %.3f rad/s(峰值) | '
             '联锁置零 %d 拍 | 指令路径 %.4fm(净 %.4fm 直度%.2f) '
             '实际净位移 %.4fm | '
-            '指令均速 %.3f 实际均速 %.3f m/s | dθ 指令 %.4f 实际 %.4f rad'
+            '指令均速 %.3f 实际均速 %.3f m/s | dθ 指令 %.4f 实际 %.4f rad | '
+            '角速度积分 %.4f rad pose换帧 %d 本帧积分=(%.4fm, %.4fm, %.4frad) | '
+            '目标领先峰值=(%.4fm, %.4frad)'
             % (tr.ticks, tr.wall,
-               tr.in_peak, tr.clamped_peak, tr.clamp_bit,
-               tr.slewed_peak, tr.slew_bit, tr.local_peak,
+               tr.in_peak, tr.local_peak, tr.in_wz_peak, tr.local_wz_peak,
                tr.zeroed_ticks,
                tr.cmd_path, tr.cmd_net, straight,
                tr.act_net, cmd_speed, act_speed,
-               tr.dtheta_cmd, tr.dtheta_act))
+               tr.dtheta_cmd, tr.dtheta_act,
+               tr.dtheta_integrated, tr.pose_rebases,
+               tr.frame_dx, tr.frame_dy, tr.frame_dtheta,
+               tr.lead_xy_peak, tr.lead_theta_peak))
 
     def _publish_odom(self):
         """把 SDK 的底盘位姿发成 Odometry。

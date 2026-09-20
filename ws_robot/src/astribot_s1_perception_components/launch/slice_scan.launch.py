@@ -7,18 +7,18 @@
 不出现任何硬编码绝对路径。
 
 用法示例：
-    # 用默认参数（输入 /livox/fused_points，输出 /scan_from_cloud）
-    ros2 launch astribot_s1_autonomy slice_scan.launch.py
+    # 用默认参数（输入 /map_scan_filtered，输出 /scan_from_cloud）
+    ros2 launch astribot_s1_perception_components slice_scan.launch.py
 
     # 换输入点云、关掉 Marker
-    ros2 launch astribot_s1_autonomy slice_scan.launch.py \\
+    ros2 launch astribot_s1_perception_components slice_scan.launch.py \\
         input_cloud_topic:=/livox/lidar_left publish_markers:=false
 
     # 让本节点直接顶替既有 /scan，Nav2 不改配置即可吃到多层切片结果
-    ros2 launch astribot_s1_autonomy slice_scan.launch.py output_scan_topic:=/scan
+    ros2 launch astribot_s1_perception_components slice_scan.launch.py output_scan_topic:=/scan
 
     # 用自己的参数文件
-    ros2 launch astribot_s1_autonomy slice_scan.launch.py params_file:=/path/to/my.yaml
+    ros2 launch astribot_s1_perception_components slice_scan.launch.py params_file:=/path/to/my.yaml
 """
 
 from launch import LaunchDescription
@@ -32,6 +32,7 @@ _OVERRIDABLE = {
     'input_cloud_topic': str,
     'output_scan_topic': str,
     'base_frame': str,
+    'cloud_pose_frame': str,
     'publish_markers': bool,
     'invalid_input_policy': str,
 }
@@ -65,7 +66,20 @@ def _build_nodes(context, *args, **kwargs):
     use_sim_time = _to_bool(LaunchConfiguration('use_sim_time').perform(context))
     log_level = LaunchConfiguration('log_level').perform(context)
 
-    parameters = [params_file, {'use_sim_time': use_sim_time}]
+    from ament_index_python.packages import get_package_share_directory
+    from pathlib import Path
+    self_filter = str(Path(get_package_share_directory('astribot_s1_perception_components')) / 'config/self_filter.yaml')
+    parameters = [self_filter, params_file, {'use_sim_time': use_sim_time}]
+    geometry_mode=LaunchConfiguration('navigation_geometry_mode').perform(context)
+    if geometry_mode not in ('legacy','fixed_v2'):raise ValueError('invalid navigation_geometry_mode')
+    if geometry_mode=='fixed_v2':
+        if not use_sim_time:raise ValueError('fixed_v2 height projection awaits hardware validation')
+        parameters.append({'slices.overhead.z_max':2.2,'self_filter.attached.enabled':True,
+            # Sparse low/high obstacles must survive the navigation projection.
+            # SLAM's height ROI and statistical outlier filtering are not
+            # evidence that a missing point is free space.
+            'enable_outlier_filter':False,
+            'slices.low_obstacle.min_points':1,'slices.overhead.min_points':1})
     if overrides:
         parameters.append(overrides)
 
@@ -88,6 +102,7 @@ def generate_launch_description():
          'pointcloud_slice_scan_params.yaml'])
 
     declare_args = [
+        DeclareLaunchArgument('navigation_geometry_mode',default_value='legacy'),
         DeclareLaunchArgument(
             'params_file', default_value=default_params,
             description='感知模块参数 yaml，默认用本包 config 下的版本。'),
@@ -109,6 +124,9 @@ def generate_launch_description():
             'base_frame', default_value='',
             description='覆盖投影本体坐标系；留空用 yaml 值'
                         '(本机器人为 astribot_torso_base，没有 base_link)。'),
+        DeclareLaunchArgument(
+            'cloud_pose_frame', default_value='',
+            description='独立定位基线的点云本体位姿帧；须与 base_frame 原点和轴向一致。'),
         DeclareLaunchArgument(
             'publish_markers', default_value='',
             description='覆盖是否发布调试 Marker (true/false)；留空用 yaml 值。'),

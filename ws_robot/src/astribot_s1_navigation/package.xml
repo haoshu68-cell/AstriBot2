@@ -3,13 +3,7 @@
 <package format="3">
   <name>astribot_s1_navigation</name>
   <version>0.1.0</version>
-  <description>
-    Astribot S1 Nav2 自主导航集成：复用 astribot_s1_perception 已验证的双 Livox 感知 +
-    SLAM Toolbox 建图/定位栈，新增 controller_server/planner_server/behavior_server/
-    bt_navigator/velocity_smoother 等 Nav2 节点，以及两个自研适配节点——车体系→world系
-    cmd_vel 转换（配合本机 gz-sim VelocityControl 插件的 world 系语义）、机械臂展开限速。
-    不运行 nav2_map_server/amcl，全局代价地图直接订阅 SLAM Toolbox 发布的 /map。
-  </description>
+  <description>Nav2 集成：感知与地图接入、事件触发规划、任务仲裁、路径跟踪、速度链路和运行诊断。支持仿真与真机配置。</description>
   <maintainer email="dev@astribot.local">astribot-dev</maintainer>
   <license>Apache-2.0</license>
 
@@ -50,4 +44,8 @@
     <build_type>ament_python</build_type>
   </export>
   <exec_depend>astribot_s1_navigation_policy</exec_depend>
+  <exec_depend>astribot_route_executor</exec_depend>
+  <exec_depend>astribot_operator_backend</exec_depend>
+  <exec_depend>astribot_map_manager</exec_depend>
+  <exec_depend>astribot_s1_robot_geometry</exec_depend>
 </package>

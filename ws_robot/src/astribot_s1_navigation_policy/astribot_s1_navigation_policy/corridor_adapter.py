@@ -32,8 +32,14 @@ class CorridorAdapter:
             item.get('tracking_margin_m', .05), item.get('bidirectional', True))
             for item in data['corridors'])
         self.manual_annotations=self.annotations
-        self.policy = CorridorPolicy(node.profile, self.annotations)
+        self.fixed=node.get_parameter('navigation_geometry_mode').value=='fixed_v2'
+        from .fixed_corridor import FixedCorridorPolicy
+        self.policy = (FixedCorridorPolicy if self.fixed else CorridorPolicy)(node.profile, self.annotations)
+        if self.fixed:
+            from astribot_navigation_msgs.msg import PassageAssessment
+            self.assessment_pub=node.create_publisher(PassageAssessment,'/navigation/passage_assessment',10)
         self.invalid_since = None
+        self.clock_epoch = None
         self.grid_cache = None
         self.grid_result = False
         self.last_error = ''
@@ -48,6 +54,13 @@ class CorridorAdapter:
         info = m.info;r = info.resolution
         margin = self.policy.margin(corridor)
         half_width = self.policy.half_projection(n.profile.narrow_heading_limit_rad)+margin
+        shift=0.
+        if self.fixed:
+            _,_,right,left=self.policy.support_bounds()
+            half_width=(left-right)/2+margin
+            shift=self.policy.target_offset(corridor)+(left+right)/2
+            # Bound all allowed yaw errors, including extrema between samples.
+            half_width+=math.hypot(n.profile.half_length_m,n.profile.half_width_m)*n.profile.narrow_heading_limit_rad
         half_length = math.hypot(n.profile.half_length_m, n.profile.half_width_m)+margin
         origin = info.origin.position;theta = yaw(info.origin.orientation)
         c, s = math.cos(theta), math.sin(theta)
@@ -57,7 +70,7 @@ class CorridorAdapter:
         for i in range(math.ceil(length/step)+1):
             along = -half_length+min(length, i*step)
             for j in range(math.ceil(2*half_width/step)+1):
-                side = -half_width+min(2*half_width, j*step)
+                side = shift-half_width+min(2*half_width, j*step)
                 x, y = corridor.point(along, side)
                 x, y, _ = n.point((x,y,0.), to_map)
                 dx, dy = x-origin.x, y-origin.y
@@ -74,6 +87,12 @@ class CorridorAdapter:
             return False
         n = self.node
         lateral = self.policy.half_projection(n.profile.narrow_heading_limit_rad)+self.policy.margin(corridor)
+        shift=0.
+        if self.fixed:
+            _,_,right,left=self.policy.support_bounds()
+            lateral=(left-right)/2+self.policy.margin(corridor)
+            lateral+=math.hypot(n.profile.half_length_m,n.profile.half_width_m)*n.profile.narrow_heading_limit_rad
+            shift=self.policy.target_offset(corridor)+(left+right)/2
         longitudinal = math.hypot(n.profile.half_length_m, n.profile.half_width_m)+self.policy.margin(corridor)
         c, s = abs(math.cos(corridor.heading)), abs(math.sin(corridor.heading))
         rows=prediction_rows(n.last_world,include_current=True)
@@ -83,7 +102,7 @@ class CorridorAdapter:
         along=cosine*dx+sine*dy;side=-sine*dx+cosine*dy
         axial=c*half[:,0]+s*half[:,1];side_bound=lateral+s*half[:,0]+c*half[:,1]
         hits=np.flatnonzero((along>=-longitudinal-axial)&
-                           (along<=corridor.length+longitudinal+axial)&(np.abs(side)<=side_bound))
+                           (along<=corridor.length+longitudinal+axial)&(np.abs(side-shift)<=side_bound))
         if hits.size:
             i=int(hits[0]);track=n.last_world.tracks[int(rows.owners[i])]
             self.evidence=dict(reason='PREDICTED_OCCUPANCY',track=track.fused_track_id,
@@ -121,6 +140,9 @@ class CorridorAdapter:
 
     def advance(self, selection, valid, now):
         n = self.node
+        if self.clock_epoch != n.execution.version.clock_epoch:
+            self.clock_epoch = n.execution.version.clock_epoch
+            self.invalid_since = None
         try:
             to_odom = n.tf.lookup_transform(n.profile.tracking_frame, 'map', Time())
             to_map = n.tf.lookup_transform('map', n.profile.tracking_frame, Time())
@@ -152,7 +174,7 @@ class CorridorAdapter:
             if rotation_clear and n.last_robot is not None and before_entry:
                 along,lateral=candidate.coordinates(n.last_robot.x,n.last_robot.y)
                 if abs(lateral)<=n.profile.narrow_centering_max_offset_m:
-                    target=self.policy.centering_target or candidate.point(along)
+                    target=self.policy.centering_target or candidate.point(along,self.policy.target_offset(candidate) if self.fixed else 0.)
                     centering_clear=self.rotation_clear(candidate,to_map,target)
             self.invalid_since=None;self.last_error = ''
         except Exception as error:
@@ -165,5 +187,20 @@ class CorridorAdapter:
             return Passage(replace(selection,motion='HOLD',speed=0.,reason=failure or 'CORRIDOR_FRAME_UNAVAILABLE'),
                            'WAIT',failure=failure)
         envelope = n.profile.envelope
-        return self.policy.evaluate(selection, n.last_robot, n.path, n.execution.version,
+        passage=self.policy.evaluate(selection, n.last_robot, n.path, n.execution.version,
             envelope.posture_id if envelope is not None else '', valid, clear, now, rotation_clear,centering_clear)
+        if self.fixed:
+            from astribot_navigation_msgs.msg import PassageAssessment
+            evidence=getattr(self.policy,'assessment',{});self.evidence.update(evidence)
+            msg=PassageAssessment();msg.header.stamp=n.get_clock().now().to_msg();msg.header.frame_id=n.profile.tracking_frame
+            envelope=n.profile.v2
+            if envelope:
+                msg.envelope_epoch=envelope.epoch;msg.installed_geometry_hash=envelope.installed_geometry_hash
+            msg.corridor_id=passage.corridor_id;msg.width_m=float(evidence.get('width',0.))
+            msg.left_clearance_m=float(evidence.get('left_clearance',0.));msg.right_clearance_m=float(evidence.get('right_clearance',0.))
+            msg.lateral_target_m=float(evidence.get('target_offset',0.))
+            msg.heading_min_rad=-n.profile.narrow_heading_limit_rad;msg.heading_max_rad=n.profile.narrow_heading_limit_rad
+            msg.in_place_rotation_allowed=bool(evidence.get('in_place_rotation_allowed',False))
+            msg.reverse_allowed=False  # Only the separately validated reverse-exit maneuver can grant this.
+            msg.decision=passage.state;msg.reason=passage.selection.reason;self.assessment_pub.publish(msg)
+        return passage

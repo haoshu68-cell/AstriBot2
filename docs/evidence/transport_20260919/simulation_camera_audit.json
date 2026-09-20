@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "captured_unix": 1789753540.0961232,
+  "ros_domain_id": "25",
+  "camera_info": {
+    "/camera/color/camera_info": {
+      "header": {
+        "stamp": {
+          "sec": 360,
+          "nanosec": 624000000
+        },
+        "frame_id": "astribot_s1/astribot_head_link_2/astribot_camera"
+      },
+      "height": 480,
+      "width": 640,
+      "distortion_model": "plumb_bob",
+      "d": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "k": [
+        343.4963675358008,
+        0.0,
+        320.0,
+        0.0,
+        343.4963675358008,
+        240.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "r": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "p": [
+        343.4963675358008,
+        0.0,
+        320.0,
+        0.0,
+        0.0,
+        343.4963675358008,
+        240.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      "binning_x": 0,
+      "binning_y": 0,
+      "roi": {
+        "x_offset": 0,
+        "y_offset": 0,
+        "height": 0,
+        "width": 0,
+        "do_rectify": false
+      }
+    }
+  },
+  "images": {
+    "/camera/depth/image_raw": {
+      "samples": 28,
+      "frame_id": "astribot_s1/astribot_head_link_2/astribot_camera",
+      "stamp": {
+        "sec": 360,
+        "nanosec": 624000000
+      },
+      "bytes": 1228800,
+      "width": 640,
+      "height": 480,
+      "encoding": "32FC1"
+    },
+    "/camera/color/image_raw": {
+      "samples": 34,
+      "frame_id": "astribot_s1/astribot_head_link_2/astribot_camera",
+      "stamp": {
+        "sec": 360,
+        "nanosec": 624000000
+      },
+      "bytes": 921600,
+      "width": 640,
+      "height": 480,
+      "encoding": "rgb8"
+    }
+  },
+  "extrinsics": [
+    {
+      "header": {
+        "stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "frame_id": "astribot_head_link_2"
+      },
+      "child_frame_id": "astribot_s1/astribot_head_link_2/astribot_camera",
+      "transform": {
+        "translation": {
+          "x": 0.25,
+          "y": -0.22,
+          "z": 0.0
+        },
+        "rotation": {
+          "x": -0.3695956840164745,
+          "y": 0.6028258706760968,
+          "z": 0.3695956840164746,
+          "w": 0.602825870676097
+        }
+      }
+    },
+    {
+      "header": {
+        "stamp": {
+          "sec": 360,
+          "nanosec": 650000000
+        },
+        "frame_id": "astribot_arm_left_link_7"
+      },
+      "child_frame_id": "astribot_s1/astribot_head_link_2/astribot_camera",
+      "transform": {
+        "translation": {
+          "x": -0.7213644230036891,
+          "y": 0.3276618596302261,
+          "z": 0.2512405982430552
+        },
+        "rotation": {
+          "x": -0.0010968312298036402,
+          "y": -0.5226718654782253,
+          "z": 0.852532965073732,
+          "w": -0.0006793094700241474
+        }
+      }
+    },
+    {
+      "header": {
+        "stamp": {
+          "sec": 360,
+          "nanosec": 650000000
+        },
+        "frame_id": "astribot_arm_right_link_7"
+      },
+      "child_frame_id": "astribot_s1/astribot_head_link_2/astribot_camera",
+      "transform": {
+        "translation": {
+          "x": -0.154147165233473,
+          "y": 0.46038915424034776,
+          "z": 0.6323919394961033
+        },
+        "rotation": {
+          "x": 0.4512727819657229,
+          "y": 0.7152328724668386,
+          "z": -0.5036879618190588,
+          "w": 0.1763327862829666
+        }
+      }
+    },
+    {
+      "header": {
+        "stamp": {
+          "sec": 360,
+          "nanosec": 650000000
+        },
+        "frame_id": "astribot_torso_base"
+      },
+      "child_frame_id": "astribot_s1/astribot_head_link_2/astribot_camera",
+      "transform": {
+        "translation": {
+          "x": 0.2500028283778961,
+          "y": -7.994823684742691e-07,
+          "z": 1.5776499999898994
+        },
+        "rotation": {
+          "x": 0.6876071383520933,
+          "y": -0.6876046126369075,
+          "z": 0.16491834366709124,
+          "w": -0.16491894945638227
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "duration_wall_s": 5.006993603979936,
+  "status": "OBSERVED",
+  "limitations": [
+    "Model must be confirmed from device/driver metadata.",
+    "A dynamic base-to-camera TF is a pose sample, not a fixed mounting calibration.",
+    "No camera activation or robot motion command was issued."
+  ],
+  "evidence_scope": "simulation_only_not_robot_hardware"
+}

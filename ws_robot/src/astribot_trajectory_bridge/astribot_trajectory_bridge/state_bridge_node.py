@@ -1,32 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""状态桥接节点（Gate 2，只读方向）。
+"""把部件关节反馈映射为 /joint_states，沿用 bridge.yaml 的顺序和单位换算。
 
-职责：厂商 SDK 按部件读关节状态 -> 展开成逐关节 sensor_msgs/JointState
-发到 /joint_states。不接受任何轨迹、不下发任何指令。
-
-设计上的三条硬边界
-================
-1. **不申请控制权**（`high_control_rights=False`）。这是只读方向的物理边界：
-   没有控制权，即使本节点有 bug 也不可能让机器人动。Gate 3 开写通路时才改。
-2. **只发主动关节**。夹爪每侧 6 个关节里只有 `joint_L1` 是主动的，另外 5 个是
-   URDF mimic 从动关节 —— 它们的值由 robot_state_publisher 按 URDF 的 mimic
-   关系算出。桥接把它们也发出去会造成同一自由度两个来源，且一旦两边算法有出入
-   （已实测 Gazebo 侧就有 7.8° 稳态误差）就会出现无法解释的姿态抖动。
-3. **读不到状态就退出，绝不发陈旧值**。发陈旧的关节角比不发更危险：
-   MoveIt 会拿它当规划起点，规划出一条从"机器人其实已经不在那儿"出发的轨迹。
-   所以连续读失败超过阈值就直接报错退出，让上层看到响亮的失败。
-
-这一层是整条链路上唯一的单位/命名换算点
-====================================
-厂商侧：按部件成组的浮点数组，夹爪还是 0~100 的抽象量。
-ROS2 侧：逐关节命名的弧度值。
-上层业务只见 MoveIt 的关节名与弧度，厂商接口只见部件名与它自己的量纲。
-换算规则（scale/offset）全部从 bridge.yaml 读，本文件里不出现任何数值常量。
+manufacturer 模式直接订阅厂家反馈，保留每个部件的源时间戳，不创建 SDK
+会话。只发布主动关节，从动关节由 robot_state_publisher 的 mimic 关系生成。
+sdk 模式保留原有读取路径；SDK 自身可能进行控制权交互。
 """
 
 from astribot_logging import get_logger
 
+import math
 import sys
 
 import rclpy
@@ -84,6 +67,7 @@ class StateBridge(Node):
         self.declare_parameter('bridge.sdk_freq', 250.0)
         self.declare_parameter('bridge.sdk_high_control_rights', False)
         self.declare_parameter('bridge.sdk_node_name', 'astribot_state_bridge')
+        self.declare_parameter('bridge.feedback_source', 'sdk')
         self.declare_parameter('bridge.max_consecutive_read_failures', 25)
         self.declare_parameter('joint_map.parts', [''])
 
@@ -93,6 +77,9 @@ class StateBridge(Node):
         self._high_rights = bool(
             self.get_parameter('bridge.sdk_high_control_rights').value)
         self._sdk_node_name = self.get_parameter('bridge.sdk_node_name').value
+        self._feedback_source = self.get_parameter('bridge.feedback_source').value
+        if self._feedback_source not in ('sdk', 'manufacturer'):
+            raise ValueError('bridge.feedback_source must be sdk or manufacturer')
         self._max_failures = int(
             self.get_parameter('bridge.max_consecutive_read_failures').value)
 
@@ -129,6 +116,17 @@ class StateBridge(Node):
 
     def connect(self):
         """连 SDK。失败直接抛，由 main 变成"启动期响亮失败"。"""
+        if self._feedback_source == 'manufacturer':
+            from astribot_msgs.msg import RobotJointState
+            from rclpy.qos import QoSProfile, ReliabilityPolicy
+            self._last_published = {}
+            self._manufacturer_subscriptions = [self.create_subscription(
+                RobotJointState, '/'+part+'/joint_space_states',
+                lambda msg, part=part: self._on_manufacturer_state(part, msg),
+                QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
+                for part in self._parts]
+            self.get_logger().info('直接订阅厂家关节反馈，保留源时间戳；不创建 SDK 会话。')
+            return
         _ensure_sdk_does_not_mute_us()
         from astribot_sdk.core.astribot_api.astribot_client import Astribot
         self.get_logger().info(
@@ -161,6 +159,24 @@ class StateBridge(Node):
             '本节点是**只读**桥接：未申请控制权，不接受轨迹、不下发任何指令。')
 
         self._timer = self.create_timer(1.0 / self._publish_rate, self._on_timer)
+
+    def _on_manufacturer_state(self, part, source):
+        stamp = source.header.stamp.sec * 10**9 + source.header.stamp.nanosec
+        previous = self._last_published.get(part)
+        if stamp <= 0 or (previous is not None and stamp-previous < 10**9/self._publish_rate):
+            return
+        values = source.position
+        names = self._joint_names[part]
+        if len(values) != len(names) or not all(math.isfinite(v) for v in values):
+            raise ValueError(part+' 厂家关节反馈长度或数值无效')
+        msg = JointState()
+        msg.header.stamp = source.header.stamp
+        msg.header.frame_id = self._frame_id
+        msg.name = names
+        msg.position = [self._scale[part]*v+self._offset[part] for v in values]
+        # Publish only the updated part: a missing part must not acquire a new TF stamp.
+        self._pub.publish(msg)
+        self._last_published[part] = stamp
 
     def _read_positions(self):
         """按部件读位置，返回展平后的 URDF 量纲值；读不到返回 None。"""

@@ -102,6 +102,11 @@ class CorridorPolicy:
         for a, b in zip(path, path[1:]):
             sa, la = c.coordinates(*a);sb, lb = c.coordinates(*b)
             if max(sa, sb) < 0 or min(sa, sb) > c.length:continue
+            # ThroughPoses repeats segment endpoints; a zero-length segment
+            # has no heading, but its lateral reservation still must fit.
+            if math.dist(a, b) <= 1e-9:
+                if abs(la) > lateral_bound:return False
+                continue
             if max(sa, sb)-min(sa, sb) < 1e-8:
                 if 0 <= sa <= c.length:return False
                 continue

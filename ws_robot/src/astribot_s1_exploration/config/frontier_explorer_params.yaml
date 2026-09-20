@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
 
-    map_topic: "/map"                       # slam_toolbox 输出，transient_local QoS
+    map_topic: "/map"                       # 统一 Voxel 栅格，transient_local QoS
     goal_topic: "/explore/goal_pose"        # geometry_msgs/PoseStamped
     status_topic: "/explore/status"         # std_msgs/String，状态机文本
     complete_topic: "/explore/complete"     # std_msgs/Bool，transient_local
@@ -27,6 +27,9 @@
     publish_markers: true
 
     search:
+      goal_footprint: [0.32, 0.32, -0.32, 0.32, -0.32, -0.32, 0.32, -0.32]
+      goal_footprint_margin: 0.05
+      goal_retreat_radius: 0.8
       occupied_threshold: 65
       free_threshold: 25
 

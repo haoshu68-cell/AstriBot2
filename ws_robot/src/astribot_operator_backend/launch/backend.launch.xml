@@ -1,0 +1,26 @@
+<launch>
+ <arg name="robot_id" default="astribot"/>
+ <arg name="use_sim_time" default="false"/>
+ <arg name="enable_voxel_adapter" default="false"/>
+ <arg name="voxel_adapter_params" default="$(find-pkg-share astribot_map_manager)/config/voxel_session_adapter.yaml"/>
+ <node if="$(var enable_voxel_adapter)" pkg="astribot_map_manager" exec="voxel_session_adapter" name="map_session_adapter" output="screen">
+  <param from="$(var voxel_adapter_params)"/>
+  <param name="robot_id" value="$(var robot_id)"/>
+  <param name="use_sim_time" value="$(var use_sim_time)"/>
+ </node>
+ <arg name="runtime_params" default="$(find-pkg-share astribot_operator_backend)/config/mapping_runtime.yaml"/>
+ <node pkg="astribot_operator_backend" exec="mapping_runtime" name="mapping_runtime" output="screen">
+  <param from="$(var runtime_params)"/>
+ </node>
+ <arg name="map_params" default="$(find-pkg-share astribot_map_manager)/config/map_manager.yaml"/>
+ <node pkg="astribot_map_manager" exec="map_manager" name="map_manager" output="screen">
+  <param from="$(var map_params)"/>
+  <param name="use_sim_time" value="$(var use_sim_time)"/>
+  <param name="robot_id" value="$(var robot_id)"/>
+ </node>
+ <node pkg="astribot_operator_backend" exec="operator_backend" name="operator_backend" output="screen">
+  <param name="robot_id" value="$(var robot_id)"/>
+  <param name="require_map_manager" value="true"/>
+  <param name="use_sim_time" value="$(var use_sim_time)"/>
+ </node>
+</launch>

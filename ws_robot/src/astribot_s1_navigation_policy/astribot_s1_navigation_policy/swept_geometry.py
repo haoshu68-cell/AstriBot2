@@ -18,7 +18,21 @@ def bounds_many(boxes, previous=None):
 
 
 def clearance_many(x, y, yaw, lower, upper, profile, sampling_margin=0.):
-    """Vectorized scalar SAT lower bound; numpy broadcasting also supports sweeps."""
+    """Separate first; resolve ambiguous clearance with exact rectangle distance."""
+    footprint=getattr(profile,'footprint_xy',None)
+    if footprint is not None:
+        from astribot_s1_robot_geometry.polygon import box_distance_many
+        # A circumscribed-circle lower bound cheaply certifies distant pairs.
+        lo,hi=np.asarray(lower),np.asarray(upper)
+        xx,yy,aa,lx,ly,ux,uy,margin=np.broadcast_arrays(x,y,yaw,lo[...,0],lo[...,1],hi[...,0],hi[...,1],
+            profile.clearance_margin_m+profile.payload_extra_margin_m+sampling_margin)
+        radius=float(np.max(np.linalg.norm(footprint,axis=1)))
+        bound=np.hypot(np.maximum(np.maximum(lx-xx,0.),xx-ux),np.maximum(np.maximum(ly-yy,0.),yy-uy))-radius
+        close=bound<=margin+1e-12;result=np.array(bound-margin-1e-12,copy=True)
+        if np.any(close):
+            result[close]=box_distance_many(footprint,xx[close],yy[close],aa[close],
+                np.column_stack((lx[close],ly[close])),np.column_stack((ux[close],uy[close])))-margin[close]-1e-12
+        return result
     x, y, yaw = np.asarray(x), np.asarray(y), np.asarray(yaw)
     length, width = profile.half_length_m, profile.half_width_m
     c, s = np.cos(yaw), np.sin(yaw)
@@ -34,7 +48,23 @@ def clearance_many(x, y, yaw, lower, upper, profile, sampling_margin=0.):
     dy = np.maximum(np.maximum(lower[..., 1]-y, 0.), y-upper[..., 1])
     circle = np.hypot(dx, dy)-math.hypot(length, width)
     margin=profile.clearance_margin_m+profile.payload_extra_margin_m+sampling_margin
-    return np.maximum(separation, circle)-margin-1e-12
+    bound,margin=np.broadcast_arrays(np.maximum(separation,circle),margin)
+    # Far separation and physical overlap are already decided. Only close,
+    # disjoint pairs need vertex-to-edge distances instead of a SAT lower bound.
+    close=(separation>0)&(bound<=margin+1e-12)
+    if not np.any(close):return bound-margin-1e-12
+    values=np.broadcast_arrays(x,y,c,s,lower[...,0],lower[...,1],upper[...,0],upper[...,1],bound)
+    xx,yy,cc,ss,lx,ly,ux,uy,_=(value[close] for value in values)
+    distance=np.full(xx.shape,np.inf)
+    for sx,sy in ((-1,-1),(1,-1),(1,1),(-1,1)):
+        px=xx+cc*sx*length-ss*sy*width;py=yy+ss*sx*length+cc*sy*width
+        distance=np.minimum(distance,np.hypot(np.maximum(np.maximum(lx-px,0.),px-ux),
+                                              np.maximum(np.maximum(ly-py,0.),py-uy)))
+        dx=(lx if sx<0 else ux)-xx;dy=(ly if sy<0 else uy)-yy
+        distance=np.minimum(distance,np.hypot(np.maximum(np.abs(cc*dx+ss*dy)-length,0.),
+                                              np.maximum(np.abs(-ss*dx+cc*dy)-width,0.)))
+    result=np.array(bound,copy=True);result[close]=distance
+    return result-margin-1e-12
 
 
 @lru_cache(maxsize=4096)
@@ -57,6 +87,8 @@ def obstacle_bounds(box, previous=None):
 
 
 def footprint_clearance(x, y, yaw, lower, upper, profile, sampling_margin=0.):
+    if getattr(profile,'footprint_xy',None) is not None:
+        return float(clearance_many(x,y,yaw,np.asarray(lower),np.asarray(upper),profile,sampling_margin))
     length,width=profile.half_length_m,profile.half_width_m
     c,s,rx,ry,radius=footprint_axes(length,width,yaw)
     bx, by = (lower[0] + upper[0]) / 2, (lower[1] + upper[1]) / 2
@@ -70,7 +102,18 @@ def footprint_clearance(x, y, yaw, lower, upper, profile, sampling_margin=0.):
                    abs(-dx*s+dy*c)-width-hx*abs(s)-hy*abs(c))
     dx, dy = max(lower[0]-x, 0., x-upper[0]), max(lower[1]-y, 0., y-upper[1])
     circle = math.hypot(dx, dy) - radius
-    return max(separation,circle)-margin-1e-12
+    bound=max(separation,circle)
+    if separation>0 and bound<=margin+1e-12:
+        distance=math.inf
+        for sx,sy in ((-1,-1),(1,-1),(1,1),(-1,1)):
+            px=x+c*sx*length-s*sy*width;py=y+s*sx*length+c*sy*width
+            distance=min(distance,math.hypot(max(lower[0]-px,0.,px-upper[0]),
+                                             max(lower[1]-py,0.,py-upper[1])))
+            dx=(lower[0] if sx<0 else upper[0])-x;dy=(lower[1] if sy<0 else upper[1])-y
+            distance=min(distance,math.hypot(max(abs(c*dx+s*dy)-length,0.),
+                                             max(abs(-s*dx+c*dy)-width,0.)))
+        bound=distance
+    return bound-margin-1e-12
 
 
 def path_samples(route, reach, profile):

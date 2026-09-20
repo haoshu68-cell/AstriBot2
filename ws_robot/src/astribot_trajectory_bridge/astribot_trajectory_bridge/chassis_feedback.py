@@ -15,7 +15,6 @@ from astribot_trajectory_bridge.chassis_integrator import (
     IDX_Y,
     error_magnitude,
     pose_error,
-    wrap_angle,
 )
 
 
@@ -54,6 +53,8 @@ def check_leash(pos_cmd, sdk_actual, leash_xy_m, leash_theta_rad):
     """
     err = pose_error(pos_cmd, sdk_actual)
     err_xy, err_theta = error_magnitude(err)
+    # SDK position commands use continuous theta; a full-turn error is not zero.
+    err_theta = abs(pos_cmd[IDX_THETA] - sdk_actual[IDX_THETA])
     if err_xy > leash_xy_m:
         return LeashState(True, err_xy, err_theta,
                           'xy 偏差 %.4fm > 阈值 %.4fm' % (err_xy, leash_xy_m))
@@ -69,7 +70,7 @@ def leash_recover_command(sdk_actual):
     返回 SDK 实际位置的副本作为新的 pos_cmd —— 不是置零、也不是保持原值：
     保持原值会让下次解冻时立刻又是一个大阶跃；置零则会命令底盘回原点。
     """
-    return [sdk_actual[IDX_X], sdk_actual[IDX_Y], wrap_angle(sdk_actual[IDX_THETA])]
+    return list(sdk_actual)
 
 
 def effective_thresholds(pose_source, slam_jump_threshold_m, odom_drift_warn_m):

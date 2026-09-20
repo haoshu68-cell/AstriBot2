@@ -1,0 +1,2550 @@
+{
+  "schema_version": 1,
+  "document_kind": "implementation_and_regression_plan",
+  "plan_id": "unified_navigation_20260919",
+  "status": "implementation_in_progress",
+  "units": {
+    "distance": "m",
+    "time": "s",
+    "angle": "rad",
+    "display_angle": "deg",
+    "route_format": "[x_m, y_m, yaw_rad]"
+  },
+  "execution_boundary": "清单本身不是启动器或验收结果；不得将 planned、已有夹具或历史结果解释为本版本通过",
+  "stage_order": [
+    "I0",
+    "I1",
+    "I2",
+    "I3",
+    "I4",
+    "I5",
+    "I6"
+  ],
+  "suites": {
+    "CORE": [
+      "H2-00",
+      "H2-01",
+      "H2-03",
+      "H2-06",
+      "H2-07",
+      "R01"
+    ]
+  },
+  "required_evidence": [
+    "source_manifest.json",
+    "runtime_manifest.json",
+    "session.json",
+    "session.log",
+    "case.json",
+    "events.jsonl",
+    "observations.jsonl",
+    "navigation/results.jsonl",
+    "metrics.json",
+    "assertions.json",
+    "paired_gazebo_rviz_review.json"
+  ],
+  "verdicts": [
+    "PASS",
+    "FAIL",
+    "INVALID_FIXTURE",
+    "INFRA_FAILURE",
+    "BLOCKED",
+    "NOT_RUN"
+  ],
+  "thresholds": {
+    "simulation_arrival_xy_m": 0.002,
+    "simulation_arrival_yaw_deg": 0.1,
+    "hardware_slam_arrival_xy_m": 0.03,
+    "hardware_slam_arrival_yaw_deg": 1.5,
+    "lateral_p95_allowed_noise": {
+      "absolute_m": 0.005,
+      "relative": 0.1
+    },
+    "heading_p95_allowed_noise": {
+      "absolute_deg": 1,
+      "relative": 0.1
+    },
+    "actual_jerk_p95_allowed_noise": {
+      "absolute_m_s3": 0.1,
+      "relative": 0.15
+    },
+    "ordinary_blockage_episode_s": 30,
+    "request_cycle_s": 2,
+    "max_request_cycles_per_goal": 5,
+    "clear_confirmation_s": 0.6,
+    "minimum_side_clearance_m": 0.08,
+    "terminal_no_route_replacement_m": 0.6,
+    "minimum_empty_ab_pairs": 3,
+    "minimum_narrow_ab_pairs": 5,
+    "full_duration_not_scored": true,
+    "release_latency_extra_control_ticks": 3,
+    "release_latency_status": "design_target_validate_against_frozen_runtime_period"
+  },
+  "oracles": [
+    {
+      "id": "O01",
+      "title": "所有权",
+      "assertion": "任务、路线服务、最终速度输出唯一；取消完成与移交可追溯"
+    },
+    {
+      "id": "O02",
+      "title": "完整几何",
+      "assertion": "独立全身与人员几何及连续/保守扫掠；普通可行场景零重叠，净空达到配置预算；不可避类单独标识"
+    },
+    {
+      "id": "O03",
+      "title": "时间与输入",
+      "assertion": "源时间、序列、epoch、TF、覆盖有效；旧帧不续期；故障恢复不能消费旧命令"
+    },
+    {
+      "id": "O04",
+      "title": "任务与精度",
+      "assertion": "固定目标/yaw 不变；FOLLOW 与 REFINE 分开；真值档 0.002 m/0.1 deg；失败不混成功"
+    },
+    {
+      "id": "O05",
+      "title": "质量回归",
+      "assertion": "横向/航向/实际 jerk 逐目标成对比较；无空样本通过；总耗时不评分"
+    },
+    {
+      "id": "O06",
+      "title": "规划事件与预算",
+      "assertion": "新目标或当前路径风险证据；每 goal/episode/request 预算独立可查；迟到候选提交为零"
+    },
+    {
+      "id": "O07",
+      "title": "恢复与计时",
+      "assertion": "清空共同区间与停稳并行；合法 HOLD 仅暂停运动无进展计时"
+    },
+    {
+      "id": "O08",
+      "title": "候选可跟踪性",
+      "assertion": "全路径曲率/曲率率/接入接回/最终 yaw/平滑后碰撞/停止空间复核"
+    },
+    {
+      "id": "O09",
+      "title": "身份和承诺",
+      "assertion": "跟随身份、队列前驱、超越侧向、通道许可带版本；失效重评"
+    },
+    {
+      "id": "O10",
+      "title": "实时性",
+      "assertion": "实际控制周期、回调年龄与租约记录；预算由冻结配置导出，不用平均值掩盖超时"
+    },
+    {
+      "id": "O11",
+      "title": "场景确实发生",
+      "assertion": "触发 ACK、独立真值冲突/动作确实发生，正反例覆盖；无覆盖是 INVALID_FIXTURE"
+    },
+    {
+      "id": "O12",
+      "title": "双视图与地图",
+      "assertion": "Gazebo/RViz 同时刻检查加原始点云/局部/全局/SLAM ROI 对照，非仅截图"
+    },
+    {
+      "id": "O13",
+      "title": "停车证据",
+      "assertion": "历史峰值覆盖与适用范围；Gazebo 实际置零峰值；平滑停和迫近零速分开"
+    },
+    {
+      "id": "O14",
+      "title": "命令响应",
+      "assertion": "源时间对齐实际速度与指令；时延/稳态增益/残差分开，正 dt 差分"
+    },
+    {
+      "id": "O15",
+      "title": "约束交集",
+      "assertion": "HOLD 优先；补偿不覆盖限制；恢复不重放等待期间累计修正"
+    },
+    {
+      "id": "O16",
+      "title": "探索活性",
+      "assertion": "前沿拒绝原因、临时/静态失败分类和剩余区域，不以单点失败宣称建图完成"
+    }
+  ],
+  "cases": [
+    {
+      "id": "H2-00",
+      "title": "无人原路 A/B",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_empty.json"
+      },
+      "trigger": "无人员；相同初态、参数和两目标路线",
+      "expected": "三个交替 off/on 对；无新增中途 HOLD；到位及 FOLLOW 质量通过",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O12",
+        "O14"
+      ],
+      "repeats": {
+        "kind": "alternating_ab_pairs",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_core_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "H2-01",
+      "title": "左向横穿",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_cross_left.json"
+      },
+      "trigger": "机器人到达配置触发位置后放行行人",
+      "expected": "真实时空冲突发生；减速或等待；离开后恢复并到点",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O12"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_core_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "H2-02",
+      "title": "右向横穿",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_cross_right.json"
+      },
+      "trigger": "与左向镜像的人员运动",
+      "expected": "两侧行为一致；完整机身净空合格",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "H2-03",
+      "title": "双人交错",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_two_cross.json"
+      },
+      "trigger": "两个人员冲突时间重叠",
+      "expected": "所有冲突解除后释放；不能只考虑最近人员",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O07"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_core_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "H2-04",
+      "title": "前方突然停止",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_stop_ahead.json"
+      },
+      "trigger": "同向行人前进后暂停并恢复",
+      "expected": "停车过程符合历史先验模型；恢复到点",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O13"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/i0_evidence_review_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "H2-05",
+      "title": "合作式迎面斜交",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_head_on.json"
+      },
+      "trigger": "沿当前夹具形成斜交接近",
+      "expected": "有提前干预和恢复；全过程跟踪质量单列",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "H2-06",
+      "title": "断流与旧帧重发",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_input_loss.json"
+      },
+      "trigger": "丢包 3 s、重复旧帧 3 s、恢复",
+      "expected": "旧帧不续期；停车与有效新帧恢复",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_core_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "H2-07",
+      "title": "目标短时占据",
+      "origin": "existing_h2",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "existing_source_not_rerun",
+        "case_file": "tools/social_navigation/cases/h2_goal_occupied.json"
+      },
+      "trigger": "规划后占据目标并停留后离开",
+      "expected": "原目标/yaw/Arrival 契约保持；解除后到点",
+      "forbidden": [
+        "场景未触发仍标为通过",
+        "把历史 overlay 结果计为当前版本通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O07"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/i0_evidence_review_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "S01",
+      "title": "无人直线与转弯",
+      "origin": "unified_design",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "partially_implemented_pending_simulation",
+        "case_file": null,
+        "case_files": [
+          "tools/social_navigation/cases/s01_yaw90.json",
+          "tools/social_navigation/cases/s01_l.json",
+          "tools/social_navigation/cases/s01_u.json",
+          "tools/social_navigation/cases/s01_start_left_straight.json",
+          "tools/social_navigation/cases/s01_start_left_l.json",
+          "tools/social_navigation/cases/s01_start_left_u.json",
+          "tools/social_navigation/cases/s01_start_right_straight.json",
+          "tools/social_navigation/cases/s01_start_right_l.json",
+          "tools/social_navigation/cases/s01_start_right_u.json"
+        ],
+        "remaining": "All fixtures implemented; complete repeats and A/B quality acceptance pending. ThroughPoses intermediate acceptance comes from active BT. Final 2 mm / 0.1 deg unchanged."
+      },
+      "trigger": "原目标路线、90° 目标 yaw、L/U 形路线",
+      "expected": "原控制效果及到位档保持",
+      "forbidden": [
+        "新增周期重规划或中途无因停车"
+      ],
+      "variants": "起始航向 0/±90°；直线/转弯",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O14"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted"
+    },
+    {
+      "id": "S02",
+      "title": "远处无关人员",
+      "origin": "unified_design",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "人员在预测走廊之外运动",
+      "expected": "社会限制为零，继续原路",
+      "forbidden": [
+        "无冲突持续降速"
+      ],
+      "variants": "单人/多人；路径左右侧",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S03",
+      "title": "短暂单人横穿",
+      "origin": "unified_design",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "左右镜像横穿；机器人不同进度触发",
+      "expected": "联合选继续/慢行/等待后恢复",
+      "forbidden": [
+        "一出现人就全局规划"
+      ],
+      "variants": "近/远冲突；早/晚穿越",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O07"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S04",
+      "title": "多人交错横穿",
+      "origin": "unified_design",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "人员交替遮挡并跨越清空时刻",
+      "expected": "同一阻塞 episode，所有条件连续清空后恢复",
+      "forbidden": [
+        "换 ID 或第一人离开重置预算"
+      ],
+      "variants": "重叠/错时；中途短暂清空",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O07"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S05",
+      "title": "同向慢行",
+      "origin": "unified_design",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "慢行人保持在原路径前方",
+      "expected": "保持停止间距；能力未开放时不超越",
+      "forbidden": [
+        "为赶时间挤过或追尾"
+      ],
+      "variants": "0/低/接近机器人速度；阶段 I5 再加合法超越",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O13"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S06",
+      "title": "突然停止或折返",
+      "origin": "unified_design",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "在预测时域内不同位置停止/折返",
+      "expected": "检查未来停止分支及本机真实减速过程",
+      "forbidden": [
+        "只检查人当前停下的位置"
+      ],
+      "variants": "多停止时刻；正反向；带延迟观测",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O13"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S07",
+      "title": "迎面有侧向空间",
+      "origin": "unified_design",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "对向接近且侧方已知可通行",
+      "expected": "比较原地等待/侧方等待区/绕行，选边稳定",
+      "forbidden": [
+        "软评分抖动反复换边"
+      ],
+      "variants": "右可用/左可用/双侧可用",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S08",
+      "title": "迎面不让行",
+      "origin": "unified_design",
+      "first_stage": "I4",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "人持续进入本机停驻区",
+      "expected": "可验证退出才机动，否则停车报告 NO_SAFE_MANEUVER",
+      "forbidden": [
+        "假设人合作；零速即宣称无碰撞风险"
+      ],
+      "variants": "存在等待区/无安全机动；单独统计不可避碰撞",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S09",
+      "title": "后方追近",
+      "origin": "unified_design",
+      "first_stage": "I4",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "后方人员逼近，前方或侧方可用性变化",
+      "expected": "评估停驻冲突；有证据才前移或侧让",
+      "forbidden": [
+        "向未知后方倒退"
+      ],
+      "variants": "前方安全/封闭；侧方安全/未知",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S10",
+      "title": "局部静态封堵",
+      "origin": "unified_design",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "原路径前方插入静态障碍",
+      "expected": "验证全身侧绕、接回和停车空间",
+      "forbidden": [
+        "只验证障碍前半段"
+      ],
+      "variants": "左/右/双侧无解；规划后障碍消失",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S11",
+      "title": "整条通道封闭",
+      "origin": "unified_design",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "当前路径存在持续拓扑阻断",
+      "expected": "有证据可直接 GLOBAL；无路有界失败",
+      "forbidden": [
+        "强制等待 8 s 或盲目重复 LOCAL"
+      ],
+      "variants": "有/无全局替代；地图无关更新",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S12",
+      "title": "目标长期被占",
+      "origin": "unified_design",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "完整机身目标位姿持续被占超过普通等待预算",
+      "expected": "保留精确目标，按期 GOAL_OCCUPIED",
+      "forbidden": [
+        "改目标到旁边或取消重发"
+      ],
+      "variants": "占据车头/尾部；不同终点 yaw",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S13",
+      "title": "Arrival 阶段横穿",
+      "origin": "unified_design",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "机器人处于接近/REFINE/停稳时行人经过",
+      "expected": "HOLD 保留状态，恢复重新校核到位",
+      "forbidden": [
+        "打滑补偿越过 HOLD；反复重置精调预算"
+      ],
+      "variants": "到位边界内外；SLAM 小抖动",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O07",
+        "O15"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S14",
+      "title": "直线和走停跟随",
+      "origin": "unified_design",
+      "first_stage": "I3",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "目标沿轨迹前进、暂停和再走",
+      "expected": "保持身份及弧长停止间距；停留不是任务完成",
+      "forbidden": [
+        "每帧发送固定新目标"
+      ],
+      "variants": "不同人速；任务结束与正常停留",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S15",
+      "title": "L/U 形跟随",
+      "origin": "unified_design",
+      "first_stage": "I3",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "目标转直角或掉头",
+      "expected": "沿历史轨迹合法连接；曲率不合格先停",
+      "forbidden": [
+        "直线切角；反复 setPlan 重置 FOLLOW"
+      ],
+      "variants": "轨迹历史足/不足；狭窄/宽区域",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S16",
+      "title": "跟随丢失或换 ID",
+      "origin": "unified_design",
+      "first_stage": "I3",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "遮挡、源 epoch 改变、两人交叉交换 ID",
+      "expected": "保持身份锁；重捕获经确认；超时 TARGET_LOST",
+      "forbidden": [
+        "追最近人或旧 epoch 续期"
+      ],
+      "variants": "短遮挡/永久丢失/身份不确定",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S17",
+      "title": "静止和走停队列",
+      "origin": "unified_design",
+      "first_stage": "I3",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "明确队列区域、方向、前驱；多次推进和长停",
+      "expected": "队尾合法加入、保持次序与停止间距",
+      "forbidden": [
+        "排队超越；正常静止报执行卡死"
+      ],
+      "variants": "2/3 人；超过普通社会等待时限",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S18",
+      "title": "插入离队关系变化",
+      "origin": "unified_design",
+      "first_stage": "I3",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "中间插入人员、前驱离开、队列局部遮挡",
+      "expected": "停后更新前驱版本，废弃旧参考",
+      "forbidden": [
+        "跳过未知成员；仅按距离决定队首"
+      ],
+      "variants": "插入/退出/前驱关系不确定",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S19",
+      "title": "宽通道合法超越",
+      "origin": "unified_design",
+      "first_stage": "I5",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "同向慢行且侧方和接回全程可见",
+      "expected": "PREPARE/PASS/REJOIN；承诺选边并完整接回",
+      "forbidden": [
+        "队列/跟随任务自动超越"
+      ],
+      "variants": "左右侧；速度差足/不足",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S20",
+      "title": "超越途中新增冲突",
+      "origin": "unified_design",
+      "first_stage": "I5",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "PASS 中出现对向人或接回段被占",
+      "expected": "在已验证区域减速停车或合法退出",
+      "forbidden": [
+        "突然换边、掉头、盲退"
+      ],
+      "variants": "PREPARE/PASS/REJOIN 分别注入",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S21",
+      "title": "无人及同向窄通道",
+      "origin": "unified_design",
+      "first_stage": "I4",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "各宽度通道与不同初始横向/航向偏差",
+      "expected": "入口准入和出口释放；安全已对齐可直接进入",
+      "forbidden": [
+        "0.85 m 内原地转向；削减 8 cm 余量"
+      ],
+      "variants": "0.85/1.0/1.2/1.8 m；空载/扩展包络",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "alternating_ab_pairs_per_geometry",
+        "count": 5
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S22",
+      "title": "窄通道对向占用",
+      "origin": "unified_design",
+      "first_stage": "I4",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "入口前/进入后对向人出现",
+      "expected": "入口等待或已验证路线退让",
+      "forbidden": [
+        "把机器人预约当作人已让路"
+      ],
+      "variants": "有/无等待区；后方覆盖有效/无效",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08",
+        "O09"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S23",
+      "title": "人员群组",
+      "origin": "unified_design",
+      "first_stage": "I6",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "并行两人或群组置信度改变",
+      "expected": "有可信分组时不穿组；不确定时保留个体风险",
+      "forbidden": [
+        "用群组语义删除个体硬占据"
+      ],
+      "variants": "分组稳定/解散/低可信",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S24",
+      "title": "包络和载荷变化",
+      "origin": "unified_design",
+      "first_stage": "I4",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "动作前/行进中/通道内改变包络 epoch",
+      "expected": "许可/候选失效并重评；新包络不满足则停",
+      "forbidden": [
+        "沿用旧窄包络；自动假定可收臂"
+      ],
+      "variants": "固定 V2/legacy 分组；变大/租约到期",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O09",
+        "O15"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S25",
+      "title": "探索前沿靠未知",
+      "origin": "unified_design",
+      "first_stage": "I6",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "前沿候选近未知且目标 yaw 不同",
+      "expected": "目标内退，沿途及最终全身净空有效",
+      "forbidden": [
+        "临时人堵永久拉黑前沿；未知当自由"
+      ],
+      "variants": "短时人堵/静态阻断/输入故障",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O16"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S26",
+      "title": "地图点云不一致和残留",
+      "origin": "unified_design",
+      "first_stage": "I6",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "人离开 ROI、障碍遮挡、SLAM/代价图差异",
+      "expected": "观测射线支持清除；保留真实静态障碍",
+      "forbidden": [
+        "整图擦除或只看截图下结论"
+      ],
+      "variants": "局部/全局/SLAM 分层；有/无清除射线",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O12",
+        "O16"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S27",
+      "title": "数据与时钟故障",
+      "origin": "unified_design",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "延迟、断流、旧帧、future stamp、暂停/回跳、重定位",
+      "expected": "按源时间和 epoch 处理；旧候选不可提交",
+      "forbidden": [
+        "接收时间续期；暂停消耗物理等待预算"
+      ],
+      "variants": "有源内容变化/重复序列/定位跳变",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O15"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "S28",
+      "title": "取消和人工接管",
+      "origin": "unified_design",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "WAIT/规划/READY/提交前后取消或抢占",
+      "expected": "旧执行器结束才移交；迟到结果无运动权",
+      "forbidden": [
+        "取消回执即重新授权；旧任务复活"
+      ],
+      "variants": "不同控制相位与异步竞争时刻",
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O15"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R01",
+      "title": "任务取消公共回归",
+      "origin": "integration_regression",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "implemented_partial_validation",
+        "case_files": [
+          "tools/social_navigation/cases/r01_cancel_moving.json",
+          "tools/social_navigation/cases/r01_cancel_waiting.json"
+        ]
+      },
+      "trigger": "任务执行和等待中取消",
+      "expected": "无迟到运动、无并行任务所有者",
+      "forbidden": [
+        "取消后旧候选复活"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_core_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "R02",
+      "title": "原窄通道分支基线",
+      "origin": "integration_regression",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "partially_implemented_pending_simulation",
+        "case_file": null,
+        "case_files": [
+          "tools/social_navigation/cases/r02_fixed_p4_13.json",
+          "tools/social_navigation/cases/r02_fixed_p5_13.json",
+          "tools/social_navigation/cases/r02_cancel_moving.json",
+          "tools/social_navigation/cases/r02_legacy_p4_13.json",
+          "tools/social_navigation/cases/r02_legacy_p5_13.json",
+          "tools/social_navigation/cases/r02_legacy_p4_18.json",
+          "tools/social_navigation/cases/r02_legacy_p5_18.json",
+          "tools/social_navigation/cases/r02_legacy_p4_grid18.json",
+          "tools/social_navigation/cases/r02_legacy_p5_grid18.json"
+        ],
+        "remaining": "Legacy and fixed_v2 P4/P5 first runs passed after scoped repairs; frozen corridor_lease candidate has P4/P5 single complete PASS only. Required repeated matrix and common candidate regression remain incomplete."
+      },
+      "trigger": "独立 p4/p5 fixed_v2 与 legacy 已支持场景",
+      "expected": "记录本版本实际准入、跟踪、停稳和失败边界",
+      "forbidden": [
+        "强开当前不兼容 H2+fixed_v2"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O12"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_lease_pilot_1/summary.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "R03",
+      "title": "历史停车先验与 Gazebo 置零",
+      "origin": "integration_regression",
+      "first_stage": "I0",
+      "fixture": {
+        "status": "implemented_pending_simulation",
+        "case_files": [
+          "tools/social_navigation/cases/r03_x_neg_06.json",
+          "tools/social_navigation/cases/r03_x_neg_10.json",
+          "tools/social_navigation/cases/r03_x_neg_20.json",
+          "tools/social_navigation/cases/r03_x_neg_35.json",
+          "tools/social_navigation/cases/r03_x_pos_06.json",
+          "tools/social_navigation/cases/r03_x_pos_10.json",
+          "tools/social_navigation/cases/r03_x_pos_20.json",
+          "tools/social_navigation/cases/r03_x_pos_35.json",
+          "tools/social_navigation/cases/r03_y_neg_06.json",
+          "tools/social_navigation/cases/r03_y_neg_10.json",
+          "tools/social_navigation/cases/r03_y_neg_20.json",
+          "tools/social_navigation/cases/r03_y_neg_35.json",
+          "tools/social_navigation/cases/r03_y_pos_06.json",
+          "tools/social_navigation/cases/r03_y_pos_10.json",
+          "tools/social_navigation/cases/r03_y_pos_20.json",
+          "tools/social_navigation/cases/r03_y_pos_35.json"
+        ],
+        "schema_version": 2,
+        "stop_boundary": "final_output_zero"
+      },
+      "trigger": "重放 16 样本；独立各方向 Gazebo 运动后置零",
+      "expected": "下游最终零指令后的峰值尾程被历史先验模型覆盖；完整正常平滑停车单独记录并留待 I2 验证；单位、源时间与实际速度范围明确",
+      "forbidden": [
+        "只用最终残差或把离线通过算 Gazebo 通过",
+        "把平滑器前后两种零指令混作同一历史先验测量边界",
+        "尾程通过冒充完整正常平滑停车已认证"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O13",
+        "O14"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "partial_not_accepted",
+      "current_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/stop_matrix_first_round_complete.json",
+      "evidence_boundary": "Required repetitions and combined current candidate acceptance incomplete; earlier overlays and original failures remain separate."
+    },
+    {
+      "id": "R04",
+      "title": "多个清空与停稳条件重叠",
+      "origin": "integration_regression",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "雷达先清/人先清/停稳先完成/短暂重阻塞",
+      "expected": "共同有效区间计时，恢复无串行重复延迟",
+      "forbidden": [
+        "恢复取最早单一条件或重复等待"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O07"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R05",
+      "title": "普通与语义等待预算",
+      "origin": "integration_regression",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "30 s 普通阻塞；队列长停；间歇清空",
+      "expected": "有界阻塞；预算不被路径/ID 变化重置",
+      "forbidden": [
+        "每个适配器另起 30 s"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O07"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R06",
+      "title": "曲率和接回二次判别",
+      "origin": "integration_regression",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "候选折角、曲率率突变、平滑后侵入障碍",
+      "expected": "重建后全路径重验或拒绝；可执行速度剖面",
+      "forbidden": [
+        "降速掩盖几何无解；样条切角"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R07",
+      "title": "事件重规划边界",
+      "origin": "integration_regression",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "风险事件/纯地图更新/等待 timer/原路恢复",
+      "expected": "只有新目标或有证据风险引起规划",
+      "forbidden": [
+        "周期规划或每帧重复申请"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R08",
+      "title": "异步提交竞争",
+      "origin": "integration_regression",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "迟到服务、map/pose/包络变更、取消、漂移",
+      "expected": "版本/租约/停稳/一次提交确认一致",
+      "forbidden": [
+        "陈旧候选提交；无确认即释放 HOLD"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O08"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R09",
+      "title": "视觉雷达融合与覆盖",
+      "origin": "integration_regression",
+      "first_stage": "I6",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "双源同人、错误关联、缺深度、遮挡和 blind sector",
+      "expected": "社会评分不重复，原始硬障碍保留",
+      "forbidden": [
+        "无深度框冒充米制净空；未知覆盖当空"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R10",
+      "title": "负载和多人实时预算",
+      "origin": "integration_regression",
+      "first_stage": "I6",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "2/8/16/32/64 人，CPU 与记录负载递增",
+      "expected": "报告可持续容量和时延，超预算按契约退化",
+      "forbidden": [
+        "接口支持 64 就宣称 64 人实时通过"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O10"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R11",
+      "title": "保护约束与打滑补偿",
+      "origin": "integration_regression",
+      "first_stage": "I1",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "低速无位移时 HOLD、限速、到位切换",
+      "expected": "补偿服从有效约束交集且不触发原地转向",
+      "forbidden": [
+        "补偿覆盖停车或突破速度上限"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O14",
+        "O15"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R12",
+      "title": "静止仍冲突的失败证明",
+      "origin": "integration_regression",
+      "first_stage": "I2",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "人逼近静止机身且无合法机动",
+      "expected": "及时停车并报告能力不足，保留实际碰撞统计",
+      "forbidden": [
+        "停车即算安全通过或隐藏不可避碰撞"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R13",
+      "title": "可选 MPPI 社会 critic A/B",
+      "origin": "integration_regression",
+      "first_stage": "I6",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "同一轨迹采样/观测，对比 critic off/on",
+      "expected": "无人员零增量；有人员质量收益且控制实时性合格",
+      "forbidden": [
+        "靠降低原速度上限掩盖跟踪退化"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O10"
+      ],
+      "repeats": {
+        "kind": "closed_loop_runs_per_variant",
+        "count": 3
+      },
+      "execution_status": "not_run"
+    },
+    {
+      "id": "R14",
+      "title": "综合长时间多场景切换",
+      "origin": "integration_regression",
+      "first_stage": "I6",
+      "fixture": {
+        "status": "requires_fixture_or_extension",
+        "case_file": null
+      },
+      "trigger": "不少于 30 min，探索/导航/跟随/队列切换及故障",
+      "expected": "任务活性、约束释放、资源和多场景质量保持",
+      "forbidden": [
+        "只记录最后成功目标"
+      ],
+      "oracles": [
+        "O01",
+        "O02",
+        "O03",
+        "O04",
+        "O05",
+        "O06",
+        "O11",
+        "O10",
+        "O12",
+        "O16"
+      ],
+      "repeats": {
+        "kind": "soak_sim_minutes",
+        "count": 30
+      },
+      "execution_status": "not_run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "I0.1",
+      "title": "基线和验证器准备",
+      "requires": [],
+      "change_class": "source_snapshot,harness_contracts",
+      "deliverable": "冻结源码及依赖、证据格式、已支持场景与夹具边界；验证器只做必要扩展",
+      "status": "in_progress",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "R03"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "R03"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": [
+        "docs/evidence/unified_navigation_20260919/implementation_status.json"
+      ]
+    },
+    {
+      "id": "I0.2",
+      "title": "合并构建和分配置基线",
+      "requires": [
+        "I0.1"
+      ],
+      "change_class": "merged_baseline",
+      "deliverable": "legacy off/h2 与原 fixed_v2 p4/p5 分别回归，不组合不兼容模式",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-02",
+          "H2-03",
+          "H2-04",
+          "H2-05",
+          "H2-06",
+          "H2-07",
+          "S01",
+          "R02",
+          "R03"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "H2-02",
+          "H2-04",
+          "H2-05",
+          "S01",
+          "R02",
+          "R03"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I1.1",
+      "title": "纯事实与唯一服务",
+      "requires": [
+        "I0.2"
+      ],
+      "change_class": "single_owner",
+      "deliverable": "提案契约与唯一路线服务；H2 仍无换路能力，影子对比旧选择",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S02",
+          "S27",
+          "S28"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S02",
+          "S27",
+          "S28"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I1.2",
+      "title": "统一状态和等待计时",
+      "requires": [
+        "I1.1"
+      ],
+      "change_class": "one_episode",
+      "deliverable": "唯一 HOLD/clear/episode；保留当前 H2 已有并行清空特性",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S03",
+          "S04",
+          "S12",
+          "S13",
+          "R04",
+          "R05"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S03",
+          "S04",
+          "S12",
+          "S13",
+          "R04",
+          "R05"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I1.3",
+      "title": "原路决策闭环接入",
+      "requires": [
+        "I1.2"
+      ],
+      "change_class": "original_path_arbitration",
+      "deliverable": "继续/减速/等待正式由新决策器裁决，保持原跟踪与到位契约",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S01",
+          "S02",
+          "S03",
+          "S04",
+          "S12",
+          "S13",
+          "S27",
+          "S28",
+          "R11"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S01",
+          "S02",
+          "S03",
+          "S04",
+          "S12",
+          "S13",
+          "S27",
+          "S28",
+          "R11"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I2.1",
+      "title": "强化预测与停止空间",
+      "requires": [
+        "I1.3"
+      ],
+      "change_class": "bounded_risk_prediction",
+      "deliverable": "未来停止分支、实际速度停止过程与静止冲突；平滑停车与直接置零模型分离",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S05",
+          "S06",
+          "R03",
+          "R12"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S05",
+          "S06",
+          "R03",
+          "R12"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I2.2",
+      "title": "等待局部全局联合选择",
+      "requires": [
+        "I2.1"
+      ],
+      "change_class": "joint_route_selection",
+      "deliverable": "事件驱动请求所需候选种类，单一预算，原路恢复取消无用候选",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S05",
+          "S07",
+          "S10",
+          "S11",
+          "R05",
+          "R07",
+          "R12"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S05",
+          "S07",
+          "S10",
+          "S11",
+          "R05",
+          "R07",
+          "R12"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I2.3",
+      "title": "二次判别与提交事务",
+      "requires": [
+        "I2.2"
+      ],
+      "change_class": "validated_route_commit",
+      "deliverable": "曲率/接回/全身/停稳/版本复核及 COMMIT-ACK，取消竞争验证",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S07",
+          "S10",
+          "S11",
+          "R06",
+          "R07",
+          "R08",
+          "S28"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S07",
+          "S10",
+          "S11",
+          "R06",
+          "R07",
+          "R08",
+          "S28"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I3.1",
+      "title": "持久跟随",
+      "requires": [
+        "I2.3"
+      ],
+      "change_class": "follow_task",
+      "deliverable": "身份锁、历史弧长参考、状态保持和重捕获",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S14",
+          "S15",
+          "S16",
+          "S28",
+          "R08"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S14",
+          "S15",
+          "S16",
+          "S28",
+          "R08"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I3.2",
+      "title": "队列任务",
+      "requires": [
+        "I3.1"
+      ],
+      "change_class": "queue_task",
+      "deliverable": "前驱版本、队尾加入、语义等待与禁超越",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S17",
+          "S18",
+          "S16",
+          "S28",
+          "R05"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S17",
+          "S18",
+          "S16",
+          "S28",
+          "R05"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I4.1",
+      "title": "统一窄通道准入",
+      "requires": [
+        "I3.2"
+      ],
+      "change_class": "corridor_admission",
+      "deliverable": "固定包络/连续扫掠、入口对齐、直入和出口释放",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S21",
+          "S24",
+          "R02",
+          "R06",
+          "R11"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S21",
+          "S24",
+          "R02",
+          "R06",
+          "R11"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I4.2",
+      "title": "人机交会和有证据退让",
+      "requires": [
+        "I4.1"
+      ],
+      "change_class": "corridor_interaction",
+      "deliverable": "等待区、覆盖有效的退出路径、非合作人员与无机动失败",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S08",
+          "S09",
+          "S22",
+          "S24",
+          "S28",
+          "R12"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S08",
+          "S09",
+          "S22",
+          "S24",
+          "S28",
+          "R12"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I5.1",
+      "title": "超越正常闭环",
+      "requires": [
+        "I4.2"
+      ],
+      "change_class": "overtake_commitment",
+      "deliverable": "合法权限、选边承诺、驶出/并行/接回及全程可停",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S05",
+          "S07",
+          "S19",
+          "S17",
+          "S21",
+          "R06"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S05",
+          "S07",
+          "S19",
+          "S17",
+          "S21",
+          "R06"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I5.2",
+      "title": "超越中断与恢复",
+      "requires": [
+        "I5.1"
+      ],
+      "change_class": "overtake_abort",
+      "deliverable": "各状态插入风险、失效候选和退路验证",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S20",
+          "S06",
+          "S08",
+          "S24",
+          "S28",
+          "R08",
+          "R12"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S20",
+          "S06",
+          "S08",
+          "S24",
+          "S28",
+          "R08",
+          "R12"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I6.1",
+      "title": "视觉融合与观测降级",
+      "requires": [
+        "I5.2"
+      ],
+      "change_class": "perception_integration",
+      "deliverable": "仿真带噪视觉/深度适配、ID 关联及覆盖；不声称真机检测已交付",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S16",
+          "S18",
+          "S23",
+          "S27",
+          "R09",
+          "R10"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S16",
+          "S18",
+          "S23",
+          "S27",
+          "R09",
+          "R10"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I6.2",
+      "title": "探索与地图联合验证",
+      "requires": [
+        "I6.1"
+      ],
+      "change_class": "exploration_integration",
+      "deliverable": "前沿内退、临时阻塞与失败分类、地图残留证据及综合场景切换",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S25",
+          "S26",
+          "S10",
+          "S11",
+          "S12",
+          "R14"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S25",
+          "S26",
+          "S10",
+          "S11",
+          "S12",
+          "R14"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I6.3",
+      "title": "可选 MPPI 社会评分",
+      "requires": [
+        "I6.2"
+      ],
+      "change_class": "optional_social_critic",
+      "deliverable": "独立插件/配置 A/B；仅有收益且无退化才启用",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "S01",
+          "S02",
+          "S03",
+          "S07",
+          "S19",
+          "S23",
+          "R10",
+          "R13"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "S01",
+          "S02",
+          "S03",
+          "S07",
+          "S19",
+          "S23",
+          "R10",
+          "R13"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": true,
+      "conditional_requires": [],
+      "acceptance_result": null,
+      "evidence": []
+    },
+    {
+      "id": "I6.4",
+      "title": "累计回归和发布证据",
+      "requires": [
+        "I6.2"
+      ],
+      "change_class": "release_evidence",
+      "deliverable": "累计已实现全部用例、30 min 驻留、完整证据；启用 critic 时额外依赖 I6.3",
+      "status": "planned",
+      "regression": {
+        "core_suite": "CORE",
+        "specific_cases": [
+          "R14",
+          "R10"
+        ],
+        "required_cases": [
+          "H2-00",
+          "H2-01",
+          "H2-03",
+          "H2-06",
+          "H2-07",
+          "R01",
+          "R14",
+          "R10"
+        ],
+        "mode": "common_plus_specific_after_every_step",
+        "stage_exit": "cumulative_all_enabled_cases",
+        "missing_fixture_result": "BLOCKED_NOT_PASSED"
+      },
+      "rollback": "仅撤回本工作项代码和能力配置，保留失败证据与已验证基线；不 git reset 或清除共享工作区",
+      "optional": false,
+      "conditional_requires": [
+        {
+          "if_capability": "social_mppi_critic",
+          "step": "I6.3"
+        }
+      ],
+      "acceptance_result": null,
+      "evidence": []
+    }
+  ],
+  "repeat_rules": {
+    "ordinary": "每个声明变体至少 3 次有效闭环；场景退出及阶段总结保留全部失败，不能只选最好一次",
+    "nondeterminism": "仅夹具无效/基础设施故障可作为独立重跑，不删除原始结果；算法失败必须修复后重跑受影响集",
+    "optional_disabled": "只有显式未启用可选能力的专属用例允许 N/A；必测场景不支持或缺数据阻止通过",
+    "no_motion_preparation": "源码快照和设计校验不是运动步骤通过；I0.1 需等其绑定场景实际完成才标 PASS"
+  }
+}

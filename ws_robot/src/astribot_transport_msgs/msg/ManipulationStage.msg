@@ -1,0 +1,4 @@
+string stage_id
+string kind
+moveit_msgs/RobotState expected_start
+moveit_msgs/RobotTrajectory trajectory

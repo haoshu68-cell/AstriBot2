@@ -1,0 +1,42 @@
+<launch>
+  <set_env name="ROS_DOMAIN_ID" value="224"/>
+  <set_env name="ROS_LOCALHOST_ONLY" value="1"/>
+  <arg name="scenario" default="waiting_map"/>
+  <arg name="navigation_outcome" default="success"/>
+  <node pkg="astribot_operator_station" exec="fake_exploration_backend" output="screen">
+    <param name="scenario" value="$(var scenario)"/>
+  </node>
+  <node pkg="astribot_operator_backend" exec="fake_navigation" output="screen">
+    <param name="outcome" value="$(var navigation_outcome)"/>
+  </node>
+  <node pkg="astribot_route_executor" exec="loop_route_executor" output="screen">
+    <param name="navigation_action" value="/operator_fake/navigate_to_pose"/>
+  </node>
+  <node pkg="astribot_operator_station" exec="diagnostics_recorder" output="screen">
+    <param from="$(find-pkg-share astribot_operator_station)/config/recorder.yaml"/>
+    <param name="robot_id" value="FAKE"/>
+    <param name="output_root" value="/tmp/astribot_fake_incidents"/>
+  </node>
+  <arg name="map_storage" default="/tmp/astribot_fake_map_catalog"/>
+  <arg name="map_import_root" default="/tmp/astribot_fake_slam_sessions"/>
+  <node pkg="astribot_map_manager" exec="fake_map_adapter" output="screen"/>
+  <node pkg="astribot_map_manager" exec="map_manager" name="map_manager" output="screen">
+    <param name="robot_id" value="FAKE"/>
+    <param name="storage_root" value="$(var map_storage)"/>
+    <param name="import_root" value="$(var map_import_root)"/>
+    <param name="adapter_service" value="/operator_fake/map_adapter/command"/>
+    <param name="adapter_status" value="/operator_fake/map_adapter/status"/>
+    <remap from="/exploration_coordinator_node/operator_status" to="/operator_fake/exploration_status"/>
+  </node>
+  <node pkg="astribot_operator_backend" exec="operator_backend" output="screen">
+    <param name="robot_id" value="FAKE"/>
+    <param name="navigation_action" value="/operator_fake/navigate_to_pose"/>
+    <param name="require_map_manager" value="true"/>
+    <remap from="/exploration_coordinator_node/operator_status" to="/operator_fake/exploration_status"/>
+    <remap from="/exploration_coordinator_node/command" to="/operator_fake/command"/>
+    <remap from="/mapping_session/status" to="/operator_fake/mapping_status"/>
+    <remap from="/mapping_session/retry" to="/operator_fake/retry"/>
+    <remap from="/navigate_to_pose" to="/operator_fake/navigate_to_pose"/>
+  </node>
+  <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share astribot_operator_station)/config/operator.rviz" output="screen"/>
+</launch>

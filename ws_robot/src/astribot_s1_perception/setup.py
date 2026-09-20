@@ -23,20 +23,14 @@ setup(
     zip_safe=True,
     maintainer='astribot-dev',
     maintainer_email='dev@astribot.local',
-    description=(
-        '双 Livox Mid-360 点云预处理/时间同步融合 + SLAM Toolbox 建图定位'
-        '（区分仿真/实体硬件两套分支）'
-    ),
+    description='标准 PointCloud2/IMU 感知与统一 Voxel-SLAM 接入',
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
-            'livox_preprocess_node = astribot_s1_perception.livox_preprocess_node:main',
-            'livox_fusion_node = astribot_s1_perception.livox_fusion_node:main',
+            'slam_session = astribot_s1_perception.slam_session:main',
             'autonomous_patrol_node = astribot_s1_perception.autonomous_patrol_node:main',
             'map_domain_relay = astribot_s1_perception.map_domain_relay:main',
             'map_start_cell_check = astribot_s1_perception.map_start_cell_check:main',
-            'slam_adapter_node = astribot_s1_perception.slam_adapter_node:main',
-            'cloud_to_grid_node = astribot_s1_perception.cloud_to_grid_node:main',
             'map_odom_tf_node = astribot_s1_perception.map_odom_tf_node:main',
         ],
     },

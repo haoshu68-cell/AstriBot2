@@ -1,0 +1,125 @@
+# Shared estimator parameters. Launch selects simulated or hardware IMU/timing.
+/**:
+  ros__parameters:
+    General:
+      lid_topic: /livox/lidar_left
+      imu_topic: /livox/imu
+      save_path: /tmp/astribot_slam_sessions/
+      previous_map: ''
+      mapname: ''
+      is_save_map: 0
+      lidar_type: 0
+      blind_half_x: 0.288
+      blind_half_y: 0.2945
+      blind_z_min: -0.096
+      blind_z_max: 1.604
+      point_filter_num: 3
+      extrinsic_tran:
+      - -0.011
+      - -0.02329
+      - 0.04412
+      extrinsic_rota:
+      - 1.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 1.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 1.0
+      lid_topic_back: /livox/lidar_right
+      back_extrinsic_tran:
+      - 0.00099903
+      - -0.49599628
+      - 0.084
+      back_extrinsic_rota:
+      - -0.9994599973
+      - 0.0315070538
+      - 0.0093284204
+      - -0.0314947541
+      - -0.9995028471
+      - 0.0014625345
+      - 0.0093698629
+      - 0.0011679485
+      - 0.9999554198
+      back_sync_tolerance_ms: 5.0
+      chassis_extrinsic_tran:
+      - 0.17393
+      - 0.16893
+      - 0.082
+      chassis_extrinsic_rota:
+      - 0.696665
+      - 0.717397
+      - 0.0
+      - -0.717397
+      - 0.696665
+      - 0.0
+      - 0.0
+      - 0.0
+      - 1.0
+      nav_scan_z_min: -0.015
+      nav_scan_z_max: 1.534
+      enable_highrate_odom: 1
+      image_topic: ''
+      image_extrinsic_rota:
+      - 0.692435
+      - -0.721377
+      - -0.012204
+      - -0.09155
+      - -0.071074
+      - -0.993261
+      - 0.715648
+      - 0.688886
+      - -0.115256
+      image_extrinsic_tran:
+      - -0.204714
+      - 1.332787
+      - 0.089659
+      image_time_tolerance_ms: 50.0
+    Odometry:
+      max_init: 30
+      cov_gyr: 0.1
+      cov_acc: 1.0
+      rdw_gyr: 0.0001
+      rdw_acc: 0.0001
+      down_size: 0.1
+      dept_err: 0.02
+      beam_err: 0.05
+      voxel_size: 1.0
+      min_eigen_value: 0.0025
+      degrade_bound: 10
+      point_notime: 0
+      pose_jump_max_lin_vel: 0.5
+      pose_jump_max_ang_vel: 0.6
+    LocalBA:
+      win_size: 10
+      max_layer: 2
+      cov_gyr: 0.01
+      cov_acc: 2.0
+      rdw_gyr: 0.0001
+      rdw_acc: 0.0001
+      min_ba_point: 1
+      plane_eigen_value_thre:
+      - 8.0
+      - 8.0
+      - 8.0
+      - 8.0
+      imu_coef: 0.0002
+      thread_num: 5
+    Loop:
+      jud_default: 0.45
+      icp_eigval: 5.0
+      ratio_drift: 0.01
+      redundant_score_thresh: 1.0
+    GBA:
+      voxel_size: 1.0
+      min_eigen_value: 0.01
+      eigen_value_array:
+      - 8.0
+      - 8.0
+      - 8.0
+      - 8.0
+      total_max_iter: 6
+    Map:
+      surf_map_capacity: 0

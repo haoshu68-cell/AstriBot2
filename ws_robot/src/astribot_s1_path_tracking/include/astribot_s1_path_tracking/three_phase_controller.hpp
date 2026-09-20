@@ -53,6 +53,13 @@ public:
   Phase phase() const {return phase_;}
 
 protected:
+  double translationApproachLimit(double distance,double maximum) const;
+  bool startManeuverHeading(double robot_yaw, double & heading) const {
+    if (phase_!=Phase::kAlignStart || !start_heading_valid_) {return false;}
+    const double error=std::abs(std::remainder(start_heading_-robot_yaw,2*M_PI));
+    heading=(start_alignment_engaged_ || needsStartAlign(error,start_min_angle_rad_)) ? start_heading_ : robot_yaw;
+    return true;
+  }
   geometry_msgs::msg::TwistStamped policyAlignment(
     double error, double measured_wz, const std_msgs::msg::Header & header) {
     return rotateOnly(error, measured_wz, header);
@@ -111,12 +118,7 @@ private:
   /// 相位超时检查，超时抛异常。
   void checkPhaseTimeout(const rclcpp::Time & now);
 
-  /// 进入某个相位。
-  ///
-  /// restart_timer=true 表示"这是一个新目标"：即使相位值没变也必须重置
-  /// phase_started_。漏掉它会永久锁死导航 —— 上一个目标在 ALIGN_START 被中止时，
-  /// 新目标进同一相位会继承旧计时器，第一拍就判超时（实测读到 1108s），
-  /// 之后每个目标都瞬间失败且永不恢复。
+  /// 进入相位；新目标须传 restart_timer=true，即使相位未变也重置超时计时。
   void enterPhase(
     Phase p, const rclcpp::Time & now, const char * why, bool restart_timer = false);
 
@@ -146,10 +148,8 @@ private:
   bool warned_yaw_unreachable_{false};
   /// "交付精度是哪个数"的一次性说明（含两数拉开过大的告警）。
   bool noted_delivered_accuracy_{false};
-  /// 上一次 computeVelocityCommands 的时刻，用来区分「同一目标的周期重规划」
-  /// 与「同一目标的**新一次** FollowPath 下发」。见 isFreshFollowAttempt 的
-  /// 头注释：这两者路径内容几乎一样，只有时间空档能分开。
-  /// **必须显式 RCL_ROS_TIME**：默认构造是 SYSTEM_TIME，与 clock_->now() 相减即抛。
+  /// 用控制周期空档区分周期重规划与新 FollowPath 尝试，见 isFreshFollowAttempt。
+  /// 必须使用 RCL_ROS_TIME，与 clock_->now() 保持一致。
   rclcpp::Time last_tick_time_{0, 0, RCL_ROS_TIME};
   bool has_tick_{false};
 
@@ -172,42 +172,30 @@ private:
   /// 尝试。默认 0.5s = 20Hz 下 10 拍：远大于单拍抖动，又远小于 align_timeout(15s)。
   double new_attempt_gap_sec_{0.5};
 
-  /// 总开关。false = 一键回退到接近段不限速（今天的行为）。
+  /// 接近段限速开关；false 时不施加本层接近限速。
   bool approach_enabled_{true};
-  /// 收敛区长度 D(m)：离终点 d < D 时线速度模长上限按 d/D 线性收敛。
-  /// 治的是 **0.55s 未建模死时间**（实测 vel_track_best_lag_s p50=0.55、增益 0.977），
-  /// 终段过冲 ≈ v_接近·τ，而 nav2 MPPI 没有 dead-time 参数、改权重动不了这个乘积。
+  /// 收敛区长度 D(m)：d < D 时线速度模长上限按 d/D 收敛，以减小响应滞后造成的过冲。
   double approach_dist_m_{1.50};
   /// 速度下限(m/s)：保证终段还能动（实测底盘 0.02 m/s 即可平动）。
   double approach_v_min_{0.05};
 
-  /// 总开关。false = 一键回退到不补偿（= 改动前的行为，逐字等价）。
-  /// 关掉它的同时**必须**把 yaw_goal_tolerance 放回 0.20，否则就是
-  /// "容差 0.05 + 未补偿余转最坏 0.033" ⇒ 对齐段转不到 ⇒ 超时 -> abort -> PAUSED。
+  /// 角速度惯性补偿开关。关闭时需重新放宽 yaw_goal_tolerance，覆盖未补偿余转。
   bool align_inertia_enabled_{true};
   /// 指令→实际的角速度死时间 [s]。
   double align_coast_lag_{0.03};
   /// 松手后的等效角减速度 [rad/s^2]。
   double align_coast_decel_{7.0};
-  /// 判"已停住"的角速度阈值 [rad/s]。**必须小于 floor 速度下的实测角速度**
-  /// （floor 0.05 × 跟踪比 0.73~0.92 = 0.037~0.046），否则发着 floor 速度就算
-  /// 静止 ⇒ 闩锁提前释放 ⇒ 边界自激。0.02 相对 0.037 有 1.85 倍余量。
+  /// 停稳角速度阈值(rad/s)，须小于 floor 指令下的实测角速度，避免提前解除滑停锁定。
   double align_settled_wz_{0.02};
 
-  /// 已因"预测到位"而发零速、正在等滑停。置位期间**只发零速**，不重新判 e_pred
-  /// —— 少了这个闩就是单阈值门在边界上以 20Hz 自激（"停→余转过头→反向→再停"）。
-  /// 在 enterPhase 里复位：相位一换，下面记的误差就换了物理含义。
+  /// 预测到位后锁定零速直到停稳，避免边界反复反转；进入相位时复位。
   bool align_coasting_{false};
-  /// 发零速那一拍的有向误差与实测角速度，以及按模型预测的余转角。
-  /// 存在的唯一目的是**标定** lag/decel：滑停后打一条"预测 %.4f / 实测 %.4f"，
-  /// 那是这两个常数唯一的实测数据来源（当初的 0.006~0.033 没记 wz）。
+  /// 停止指令时的误差、实测角速度及预测余转，用于记录预测/实测差异并标定 lag/decel。
   double coast_err_at_stop_{0.0};
   double coast_wz_at_stop_{0.0};
   double coast_predicted_{0.0};
 
-  /// 本目标是否已打过到达误差。**必须有这个闩**：判据在 20Hz 的 tick 里求值，
-  /// 不闩住就是每拍一条，几秒钟把关心的那一行冲出屏幕。
-  /// 在 setPlan 认定"新目标"时复位（不是在周期重规划那条路径上复位）。
+  /// 每个目标只记录一次到达误差；仅新目标重置，周期重规划不重置。
   bool arrival_logged_{false};
   /// 跨目标累计量。用户要的是"统计"，单条读数不够：单个目标的误差落在容差内
   /// 说明不了系统性偏置，n 条的均值/最大值才能。进程内累计，重启即清零。

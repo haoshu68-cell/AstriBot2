@@ -22,6 +22,9 @@ controller_server:
       yaw_goal_tolerance: 0.02617993877991494
     FollowPath:
       plugin: astribot_s1_path_tracking::ArrivalController
+      metrics:
+        sample_hz: 2.0
+        terminal_exclusion_radius: 0.5
       arrival:
         source: nav2_pose
         capture_radius: 0.3
@@ -245,6 +248,7 @@ local_costmap:
       height: 6
       resolution: 0.05
       footprint: '[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]'
+      footprint_padding: 0.01  # Explicit legacy default; fixed_v2 overrides to zero.
       plugins:
       - obstacle_layer
       - inflation_layer
@@ -253,6 +257,7 @@ local_costmap:
         cost_scaling_factor: 3.0
         inflation_radius: 0.65
       obstacle_layer:
+        footprint_clearing_enabled: true  # fixed_v2 disables convex-hull interior clearing.
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true
         observation_sources: scan
@@ -266,7 +271,8 @@ local_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 5.5
           obstacle_min_range: 0.0
-          expected_update_rate: 0.2
+          # Seconds between buffered scans: one missed 10 Hz frame plus TF/transport jitter.
+          expected_update_rate: 0.3
       always_send_full_costmap: true
 global_costmap:
   global_costmap:
@@ -277,6 +283,7 @@ global_costmap:
       robot_base_frame: astribot_torso_base
       use_sim_time: true
       footprint: '[[0.31, 0.31], [-0.31, 0.31], [-0.31, -0.31], [0.31, -0.31]]'
+      footprint_padding: 0.01  # Explicit legacy default; fixed_v2 overrides to zero.
       resolution: 0.05
       track_unknown_space: true
       plugins:
@@ -284,6 +291,7 @@ global_costmap:
       - obstacle_layer
       - inflation_layer
       obstacle_layer:
+        footprint_clearing_enabled: true  # fixed_v2 disables convex-hull interior clearing.
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true
         observation_sources: scan
@@ -297,7 +305,7 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 5.5
           obstacle_min_range: 0.0
-          expected_update_rate: 0.2
+          expected_update_rate: 0.3
       static_layer:
         plugin: nav2_costmap_2d::StaticLayer
         map_topic: /map

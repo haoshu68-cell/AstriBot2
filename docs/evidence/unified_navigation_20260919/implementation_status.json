@@ -1,0 +1,520 @@
+{
+  "schema_version": 1,
+  "updated": "2026-09-19T22:51:48.104843+08:00",
+  "current_step": "I0.1",
+  "status": "I0_multiscene_fixture_and_baseline_validation",
+  "stage_acceptance": "NOT_PASSED",
+  "runtime_changes": "Frozen H2 and merged/corridor baselines preserved. Candidate arrival_progress overlay changes only progress-window ownership when XY hold toggles; gain, speed, arrival tolerances and timeout parameters unchanged. Simulation acceptance pending; no hardware change.",
+  "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919",
+  "implemented": [
+    "source and dependency snapshot",
+    "episode evidence continuity and failure exit status",
+    "moving and waiting cancellation fixtures",
+    "owned cold-start regression orchestration",
+    "paired Gazebo/RViz capture with pending manual review",
+    "offline replay and negative evidence injection",
+    "isolated Domain 67 Gazebo/DDS identity with live environment audit",
+    "27-package candidate merged build",
+    "source-time 20 Hz pose metrics comparison",
+    "bounded raw map/scan/cloud snapshots",
+    "normal stop chain diagnostic plots",
+    "S01 initial heading +/-90 straight/L/U fixtures with normal Gazebo spawn",
+    "Complete controller parameter/library A/B evidence and alternating run order",
+    "R02 fixed_v2 P4/P5 protocol recorder with existing arm hold and corridor execution",
+    "Independent full-body physics swept bounds for wall clearance",
+    "Legacy P4/P5 separate corridor fixture with normal spawn origin; live test pending",
+    "Read-only multi-batch per-goal summary with duplicate exclusion"
+  ],
+  "verified": [
+    {
+      "kind": "offline",
+      "result": "PASS",
+      "detail": "7 episode replays and 68 negative evidence checks",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_20260919_061250/I0.1/replay_negative_checks.json"
+    },
+    {
+      "kind": "offline",
+      "result": "PASS",
+      "detail": "16 historical braking samples and 16 directional sweep comparisons",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_20260919_061250/I0.1/stop_reference.json"
+    },
+    {
+      "kind": "fresh_gazebo",
+      "result": "PASS_ONE_RUN",
+      "case": "R01-moving",
+      "detail": "Task canceled; command and actual motion stopped; no overlap. Not the required 3 repetitions. Updated task-ID assertion passed by replay.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_20260919_061250/I0.1/r01_moving_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo",
+      "result": "PASS_ONE_RUN",
+      "case": "R01-waiting",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/core_1/r01_cancel_waiting_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo",
+      "result": "PASS_ONE_RUN",
+      "case": "R01-moving",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/core_1/r01_cancel_moving_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "offline",
+      "result": "PASS",
+      "detail": "Source-time stop interpolation, peak versus final residual, excessive-peak rejection",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/stop_probe_analyzer_checks.json"
+    },
+    {
+      "kind": "build",
+      "result": "PASS",
+      "detail": "27 packages built from isolated source snapshot",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/merged/build_attempt3.log"
+    },
+    {
+      "kind": "offline",
+      "result": "PASS",
+      "detail": "4 CTest checks: planner plugin, corridor refinement/route and policy clock",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/merged/tracking_checks.log"
+    },
+    {
+      "kind": "offline",
+      "result": "PASS",
+      "detail": "21 navigation policy Python checks; social package has no test directory",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/merged/policy_checks.log"
+    },
+    {
+      "kind": "offline",
+      "result": "PASS",
+      "detail": "9 episode replays and 101 negative evidence checks",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/source_time_evidence_replay_v2.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "H2-01",
+      "detail": "Both goals arrived: 1.466 mm/0.019653 deg and 1.192 mm/0.081969 deg; required repetitions incomplete",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/merged_clock_diagnostic_1/h2_cross_left_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "H2-03",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/merged_clock_diagnostic_1/h2_two_cross_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "H2-06",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/merged_clock_diagnostic_1/h2_input_loss_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "H2-07",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/merged_clock_diagnostic_1/h2_goal_occupied_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "R01-waiting",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/merged_clock_diagnostic_1/r01_cancel_waiting_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "R03-x_neg_35",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/stop_boundary_v2_pilot/r03_x_neg_35_off_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "O02-geometry-oracle",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/stop_boundary_v2_pilot/oracle_geometry_off_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "R01-moving",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/stop_boundary_v2_pilot/r01_cancel_moving_h2_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_PAIR_PER_VARIANT",
+      "case": "S01 initial +/-90 and goal90",
+      "detail": "6 episodes, 12/12 arrivals; max 1.404 mm and 0.0725 deg; six paired views reviewed; repeated performance acceptance pending",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/heading_pilot_1/summary.json"
+    },
+    {
+      "kind": "build",
+      "result": "PASS",
+      "detail": "4 additional packages: manipulation, MoveIt config, transport and MTC plus observer rebuild",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_build3.log"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "R02-fixed-P5-1.3",
+      "detail": "Actual crossing and hold-expiry protocol passed. Full-body clearance lower bound 0.28445 m; crossing goal 0.536 mm / 0.00231 deg. During-passage Gazebo frame obscured/stale; visual review not accepted.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_pilot_3/r02_fixed_p5_13_off_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN",
+      "case": "R02-tool-interruption",
+      "detail": "SIGINT during measured motion canceled task, confirmed cleanup, zero command and measured stop; no task resumed. No new controller behavior.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_cancellation_1/r02_cancel_moving_off_1/episode/summary.json"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_THREE_PAIRS",
+      "case": "H2-00",
+      "detail": "12/12 arrivals. Full 190 controller parameter and loaded-library comparison passed, event-only planning, no additional moving HOLD, all six FOLLOW quality comparisons within declared tolerance. Interrupted fourth case excluded.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/empty_three_pairs_verified.json"
+    },
+    {
+      "kind": "build_and_ctest",
+      "result": "PASS",
+      "case": "arrival progress window fix",
+      "detail": "Separate Release build; 4 existing CTest checks passed; no live controller replacement or hardware deployment.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/arrival_progress/build.log"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "PASS_ONE_RUN_PER_VARIANT",
+      "case": "arrival progress P4/P5",
+      "detail": "4/4 arrivals <=2 mm / 0.1 deg. Full-body clearance lower bounds 0.28458/0.29183 m. During-passage and endpoint Gazebo/RViz views reviewed. Repeated regression still pending.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_pilot_1/summary.json"
+    },
+    {
+      "kind": "build_and_offline",
+      "result": "PASS",
+      "case": "legacy corridor fixture preparation",
+      "detail": "Two launch packages built; 10 geometry/permit/missing-evidence oracle checks passed. No live legacy movement yet.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/legacy_fixture_checks.json"
+    }
+  ],
+  "blocked_run": {
+    "result": "INFRA_FAILURE",
+    "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_20260919_061250/I0.1/core/r01_cancel_waiting_h2_1/result.json",
+    "reason": "Another task acquired Domain 25 after our previous stack stopped. No takeover performed.",
+    "other_supervisor_pid": 4058920,
+    "other_log_dir": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/nonhome_navigation_20260919/fixed14",
+    "authorization": "not required for our isolated instance; other task untouched"
+  },
+  "pending": [
+    "Complete candidate CORE repetitions and paired visual review",
+    "Complete v2 final-zero tail repeats, plus keep normal-smoothed-stop prediction explicitly pending I2; preserve v1 boundary-mismatch failure",
+    "Complete all four-direction/four-speed stop repeats and strict stationary geometry oracle",
+    "Repeat 3 empty A/B pairs for the new arrival_progress controller; prior merged baseline already passed three pairs",
+    "Finish I0 acceptance including legacy/fixed_v2 separate valid configurations; I1-I6 remain unopened",
+    "S01 continuous L/U and 90-degree goal A/B; initial-heading +/-90 fixtures prepared; straight single-pair pass, L/U variants and all repeats pending",
+    "Validate explicit source_hold_budget_v2 in fresh paused-person/goal-occupied simulations; offline 13 checks pass, original fixed-deadline failure preserved",
+    "Resolve legacy planner/admission mismatch: grid joins and gentle bows exceed 0.05 rad corridor limit; grid-aligned diagnostic fixtures prepared, not run"
+  ],
+  "next_stage_open": false,
+  "boundary": "Historical replay, fresh simulation, and hardware evidence remain separate; no new behavior stage is accepted.",
+  "blocking_session_resolved": "Use independent Domain 67 / partition astribot_unified_social_67 / ports 18134,18135. No other task was stopped.",
+  "isolation": {
+    "ros_domain_id": 67,
+    "instance": "unified_social_67",
+    "gazebo_partition": "astribot_unified_social_67",
+    "discovery_ports": [
+      18134,
+      18135
+    ],
+    "runtime_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/runtime",
+    "frozen_install": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/frozen_h2",
+    "process_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/first_isolation_process_audit.json"
+  },
+  "active_regression": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/integer_status_core_1",
+  "baseline_failures": [
+    {
+      "case": "H2-01",
+      "boundary": "frozen H2",
+      "reason": "return goal aborted POLICY_LEASE_EXPIRED; precise old clock race not proved by old diagnostics",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/clock_core_2/h2_cross_left_h2_1/episode/summary.json"
+    },
+    {
+      "case": "R03-x_neg_35",
+      "boundary": "normal raw zero before smoother; not final-protection zero",
+      "reason": "peak 0.521069 m exceeded measured-only budget 0.254071 m; downstream command was 0.329775 m/s at raw zero and reached zero 2.176 s later",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/stopping_matrix_2/r03_x_neg_35_off_1/episode/summary.json"
+    },
+    {
+      "case": "empty A/B",
+      "boundary": "one frozen pair only",
+      "reason": "return FOLLOW lateral P95 0.058570 on vs 0.044013 off; insufficient repeats and currently outside tolerance",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/source_time_metrics_checks.json"
+    },
+    {
+      "case": "R02-P4-entry",
+      "boundary": "90 s wall deadline; 69.6 s simulation elapsed",
+      "reason": "Position reached 1.64 mm; yaw stayed near 0.219 deg despite final 0.02 rad/s command, then moved to 0.190 deg before timeout. Slow physical response remains unresolved, not solely a timing failure.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_cancellation_1/r02_fixed_p4_13_off_1/episode/summary.json"
+    },
+    {
+      "case": "R02-P4/P5 entry",
+      "boundary": "Physical-time harness, baseline controller",
+      "reason": "Both aborted REFINEMENT_NO_PROGRESS about 3.6 s after XY correction resumed, while inheriting prior yaw progress timestamp. Wheel response data preserved. Scoped progress-window fix built in a separate overlay; simulation pending.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/arrival_progress/recorded_failure_analysis.json"
+    },
+    {
+      "case": "R02 legacy P4/P5 1.8 m",
+      "reason": "Single-goal path bows by 3.1-3.6 degrees, exceeding unchanged 0.05 rad corridor route-heading bound. Both refused before entry; no planner/controller gain change applied.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/i0_probe_matrix_1/r02_legacy_p4_18_off_1/episode/summary.json"
+    }
+  ],
+  "normal_stop_boundary_correction": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/stop_boundary_contract_v2.json",
+  "normal_stop_boundary_note": "V2 fresh x-0.35 trial passed final-zero tail budget: 0.02564 m <= 0.29358 m. Complete normal-stop excursion 0.52438 m remains recorded separately and unvalidated by I2; original v1 FAIL unchanged.",
+  "startup_failures": [
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/merged_clock_diagnostic_1/r01_cancel_moving_h2_1/result.json",
+      "reason": "No Gazebo world service or /stats before readiness deadline; no episode motion; own cleanup complete. Root cause unconfirmed."
+    },
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/turn_fixture_contract_pilot2/s01_yaw90_off_1/result.json",
+      "reason": "Frozen supervisor companion import mismatch before startup; repaired with reviewed 13-line helper; six fresh navigation episodes subsequently passed."
+    }
+  ],
+  "fixture_failures": [
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_pilot_1/r02_fixed_p4_13_off_1/episode/summary.json",
+      "reason": "Recorder required nonexistent initial IDLE task message. Corrected to existing action-status ownership observation; no movement occurred; retest pending."
+    },
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_pilot_3/r02_fixed_p4_13_off_1/episode/summary.json",
+      "reason": "Regression interrupted by signal; sender unconfirmed. Not a navigation quality failure. Probe ROS shutdown order prevented cancel confirmation; repaired and verified by controlled SIGINT trial. Old lease reconciled only after owned simulation and executor termination."
+    },
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/empty_three_pairs_1/summary.json",
+      "reason": "Batch received SIGTERM (15); sender not known. Three completed episodes retained; fourth interrupted while returning and excluded from performance. Owned cleanup confirmed. Missing pairs continued in a new directory with signal-source trace."
+    },
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/legacy_origin_pilot_1/summary.json",
+      "reason": "Endpoint-only P4/P5 plans legitimately avoided 1.3 m corridor. Both arrived but passage/permit unexercised; original FAIL reports preserved."
+    },
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/legacy_origin_pilot_2/summary.json",
+      "reason": "Legacy ThroughPoses exact-goal/grid-start joins create backward/diagonal segments within corridor. P4/P5 route admission correctly refused them. No tolerance weakened; separate 1.8 m single-goal reference now testing, join handling pending."
+    },
+    {
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/i0_probe_matrix_1/summary.json",
+      "reason": "Owned interrupt after first four-direction speed matrix to validate new evidence contract and grid-aligned fixture. Interrupted second legacy P4 retained as INFRA_FAILURE; cleanup confirmed. Stop repeats 2-3 remain pending."
+    }
+  ],
+  "active_regressions": [],
+  "secondary_isolation": {
+    "ros_domain_id": 68,
+    "instance": "unified_probes_68",
+    "gazebo_partition": "astribot_unified_probes_68",
+    "discovery_ports": [
+      18136,
+      18137
+    ],
+    "runtime": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/runtime_policy_confirmation_v1",
+    "boundary": "Separate owned probe instance; concurrent host-load interval recorded, no shared writable installs"
+  },
+  "updated_at": "2026-09-19T22:32:48+0800",
+  "pause_stop_evidence_v2": {
+    "status": "two_fresh_scenarios_passed; repetitions incomplete",
+    "checks": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/pause_stop_v2_offline_checks_3.json",
+    "runtime": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/runtime_i0_review_v3",
+    "original_failed_episode": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_core_1/h2_goal_occupied_h2_1/episode",
+    "physical_review": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/arrival_progress_core_1/h2_goal_occupied_h2_1/protection_stop_review.json",
+    "fresh_episode": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/i0_evidence_review_1/h2_goal_occupied_h2_1/episode",
+    "fresh_replay": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/pause_v2_fresh_replay.json",
+    "fresh_negative_checks": 32,
+    "stop_ahead_episode": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/i0_evidence_review_1/h2_stop_ahead_h2_1/episode",
+    "stop_ahead_replay": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/pause_v2_stop_ahead_replay.json"
+  },
+  "stop_matrix_first_round": {
+    "report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/stop_matrix_first_round_complete.json",
+    "figure": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/stop_matrix_first_round_complete.png",
+    "passed": 16,
+    "planned": 16,
+    "missing": null,
+    "repeated_rounds": "pending; pulse did not ensure steady state"
+  },
+  "host_load_management": {
+    "other_domains_observed": [
+      74,
+      213
+    ],
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/host_concurrency_1900.json",
+    "decision": "Continue with one owned Gazebo instance after current CORE episode completed; do not stop other tasks",
+    "core_cleanup_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/core_interrupted_prelaunch_cleanup_audit.json",
+    "core_pending": "repeat 2: two-cross/input-loss/occupied/cancel moving/cancel waiting; repeat 3 all ten jobs"
+  },
+  "active_batches": [
+    {
+      "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/integer_status_core_1",
+      "overlay": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_lease.bash",
+      "pid": 676287,
+      "status": "RUNNING_NOT_ACCEPTED",
+      "jobs": 18
+    }
+  ],
+  "legacy_aligned_planner": {
+    "build": "2 packages and 4 CTest checks PASS",
+    "simulation": "P4/P5 aligned straight paths validated, but both failed entrance wall-clock timeout; original failures retained",
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/legacy_aligned/build_evidence.json",
+    "scope": "Exact aligned direct candidate limited to legacy P4/P5, continuously swept against configured footprint; tracking gains unchanged"
+  },
+  "corridor_source_clock": {
+    "build": "1 package and 21 Python checks PASS",
+    "simulation": "P4/P5 1.8m each PASS once, paired passage/endpoint views reviewed; 1.3m ThroughPoses exposed duplicate-endpoint rejection",
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_clock/build_evidence.json",
+    "change": "semantic wait/preparation uses ROS time, invalid interval reset on epoch; wall freshness/leases unchanged",
+    "epoch_checks": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_clock/epoch_probe.json",
+    "comparison": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_clock_p4_before_after.json",
+    "figure": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_clock_p4_comparison.png"
+  },
+  "corridor_duplicate_route": {
+    "build": "1 package and 21 Python checks PASS",
+    "recorded_path": "116 poses, duplicates at (-0.4,0) and (0.4,0)",
+    "validation": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_route/build_evidence.json",
+    "simulation": "Legacy P4/P5 1.3m each PASS once; paired views reviewed. Fixed-v2 P4/P5 both FAIL at ATTACHMENT_FILTER_UNCONFIRMED before crossing."
+  },
+  "workspace_drift": {
+    "audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/candidate_source_audit_1945.json",
+    "file": "ws_robot/src/astribot_s1_path_tracking/src/arrival_controller.cpp",
+    "detail": "Shared workspace added corridor_terminal_coast after this task froze arrival_progress. Current isolated candidate preserves its frozen source; no overwrite. This candidate does not validate those additional changes.",
+    "integrated_acceptance": "PENDING",
+    "snapshot": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/workspace_drift_1950/manifest.json",
+    "additional_geometry_difference": "Concurrent projection_contract change exists in root geometry node; frozen diagnostic candidate intentionally excludes it. Error-detail-only patch applied in both without overwriting other source.",
+    "additional_policy_difference": "Shared root observer/fusion now use native scan_boxes_free from concurrent work. Frozen prediction_batch retains previous implementations; neither overwritten nor silently imported."
+  },
+  "geometry_confirmation_diagnostic": {
+    "build": "1 package, 17 Python checks, 1 CTest PASS",
+    "change": "Error detail and recorder only; original revision / 0.5 wall-second check unchanged",
+    "simulation": "P4 FAIL with same revision and 0.526629 s wall age; P5 PASS single run. Original failures retained.",
+    "original_failures": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_route_pilot_1",
+    "late_probe": "No messages: both sessions had already stopped; not evidence of a DDS fault.",
+    "timing_report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/attachment_confirmation_timing.json"
+  },
+  "attachment_confirmation_candidate": {
+    "build": "1 package, 2 CTest PASS",
+    "scope": "Simulation attached-filter configuration heartbeat only; acquisition time, source freshness and 0.5 s receiver watchdog unchanged; invalid frames, changed revision, clock rewind/pause invalidate.",
+    "simulation": "No attachment confirmation timeouts in both pilot cases; both still FAIL due to policy ACK expiry. Not whole-case acceptance.",
+    "source_manifest": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/attachment_confirmation/source_manifest.json",
+    "live_contract": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/attachment_confirmation/live_contract/result.json",
+    "live_contract_result": "14 ROS node checks PASS"
+  },
+  "policy_confirmation_candidate": {
+    "scope": "Repeat ACK only for exact already-applied immutable V2 configuration with fresh source lease; in-flight decision profile and motion lease untouched; legacy path unchanged",
+    "build": "1 package; 22 Python checks PASS",
+    "live_contract": "6 ROS callback checks PASS including deliberately delayed risk cycle and exact-vertex mutation",
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/policy_confirmation/live_contract.json",
+    "timing": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/policy_confirmation_timing.json",
+    "simulation": "No repeated configuration ACK failure after admission in P4; P4 FAIL MANEUVER_TIMEOUT. P5 deliberately interrupted after independent protection confirmed repeated policy lease gaps; INFRA_FAILURE and owned cleanup retained."
+  },
+  "policy_decision_deadline": {
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/policy_decision_deadline_diagnostic.json",
+    "protection": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/protection_deadline_live.json",
+    "interpretation": "MotionConstraint stamp is fresh at publication; inter-publication gaps exceed 0.3 s lease, resetting final-protection clear confirmation. Slow-loop profiling active; no lease relaxation.",
+    "figure": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/policy_deadline_diagnostic.png",
+    "profiling_boundary": "Valid corridor profile complete: 3 prediction_rows calls construct 12,225 one-box arrays, 0.324 s of 0.373 s instrumented corridor cycle. Diagnostic case FAIL and cleanup confirmed; not performance acceptance."
+  },
+  "prediction_batch_candidate": {
+    "build": "1 package, 25 Python checks PASS",
+    "equivalence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/prediction_batch/compare.json",
+    "scope": "Batch explicit obstacle bounds with unchanged order, covariance, swept pairing and immutable output; no culling, source refresh or lease relaxation",
+    "simulation": "P4 PASS once (two arrivals). P5 FAIL: initial arrival 0.6810 mm / 0.04376 deg, then CORRIDOR_HEADING_PENDING at entrance and NO_MOTION_PROGRESS; no traversal. Overall not accepted.",
+    "original_profile": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_timing/cprofiles/corridor_3.txt",
+    "timing": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/prediction_batch/timing_comparison.json",
+    "figure": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/prediction_batch/timing_comparison.png",
+    "residual": "7/512 diagnostic receipt gaps exceeded 0.3 source seconds; raw MotionConstraint/protection recording added for next cold-start batch",
+    "query_correction": "The attempted P5 ros2 parameter dump returned Node not found after the owned stack had exited. Not evidence of a daemon/DDS fault."
+  },
+  "native_geometry_candidate": {
+    "origin": "Reuse concurrent repository native kernels, frozen in independent source/build/install; do not overwrite shared changes",
+    "build": "2 packages; 56 Python tests and 1 CTest PASS",
+    "benchmark": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/native_geometry/benchmark.json",
+    "simulation": "Combined native_geometry + corridor_lease candidate completed P4/P5 once each; repeat acceptance pending. This is not a controlled attribution of the native kernel performance alone.",
+    "scope": "Native scan free-space and convex-polygon box-distance kernels plus fusion batch callback; frozen geometry node and controller preserved"
+  },
+  "corridor_alignment_lease_diagnostic": {
+    "build": "1 controller package, 4 CTest PASS",
+    "hypothesis": "Publisher timer uses simulation time but corridor request checks 0.3 second wall age even in simulation. Low RTF can expire heading requests while proposed constraint remains physically fresh.",
+    "pending": "Capture exact rejection ages/path/frame equality; do not loosen thresholds",
+    "validation_event_correction": "NAVIGATION_DEADLINE was emitted unconditionally even on action results; future recorder uses NAVIGATION_WAIT_FINISHED. Historical FAIL retained."
+  },
+  "corridor_lease_candidate": {
+    "status": "P4_P5_SINGLE_COMPLETE_RUNS_PASSED_REPEATS_AND_COMMON_REGRESSION_PENDING",
+    "diagnostic": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_lease_rejection_evidence.json",
+    "raw_rejections": 14,
+    "wall_only_rejections": 14,
+    "scope": "Corridor request freshness follows physical ROS time in simulation, retains wall reception budget on hardware. Final PolicyLease wall watchdog and FinalProtection stall/revocation unchanged. Gains and tolerances unchanged.",
+    "build_packages": 1,
+    "ctest_passed": 4,
+    "production_protection_tick_offline_checks_passed": 4,
+    "source": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_lease/source_manifest.json",
+    "p4": "PASS_ONE_COMPLETE_RUN",
+    "p4_metrics": {
+      "entry_xy_m": 0.000119,
+      "entry_yaw_deg": 0.025753,
+      "exit_xy_m": 0.001148,
+      "exit_yaw_deg": 0.064472,
+      "min_clearance_lower_bound_m": 0.288761658767,
+      "follow_samples": 514,
+      "cross_p95_m": 0.02122444408680571,
+      "heading_p95_deg": 1.9735303770553105,
+      "measured_jerk_p95_m_s3": 0.06833837200261629,
+      "corridor_pending_samples": 0,
+      "crossing_policy_hold_events": 0
+    },
+    "p5": "PASS_ONE_COMPLETE_RUN",
+    "pilot_report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_lease/pilot_report.json",
+    "figure": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_lease/pilot_report.png",
+    "p5_low_speed_observation": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/corridor_lease/p5_low_speed_delay.json"
+  },
+  "startup_diagnostic_correction": {
+    "unresolved": "Same-shell double-source hypothesis did not reproduce; separate child-shell inherited overlay precedence was subsequently reproduced and corrected. Original failed startup evidence retained.",
+    "probe": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/overlay_source_order_reproduction.json",
+    "diagnostic_2_first_attempt": "Physics did not advance; readiness failed before motion, owned stack stopped; retry reached readiness. Diagnostic interrupted after direct lease evidence."
+  },
+  "startup_overlay_fix": {
+    "status": "FOUR_COLD_STARTS_PASSED_WITH_CORRECT_FROZEN_OVERLAY",
+    "reproduction": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/overlay_source_child_reproduction.json",
+    "verification": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/overlay_source_child_fixed.json",
+    "scope": "Explicit overlay launch and query environments; four measured-ready episodes ran, original default launch unchanged."
+  },
+  "deferred_cancellation_harness": {
+    "original_failure": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corridor_lease_core_1/r01_cancel_moving_h2_1/episode/summary.json",
+    "cause": "SIGINT can raise through rclpy pybind message conversion; backend cancellation and actual stop passed but executor could not collect terminal result.",
+    "change": "Latch SIGINT/SIGTERM; raise between spin_once calls; retain pending goal acceptance for cancellation; check latched stop before new dispatch.",
+    "runtime": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/runtime_deferred_cancel_v1",
+    "validation": "6/6 original moving/WAIT-transition scenarios PASS. Stationary WAIT coverage gap identified; 0.5 s stationary fixture added, 11 offline checks PASS, fresh simulation pending.",
+    "report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/deferred_cancel/report.json",
+    "visual_limit": "2/6 Gazebo images retained startup camera view; marked INCONCLUSIVE. Expose-before-camera change syntax checked; live verification pending.",
+    "settled_fixture": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/runtime_settled_cancel_v2/validation_boundary.json",
+    "offline_settled_checks": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/deferred_cancel/settled_trigger_checks.json",
+    "settled_fixture_v1": "INVALID_FIXTURE: required 0.3 s telemetry freshness, but social diagnostic period is 0.5 s. Corrected to existing 1.0 s diagnostic contract; motion lease unchanged."
+  },
+  "isolated_display": {
+    "manifest": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/display/processes.json",
+    "display": ":168",
+    "renderer_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/display/glxinfo.txt",
+    "host_desktop": "LockedHint=yes; no unlocking attempted",
+    "runtime_packages": "Downloaded official distro packages extracted inside isolation directory; no system installation"
+  },
+  "cancel_verification_latest": {
+    "functional": "stationary waiting 3/3; moving 3/3 PASS",
+    "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/isolated_display_cancel_1",
+    "visual": "5 paired views reviewed with endpoint-only limits; waiting repeat1 black Gazebo viewport INCONCLUSIVE",
+    "hardware": "not operated"
+  },
+  "display_isolation": {
+    "display": ":168",
+    "environment": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/display/environment.json",
+    "host_desktop": "Locked; unchanged",
+    "renderer": "llvmpipe; GUI only, no controller/drive/physics parameter changes",
+    "capture_regression": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/display/viewport_capture_checks.json"
+  },
+  "status_timestamp_fix": {
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/integer_status_time/checks.json",
+    "checks": 28,
+    "simulation": "pending",
+    "scope": "measurement only; integer ns instead of mixed multiply/divide conversion; original 300ms source and 2s wall budgets unchanged",
+    "old_evidence": "isolated_core_2 interrupted by owner, missing phases are not retroactively filled"
+  }
+}

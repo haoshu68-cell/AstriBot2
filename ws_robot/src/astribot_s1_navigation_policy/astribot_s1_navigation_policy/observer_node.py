@@ -25,11 +25,11 @@ from .observation_adapters import VisionAdapter, make_adapter, adapter_message_t
 from .execution_context import ExecutionContext
 from astribot_navigation_msgs.msg import NavigationExecutionStatus, SensorHealth as HealthMessage, SensorHealthArray, RobotEnvelope
 from .profile import Profile
-from .robot_envelope import EnvelopeProfile
+from .robot_envelope import configure_envelope_input
 from .protection import scan_usable
 from .risk import RobotState, evaluate_risk
-from .scan_occupancy import occupied_cells
 from .world_geometry import has_predictions
+from astribot_s1_robot_geometry._geometry_native import scan_boxes_free, scan_occupied_cells
 
 
 def yaw(q):
@@ -52,7 +52,7 @@ class PolicyObserver(Node):
         self.declare_parameter('scan_topic','/scan_from_cloud')
         self.declare_parameter('vision_topic','/navigation_policy/vision_observations')
         self.declare_parameter('plan_topic',self.default_plan_topic)
-        self.profile=EnvelopeProfile(Profile.load(self.get_parameter('profile').value))
+        self.profile,self.envelope_ack=configure_envelope_input(self,Profile.load(self.get_parameter('profile').value),self.envelope,'policy',1)
         self.profile.require_environment(self.get_parameter('use_sim_time').value)
         self.clock_id='sim' if self.get_parameter('use_sim_time').value else 'ros'
         self.tf=Buffer();self.listener=TransformListener(self.tf,self)
@@ -102,12 +102,17 @@ class PolicyObserver(Node):
         self.create_subscription(NavigationExecutionStatus,'/navigation/execution_status',
             lambda m:self.execution.task(m.task_id,m.state,m.sequence),
             QoSProfile(depth=10,durability=DurabilityPolicy.TRANSIENT_LOCAL),callback_group=self.processing_group)
-        self.create_subscription(RobotEnvelope,'/navigation/robot_envelope',self.envelope,1)
         self.create_timer(.1,self.tick,callback_group=self.processing_group)
 
     def envelope(self,msg):
         # Receive heartbeats independently of risk computation; apply at its boundary.
         with self.envelope_lock:self.pending_envelope=msg
+        # A matching configuration was already applied. Confirm its live source
+        # without mutating the profile being used by an in-flight decision.
+        # Motion decisions keep their own original source deadlines and leases.
+        if self.envelope_ack:
+            now=Stamp(self.get_clock().now().nanoseconds,self.clock_id,self.epoch)
+            if self.profile.confirms_applied(msg,now):self.envelope_ack(msg)
 
     def process_envelope(self):
         with self.envelope_lock:
@@ -116,6 +121,7 @@ class PolicyObserver(Node):
         try:
             if self.profile.accept(msg,self.stamp()):
                 self.execution.version=replace(self.execution.version,envelope_epoch=msg.epoch)
+                if self.envelope_ack:self.envelope_ack(msg)
         except ValueError as error:self.get_logger().warning(str(error))
 
     def stamp(self):
@@ -172,6 +178,12 @@ class PolicyObserver(Node):
 
     def static_at(self,x,y):
         if self.map is None:return False
+        _,c,s,ox,oy,resolution,mask=self.static_mask()
+        dx,dy=x-ox,y-oy
+        ix=math.floor((c*dx+s*dy)/resolution)+2;iy=math.floor((-s*dx+c*dy)/resolution)+2
+        return bool(mask[iy,ix]) if 0<=iy<mask.shape[0] and 0<=ix<mask.shape[1] else False
+
+    def static_mask(self):
         cached=getattr(self,'static_lookup',None)
         if cached is None or cached[0] is not self.map:
             import numpy as np
@@ -184,10 +196,7 @@ class PolicyObserver(Node):
                 for dx in range(5):mask|=padded[dy:dy+info.height+4,dx:dx+info.width+4]
             cached=(self.map,math.cos(theta),math.sin(theta),origin.x,origin.y,info.resolution,mask)
             self.static_lookup=cached
-        _,c,s,ox,oy,resolution,mask=cached
-        dx,dy=x-ox,y-oy
-        ix=math.floor((c*dx+s*dy)/resolution)+2;iy=math.floor((-s*dx+c*dy)/resolution)+2
-        return bool(mask[iy,ix]) if 0<=iy<mask.shape[0] and 0<=ix<mask.shape[1] else False
+        return cached
 
     def scan(self,msg):
         if not scan_usable(msg.ranges,msg.range_min,msg.range_max,msg.angle_min,msg.angle_increment,
@@ -221,19 +230,18 @@ class PolicyObserver(Node):
                 return
             transform=self.tf.lookup_transform(self.profile.tracking_frame,msg.header.frame_id,Time.from_msg(msg.header.stamp))
             to_map=self.tf.lookup_transform('map',msg.header.frame_id,Time.from_msg(msg.header.stamp))
-            points=[]
-            for i,r in enumerate(msg.ranges):
-                if not math.isfinite(r) or not msg.range_min<=r<msg.range_max-.05:
-                    continue
-                angle=msg.angle_min+i*msg.angle_increment
-                xyz=(r*math.cos(angle),r*math.sin(angle),0.)
-                mx,my,_=self.point(xyz,to_map)
-                if self.static_at(mx,my):continue
-                x,y,_=self.point(xyz,transform)
-                points.append((x,y))
             observations=[]
             cell_size=self.profile.scan_occupancy_resolution_m
-            for cell,x,y in occupied_cells(points,cell_size):
+            def tf_values(tf):
+                t=tf.transform.translation;q=tf.transform.rotation
+                return (t.x,t.y,t.z,q.x,q.y,q.z,q.w)
+            _,c,s,ox,oy,resolution,mask=self.static_mask()
+            cells=scan_occupied_cells(msg.ranges,msg.range_min,msg.range_max,msg.angle_min,
+                msg.angle_increment,tf_values(transform),tf_values(to_map),
+                (c,s,ox,oy,resolution),mask,cell_size)
+            for ix,iy in cells:
+                cell=f'cell:{cell_size:g}:{ix}:{iy}'
+                x,y=(float(ix)+.5)*cell_size,(float(iy)+.5)*cell_size
                 box=MetricBox(Vec3(x,y,self.profile.height_m/2),
                               Vec3(cell_size+2*self.profile.scan_obstacle_padding_m,
                                    cell_size+2*self.profile.scan_obstacle_padding_m,self.profile.height_m),
@@ -245,14 +253,13 @@ class PolicyObserver(Node):
                     velocity_observable=False,spatial_occupancy=True))
             self.fusion.ingest(tuple(observations),now)
             inv=self.tf.lookup_transform(msg.header.frame_id,self.profile.tracking_frame,Time.from_msg(msg.header.stamp))
-            def free_at(box):
-                from .scan_occupancy import angular_box_free
-                corners=[self.point((box.center_m.x+dx*box.size_m.x/2,
-                                     box.center_m.y+dy*box.size_m.y/2,0.),inv)[:2]
-                         for dx,dy in ((-1,-1),(-1,1),(1,-1),(1,1))]
-                return angular_box_free(corners,msg.ranges,msg.range_min,msg.range_max,
-                                        msg.angle_min,msg.angle_increment,cell_size)
-            self.fusion.clear_observed_free(now,free_at)
+            def free_many(boxes):
+                t=inv.transform.translation;q=inv.transform.rotation
+                return scan_boxes_free(
+                    [(b.center_m.x,b.center_m.y,b.size_m.x,b.size_m.y) for b in boxes],
+                    (t.x,t.y,t.z,q.x,q.y,q.z,q.w),msg.ranges,msg.range_min,msg.range_max,
+                    msg.angle_min,msg.angle_increment,cell_size)
+            self.fusion.clear_observed_free(now,free_many=free_many)
             body_tf=self.tf.lookup_transform(self.base_frame,msg.header.frame_id,Time.from_msg(msg.header.stamp))
             coverage=scan_coverage(msg.ranges,msg.range_min,msg.range_max,msg.angle_min,msg.angle_increment,
                                    yaw(body_tf.transform.rotation))
@@ -302,6 +309,7 @@ class PolicyObserver(Node):
 
     def tick(self):
         processing_start=time.monotonic()
+        processing_cpu_start=time.thread_time()
         self.process_envelope()
         now=self.stamp();seconds=now.ns*1e-9
         try:
@@ -315,7 +323,9 @@ class PolicyObserver(Node):
         self.execution.version=replace(self.execution.version,clock_epoch=now.epoch)
         self.process_plan()
         self.fusion.version=self.execution.version
+        scan_start=time.monotonic()
         self.process_scans(now)
+        scan_elapsed=time.monotonic()-scan_start
         with self.odom_lock:
             robot=self.robot;odom_at=self.odom_at
         scan_at=self.scan_at
@@ -332,8 +342,11 @@ class PolicyObserver(Node):
             h.coverage_yaw=[math.atan2(c.direction.y,c.direction.x) for c in source.coverage]
             h.coverage_half_angle=[c.half_angle_rad for c in source.coverage];health.sensors.append(h)
         self.health_pub.publish(health)
+        snapshot_start=time.monotonic()
         world=self.fusion.snapshot(now,region)
+        risk_start=time.monotonic()
         risk=evaluate_risk(world,robot,self.path,self.profile) if robot else None
+        risk_elapsed=time.monotonic()-risk_start
         self.last_risk=risk
         self.last_world=world;self.last_robot=robot
         seconds=self.get_clock().now().nanoseconds*1e-9
@@ -343,7 +356,7 @@ class PolicyObserver(Node):
         self.last_inputs_valid=fresh;self.last_evaluation_epoch=now.epoch
         blocking=[]
         if risk:
-            for identifier in risk.obstacle_ids:
+            for identifier in dict.fromkeys((*risk.obstacle_ids,*risk.immediate_obstacle_ids)):
                 track=self.fusion.tracks[identifier];o=track.observation;b=o.geometry
                 blocking.append({'id':identifier,'center_m':asdict(b.center_m),'size_m':asdict(b.size_m),
                                  'velocity_m_s':asdict(track.velocity),'age_s':seconds-o.capture_stamp.ns*1e-9})
@@ -359,6 +372,9 @@ class PolicyObserver(Node):
                 'tracks':len(world.tracks),'unassociated':len(world.unassociated),'path_revision':self.path_revision,
                 'predicted_tracks':sum(has_predictions(t) for t in world.tracks),
                 'processing_wall_s':time.monotonic()-processing_start,'blocking_tracks':blocking,
+                'geometry_backend':'cpp',
+                'processing_cpu_s':time.thread_time()-processing_cpu_start,
+                'processing_stages_s':{'scan':scan_elapsed,'snapshot':risk_start-snapshot_start,'risk':risk_elapsed},
                 'risk':{k:number(v) if isinstance(v,float) else v for k,v in asdict(risk).items()} if risk else None}
         self.publisher.publish(String(data=json.dumps(result,allow_nan=False)))
 

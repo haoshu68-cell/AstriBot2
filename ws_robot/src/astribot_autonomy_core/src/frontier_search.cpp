@@ -1,6 +1,7 @@
 // Copyright 2026 Astribot.
 #include "astribot_s1_autonomy/frontier_search.hpp"
 #include "astribot_s1_autonomy/frontier_observation.hpp"
+#include "astribot_s1_autonomy/footprint_clearance.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -93,6 +94,11 @@ bool FrontierSearch::configure(const FrontierSearchParams & params, std::string 
     !std::isfinite(params.gain_window_radius) || params.gain_window_radius < 0.0 ||
     !std::isfinite(params.sensor_fov_rad) || params.sensor_fov_rad <= 0.0 || params.sensor_fov_rad > 6.283185307179587)
   {error = "观测范围、视场角或射线数非法";return false;}
+  if (!validGoalFootprint(params.goal_footprint) ||
+    !std::isfinite(params.goal_footprint_margin) || params.goal_footprint_margin<0 ||
+    params.goal_footprint_margin>1.0 || !std::isfinite(params.goal_retreat_radius) ||
+    params.goal_retreat_radius<=0 || params.goal_retreat_radius>3.0)
+  {error = "目标足迹须为包含机身原点的凸多边形，净空余量 0..1m，内退搜索半径 0..3m";return false;}
   params_ = params;
   configured_ = true;
   error.clear();
@@ -355,6 +361,67 @@ bool FrontierSearch::hasClearance(const GridMap & map, unsigned int mx, unsigned
   return true;
 }
 
+bool FrontierSearch::goalFootprintIsKnownFree(
+  const GridMap & map, double x, double y, double yaw) const
+{
+  return configured_ && knownFreeFootprint(map,x,y,yaw,params_.goal_footprint,
+    params_.goal_footprint_margin,params_.free_threshold);
+}
+
+bool FrontierSearch::retreatGoal(const GridMap & map, unsigned int mx, unsigned int my,
+  double robot_x, double robot_y, GoalCandidate & candidate) const
+{
+  const double cells=std::ceil(params_.goal_retreat_radius/map.resolution);
+  if (!std::isfinite(cells) || cells>200) {return false;}
+  const int radius=static_cast<int>(cells),side=2*radius+1;
+  std::vector<uint8_t> seen(static_cast<std::size_t>(side)*side,0);
+  std::vector<std::array<int,2>> queue{{0,0}};
+  seen[radius*side+radius]=1;
+  for (std::size_t head=0;head<queue.size();++head) {
+    checkpoint();
+    const int dx=queue[head][0],dy=queue[head][1];
+    const int gx=static_cast<int>(mx)+dx,gy=static_cast<int>(my)+dy;
+    const double x=map.worldX(gx),y=map.worldY(gy);
+    const double distance=std::hypot(x-robot_x,y-robot_y);
+    const double yaw=(dx || dy) ? std::atan2(-dy,-dx) : candidate.yaw;
+    if (distance>=params_.min_goal_distance &&
+      (params_.max_goal_distance<=0 || distance<=params_.max_goal_distance) &&
+      hasClearance(map,gx,gy) && goalFootprintIsKnownFree(map,x,y,yaw))
+    {
+      const auto observation=frontierObservation(map,x,y,yaw,params_.gain_window_radius,
+        params_.sensor_fov_rad,params_.visibility_rays,params_.free_threshold,canceled_);
+      if (canceled_ && canceled_()) {throw SearchCanceled{};}
+      if (observation.valid && (params_.gain_window_radius==0 || observation.cells>0) &&
+        goalFootprintIsKnownFree(map,x,y,observation.yaw))
+      {
+        candidate.x=x;candidate.y=y;candidate.yaw=observation.yaw;
+        candidate.distance=distance;candidate.visible_unknown_cells=observation.cells;
+        candidate.retreat_distance=std::hypot(x-candidate.frontier_x,y-candidate.frontier_y);
+        return true;
+      }
+    }
+    for (int k=0;k<8;++k) {
+      const int nx=dx+kNeighborDx8[k],ny=dy+kNeighborDy8[k];
+      if (std::abs(nx)>radius || std::abs(ny)>radius ||
+        std::hypot(nx,ny)*map.resolution>params_.goal_retreat_radius+1e-9) {continue;}
+      const auto index=static_cast<std::size_t>(ny+radius)*side+nx+radius;
+      if (seen[index]) {continue;}
+      const int cx=static_cast<int>(mx)+nx,cy=static_cast<int>(my)+ny;
+      auto traversable=[&](int px,int py) {
+        if (px<0 || py<0 || px>=static_cast<int>(map.width) || py>=static_cast<int>(map.height)) {return false;}
+        const auto i=map.index(px,py);
+        return reachable_[i] && !inflated_occupied_[i] && map.data[i]>=0 &&
+          map.data[i]<=params_.free_threshold;
+      };
+      if (!traversable(cx,cy)) {continue;}
+      if (nx!=dx && ny!=dy && (!traversable(cx,gy) || !traversable(gx,cy))) {continue;}
+      seen[index]=1;
+      queue.push_back({nx,ny});
+    }
+  }
+  return false;
+}
+
 double FrontierSearch::visitPenaltyAt(
   double x, double y, const std::vector<VisitRecord> & history) const
 {
@@ -550,6 +617,7 @@ void FrontierSearch::search(
       cand.cluster_index = ci;
       cand.x = map.worldX(mx);
       cand.y = map.worldY(my);
+      cand.frontier_x=cand.x;cand.frontier_y=cand.y;
       const double to_centroid_x = cluster.centroid_x - cand.x;
       const double to_centroid_y = cluster.centroid_y - cand.y;
       constexpr double kYawDegenerateEps = 1e-6;
@@ -565,28 +633,15 @@ void FrontierSearch::search(
         cand.reject_reason = "落在障碍物/膨胀区内";
       } else if (reachable_[cell] == 0U) {
         cand.reject_reason = "不可达";
-      } else if (cand.distance < params_.min_goal_distance) {
-        cand.reject_reason = "距离机器人过近";
-      } else if (params_.max_goal_distance > 0.0 && cand.distance > params_.max_goal_distance) {
-        cand.reject_reason = "距离机器人过远";
-      } else if (!hasClearance(map, mx, my)) {
-        cand.reject_reason = "净空不足";
+      } else if (!retreatGoal(map,mx,my,robot_x,robot_y,cand)) {
+        cand.reject_reason = "前沿内退范围内无完整足迹已知空闲的可达观测位姿";
       } else {
         cand.valid = true;
       }
 
       if (cand.valid) {
-        const auto observation = frontierObservation(map, cand.x, cand.y, cand.yaw,
-          params_.gain_window_radius, params_.sensor_fov_rad, params_.visibility_rays,
-          params_.free_threshold, canceled_);
-        if (canceled_ && canceled_()) {throw SearchCanceled{};}
-        cand.yaw = observation.yaw;
-        cand.visible_unknown_cells = observation.cells;
-        out.clusters[ci].unknown_gain = std::max(out.clusters[ci].unknown_gain, observation.cells);
+        out.clusters[ci].unknown_gain = std::max(out.clusters[ci].unknown_gain, cand.visible_unknown_cells);
         cand.visit_penalty = visitPenaltyAt(cand.x, cand.y, history);
-        if (!observation.valid || (params_.gain_window_radius > 0 && observation.cells == 0)) {
-          cand.valid = false; cand.reject_reason = "无可见未知单元或观测模型超限";
-        }
       }
       out.candidates.push_back(std::move(cand));
     }
@@ -603,7 +658,14 @@ void FrontierSearch::search(
     if(out.best_candidate_index<0 || c.cost<best_cost){best_cost=c.cost;out.best_candidate_index=static_cast<int>(i);}
   }
   std::ostringstream oss;
-  oss << "原始前沿格=" << out.raw_frontier_cell_count
+  std::size_t retreated=0;double max_retreat=0;
+  for (const auto & candidate:out.candidates) {
+    if (candidate.valid && candidate.retreat_distance>0) {
+      ++retreated;max_retreat=std::max(max_retreat,candidate.retreat_distance);
+    }
+  }
+  oss << "足迹内退候选=" << retreated << " 最大内退=" << max_retreat << "m "
+      << "原始前沿格=" << out.raw_frontier_cell_count
       << " 膨胀后前沿=" << out.eligible_frontier_cell_count
       << " 可达前沿=" << out.reachable_frontier_cell_count
       << " 未知格=" << out.unknown_cell_count

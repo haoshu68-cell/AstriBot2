@@ -11,6 +11,10 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include "moveit_msgs/msg/planning_scene.hpp"
+#include "std_msgs/msg/string.hpp"
+#include "astribot_s1_autonomy/attached_body_filter.hpp"
+#include "astribot_s1_autonomy/attachment_filter_confirmation.hpp"
 #include "rcl_interfaces/msg/parameter_event.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
@@ -77,6 +81,9 @@ private:
   /// 用当前 TF 把各连杆链解析成 base_frame 下的胶囊体。
   /// 拿不到某个 frame 时跳过对应胶囊并计数，不影响其余部分。
   std::vector<FilterCapsule> resolveSelfFilterCapsules(const rclcpp::Time & stamp);
+  bool resolveAttachedBodies(const rclcpp::Time & stamp,std::vector<AttachedBody> & bodies,std::string & revision);
+  void publishAttachmentConfirmation();
+  void invalidateAttachmentConfirmation();
 
   void publishScan(const ProjectionResult & result, const rclcpp::Time & stamp);
   /// 发布过滤后的点云。
@@ -101,6 +108,7 @@ private:
     std::string output_scan_topic_;
     std::string marker_topic_;
     std::string base_frame_;
+    std::string cloud_pose_frame_;
     double tf_timeout_sec_{0.0};
     double tf_total_budget_sec_{0.0};
     double max_cloud_age_sec_{0.0};
@@ -130,6 +138,7 @@ private:
   std::string output_scan_topic_;
   std::string marker_topic_;
   std::string base_frame_;
+  std::string cloud_pose_frame_;
   double tf_timeout_sec_{0.0};
   /// **单帧**所有连杆 TF 查询的总等待预算(s)。
   double tf_total_budget_sec_{0.0};
@@ -161,6 +170,14 @@ private:
   rclcpp::Subscription<rcl_interfaces::msg::ParameterEvent>::SharedPtr config_event_sub_;
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_sub_;
+  bool attached_filter_enabled_{false};
+  std::mutex attached_mutex_;
+  moveit_msgs::msg::PlanningScene::ConstSharedPtr attached_snapshot_;
+  rclcpp::Time attached_changed_{0,0,RCL_ROS_TIME};
+  rclcpp::Subscription<moveit_msgs::msg::PlanningScene>::SharedPtr attached_sub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr attached_ack_;
+  AttachmentFilterConfirmation attached_confirmation_;
+  rclcpp::TimerBase::SharedPtr attached_ack_timer_;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr filtered_cloud_pub_;

@@ -15,23 +15,18 @@ struct ExplorationFailureBudget
   int sample_failures{0};
   int validation_failures{0};
 
-  /// 采到了候选点。**只**清采样预算。
-  ///
-  /// 刻意不碰 validation_failures：这个函数在「采样->校验全废->重采样」
-  /// 循环里每轮都会被调到，碰了就等于把校验预算废掉。
+  /// 采到候选时只清采样预算；保留校验预算，避免重采样循环绕过失败上限。
   void onCandidatesSampled();
 
   /// 本轮一个合法候选都没采到。
-  /// @return true 表示预算已用尽，调用方该升级（自举或转 PAUSED）
+  /// @return true 表示预算已用尽，调用方该转 PAUSED
   [[nodiscard]] bool onNoCandidateSampled();
 
   /// 本轮采到了候选，但逐个校验后全部不合法。
   /// @return true 表示预算已用尽，调用方该转 PAUSED
   [[nodiscard]] bool onAllCandidatesInvalid();
 
-  /// 目标**真的下发成功**了（动作 goal 已发出）。清校验预算。
-  ///
-  /// 这是走出「校验全废」循环的唯一标志，所以只有它能清 validation_failures。
+  /// 动作 goal 已发出时清校验预算。
   void onGoalDispatched();
 
   /// 全量重置：自动恢复 / 人工 resume 用。

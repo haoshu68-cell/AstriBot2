@@ -15,10 +15,10 @@
 SLAM 必须已经在发 /map。协调器起得比 Nav2 早没问题，它会等到 action server 就绪。
 
 用法示例：
-    ros2 launch astribot_s1_autonomy exploration_coordinator.launch.py
-    ros2 launch astribot_s1_autonomy exploration_coordinator.launch.py log_level:=debug
-    ros2 launch astribot_s1_autonomy exploration_coordinator.launch.py dwell_time_sec:=3.0
-    ros2 launch astribot_s1_autonomy exploration_coordinator.launch.py params_file:=/path/my.yaml
+    ros2 launch astribot_s1_exploration exploration_coordinator.launch.py
+    ros2 launch astribot_s1_exploration exploration_coordinator.launch.py log_level:=debug
+    ros2 launch astribot_s1_exploration exploration_coordinator.launch.py dwell_time_sec:=3.0
+    ros2 launch astribot_s1_exploration exploration_coordinator.launch.py params_file:=/path/my.yaml
 """
 
 
@@ -38,6 +38,8 @@ _OVERRIDABLE = {
     'dwell_time_sec': float,
     'nav_timeout_sec': float,
     'check_yaw': bool,
+    'finalize_on_completion': bool,
+    'require_fixed_envelope': bool,
 }
 
 
@@ -85,6 +87,13 @@ def _build_nodes(context, *args, **kwargs):
             parameters=parameters,
             arguments=['--ros-args', '--log-level', log_level],
             emulate_tty=True,
+        ),
+        Node(
+            package='astribot_s1_exploration', executable='mapping_session_node',
+            name='mapping_session', output='screen',
+            parameters=[params_file, {'use_sim_time': use_sim_time},
+                        {k: v for k, v in overrides.items() if k == 'odom_topic'}],
+            arguments=['--ros-args', '--log-level', log_level],
         )
     ]
 
@@ -95,6 +104,10 @@ def generate_launch_description():
          'exploration_coordinator_params.yaml'])
 
     declare_args = [
+        DeclareLaunchArgument('require_fixed_envelope', default_value='false',
+            description='fixed_v2导航须确认唯一、新鲜且已完成握手的包络后才能选点。'),
+        DeclareLaunchArgument('finalize_on_completion', default_value='true',
+            description='确认探索完成后结束 SLAM 并存图；取消任务始终请求存图。'),
         DeclareLaunchArgument(
             'params_file', default_value=default_params,
             description='协调器参数 yaml，默认用本包 config 下的版本。'),
@@ -110,8 +123,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'map_transient_local', default_value='',
             description='覆盖 map_topic 的 durability；留空用 yaml 值。'
-                        '仿真 slam_toolbox 的 /map 是 transient_local(true)；'
-                        '实机 /map_scan_filtered_prob 是 VOLATILE，必须 false。'),
+                        '统一 Voxel 栅格 /map 在仿真和真机均为 transient_local(true)。'),
         DeclareLaunchArgument(
             'odom_topic', default_value='',
             description='覆盖里程计话题（用于驻留速度判定）；留空用 yaml 值。'),

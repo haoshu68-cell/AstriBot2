@@ -9,8 +9,11 @@ from launch import LaunchDescription
 from launch.utilities import perform_substitutions
 from launch.actions import (
     DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, SetEnvironmentVariable, OpaqueFunction,
+    RegisterEventHandler, EmitEvent,
 )
 from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from astribot_logging import log_level as default_log_level
@@ -18,6 +21,7 @@ from astribot_logging.launch import Node
 from launch_ros.descriptions import ParameterFile, ParameterValue
 from launch_ros.substitutions import FindPackageShare
 from nav2_common.launch import RewrittenYaml
+
 
 def generate_launch_description():
     pkg_navigation = FindPackageShare('astribot_s1_navigation')
@@ -28,9 +32,25 @@ def generate_launch_description():
         pkg_navigation, 'behavior_trees', 'navigate_through_poses_precise_goal.xml'])
     pkg_dynamics_coupling = FindPackageShare('astribot_s1_dynamics_coupling')
 
+    geometry_mode = LaunchConfiguration('navigation_geometry_mode')
     policy_stage = LaunchConfiguration('navigation_policy_stage')
     policy_enabled = PythonExpression(["'", policy_stage, "' != 'off'"])
-    policy_params = {'navigation_policy_enabled': ParameterValue(policy_enabled, value_type=bool),
+    social_stage = LaunchConfiguration('social_navigation_stage')
+    social_enabled = PythonExpression(["'", social_stage, "' != 'off'"])
+    def validate_social_stage(context):
+        mode=geometry_mode.perform(context)
+        if mode not in ('legacy','fixed_v2'):raise ValueError('invalid navigation_geometry_mode')
+        if mode=='fixed_v2' and policy_stage.perform(context) not in ('p4','p5'):
+            raise ValueError('fixed_v2 requires corridor policy p4 or p5')
+        social = social_stage.perform(context)
+        if social not in ('off', 'h2'):
+            raise ValueError('social_navigation_stage must be off or h2')
+        if social == 'h2' and policy_stage.perform(context) != 'p2':
+            raise ValueError('H2 social arbitration requires navigation_policy_stage:=p2')
+        return []
+    policy_params = {'navigation_geometry_mode': ParameterValue(geometry_mode,value_type=str),
+                     'navigation_policy_enabled': ParameterValue(policy_enabled, value_type=bool),
+                     'social_navigation_enabled': ParameterValue(social_enabled, value_type=bool),
                      'navigation_policy_stage': ParameterValue(policy_stage, value_type=str)}
     namespace = LaunchConfiguration('namespace')
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -68,6 +88,26 @@ def generate_launch_description():
                                    "' != 'off' else '", scan_topic, "'"]),
         'map_topic': LaunchConfiguration('map_topic'),
         'map_subscribe_transient_local': LaunchConfiguration('map_transient_local')}
+    for costmap in ('local_costmap', 'global_costmap'):
+        param_substitutions[f'{costmap}.{costmap}.ros__parameters.obstacle_layer.plugin'] = \
+            LaunchConfiguration('obstacle_layer_plugin')
+
+    def arrival_precision(context):
+        profile = LaunchConfiguration('arrival_precision_profile').perform(context)
+        if profile == 'standard':
+            return {}
+        if profile not in ('simulation_precision', 'hardware'):
+            raise ValueError('unknown arrival precision profile: '+profile)
+        if profile == 'simulation_precision' and use_sim_time.perform(context).lower() != 'true':
+            raise ValueError('simulation_precision requires use_sim_time=true')
+        filename = 'arrival_precision_hardware.yaml' if profile == 'hardware' else 'arrival_precision_sim.yaml'
+        path = PathJoinSubstitution([pkg_navigation, 'config', filename])
+        common = PathJoinSubstitution([pkg_navigation, 'config', 'arrival_motion.yaml'])
+        with open(perform_substitutions(context, [common]), encoding='utf-8') as stream:
+            values = yaml.safe_load(stream)
+        with open(perform_substitutions(context, [path]), encoding='utf-8') as stream:
+            values.update(yaml.safe_load(stream))
+        return values
 
     def costmap_scan_adapter(context):
         if policy_stage.perform(context)=='off':return []
@@ -94,8 +134,21 @@ def generate_launch_description():
             values = list(config[key])
             values[:2] = [max(-cap, min(cap, float(v))) for v in values[:2]]
             limits[key] = values
+        precision=arrival_precision(context)
+        if precision:
+            limits.update({
+                'smoothing_frequency':50.0,'velocity_timeout':0.3,
+                'normal_acceleration':[
+                    precision['FollowPath.arrival.normal_acceleration'],
+                    precision['FollowPath.arrival.normal_acceleration'],
+                    precision['FollowPath.arrival.normal_angular_acceleration']],
+                'normal_jerk':[
+                    precision['FollowPath.arrival.normal_jerk'],
+                    precision['FollowPath.arrival.normal_jerk'],
+                    precision['FollowPath.arrival.normal_angular_jerk']]})
         return [Node(
-            package='nav2_velocity_smoother', executable='velocity_smoother',
+            package='astribot_s1_path_tracking' if precision else 'nav2_velocity_smoother',
+            executable='jerk_velocity_smoother' if precision else 'velocity_smoother',
             name='velocity_smoother', output='screen', respawn=use_respawn,
             respawn_delay=2.0, parameters=[configured_params, limits],
             arguments=['--ros-args', '--log-level', log_level],
@@ -120,6 +173,11 @@ def generate_launch_description():
 
     })
 
+    for costmap in ('local_costmap','global_costmap'):
+        prefix=costmap+'.'+costmap+'.ros__parameters.'
+        param_substitutions[prefix+'footprint_padding']=PythonExpression(["0.0 if '",geometry_mode,"' == 'fixed_v2' else 0.01"])
+        param_substitutions[prefix+'obstacle_layer.footprint_clearing_enabled']=PythonExpression(["False if '",geometry_mode,"' == 'fixed_v2' else True"])
+
     configured_params = ParameterFile(
         RewrittenYaml(
             source_file=params_file,
@@ -132,7 +190,12 @@ def generate_launch_description():
         'RCUTILS_LOGGING_BUFFERED_STREAM', '0')
 
     declare_args = [
+        DeclareLaunchArgument('navigation_geometry_mode', default_value='legacy'),
         DeclareLaunchArgument('navigation_policy_stage', default_value='off'),
+        DeclareLaunchArgument('social_navigation_stage', default_value='off'),
+        DeclareLaunchArgument('social_allow_simulation_truth', default_value='false'),
+        DeclareLaunchArgument('arrival_precision_profile', default_value='standard',
+                              description='standard / hardware / simulation_precision (ground-truth calibration)'),
         DeclareLaunchArgument('corridor_file', default_value=''),
         DeclareLaunchArgument('namespace', default_value='', description='Top-level namespace'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
@@ -182,10 +245,8 @@ def generate_launch_description():
                 output='screen',
                 respawn=use_respawn,
                 respawn_delay=2.0,
-                parameters=[configured_params, policy_params, limits, {
-                    'progress_checker.plugin': ParameterValue(PythonExpression([
-                        "'astribot_s1_path_tracking::PolicyProgressChecker' if '", policy_stage,
-                        "' != 'off' else 'nav2_controller::PoseProgressChecker'"]), value_type=str)}],
+                parameters=[configured_params, policy_params, limits, arrival_precision(context), {
+                    'progress_checker.plugin': 'astribot_s1_path_tracking::PolicyProgressChecker'}],
                 arguments=['--ros-args', '--log-level', log_level],
 
                 remappings=remappings + [('cmd_vel', 'cmd_vel_nav_body_raw')])]
@@ -210,7 +271,9 @@ def generate_launch_description():
                 output='screen',
                 respawn=use_respawn,
                 respawn_delay=2.0,
-                parameters=[configured_params],
+                parameters=[configured_params, {
+                    'navigation_geometry_mode': ParameterValue(geometry_mode, value_type=str),
+                    'navigation_policy_stage': ParameterValue(policy_stage, value_type=str)}],
                 arguments=['--ros-args', '--log-level', log_level],
                 remappings=remappings),
             Node(
@@ -304,18 +367,57 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
+    ld.add_action(DeclareLaunchArgument('obstacle_layer_plugin',
+        default_value='nav2_costmap_2d::ObstacleLayer'))
     ld.add_action(stdout_linebuf_envvar)
     for action in declare_args:
         ld.add_action(action)
+    ld.add_action(OpaqueFunction(function=validate_social_stage))
     ld.add_action(OpaqueFunction(function=costmap_scan_adapter))
     ld.add_action(Node(package='astribot_s1_navigation_policy', executable='task_arbiter',
         output='screen', parameters=[{'use_sim_time': use_sim_time}]))
+    ld.add_action(Node(package='astribot_route_executor', executable='loop_route_executor',
+        name='loop_route_executor', output='screen', parameters=[{'use_sim_time': use_sim_time}]))
+    operator_backend = Node(package='astribot_operator_backend', executable='operator_backend',
+        name='operator_backend', output='screen', parameters=[{'require_map_manager': True, 'use_sim_time': use_sim_time}])
+    ld.add_action(DeclareLaunchArgument('map_manager_params_file',
+        default_value=PathJoinSubstitution([FindPackageShare('astribot_map_manager'),
+            'config', 'map_manager.yaml'])))
+    ld.add_action(Node(package='astribot_map_manager', executable='map_manager',
+        name='map_manager', output='screen', parameters=[LaunchConfiguration('map_manager_params_file'),
+            {'use_sim_time': use_sim_time}]))
+    ld.add_action(DeclareLaunchArgument('enable_voxel_adapter', default_value='false'))
+    ld.add_action(DeclareLaunchArgument('voxel_adapter_params_file',
+        default_value=PathJoinSubstitution([FindPackageShare('astribot_map_manager'),
+            'config', 'voxel_session_adapter.yaml'])))
+    ld.add_action(Node(package='astribot_map_manager', executable='voxel_session_adapter',
+        name='map_session_adapter', output='screen',
+        condition=IfCondition(LaunchConfiguration('enable_voxel_adapter')),
+        parameters=[LaunchConfiguration('voxel_adapter_params_file'),
+            {'use_sim_time': use_sim_time}]))
+    ld.add_action(operator_backend)
+    ld.add_action(RegisterEventHandler(OnProcessExit(target_action=operator_backend,
+        on_exit=[EmitEvent(event=Shutdown(reason='Operator authority exited; stop managed navigation'))])))
+    ld.add_action(DeclareLaunchArgument('operator_runtime_params_file',
+        default_value=PathJoinSubstitution([FindPackageShare('astribot_operator_backend'),
+            'config', 'mapping_runtime.yaml'])))
+    ld.add_action(Node(package='astribot_operator_backend', executable='mapping_runtime',
+        name='mapping_runtime', output='screen',
+        parameters=[LaunchConfiguration('operator_runtime_params_file')]))
+    ld.add_action(Node(package='astribot_s1_robot_geometry',executable='geometry_state',output='screen',
+        parameters=[{'use_sim_time':use_sim_time}],
+        condition=IfCondition(PythonExpression(["'",geometry_mode,"' == 'fixed_v2'"]))))
     ld.add_action(load_nodes)
     ld.add_action(arm_chassis_coupling)
     for executable in ('envelope_coordinator', 'policy_controller', 'final_protection'):
         ld.add_action(Node(package='astribot_s1_navigation_policy', executable=executable,
             output='screen', parameters=[{'use_sim_time': use_sim_time, 'scan_topic': scan_topic,
+                                         'profile': PathJoinSubstitution([FindPackageShare('astribot_s1_navigation_policy'), 'config',
+                                             PythonExpression(["'h2_simulation.json' if '", social_stage, "' == 'h2' else 'simulation.json'"])]),
                                          'navigation_policy_stage': ParameterValue(policy_stage, value_type=str),
+                                         'navigation_geometry_mode': ParameterValue(geometry_mode, value_type=str),
+                                         'social_navigation_stage': ParameterValue(social_stage, value_type=str),
+                                         'social_allow_simulation_truth': ParameterValue(LaunchConfiguration('social_allow_simulation_truth'), value_type=bool),
                                          'corridor_file': LaunchConfiguration('corridor_file')}],
             condition=IfCondition(policy_enabled)))
     return ld

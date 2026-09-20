@@ -30,10 +30,9 @@ local coordinate" —— 方向是**世界系 → 本体系**。由此推断 ``s
 
 为什么这一层要做成纯函数
 ======================
-底盘是**位置指令开环积分**：``set_joints_position`` 收的是位置，若轮子打滑，
-指令位置会持续超前实际位置，而且没有任何反馈会阻止它 —— 误差单调累积，一旦
-恢复附着力，底盘会以最大能力冲向那个跑飞的位置。这条链路上每一个数值都必须
-可离线复现、可故障注入，所以积分/限幅/leash/校正全部剥离成无副作用函数。
+``set_joints_position`` 接收位置目标。PoseFrameIntegrator 将定位反馈映射到 SDK
+增量口径，在每个新 pose 到来时同时清零 x/y/yaw 的指令积分。转换函数便于离线复现；
+SDK 位置误差检查由控制核心执行，速度与加减速限制由上层导航负责。
 """
 
 import collections
@@ -55,12 +54,114 @@ class ChassisConfigError(ValueError):
 
 
 def wrap_angle(theta):
-    """把角度归一到 (-pi, pi]。
-
-    theta 是累积积分量，不归一会让 ``theta`` 无界增长；而 leash 与外环校正都要
-    算角度差，不归一时 179° 与 -179° 的差会算成 358° 而不是 2°，直接误触发。
-    """
+    """定位朝向和几何误差取最短角；SDK 位置目标不得调用此函数。"""
     return math.atan2(math.sin(theta), math.cos(theta))
+
+
+class PoseFrameIntegrator:
+    """SDK 目标 = 最新反馈基准 + 本帧指令积分，三个轴同时换帧。
+
+    无前瞻模式累加 SLAM 的局部测量增量；有限前瞻模式由控制核心按 SLAM
+    时间戳查询 SDK 历史位置，重设接口基准。两种模式均不保留上一帧未完成的
+    指令积分。SDK 基准只服务于位置接口，导航到位判断仍使用定位源。
+    """
+
+    def __init__(self, pose, stamp, sdk_pose):
+        self.stamp = stamp
+        self.pose = list(pose)
+        self.anchor = list(sdk_pose)
+        self.integral = [0.0, 0.0, 0.0]
+        self.velocity = [0.0, 0.0, 0.0]
+
+    def observe(self, pose, stamp):
+        if stamp <= self.stamp:
+            return False
+        dx, dy = local_pose_displacement(self.pose, pose)
+        self.anchor = [self.anchor[IDX_X] + dx, self.anchor[IDX_Y] + dy,
+                       self.anchor[IDX_THETA] + wrap_angle(pose[IDX_THETA] - self.pose[IDX_THETA])]
+        self.stamp = stamp
+        self.pose = list(pose)
+        self.integral = [0.0, 0.0, 0.0]
+        return True
+
+    def reanchor_axis(self, axis, actual):
+        """Set one axis' SDK interface reference and discard its frame integral."""
+        self.anchor[axis] = actual
+        self.integral[axis] = 0.0
+
+    def target(self, velocity, dt):
+        base = [a + delta for a, delta in zip(self.anchor, self.integral)]
+        return integrate_step_dt(base, velocity, dt)
+
+    def commit(self, velocity, dt):
+        """只提交实际写入 SDK 的本拍增量。"""
+        self.integral = [delta + v * dt for delta, v in zip(self.integral, velocity)]
+
+    def preview_target(self, velocity, dt, times, xy_limit, theta_limit):
+        """有限位置前瞻；限的是目标提前量，不改变上游速度指令。
+
+        原地等待时不累积，换向时丢弃本帧同轴旧方向积分。
+        上层负责在零速边沿以 SDK 实测位置撤掉前瞻，并保持该位置。
+        """
+        delta = [((old if v * prev > 0.0 else 0.0) + v * dt + v * h)
+                 if v != 0.0 else 0.0
+                 for old, v, prev, h in zip(self.integral, velocity, self.velocity, times)]
+        xy = math.hypot(delta[0], delta[1])
+        if xy > xy_limit:
+            delta[0] *= xy_limit / xy
+            delta[1] *= xy_limit / xy
+        delta[2] = max(-theta_limit, min(theta_limit, delta[2]))
+        result = [base + d for base, d in zip(self.anchor, delta)]
+        return result
+
+    def commit_preview(self, velocity, dt):
+        self.integral = [(old if v * prev > 0.0 else 0.0) + v * dt
+                         for old, v, prev in zip(self.integral, velocity, self.velocity)]
+        self.velocity = list(velocity)
+
+
+class SdkPoseHistory:
+    """SDK read-time samples aligned to localization time, without accumulating frame bias."""
+
+    def __init__(self, duration):
+        self.duration = duration
+        self.samples = collections.deque()
+
+    def append(self, stamp, pose):
+        if self.samples and stamp < self.samples[-1][0]:
+            self.samples.clear()
+        if self.samples and stamp == self.samples[-1][0]:
+            self.samples.pop()
+        self.samples.append((stamp, list(pose)))
+        while len(self.samples) > 2 and self.samples[1][0] < stamp-self.duration:
+            self.samples.popleft()
+
+    def at(self, stamp):
+        if not self.samples:
+            raise ValueError('SDK pose history is empty')
+        if stamp <= self.samples[0][0]:
+            return list(self.samples[0][1])
+        for (ta, a), (tb, b) in zip(self.samples, list(self.samples)[1:]):
+            if stamp <= tb:
+                ratio = (stamp-ta)/(tb-ta)
+                # SDK theta is a continuous position coordinate, including its turn count.
+                return [a[i]+ratio*(b[i]-a[i]) for i in range(CHASSIS_DOF_S1)]
+        return list(self.samples[-1][1])
+
+
+def local_pose_displacement(previous, current):
+    """SLAM 帧间位移转成 SDK 示例使用的本体行程；转弯按 SE(2) 对数映射。
+
+    使用最短 yaw 差，假定相邻定位帧的真实转角小于 pi。sinc 补偿避免将圆弧
+    的弦长当作本体行程；不能恢复两帧间未被测量的复杂运动。
+    """
+    turn = wrap_angle(current[IDX_THETA] - previous[IDX_THETA])
+    mid_yaw = previous[IDX_THETA] + 0.5 * turn
+    chord = (current[IDX_X] - previous[IDX_X], current[IDX_Y] - previous[IDX_Y])
+    dx, dy = rotate_vec2_transposed(rot_z(mid_yaw), chord)
+    half = 0.5 * turn
+    scale = half / math.sin(half) if abs(half) > 1e-6 else 1.0 + half * half / 6.0
+    return dx * scale, dy * scale
 
 
 def rot_z(theta):
@@ -109,97 +210,6 @@ def to_local_velocity(twist_xy_wz, input_frame, theta):
         return (vx, vy, wz)
     local_xy = rotate_vec2_transposed(rot_z(theta), (vx, vy))
     return (local_xy[0], local_xy[1], wz)
-
-
-def clamp_velocity(twist_xy_wz, max_vel_xy, max_vel_theta):
-    """速度限幅。xy 按**合成模长**等比缩放，不是逐轴裁剪。
-
-    逐轴裁剪会改变运动方向：(1.0, 1.0) 逐轴裁到 (1.0, 1.0) 模长是 1.41 超限，
-    而裁成 (0.707, 0.707) 才是既满足限幅又保持方向。方向被改会让 Nav2 的
-    路径跟踪出现它无法解释的横向偏差。
-    """
-    if max_vel_xy <= 0.0 or max_vel_theta <= 0.0:
-        raise ChassisConfigError(
-            'max_vel_xy=%r / max_vel_theta=%r 必须为正' % (max_vel_xy, max_vel_theta))
-    vx, vy, wz = twist_xy_wz
-    norm_xy = math.hypot(vx, vy)
-    if norm_xy > max_vel_xy:
-        scale = max_vel_xy / norm_xy
-        vx, vy = vx * scale, vy * scale
-    wz = max(-max_vel_theta, min(max_vel_theta, wz))
-    return (vx, vy, wz)
-
-
-def slew_limit_velocity(target, previous, max_accel_xy, max_accel_theta, dt,
-                        max_accel_xy_up=None):
-    """速度斜率限制（加速度限幅）。与 nav2 velocity_smoother 的 max_accel 取齐。
-
-    没有这一层时，Nav2 一个突变的 Twist 会在一个积分周期内变成位置阶跃，
-    底盘会猛冲。
-
-    ═══════════ max_accel_xy_up：非对称限幅，只限**加速** ═══════════
-    2026-09-08 实机：RPP 一进 FOLLOW 就要 0.5m/s，桥接按 max_accel_xy=2.5
-    在 0.20s 内把指令拉到 0.5，而底盘真实加速度实测只有 ~0.39m/s²（由
-    "0.0872m / 0.67s 从静止起"反解），要 1.29s 才到 0.5。
-    **底盘是位置指令开环积分链**：加速段指令跑在实际前面积下的位置欠账，
-    在随后的匀速段**永不归还**（指令与实际同步前进，差值不变），而 leash
-    预算是总量制。纯加速暂态的欠账：
-
-        Δ = v²/2 × (1/a_实际 − 1/a_指令) ≈ 1.09·v²
-        v=0.5 → 0.272m  >  leash_xy_m 0.250m   ← 每次从静止起步都必然跳闸
-        v=0.3 → 0.098m  =  39% 预算
-        v=0.2 → 0.044m  =  17% 预算（与 MPPI 那次 leash 从未跳吻合）
-
-    实测跳闸值 0.2509m（0.0124 + 0.2385 两窗累加）对 0.250m 阈值，吻合 0.4%。
-    所以瓶颈**不是速度上限**，是指令加速度比底盘快 6.4 倍。
-
-    **减速方向刻意不限**：减速时底盘因惯性反超指令，欠账是**缩小**的 ——
-    同一份日志里实测过（旋转段 `指令 -0.4158 / 实际 -0.5484`）。而
-    max_accel_xy 同时管刹车，一起压下去会把停车距离从实测的 0.069~0.100m
-    拉长到 0.36m，那是拿一个真实的安全裕度换另一个。
-
-    ``max_accel_xy_up=None`` 时退化为对称限幅（与本函数原行为一致）。
-
-    ⚠ xy 按**二维矢量**限幅，不是逐轴。逐轴符号判据不是旋转不变的
-    （本项目已在"越界判据"上踩过一次：横向分量能合法顶到
-    sqrt(0.10²+0.05²)）。逐轴限幅在斜向上放行 sqrt(2) 倍的加速度，
-    而"加速还是减速"只有对速度**模长**才有定义。
-    模长不减（含等模长的方向变化）一律走 up 限幅，取保守侧。
-    theta 是标量，仍按原样逐轴处理。
-    """
-    if dt <= 0.0:
-        raise ChassisConfigError('dt=%r 必须为正' % (dt,))
-    if max_accel_xy <= 0.0 or max_accel_theta <= 0.0:
-        raise ChassisConfigError(
-            'max_accel_xy=%r / max_accel_theta=%r 必须为正'
-            % (max_accel_xy, max_accel_theta))
-    if max_accel_xy_up is not None and max_accel_xy_up <= 0.0:
-        raise ChassisConfigError(
-            'max_accel_xy_up=%r 必须为正或 None' % (max_accel_xy_up,))
-
-    dx = target[0] - previous[0]
-    dy = target[1] - previous[1]
-    a_xy = max_accel_xy
-    if max_accel_xy_up is not None:
-        speed_t = math.hypot(target[0], target[1])
-        speed_p = math.hypot(previous[0], previous[1])
-        if speed_t >= speed_p:
-            a_xy = max_accel_xy_up
-    max_delta_xy = a_xy * dt
-    delta_norm = math.hypot(dx, dy)
-    if delta_norm > max_delta_xy:
-        scale = max_delta_xy / delta_norm
-        dx *= scale
-        dy *= scale
-
-    dth = target[2] - previous[2]
-    max_delta_th = max_accel_theta * dt
-    if dth > max_delta_th:
-        dth = max_delta_th
-    elif dth < -max_delta_th:
-        dth = -max_delta_th
-
-    return (previous[0] + dx, previous[1] + dy, previous[2] + dth)
 
 
 TickDt = collections.namedtuple('TickDt', 'dt clamped reason raw')
@@ -264,7 +274,7 @@ def integrate_step_dt(pos_cmd, local_velocity, dt):
         dt: 步长（秒），必须为正。调用方应已用 :func:`measure_tick_dt` 钳位。
 
     Returns:
-        新的 [x, y, theta]，theta 已归一。
+        新的 [x, y, theta]，theta 保留 SDK 连续角度分支。
     """
     if dt <= 0.0:
         raise ChassisConfigError('dt=%r 必须为正' % (dt,))
@@ -276,7 +286,7 @@ def integrate_step_dt(pos_cmd, local_velocity, dt):
     return [
         pos_cmd[IDX_X] + local_velocity[0] * dt,
         pos_cmd[IDX_Y] + local_velocity[1] * dt,
-        wrap_angle(pos_cmd[IDX_THETA] + local_velocity[2] * dt),
+        pos_cmd[IDX_THETA] + local_velocity[2] * dt,
     ]
 
 

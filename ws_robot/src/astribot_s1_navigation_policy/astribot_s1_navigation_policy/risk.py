@@ -3,7 +3,8 @@ from dataclasses import dataclass
 import math
 
 from .contracts import finite
-from .motion_geometry import body_pose, stopping_horizon, sampling_margin
+from .motion_geometry import stopping_horizon
+from .continuous_sweep import motion_clearance
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class Risk:
     obstacle_ids: tuple[str,...]
     moving: bool
     uncertain: bool
+    immediate_obstacle_ids: tuple[str,...] = ()
 
 
 def path_position(path, distance, fallback):
@@ -83,6 +85,7 @@ def evaluate_risk(world, robot, path, profile, speed_limit=None):
     current=clearance_many(robot.x,robot.y,robot.yaw,lower,upper,profile)
     minimum=float(np.min(current));immediate=bool(np.any(current<=0))
     blocked=set(np.flatnonzero(current<=0).tolist());first=float('inf')
+    immediate_owners=set(blocked)
     from .world_geometry import prediction_rows
     batch=prediction_rows(world)
     if batch.owners.size:
@@ -97,14 +100,15 @@ def evaluate_risk(world, robot, path, profile, speed_limit=None):
             first=float(np.min(offsets[hits]));blocked.update(owners[hits].tolist())
         command=(robot.vx,robot.vy,robot.wz)
         stop_time=stopping_horizon(command,profile)
-        active=offsets<=stop_time+profile.prediction_step_s;t=np.minimum(offsets[active],stop_time)
+        previous=np.r_[0.,offsets[:-1]]
+        previous[np.r_[True,owners[1:]!=owners[:-1]]]=0.
+        active=previous<stop_time
         swept=prediction_rows(world,swept=True)
-        bx,by,theta=body_pose(command,t,np)
-        c,s=math.cos(robot.yaw),math.sin(robot.yaw)
-        actual=clearance_many(robot.x+c*bx-s*by,robot.y+s*bx+c*by,robot.yaw+theta,
-                             swept.lower[active],swept.upper[active],profile,
-                             sampling_margin(command,profile,profile.prediction_step_s))
+        actual=motion_clearance(command,previous[active],np.minimum(offsets[active],stop_time),
+                                swept.lower[active],swept.upper[active],profile,
+                                (robot.x,robot.y,robot.yaw))
         immediate=immediate or stop_time>profile.prediction_horizon_s or bool(np.any(actual<=0))
+        immediate_owners.update(swept.owners[active][actual<=0].tolist())
     selected=[tracks[i] for i in sorted(blocked)]
     def moving_track(track):
         model=track.prediction_model
@@ -118,4 +122,5 @@ def evaluate_risk(world, robot, path, profile, speed_limit=None):
     moving=any(moving_track(track) for track in selected)
     uncertain=bool(world.unassociated)
     return Risk(bool(blocked) or uncertain,immediate,minimum,first,
-                tuple(t.fused_track_id for t in selected),moving,uncertain)
+                tuple(t.fused_track_id for t in selected),moving,uncertain,
+                tuple(tracks[i].fused_track_id for i in sorted(immediate_owners)))
