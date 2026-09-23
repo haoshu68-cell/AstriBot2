@@ -85,7 +85,7 @@ def main():
     from unique_identifier_msgs.msg import UUID
     from nav2_msgs.action import NavigateToPose
     from std_msgs.msg import String
-    from astribot_navigation_msgs.msg import ArmHoldStatus, RobotGeometryState, NavigationEnvelopeV2, EnvelopeApplyStatus, RobotEnvelope, NavigationExecutionStatus
+    from astribot_navigation_msgs.msg import ArmHoldStatus, RobotGeometryState, NavigationEnvelopeV2, EnvelopeApplyStatus, RobotEnvelope, NavigationExecutionStatus, MotionConstraint
     from astribot_navigation_msgs.srv import SetFixedEnvelope
     from astribot_s1_transport_native.action import HoldResources
     from astribot_s1_transport_native.srv import RenewHold
@@ -98,6 +98,7 @@ def main():
     parser.add_argument('--profile',type=Path,required=True)
     parser.add_argument('--cold-start-receipt',type=Path,required=True,help='own runner receipt for a fresh navigator with no preceding goal writers')
     parser.add_argument('--scenario',choices=('all','return_90','hold_cancel','consumer_pause'),default='all',help='run faults independently when another scenario has a separately recorded failure')
+    parser.add_argument('--constraint-deadline-audit',action='store_true',help='record every policy state and proposed wire lease for source deadline pairing')
     args=parser.parse_args()
     owner=json.loads(args.owner.read_text())
     verify_owner(owner,args.session,args.source)
@@ -180,10 +181,20 @@ def main():
     diagnostic_stream=(args.output/'policy_diagnostics.jsonl').open('w')
     def diagnostic(key,msg):
         wall=time.monotonic()
-        if wall-diagnostic_at.get(key,0.)<.2:return
+        if not (args.constraint_deadline_audit and key in ('state','protection')) and wall-diagnostic_at.get(key,0.)<.2:return
         diagnostic_at[key]=wall
         value=dict(source=key,wall=wall,ros_s=ros(),data=json.loads(msg.data))
         diagnostic_stream.write(json.dumps(value)+'\n');diagnostic_stream.flush()
+    def constraint_wire(msg,source):
+        row=dict(source=source,wall=time.monotonic(),ros_s=ros(),data=dict(
+            stamp_ns=msg.stamp.sec*10**9+msg.stamp.nanosec,epoch=msg.epoch,sequence=msg.sequence,
+            lease_s=msg.lease_s,hold=msg.hold,reason=msg.reason,
+            max_linear_speed=msg.max_linear_speed,max_angular_speed=msg.max_angular_speed))
+        diagnostic_stream.write(json.dumps(row)+'\n');diagnostic_stream.flush()
+    if args.constraint_deadline_audit:
+        node.create_subscription(MotionConstraint,'/navigation_policy/proposed_constraint',lambda m:constraint_wire(m,'proposed_constraint_wire'),100)
+        node.create_subscription(MotionConstraint,'/navigation_policy/constraint',lambda m:constraint_wire(m,'final_constraint_wire'),100)
+        node.create_subscription(String,'/navigation_policy/protection_state',lambda m:diagnostic('protection',m),100)
     for key in ('observation','state'):
         node.create_subscription(String,'/navigation_policy/'+key,lambda m,k=key:diagnostic(k,m),10)
     def scan_diagnostic(msg):

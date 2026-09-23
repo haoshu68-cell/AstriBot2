@@ -1,0 +1,16 @@
+--- a/ws_robot/src/astribot_s1_path_tracking/src/arrival_controller.cpp
++++ b/ws_robot/src/astribot_s1_path_tracking/src/arrival_controller.cpp
+@@ -567,7 +567,12 @@
+         geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
+       }
+       RCLCPP_ERROR(logger_, "POLICY_LEASE_EVIDENCE %s", policy_lease_.freshnessDetail(clock_->now()).c_str());
+-      fail("POLICY_LEASE_EXPIRED");
++      slip_.pause();xy_settling_.reset();yaw_settling_.reset();holding_=false;
++      publishPhase("POLICY_LEASE_WAIT");
++      recordCornerPause(current,velocity,now);
++      // Nav2 publishes zero while retrying under its existing failure_tolerance.
++      // A transient expiry must not latch error_ and reject a later fresh lease.
++      throw nav2_core::PlannerException("PATH_TRACKING/POLICY_LEASE_EXPIRED");
+     }
+     if (policy_paused_ && policy_tick_>=0) {
+       const double duration=std::max(0.0,now-policy_tick_);
