@@ -5,7 +5,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.parameter_descriptions import ParameterValue
 from astribot_logging.launch import Node
 
@@ -13,9 +13,18 @@ from astribot_logging.launch import Node
 def generate_launch_description():
     config = get_package_share_directory('astribot_s1_moveit_config')
     description = get_package_share_directory('astribot_s1_description')
-    camera_profile = os.path.join(description, 'config/camera_rgbd_transport.yaml')
-    with open(os.path.join(config, 'config/astribot_s1.srdf')) as stream:
-        semantic = stream.read()
+    # Share the navigation baseline rather than maintaining a manipulation-only
+    # camera default. Explicit session arguments still override each field.
+    preset_path = os.path.join(description, 'config/simulation_navigation_full/launch_preset.yaml')
+    with open(preset_path, encoding='utf-8') as stream:
+        preset = yaml.safe_load(stream)
+    if preset.get('schema_version') != 1:
+        raise ValueError('Unsupported shared navigation camera preset')
+    camera_defaults = preset['parameters']
+    camera_paths = ('camera_profile', 'torso_camera_profile', 'camera_calibration_dir', 'camera_mounts_profile')
+    camera_switches = ('use_camera', 'use_wrist_cameras', 'use_stereo_cameras')
+    if any(type(camera_defaults[name]) is not bool for name in camera_switches):
+        raise ValueError('Shared camera sensor switches must be boolean')
     with open(os.path.join(config, 'config/kinematics.yaml')) as stream:
         kinematics = yaml.safe_load(stream)
     with open(os.path.join(config, 'config/joint_limits.yaml')) as stream:
@@ -31,17 +40,27 @@ def generate_launch_description():
         ompl[group]['longest_valid_segment_fraction'] = 0.0004
     ompl['planner_configs']['RRTConnectConfig']['range'] = 0.2
     model = {'use_sim_time': True,
-             'robot_description': ParameterValue(Command(['xacro ', os.path.join(description, 'urdf/astribot_s1.xacro'),
-                 ' robot_name:=astribot_s1 camera_profile:=', camera_profile]), value_type=str),
-             'robot_description_semantic': semantic, 'robot_description_kinematics': kinematics,
+             # The included move_group launch resolves these first. All three
+             # consumers use identical URDF/SRDF bytes, including mount contacts.
+             'robot_description': ParameterValue(LaunchConfiguration('resolved_robot_description'), value_type=str),
+             'robot_description_semantic': ParameterValue(LaunchConfiguration('resolved_robot_semantic'), value_type=str),
+             'robot_description_kinematics': kinematics,
              'robot_description_planning': limits}
     return LaunchDescription([
+        DeclareLaunchArgument('use_lidar', default_value='true', choices=['true', 'false']),
+        *[DeclareLaunchArgument(name, default_value=str(camera_defaults[name]).lower(), choices=['true', 'false'])
+          for name in camera_switches],
+        *[DeclareLaunchArgument(name, default_value=os.path.normpath(os.path.join(os.path.dirname(preset_path), camera_defaults[name])))
+          for name in camera_paths],
+        DeclareLaunchArgument('allow_trajectory_execution', default_value='true', choices=['true', 'false']),
         DeclareLaunchArgument('mtc_velocity_scaling', default_value='0.1'),
         DeclareLaunchArgument('mtc_acceleration_scaling', default_value='0.1'),
         DeclareLaunchArgument('mtc_joint_limit_margin_rad', default_value='0.1'),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(os.path.join(config, 'launch/move_group.launch.py')),
-                                 launch_arguments={'use_sim_time': 'true', 'camera_profile': camera_profile,
-                                     'extra_capabilities': 'astribot_s1_manipulation/CancellableExecution',
+                                 launch_arguments={'use_sim_time': 'true',
+                                     **{name: LaunchConfiguration(name) for name in ('use_lidar', *camera_switches, *camera_paths)},
+                                     'allow_trajectory_execution': LaunchConfiguration('allow_trajectory_execution'),
+                                     'extra_capabilities': PythonExpression(["'astribot_s1_manipulation/CancellableExecution' if '", LaunchConfiguration('allow_trajectory_execution'), "' == 'true' else ''"]),
                                      'disable_capabilities': 'move_group/MoveGroupExecuteTrajectoryAction'}.items()),
         Node(package='astribot_s1_manipulation', executable='transport_skill_planner', output='screen',
              parameters=[model]),
