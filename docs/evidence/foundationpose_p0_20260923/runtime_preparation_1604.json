@@ -1,0 +1,58 @@
+{
+  "schema": "astribot.foundationpose.runtime_preparation/1",
+  "recorded_at": "2026-09-23T08:04:18.842436+00:00",
+  "docker_toolkit_installation": "PASS",
+  "gpu_device_visibility": "PASS",
+  "tensorrt_image_pull": "INTERRUPTED_FOR_NAVIGATION_OWNERSHIP",
+  "pull_exit_code": 130,
+  "backend_image_build": "NOT_RUN",
+  "engine_build": "NOT_RUN",
+  "real_fixture_inference": "NOT_RUN",
+  "validation_script_cpu_tests": {
+    "passed": 15,
+    "scope": "preparation and output acceptance boundaries; not backend inference"
+  },
+  "real_input_cpu_parse": {
+    "passed": 8,
+    "scope": "official sample plus seven project single frames"
+  },
+  "resource_owner": "navigation task 01a09962-8e15-71e0-b9a6-a92798318698",
+  "resume_condition": "explicit cleanup/release from owner, never wall-clock expiry alone",
+  "image_build_context": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/container_context_v1",
+  "context_files": {
+    "Dockerfile": {
+      "sha256": "d3da11442147fa215afa87dc1093f7e4d37b811778d08886a2f027e2c694c3ef",
+      "bytes": 2009
+    },
+    "ros_key.gpg": {
+      "sha256": "4a91c49af0d6f0016108b93698782b596c27ccd836937e18e0e36c3347dc602f",
+      "bytes": 1167
+    },
+    "isaac_repos.key": {
+      "sha256": "d45fbd909e89914960a66dba17d4c659adf908ab4d6fe2cf55381e9ffe5ce59d",
+      "bytes": 3455
+    }
+  },
+  "files": {
+    "tools/vision/foundationpose/Dockerfile.p0": {
+      "sha256": "d3da11442147fa215afa87dc1093f7e4d37b811778d08886a2f027e2c694c3ef",
+      "bytes": 2009
+    },
+    "tools/vision/foundationpose/build_engines.sh": {
+      "sha256": "10efec5b9f4441e6b5102d580f055ef4bafa337867d3c9a01884b6da63d43a4c",
+      "bytes": 2993
+    },
+    "tools/vision/foundationpose/p0_fixture.launch.py": {
+      "sha256": "27f771c48d1690b158797130a1b9aa6cb3c897c5f9b18a413f47221dd8f25fbb",
+      "bytes": 1813
+    },
+    "tools/vision/foundationpose/validate_fixture.py": {
+      "sha256": "6eab7cceedd34a8fffdfcecc14b6b4868a3156fbfd2bf3a5980a3b0a6aae400e",
+      "bytes": 9945
+    },
+    "tools/vision/foundationpose/test_validate_fixture.py": {
+      "sha256": "e67967c22c164f4a27977cdd817a29ba0261d0474e5d9e8cd0779b3fdca03b1b",
+      "bytes": 2328
+    }
+  }
+}

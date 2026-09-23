@@ -1,0 +1,915 @@
+{
+  "cache": "/home/yjh/.cache/astribot/foundationpose/p0_20260923",
+  "cad": {
+    "T_mesh_object": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        -0.027499999999999997
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        -0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        -0.024999999999999998
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "T_object_mesh": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.027499999999999997
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.024999999999999998
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "assets": {
+      "albedo.png": {
+        "bytes": 79,
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/cad/albedo.png",
+        "sha256": "41414f1bba00f82357dac02a3a1774a2d6a888be2e2ec5706de4ba91488ef153"
+      },
+      "asymmetric_union.obj": {
+        "bytes": 5788,
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/cad/asymmetric_union.obj",
+        "sha256": "b250aba126a9f8d24cfbe43905aba4ddcf9ee330270c29e030c7adb848af5db5"
+      },
+      "centered.obj": {
+        "bytes": 6103,
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/cad/centered.obj",
+        "sha256": "a244221e54be9a7bed9292d91dd75428f6dd27c02364c7675783d163d17bb3f9"
+      },
+      "material.mtl": {
+        "bytes": 80,
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/cad/material.mtl",
+        "sha256": "ba05b7f1d15da7e5a8c5c7d83a099c5c5a065fe533511771a19e553a3c679f59"
+      }
+    },
+    "backend_output_frame_validation": "NOT_RUN",
+    "business_mesh": "asymmetric_union.obj",
+    "collision_mesh": "asymmetric_union.obj",
+    "frozen_source": {
+      "bytes": 328,
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/cad/source_geometry.json",
+      "sha256": "a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f"
+    },
+    "geometry_validation": {
+      "boundary_edges": 0,
+      "bounds_m": [
+        [
+          -0.09,
+          -0.05,
+          -0.04
+        ],
+        [
+          0.145,
+          0.05,
+          0.09
+        ]
+      ],
+      "coordinate_rounding_m": 1e-12,
+      "dimensions_m": [
+        0.235,
+        0.1,
+        0.13
+      ],
+      "euler_characteristic": 2,
+      "exact_union_volume_m3": 0.0017489999999999995,
+      "mesh_center_in_object_m": [
+        0.027499999999999997,
+        0.0,
+        0.024999999999999998
+      ],
+      "method": "axis-aligned arrangement exposed faces; no approximate Boolean mesh",
+      "nonmanifold_edges": 0,
+      "object_frame": "asymmetric_union",
+      "signed_volume_m3": 0.001749000000000001,
+      "solid_components": 1,
+      "status": "PASS",
+      "triangles": 212,
+      "units": "m",
+      "vertex_links": "one closed cycle per vertex",
+      "vertices": 108
+    },
+    "material_scope": "uniform synthetic magenta fixture; not a measured real-object texture",
+    "mesh": "centered.obj",
+    "model_id": "asymmetric_union_v1",
+    "object_frame": "asymmetric_union",
+    "schema": "astribot.foundationpose.cad/1",
+    "source": {
+      "bytes": 328,
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_object_pose_core/models/asymmetric_union.visibility.json",
+      "sha256": "a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f"
+    },
+    "symmetry": "none",
+    "texture": "albedo.png",
+    "transform_convention": "T_A_B maps B-frame points into A; T_camera_object=T_camera_mesh*T_mesh_object",
+    "units": "m"
+  },
+  "consumer_boundary": {
+    "algorithm_root": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs",
+    "evaluation_only_root": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only",
+    "instruction": "Give estimator only algorithm_inputs and cad. Never mount evaluation_only or this manifest into estimator. Directory separation alone is not OS access control."
+  },
+  "cpu_preparation": "BLOCKED",
+  "dataset": {
+    "continuous_sequence": false,
+    "independent_snapshots": 7,
+    "scenarios": [
+      {
+        "algorithm_files": {
+          "camera.json": {
+            "bytes": 945,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/clear/camera.json",
+            "sha256": "7b489db75af3fd64707fdc2fcdba345014d808209465e348baf13723879214d4"
+          },
+          "depth.npz": {
+            "bytes": 435674,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/clear/depth.npz",
+            "sha256": "a6cf127fb15867598563e96fa2a94a624494bd43c8da3fbc316e4b5a69539096"
+          },
+          "mask.png": {
+            "bytes": 1074,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/clear/mask.png",
+            "sha256": "9dd328a6c13b836d7d598783d54f5bb9a793857e57fc524596dc348d2c14167e"
+          },
+          "rgb.png": {
+            "bytes": 24780,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/clear/rgb.png",
+            "sha256": "4654ebad6d3796cce08c60781cf90ab290790559a5ec7bb4f2c1c83976bc3a23"
+          }
+        },
+        "calibration_revision": 1,
+        "capture_stamp_ns": 1043700000000,
+        "current_camera_geometry_validated": false,
+        "depth_encoding": "32FC1",
+        "depth_units": "m",
+        "evaluation_files": {
+          "camera_info.json": {
+            "bytes": 3200,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/clear/camera_info.json",
+            "sha256": "eef1b7b49e8842ee468b8d04f76472849fae8b2ca0cd4944443b73b73383d1bb"
+          },
+          "scene.xyz": {
+            "bytes": 177457,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/clear/scene.xyz",
+            "sha256": "fa4d6937fe0d45e83190ae11bfc2b26edc3bda147696c99cbb35990dd00975b1"
+          },
+          "truth.json": {
+            "bytes": 1677,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/clear/truth.json",
+            "sha256": "befe4472d4b552b2ea098f37e8b4787eb50b0e9237d0e0bcff5063d98df8c19a"
+          },
+          "truth_setup.json": {
+            "bytes": 1004,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/clear/truth_setup.json",
+            "sha256": "22b7a7bb08440e07a82739e25955f2337eeb0cb29b565742a5f7a5783dbbbf79"
+          }
+        },
+        "evaluation_scope": "static target; later independent truth sample with camera TF at image stamp",
+        "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "mask_invalid_depth_pixels": 0,
+        "mask_is_general_instance_segmentation": false,
+        "mask_pixels": 2593,
+        "mask_source": "hsv_color_fixture",
+        "rgb_encoding": "rgb8",
+        "scenario": "clear",
+        "sequence_frames": 1,
+        "shape": [
+          360,
+          640
+        ],
+        "source_epoch": "gazebo_camera",
+        "source_files": {
+          "camera_info.json": {
+            "bytes": 3200,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/clear/camera_info.json",
+            "sha256": "eef1b7b49e8842ee468b8d04f76472849fae8b2ca0cd4944443b73b73383d1bb"
+          },
+          "depth.npz": {
+            "bytes": 435674,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/clear/depth.npz",
+            "sha256": "a6cf127fb15867598563e96fa2a94a624494bd43c8da3fbc316e4b5a69539096"
+          },
+          "mask.png": {
+            "bytes": 1074,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/clear/mask.png",
+            "sha256": "9dd328a6c13b836d7d598783d54f5bb9a793857e57fc524596dc348d2c14167e"
+          },
+          "rgb.png": {
+            "bytes": 24780,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/clear/rgb.png",
+            "sha256": "4654ebad6d3796cce08c60781cf90ab290790559a5ec7bb4f2c1c83976bc3a23"
+          }
+        },
+        "status": "PASS",
+        "tf_at_capture_stamp": true,
+        "truth_sample_delta_s": 0.324,
+        "valid_depth_pixels": 134337
+      },
+      {
+        "algorithm_files": {
+          "camera.json": {
+            "bytes": 941,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/close/camera.json",
+            "sha256": "bad1bb4097b59c7c82cef35268829bc65e9fbd3a41f86870413fd28f1a50e205"
+          },
+          "depth.npz": {
+            "bytes": 439558,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/close/depth.npz",
+            "sha256": "22d2d5a29866e3ca088c840b190dee9cfa1480b2c8347264e8491c0946c7edf4"
+          },
+          "mask.png": {
+            "bytes": 1084,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/close/mask.png",
+            "sha256": "681472c149ea7628e3934d554107b5182ae056caedb92eddcf328b9c9028b702"
+          },
+          "rgb.png": {
+            "bytes": 24391,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/close/rgb.png",
+            "sha256": "589fc8ad9b0e523fd44da6c55ddf048adfb90aadaafd69954faa493f76c65143"
+          }
+        },
+        "calibration_revision": 1,
+        "capture_stamp_ns": 817900000000,
+        "current_camera_geometry_validated": false,
+        "depth_encoding": "32FC1",
+        "depth_units": "m",
+        "evaluation_files": {
+          "camera_info.json": {
+            "bytes": 3190,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/close/camera_info.json",
+            "sha256": "3381a6542a1155600afa58fd48eee481a1a85f531e4aeb39680409680fd67a3b"
+          },
+          "scene.xyz": {
+            "bytes": 401211,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/close/scene.xyz",
+            "sha256": "86728cc5566e216985ae4e6b795a6cdfa32b2d3e09af9e3862a54c9f1ab851ab"
+          },
+          "truth.json": {
+            "bytes": 1649,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/close/truth.json",
+            "sha256": "c2f1cc9d2615cbcc72dc1f70bcb8d50151963072c7428ad5b9f5b471bbb65a98"
+          },
+          "truth_setup.json": {
+            "bytes": 972,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/close/truth_setup.json",
+            "sha256": "63c99ab8848ba44e2baeb1f3a8a4055c484ed7569e9a8b44d6dbe10b918ce993"
+          }
+        },
+        "evaluation_scope": "static target; later independent truth sample with camera TF at image stamp",
+        "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "mask_invalid_depth_pixels": 0,
+        "mask_is_general_instance_segmentation": false,
+        "mask_pixels": 5844,
+        "mask_source": "hsv_color_fixture",
+        "rgb_encoding": "rgb8",
+        "scenario": "close",
+        "sequence_frames": 1,
+        "shape": [
+          360,
+          640
+        ],
+        "source_epoch": "gazebo_camera",
+        "source_files": {
+          "camera_info.json": {
+            "bytes": 3190,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/close/camera_info.json",
+            "sha256": "3381a6542a1155600afa58fd48eee481a1a85f531e4aeb39680409680fd67a3b"
+          },
+          "depth.npz": {
+            "bytes": 439558,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/close/depth.npz",
+            "sha256": "22d2d5a29866e3ca088c840b190dee9cfa1480b2c8347264e8491c0946c7edf4"
+          },
+          "mask.png": {
+            "bytes": 1084,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/close/mask.png",
+            "sha256": "681472c149ea7628e3934d554107b5182ae056caedb92eddcf328b9c9028b702"
+          },
+          "rgb.png": {
+            "bytes": 24391,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/close/rgb.png",
+            "sha256": "589fc8ad9b0e523fd44da6c55ddf048adfb90aadaafd69954faa493f76c65143"
+          }
+        },
+        "status": "PASS",
+        "tf_at_capture_stamp": true,
+        "truth_sample_delta_s": 0.325,
+        "valid_depth_pixels": 136378
+      },
+      {
+        "algorithm_files": {
+          "camera.json": {
+            "bytes": 941,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/far/camera.json",
+            "sha256": "0482ef2f32021f7fd63e9a8947022c3ecae4be8b2f557fed673d8fbbb1289492"
+          },
+          "depth.npz": {
+            "bytes": 433866,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/far/depth.npz",
+            "sha256": "284a6c8299b0c77537960a70cd4ceda5893e48e52f09cda6737504090e49f98b"
+          },
+          "mask.png": {
+            "bytes": 1053,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/far/mask.png",
+            "sha256": "883f0278495326f88be0919bff8eef39fbf91576018ac45df0b38aa52f2b13f1"
+          },
+          "rgb.png": {
+            "bytes": 25017,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/far/rgb.png",
+            "sha256": "e1dd10b03e18b4436167b8a0c042d0c18775d28990d59de9db725131b9467f6c"
+          }
+        },
+        "calibration_revision": 1,
+        "capture_stamp_ns": 764500000000,
+        "current_camera_geometry_validated": false,
+        "depth_encoding": "32FC1",
+        "depth_units": "m",
+        "evaluation_files": {
+          "camera_info.json": {
+            "bytes": 3170,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/far/camera_info.json",
+            "sha256": "cc592a739dc0860c008ee572c947c95a15b569f952551dfac40452cdb0900372"
+          },
+          "scene.xyz": {
+            "bytes": 116847,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/far/scene.xyz",
+            "sha256": "11fd926f46eae7f9cb4b72e540d480ddb8cdff8eefa7805a896514de0066df8d"
+          },
+          "truth.json": {
+            "bytes": 1640,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/far/truth.json",
+            "sha256": "5fa3490bd276206eba234ec44abb6b9d542e874c4f5f530e1d6580741ba61a96"
+          },
+          "truth_setup.json": {
+            "bytes": 1002,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/far/truth_setup.json",
+            "sha256": "30038c10ff0616558b63d7d7b185489d2dd2bd79c1daf658df303134dc7acb21"
+          }
+        },
+        "evaluation_scope": "static target; later independent truth sample with camera TF at image stamp",
+        "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "mask_invalid_depth_pixels": 0,
+        "mask_is_general_instance_segmentation": false,
+        "mask_pixels": 1710,
+        "mask_source": "hsv_color_fixture",
+        "rgb_encoding": "rgb8",
+        "scenario": "far",
+        "sequence_frames": 1,
+        "shape": [
+          360,
+          640
+        ],
+        "source_epoch": "gazebo_camera",
+        "source_files": {
+          "camera_info.json": {
+            "bytes": 3170,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/far/camera_info.json",
+            "sha256": "cc592a739dc0860c008ee572c947c95a15b569f952551dfac40452cdb0900372"
+          },
+          "depth.npz": {
+            "bytes": 433866,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/far/depth.npz",
+            "sha256": "284a6c8299b0c77537960a70cd4ceda5893e48e52f09cda6737504090e49f98b"
+          },
+          "mask.png": {
+            "bytes": 1053,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/far/mask.png",
+            "sha256": "883f0278495326f88be0919bff8eef39fbf91576018ac45df0b38aa52f2b13f1"
+          },
+          "rgb.png": {
+            "bytes": 25017,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/far/rgb.png",
+            "sha256": "e1dd10b03e18b4436167b8a0c042d0c18775d28990d59de9db725131b9467f6c"
+          }
+        },
+        "status": "PASS",
+        "tf_at_capture_stamp": true,
+        "truth_sample_delta_s": 0.318,
+        "valid_depth_pixels": 133790
+      },
+      {
+        "algorithm_files": {
+          "camera.json": {
+            "bytes": 941,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/near/camera.json",
+            "sha256": "827f47b8d350485d9ce9315c9cf02124208715eb53c00a6e1d39bf925ec66d9c"
+          },
+          "depth.npz": {
+            "bytes": 435439,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/near/depth.npz",
+            "sha256": "299b8c9015870eb301dc6b9d0690ec718c64535c067fe2f145421dded92f47cb"
+          },
+          "mask.png": {
+            "bytes": 1084,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/near/mask.png",
+            "sha256": "5345b5811253e140979be460665418a24494ee032d9fd58995dd11ab972c306d"
+          },
+          "rgb.png": {
+            "bytes": 24988,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/near/rgb.png",
+            "sha256": "c43eda158d1fa79b2fa8f3d457d5342249f1936b21a5d8e97bb86857e4c52f5e"
+          }
+        },
+        "calibration_revision": 1,
+        "capture_stamp_ns": 758600000000,
+        "current_camera_geometry_validated": false,
+        "depth_encoding": "32FC1",
+        "depth_units": "m",
+        "evaluation_files": {
+          "camera_info.json": {
+            "bytes": 3130,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/near/camera_info.json",
+            "sha256": "0a1d294ea7fc3d742c1c45b5437cc40ceebb43c1bd795893ac882b67f5531160"
+          },
+          "scene.xyz": {
+            "bytes": 138552,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/near/scene.xyz",
+            "sha256": "232e1011bc5f67e16224592ccf950019c612f47f3da0f1b24695924959d09308"
+          },
+          "truth.json": {
+            "bytes": 1660,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/near/truth.json",
+            "sha256": "64fa8b7b7308c60d3491bc07b20db04e34f14794263a1d2c3e752f484fe4f1cb"
+          },
+          "truth_setup.json": {
+            "bytes": 1002,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/near/truth_setup.json",
+            "sha256": "c2400d09270a01874ada6f71ac0c983fd0c00e732f25e966bd6df86016dbd9d4"
+          }
+        },
+        "evaluation_scope": "static target; later independent truth sample with camera TF at image stamp",
+        "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "mask_invalid_depth_pixels": 0,
+        "mask_is_general_instance_segmentation": false,
+        "mask_pixels": 2008,
+        "mask_source": "hsv_color_fixture",
+        "rgb_encoding": "rgb8",
+        "scenario": "near",
+        "sequence_frames": 1,
+        "shape": [
+          360,
+          640
+        ],
+        "source_epoch": "gazebo_camera",
+        "source_files": {
+          "camera_info.json": {
+            "bytes": 3130,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/near/camera_info.json",
+            "sha256": "0a1d294ea7fc3d742c1c45b5437cc40ceebb43c1bd795893ac882b67f5531160"
+          },
+          "depth.npz": {
+            "bytes": 435439,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/near/depth.npz",
+            "sha256": "299b8c9015870eb301dc6b9d0690ec718c64535c067fe2f145421dded92f47cb"
+          },
+          "mask.png": {
+            "bytes": 1084,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/near/mask.png",
+            "sha256": "5345b5811253e140979be460665418a24494ee032d9fd58995dd11ab972c306d"
+          },
+          "rgb.png": {
+            "bytes": 24988,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/near/rgb.png",
+            "sha256": "c43eda158d1fa79b2fa8f3d457d5342249f1936b21a5d8e97bb86857e4c52f5e"
+          }
+        },
+        "status": "PASS",
+        "tf_at_capture_stamp": true,
+        "truth_sample_delta_s": 0.296,
+        "valid_depth_pixels": 134216
+      },
+      {
+        "algorithm_files": {
+          "camera.json": {
+            "bytes": 941,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/occluded/camera.json",
+            "sha256": "5c954aa20ef3ead495e6bc61825bdd5c8dc36e596322b5830f2e2d1163ce75a1"
+          },
+          "depth.npz": {
+            "bytes": 432767,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/occluded/depth.npz",
+            "sha256": "0d9c2335a8b30c45a5baa9317add09d99381793fd3f2fec2567385eb6cb53f3d"
+          },
+          "mask.png": {
+            "bytes": 1179,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/occluded/mask.png",
+            "sha256": "8f6436df5a52f29a9a72b0dc7d1ca4b3eb1fabbdb0d07055a2451c6294a4ffbf"
+          },
+          "rgb.png": {
+            "bytes": 25493,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/occluded/rgb.png",
+            "sha256": "bc37019f8de50ffe6baf03ea954e474fd1f12f2c1d0021fececdf140f30dc2a4"
+          }
+        },
+        "calibration_revision": 1,
+        "capture_stamp_ns": 535000000000,
+        "current_camera_geometry_validated": false,
+        "depth_encoding": "32FC1",
+        "depth_units": "m",
+        "evaluation_files": {
+          "camera_info.json": {
+            "bytes": 3162,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/occluded/camera_info.json",
+            "sha256": "63167d4e515ecec921a96c4acc0542907d12d708e5398ace1c8854dbc8f5b055"
+          },
+          "scene.xyz": {
+            "bytes": 82416,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/occluded/scene.xyz",
+            "sha256": "6d3dda3058245458ec6c2c343e98e0cbd5168d648f112400bea6c7619691ba7c"
+          },
+          "truth.json": {
+            "bytes": 1663,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/occluded/truth.json",
+            "sha256": "e62110b4829d68e2ca997ec975158beb34b56553c5fba5c9ee425aa696f9a84a"
+          },
+          "truth_setup.json": {
+            "bytes": 1005,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/occluded/truth_setup.json",
+            "sha256": "e6ca494c55a5a57ee06dfc5232f3626a85c544eaf10f4aa4005c8655990aad96"
+          }
+        },
+        "evaluation_scope": "static target; later independent truth sample with camera TF at image stamp",
+        "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "mask_invalid_depth_pixels": 0,
+        "mask_is_general_instance_segmentation": false,
+        "mask_pixels": 1186,
+        "mask_source": "hsv_color_fixture",
+        "rgb_encoding": "rgb8",
+        "scenario": "occluded",
+        "sequence_frames": 1,
+        "shape": [
+          360,
+          640
+        ],
+        "source_epoch": "gazebo_camera",
+        "source_files": {
+          "camera_info.json": {
+            "bytes": 3162,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/occluded/camera_info.json",
+            "sha256": "63167d4e515ecec921a96c4acc0542907d12d708e5398ace1c8854dbc8f5b055"
+          },
+          "depth.npz": {
+            "bytes": 432767,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/occluded/depth.npz",
+            "sha256": "0d9c2335a8b30c45a5baa9317add09d99381793fd3f2fec2567385eb6cb53f3d"
+          },
+          "mask.png": {
+            "bytes": 1179,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/occluded/mask.png",
+            "sha256": "8f6436df5a52f29a9a72b0dc7d1ca4b3eb1fabbdb0d07055a2451c6294a4ffbf"
+          },
+          "rgb.png": {
+            "bytes": 25493,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/occluded/rgb.png",
+            "sha256": "bc37019f8de50ffe6baf03ea954e474fd1f12f2c1d0021fececdf140f30dc2a4"
+          }
+        },
+        "status": "PASS",
+        "tf_at_capture_stamp": true,
+        "truth_sample_delta_s": 0.33,
+        "valid_depth_pixels": 134246
+      },
+      {
+        "algorithm_files": {
+          "camera.json": {
+            "bytes": 941,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/tilted/camera.json",
+            "sha256": "23b5b265e2cc20b8ef55e24487223256abb5e7f13326177f30664c468ab702f4"
+          },
+          "depth.npz": {
+            "bytes": 435353,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/tilted/depth.npz",
+            "sha256": "478ae796882eee3e0ea9517071bfe7d43134a7d8e1f4ac89a75faa68a39ce82a"
+          },
+          "mask.png": {
+            "bytes": 1080,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/tilted/mask.png",
+            "sha256": "2d1ee4974ca558eea873704af9e084408c231ce76425d2429996198031e85bc0"
+          },
+          "rgb.png": {
+            "bytes": 24789,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/tilted/rgb.png",
+            "sha256": "b5311e94a352976e1439f158b7e7013bbc493f7bb85c96382c285ec2c405d317"
+          }
+        },
+        "calibration_revision": 1,
+        "capture_stamp_ns": 515800000000,
+        "current_camera_geometry_validated": false,
+        "depth_encoding": "32FC1",
+        "depth_units": "m",
+        "evaluation_files": {
+          "camera_info.json": {
+            "bytes": 3170,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/tilted/camera_info.json",
+            "sha256": "a0c801676b37dcb53aaa7d6f94c4fea05ef56fcffa055c9479d7b31418315bda"
+          },
+          "scene.xyz": {
+            "bytes": 166203,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/tilted/scene.xyz",
+            "sha256": "0f14df3c183ba314e84bf197c044c06612071d7f29158b4b9d6e6124b85f3a10"
+          },
+          "truth.json": {
+            "bytes": 1656,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/tilted/truth.json",
+            "sha256": "41d8178a5226d7e70fbc19c5f8c75e8b8fb57471e14af24af86de29419487299"
+          },
+          "truth_setup.json": {
+            "bytes": 1005,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/tilted/truth_setup.json",
+            "sha256": "07b3c9ec98776fbb1e0ae7801d73f69e61d125acf45d50ff2b5056833204d198"
+          }
+        },
+        "evaluation_scope": "static target; later independent truth sample with camera TF at image stamp",
+        "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "mask_invalid_depth_pixels": 0,
+        "mask_is_general_instance_segmentation": false,
+        "mask_pixels": 2438,
+        "mask_source": "hsv_color_fixture",
+        "rgb_encoding": "rgb8",
+        "scenario": "tilted",
+        "sequence_frames": 1,
+        "shape": [
+          360,
+          640
+        ],
+        "source_epoch": "gazebo_camera",
+        "source_files": {
+          "camera_info.json": {
+            "bytes": 3170,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/tilted/camera_info.json",
+            "sha256": "a0c801676b37dcb53aaa7d6f94c4fea05ef56fcffa055c9479d7b31418315bda"
+          },
+          "depth.npz": {
+            "bytes": 435353,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/tilted/depth.npz",
+            "sha256": "478ae796882eee3e0ea9517071bfe7d43134a7d8e1f4ac89a75faa68a39ce82a"
+          },
+          "mask.png": {
+            "bytes": 1080,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/tilted/mask.png",
+            "sha256": "2d1ee4974ca558eea873704af9e084408c231ce76425d2429996198031e85bc0"
+          },
+          "rgb.png": {
+            "bytes": 24789,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/tilted/rgb.png",
+            "sha256": "b5311e94a352976e1439f158b7e7013bbc493f7bb85c96382c285ec2c405d317"
+          }
+        },
+        "status": "PASS",
+        "tf_at_capture_stamp": true,
+        "truth_sample_delta_s": 0.301,
+        "valid_depth_pixels": 134337
+      },
+      {
+        "algorithm_files": {
+          "camera.json": {
+            "bytes": 941,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/yawed/camera.json",
+            "sha256": "dd9735a3704a95e37711b30ee71388855252713a911436e8ad771dcac3a64c20"
+          },
+          "depth.npz": {
+            "bytes": 436132,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/yawed/depth.npz",
+            "sha256": "4992dbbaef97c4ce5a0dad3101ce8007afd2ab7ec96c612dd333a1b86d67ea75"
+          },
+          "mask.png": {
+            "bytes": 1074,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/yawed/mask.png",
+            "sha256": "76150b642fbbe0f2854c3f9da2d372ba8aa8690b242ae160b3a02d5cd9ba8ed5"
+          },
+          "rgb.png": {
+            "bytes": 24695,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/algorithm_inputs/yawed/rgb.png",
+            "sha256": "2bab5efc4eb5a562ba73b21cd0ab71e9b686909a73860c625da7a509f5be6d7d"
+          }
+        },
+        "calibration_revision": 1,
+        "capture_stamp_ns": 811300000000,
+        "current_camera_geometry_validated": false,
+        "depth_encoding": "32FC1",
+        "depth_units": "m",
+        "evaluation_files": {
+          "camera_info.json": {
+            "bytes": 3177,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/yawed/camera_info.json",
+            "sha256": "5ccaafab20416a89347cda5dc7da9c3af7a7e7e1e31ad18ced0528bd44a688b3"
+          },
+          "scene.xyz": {
+            "bytes": 152276,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/yawed/scene.xyz",
+            "sha256": "02a791880931012714b1c382882152ba1336d5aee8ade41586818f21a4a510d2"
+          },
+          "truth.json": {
+            "bytes": 1674,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/yawed/truth.json",
+            "sha256": "6a7832bb76eea39ca8f358a0f168c61ed383c6e566465b4da838d9d02cf12916"
+          },
+          "truth_setup.json": {
+            "bytes": 1005,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/evaluation_only/yawed/truth_setup.json",
+            "sha256": "93b76d1fd96a374c466d2973b3efefc0a61956a167a98739fbfdd659cc30bbe5"
+          }
+        },
+        "evaluation_scope": "static target; later independent truth sample with camera TF at image stamp",
+        "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "mask_invalid_depth_pixels": 0,
+        "mask_is_general_instance_segmentation": false,
+        "mask_pixels": 2600,
+        "mask_source": "hsv_color_fixture",
+        "rgb_encoding": "rgb8",
+        "scenario": "yawed",
+        "sequence_frames": 1,
+        "shape": [
+          360,
+          640
+        ],
+        "source_epoch": "gazebo_camera",
+        "source_files": {
+          "camera_info.json": {
+            "bytes": 3177,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/yawed/camera_info.json",
+            "sha256": "5ccaafab20416a89347cda5dc7da9c3af7a7e7e1e31ad18ced0528bd44a688b3"
+          },
+          "depth.npz": {
+            "bytes": 436132,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/yawed/depth.npz",
+            "sha256": "4992dbbaef97c4ce5a0dad3101ce8007afd2ab7ec96c612dd333a1b86d67ea75"
+          },
+          "mask.png": {
+            "bytes": 1074,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/yawed/mask.png",
+            "sha256": "76150b642fbbe0f2854c3f9da2d372ba8aa8690b242ae160b3a02d5cd9ba8ed5"
+          },
+          "rgb.png": {
+            "bytes": 24695,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots/yawed/rgb.png",
+            "sha256": "2bab5efc4eb5a562ba73b21cd0ab71e9b686909a73860c625da7a509f5be6d7d"
+          }
+        },
+        "status": "PASS",
+        "tf_at_capture_stamp": true,
+        "truth_sample_delta_s": 0.395,
+        "valid_depth_pixels": 134428
+      }
+    ],
+    "status": "PASS"
+  },
+  "dataset_source": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/grasp_pose_sim_20260921/simulation/snapshots",
+  "dependency_environment": {
+    "reason": "Docker/NVIDIA Container Toolkit/TensorRT/GXF not provisioned or tested; remaining transitive dependencies/container digest unpinned.",
+    "status": "BLOCKED"
+  },
+  "engine_build": {
+    "precision": "FP32",
+    "reason": "Requires isolated supported environment and explicit release of shared GPU ownership.",
+    "status": "NOT_RUN"
+  },
+  "official_assets": {
+    "artifacts": {
+      "isaac_ros_common": {
+        "archive_contains_git_history": false,
+        "bytes": 126474,
+        "commit": "fcf4d9e17f8f0a7f47f1d22d6a18421ce3768c01",
+        "hash_scope": "downloaded bytes; publisher signature was not cryptographically verified",
+        "licenses": [
+          {
+            "archive_member": "isaac_ros_common-fcf4d9e17f8f0a7f47f1d22d6a18421ce3768c01/LICENSE",
+            "bytes": 14844,
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2/licenses/isaac_ros_common/LICENSE",
+            "sha256": "d3ae3fd96db12c049c7a2293d8da8f5acf762790c5b07b4f0a5345e60b84098d"
+          }
+        ],
+        "path": "/home/yjh/.cache/astribot/foundationpose/p0_20260923/sources/isaac_ros_common-fcf4d9e17f8f0a7f47f1d22d6a18421ce3768c01.tar.gz",
+        "publisher_hash_verified": false,
+        "release": "release-3.2",
+        "retrieved_at_utc": "2026-09-23T06:26:12.265693+00:00",
+        "sha256": "6e5a29d007d28843e38f9956f5b35396c879ff465bdf5a5e54f8851d93c197b4",
+        "source_url": "https://codeload.github.com/NVIDIA-ISAAC-ROS/isaac_ros_common/tar.gz/fcf4d9e17f8f0a7f47f1d22d6a18421ce3768c01",
+        "status": "PASS"
+      },
+      "isaac_ros_pose_estimation": {
+        "archive_contains_git_history": false,
+        "commit": "9caca619bcc9d637b3107e17c1a77132c9d7863b",
+        "reason": "download failed: curl exit 28, artifact isaac_ros_pose_estimation-9caca619bcc9d637b3107e17c1a77132c9d7863b.tar.gz",
+        "release": "release-3.2",
+        "source_url": "https://codeload.github.com/NVIDIA-ISAAC-ROS/isaac_ros_pose_estimation/tar.gz/9caca619bcc9d637b3107e17c1a77132c9d7863b",
+        "status": "BLOCKED"
+      },
+      "license_scope": {
+        "model_license_url": "https://developer.download.nvidia.com/licenses/tao_toolkit_21-08_models_eula.pdf",
+        "model_source": "https://api.ngc.nvidia.com/v2/models/nvidia/isaac/foundationpose/versions/1.0.0_onnx",
+        "note": "License link observed on exact-version API; not inferred from ROS Apache license or NVlabs research license."
+      },
+      "ngc_files_api": {
+        "bytes": 864,
+        "hash_scope": "downloaded bytes; publisher signature was not cryptographically verified",
+        "path": "/home/yjh/.cache/astribot/foundationpose/p0_20260923/ngc_1.0.0_onnx_files.json",
+        "publisher_hash_verified": false,
+        "retrieved_at_utc": "2026-09-23T06:25:17.713211+00:00",
+        "sha256": "bb59746a0fecb29539c979cbd8da9b47b0202de75a995abb68ad6dfd2ccf47a6",
+        "source_url": "https://api.ngc.nvidia.com/v2/models/nvidia/isaac/foundationpose/versions/1.0.0_onnx/files",
+        "status": "PASS"
+      },
+      "ngc_model_license": {
+        "bytes": 148103,
+        "hash_scope": "downloaded bytes; publisher signature was not cryptographically verified",
+        "path": "/home/yjh/.cache/astribot/foundationpose/p0_20260923/tao_toolkit_21-08_models_eula.pdf",
+        "publisher_hash_verified": false,
+        "retrieved_at_utc": "2026-09-23T06:25:20.986083+00:00",
+        "sha256": "78ca048fc249dc8d45633bbe33e9de1d85d09712365e5093ea760dc9c94f655a",
+        "source_url": "https://developer.download.nvidia.com/licenses/tao_toolkit_21-08_models_eula.pdf",
+        "status": "PASS"
+      },
+      "ngc_version_api": {
+        "bytes": 15303,
+        "hash_scope": "downloaded bytes; publisher signature was not cryptographically verified",
+        "path": "/home/yjh/.cache/astribot/foundationpose/p0_20260923/ngc_1.0.0_onnx_metadata.json",
+        "publisher_hash_verified": false,
+        "retrieved_at_utc": "2026-09-23T06:25:18.245314+00:00",
+        "sha256": "e0d3102b1ec354dd5512809e8b8cd38357db6c7ccb9abd414dfbf489f1ccd975",
+        "source_url": "https://api.ngc.nvidia.com/v2/models/nvidia/isaac/foundationpose/versions/1.0.0_onnx",
+        "status": "PASS"
+      },
+      "refine_model.onnx": {
+        "bytes": 68170161,
+        "hash_scope": "downloaded bytes; publisher signature was not cryptographically verified",
+        "path": "/home/yjh/.cache/astribot/foundationpose/p0_20260923/models/refine_model.onnx",
+        "publisher_hash_verified": true,
+        "retrieved_at_utc": "2026-09-23T06:25:47.203092+00:00",
+        "sha256": "06ad19f2c3598cb76733feec084d3f6802e7ff143882ec42ba368df7e38ae094",
+        "source_url": "https://api.ngc.nvidia.com/v2/models/nvidia/isaac/foundationpose/versions/1.0.0_onnx/files/refine_model.onnx",
+        "status": "PASS"
+      },
+      "score_model.onnx": {
+        "bytes": 63910294,
+        "hash_scope": "downloaded bytes; publisher signature was not cryptographically verified",
+        "path": "/home/yjh/.cache/astribot/foundationpose/p0_20260923/models/score_model.onnx",
+        "publisher_hash_verified": true,
+        "retrieved_at_utc": "2026-09-23T06:26:10.895637+00:00",
+        "sha256": "49a4f5f094358913670733ec31e856b96271c869f9949aa3a0361cf7cf8f0be8",
+        "source_url": "https://api.ngc.nvidia.com/v2/models/nvidia/isaac/foundationpose/versions/1.0.0_onnx/files/score_model.onnx",
+        "status": "PASS"
+      }
+    },
+    "blocked_items": [
+      "isaac_ros_pose_estimation"
+    ],
+    "onnx_semantic_check": {
+      "reason": "No ONNX checker is invoked; exact published bytes/hash validation is separate from model execution.",
+      "status": "NOT_RUN"
+    },
+    "status": "BLOCKED"
+  },
+  "official_example_inference": {
+    "status": "NOT_RUN"
+  },
+  "output": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/prepared_v2",
+  "p0_stage": "BLOCKED",
+  "preparation_script": {
+    "bytes": 30831,
+    "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/foundationpose/prepare_p0.py",
+    "sha256": "ae817a25830ccb5d64434c3a1609ea8e4f985f023eb451cb60bdb04c0e7dea15"
+  },
+  "prepared_at_utc": "2026-09-23T06:33:12.850955+00:00",
+  "project_inference": {
+    "status": "NOT_RUN"
+  },
+  "robot_execution_authorized": false,
+  "schema": "astribot.foundationpose.p0_preparation/1",
+  "tracking_benchmark": {
+    "reason": "Seven static snapshots are not a tracking sequence.",
+    "status": "NOT_RUN"
+  }
+}

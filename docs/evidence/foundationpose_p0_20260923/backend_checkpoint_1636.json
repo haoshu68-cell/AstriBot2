@@ -1,0 +1,41 @@
+{
+  "schema": "astribot.foundationpose.backend_checkpoint/1",
+  "issue_id": "FP-BACKEND-01",
+  "status": "deferred",
+  "recorded_at": "2026-09-23T08:39:00.331956+00:00",
+  "first_existing_failure_evidence_at": "2026-09-23T15:38:27+08:00",
+  "actual_first_start_and_cumulative_active_time": "not fully recorded; unknown, not zero",
+  "external_wait_intervals": [
+    {
+      "kind": "resource handoff; image transfer stopped",
+      "from": "2026-09-23T15:57:25+08:00",
+      "to": "2026-09-23T16:08:28+08:00"
+    },
+    {
+      "kind": "image transfer/unpack",
+      "note": "See three separate pull logs; initial130, resumed124, finalize0"
+    }
+  ],
+  "base_image_pull": "PASS",
+  "base_image_digest": "sha256:5ee1d4376a8b73c6a7f756e684fff4f2a06883ae3680de5d8fafc8c96a8e42ef",
+  "base_tensorrt": "10.3.0.26",
+  "target_common_tensorrt": "10.3.0.30",
+  "onnx_semantic_and_input_contract_checks": "PASS for both models in onnx_check_v2",
+  "v1_failure": "temporary checker shared library loading rejected by tmpfs noexec; preserved",
+  "backend_build": "NOT_RUN",
+  "engine_build": "NOT_RUN",
+  "inference": "NOT_RUN",
+  "owned_containers_remaining": 0,
+  "gpu_algorithm_started": false,
+  "all_resources_released_to": "navigation task 01a09962-8e15-71e0-b9a6-a92798318698 at about16:36",
+  "next_independent_task": "S0 analytic slot-profile checks, wrong-slot fit screening and 2D CAD contours",
+  "resume_minimal_experiment": "Resolve signed APT dependency plan for container_context_v3; align all TRT libs/tools to30 and verify loaded library paths before GPU builds",
+  "build_context": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/foundationpose_p0_20260923/container_context_v3",
+  "context_files": {
+    "nvcv-lib-0.5.0_beta-cuda12-x86_64-linux.deb": "cc982073f401bf718f678e6a566d4ad1e59028fa0f96cc3c4588310121b711db",
+    "Dockerfile": "1ccef0183b52fb7f41f5e7203f94cd722d513fc70db106e51322c222b4a85dcd",
+    "cuda-3bf863cc.pub": "7eb71103e32e813ea3e1c06bdb01b143f36feb8d83ecac2b0c11c9273f9e6822",
+    "ros_key.gpg": "4a91c49af0d6f0016108b93698782b596c27ccd836937e18e0e36c3347dc602f",
+    "isaac_repos.key": "d45fbd909e89914960a66dba17d4c659adf908ab4d6fe2cf55381e9ffe5ce59d"
+  }
+}

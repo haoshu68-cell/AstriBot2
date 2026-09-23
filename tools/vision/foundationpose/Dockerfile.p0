@@ -1,0 +1,53 @@
+# Task-owned offline validation image; no host ROS workspace is copied.
+# The keys are downloaded separately over verified HTTPS and copied into a
+# minimal build context. Package signatures stay enabled, including ROS HTTP.
+FROM nvcr.io/nvidia/tensorrt@sha256:5ee1d4376a8b73c6a7f756e684fff4f2a06883ae3680de5d8fafc8c96a8e42ef
+
+ARG DEBIAN_FRONTEND=noninteractive
+COPY ros_key.gpg /usr/share/keyrings/p0-ros.gpg
+COPY isaac_repos.key /usr/share/keyrings/p0-isaac.asc
+COPY cuda-3bf863cc.pub /usr/share/keyrings/p0-cuda.asc
+COPY nvcv-lib-0.5.0_beta-cuda12-x86_64-linux.deb /tmp/p0-cvcuda.deb
+RUN echo '4a91c49af0d6f0016108b93698782b596c27ccd836937e18e0e36c3347dc602f  /usr/share/keyrings/p0-ros.gpg' | sha256sum --check - \
+ && echo 'd45fbd909e89914960a66dba17d4c659adf908ab4d6fe2cf55381e9ffe5ce59d  /usr/share/keyrings/p0-isaac.asc' | sha256sum --check - \
+ && echo '7eb71103e32e813ea3e1c06bdb01b143f36feb8d83ecac2b0c11c9273f9e6822  /usr/share/keyrings/p0-cuda.asc' | sha256sum --check - \
+ && echo 'cc982073f401bf718f678e6a566d4ad1e59028fa0f96cc3c4588310121b711db  /tmp/p0-cvcuda.deb' | sha256sum --check - \
+ && printf '%s\n' 'deb [arch=amd64 signed-by=/usr/share/keyrings/p0-ros.gpg] http://packages.ros.org/ros2/ubuntu jammy main' > /etc/apt/sources.list.d/p0-ros.list \
+ && printf '%s\n' 'deb [arch=amd64 signed-by=/usr/share/keyrings/p0-isaac.asc] https://isaac.download.nvidia.com/isaac-ros/release-3 jammy release-3.0' > /etc/apt/sources.list.d/p0-isaac.list \
+ && printf '%s\n' 'deb [arch=amd64 signed-by=/usr/share/keyrings/p0-cuda.asc] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /' > /etc/apt/sources.list.d/p0-cuda.list
+
+# Isaac's release-3 repo intentionally mixes 3.2.x package versions. Freeze the
+# FoundationPose pair, preserve TRT 10.3.0.30 and inventory every resolved package.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      /tmp/p0-cvcuda.deb \
+      libnvinfer10=10.3.0.30-1+cuda12.5 \
+      libnvinfer-plugin10=10.3.0.30-1+cuda12.5 \
+      libnvinfer-lean10=10.3.0.30-1+cuda12.5 \
+      libnvinfer-vc-plugin10=10.3.0.30-1+cuda12.5 \
+      libnvinfer-dispatch10=10.3.0.30-1+cuda12.5 \
+      libnvinfer-bin=10.3.0.30-1+cuda12.5 \
+      libnvinfer-dev=10.3.0.30-1+cuda12.5 \
+      libnvinfer-lean-dev=10.3.0.30-1+cuda12.5 \
+      libnvinfer-plugin-dev=10.3.0.30-1+cuda12.5 \
+      libnvinfer-vc-plugin-dev=10.3.0.30-1+cuda12.5 \
+      libnvinfer-dispatch-dev=10.3.0.30-1+cuda12.5 \
+      libnvinfer-headers-dev=10.3.0.30-1+cuda12.5 \
+      libnvinfer-headers-plugin-dev=10.3.0.30-1+cuda12.5 \
+      libnvonnxparsers10=10.3.0.30-1+cuda12.5 \
+      libnvonnxparsers-dev=10.3.0.30-1+cuda12.5 \
+      tensorrt-dev=10.3.0.30-1+cuda12.5 \
+      ros-humble-ros-base \
+      ros-humble-isaac-ros-foundationpose=3.2.14-0jammy \
+      ros-humble-gxf-isaac-foundationpose=3.2.14-0jammy \
+      python3-numpy python3-opencv python3-pil \
+ && mkdir -p /opt/astribot-p0 \
+ && dpkg-query -W -f='${Package}\t${Version}\n' | sort > /opt/astribot-p0/packages.tsv \
+ && rm -rf /var/lib/apt/lists/* /tmp/p0-cvcuda.deb
+
+ENV ROS_DISTRO=humble
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ENV ROS_LOCALHOST_ONLY=1
+ENV ROS_DOMAIN_ID=173
+# Scripts and data are mounted explicitly read-only at execution, never COPY .
+WORKDIR /tmp

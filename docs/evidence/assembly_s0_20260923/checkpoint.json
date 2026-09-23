@@ -1,0 +1,29 @@
+{
+  "schema": "astribot.assembly.s0_profile_checkpoint/1",
+  "recorded_at": "2026-09-23T09:01:59.990979+00:00",
+  "task_scope": "S0 substep: analytic straight-wall profiles and 2D DXF",
+  "implementation": "PASS",
+  "analytic_boundary_tests": 7,
+  "nominal_clearances": 18,
+  "centered_yaw_combinations": 108,
+  "wrong_slot_positive_witnesses_across_levels": 10,
+  "distinct_wrong_part_slot_pairs": 6,
+  "dxf_readback_files": 27,
+  "dxf_readback": "PASS via ezdxf1.4.3 and independent scipy ConvexHull halfplanes",
+  "raster_preview": "reviewed visually",
+  "source_spec_revision": 2,
+  "complete_s0_acceptance": false,
+  "three_dimensional_cad": "NOT_RUN",
+  "gripper_sweep_and_ik": "NOT_RUN",
+  "contact_simulation": "NOT_RUN",
+  "runtime_match_enforcement": "DESIGN_ONLY",
+  "next_requirements": [
+    "prepare a task-isolated 3D CAD/Boolean kernel after shared resource window permits dependency work",
+    "generate 3D stem/shoulder/tip/chamfer solids and verify topology, gap bounds and mass/inertia",
+    "derive and validate grasp/TCP and full opening/withdrawal sweep; then choose board placement using IK"
+  ],
+  "shared_runtime_ownership": "navigation task; no GPU/ROS/big downloads from this task",
+  "ezdxf_wheel_sha256": "e5f2cf7f904cb78390f6df8a374c2cfe304bb50fce215768eab0e94677c32a17",
+  "library_install_scope": "task cache only; no system package changes",
+  "verified_report_sha256": "18af2183e60f9996eaf88a3cfcd1b2aabe57bd7094baec26c14a1604e2af7b21"
+}

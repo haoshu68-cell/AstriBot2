@@ -1,0 +1,196 @@
+schema: astribot.assembly_scene_design/1
+status: DESIGN_ONLY
+units:
+  length: m
+  angle: rad
+execution_authorized: false
+contact_validated: false
+geometry_source: original_parameterized_design
+frames:
+  convention: T_A_B maps B-frame coordinates into A
+  board: origin at plate top center; +z points out of plate; +x along 320 mm side
+  object: origin at insertion tip center; +z toward grasping column
+  slot: origin at nominal hole mouth center; axes parallel to board
+  seated_tip_in_slot:
+  - 0.0
+  - 0.0
+  - -0.02
+  candidate_grasp_center_in_object:
+  - 0.0
+  - 0.0
+  - 0.07
+  grasp_orientation_in_object: UNVALIDATED
+  tcp_to_grasp_transform: UNCALIBRATED
+board:
+  dimensions:
+  - 0.32
+  - 0.24
+  - 0.035
+  module_footprint:
+  - 0.08
+  - 0.08
+  mounting_fasteners: UNDESIGNED
+  table_height: REQUIRES_REACH_AND_COLLISION_SWEEP
+  base_from_board: REQUIRES_OBSERVATION
+  blind_depth: 0.02
+  floor_thickness: 0.015
+  entry_chamfer_nominal_extent: 0.002
+  chamfer_angle_and_corner_radius: UNDEFINED
+  collision_construction: hollow static geometry or verified wall decomposition; never
+    one convex hull
+objects:
+  lower_profile_z:
+  - 0.0
+  - 0.025
+  tip_chamfer_nominal_extent: 0.002
+  grasp_column_dimensions_xy:
+  - 0.026
+  - 0.02
+  grasp_column_z:
+  - 0.025
+  - 0.1
+  total_height: 0.1
+  seated_column_bottom_above_board: 0.005
+  seated_candidate_grasp_center_above_board: 0.05
+  seated_object_top_above_board: 0.08
+  full_gripper_sweep_and_release_clearance: UNVALIDATED
+  shoulder_profile_union: REQUIRES_CAD_VALIDATION
+  mass_inertia_material_friction: UNMEASURED
+clearance:
+  definition: minimum normal distance between nominal insertion profile and straight
+    hole wall
+  levels:
+  - 0.003
+  - 0.001
+  - 0.0005
+  initial_level: 0.003
+  circular_diameter_difference: 2 * clearance
+  polygon_method: outward unit-normal support-line offset by c, intersect adjacent
+    lines; sharp miter joins
+  manufacturing_tolerances: UNDEFINED
+  note: entry chamfers do not enlarge the minimum clearance of the straight insertion
+    section
+  d_shape_method: disk(radius + c) intersect halfplane(x <= clip_x + c); exact circle-line
+    intersections, sharp joins
+  corner_scope: straight insertion section only; entrance/tip chamfer and manufacturing
+    corner treatment remain undefined
+slots:
+- id: circle_01
+  model_id: assembly_circle_stem_v1
+  center_in_board:
+  - -0.1
+  - 0.055
+  - 0.0
+  yaw_in_board: 0.0
+  profile:
+    type: circle
+    diameter: 0.036
+  insertion_yaw_equivalence: continuous
+- id: rectangle_01
+  model_id: assembly_rectangle_stem_v1
+  center_in_board:
+  - 0.0
+  - 0.055
+  - 0.0
+  yaw_in_board: 0.0
+  profile:
+    type: rectangle
+    size_xy:
+    - 0.042
+    - 0.03
+  insertion_yaw_equivalence:
+  - 0.0
+  - 3.141592653589793
+- id: triangle_01
+  model_id: assembly_triangle_stem_v1
+  center_in_board:
+  - 0.1
+  - 0.055
+  - 0.0
+  yaw_in_board: 0.0
+  profile:
+    type: regular_triangle
+    circumradius: 0.024
+    vertex_direction: positive_y
+  insertion_yaw_equivalence:
+  - 0.0
+  - 2.0943951023931953
+  - 4.1887902047863905
+- id: hexagon_01
+  model_id: assembly_hexagon_stem_v1
+  center_in_board:
+  - -0.1
+  - -0.055
+  - 0.0
+  yaw_in_board: 0.0
+  profile:
+    type: regular_hexagon
+    across_flats: 0.036
+    vertex_direction: positive_x
+  insertion_yaw_equivalence:
+  - 0.0
+  - 1.0471975511965976
+  - 2.0943951023931953
+  - 3.141592653589793
+  - 4.1887902047863905
+  - 5.235987755982989
+- id: d_shape_01
+  model_id: assembly_d_stem_v1
+  center_in_board:
+  - 0.0
+  - -0.055
+  - 0.0
+  yaw_in_board: 0.0
+  profile:
+    type: clipped_circle
+    radius: 0.02
+    retain_halfplane: x <= 0.010
+  insertion_yaw_equivalence:
+  - 0.0
+- id: keyed_01
+  model_id: assembly_keyed_stem_v1
+  center_in_board:
+  - 0.1
+  - -0.055
+  - 0.0
+  yaw_in_board: 0.0
+  profile:
+    type: clipped_rectangle
+    size_xy:
+    - 0.04
+    - 0.03
+    remove_corner: positive_x_positive_y
+    corner_cut_legs:
+    - 0.008
+    - 0.008
+  insertion_yaw_equivalence:
+  - 0.0
+identity_policy:
+  required_match: object_instance -> registered_model -> assigned_slot
+  wrong_slot_geometric_fit_is_success: false
+  validate_pair_matrix: 6 x 6
+  mechanical_symmetry_is_full_object_visual_symmetry: false
+stages:
+- offline CAD topology, dimensions, grasp sweep and reachability
+- independent board/object perception with no simulator truth input
+- trajectory validation without contact-success claims
+- contact insertion with explicitly labelled ideal rigid grasp
+- calibrated gripper contact and friction grasp
+- later flush seating with finger-relief or removable grasp handle
+gates:
+  runtime_implementation: C++
+  prerequisite: navigation I0.2 and transport A4 gates as defined by their owners
+  arrival_is_insertion_alignment: false
+  fresh_observation_after_settling: true
+  planning_and_execution_recheck:
+  - resource_authority
+  - start_state
+  - observation_age
+  - scene_revision
+  - attachment_revision
+  pose_teleport_counts_as_insertion: false
+  joint_hold_implies_base_or_scene_lock: false
+  release_requires: independent seating/stability evidence and execution-owner state
+    commit
+geometry_contract_revision: 2
+parent_spec_sha256: 6a27534bcda98df6568fb57602005cf476de20cd4144c73b4d51d5d1cd467568
