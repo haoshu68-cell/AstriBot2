@@ -1,0 +1,176 @@
+{
+  "scope": "A2 task-owned current-pose hold under cooperative simulation ownership",
+  "status": "passed",
+  "cpp_tests": [
+    {
+      "suite": "resource_journal_test.gtest.xml",
+      "tests": 7
+    },
+    {
+      "suite": "arm_hold_test.gtest.xml",
+      "tests": 25
+    },
+    {
+      "suite": "resource_authority_test.gtest.xml",
+      "tests": 11
+    },
+    {
+      "suite": "child_actions_test.gtest.xml",
+      "tests": 5
+    }
+  ],
+  "cpp_total": 48,
+  "compatibility_tests": 4,
+  "launch_policy_tests": 1,
+  "runtime_cases": [
+    {
+      "mode": "early_cancel",
+      "pass": true,
+      "evidence": "owned_navigation_simulation_current_pose_hold",
+      "admission_geometry": {
+        "source_id": "dbd5fe46d419250edcacabcdccfe34882283e1faf87b961dc4f0003bc22db883",
+        "sequence": 35217,
+        "model_revision": "47238a102deebfe84b24dffcc0647bc6361d32ba1ae2dc62a516182d482f1722",
+        "attachment_revision": "a0dd3065f8c32118510a8025b3d2e9cf91d627aef6e2cfbd358842b654edaaf5"
+      },
+      "status": 5,
+      "resources_released": true,
+      "reason": "TASK_CANCELED",
+      "lease_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_1",
+      "hold_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_1_hold",
+      "cmd_vel_samples": 64,
+      "max_cmd_vel": 0.0,
+      "artifact": "hold_early_cancel_08.json",
+      "positive_samples": 0,
+      "maximum_positive_message_gap_s": null,
+      "maximum_hold_lease_s": null
+    },
+    {
+      "mode": "cancel",
+      "pass": true,
+      "evidence": "owned_navigation_simulation_current_pose_hold",
+      "admission_geometry": {
+        "source_id": "dbd5fe46d419250edcacabcdccfe34882283e1faf87b961dc4f0003bc22db883",
+        "sequence": 35246,
+        "model_revision": "47238a102deebfe84b24dffcc0647bc6361d32ba1ae2dc62a516182d482f1722",
+        "attachment_revision": "a0dd3065f8c32118510a8025b3d2e9cf91d627aef6e2cfbd358842b654edaaf5"
+      },
+      "status": 5,
+      "resources_released": true,
+      "reason": "TASK_CANCELED",
+      "lease_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_2",
+      "hold_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_2_hold",
+      "cmd_vel_samples": 261,
+      "max_cmd_vel": 0.0,
+      "artifact": "hold_cancel_08.json",
+      "positive_samples": 41,
+      "maximum_positive_message_gap_s": 0.058170446995063685,
+      "maximum_hold_lease_s": 0.200885062
+    },
+    {
+      "mode": "expiry",
+      "pass": true,
+      "evidence": "owned_navigation_simulation_current_pose_hold",
+      "admission_geometry": {
+        "source_id": "dbd5fe46d419250edcacabcdccfe34882283e1faf87b961dc4f0003bc22db883",
+        "sequence": 35304,
+        "model_revision": "47238a102deebfe84b24dffcc0647bc6361d32ba1ae2dc62a516182d482f1722",
+        "attachment_revision": "a0dd3065f8c32118510a8025b3d2e9cf91d627aef6e2cfbd358842b654edaaf5"
+      },
+      "status": 6,
+      "resources_released": true,
+      "reason": "RESOURCE_LEASE_EXPIRED",
+      "lease_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_3",
+      "hold_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_3_hold",
+      "cmd_vel_samples": 382,
+      "max_cmd_vel": 0.0,
+      "artifact": "hold_expiry_08.json",
+      "positive_samples": 76,
+      "maximum_positive_message_gap_s": 0.05068941300851293,
+      "maximum_hold_lease_s": 0.239960746
+    },
+    {
+      "mode": "foreign_client",
+      "pass": true,
+      "evidence": "owned_navigation_simulation_current_pose_hold",
+      "admission_geometry": {
+        "source_id": "dbd5fe46d419250edcacabcdccfe34882283e1faf87b961dc4f0003bc22db883",
+        "sequence": 35383,
+        "model_revision": "47238a102deebfe84b24dffcc0647bc6361d32ba1ae2dc62a516182d482f1722",
+        "attachment_revision": "a0dd3065f8c32118510a8025b3d2e9cf91d627aef6e2cfbd358842b654edaaf5"
+      },
+      "status": 6,
+      "resources_released": true,
+      "reason": "FOREIGN_CONTROLLER_SERVICE_CLIENT:task_hold_acceptance_2a5cc788",
+      "lease_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_4",
+      "hold_id": "f53f8148-3034-4085-a3ee-2226a44b87cb_4_hold",
+      "cmd_vel_samples": 255,
+      "max_cmd_vel": 0.0,
+      "artifact": "hold_foreign_client_08.json",
+      "positive_samples": 41,
+      "maximum_positive_message_gap_s": 0.050753454997902736,
+      "maximum_hold_lease_s": 0.235603198
+    },
+    {
+      "pass": true,
+      "mode": "unknown",
+      "domain": 205,
+      "evidence": "isolated_ros_protocol_fixture",
+      "status": 6,
+      "resources_released": false,
+      "reason": "RESOURCE_RECOVERY_REQUIRED:CHILD_RESULT_UNKNOWN",
+      "restart_quarantined_without_child_replay": true,
+      "process_exit": 0,
+      "artifact": "hold_fixture_unknown_08.json"
+    },
+    {
+      "pass": true,
+      "mode": "pending_cancel",
+      "domain": 206,
+      "evidence": "isolated_ros_protocol_fixture",
+      "status": 5,
+      "resources_released": true,
+      "reason": "TASK_CANCELED",
+      "terminal_to_release_s": 0.6451059590035584,
+      "process_exit": 0,
+      "artifact": "hold_fixture_pending_cancel_08.json"
+    },
+    {
+      "pass": true,
+      "mode": "reject",
+      "domain": 207,
+      "evidence": "isolated_ros_protocol_fixture",
+      "status": 6,
+      "resources_released": true,
+      "reason": "CHILD_GOAL_REJECTED:arm_left_controller",
+      "process_exit": 0,
+      "artifact": "hold_fixture_reject_08.json"
+    },
+    {
+      "pass": true,
+      "mode": "aborted",
+      "domain": 208,
+      "evidence": "isolated_ros_protocol_fixture",
+      "status": 6,
+      "resources_released": true,
+      "reason": "CHILD_RESULT_FAILED:arm_left_controller",
+      "process_exit": 0,
+      "artifact": "hold_fixture_aborted_08.json"
+    }
+  ],
+  "not_accepted": [
+    "A3 six-consumer positive handshake",
+    "fixed_v2 dynamic navigation",
+    "hardware or DDS authorization",
+    "VLA",
+    "full dynamic pick-carry-place"
+  ],
+  "failed_attempts_retained": [
+    "hold_fixture_pending_01.log QoS fixture startup rejection",
+    "hold_fixture_pending_02.journal.jsonl evidence JSON serialization failed",
+    "hold_fixture_unknown_final.log result callback deadlock; unresolved domain_200 journal retained",
+    "hold_early_cancel_final.json missing stationary observation",
+    "hold_early_cancel_06.json unconfirmed geometry admission rejection",
+    "hold_build/test_results earlier old install library selected; final CTest uses build library first"
+  ]
+}

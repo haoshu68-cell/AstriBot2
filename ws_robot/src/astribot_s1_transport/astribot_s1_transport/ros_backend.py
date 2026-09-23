@@ -44,7 +44,8 @@ from astribot_navigation_msgs.srv import SetRobotEnvelope,SetFixedEnvelope
 from astribot_logging import get_logger
 from rcl_interfaces.srv import GetParameters
 from std_srvs.srv import Trigger
-from .core import TransportTask, Ledger, ResourceLease, TaskFailure, Canceled, validate_scenario
+from .core import (TransportTask, Ledger, ResourceLease, TaskFailure, Canceled,
+                   validate_scenario, canonical_resource_domain, check_native_resource_release)
 from .geometry import collision_bounds, collision_primitive_matrix
 from .plan_guard import PlanGuard
 from .payload_sync import physical_parent,confirmed_state
@@ -83,6 +84,8 @@ class RosBackend(Node):
     evidence_level = 'gazebo_kinematic_attachment_with_moveit_and_ros_control'
 
     def __init__(self, config, ledger):
+        if config.get('navigation_geometry_mode', 'legacy') == 'fixed_v2':
+            raise TaskFailure('CPP_TASK_HOLD_EXECUTOR_REQUIRED: legacy measured-only hold is not an execution ownership proof')
         super().__init__('transport_task', parameter_overrides=[rclpy.parameter.Parameter('use_sim_time', value=True)])
         self.c, self.ledger = config, ledger
         self.fixed_v2=config.get("navigation_geometry_mode","legacy")=="fixed_v2"
@@ -1185,12 +1188,16 @@ def main():
         if args.resume_placed:
             raise SystemExit('PLACED recovery uses the existing recovery path; omit VLA configuration.')
     validate_scenario(config)
+    if config.get('navigation_geometry_mode', 'legacy') == 'fixed_v2':
+        raise SystemExit('CPP_TASK_HOLD_EXECUTOR_REQUIRED: use the native hold action; the legacy measured-only publisher is disabled.')
     output = Path(args.output)
     if (output / 'state.json').exists() and not args.resume_placed:
         raise SystemExit('Existing ledger: inspect recovery state; use a new output directory only after scene reconciliation.')
     rclpy.init()
     logger = get_logger('astribot.transport')
-    with ResourceLease('/tmp/astribot_transport_domain_' + os.environ.get('ROS_DOMAIN_ID', '0') + '.lock') as lease:
+    domain = canonical_resource_domain(os.environ.get('ROS_DOMAIN_ID', '0'))
+    with ResourceLease('/tmp/astribot_transport_domain_' + domain + '.lock') as lease:
+        check_native_resource_release(Path.home() / '.local/state/astribot/transport' / ('domain_' + domain + '.jsonl'))
         lease.file.seek(0)
         previous = lease.file.read()
         if previous and json.loads(previous).get('unconfirmed_executor', False):

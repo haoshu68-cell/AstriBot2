@@ -8,6 +8,7 @@ import fcntl
 import json
 import math
 import os
+import stat
 from pathlib import Path
 import time
 
@@ -20,6 +21,35 @@ class Canceled(TaskFailure):
     pass
 
 
+def canonical_resource_domain(raw):
+    if not raw.isascii() or not raw.isdecimal() or not 0 <= int(raw) <= 232 or str(int(raw)) != raw:
+        raise TaskFailure('NONCANONICAL_ROS_DOMAIN')
+    return raw
+
+
+def check_native_resource_release(state_path):
+    """Compatibility reader, called while holding the shared domain lock.
+
+    A torn legacy marker must not bypass the native durable transaction.
+    This does not provide execution ownership for the old fixed_v2 publisher.
+    """
+    path = Path(state_path)
+    if not path.exists():
+        return
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 4 * 1024 * 1024:
+        raise TaskFailure('NATIVE_RESOURCE_RECOVERY_REQUIRED')
+    try:
+        contents = path.read_text()
+        if not contents or not contents.endswith('\n'):
+            raise ValueError('incomplete journal')
+        records = [json.loads(line) for line in contents.splitlines()]
+        latest = records[-1]
+        if not isinstance(latest, dict) or latest.get('schema') != 'astribot.resource/1' or type(latest.get('phase')) is not int or latest['phase'] != 0:
+            raise ValueError('unreleased native resource')
+    except (ValueError, TypeError, KeyError, OSError) as error:
+        raise TaskFailure('NATIVE_RESOURCE_RECOVERY_REQUIRED') from error
+
+
 class ResourceLease:
     """One host/domain lease for base, arms, head, torso and grippers."""
     def __init__(self, path):
@@ -28,7 +58,12 @@ class ResourceLease:
 
     def __enter__(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.file = self.path.open('a+')
+        descriptor = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW, 0o600)
+        info = os.fstat(descriptor)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_nlink != 1:
+            os.close(descriptor)
+            raise TaskFailure('RESOURCE_FILE_INVALID')
+        self.file = os.fdopen(descriptor, 'r+')
         try:
             fcntl.flock(self.file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -41,9 +76,14 @@ class ResourceLease:
         self.file.close()
 
     def checkpoint(self, record):
+        # Keep the old protective marker until a complete replacement has been
+        # synced. Never rename this file: flock is bound to its inode.
+        content = json.dumps(record)
         self.file.seek(0)
+        self.file.write(content)
+        self.file.flush()
+        os.fsync(self.file.fileno())
         self.file.truncate()
-        json.dump(record, self.file)
         self.file.flush()
         os.fsync(self.file.fileno())
 

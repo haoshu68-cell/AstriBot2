@@ -24,17 +24,74 @@
 from astribot_logging import get_logger
 
 import os
+import xml.etree.ElementTree as ET
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction
+from launch.actions import DeclareLaunchArgument, GroupAction, OpaqueFunction, SetLaunchConfiguration
 from launch.conditions import IfCondition
-from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from astribot_logging import log_level as default_log_level
 from astribot_logging.launch import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 import yaml
+
+
+def _fixed_camera_mount_semantic(urdf_xml, srdf_xml):
+    """Allow only known mounting contacts connected entirely by fixed joints.
+
+    Applied only with an explicit mount profile. The shared hardware SRDF is
+    unchanged; no moving joint, finger, payload or world contact is exempted.
+    """
+    robot, semantic = ET.fromstring(urdf_xml), ET.fromstring(srdf_xml)
+    fixed = {}
+    for joint in robot.findall('joint'):
+        if joint.get('type') == 'fixed':
+            a, b = joint.find('parent').get('link'), joint.find('child').get('link')
+            fixed.setdefault(a, set()).add(b)
+            fixed.setdefault(b, set()).add(a)
+    candidates = [(c+'_camera_link', 'astribot_head_link_2')
+                  for c in ('head_rgbd', 'head_stereo_left', 'head_stereo_right')]
+    candidates += [('torso_rgbd_camera_link', 'astribot_torso_link_4')]
+    candidates += [(s+'_wrist_rgbd_camera_link', 'astribot_gripper_'+s+'_base')
+                   for s in ('left', 'right')]
+    existing = {frozenset((e.get('link1'), e.get('link2')))
+                for e in semantic.findall('disable_collisions')}
+    for a, b in candidates:
+        pending, seen = [a], set()
+        while pending:
+            current = pending.pop()
+            if current not in seen:
+                seen.add(current)
+                pending.extend(fixed.get(current, ()))
+        if b in seen and frozenset((a, b)) not in existing:
+            ET.SubElement(semantic, 'disable_collisions', link1=a, link2=b, reason='Adjacent')
+    return ET.tostring(semantic, encoding='unicode')
+
+
+def _prepare_robot_descriptions(context):
+    content = Command([
+        'xacro ', PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'urdf', 'astribot_s1.xacro']),
+        ' robot_name:=astribot_s1',
+        ' use_lidar:=', LaunchConfiguration('use_lidar'),
+        ' use_camera:=', LaunchConfiguration('use_camera'),
+        ' use_wrist_cameras:=', LaunchConfiguration('use_wrist_cameras'),
+        ' use_stereo_cameras:=', LaunchConfiguration('use_stereo_cameras'),
+        ' camera_profile:=', LaunchConfiguration('camera_profile'),
+        ' torso_camera_profile:=', LaunchConfiguration('torso_camera_profile'),
+        ' camera_calibration_dir:=', LaunchConfiguration('camera_calibration_dir'),
+        ' camera_mounts_profile:="', LaunchConfiguration('camera_mounts_profile'), '"',
+    ]).perform(context)
+    srdf_path = os.path.join(get_package_share_directory('astribot_s1_moveit_config'),
+                             'config', 'astribot_s1.srdf')
+    with open(srdf_path, encoding='utf-8') as handle:
+        semantic = handle.read()
+    if LaunchConfiguration('camera_mounts_profile').perform(context):
+        semantic = _fixed_camera_mount_semantic(content, semantic)
+    return [SetLaunchConfiguration('resolved_robot_description', content),
+            SetLaunchConfiguration('resolved_robot_semantic', semantic)]
 
 
 def _load_yaml(package_name, relative_path):
@@ -50,15 +107,42 @@ def _load_yaml(package_name, relative_path):
         return None
 
 
+def _controllers_for_execution(controllers, enabled):
+    """Planning-only instances must not create clients of physical controllers."""
+    import copy
+    selected = copy.deepcopy(controllers)
+    if not enabled:
+        # Humble launch rejects an untyped empty list. Omitting the manager's
+        # configuration makes its initialize() return before creating handles.
+        # Its "No controller_names specified" log is expected in this mode.
+        selected.pop('moveit_simple_controller_manager', None)
+    return selected
+
+
 def generate_launch_description():
     declared_args = [
         DeclareLaunchArgument('extra_capabilities', default_value=''),
+        # Match the physical attachments selected by the simulation launcher.
+        # Defaults preserve the standalone full-robot model.
+        *[DeclareLaunchArgument(name, default_value='true', choices=['true', 'false'])
+          for name in ('use_lidar', 'use_camera', 'use_wrist_cameras', 'use_stereo_cameras')],
         DeclareLaunchArgument('disable_capabilities', default_value=''),
+        DeclareLaunchArgument('allow_trajectory_execution', default_value='true', choices=['true', 'false']),
         DeclareLaunchArgument(
             'use_sim_time', default_value='true',
             description='仿真必须 true，否则轨迹时间戳与 /clock 不一致，执行会立刻超时。'),
         DeclareLaunchArgument('camera_profile', default_value=PathJoinSubstitution([
-            FindPackageShare('astribot_s1_description'), 'config', 'camera_generic.yaml'])),
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_rgbd_transport.yaml']),
+            description='默认使用最新机器人标定的头部 RGB-D profile；需要完整六路相机时由仿真启动传入 camera_calibration_dir。'),
+        DeclareLaunchArgument('torso_camera_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_torso_rgbd.yaml'])),
+        DeclareLaunchArgument('camera_calibration_dir', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config'])),
+        DeclareLaunchArgument('camera_mounts_profile', default_value=PythonExpression([
+            "'", PathJoinSubstitution([FindPackageShare('astribot_s1_description'), 'config',
+                                       'camera_mounts_reference_sim.yaml']),
+            "' if '", LaunchConfiguration('use_sim_time'), "'.lower() == 'true' else ''"]),
+            description='仿真与warehouse使用同一安装配置；真机默认空，不使用临时参考安装'),
         DeclareLaunchArgument(
             'use_rviz', default_value='false',
             description='是否同时拉起带 MoveIt 显示插件的 RViz。'),
@@ -75,22 +159,11 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time')
 
-    robot_description_content = Command([
-        'xacro ',
-        PathJoinSubstitution([
-            FindPackageShare('astribot_s1_description'), 'urdf', 'astribot_s1.xacro']),
-        ' robot_name:=astribot_s1',
-        ' camera_profile:=', LaunchConfiguration('camera_profile'),
-    ])
     robot_description = {
-        'robot_description': ParameterValue(robot_description_content, value_type=str),
+        'robot_description': ParameterValue(LaunchConfiguration('resolved_robot_description'), value_type=str),
     }
-
-    srdf_path = os.path.join(
-        get_package_share_directory('astribot_s1_moveit_config'),
-        'config', 'astribot_s1.srdf')
-    with open(srdf_path, 'r', encoding='utf-8') as handle:
-        robot_description_semantic = {'robot_description_semantic': handle.read()}
+    robot_description_semantic = {'robot_description_semantic': ParameterValue(
+        LaunchConfiguration('resolved_robot_semantic'), value_type=str)}
 
     kinematics = _load_yaml('astribot_s1_moveit_config', 'config/kinematics.yaml') or {}
     joint_limits = _load_yaml('astribot_s1_moveit_config', 'config/joint_limits.yaml') or {}
@@ -119,28 +192,32 @@ def generate_launch_description():
     }
     planning_pipeline['ompl'].update(ompl_planning)
 
-    move_group_node = Node(
-        package='moveit_ros_move_group',
-        executable='move_group',
-        output='screen',
-        arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')],
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-            robot_description_kinematics,
-            robot_description_planning,
-            planning_pipeline,
-            controllers,
-            {'use_sim_time': use_sim_time},
-            {'capabilities': LaunchConfiguration('extra_capabilities'),
-             'disable_capabilities': LaunchConfiguration('disable_capabilities')},
-            {'publish_robot_description_semantic': True},
-            {'publish_planning_scene': True},
-            {'publish_geometry_updates': True},
-            {'publish_state_updates': True},
-            {'publish_transforms_updates': True},
-        ],
-    )
+    def _start_move_group(context):
+        move_group_node = Node(
+            package='moveit_ros_move_group',
+            executable='move_group',
+            output='screen',
+            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')],
+            parameters=[
+                robot_description,
+                robot_description_semantic,
+                robot_description_kinematics,
+                robot_description_planning,
+                planning_pipeline,
+                _controllers_for_execution(controllers,
+                    LaunchConfiguration('allow_trajectory_execution').perform(context).lower() == 'true'),
+                {'use_sim_time': use_sim_time},
+                {'allow_trajectory_execution': ParameterValue(LaunchConfiguration('allow_trajectory_execution'), value_type=bool)},
+                {'capabilities': LaunchConfiguration('extra_capabilities'),
+                 'disable_capabilities': LaunchConfiguration('disable_capabilities')},
+                {'publish_robot_description_semantic': True},
+                {'publish_planning_scene': True},
+                {'publish_geometry_updates': True},
+                {'publish_state_updates': True},
+                {'publish_transforms_updates': True},
+            ],
+        )
+        return [move_group_node]
 
     rviz_node = Node(
         package='rviz2',
@@ -162,4 +239,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        declared_args + [GroupAction(scoped=True, actions=[move_group_node, rviz_node])])
+        declared_args + [OpaqueFunction(function=_prepare_robot_descriptions),
+                         GroupAction(scoped=True, actions=[OpaqueFunction(function=_start_move_group), rviz_node])])

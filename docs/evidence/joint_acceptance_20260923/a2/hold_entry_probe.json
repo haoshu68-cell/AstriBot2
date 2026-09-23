@@ -1,0 +1,262 @@
+{
+  "status": {
+    "authority_reason": "IDLE",
+    "epoch": "aa85722c-ccee-4432-a8ac-e7c4662cf488",
+    "hold_confirmed": false,
+    "hold_id": "",
+    "hold_reason": "NO_HOLD",
+    "lease_id": "",
+    "phase": "0",
+    "reason": "WAITING_FOR_TASK"
+  },
+  "geometry": {
+    "complete": true,
+    "confirmed": true,
+    "joints": [
+      "astribot_arm_left_joint_1",
+      "astribot_arm_left_joint_2",
+      "astribot_arm_left_joint_3",
+      "astribot_arm_left_joint_4",
+      "astribot_arm_left_joint_5",
+      "astribot_arm_left_joint_6",
+      "astribot_arm_left_joint_7",
+      "astribot_arm_right_joint_1",
+      "astribot_arm_right_joint_2",
+      "astribot_arm_right_joint_3",
+      "astribot_arm_right_joint_4",
+      "astribot_arm_right_joint_5",
+      "astribot_arm_right_joint_6",
+      "astribot_arm_right_joint_7",
+      "astribot_gripper_left_joint_L1",
+      "astribot_gripper_right_joint_L1",
+      "astribot_head_joint_1",
+      "astribot_head_joint_2",
+      "astribot_torso_joint_1",
+      "astribot_torso_joint_2",
+      "astribot_torso_joint_3",
+      "astribot_torso_joint_4"
+    ],
+    "at": 1849.75
+  },
+  "controllers": [
+    {
+      "name": "joint_state_broadcaster",
+      "state": "active",
+      "claimed": []
+    },
+    {
+      "name": "torso_controller",
+      "state": "active",
+      "claimed": [
+        "astribot_torso_joint_1/position",
+        "astribot_torso_joint_2/position",
+        "astribot_torso_joint_3/position",
+        "astribot_torso_joint_4/position"
+      ]
+    },
+    {
+      "name": "head_controller",
+      "state": "active",
+      "claimed": [
+        "astribot_head_joint_1/position",
+        "astribot_head_joint_2/position"
+      ]
+    },
+    {
+      "name": "arm_left_controller",
+      "state": "active",
+      "claimed": [
+        "astribot_arm_left_joint_1/position",
+        "astribot_arm_left_joint_2/position",
+        "astribot_arm_left_joint_3/position",
+        "astribot_arm_left_joint_4/position",
+        "astribot_arm_left_joint_5/position",
+        "astribot_arm_left_joint_6/position",
+        "astribot_arm_left_joint_7/position"
+      ]
+    },
+    {
+      "name": "arm_right_controller",
+      "state": "active",
+      "claimed": [
+        "astribot_arm_right_joint_1/position",
+        "astribot_arm_right_joint_2/position",
+        "astribot_arm_right_joint_3/position",
+        "astribot_arm_right_joint_4/position",
+        "astribot_arm_right_joint_5/position",
+        "astribot_arm_right_joint_6/position",
+        "astribot_arm_right_joint_7/position"
+      ]
+    },
+    {
+      "name": "wheel_effort_controller",
+      "state": "active",
+      "claimed": [
+        "wheel_RF_Joint/effort",
+        "wheel_LF_Joint/effort",
+        "wheel_RR_Joint/effort",
+        "wheel_LR_Joint/effort"
+      ]
+    },
+    {
+      "name": "gripper_left_controller",
+      "state": "active",
+      "claimed": [
+        "astribot_gripper_left_joint_L1/position"
+      ]
+    },
+    {
+      "name": "gripper_right_controller",
+      "state": "active",
+      "claimed": [
+        "astribot_gripper_right_joint_L1/position"
+      ]
+    }
+  ],
+  "controller_clients": [
+    {
+      "node": "task_hold_executor",
+      "ns": "/",
+      "clients": [
+        [
+          "/arm_left_controller/follow_joint_trajectory",
+          [
+            "control_msgs/action/FollowJointTrajectory"
+          ]
+        ],
+        [
+          "/arm_right_controller/follow_joint_trajectory",
+          [
+            "control_msgs/action/FollowJointTrajectory"
+          ]
+        ],
+        [
+          "/gripper_left_controller/follow_joint_trajectory",
+          [
+            "control_msgs/action/FollowJointTrajectory"
+          ]
+        ],
+        [
+          "/gripper_right_controller/follow_joint_trajectory",
+          [
+            "control_msgs/action/FollowJointTrajectory"
+          ]
+        ],
+        [
+          "/head_controller/follow_joint_trajectory",
+          [
+            "control_msgs/action/FollowJointTrajectory"
+          ]
+        ],
+        [
+          "/torso_controller/follow_joint_trajectory",
+          [
+            "control_msgs/action/FollowJointTrajectory"
+          ]
+        ]
+      ]
+    },
+    {
+      "node": "navigation_task_arbiter",
+      "ns": "/",
+      "clients": [
+        [
+          "/navigation_executor/navigate_through_poses",
+          [
+            "nav2_msgs/action/NavigateThroughPoses"
+          ]
+        ],
+        [
+          "/navigation_executor/navigate_to_pose",
+          [
+            "nav2_msgs/action/NavigateToPose"
+          ]
+        ]
+      ]
+    },
+    {
+      "node": "loop_route_executor",
+      "ns": "/",
+      "clients": [
+        [
+          "/route/navigate_to_pose",
+          [
+            "nav2_msgs/action/NavigateToPose"
+          ]
+        ]
+      ]
+    },
+    {
+      "node": "operator_backend",
+      "ns": "/",
+      "clients": [
+        [
+          "/navigate_to_pose",
+          [
+            "nav2_msgs/action/NavigateToPose"
+          ]
+        ]
+      ]
+    },
+    {
+      "node": "bt_navigator",
+      "ns": "/navigation_executor",
+      "clients": [
+        [
+          "/navigation_executor/navigate_to_pose",
+          [
+            "nav2_msgs/action/NavigateToPose"
+          ]
+        ]
+      ]
+    },
+    {
+      "node": "bt_navigator_navigate_to_pose_rclcpp_node",
+      "ns": "/",
+      "clients": [
+        [
+          "/compute_path_to_pose",
+          [
+            "nav2_msgs/action/ComputePathToPose"
+          ]
+        ],
+        [
+          "/follow_path",
+          [
+            "nav2_msgs/action/FollowPath"
+          ]
+        ]
+      ]
+    },
+    {
+      "node": "bt_navigator_navigate_through_poses_rclcpp_node",
+      "ns": "/",
+      "clients": [
+        [
+          "/compute_path_through_poses",
+          [
+            "nav2_msgs/action/ComputePathThroughPoses"
+          ]
+        ],
+        [
+          "/follow_path",
+          [
+            "nav2_msgs/action/FollowPath"
+          ]
+        ]
+      ]
+    },
+    {
+      "node": "waypoint_follower",
+      "ns": "/",
+      "clients": [
+        [
+          "/navigate_to_pose",
+          [
+            "nav2_msgs/action/NavigateToPose"
+          ]
+        ]
+      ]
+    }
+  ]
+}
