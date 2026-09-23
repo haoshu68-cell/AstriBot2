@@ -16,7 +16,18 @@
   <xacro:arg name="robot_name" default="astribot_s1"/>
   <xacro:arg name="use_lidar" default="true"/>
   <xacro:arg name="use_camera" default="true"/>
-  <xacro:arg name="camera_profile" default="$(find astribot_s1_description)/config/camera_generic.yaml"/>
+  <!-- Navigation only needs the head and torso RGB-D sources.  Wrist/stereo
+       sensors stay opt-in so their render cost cannot starve the two sources
+       that feed the local costmap. -->
+  <xacro:arg name="use_wrist_cameras" default="true"/>
+  <xacro:arg name="use_stereo_cameras" default="true"/>
+  <xacro:arg name="camera_profile" default="$(find astribot_s1_description)/config/camera_head_rgbd.yaml"/>
+  <xacro:arg name="torso_camera_profile" default="$(find astribot_s1_description)/config/camera_torso_rgbd.yaml"/>
+  <xacro:arg name="camera_calibration_dir" default="$(find astribot_s1_description)/config"/>
+  <!-- Empty keeps imported calibration; the warehouse passes a separately
+       versioned provisional layout until physical extrinsics are verified. -->
+  <xacro:arg name="camera_mounts_profile" default=""/>
+  <xacro:arg name="use_native_camera_distortion" default="false"/>
   <!-- use_gripper：是否把平行夹爪作为真实关节模块建模。
        true（默认，与真机一致）：加载 astribot_s1_gripper.xacro，两臂末端各挂
          7 个 link / 6 个关节（1 主动 + 5 mimic），法兰 tool_link 的集中惯量清零。
@@ -83,6 +94,9 @@
 
   <xacro:property name="use_lidar_prop" value="$(arg use_lidar)"/>
   <xacro:property name="use_camera_prop" value="$(arg use_camera)"/>
+  <xacro:property name="use_wrist_cameras_prop" value="$(arg use_wrist_cameras)"/>
+  <xacro:property name="use_stereo_cameras_prop" value="$(arg use_stereo_cameras)"/>
+  <xacro:property name="use_native_camera_distortion_prop" value="$(arg use_native_camera_distortion)"/>
   <xacro:property name="robot_name_prop" value="$(arg robot_name)"/>
   <!-- use_gripper 必须在 include 之前定义成 property：astribot_s1_arm.xacro 在它
        自己文件末尾就地实例化左右两条臂，宏体里用 ${use_gripper} 决定法兰惯量的
@@ -120,9 +134,22 @@
       side="right" parent="astribot_torso_base" robot_name="${robot_name_prop}"
       xyz="$(arg livox_right_xyz)" rpy="$(arg livox_right_rpy)"/>
   </xacro:if>
-  <xacro:if value="${use_camera_prop}">
-    <xacro:astribot_s1_camera parent="astribot_head_link_2" robot_name="${robot_name_prop}" profile="$(arg camera_profile)"/>
-  </xacro:if>
+  <!-- Sensor switches never remove physical camera mass, collision or fixed TF. -->
+  <xacro:property name="camera_capture_enabled" value="${str(use_camera_prop).lower() in ['true', '1']}"/>
+  <xacro:property name="wrist_capture_enabled" value="${camera_capture_enabled and str(use_wrist_cameras_prop).lower() in ['true', '1']}"/>
+  <xacro:property name="stereo_capture_enabled" value="${camera_capture_enabled and str(use_stereo_cameras_prop).lower() in ['true', '1']}"/>
+    <xacro:astribot_s1_calibrated_camera id="head_rgbd" parent="astribot_head_link_2"
+      robot_name="${robot_name_prop}" profile="$(arg camera_profile)" mounts_file="$(arg camera_mounts_profile)" native_distortion="${use_native_camera_distortion_prop}" sensor_enabled="${camera_capture_enabled}"/>
+    <xacro:astribot_s1_calibrated_camera id="torso_rgbd" parent="astribot_torso_base"
+      robot_name="${robot_name_prop}" profile="$(arg torso_camera_profile)" mounts_file="$(arg camera_mounts_profile)" native_distortion="${use_native_camera_distortion_prop}" sensor_enabled="${camera_capture_enabled}"/>
+      <xacro:astribot_s1_calibrated_camera id="left_wrist_rgbd" parent="astribot_arm_left_link_7"
+        robot_name="${robot_name_prop}" profile="$(arg camera_calibration_dir)/camera_left_wrist_rgbd.yaml" mounts_file="$(arg camera_mounts_profile)" native_distortion="${use_native_camera_distortion_prop}" sensor_enabled="${wrist_capture_enabled}"/>
+      <xacro:astribot_s1_calibrated_camera id="right_wrist_rgbd" parent="astribot_arm_right_link_7"
+        robot_name="${robot_name_prop}" profile="$(arg camera_calibration_dir)/camera_right_wrist_rgbd.yaml" mounts_file="$(arg camera_mounts_profile)" native_distortion="${use_native_camera_distortion_prop}" sensor_enabled="${wrist_capture_enabled}"/>
+      <xacro:astribot_s1_calibrated_camera id="head_stereo_left" parent="astribot_head_link_2"
+        robot_name="${robot_name_prop}" profile="$(arg camera_calibration_dir)/camera_head_stereo_left.yaml" mounts_file="$(arg camera_mounts_profile)" native_distortion="${use_native_camera_distortion_prop}" sensor_enabled="${stereo_capture_enabled}"/>
+      <xacro:astribot_s1_calibrated_camera id="head_stereo_right" parent="head_stereo_left_camera_optical_frame"
+        robot_name="${robot_name_prop}" profile="$(arg camera_calibration_dir)/camera_head_stereo_right.yaml" mounts_file="$(arg camera_mounts_profile)" native_distortion="${use_native_camera_distortion_prop}" sensor_enabled="${stereo_capture_enabled}"/>
 
   <!-- ============ ros2_control + gz_ros2_control 插件 ============ -->
   <!-- wheel_effort_limit 不再传进 astribot_s1_ros2_control 宏——实测发现

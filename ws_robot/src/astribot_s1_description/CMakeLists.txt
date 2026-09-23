@@ -8,6 +8,14 @@ install(DIRECTORY
   config
   rviz
   DESTINATION share/${PROJECT_NAME}
+  # The source checkout may contain colcon output under urdf/ from an older
+  # in-place build.  Those directories are build metadata, not robot assets;
+  # installing them can duplicate latest_build symlinks and abort the package
+  # install before camera profiles reach the share directory.
+  PATTERN "build" EXCLUDE
+  PATTERN "install" EXCLUDE
+  PATTERN "log" EXCLUDE
+  PATTERN ".pytest_cache" EXCLUDE
 )
 
 set(ASTRIBOT_S1_MESH_SRC_DIR
@@ -46,5 +54,7 @@ install(DIRECTORY
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(gripper_mimic_interfaces test/test_gripper_mimic_interfaces.py)
+  ament_add_pytest_test(camera_profiles_installed test/test_camera_profiles.py)
+  ament_add_pytest_test(camera_reference_mounts test/test_camera_reference_mounts.py)
 endif()
 ament_package()

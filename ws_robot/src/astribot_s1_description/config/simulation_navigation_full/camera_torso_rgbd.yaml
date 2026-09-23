@@ -1,0 +1,43 @@
+model: robot_torso_rgbd_nav_sim
+calibration_status: simulation_scaled_intrinsics_reference_mount_separate
+calibration_source: camera_torso_rgbd.yaml
+sensor_type: rgbd_camera
+parent_frame: astribot_torso_base
+child_frame: torso_rgbd_camera_optical_frame
+mount_xyz: 0.06775267 0.00133190 -0.08793599
+mount_rpy: -0.03077572 0.08157172 -0.01985774
+width: 640
+height: 360
+rate_hz: 20.0
+horizontal_fov: 1.493639999
+near_m: 0.08
+far_m: 5.0
+intrinsics:
+  color:
+  - 345.694
+  - 0.0
+  - 323.8735
+  - 0.0
+  - 345.726
+  - 182.7
+  - 0
+  - 0
+  - 1
+  depth:
+  - 345.694
+  - 0.0
+  - 323.8735
+  - 0.0
+  - 345.726
+  - 182.7
+  - 0
+  - 0
+  - 1
+distortion_model: plumb_bob
+distortion:
+- 0.00268249
+- -0.0404815
+- 8.09985e-06
+- -0.000577883
+- 0.027629
+distortion_status: robot_firmware_calibrated

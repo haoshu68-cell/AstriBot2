@@ -1,0 +1,28 @@
+# Robot-calibrated head_stereo_left profile mirrored into Gazebo.
+# Source: robot ws_robot/src/astribot_s1_description/config/camera_calibration_robot.json
+# SHA256: 40ffd44fa5b103b2b03f2877fa9f4c4bd4511de2bd72d17263456a0b7acc1cd3
+# Gazebo consumes mount, image, FOV and clipping fields. Distortion is retained
+# as provenance; the current Gazebo camera path does not render lens distortion.
+model: robot_head_stereo_left
+calibration_status: robot_firmware_calibrated
+calibration_source: /etc/config/sensor_calib.json
+calibration_sha256: 40ffd44fa5b103b2b03f2877fa9f4c4bd4511de2bd72d17263456a0b7acc1cd3
+sensor_type: camera
+parent_frame: astribot_head_link_2
+child_frame: head_stereo_left_camera_optical_frame
+mount_xyz: '0.05308852 -0.14422492 0.04584377'
+mount_rpy: '1.56209723 0.03048011 0.00483466'
+width: 1600
+height: 1200
+rate_hz: 15
+horizontal_fov: 1.767486319
+near_m: 0.08
+far_m: 5.0
+intrinsics:
+  color: [656.315165, 0, 786.819434, 0, 647.012277, 605.649339, 0, 0, 1]
+  depth: [656.315165, 0, 786.819434, 0, 647.012277, 605.649339, 0, 0, 1]
+distortion_model: plumb_bob
+distortion: [-0.2210107, 0.8403659, 0.00619961, -0.00472739, -1.68098506]
+distortion_status: robot_firmware_calibrated
+extrinsic_parent_frame: head
+extrinsic_matrix_row_major: [-0.03043183, -0.00509956, 0.99952384, 0.05308852, -0.00884622, 0.99994919, 0.0048324, -0.14422492, -0.9994977, -0.00869495, -0.03047539, 0.04584377, 0, 0, 0, 1]

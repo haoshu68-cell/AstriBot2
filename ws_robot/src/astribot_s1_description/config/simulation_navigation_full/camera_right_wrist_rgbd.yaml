@@ -1,0 +1,62 @@
+model: robot_right_wrist_rgbd
+calibration_status: simulation_scaled_intrinsics_reference_mount_separate
+calibration_source: /etc/config/sensor_calib.json
+calibration_sha256: 40ffd44fa5b103b2b03f2877fa9f4c4bd4511de2bd72d17263456a0b7acc1cd3
+sensor_type: rgbd_camera
+parent_frame: astribot_arm_right_link_7
+child_frame: right_wrist_rgbd_camera_optical_frame
+mount_xyz: 0.00798956 0.01107185 0.05206840
+mount_rpy: 0.15186302 -0.06475795 -1.59568150
+width: 640
+height: 320
+rate_hz: 20.0
+horizontal_fov: 1.550557065
+near_m: 0.08
+far_m: 5.0
+intrinsics:
+  color:
+  - 326.543
+  - 0.0
+  - 318.892
+  - 0.0
+  - 325.676
+  - 182.78
+  - 0
+  - 0
+  - 1
+  depth:
+  - 323.31
+  - 0.0
+  - 318.715
+  - 0.0
+  - 323.31
+  - 181.135
+  - 0
+  - 0
+  - 1
+distortion_model: plumb_bob
+distortion:
+- 0
+- 0
+- 0
+- 0
+- 0
+distortion_status: unavailable_sentinel_zeroed
+extrinsic_parent_frame: right
+extrinsic_matrix_row_major:
+- -0.98864388
+- 0.14989586
+- -0.02484777
+- 0.00798956
+- 0.01467218
+- -0.06819883
+- -0.99829099
+- 0.01107185
+- -0.15097804
+- -0.98651809
+- 0.0647127
+- 0.0520684
+- 0
+- 0
+- 0
+- 1

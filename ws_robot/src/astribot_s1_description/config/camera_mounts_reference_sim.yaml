@@ -1,0 +1,81 @@
+# Temporary simulation mounting layout, referenced to the user's 20260921 photo.
+# Distances: metres. mount_rpy: URDF radians, camera_link (+X forward,+Y left,+Z up).
+# The fixed optical joint supplies (+Z forward,+X right,+Y down).
+# Original camera_calibration_robot.json / camera_*.yaml are preserved separately.
+schema: astribot.camera_mounts/1
+status: provisional_reference
+revision: 2026092101
+scope: simulation_only_pending_complete_calibration
+source_image: 20260921-165049.jpg
+source_names: camera_calibration_robot.json
+cameras:
+  head_rgbd:
+    reference_label: head_rgbd
+    firmware_parent: head
+    parent_frame: astribot_head_link_2
+    mount_xyz: '0.107328 -0.220000 0.000000'
+    mount_rpy: '1.5707963267948966 0 0'
+    housing_size: '0.03 0.08 0.03'
+    housing_center_xyz: '-0.017 0 0'
+    mount_bracket_size: '0.010247 0.020 0.012'
+    mount_bracket_center_xyz: '-0.036123 0 0'
+  head_stereo_left:
+    reference_label: head_stereo
+    firmware_parent: head
+    parent_frame: astribot_head_link_2
+    mount_xyz: '0.115197 -0.150000 0.030000'
+    mount_rpy: '1.5707963267948966 0 0'
+    housing_size: '0.03 0.025 0.025'
+    housing_center_xyz: '-0.017 0 0'
+    mount_bracket_size: '0.008551 0.020 0.012'
+    mount_bracket_center_xyz: '-0.035276 0 0'
+  head_stereo_right:
+    reference_label: head_stereo
+    firmware_parent: head_stereo_left
+    parent_frame: astribot_head_link_2
+    mount_xyz: '0.115197 -0.150000 -0.030000'
+    mount_rpy: '1.5707963267948966 0 0'
+    housing_size: '0.03 0.025 0.025'
+    housing_center_xyz: '-0.017 0 0'
+    mount_bracket_size: '0.008689 0.020 0.012'
+    mount_bracket_center_xyz: '-0.035344 0 0'
+  torso_rgbd:
+    reference_label: torso_rgbd
+    firmware_parent: torso
+    parent_frame: astribot_torso_link_4
+    mount_xyz: '0.104390 0.000000 0.120000'
+    mount_rpy: '0 0 0'
+    housing_size: '0.03 0.08 0.03'
+    housing_center_xyz: '-0.017 0 0'
+    mount_bracket_size: '0.005336 0.020 0.012'
+    mount_bracket_center_xyz: '-0.033668 0 0'
+    # The fixed torso4 collision box already covers x<=.0925 (torso4 frame).
+    # Keep exactly the exposed housing remainder; retain the full visual.
+    # Removed housing + entire bracket are inside that existing parent box:
+    # the whole robot collision-volume union is unchanged (tested in URDF).
+    collision_housing_size: '0.009890 0.08 0.03'
+    collision_housing_center_xyz: '-0.006945 0 0'
+    mount_bracket_collision: false
+  left_wrist_rgbd:
+    reference_label: left_wrist_rgbd
+    firmware_parent: left
+    parent_frame: astribot_arm_left_link_7
+    # Close-up: fixed palm side bracket, not a moving finger or wrist shell.
+    # Equivalent gripper_base -> optical: xyz=[0,-.060,.040], R=identity.
+    # Same local mounting side provisionally assumed for both hands.
+    mount_xyz: '0.006000 -0.088000 -0.060000'
+    mount_rpy: '3.141592653589793 0 -1.5707963267948966'
+    housing_size: '0.03 0.06 0.05'
+    housing_center_xyz: '-0.017 0 0'
+    mount_bracket_size: '0.012 0.020 0.007'
+    mount_bracket_center_xyz: '-0.017 0 -0.0275'
+  right_wrist_rgbd:
+    reference_label: right_wrist_rgbd
+    firmware_parent: right
+    parent_frame: astribot_arm_right_link_7
+    mount_xyz: '0.006000 -0.088000 -0.060000'
+    mount_rpy: '3.141592653589793 0 -1.5707963267948966'
+    housing_size: '0.03 0.06 0.05'
+    housing_center_xyz: '-0.017 0 0'
+    mount_bracket_size: '0.012 0.020 0.007'
+    mount_bracket_center_xyz: '-0.017 0 -0.0275'

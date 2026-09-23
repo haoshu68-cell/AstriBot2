@@ -1,0 +1,43 @@
+model: robot_head_rgbd_nav_sim
+calibration_status: simulation_scaled_intrinsics_reference_mount_separate
+calibration_source: camera_head_rgbd.yaml
+sensor_type: rgbd_camera
+parent_frame: astribot_head_link_2
+child_frame: head_rgbd_camera_optical_frame
+mount_xyz: 0.06034375 -0.21385876 -0.02767104
+mount_rpy: 1.55787852 0.02188740 0.20119478
+width: 640
+height: 360
+rate_hz: 20.0
+horizontal_fov: 1.414070963
+near_m: 0.08
+far_m: 5.0
+intrinsics:
+  color:
+  - 374.5375
+  - 0.0
+  - 318.252
+  - 0.0
+  - 374.451
+  - 179.303
+  - 0
+  - 0
+  - 1
+  depth:
+  - 374.5375
+  - 0.0
+  - 318.252
+  - 0.0
+  - 374.451
+  - 179.303
+  - 0
+  - 0
+  - 1
+distortion_model: plumb_bob
+distortion:
+- 0.0765807
+- -0.106598
+- -9.18542e-05
+- 0.000439831
+- 0.0439563
+distortion_status: robot_firmware_calibrated

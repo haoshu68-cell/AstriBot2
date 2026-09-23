@@ -1,0 +1,28 @@
+# Robot-calibrated left_wrist_rgbd profile mirrored into Gazebo.
+# Source: robot ws_robot/src/astribot_s1_description/config/camera_calibration_robot.json
+# SHA256: 40ffd44fa5b103b2b03f2877fa9f4c4bd4511de2bd72d17263456a0b7acc1cd3
+# Gazebo consumes mount, image, FOV and clipping fields. Distortion is retained
+# as provenance; the current Gazebo camera path does not render lens distortion.
+model: robot_left_wrist_rgbd
+calibration_status: robot_firmware_calibrated
+calibration_source: /etc/config/sensor_calib.json
+calibration_sha256: 40ffd44fa5b103b2b03f2877fa9f4c4bd4511de2bd72d17263456a0b7acc1cd3
+sensor_type: rgbd_camera
+parent_frame: astribot_arm_left_link_7
+child_frame: left_wrist_rgbd_camera_optical_frame
+mount_xyz: '-0.01938667 -0.00412844 0.04767655'
+mount_rpy: '-0.24958987 -0.09270533 -1.60741310'
+width: 640
+height: 320
+rate_hz: 15
+horizontal_fov: 1.555040516
+near_m: 0.08
+far_m: 5.0
+intrinsics:
+  color: [325.082, 0, 317.354, 0, 324.212, 180.34, 0, 0, 1]
+  depth: [322.243, 0, 317.582, 0, 322.243, 179.866, 0, 0, 1]
+distortion_model: plumb_bob
+distortion: [0, 0, 0, 0, 0]
+distortion_status: unavailable_sentinel_zeroed
+extrinsic_parent_frame: left
+extrinsic_matrix_row_major: [-0.96771442, -0.25040208, -0.03647614, -0.01938667, 0.0585881, -0.08106844, -0.99571412, -0.00412844, 0.24597071, -0.96495013, 0.0925726, 0.04767655, 0, 0, 0, 1]

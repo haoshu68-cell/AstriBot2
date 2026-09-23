@@ -132,6 +132,70 @@
     </gazebo>
   </xacro:macro>
 
+  <!-- Calibrated camera instance.  Names are prefixed by id so all six
+       firmware cameras can coexist in one model without frame/sensor clashes. -->
+  <xacro:macro name="astribot_s1_calibrated_camera" params="id parent robot_name profile native_distortion:=false mounts_file:='' sensor_enabled:=true">
+    <xacro:property name="camera" value="${xacro.load_yaml(profile)}"/>
+    <xacro:property name="mount" value="${xacro.load_yaml(mounts_file)['cameras'][id] if mounts_file else camera}"/>
+    <xacro:property name="housing_size" value="${mount.get('housing_size', '0.03 0.08 0.03')}"/>
+    <!-- camera_link is the entrance pupil. Housing belongs behind that plane,
+         not around the sensor origin, otherwise it can occlude its own lens. -->
+    <xacro:property name="housing_center" value="${mount.get('housing_center_xyz', '-0.016 0 0')}"/>
+    <link name="${id}_camera_link">
+      <inertial><origin xyz="${housing_center}"/><mass value="0.05"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+      <visual><origin xyz="${housing_center}"/><geometry><box size="${housing_size}"/></geometry><material name="astribot_camera_color"><color rgba="0.05 0.05 0.05 1"/></material></visual>
+      <!-- An override may omit only volume already represented by the fixed
+           parent's collision geometry; the reference profile tests this union. -->
+      <collision><origin xyz="${mount.get('collision_housing_center_xyz', housing_center)}"/><geometry><box size="${mount.get('collision_housing_size', housing_size)}"/></geometry></collision>
+      <xacro:if value="${'mount_bracket_size' in mount}">
+        <visual name="${id}_mount_bracket">
+          <origin xyz="${mount.mount_bracket_center_xyz}"/>
+          <geometry><box size="${mount.mount_bracket_size}"/></geometry>
+          <material name="astribot_camera_bracket_color"><color rgba="0.45 0.45 0.45 1"/></material>
+        </visual>
+        <xacro:if value="${mount.get('mount_bracket_collision', True)}">
+          <collision name="${id}_mount_bracket_collision">
+            <origin xyz="${mount.mount_bracket_center_xyz}"/>
+            <geometry><box size="${mount.mount_bracket_size}"/></geometry>
+          </collision>
+        </xacro:if>
+      </xacro:if>
+    </link>
+    <joint name="${id}_camera_joint" type="fixed">
+      <parent link="${mount.get('parent_frame', parent)}"/><child link="${id}_camera_link"/>
+      <origin xyz="${mount.mount_xyz}" rpy="${mount.mount_rpy}"/>
+    </joint>
+    <link name="${id}_camera_optical_frame"/>
+    <joint name="${id}_camera_optical_joint" type="fixed">
+      <parent link="${id}_camera_link"/><child link="${id}_camera_optical_frame"/>
+      <origin xyz="0 0 0" rpy="-1.5707963267948966 0 -1.5707963267948966"/>
+    </joint>
+    <!-- Installed housing and fixed frames remain present when capture is disabled. -->
+    <xacro:if value="${sensor_enabled}">
+    <gazebo reference="${id}_camera_link">
+      <sensor name="${id}_sensor" type="${camera.sensor_type}">
+        <pose>0 0 0 0 0 0</pose>
+        <topic>${'/model/' + robot_name + '/' + id if camera.sensor_type == 'rgbd_camera' else '/model/' + robot_name + '/' + id + '/image_raw'}</topic>
+        <update_rate>${camera.rate_hz}</update_rate><always_on>true</always_on><visualize>false</visualize>
+        <camera>
+          <horizontal_fov>${camera.horizontal_fov}</horizontal_fov>
+          <image><width>${camera.width}</width><height>${camera.height}</height><format>R8G8B8</format></image>
+          <clip><near>${camera.near_m}</near><far>${camera.far_m}</far></clip>
+          <xacro:if value="${native_distortion}">
+            <!-- YAML follows ROS/OpenCV order k1,k2,p1,p2,k3; SDF uses k1,k2,k3,p1,p2. -->
+            <distortion>
+              <k1>${camera.distortion[0]}</k1><k2>${camera.distortion[1]}</k2><k3>${camera.distortion[4]}</k3>
+              <p1>${camera.distortion[2]}</p1><p2>${camera.distortion[3]}</p2>
+              <center>${camera.intrinsics.color[2] / camera.width} ${camera.intrinsics.color[5] / camera.height}</center>
+            </distortion>
+          </xacro:if>
+        </camera>
+      </sensor>
+    </gazebo>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Legacy single head camera entry point retained for downstream launch files. -->
   <xacro:macro name="astribot_s1_camera" params="parent:=astribot_head_link_2 robot_name:=astribot_s1 profile">
     <xacro:property name="camera" value="${xacro.load_yaml(profile)}"/>
     <link name="camera_link">
