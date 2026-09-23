@@ -16,6 +16,8 @@
 #include <optional>
 #include <sstream>
 #include <iomanip>
+#include <random>
+#include "astribot_s1_gazebo_bringup/kinematic_inventory.hpp"
 
 namespace sim=ignition::gazebo;
 namespace math=ignition::math;
@@ -32,6 +34,7 @@ class KinematicPayload : public sim::System, public sim::ISystemConfigure,
   bool attached_{false};
   math::Pose3d offset_;
   std::chrono::steady_clock::duration last_publish_{0};
+  simulation::PayloadExecution evidence_;
 
   bool command(const ignition::msgs::Pose & req,ignition::msgs::Boolean & response) {
     const auto pose=ignition::msgs::Convert(req);
@@ -53,12 +56,18 @@ public:
     parent_model_=sdf->Get<std::string>("parent_model");
     parent_link_=sdf->Get<std::string>("parent_link");
     parent_name_=parent_model_+"::"+parent_link_;
+    std::random_device random;std::ostringstream epoch;
+    for(unsigned i=0;i<8;++i)epoch<<std::hex<<random();
+    evidence_.epoch=epoch.str();evidence_.parent_model=parent_model_;evidence_.parent_link=parent_link_;
     const auto topic="/model/"+sim::Model(entity).Name(ecm)+"/kinematic_attachment";
     node_.Advertise(topic+"/command",&KinematicPayload::command,this);
     state_=node_.Advertise<ignition::msgs::StringMsg>(topic+"/state");
   }
   void PreUpdate(const sim::UpdateInfo & info,sim::EntityComponentManager & ecm) override {
     if(info.paused)return;
+    const auto capture=std::chrono::duration_cast<std::chrono::nanoseconds>(info.simTime).count();
+    if(evidence_.capture>=0 && capture<evidence_.capture)++evidence_.clock_epoch;
+    evidence_.capture=capture;
     if(parent_==sim::kNullEntity || !ecm.HasEntity(parent_)) {
       const auto robot=ecm.EntityByComponents(sim::components::Model(),sim::components::Name(parent_model_));
       parent_=robot==sim::kNullEntity ? sim::kNullEntity : sim::Model(robot).LinkByName(ecm,parent_link_);
@@ -74,11 +83,15 @@ public:
       }
     }
     if(attached_) {
-      if(parent_==sim::kNullEntity) {error_="PARENT_LOST";return;}
-      sim::Model(model_).SetWorldPoseCmd(ecm,sim::worldPose(parent_,ecm)*offset_);
+      if(parent_==sim::kNullEntity)error_="PARENT_LOST";
+      else sim::Model(model_).SetWorldPoseCmd(ecm,sim::worldPose(parent_,ecm)*offset_);
     } else if(request && applied_==request->id()) {
       sim::Model(model_).SetWorldPoseCmd(ecm,offset_);
     }
+    {std::lock_guard<std::mutex> lock(mutex_);evidence_.accepted=accepted_;evidence_.pending=pending_.has_value();}
+    evidence_.applied=applied_;evidence_.attached=attached_;evidence_.parent=parent_;
+    evidence_.offset=offset_;evidence_.error=error_;
+    simulation::write_execution(model_,ecm,evidence_);
   }
   void PostUpdate(const sim::UpdateInfo & info,const sim::EntityComponentManager & ecm) override {
     if(info.paused || (info.simTime>=last_publish_ && info.simTime-last_publish_<std::chrono::milliseconds(20)))return;
