@@ -1,0 +1,87 @@
+{
+  "observed_at": "2026-09-23T14:08:02.966382+08:00",
+  "current_boot_id": "2063685d-c834-4d96-ad01-6ea8bd8cd80e",
+  "previous_identities": [
+    {
+      "boot_id": "288493a6-a507-454b-8451-db565a587521",
+      "pid": 3984107,
+      "start_ticks": "7260704",
+      "exe": "/usr/bin/python3.10",
+      "cmdline": [
+        "python3",
+        "tools/sim_stack_supervisor.py",
+        "--instance",
+        "payload_live_20260923",
+        "--ros-domain-id",
+        "94",
+        "--mode",
+        "mapping",
+        "--navigation-geometry-mode",
+        "fixed_v2",
+        "--navigation-policy",
+        "p4",
+        "--corridor-file",
+        "tools/social_navigation/cases/corridor_13.json",
+        "--tracker",
+        "mppi",
+        "--payload-source-id",
+        "gazebo_kinematic_v1",
+        "--nav-transport",
+        "udp",
+        "--headless",
+        "--no-rviz",
+        "--ready-timeout",
+        "150",
+        "--log-dir",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/navigation_04"
+      ],
+      "tool_session": 89400
+    },
+    {
+      "pid": 1398744,
+      "start_ticks": 7756387,
+      "exe": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/fixed_build/fixed_envelope_cpp",
+      "cmdline": [
+        "runs/joint_acceptance_20260923/fixed_build/fixed_envelope_cpp",
+        "--ros-args",
+        "-p",
+        "use_sim_time:=true",
+        "-p",
+        "navigation_geometry_mode:=fixed_v2",
+        "-p",
+        "profile:=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/config/simulation.json"
+      ],
+      "boot_id": "288493a6-a507-454b-8451-db565a587521",
+      "tool_session": 56170,
+      "sha256": "d86b55d840304fc9aed93ed93a7df5be7283f6539e255c0e298736d68b72cf72"
+    },
+    {
+      "pid": 964512,
+      "boot_id": "288493a6-a507-454b-8451-db565a587521",
+      "start_ticks": "7611308",
+      "exe": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/hold_install/lib/astribot_s1_transport_native/hold_executor",
+      "sha256": "824bd35650396f96419d430fb81868cd9146dec1710649b244a631f4012cc230",
+      "cmdline": [
+        "runs/joint_acceptance_20260923/hold_install/lib/astribot_s1_transport_native/hold_executor",
+        "--ros-args",
+        "-p",
+        "use_sim_time:=true",
+        "-p",
+        "simulation_commissioning:=true"
+      ],
+      "domain": "94",
+      "tool_session": 26423,
+      "libraries": {
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/hold_install/lib/libarm_hold_core.so": "9a08b4a93d0447b2d1b280d8941632340c464c43fa6fa2085576ac636114090c"
+      }
+    }
+  ],
+  "all_previous_boots_different": true,
+  "previous_pid_paths_present": {
+    "3984107": false,
+    "1398744": false,
+    "964512": false
+  },
+  "validation_07": "refused at boot identity check before ROS init or mutations",
+  "cleanup_claim": "prior boot identities are no longer live; no claimed graceful stop or physical stopping evidence"
+}
