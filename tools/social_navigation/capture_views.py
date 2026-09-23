@@ -27,6 +27,43 @@ def viewport_rendered(pixels):
     return sum(histogram[9:]) > .02 * viewport.width * viewport.height
 
 
+def frame_unobscured(frame):
+    from Xlib import display, X
+    connection = display.Display(os.environ.get('DISPLAY', ':1'))
+    try:
+        children = connection.screen().root.query_tree().children
+        target_index = next(index for index, child in enumerate(children) if child.id == frame)
+        target = children[target_index]
+        if target.get_attributes().map_state != X.IsViewable:
+            return False
+        region = target.get_geometry()
+        for window in children[target_index+1:]:
+            attributes = window.get_attributes()
+            if attributes.map_state != X.IsViewable or attributes.win_class == X.InputOnly:
+                continue
+            other = window.get_geometry()
+            if (max(region.x, other.x) < min(region.x+region.width, other.x+other.width) and
+                    max(region.y, other.y) < min(region.y+region.height, other.y+other.height)):
+                return False
+        return True
+    finally:
+        connection.close()
+
+
+def capture_exposed(target, output, active_client, *, scene=False, visible=None):
+    visible = visible or (lambda: frame_unobscured(target['frame']))
+    if active_client() != target['client']:
+        raise RuntimeError('Owned window is not the active client before capture')
+    if not visible():
+        raise RuntimeError('Owned window is obscured before capture')
+    capture(target['frame'], output, scene=scene)
+    active = active_client() == target['client']
+    if not active or not visible():
+        if output.exists():
+            output.replace(output.with_name(output.stem + '_occluded.png'))
+        raise RuntimeError('Owned window is not active or is obscured after capture')
+
+
 def capture(frame, output, *, scene=False):
     from PIL import Image
     x = c.CDLL('libX11.so.6')
@@ -142,7 +179,12 @@ def main():
         target['active_client_at_capture'] = int(active.value[0]) if active is not None else None
         for attempt in range(3):
             try:
-                capture(target['frame'], args.output/(label + '.png'), scene=label == 'gazebo')
+                def active_client():
+                    prop = connection.screen().root.get_full_property(
+                        connection.intern_atom('_NET_ACTIVE_WINDOW'), Xatom.WINDOW)
+                    return int(prop.value[0]) if prop is not None else None
+                capture_exposed(target, args.output/(label + '.png'), active_client,
+                                scene=label == 'gazebo')
                 break
             except RuntimeError:
                 output = args.output/(label + '.png')

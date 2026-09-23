@@ -19,6 +19,30 @@ SHORT_ROUTE = [(1., 0., 0.), (1., -1., 0.), (0., -2., -math.pi/2),
                (0., -2., math.pi/2), (0., 0., 0.)]
 
 
+def read_service(client, request, spin, timeout=10., *, clock=time.monotonic, events=None):
+    """Retry idempotent parameter reads within one original wall-clock budget."""
+    deadline = clock() + timeout
+    for attempt in range(1, 4):
+        future = client.call_async(request)
+        end = min(deadline, clock()+2.) if attempt < 3 else deadline
+        try:
+            while not future.done() and clock() < end:
+                spin()
+            if future.done():
+                if events is not None:
+                    events.append({'service': client.srv_name, 'attempt': attempt, 'result': 'response'})
+                return future.result()
+            if events is not None:
+                events.append({'service': client.srv_name, 'attempt': attempt, 'result': 'response_timeout'})
+        finally:
+            if not future.done():
+                client.remove_pending_request(future)
+                future.cancel()
+        if clock() >= deadline:
+            break
+    raise TimeoutError('Read-only ROS service response timeout within original budget')
+
+
 def yaw(q):
     return math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
 
@@ -415,7 +439,13 @@ def main():
         keys=['use_sim_time','precise_goal_checker.xy_goal_tolerance','precise_goal_checker.yaw_goal_tolerance','FollowPath.inner.GoalAngleCritic.threshold_to_consider','FollowPath.arrival.capture_radius','FollowPath.inner.vx_max',
               'FollowPath.inner.vy_max','FollowPath.inner.CurvatureSpeedLimitCritic.v_min_turn',
               'navigation_policy_enabled']
-        values=wait(params.call_async(GetParameters.Request(names=keys)),10).values
+        parameter_reads = []
+        def read_parameters(client, request):
+            try:
+                return read_service(client, request, spin, events=parameter_reads)
+            finally:
+                (output/'parameter_reads.json').write_text(json.dumps(parameter_reads, indent=2)+'\n')
+        values=read_parameters(params, GetParameters.Request(names=keys)).values
         if not values[0].bool_value:
             raise RuntimeError('this runner requires a simulation stack (use_sim_time=true)')
         xy_limit,yaw_limit=values[1].double_value,values[2].double_value
@@ -423,8 +453,8 @@ def main():
         listing=node.create_client(ListParameters,'/controller_server/list_parameters')
         if not listing.wait_for_service(timeout_sec=10):
             raise RuntimeError('controller parameter inventory unavailable')
-        all_keys=sorted(wait(listing.call_async(ListParameters.Request(depth=0)),10).result.names)
-        all_values=wait(params.call_async(GetParameters.Request(names=all_keys)),10).values
+        all_keys=sorted(read_parameters(listing, ListParameters.Request(depth=0)).result.names)
+        all_values=read_parameters(params, GetParameters.Request(names=all_keys)).values
         if len(all_values)!=len(all_keys) or not set(keys)<=set(all_keys):
             raise RuntimeError('controller parameter inventory incomplete')
         (output/'metadata.json').write_text(json.dumps({'arguments':vars(args),'script_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'xy_limit':xy_limit,'yaw_limit':yaw_limit,'terminal_heading_radius':terminal_heading_radius,'controller_parameters':dict(zip(keys,[parameter_value_to_python(v) for v in values])),'controller_parameters_all':dict(zip(all_keys,[parameter_value_to_python(v) for v in all_values])),'ros_domain':os.environ.get('ROS_DOMAIN_ID')},indent=2))
