@@ -58,4 +58,55 @@ class StopEvidence(unittest.TestCase):
         self.assertFalse(measured_stop(rows,9.9,20.71, 10.71)['passed'])
         self.assertFalse(measured_stop(stationary(),10.5,20.71, 10.71)['passed'])
 
+
+class HoldRenewalOwnership(unittest.TestCase):
+    def test_foreign_feedback_and_global_status_do_not_authorize_renewal(self):
+        from verify_fixed_navigation import OwnedHoldLease
+        binding=OwnedHoldLease('own')
+        binding.observe('foreign','lease','epoch','hold')
+        binding.accepted=True
+        self.assertFalse(binding.matches(dict(lease_id='lease',epoch='epoch',hold_id='hold',phase='2')))
+
+    def test_feedback_before_admission_cannot_renew(self):
+        from verify_fixed_navigation import OwnedHoldLease
+        binding=OwnedHoldLease('own');binding.observe('own','lease','epoch','hold')
+        status=dict(lease_id='lease',epoch='epoch',hold_id='hold',phase='2')
+        self.assertFalse(binding.matches(status));binding.accepted=True
+        self.assertTrue(binding.matches(status))
+        for key in ('lease_id','epoch','hold_id'):
+            self.assertFalse(binding.matches(dict(status,**{key:'foreign'})))
+
+    def test_changed_own_identity_is_rejected(self):
+        from verify_fixed_navigation import OwnedHoldLease
+        binding=OwnedHoldLease('own');binding.observe('own','lease','epoch','hold')
+        with self.assertRaises(RuntimeError):binding.observe('own','different','epoch','hold')
+
+    def test_incomplete_and_terminal_feedback_does_not_grant_renewal(self):
+        from verify_fixed_navigation import OwnedHoldLease
+        binding=OwnedHoldLease('own');binding.accepted=True
+        binding.observe('own','lease','','hold')
+        self.assertFalse(binding.matches(dict(lease_id='lease',epoch='',hold_id='hold',phase='2')))
+        binding.observe('own','lease','epoch','hold')
+        self.assertFalse(binding.matches(dict(lease_id='lease',epoch='epoch',hold_id='hold',phase='0')))
+
+    def test_changed_feedback_latches_without_interrupting_cleanup_callbacks(self):
+        import ast
+        from pathlib import Path
+        from types import SimpleNamespace as S
+        from verify_fixed_navigation import OwnedHoldLease
+        tree=ast.parse(Path(__file__).with_name('verify_fixed_navigation.py').read_text())
+        main=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='main')
+        callback=next(n for n in main.body if isinstance(n,ast.FunctionDef) and n.name=='hold_feedback')
+        class Scope(ast.NodeTransformer):
+            def visit_Nonlocal(self,node):return ast.copy_location(ast.Global(names=node.names),node)
+        callback=Scope().visit(callback)
+        binding=OwnedHoldLease('01');binding.observe('01','mine','epoch','hold');binding.accepted=True
+        namespace=dict(hold_binding=binding,renew_enabled=True,latest={},cleanup_health_errors=[])
+        exec(compile(ast.fix_missing_locations(ast.Module(body=[callback],type_ignores=[])), '<actual callback>', 'exec'),namespace)
+        msg=S(goal_id=S(uuid=[1]),feedback=S(lease_id='changed',resource_epoch='epoch',hold_id='hold'))
+        for _ in range(2):namespace['hold_feedback'](msg)
+        self.assertFalse(namespace['renew_enabled'])
+        self.assertEqual(namespace['latest']['hold_ownership_error'],'OWN_HOLD_FEEDBACK_IDENTITY_CHANGED')
+        self.assertEqual(namespace['cleanup_health_errors'],['OWN_HOLD_FEEDBACK_IDENTITY_CHANGED'])
+
 if __name__=='__main__': unittest.main()

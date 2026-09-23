@@ -3,6 +3,26 @@
 import math
 import statistics
 
+class OwnedHoldLease:
+    """Bind renewal to feedback for this Action UUID, never global status alone."""
+    def __init__(self, goal_id):
+        self.goal_id=goal_id
+        self.accepted=False
+        self.identity=None
+
+    def observe(self, goal_id, lease_id, epoch, hold_id):
+        if goal_id!=self.goal_id or not all((lease_id,epoch,hold_id)):
+            return
+        identity=(lease_id,epoch,hold_id)
+        if self.identity is not None and self.identity!=identity:
+            raise RuntimeError('OWN_HOLD_FEEDBACK_IDENTITY_CHANGED')
+        self.identity=identity
+
+    def matches(self, status):
+        return bool(self.accepted and self.identity is not None and status.get('phase') in ('1','2','3')
+                    and self.identity==(status.get('lease_id'),status.get('epoch'),status.get('hold_id')))
+
+
 def navigation_entry_observed(active_goals, verified_cold_start):
     return verified_cold_start or set(active_goals) == {'navigate_to_pose', 'navigate_through_poses'}
 
@@ -112,7 +132,7 @@ def main():
     active_goals={}; execution_active=set(); execution_events=[]; seen_nav_ids=set(); own_nav_ids=set(); pending_nav=None; pending_hold=None; pending_nav_id=None; pending_hold_id=None
     nav_admission_uncertain=False;hold_admission_uncertain=False
     consumers={'global_costmap','local_costmap','planner','controller','policy','protection'}
-    hold_goal=hold_result=nav_goal=nav_result=None
+    hold_goal=hold_result=nav_goal=nav_result=None;hold_binding=None
     renew_enabled=False; renew_sequence=0; renew_pending=None; renew_last=0.; suspended=None
     cleanup_mode=False;cleanup_health_errors=[];graph_ready=False;graph_last=0.
     report=dict(passed=False,owner=owner,layer='owned_fixed_v2_empty_navigation_simulation',scenario=args.scenario,started_wall=time.time(),scenarios=scenarios)
@@ -219,6 +239,7 @@ def main():
         nonlocal renew_pending,renew_last,renew_sequence,renew_enabled,graph_last
         deadline=time.monotonic()+timeout
         while True:
+            if not cleanup_mode and latest.get('hold_ownership_error'):raise RuntimeError(latest['hold_ownership_error'])
             if graph_ready and not cleanup_mode and time.monotonic()-graph_last>1.:
                 graph_last=time.monotonic()
                 if not check_navigation_graph():raise RuntimeError('NAVIGATION_GRAPH_CHANGED')
@@ -235,7 +256,7 @@ def main():
                     cleanup_health_errors.append('RENEW_REJECTED:'+answer.reason);renew_enabled=False
                 renew_pending=None
             status=latest.get('executor',{})
-            if renew_enabled and status.get('phase') in ('1','2','3') and renew_pending is None and time.monotonic()-renew_last>.2:
+            if renew_enabled and hold_binding is not None and hold_binding.matches(status) and renew_pending is None and time.monotonic()-renew_last>.2:
                 renew_sequence+=1
                 renew_pending=renew.call_async(RenewHold.Request(lease_id=status['lease_id'],resource_epoch=status['epoch'],sequence=renew_sequence))
                 renew_last=time.monotonic()
@@ -246,17 +267,30 @@ def main():
         if latest.get('clock_error'):raise RuntimeError(latest['clock_error'])
         spin(lambda:measured_stop(motion,after,time.monotonic(),ros())['passed'],timeout,'ACTUAL_STOP_TIMEOUT',True)
         return measured_stop(motion,after,time.monotonic(),ros())
+    def hold_feedback(message):
+        nonlocal renew_enabled
+        if hold_binding is not None:
+            value=message.feedback
+            try:
+                hold_binding.observe(bytes(message.goal_id.uuid).hex(),value.lease_id,value.resource_epoch,value.hold_id)
+            except RuntimeError as error:
+                # Fail the run, but let cancellation and terminal readback keep spinning.
+                renew_enabled=False
+                latest['hold_ownership_error']=str(error)
+                if str(error) not in cleanup_health_errors:cleanup_health_errors.append(str(error))
+
     def acquire():
-        nonlocal hold_goal,hold_result,renew_enabled,renew_sequence,renew_pending,renew_last,pending_hold,pending_hold_id,hold_admission_uncertain
+        nonlocal hold_goal,hold_result,renew_enabled,renew_sequence,renew_pending,renew_last,pending_hold,pending_hold_id,hold_admission_uncertain,hold_binding
         spin(lambda:geometry_ready() and latest.get('executor',{}).get('phase')=='0',15,'FORMAL_HOLD_ENTRY')
         renew_sequence=0;renew_pending=None;renew_last=0.;renew_enabled=True
-        pending_hold_id=uuid.uuid4()
+        pending_hold_id=uuid.uuid4();hold_binding=OwnedHoldLease(pending_hold_id.hex)
         hold_admission_uncertain=True
-        pending_hold=hold_action.send_goal_async(HoldResources.Goal(task_id='I0_2_fixed_navigation',request_id='n4_hold_'+uuid.uuid4().hex),goal_uuid=UUID(uuid=list(pending_hold_id.bytes)))
+        pending_hold=hold_action.send_goal_async(HoldResources.Goal(task_id='I0_2_fixed_navigation',request_id='n4_hold_'+uuid.uuid4().hex),goal_uuid=UUID(uuid=list(pending_hold_id.bytes)),feedback_callback=hold_feedback)
         spin(pending_hold.done,5,'HOLD_ADMISSION');hold_goal=pending_hold.result();pending_hold=None;hold_admission_uncertain=False
         if not hold_goal.accepted: raise RuntimeError('HOLD_REJECTED')
+        hold_binding.accepted=True
         hold_result=hold_goal.get_result_async()
-        spin(lambda:hold_result.done() or (fresh('hold') and latest['hold'].hold_confirmed and latest['hold'].hold_id==latest.get('executor',{}).get('hold_id')),18,'HOLD_NOT_CONFIRMED')
+        spin(lambda:hold_result.done() or (fresh('hold') and latest['hold'].hold_confirmed and hold_binding.matches(latest.get('executor',{})) and latest['hold'].hold_id==hold_binding.identity[2]),18,'HOLD_NOT_CONFIRMED')
         if hold_result.done(): raise RuntimeError('HOLD_TERMINATED:'+str(hold_result.result()))
         spin(geometry_ready,3,'GEOMETRY_FOR_FIXED')
         limits=RobotEnvelope(frame_id=profile['base_frame'],posture_id='n4_measured_current_pose',lease_s=.3)
