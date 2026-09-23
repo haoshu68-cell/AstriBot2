@@ -1,0 +1,161 @@
+{
+  "scope": "metadata and task-event correlation only; no frame-by-frame visual inspection",
+  "task_wall_duration_s": 160.43054938316345,
+  "recording_wall_duration_s": 163.9199134240007,
+  "video_duration_s": 77.4,
+  "video_frames": 774,
+  "encoding_fps": 10,
+  "recording_wall_to_playback_ratio": 2.1178283388113783,
+  "timing_caveat": "Received frames encoded at constant 10 fps. Playback is accelerated relative to wall time; ratio is overall only, not a guaranteed uniform per-stage speed. Frame intervals follow recorder status arrival, not exact motion/image timestamps.",
+  "terminal": "SUCCEEDED",
+  "object_state": "PLACED",
+  "key_phases_present": true,
+  "coverage": [
+    {
+      "phase": "grasp",
+      "stage_start": "PREGRASP",
+      "stage_end_exclusive": "LIFT",
+      "frame_start_zero_based": 152,
+      "frame_end_exclusive": 220,
+      "frames": 68,
+      "video_start_s": 15.2,
+      "video_end_s": 22.0,
+      "video_duration_s": 6.8,
+      "task_stage_start_wall_s": 31.95758080482483,
+      "task_stage_end_wall_s": 46.211304903030396,
+      "event_wall_duration_s": 14.253724098205566
+    },
+    {
+      "phase": "lift",
+      "stage_start": "LIFT",
+      "stage_end_exclusive": "TRANSPORT_POSTURE",
+      "frame_start_zero_based": 220,
+      "frame_end_exclusive": 222,
+      "frames": 2,
+      "video_start_s": 22.0,
+      "video_end_s": 22.2,
+      "video_duration_s": 0.2,
+      "task_stage_start_wall_s": 46.211304903030396,
+      "task_stage_end_wall_s": 47.14394545555115,
+      "event_wall_duration_s": 0.932640552520752
+    },
+    {
+      "phase": "transport_posture",
+      "stage_start": "TRANSPORT_POSTURE",
+      "stage_end_exclusive": "ENVELOPE_CONFIRM",
+      "frame_start_zero_based": 222,
+      "frame_end_exclusive": 258,
+      "frames": 36,
+      "video_start_s": 22.2,
+      "video_end_s": 25.8,
+      "video_duration_s": 3.6,
+      "task_stage_start_wall_s": 47.14394545555115,
+      "task_stage_end_wall_s": 55.84317326545715,
+      "event_wall_duration_s": 8.699227809906006
+    },
+    {
+      "phase": "carry_navigation",
+      "stage_start": "TRANSPORT",
+      "stage_end_exclusive": "PLACE_HOLD",
+      "frame_start_zero_based": 264,
+      "frame_end_exclusive": 568,
+      "frames": 304,
+      "video_start_s": 26.4,
+      "video_end_s": 56.8,
+      "video_duration_s": 30.4,
+      "task_stage_start_wall_s": 56.71352982521057,
+      "task_stage_end_wall_s": 117.41214919090271,
+      "event_wall_duration_s": 60.69861936569214
+    },
+    {
+      "phase": "place",
+      "stage_start": "PREPLACE",
+      "stage_end_exclusive": "RELEASE",
+      "frame_start_zero_based": 603,
+      "frame_end_exclusive": 664,
+      "frames": 61,
+      "video_start_s": 60.3,
+      "video_end_s": 66.4,
+      "video_duration_s": 6.1,
+      "task_stage_start_wall_s": 126.14388823509216,
+      "task_stage_end_wall_s": 138.9499237537384,
+      "event_wall_duration_s": 12.80603551864624
+    },
+    {
+      "phase": "release_detach",
+      "stage_start": "RELEASE",
+      "stage_end_exclusive": "RETREAT",
+      "frame_start_zero_based": 664,
+      "frame_end_exclusive": 691,
+      "frames": 27,
+      "video_start_s": 66.4,
+      "video_end_s": 69.1,
+      "video_duration_s": 2.7,
+      "task_stage_start_wall_s": 138.9499237537384,
+      "task_stage_end_wall_s": 144.88424372673035,
+      "event_wall_duration_s": 5.934319972991943
+    },
+    {
+      "phase": "retreat_stow",
+      "stage_start": "RETREAT",
+      "stage_end_exclusive": "EMPTY_PAYLOAD_HOLD",
+      "frame_start_zero_based": 691,
+      "frame_end_exclusive": 761,
+      "frames": 70,
+      "video_start_s": 69.1,
+      "video_end_s": 76.1,
+      "video_duration_s": 7.0,
+      "task_stage_start_wall_s": 144.88424372673035,
+      "task_stage_end_wall_s": 159.76105999946594,
+      "event_wall_duration_s": 14.876816272735596
+    },
+    {
+      "phase": "terminal",
+      "stage_start": "SUCCEEDED",
+      "stage_end_exclusive": null,
+      "frame_start_zero_based": 764,
+      "frame_end_exclusive": 774,
+      "frames": 10,
+      "video_start_s": 76.4,
+      "video_end_s": 77.4,
+      "video_duration_s": 1.0,
+      "task_stage_start_wall_s": 160.43054938316345,
+      "task_stage_end_wall_s": null,
+      "event_wall_duration_s": null
+    }
+  ],
+  "missing_event_stage_labels": [
+    {
+      "stage": "MANIPULATION_HOLD",
+      "event_duration_s": 0.027719736099243164,
+      "classification": "brief_status_label_not_observed_by_recorder"
+    },
+    {
+      "stage": "PLACE_CONFIRM",
+      "event_duration_s": 0.00509953498840332,
+      "classification": "brief_status_label_not_observed_by_recorder"
+    }
+  ],
+  "limitations": [
+    "LIFT label covers only 2 frames / 0.2 s of video; lift details need visual inspection.",
+    "No per-image timestamp inventory, so dropped images or unobserved motion instants cannot be quantified.",
+    "Gazebo kinematic attachment with MoveIt and ROS control; physical force/contact grasp is not validated."
+  ],
+  "ffprobe": {
+    "programs": [],
+    "streams": [
+      {
+        "codec_name": "mpeg4",
+        "width": 1280,
+        "height": 720,
+        "r_frame_rate": "10/1",
+        "avg_frame_rate": "10/1",
+        "duration": "77.400000",
+        "nb_frames": "774"
+      }
+    ],
+    "format": {
+      "duration": "77.400000"
+    }
+  }
+}

@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
     parser.add_argument('--timeout', type=float, default=600.)
+    parser.add_argument('--head-topic', default='/camera/color/image_raw')
     args = parser.parse_args()
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -52,7 +53,7 @@ def main():
         writer.write(picture);count[0] += 1;latest[0]=picture
         if count[0]%20 == 0:
             cv2.imwrite(str(output.with_suffix('.jpg')), picture)
-    subscriptions = [node.create_subscription(Image,'/camera/color/image_raw',lambda m:head.__setitem__(0,frame(m)),qos_profile_sensor_data),
+    subscriptions = [node.create_subscription(Image,args.head_topic,lambda m:head.__setitem__(0,frame(m)),qos_profile_sensor_data),
                      node.create_subscription(Image,'/transport/overview',overview_cb,qos_profile_sensor_data),
                      node.create_subscription(String,'/transport/status',status_cb,10)]
     start=time.monotonic()
