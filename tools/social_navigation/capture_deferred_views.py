@@ -19,6 +19,19 @@ def validate_environment(environment, isolation):
             raise RuntimeError('GUI environment differs from owned episode: ' + key)
 
 
+def observer_environment(environment, gazebo_prefix):
+    library = Path(gazebo_prefix)/'lib'
+    plugin = library/'libSocialProxyDisplay.so'
+    if not plugin.is_file():
+        raise FileNotFoundError('SocialProxyDisplay observer plugin missing: ' + str(plugin))
+    env = dict(environment, LIBGL_ALWAYS_SOFTWARE='1')
+    paths = [str(library), *env.get('IGN_GUI_PLUGIN_PATH', '').split(os.pathsep)]
+    env['IGN_GUI_PLUGIN_PATH'] = os.pathsep.join(dict.fromkeys(p for p in paths if p))
+    for key in ('EGL_PLATFORM', '__GLX_VENDOR_LIBRARY_NAME', '__EGL_VENDOR_LIBRARY_FILENAMES'):
+        env.pop(key, None)
+    return env
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
@@ -30,11 +43,9 @@ def main():
     if not Path(f'/proc/{args.supervisor}').exists():
         raise RuntimeError('Episode supervisor already exited')
     validate_environment(os.environ, session['isolation'])
-    from ament_index_python.packages import get_package_share_directory
+    from ament_index_python.packages import get_package_prefix, get_package_share_directory
     from Xlib import display, Xatom
-    env = dict(os.environ, LIBGL_ALWAYS_SOFTWARE='1')
-    for key in ('EGL_PLATFORM', '__GLX_VENDOR_LIBRARY_NAME', '__EGL_VENDOR_LIBRARY_FILENAMES'):
-        env.pop(key, None)
+    env = observer_environment(os.environ, get_package_prefix('astribot_s1_gazebo_bringup'))
     commands = [
         ['ign', 'gazebo', '-g', '--gui-config', str(args.output/'stack/simulation/social_gui.config')],
         ['ros2', 'run', 'rviz2', 'rviz2', '-d', str(Path(get_package_share_directory(
@@ -89,6 +100,7 @@ def main():
             (args.output/'visual_scope.json').write_text(json.dumps({
                 'scope': 'Post-episode observations only; not continuous route visual coverage',
                 'headless_physics': True, 'display': env['DISPLAY'],
+                'gui_plugin_path': env['IGN_GUI_PLUGIN_PATH'],
                 'gui_software_rendering': True, 'commands': commands}, indent=2)+'\n')
     finally:
         if connection is not None:

@@ -11,6 +11,26 @@ from capture_deferred_views import validate_environment
 from owned_command import OwnedCommand, run_owned_capture
 
 
+def test_observer_restores_social_plugin_path_without_modifying_server_environment(tmp_path):
+    from capture_deferred_views import observer_environment
+    library = tmp_path/'lib'
+    library.mkdir()
+    (library/'libSocialProxyDisplay.so').touch()
+    server = {'ROS_DOMAIN_ID': '89', 'IGN_PARTITION': 'owned',
+              'IGN_GUI_PLUGIN_PATH': '/existing/plugins', 'EGL_PLATFORM': 'device'}
+    result = observer_environment(server, tmp_path)
+    assert result['IGN_GUI_PLUGIN_PATH'].split(os.pathsep) == [str(library), '/existing/plugins']
+    assert result['ROS_DOMAIN_ID'] == '89' and result['IGN_PARTITION'] == 'owned'
+    assert result['LIBGL_ALWAYS_SOFTWARE'] == '1' and 'EGL_PLATFORM' not in result
+    assert server['EGL_PLATFORM'] == 'device' and server['IGN_GUI_PLUGIN_PATH'] == '/existing/plugins'
+
+
+def test_missing_social_plugin_rejected_before_gui_start(tmp_path):
+    from capture_deferred_views import observer_environment
+    with pytest.raises(FileNotFoundError, match='SocialProxyDisplay'):
+        observer_environment({}, tmp_path)
+
+
 def test_default_nonisolated_environment():
     validate_environment({'ROS_DOMAIN_ID': '25'}, {'ROS_DOMAIN_ID': '25'})
 
