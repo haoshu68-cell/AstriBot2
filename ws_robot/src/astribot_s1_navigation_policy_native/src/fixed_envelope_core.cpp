@@ -62,6 +62,42 @@ FixedEnvelopeCore::FixedEnvelopeCore(nlohmann::json baseline,std::string session
     :baseline_(std::move(baseline)),session_(std::move(session)),epoch_(epoch) {
   require(baseline_.at("environment")=="simulation","FIXED_V2_HARDWARE_NOT_VALIDATED");
 }
+void FixedEnvelopeCore::payload_source(PayloadProvider provider) {
+  require(!output_ && !payload_provider_ && static_cast<bool>(provider),"PAYLOAD_PROVIDER_CONFIGURATION_LOCKED");
+  payload_provider_=std::move(provider);
+}
+std::int64_t FixedEnvelopeCore::payload_until(const State& geometry,double requested_mass,std::int64_t now) const {
+  // Geometry-only EMPTY consumers preserve their existing validated contract.
+  // Once a payload source is configured, also bind EMPTY to it so a newer
+  // attachment ledger can revoke permission before geometry finishes updating.
+  if(geometry.attachment_ids.empty() && !payload_provider_)return fixed_stamp_ns(geometry.valid_until);
+  require(static_cast<bool>(payload_provider_),"PAYLOAD_SOURCE_NOT_CONFIGURED");
+  const auto* state=payload_provider_(now);
+  require(state && state->confirmed,"PAYLOAD_MASS_EVIDENCE_UNAVAILABLE");
+  const auto& observation=state->observation;
+  require(observation.full_inventory &&
+          (observation.status==observation.EMPTY || observation.status==observation.ATTACHED) &&
+          (observation.status==observation.EMPTY)==observation.objects.empty(),"PAYLOAD_MASS_STATUS_INVALID");
+  require(state->attachment_revision==geometry.attachment_revision,"PAYLOAD_MASS_REVISION_MISMATCH");
+  const auto until=std::min(fixed_stamp_ns(state->valid_until),fixed_stamp_ns(observation.valid_until));
+  require(fixed_stamp_ns(observation.observed_at)<=now && fixed_stamp_ns(state->published_at)<=now && now<until,"PAYLOAD_MASS_EXPIRED");
+  std::set<std::string> ids;
+  long double total=0.;
+  for(const auto& object:observation.objects) {
+    require(!object.object.id.empty() && ids.insert(object.object.id).second,"PAYLOAD_MASS_DUPLICATE_ID");
+    require(std::isfinite(object.weight) && object.weight>0.,"PAYLOAD_MASS_INVALID_WEIGHT");
+    total+=static_cast<long double>(object.weight);
+  }
+  const std::set<std::string> expected(geometry.attachment_ids.begin(),geometry.attachment_ids.end());
+  require(ids==expected && expected.size()==geometry.attachment_ids.size(),"PAYLOAD_MASS_OBJECT_IDS_MISMATCH");
+  require(std::isfinite(total) && total<=std::numeric_limits<double>::max(),"PAYLOAD_MASS_SUM_OVERFLOW");
+  // One representable double step only accommodates summation roundoff. This is
+  // not a configurable load tolerance or a lower physical safety threshold.
+  require(std::isfinite(requested_mass) && requested_mass>=0. &&
+          static_cast<long double>(std::nextafter(requested_mass,std::numeric_limits<double>::infinity()))>=total,
+          "PAYLOAD_MASS_UNDERREPORTED");
+  return until;
+}
 void FixedEnvelopeCore::state(const State& message) {
   if(current_ && message.source_id==current_->source_id && message.clock_epoch==current_->clock_epoch) {
     if(message.sequence<current_->sequence)return;
@@ -151,6 +187,7 @@ const FixedEnvelopeCore::Envelope& FixedEnvelopeCore::propose(const Request& req
   e.limits.half_length_m=x;e.limits.half_width_m=y;
   e.limits.height_m=std::max(baseline_.at("height_m").get<double>(),reference->height_m);
   validate_limits(e.limits,baseline_);
+  (void)payload_until(*reference,e.limits.payload_mass_kg,now);
   reference_=reference;output_=e;++epoch_;output_->epoch=epoch_;output_->limits.epoch=epoch_;
   acks_.clear();ack_revocations_.clear();fault_.clear();tick(now);
   require(fault_.empty(),fault_);
@@ -194,7 +231,8 @@ const std::optional<FixedEnvelopeCore::Envelope>& FixedEnvelopeCore::tick(std::i
     }
     require(geometry::containsPolygon(points(e.reserved_footprint),points(s.physical_footprint),1e-6),
       "PHYSICAL_GEOMETRY_LEFT_RESERVATION");
-    const auto until=std::min(fixed_stamp_ns(s.valid_until),hold_until(e.hold_id,e.attachment_revision,now));
+    const auto until=std::min({fixed_stamp_ns(s.valid_until),hold_until(e.hold_id,e.attachment_revision,now),
+                              payload_until(s,e.limits.payload_mass_kg,now)});
     e.source_state_sequence=s.sequence;e.valid_until=fixed_stamp(until);
     std::vector<std::string> missing;
     for(const auto& consumer:consumers) {

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="32" failures="0" disabled="0" errors="0" time="0.014" timestamp="2026-09-23T14:58:48" name="AllTests">
+  <testsuite name="Flow" tests="11" failures="0" disabled="0" errors="0" time="0.003" timestamp="2026-09-23T14:58:48">
+    <testcase name="MissingControllerAndLocalCostmapStayExplicitlyBlocked" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="CancelThenLateAckCannotRestoreMotion" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="AttachmentChangeBetweenTimerTicksRevokesImmediately" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="SamePolygonOldEpochAckCannotAuthorizeNewRequest" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="NegativeAckAlwaysRemovesCurrentPermission" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="PreRevocationAndSameStampPositiveAcksCannotRestorePermission" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="ReorderedNegativeAckCannotLowerTheRecoveryBoundary" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="NewEnvelopeEpochDoesNotReuseTheOldNegativeAckBoundary" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="HoldRevocationBetweenTicksRemainsLatched" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="ClockEpochWithResetSequenceInvalidatesOldReservation" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+    <testcase name="ConflictingSameSequenceCannotHideAttachmentRevocation" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="Flow" />
+  </testsuite>
+  <testsuite name="FullChain" tests="6" failures="0" disabled="0" errors="0" time="0.003" timestamp="2026-09-23T14:58:48">
+    <testcase name="ConfirmedEmptyVersionReachesAllConsumers" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="FullChain" />
+    <testcase name="DistinctDualLoadsExpandGeometryAndRevokeOldEmptyPermission" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="FullChain" />
+    <testcase name="EmptyLoadedEmptyUsesNewVersionAndLateAcksCannotRestoreOldRequest" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="FullChain" />
+    <testcase name="IncompleteSceneReadbackStopsTheWholeAdmissionChain" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="FullChain" />
+    <testcase name="ExpiredSourceCannotBeRenewedByPublishingTheLedger" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="FullChain" />
+    <testcase name="LedgerAttachmentChangeRevokesBeforeGeometryUpdate" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="FullChain" />
+  </testsuite>
+  <testsuite name="LoadedChain" tests="15" failures="0" disabled="0" errors="0" time="0.008" timestamp="2026-09-23T14:58:48">
+    <testcase name="StableDualLoadRequiresTheSameSixConsumerConfirmations" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="LoadedGeometryCannotProposeAnUnknownMassEnvelope" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="PositiveButUnderreportedMassMustBeRejected" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="ExactAndConservativelyHigherMassRemainAdmissible" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="NonfiniteMassCannotBeProposed" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="ConsumerMustMatchTheGeometryAttachmentRevision" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="MissingOrAdditionalObjectIdentityIsRejected" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="MissingConfiguredProviderDoesNotFallBackToEmpty" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="RepeatedLedgerCannotRenewMassWhenRosClockFreezes" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="FreshMassAfterExpiryNeedsANewEnvelopeRequest" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="DetachLedgerCannotRenewAnOldLoadedGeometry" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="ChangedMassWithoutLedgerRevisionRevokes" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="ZeroPhysicalWeightIsUnknownEvenWithPositiveRequestedMass" status="run" result="completed" time="0" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="FiniteIndividualMassesCannotOverflowTheSum" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+    <testcase name="DecimalSummationUsesOnlyOneRepresentableStep" status="run" result="completed" time="0.001" timestamp="2026-09-23T14:58:48" classname="LoadedChain" />
+  </testsuite>
+</testsuites>

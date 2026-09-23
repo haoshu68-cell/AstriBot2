@@ -148,6 +148,8 @@ protected:
   payload::Ledger ledger{config,[](const auto &) {}};
   payload::Consumer consumer{config};
   payload::Observation observation;
+  int64_t payload_steady_offset=0;
+  FullChain() {coordinator.payload_source([this](int64_t at){return consumer.current(at,at+payload_steady_offset);});}
   virtual payload::Objects initial_objects() {return {};}
   double payload_mass() const override {
     double mass=0.;for(const auto &object:observation.objects)mass+=object.weight;return mass;
@@ -169,11 +171,11 @@ protected:
   void consume(int64_t at) {
     auto s=ledger.state(at,at);g.sequence=observation.sequence;g.header.stamp=payload::stamp(at);
     g.joint_source_stamps={g.header.stamp,g.header.stamp};
-    if(!consumer.receive(s,at,at)) {
+    if(!consumer.receive(s,at,at+payload_steady_offset)) {
       g.complete=g.attachment_state_confirmed=false;g.reason=consumer.reason();
       return;
     }
-    const auto a=geometry::confirmedAttachments(consumer,at,at);
+    const auto a=geometry::confirmedAttachments(consumer,at,at+payload_steady_offset);
     g.complete=g.attachment_state_confirmed=true;g.attachment_revision=a.revision;g.attachment_ids=a.ids;
     g.valid_until=payload::stamp(a.valid_until);
     // Known fixture TCP-to-base transforms are identity; production uses URDF FK.
@@ -232,8 +234,38 @@ TEST_F(FullChain, ExpiredSourceCannotBeRenewedByPublishingTheLedger) {
   hold.geometry(g,now,now);coordinator.state(g);coordinator.hold(hold.status(now,now));
   all();EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
 }
+TEST_F(FullChain, LedgerAttachmentChangeRevokesBeforeGeometryUpdate) {
+  all();ASSERT_TRUE(coordinator.tick(now)->navigation_allowed);
+  now+=MS;observation.sequence++;observation.revision++;observation.status=observation.ATTACHED;observation.objects=dual_load();
+  observation.transaction_id="attach_before_geometry";
+  observation.observed_at=payload::stamp(now);observation.valid_until=payload::stamp(now+300*MS);
+  ASSERT_TRUE(ledger.observe(observation,now,now));reconcile(now);
+  ASSERT_TRUE(consumer.receive(ledger.state(now,now),now,now));
+  // No geometry callback has occurred. An old explicit EMPTY cannot cover loads.
+  EXPECT_TRUE(g.attachment_ids.empty());EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+  EXPECT_EQ(coordinator.fault(),"PAYLOAD_MASS_REVISION_MISMATCH");
+}
 class LoadedChain:public FullChain {
-protected: payload::Objects initial_objects() override {return dual_load();}
+protected:
+  payload::Objects initial_objects() override {return dual_load();}
+  std::string mass_case(double left,double right,double requested) {
+    payload::Ledger independent{config,[](const auto&) {}};
+    auto o=observation;o.objects=dual_load();o.objects[0].weight=left;o.objects[1].weight=right;
+    if(!independent.observe(o,now,now))return "FIXTURE_OBSERVATION_REJECTED";
+    auto ticket=independent.request(now,now);if(!ticket)return "FIXTURE_TICKET_UNAVAILABLE";
+    moveit_msgs::msg::PlanningScene scene;scene.robot_state.attached_collision_objects=o.objects;
+    if(!independent.reconcile(*ticket,scene,now,now))return "FIXTURE_RECONCILIATION_REJECTED";
+    payload::Consumer confirmed{config};auto state=independent.state(now,now);
+    if(!confirmed.receive(state,now,now))return confirmed.reason();
+    auto geometry=g;geometry.attachment_revision=state.attachment_revision;
+    auto status=hold.status(now,now);status.attachment_revision=state.attachment_revision;
+    nav::FixedEnvelopeCore candidate{profile,"numeric_mass",1};
+    candidate.payload_source([&confirmed](int64_t at){return confirmed.current(at,at);});
+    candidate.state(geometry);candidate.hold(status);
+    auto request=hold.request("numeric_mass",limits,now,now);request.limits.payload_mass_kg=requested;
+    try {candidate.propose(request,now,true);return "ACCEPTED";}
+    catch(const std::invalid_argument& e){return e.what();}
+  }
 };
 TEST_F(LoadedChain, StableDualLoadRequiresTheSameSixConsumerConfirmations) {
   ASSERT_EQ(g.attachment_ids.size(),2u);ASSERT_TRUE(hold.status(now,now).hold_confirmed);
@@ -244,5 +276,106 @@ TEST_F(LoadedChain, LoadedGeometryCannotProposeAnUnknownMassEnvelope) {
   limits.payload_mass_kg=0.;
   EXPECT_THROW(coordinator.propose(hold.request("unknown_mass",limits,now,now),now,true),std::invalid_argument);
   EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+}
+TEST_F(LoadedChain, PositiveButUnderreportedMassMustBeRejected) {
+  limits.payload_mass_kg=.001;
+  EXPECT_THROW(coordinator.propose(hold.request("underreported",limits,now,now),now,true),std::invalid_argument);
+}
+TEST_F(LoadedChain, ExactAndConservativelyHigherMassRemainAdmissible) {
+  for(double mass:{2.,2.5}) {
+    limits.payload_mass_kg=mass;
+    EXPECT_NO_THROW(coordinator.propose(hold.request("mass_"+std::to_string(mass),limits,now,now),now,true));
+    EXPECT_EQ(coordinator.output()->limits.payload_mass_kg,mass);
+  }
+}
+TEST_F(LoadedChain, NonfiniteMassCannotBeProposed) {
+  for(double mass:std::vector<double>{NAN,INFINITY,-1.}) {
+    limits.payload_mass_kg=mass;
+    EXPECT_THROW(coordinator.propose(hold.request("bad_mass",limits,now,now),now,true),std::invalid_argument);
+  }
+}
+TEST_F(LoadedChain, ConsumerMustMatchTheGeometryAttachmentRevision) {
+  auto old_geometry=g;
+  changed(observation.ATTACHED,dual_load());
+  nav::FixedEnvelopeCore candidate{profile,"mismatched",1};
+  candidate.payload_source([this](int64_t at){return consumer.current(at,at);});
+  old_geometry.header.stamp=nav::fixed_stamp(now);old_geometry.valid_until=nav::fixed_stamp(now+300*MS);
+  old_geometry.joint_source_stamps={old_geometry.header.stamp,old_geometry.header.stamp};
+  auto h=nav::FixedEnvelopeCore::Hold{};h.header.stamp=old_geometry.header.stamp;h.owner_id="task";h.hold_id="hold";
+  h.attachment_revision=old_geometry.attachment_revision;h.hold_confirmed=true;h.lease_s=.3;
+  candidate.state(old_geometry);candidate.hold(h);
+  nav::FixedEnvelopeCore::Request request;request.request_id="mismatch";request.hold_id="hold";request.geometry_sequence=old_geometry.sequence;request.limits=limits;
+  try {candidate.propose(request,now,true);FAIL()<<"revision mismatch accepted";}
+  catch(const std::invalid_argument& e){EXPECT_STREQ(e.what(),"PAYLOAD_MASS_REVISION_MISMATCH");}
+}
+TEST_F(LoadedChain, MissingOrAdditionalObjectIdentityIsRejected) {
+  for(auto ids:std::vector<std::vector<std::string>>{{"left"},{"left","right","extra"},{"left","left"}}) {
+    auto wrong=g;wrong.sequence++;wrong.attachment_ids=ids;
+    nav::FixedEnvelopeCore candidate{profile,"mismatched_ids",1};
+    candidate.payload_source([this](int64_t at){return consumer.current(at,at);});
+    candidate.state(wrong);candidate.hold(hold.status(now,now));
+    auto request=hold.request("ids",limits,now,now);request.geometry_sequence=wrong.sequence;
+    EXPECT_THROW(candidate.propose(request,now,true),std::invalid_argument);
+  }
+}
+TEST_F(LoadedChain, MissingConfiguredProviderDoesNotFallBackToEmpty) {
+  nav::FixedEnvelopeCore candidate{profile,"no_source",1};candidate.state(g);candidate.hold(hold.status(now,now));
+  try {candidate.propose(hold.request("source_missing",limits,now,now),now,true);FAIL()<<"missing source accepted";}
+  catch(const std::invalid_argument& e){EXPECT_STREQ(e.what(),"PAYLOAD_SOURCE_NOT_CONFIGURED");}
+}
+TEST_F(LoadedChain, RepeatedLedgerCannotRenewMassWhenRosClockFreezes) {
+  all();ASSERT_TRUE(coordinator.tick(now)->navigation_allowed);
+  auto old=ledger.state(now,now);
+  payload_steady_offset=200*MS;EXPECT_TRUE(consumer.receive(old,now,now+payload_steady_offset));
+  payload_steady_offset=301*MS;
+  EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+  EXPECT_EQ(coordinator.fault(),"PAYLOAD_MASS_EVIDENCE_UNAVAILABLE");
+  EXPECT_FALSE(consumer.receive(old,now,now+payload_steady_offset));
+  all();EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+}
+TEST_F(LoadedChain, FreshMassAfterExpiryNeedsANewEnvelopeRequest) {
+  all();ASSERT_TRUE(coordinator.tick(now)->navigation_allowed);const auto old_epoch=coordinator.epoch();
+  payload_steady_offset=301*MS;ASSERT_FALSE(coordinator.tick(now)->navigation_allowed);
+  now+=MS;observation.sequence++;observation.observed_at=payload::stamp(now);observation.valid_until=payload::stamp(now+300*MS);
+  ASSERT_TRUE(ledger.observe(observation,now,now));reconcile(now);consume(now);ASSERT_TRUE(g.complete);
+  ASSERT_TRUE(hold.geometry(g,now,now));coordinator.state(g);coordinator.hold(hold.status(now,now));
+  all();EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+  EXPECT_NO_THROW(coordinator.propose(hold.request("mass_recovered",limits,now,now),now,true));
+  EXPECT_GT(coordinator.epoch(),old_epoch);
+  ack.envelope_epoch=coordinator.epoch();ack.installed_geometry_hash=coordinator.output()->installed_geometry_hash;ack.header.stamp=nav::fixed_stamp(now);
+  all();EXPECT_TRUE(coordinator.tick(now)->navigation_allowed);
+}
+TEST_F(LoadedChain, DetachLedgerCannotRenewAnOldLoadedGeometry) {
+  all();ASSERT_TRUE(coordinator.tick(now)->navigation_allowed);
+  now+=MS;observation.sequence++;observation.revision++;observation.status=observation.EMPTY;observation.objects.clear();
+  observation.transaction_id="detach_before_geometry";
+  observation.observed_at=payload::stamp(now);observation.valid_until=payload::stamp(now+300*MS);
+  ASSERT_TRUE(ledger.observe(observation,now,now));reconcile(now);
+  ASSERT_TRUE(consumer.receive(ledger.state(now,now),now,now));
+  EXPECT_EQ(g.attachment_ids.size(),2u);EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+  EXPECT_EQ(coordinator.fault(),"PAYLOAD_MASS_REVISION_MISMATCH");
+}
+TEST_F(LoadedChain, ChangedMassWithoutLedgerRevisionRevokes) {
+  all();ASSERT_TRUE(coordinator.tick(now)->navigation_allowed);
+  auto forged=ledger.state(now,now);forged.observation.objects[0].weight=10.;
+  forged.geometry_digest=payload::digest(payload::canonical(forged.observation.objects,config.allowed_links).dump());
+  EXPECT_FALSE(consumer.receive(forged,now,now));
+  EXPECT_EQ(consumer.reason(),"ATTACHMENT_CONTENT_CHANGED_WITHOUT_REVISION");
+  EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+  EXPECT_EQ(coordinator.fault(),"PAYLOAD_MASS_EVIDENCE_UNAVAILABLE");
+}
+TEST_F(LoadedChain, ZeroPhysicalWeightIsUnknownEvenWithPositiveRequestedMass) {
+  EXPECT_EQ(mass_case(0.,1.,2.),"PAYLOAD_MASS_INVALID_WEIGHT");
+}
+TEST_F(LoadedChain, FiniteIndividualMassesCannotOverflowTheSum) {
+  const auto maximum=std::numeric_limits<double>::max();
+  EXPECT_EQ(mass_case(maximum,maximum,maximum),"PAYLOAD_MASS_SUM_OVERFLOW");
+}
+TEST_F(LoadedChain, DecimalSummationUsesOnlyOneRepresentableStep) {
+  EXPECT_EQ(mass_case(.1,.2,.3),"ACCEPTED");
+  EXPECT_EQ(mass_case(.1,.2,std::nextafter(.3,0.)),"PAYLOAD_MASS_UNDERREPORTED");
+  const auto one_below=std::nextafter(2.,0.);
+  EXPECT_EQ(mass_case(1.,1.,one_below),"ACCEPTED");
+  EXPECT_EQ(mass_case(1.,1.,std::nextafter(one_below,0.)),"PAYLOAD_MASS_UNDERREPORTED");
 }
 }

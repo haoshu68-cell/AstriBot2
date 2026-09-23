@@ -14,6 +14,7 @@
 #include <rclcpp/create_timer.hpp>
 #include <astribot_navigation_msgs/srv/reserve_arm_motion.hpp>
 #include <astribot_navigation_msgs/srv/set_robot_envelope.hpp>
+#include <astribot_s1_payload_state/consumer.hpp>
 
 namespace astribot::navigation {
 namespace {
@@ -41,6 +42,22 @@ public:
     const auto epoch=static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::steady_clock::now().time_since_epoch()).count());
     core_=std::make_unique<FixedEnvelopeCore>(baseline,new_session(),epoch);
+    rcl_interfaces::msg::ParameterDescriptor identity;identity.read_only=true;
+    astribot::payload::Config payload_config;
+    payload_config.environment=declare_parameter<std::string>("payload_environment","simulation",identity);
+    payload_config.session=declare_parameter<std::string>("payload_session_id","",identity);
+    payload_config.source=declare_parameter<std::string>("payload_source_id","",identity);
+    payload_config.allowed_links={"astribot_arm_left_tcp_link","astribot_arm_right_tcp_link"};
+    if(payload_config.session.empty()!=payload_config.source.empty())throw std::invalid_argument("PAYLOAD_IDENTITY_INCOMPLETE");
+    if(!payload_config.source.empty()) {
+      if(payload_config.environment!="simulation")throw std::invalid_argument("FIXED_V2_PAYLOAD_SIMULATION_REQUIRED");
+      payload_consumer_=std::make_unique<astribot::payload::Consumer>(payload_config);
+      core_->payload_source([this](int64_t at){return payload_consumer_->current(at,steady_now());});
+      payload_=create_subscription<astribot::payload::State>("/payload/attachment_state",10,
+        [this](astribot::payload::State::ConstSharedPtr msg){payload_consumer_->receive(*msg,now().nanoseconds(),steady_now());tick(false);});
+      // Consumer lease expiration must also be evaluated while ROS time freezes.
+      payload_watchdog_=create_wall_timer(std::chrono::milliseconds(50),[this]{tick(false);});
+    }
     publisher_=create_publisher<FixedEnvelopeCore::Envelope>("/navigation/envelope_v2",10);
     legacy_=create_publisher<astribot_navigation_msgs::msg::RobotEnvelope>("/navigation/robot_envelope",10);
     for(const auto* name:{"global_costmap","local_costmap"})
@@ -87,6 +104,9 @@ public:
     timer_=rclcpp::create_timer(this,get_clock(),rclcpp::Duration::from_seconds(.1),[this]{tick();});
   }
 private:
+  static int64_t steady_now() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+  }
   void tick(bool source_update=true) {
     const auto& current=core_->tick(now().nanoseconds());
     // A positive installation heartbeat renews evidence, not its own input.
@@ -120,6 +140,9 @@ private:
   std::uint64_t published_epoch_{0};
   std::string published_reason_;
   std::unique_ptr<FixedEnvelopeCore> core_;
+  std::unique_ptr<astribot::payload::Consumer> payload_consumer_;
+  rclcpp::Subscription<astribot::payload::State>::SharedPtr payload_;
+  rclcpp::TimerBase::SharedPtr payload_watchdog_;
   nav_msgs::msg::Odometry::ConstSharedPtr odom_message_;
   rclcpp::Publisher<FixedEnvelopeCore::Envelope>::SharedPtr publisher_;
   rclcpp::Publisher<astribot_navigation_msgs::msg::RobotEnvelope>::SharedPtr legacy_;

@@ -5,12 +5,14 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <functional>
 #include <nlohmann/json.hpp>
 #include <astribot_navigation_msgs/msg/arm_hold_status.hpp>
 #include <astribot_navigation_msgs/msg/envelope_apply_status.hpp>
 #include <astribot_navigation_msgs/msg/navigation_envelope_v2.hpp>
 #include <astribot_navigation_msgs/msg/robot_geometry_state.hpp>
 #include <astribot_navigation_msgs/srv/set_fixed_envelope.hpp>
+#include <astribot_payload_msgs/msg/attachment_state.hpp>
 
 namespace astribot::navigation {
 // No executor, Python object, or receipt-time renewal inside the transaction.
@@ -22,6 +24,10 @@ public:
   using Envelope = astribot_navigation_msgs::msg::NavigationEnvelopeV2;
   using Request = astribot_navigation_msgs::srv::SetFixedEnvelope::Request;
   FixedEnvelopeCore(nlohmann::json baseline, std::string session, std::uint64_t epoch);
+  // Configure once before any proposal. Production supplies Consumer::current(),
+  // which enforces configured identity, digest, ordering and both lease clocks.
+  using PayloadProvider=std::function<const astribot_payload_msgs::msg::AttachmentState*(std::int64_t)>;
+  void payload_source(PayloadProvider provider);
   void state(const State& message);
   void hold(const Hold& message);
   void revoke(const std::string& reason);
@@ -37,6 +43,8 @@ public:
 private:
   void validate_state(const std::shared_ptr<State>& state, std::int64_t now) const;
   std::int64_t hold_until(const std::string& id, const std::string& revision, std::int64_t now) const;
+  std::int64_t payload_until(const State& geometry,double requested_mass,std::int64_t now) const;
+  PayloadProvider payload_provider_;
   nlohmann::json baseline_;
   std::string session_;
   std::uint64_t epoch_;

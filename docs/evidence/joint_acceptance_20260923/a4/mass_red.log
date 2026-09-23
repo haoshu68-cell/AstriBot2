@@ -1,0 +1,19 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+Note: Google Test filter = LoadedChain.PositiveButUnderreportedMassMustBeRejected
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from LoadedChain
+[ RUN      ] LoadedChain.PositiveButUnderreportedMassMustBeRejected
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/fixed_hold_flow_test.cpp:250: Failure
+Expected: coordinator.propose(hold.request("underreported",limits,now,now),now,true) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+[  FAILED  ] LoadedChain.PositiveButUnderreportedMassMustBeRejected (2 ms)
+[----------] 1 test from LoadedChain (2 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (2 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] LoadedChain.PositiveButUnderreportedMassMustBeRejected
+
+ 1 FAILED TEST

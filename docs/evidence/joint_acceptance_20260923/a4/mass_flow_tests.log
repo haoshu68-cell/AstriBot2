@@ -1,0 +1,79 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 32 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 11 tests from Flow
+[ RUN      ] Flow.MissingControllerAndLocalCostmapStayExplicitlyBlocked
+[       OK ] Flow.MissingControllerAndLocalCostmapStayExplicitlyBlocked (1 ms)
+[ RUN      ] Flow.CancelThenLateAckCannotRestoreMotion
+[       OK ] Flow.CancelThenLateAckCannotRestoreMotion (0 ms)
+[ RUN      ] Flow.AttachmentChangeBetweenTimerTicksRevokesImmediately
+[       OK ] Flow.AttachmentChangeBetweenTimerTicksRevokesImmediately (1 ms)
+[ RUN      ] Flow.SamePolygonOldEpochAckCannotAuthorizeNewRequest
+[       OK ] Flow.SamePolygonOldEpochAckCannotAuthorizeNewRequest (0 ms)
+[ RUN      ] Flow.NegativeAckAlwaysRemovesCurrentPermission
+[       OK ] Flow.NegativeAckAlwaysRemovesCurrentPermission (0 ms)
+[ RUN      ] Flow.PreRevocationAndSameStampPositiveAcksCannotRestorePermission
+[       OK ] Flow.PreRevocationAndSameStampPositiveAcksCannotRestorePermission (0 ms)
+[ RUN      ] Flow.ReorderedNegativeAckCannotLowerTheRecoveryBoundary
+[       OK ] Flow.ReorderedNegativeAckCannotLowerTheRecoveryBoundary (1 ms)
+[ RUN      ] Flow.NewEnvelopeEpochDoesNotReuseTheOldNegativeAckBoundary
+[       OK ] Flow.NewEnvelopeEpochDoesNotReuseTheOldNegativeAckBoundary (0 ms)
+[ RUN      ] Flow.HoldRevocationBetweenTicksRemainsLatched
+[       OK ] Flow.HoldRevocationBetweenTicksRemainsLatched (0 ms)
+[ RUN      ] Flow.ClockEpochWithResetSequenceInvalidatesOldReservation
+[       OK ] Flow.ClockEpochWithResetSequenceInvalidatesOldReservation (0 ms)
+[ RUN      ] Flow.ConflictingSameSequenceCannotHideAttachmentRevocation
+[       OK ] Flow.ConflictingSameSequenceCannotHideAttachmentRevocation (0 ms)
+[----------] 11 tests from Flow (3 ms total)
+
+[----------] 6 tests from FullChain
+[ RUN      ] FullChain.ConfirmedEmptyVersionReachesAllConsumers
+[       OK ] FullChain.ConfirmedEmptyVersionReachesAllConsumers (1 ms)
+[ RUN      ] FullChain.DistinctDualLoadsExpandGeometryAndRevokeOldEmptyPermission
+[       OK ] FullChain.DistinctDualLoadsExpandGeometryAndRevokeOldEmptyPermission (0 ms)
+[ RUN      ] FullChain.EmptyLoadedEmptyUsesNewVersionAndLateAcksCannotRestoreOldRequest
+[       OK ] FullChain.EmptyLoadedEmptyUsesNewVersionAndLateAcksCannotRestoreOldRequest (1 ms)
+[ RUN      ] FullChain.IncompleteSceneReadbackStopsTheWholeAdmissionChain
+[       OK ] FullChain.IncompleteSceneReadbackStopsTheWholeAdmissionChain (0 ms)
+[ RUN      ] FullChain.ExpiredSourceCannotBeRenewedByPublishingTheLedger
+[       OK ] FullChain.ExpiredSourceCannotBeRenewedByPublishingTheLedger (0 ms)
+[ RUN      ] FullChain.LedgerAttachmentChangeRevokesBeforeGeometryUpdate
+[       OK ] FullChain.LedgerAttachmentChangeRevokesBeforeGeometryUpdate (1 ms)
+[----------] 6 tests from FullChain (3 ms total)
+
+[----------] 15 tests from LoadedChain
+[ RUN      ] LoadedChain.StableDualLoadRequiresTheSameSixConsumerConfirmations
+[       OK ] LoadedChain.StableDualLoadRequiresTheSameSixConsumerConfirmations (0 ms)
+[ RUN      ] LoadedChain.LoadedGeometryCannotProposeAnUnknownMassEnvelope
+[       OK ] LoadedChain.LoadedGeometryCannotProposeAnUnknownMassEnvelope (1 ms)
+[ RUN      ] LoadedChain.PositiveButUnderreportedMassMustBeRejected
+[       OK ] LoadedChain.PositiveButUnderreportedMassMustBeRejected (0 ms)
+[ RUN      ] LoadedChain.ExactAndConservativelyHigherMassRemainAdmissible
+[       OK ] LoadedChain.ExactAndConservativelyHigherMassRemainAdmissible (1 ms)
+[ RUN      ] LoadedChain.NonfiniteMassCannotBeProposed
+[       OK ] LoadedChain.NonfiniteMassCannotBeProposed (0 ms)
+[ RUN      ] LoadedChain.ConsumerMustMatchTheGeometryAttachmentRevision
+[       OK ] LoadedChain.ConsumerMustMatchTheGeometryAttachmentRevision (1 ms)
+[ RUN      ] LoadedChain.MissingOrAdditionalObjectIdentityIsRejected
+[       OK ] LoadedChain.MissingOrAdditionalObjectIdentityIsRejected (0 ms)
+[ RUN      ] LoadedChain.MissingConfiguredProviderDoesNotFallBackToEmpty
+[       OK ] LoadedChain.MissingConfiguredProviderDoesNotFallBackToEmpty (1 ms)
+[ RUN      ] LoadedChain.RepeatedLedgerCannotRenewMassWhenRosClockFreezes
+[       OK ] LoadedChain.RepeatedLedgerCannotRenewMassWhenRosClockFreezes (0 ms)
+[ RUN      ] LoadedChain.FreshMassAfterExpiryNeedsANewEnvelopeRequest
+[       OK ] LoadedChain.FreshMassAfterExpiryNeedsANewEnvelopeRequest (1 ms)
+[ RUN      ] LoadedChain.DetachLedgerCannotRenewAnOldLoadedGeometry
+[       OK ] LoadedChain.DetachLedgerCannotRenewAnOldLoadedGeometry (0 ms)
+[ RUN      ] LoadedChain.ChangedMassWithoutLedgerRevisionRevokes
+[       OK ] LoadedChain.ChangedMassWithoutLedgerRevisionRevokes (1 ms)
+[ RUN      ] LoadedChain.ZeroPhysicalWeightIsUnknownEvenWithPositiveRequestedMass
+[       OK ] LoadedChain.ZeroPhysicalWeightIsUnknownEvenWithPositiveRequestedMass (0 ms)
+[ RUN      ] LoadedChain.FiniteIndividualMassesCannotOverflowTheSum
+[       OK ] LoadedChain.FiniteIndividualMassesCannotOverflowTheSum (1 ms)
+[ RUN      ] LoadedChain.DecimalSummationUsesOnlyOneRepresentableStep
+[       OK ] LoadedChain.DecimalSummationUsesOnlyOneRepresentableStep (1 ms)
+[----------] 15 tests from LoadedChain (8 ms total)
+
+[----------] Global test environment tear-down
+[==========] 32 tests from 3 test suites ran. (14 ms total)
+[  PASSED  ] 32 tests.
