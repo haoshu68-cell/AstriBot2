@@ -16,4 +16,12 @@
 
 `joint_limit_margin_rad`、`max_velocity_scaling`、`max_acceleration_scaling` 是启动参数，运行时变更拒绝并返回 `PLANNING_PARAMETERS_REQUIRE_RESTART`，避免参数服务显示新值而规划器仍用缓存旧值。关键参数由 diagnostics_recorder 白名单记录。
 
+## 占据图场景一致性
+
+`_transport_scene_native` 使用 C++ / liboctomap 将占据图转换为碰撞语义签名，供兼容任务的执行前场景检查使用。重复观测只改变 log-odds、没有改变 FCL 使用的占据/空闲分类时，不使计划失效。所有已分配节点的位置、深度、叶节点标记和分类仍参与签名；外层继续校验 frame、origin、resolution、碰撞体及允许碰撞矩阵。
+
+机械臂运动改变视野后，占据图几何可能发生有效变化。兼容执行器等待占据语义稳定 1 秒（最多 15 秒），确认其他场景内容未变，再调用 `/transport/revalidate_manipulation`。C++ 服务仅保留最近一次成功规划的上下文（120 秒有效），在各阶段原有 MTC 场景副本中替换占据图，重验所有剩余运动轨迹；原 ACM、预测附着/解除附着和轨迹保持不变。碰撞、限位、奇异点检查失败则拒绝，服务本身不执行动作。执行器还会再次读取场景确认未变，并重新检查 HOLD、底盘和标定条件；不会因复核成功放宽执行门槛。
+
+模块随本包安装并设置 Python 导入路径；缺模块、坏数据或不支持的树类型均拒绝，不退回忽略占据图。独立构建入口为 `native_scene/CMakeLists.txt`，用于只验证此核心而不启动 ROS。它没有启用 fixed_v2 抓放执行，也不替代轨迹碰撞检查。
+
 `joint_planning_margin` 回归覆盖实测失败边界、区间内目标及非法余量；`execution_guard_boundaries` 保留原保护测试。实际仿真验证与剩余任务见仓库 `docs/TRACKING_FIX_AND_TASK_STATUS_20260919.md`。

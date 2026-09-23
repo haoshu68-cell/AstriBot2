@@ -7,10 +7,12 @@
 #include <moveit/task_constructor/solvers.h>
 #include <moveit/robot_state/conversions.h>
 #include <astribot_transport_msgs/action/plan_manipulation.hpp>
+#include <astribot_transport_msgs/srv/revalidate_manipulation.hpp>
 #include <astribot_s1_manipulation/external_trajectory_validator.hpp>
 #include <astribot_s1_manipulation/gripper_commander.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include "astribot_s1_transport_mtc/joint_margin.hpp"
+#include "astribot_s1_transport_mtc/canonical_octomap.hpp"
 
 namespace mtc=moveit::task_constructor;
 using Action=astribot_transport_msgs::action::PlanManipulation;
@@ -58,6 +60,17 @@ class Planner {
   std::thread worker_;
   std::mutex mutex_;
   mtc::Task* active_{nullptr};
+  using Revalidate=astribot_transport_msgs::srv::RevalidateManipulation;
+  struct CachedStage {
+    std::string id;
+    planning_scene::PlanningSceneConstPtr scene;
+    robot_trajectory::RobotTrajectoryPtr trajectory;
+  };
+  rclcpp::Service<Revalidate>::SharedPtr revalidate_service_;
+  std::vector<CachedStage> cached_stages_;
+  std::string cached_context_;
+  octomap_msgs::msg::OctomapWithPose cached_octomap_metadata_;
+  std::chrono::steady_clock::time_point cached_at_;
   double velocity_scaling_{.1}, acceleration_scaling_{.1};
   double joint_margin_{.1};
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameters_callback_;
@@ -70,9 +83,65 @@ class Planner {
     else throw std::runtime_error("UNSUPPORTED_SOLUTION_TYPE");
   }
 
+  void revalidate(const Revalidate::Request& request,Revalidate::Response& response) {
+    response.context_id=request.context_id;
+    bool free=false;
+    if(!busy_.compare_exchange_strong(free,true)) {response.reason="MTC_REVALIDATION_BUSY";return;}
+    struct Release {std::atomic<bool>& busy;~Release(){busy=false;}} release{busy_};
+    try {
+      if(request.context_id.empty() || request.scene.is_diff || request.scene.robot_state.is_diff)
+        throw std::runtime_error("MTC_REVALIDATION_FULL_SCENE_REQUIRED");
+      std::vector<CachedStage> stages;
+      octomap_msgs::msg::OctomapWithPose metadata;
+      std::chrono::steady_clock::time_point expires;
+      {
+        std::lock_guard<std::mutex> guard(mutex_);
+        if(cached_context_!=request.context_id || cached_stages_.empty())
+          throw std::runtime_error("MTC_REVALIDATION_CONTEXT_UNKNOWN");
+        expires=cached_at_+std::chrono::seconds(120);
+        if(std::chrono::steady_clock::now()>=expires)
+          throw std::runtime_error("MTC_REVALIDATION_CONTEXT_EXPIRED");
+        if(request.start_index>=cached_stages_.size())
+          throw std::runtime_error("MTC_REVALIDATION_INDEX_INVALID");
+        stages=cached_stages_;
+        metadata=cached_octomap_metadata_;
+      }
+      const auto& map=request.scene.world.octomap;
+      if(map.header.frame_id!="astribot_torso_base")
+        throw std::runtime_error("MTC_REVALIDATION_OCTOMAP_FRAME_INVALID");
+      if(map.header.frame_id!=metadata.header.frame_id || map.origin!=metadata.origin ||
+         map.octomap.header.frame_id!=metadata.octomap.header.frame_id ||
+         map.octomap.id!=metadata.octomap.id || map.octomap.resolution!=metadata.octomap.resolution ||
+         map.octomap.binary!=metadata.octomap.binary)
+        throw std::runtime_error("MTC_REVALIDATION_OCTOMAP_METADATA_CHANGED");
+      const auto& p=map.origin.position;const auto& q=map.origin.orientation;
+      if(!std::isfinite(p.x+p.y+p.z+q.x+q.y+q.z+q.w) ||
+         std::abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001)
+        throw std::runtime_error("MTC_REVALIDATION_OCTOMAP_ORIGIN_INVALID");
+      const auto& octomap=map.octomap;
+      const std::string bytes(octomap.data.begin(),octomap.data.end());
+      (void)astribot::transport::canonical_octomap(bytes,octomap.binary,octomap.resolution,octomap.id);
+      const auto deadline=std::min(expires,std::chrono::steady_clock::now()+std::chrono::seconds(10));
+      for(std::size_t index=request.start_index;index<stages.size();++index) {
+        const auto& stage=stages[index];
+        if(!stage.trajectory) continue; // Attachment transitions have no motion.
+        auto scene=planning_scene::PlanningScene::clone(stage.scene);
+        scene->processOctomapMsg(map);
+        robot_trajectory::RobotTrajectory trajectory(*stage.trajectory,true);
+        std::string reason;
+        if(!validateExternalTrajectory(scene,trajectory,reason,velocity_scaling_,acceleration_scaling_))
+          throw std::runtime_error("MTC_REVALIDATION:"+stage.id+":"+reason);
+        if(std::chrono::steady_clock::now()>=deadline)
+          throw std::runtime_error("MTC_REVALIDATION_BUDGET_EXHAUSTED");
+      }
+      response.success=true;response.reason="MTC_REMAINING_SEQUENCE_REVALIDATED";
+    } catch(const std::exception& error) {response.success=false;response.reason=error.what();}
+  }
+
   void run(const std::shared_ptr<Handle>& handle) {
     auto result=std::make_shared<Action::Result>();
     const auto goal=handle->get_goal();result->context_id=goal->context_id;
+    {std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();}
     try {
       if((goal->operation!="PICK" && goal->operation!="PLACE") || goal->object_id.empty() ||
          goal->context_id.empty() || goal->exit_targets.empty() || goal->exit_targets.size()>3 ||
@@ -232,12 +301,15 @@ class Planner {
         if(handle->is_canceling())break;
         for(const auto& candidate:task.solutions()) {
           std::vector<const mtc::SubTrajectory*> leaves;flatten(*candidate,leaves);std::vector<Segment> segments;bool valid=true;
+          std::vector<CachedStage> cached_candidate;
           for(const auto* sub:leaves) {
             if(handle->is_canceling()){valid=false;break;}
             const auto name=sub->creator()->name();
             if(name=="SNAPSHOT" || name.rfind("_CONTACT_",0)==0 || name.rfind("_SUPPORT_",0)==0 ||
                name.rfind("_PREPLACE_",0)==0 || name.rfind("_PREGRASP_",0)==0)continue;
             Segment segment;segment.stage_id=name;
+            CachedStage cached_stage;cached_stage.id=name;
+            cached_stage.scene=planning_scene::PlanningScene::clone(sub->start()->scene());
             moveit::core::robotStateToRobotStateMsg(sub->start()->scene()->getCurrentState(),segment.expected_start);
             if(sub->trajectory() && sub->trajectory()->getWayPointCount()) {
               robot_trajectory::RobotTrajectory trajectory(*sub->trajectory(),true);
@@ -262,20 +334,29 @@ class Planner {
               }
               trajectory.getRobotTrajectoryMsg(segment.trajectory);
               segment.kind=trajectory.getGroupName()=="gripper_left"?"GRIPPER":"ARM";
+              cached_stage.trajectory=std::make_shared<robot_trajectory::RobotTrajectory>(trajectory,true);
             } else if(name=="ATTACH_CONFIRM")segment.kind="ATTACH";
             else if(name=="DETACH_CONFIRM")segment.kind="DETACH";
             else {valid=false;result->reason="UNSUPPORTED_EMPTY_STAGE:"+name;break;}
             segments.push_back(segment);
+            cached_candidate.push_back(std::move(cached_stage));
           }
           if(valid && !segments.empty()) {
             task.introspection().publishSolution(*candidate);
-            result->stages=std::move(segments);result->success=true;result->reason="MTC_SEQUENCE_VALIDATED";break;
+            result->stages=std::move(segments);result->success=true;result->reason="MTC_SEQUENCE_VALIDATED";
+            {std::lock_guard<std::mutex> guard(mutex_);cached_stages_=std::move(cached_candidate);
+             cached_context_=goal->context_id;cached_at_=std::chrono::steady_clock::now();
+             cached_octomap_metadata_=goal->scene.world.octomap;cached_octomap_metadata_.octomap.data.clear();}
+            break;
           }
         }
         if(result->success)break;
         if(result->reason.empty()) {std::ostringstream details;task.explainFailure(details);result->reason="MTC_NO_SOLUTION:"+details.str();}
       }
     } catch(const std::exception& e) {result->success=false;result->stages.clear();result->reason=e.what();}
+    if(handle->is_canceling() || !result->success) {
+      std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();
+    }
     if(handle->is_canceling()){result->success=false;result->stages.clear();result->reason="PLANNING_CANCELED";handle->canceled(result);}
     else if(result->success)handle->succeed(result);
     else {result->stages.clear();if(result->reason.empty())result->reason="PLANNING_BUDGET_EXHAUSTED";handle->abort(result);}
@@ -303,6 +384,10 @@ public:
         }
       return result;
     });
+    revalidate_service_=node_->create_service<Revalidate>("/transport/revalidate_manipulation",
+      [this](const std::shared_ptr<Revalidate::Request> request,std::shared_ptr<Revalidate::Response> response) {
+        revalidate(*request,*response);
+      });
     server_=rclcpp_action::create_server<Action>(node_,"/transport/plan_manipulation",
       [this](const rclcpp_action::GoalUUID&,std::shared_ptr<const Action::Goal>) {
         bool free=false;return busy_.compare_exchange_strong(free,true)?rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE:rclcpp_action::GoalResponse::REJECT;

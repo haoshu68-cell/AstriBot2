@@ -1,0 +1,141 @@
+{
+  "task_id": "normal_grasp_20260923",
+  "owner_thread": "01a0c405-627f-7742-b500-e057726ed2e7",
+  "started_at": "2026-09-23T17:53:33+08:00",
+  "scope": "normal legacy-compatible RGBD fixture MTC pick carry place; pause/resume/fault cases deferred",
+  "world": "small_warehouse",
+  "instance": "normal_grasp_20260923",
+  "domain": 90,
+  "evidence_boundary": "kinematic attachment, not force/contact, not GraspNet execution, not fixed_v2 acceptance",
+  "source_files": {
+    "ws_robot/src/astribot_s1_transport/astribot_s1_transport/core.py": "42be37ab3f214ff259daf854fc745bb180bd5c9050cb5a1f97d298863ede176e",
+    "ws_robot/src/astribot_s1_transport/astribot_s1_transport/ros_backend.py": "29ab04489ac6ec9bd2ba602c13d754d8b68f4ba51b8a4d59948936cc49124f0a",
+    "ws_robot/src/astribot_s1_transport/config/warehouse_transfer.json": "f2557cd0bbc35cd13ac3e9e5611260c577158b54ca0c87b1a0d62f0f6deb58d5",
+    "ws_robot/src/astribot_s1_transport/launch/transport_skills.launch.py": "bd30560bbdbe58085feb05de090908c1bc1a2a1862916505cecf822c4988b094",
+    "ws_robot/src/astribot_s1_transport/launch/transport_support.launch.py": "5d505519832cb9222789a7fee36df12a19614345db35775e6047414e748c7d0a",
+    "ws_robot/src/astribot_s1_description/config/camera_mounts_reference_sim.yaml": "56fb2e4ea13f631e04353e0441bd4567f99992f241db91d4812b0a8053220966",
+    "ws_robot/src/astribot_s1_transport/astribot_s1_transport/rgbd.py": "550e65b941c4791521589f6f0a73643f4a0bff7049392979283dee201f933e19",
+    "ws_robot/src/astribot_s1_transport/test/test_rgbd.py": "5ad6809133286cd10ab5d36ddaa813db9ec885dded20a79dea81ec82017043dc",
+    "tools/vision/test_transport_support_calibration.py": "11b0af4c41cafc49f607a122fd746dc9f1173e6357a09451464c9393629b26d9",
+    "ws_robot/src/astribot_s1_transport_mtc/src/canonical_octomap.cpp": "7c5d442472061c807187c00fb61cad228b88ea700eca27dc9f797f51c7df031b",
+    "ws_robot/src/astribot_s1_transport_mtc/src/transport_scene_pybind.cpp": "e03448c72e5921382c8e78ad06345b5daef201c9bf28d0c51c3602417c4289a2",
+    "ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp": "91bb0e0f3d8894bb9da0cb55c41782c16ccb72c5a2c2784b92e2e307b6719afa",
+    "ws_robot/src/astribot_transport_msgs/srv/RevalidateManipulation.srv": "7b207d3353d05f1838cb47995ddddb1b810bf6fc4a27b814db6d4f0b7ec64a24"
+  },
+  "normal_flow_observed": [
+    "ADMISSION",
+    "MANIPULATION_HOLD",
+    "SCENE_SYNC",
+    "READY_RIGHT",
+    "READY_LEFT",
+    "OPEN",
+    "LOOK_PICK",
+    "PERCEPTION_LOCATE",
+    "PICK_PLAN",
+    "PREGRASP",
+    "GRASP_APPROACH",
+    "GRASP_CONFIRM",
+    "ATTACH_CONFIRM",
+    "LIFT",
+    "TRANSPORT_POSTURE",
+    "ENVELOPE_CONFIRM",
+    "TRANSPORT",
+    "PLACE_HOLD",
+    "PLACE_PLAN",
+    "PREPLACE",
+    "PLACE_APPROACH",
+    "PLACE_CONFIRM",
+    "RELEASE",
+    "DETACH_CONFIRM",
+    "RETREAT",
+    "STOW",
+    "EMPTY_PAYLOAD_HOLD",
+    "PLACEMENT_VERIFY",
+    "SUCCEEDED"
+  ],
+  "current_blocker": null,
+  "scene_canonical_binary": {
+    "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/normal_grasp_20260923/scene_native/package_build/native_scene/_transport_scene_native.cpython-310-x86_64-linux-gnu.so",
+    "sha256": "feadd5ddc5fb661d779a373a00e84b78864e2377e96533416452c6e605244e7c"
+  },
+  "result": "SUCCEEDED_NORMAL_LEGACY_SIMULATION",
+  "finished_task_at": "2026-09-23T18:42:40.923657+08:00",
+  "normal_flow_result": {
+    "session": "normal_grasp_20260923",
+    "task": "task08",
+    "result": "SUCCEEDED",
+    "evidence_level": "gazebo_kinematic_attachment_with_moveit_and_ros_control",
+    "elapsed_wall_s": 147.67557835578918,
+    "stage_order": [
+      "ADMISSION",
+      "MANIPULATION_HOLD",
+      "SCENE_SYNC",
+      "READY_RIGHT",
+      "READY_LEFT",
+      "OPEN",
+      "LOOK_PICK",
+      "PERCEPTION_LOCATE",
+      "PICK_PLAN",
+      "PREGRASP",
+      "GRASP_APPROACH",
+      "GRASP_CONFIRM",
+      "ATTACH_CONFIRM",
+      "LIFT",
+      "TRANSPORT_POSTURE",
+      "ENVELOPE_CONFIRM",
+      "TRANSPORT",
+      "PLACE_HOLD",
+      "PLACE_PLAN",
+      "PREPLACE",
+      "PLACE_APPROACH",
+      "PLACE_CONFIRM",
+      "RELEASE",
+      "DETACH_CONFIRM",
+      "RETREAT",
+      "STOW",
+      "EMPTY_PAYLOAD_HOLD",
+      "PLACEMENT_VERIFY",
+      "SUCCEEDED"
+    ],
+    "remaining_trajectory_revalidation_count": 6,
+    "navigation": [
+      {
+        "target": [
+          0.45,
+          0.0,
+          0.0
+        ],
+        "position_error_m": 0.0005094066983690129,
+        "yaw_error_rad": 0.0006441564278226364
+      },
+      {
+        "target": [
+          1.1,
+          0.0,
+          0.0
+        ],
+        "position_error_m": 0.001036197729394492,
+        "yaw_error_rad": 9.408020894907729e-05
+      }
+    ],
+    "placement": {
+      "scene_error_m": 0.0009878578628214941,
+      "gazebo_error_m": 0.001180065037362233,
+      "gazebo_position": [
+        1.151177256418691,
+        0.7199186315967027,
+        1.0949999997636288
+      ],
+      "observations": 2
+    },
+    "scope_limits": [
+      "legacy compatible task executor; not fixed_v2 acceptance",
+      "kinematic simulated attachment; no force/contact grasp acceptance",
+      "RGBD color fixture; not GraspNet model to MTC execution",
+      "one successful normal flow; no pause/resume/fault matrix",
+      "post-wait HOLD recheck added after task08 process began and verified offline only"
+    ],
+    "artifacts_root": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/normal_grasp_20260923"
+  },
+  "source_hashes_note": "Final source hashes; post-wait HOLD recheck was added while task08 was running and has offline evidence only."
+}

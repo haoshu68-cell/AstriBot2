@@ -17,12 +17,38 @@ def localize_orange_box(rgb, depth, intrinsics, optical_to_map, expected_size,
         raise TaskFailure('INVALID_CAMERA_INTRINSICS')
     hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
     mask = cv2.inRange(hsv, np.array([5, 100, 45]), np.array([30, 255, 255]))
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
-    candidates = [i for i in range(1, count) if stats[i, cv2.CC_STAT_AREA] >= 30]
     if search_center is not None:
         center = np.asarray(search_center, dtype=float)
         if center.shape != (3,) or not np.isfinite(center).all() or not 0 < search_radius <= .2:
             raise TaskFailure('INVALID_SEARCH_REGION')
+        # Separate same-color background by measured position before image
+        # connectivity: a floor stripe can touch the box in the RGB image.
+        # The region covers surfaces of objects whose centers pass the original
+        # center gate below; it does not replace or relax that gate.
+        radius = search_radius + np.linalg.norm(np.asarray(expected_size)) / 2
+        ys, xs = np.nonzero(mask)
+        z = depth[ys, xs]
+        valid = np.isfinite(z) & (z > .08) & (z < 5.)
+        rays = np.column_stack(((xs-k[0, 2])/k[0, 0],
+                                (ys-k[1, 2])/k[1, 1], np.ones(len(xs))))
+        world_rays = (optical_to_map[:3, :3] @ rays.T).T
+        origin = optical_to_map[:3, 3]
+        keep = np.zeros(len(xs), dtype=bool)
+        measured = origin + world_rays[valid] * z[valid, None]
+        keep[valid] = np.linalg.norm(measured-center, axis=1) <= radius
+        # Missing depth cannot be discarded to inflate quality. Keep invalid
+        # color pixels whose forward camera rays intersect the search sphere;
+        # project_component still counts them in the 80% validity denominator.
+        delta = center-origin
+        dot = world_rays @ delta
+        ray_norm2 = np.sum(world_rays*world_rays, axis=1)
+        intersects = (dot > 0) & (np.dot(delta, delta)-dot*dot/ray_norm2 <= radius*radius)
+        keep[~valid] = intersects[~valid]
+        mask[:] = 0
+        mask[ys[keep], xs[keep]] = 255
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
+    candidates = [i for i in range(1, count) if stats[i, cv2.CC_STAT_AREA] >= 30]
+    if search_center is not None:
         found = []
         for candidate in candidates:
             try:

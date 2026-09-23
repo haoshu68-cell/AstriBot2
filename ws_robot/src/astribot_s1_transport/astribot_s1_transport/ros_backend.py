@@ -37,6 +37,7 @@ from controller_manager_msgs.srv import ListControllers
 from shape_msgs.msg import SolidPrimitive
 from tf2_ros import Buffer, TransformListener, TransformException
 from astribot_transport_msgs.srv import PlanSkill
+from astribot_transport_msgs.srv import RevalidateManipulation
 from astribot_transport_msgs.action import PlanManipulation
 from rosidl_runtime_py.convert import message_to_ordereddict
 from astribot_navigation_msgs.msg import RobotEnvelope,RobotGeometryState,NavigationEnvelopeV2,ArmHoldStatus
@@ -142,6 +143,7 @@ class RosBackend(Node):
         self.status = self.create_publisher(String, '/transport/status', 10)
         self.scene_pub = self.create_publisher(PlanningScene, '/planning_scene', 10)
         self.plan = self.create_client(PlanSkill, '/transport/plan_skill')
+        self.revalidate = self.create_client(RevalidateManipulation, '/transport/revalidate_manipulation')
         self.gz_pose = self.create_client(SetEntityPose, '/world/' + config['world'] + '/set_pose')
         self.apply = self.create_client(ApplyPlanningScene, '/apply_planning_scene')
         self.get_scene = self.create_client(GetPlanningScene, '/get_planning_scene')
@@ -689,7 +691,7 @@ class RosBackend(Node):
     def arm_pose(self, station, lift, inward_m=0.):
         self.skill('pose', target=self.arm_target(station, lift, inward_m))
 
-    def scene_context(self, scene):
+    def scene_context(self, scene, include_occupancy=True):
         # Own payload has explicit attach/detach checkpoints; all other geometry,
         # collision policy and occupancy remain bound to this plan snapshot.
         world = copy.deepcopy(scene.world)
@@ -697,6 +699,20 @@ class RosBackend(Node):
         for obj in world.collision_objects:
             obj.header.stamp.sec = obj.header.stamp.nanosec = 0
         raw = [message_to_ordereddict(world), message_to_ordereddict(scene.allowed_collision_matrix)]
+        octomap = raw[0]['octomap']['octomap']
+        if not include_occupancy:
+            octomap['data'] = []
+        elif octomap['data']:
+            # Bind the plan to collision geometry, not changing sensor log-odds.
+            # The C++ decoder preserves all nodes' keys/depths/classifications;
+            # frame, origin, resolution and the collision matrix stay in raw.
+            try:
+                from _transport_scene_native import canonical_octomap
+                octomap['data'] = canonical_octomap(
+                    bytes(value % 256 for value in octomap['data']),
+                    octomap['binary'], octomap['resolution'], octomap['id']).hex()
+            except (ImportError, RuntimeError, ValueError, TypeError) as error:
+                raise TaskFailure('MTC_OCTOMAP_CANONICALIZATION_FAILED:' + str(error)) from error
         return hashlib.sha256(json.dumps(raw, sort_keys=True).encode()).hexdigest()
 
     def payload_context(self, scene):
@@ -704,6 +720,27 @@ class RosBackend(Node):
         for obj in objects:
             obj.header.stamp.sec = obj.header.stamp.nanosec = 0
         return json.dumps([message_to_ordereddict(o) for o in objects], sort_keys=True)
+
+    def stable_scene_snapshot(self):
+        # A head turn exposes new voxels. Plan after their collision semantics
+        # settle; execution still compares the live scene before every stage.
+        candidate, signature, stable_since = None, None, None
+        def settled():
+            nonlocal candidate, signature, stable_since
+            candidate = self.scene(full=True)
+            current = self.scene_context(candidate)
+            now = time.monotonic()
+            if current != signature:
+                signature, stable_since = current, now
+                return False
+            return now - stable_since >= 1.0
+        try:
+            self.wait(settled, 15.)
+        except TaskFailure as error:
+            if str(error) == 'WAIT_TIMEOUT':
+                raise TaskFailure('MTC_SCENE_NOT_STABLE') from error
+            raise
+        return candidate
 
     def prepare_manipulation(self, operation):
         if self.mtc_bundle is not None and not self.mtc_bundle.complete:
@@ -728,7 +765,7 @@ class RosBackend(Node):
         self.mtc_hold_epoch = self.envelope.epoch
         if not self.mtc.wait_for_server(timeout_sec=10.):
             raise TaskFailure('MTC_SERVER_UNAVAILABLE')
-        snapshot = self.scene(full=True)
+        snapshot = self.stable_scene_snapshot()
         snapshot.robot_state.joint_state = copy.deepcopy(self.joints)
         context = str(uuid.uuid4())
         goal = PlanManipulation.Goal(operation=operation, object_id=self.c['object_id'],
@@ -743,6 +780,7 @@ class RosBackend(Node):
             goal = self.vla.propose(goal, snapshot)
         self.mtc_base = self.transform(self.c['map_frame'], self.c['base_frame'])
         self.mtc_scene_context = self.scene_context(snapshot)
+        self.mtc_static_scene_context = self.scene_context(snapshot, include_occupancy=False)
         self.mtc_payload_context = self.payload_context(snapshot)
         self.mtc_calibration = (self.observation or {}).get('calibration_epoch')
         (self.ledger.directory / (operation.lower() + '_mtc_request.json')).write_text(
@@ -754,17 +792,14 @@ class RosBackend(Node):
         if not response.success:
             raise TaskFailure('MTC_PLAN:' + response.reason)
         self.mtc_bundle = PlanGuard(operation, response.stages, time.monotonic(), context, response.context_id)
+        self.mtc_context_id = context
         # Retain the complete plan, including expected states, for review/replay inspection.
         (self.ledger.directory / (operation.lower() + '_mtc_plan.json')).write_text(
             json.dumps(message_to_ordereddict(response), indent=2))
         self.ledger.emit(self.ledger.stage, planner='moveit_task_constructor', context_id=context,
                          planned_stages=[s.stage_id for s in response.stages])
 
-    def mtc_stage(self, kind):
-        if self.mtc_bundle is None or self.mtc_bundle.complete:
-            if self.recovery:
-                return None
-            raise TaskFailure('MTC_PLAN_REQUIRED')
+    def check_mtc_execution_context(self):
         self.check()
         self.require_manipulation_hold()
         if self.envelope.epoch != self.mtc_hold_epoch:
@@ -775,9 +810,40 @@ class RosBackend(Node):
             raise TaskFailure('MTC_BASE_MOVED')
         if (self.observation or {}).get('calibration_epoch') != self.mtc_calibration:
             raise TaskFailure('MTC_CALIBRATION_CHANGED')
+
+    def mtc_stage(self, kind):
+        if self.mtc_bundle is None or self.mtc_bundle.complete:
+            if self.recovery:
+                return None
+            raise TaskFailure('MTC_PLAN_REQUIRED')
+        self.check_mtc_execution_context()
         scene = self.scene(full=True)
         if self.scene_context(scene) != self.mtc_scene_context:
-            raise TaskFailure('MTC_SCENE_CHANGED')
+            (self.ledger.directory / 'mtc_scene_changed.json').write_text(json.dumps(dict(
+                expected_context=self.mtc_scene_context,
+                current_context=self.scene_context(scene),
+                stage=self.ledger.stage, scene=message_to_ordereddict(scene)), indent=2))
+            # Only occupancy may be refreshed. The native planner owns the
+            # exact original remaining paths and their stage-specific scenes.
+            scene = self.stable_scene_snapshot()
+            if self.scene_context(scene, include_occupancy=False) != self.mtc_static_scene_context:
+                raise TaskFailure('MTC_SCENE_CHANGED')
+            checked_context = self.scene_context(scene)
+            request = RevalidateManipulation.Request(context_id=self.mtc_context_id,
+                start_index=self.mtc_bundle.index, scene=scene)
+            response = self.call(self.revalidate, request)
+            if not response.success or response.context_id != self.mtc_context_id:
+                raise TaskFailure('MTC_REVALIDATION_REJECTED:' + response.reason)
+            scene = self.scene(full=True)
+            if self.scene_context(scene) != checked_context:
+                raise TaskFailure('MTC_SCENE_CHANGED_DURING_REVALIDATION')
+            self.mtc_scene_context = checked_context
+            self.ledger.emit(self.ledger.stage, executor_event='remaining_plan_revalidated',
+                context_id=self.mtc_context_id, start_index=self.mtc_bundle.index,
+                scene_context=checked_context, validator='native_mtc')
+        # Scene/service waits process new feedback; recheck the execution
+        # authority and measured base before accepting the next stage.
+        self.check_mtc_execution_context()
         expected_state = self.mtc_bundle.stages[self.mtc_bundle.index].expected_start
         expected = {j:p for j,p in zip(expected_state.joint_state.name, expected_state.joint_state.position)
                     if (any(part in j for part in ('arm_', 'torso_joint', 'head_joint')) or
