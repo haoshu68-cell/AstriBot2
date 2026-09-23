@@ -1,0 +1,1432 @@
+{
+  "layer": "offline extracted mailbox semantics, not ROS or full policy validation",
+  "source": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/observer_node.py",
+  "sha256": "346535aa1f28d3f8fe0d76e0b056f5f22f2770a1099458188a65bcf71dd1e10f",
+  "passed": true,
+  "cases": [
+    {
+      "case": "last_arrival_not_max_capture",
+      "passed": true,
+      "selected": [
+        "later_arrival"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ],
+        [
+          "odom",
+          "scan",
+          950000000
+        ],
+        [
+          "map",
+          "scan",
+          950000000
+        ]
+      ],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 2,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {
+          "superseded": 1
+        },
+        "defer_counts": {},
+        "received": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 950000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480462998290
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 950000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480462998290
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463010508
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463014107
+          },
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463010508
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "finished": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 950000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480462998290
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463010508
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463014107
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463015619
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463010508
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "successful": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 950000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480462998290
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463010508
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463014107
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463015619
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463010508
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "dropped": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480462990854
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463007297
+          },
+          "selected": null,
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463012022
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463007297
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": false,
+          "reason": "superseded"
+        },
+        "deferred": null
+      }
+    },
+    {
+      "case": "duplicate_capture_distinct_arrivals",
+      "passed": true,
+      "selected": [
+        "same_stamp_b"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ],
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ]
+      ],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 2,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {
+          "superseded": 1
+        },
+        "defer_counts": {},
+        "received": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463035404
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463035404
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463040384
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463042381
+          },
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463040384
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "finished": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463035404
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463040384
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463042381
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463043363
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463040384
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "successful": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463035404
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463040384
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463042381
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463043363
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463040384
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "dropped": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463033120
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463038807
+          },
+          "selected": null,
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463041427
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463038807
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": false,
+          "reason": "superseded"
+        },
+        "deferred": null
+      }
+    },
+    {
+      "case": "future_not_yet_selected",
+      "passed": true,
+      "selected": [
+        "future"
+      ],
+      "pending": [
+        "future"
+      ],
+      "queries": [],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 1,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {},
+        "defer_counts": {
+          "future": 1
+        },
+        "received": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1200000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463055157
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": null,
+        "finished": null,
+        "successful": null,
+        "dropped": null,
+        "deferred": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1200000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463055157
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463057817
+          },
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "future"
+        }
+      }
+    },
+    {
+      "case": "future_becomes_current",
+      "passed": true,
+      "selected": [
+        "future"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1200000000
+        ],
+        [
+          "map",
+          "scan",
+          1200000000
+        ]
+      ],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 1,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {},
+        "defer_counts": {
+          "future": 1
+        },
+        "received": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1200000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463055157
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1200000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463055157
+          },
+          "first_tf_ready": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463065806
+          },
+          "selected": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463066970
+          },
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463065806
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "finished": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1200000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463055157
+          },
+          "first_tf_ready": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463065806
+          },
+          "selected": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463066970
+          },
+          "finished": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463067893
+          },
+          "last_tf_check": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463065806
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "successful": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1200000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463055157
+          },
+          "first_tf_ready": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463065806
+          },
+          "selected": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463066970
+          },
+          "finished": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463067893
+          },
+          "last_tf_check": {
+            "ros_ns": 1200000000,
+            "steady_ns": 9480463065806
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "dropped": null,
+        "deferred": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1200000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463055157
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463057817
+          },
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "future"
+        }
+      }
+    },
+    {
+      "case": "age_299999999",
+      "passed": true,
+      "selected": [
+        "boundary"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          700000001
+        ],
+        [
+          "map",
+          "scan",
+          700000001
+        ]
+      ],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 1,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {},
+        "defer_counts": {},
+        "received": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 700000001,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463078211
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 700000001,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463078211
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463081072
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463082165
+          },
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463081072
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "finished": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 700000001,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463078211
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463081072
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463082165
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463082999
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463081072
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "successful": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 700000001,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463078211
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463081072
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463082165
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463082999
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463081072
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "dropped": null,
+        "deferred": null
+      }
+    },
+    {
+      "case": "age_300000000",
+      "passed": true,
+      "selected": [],
+      "pending": [],
+      "queries": [],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 1,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {
+          "expired": 1
+        },
+        "defer_counts": {},
+        "received": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 700000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463092568
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": null,
+        "finished": null,
+        "successful": null,
+        "dropped": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 700000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463092568
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463094682
+          },
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "expired"
+        },
+        "deferred": null
+      }
+    },
+    {
+      "case": "age_300000001",
+      "passed": true,
+      "selected": [],
+      "pending": [],
+      "queries": [],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 1,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {
+          "expired": 1
+        },
+        "defer_counts": {},
+        "received": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 699999999,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463101914
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": null,
+        "finished": null,
+        "successful": null,
+        "dropped": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 699999999,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463101914
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463103920
+          },
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "expired"
+        },
+        "deferred": null
+      }
+    },
+    {
+      "case": "receive_tail_five",
+      "passed": true,
+      "selected": [],
+      "pending": [
+        "blocked_0",
+        "blocked_1",
+        "blocked_2",
+        "blocked_3",
+        "blocked_4"
+      ],
+      "queries": [
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ]
+      ],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 6,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {
+          "queue_capacity": 1
+        },
+        "defer_counts": {},
+        "received": {
+          "sequence": 6,
+          "clock_epoch": 0,
+          "frame_id": "blocked",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463120207
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": {
+          "sequence": 6,
+          "clock_epoch": 0,
+          "frame_id": "blocked",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463120207
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463128942
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 0,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "selected": null,
+        "finished": null,
+        "successful": null,
+        "dropped": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463110685
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463121351
+          },
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "queue_capacity"
+        },
+        "deferred": null
+      }
+    },
+    {
+      "case": "last_ready_while_latest_waits",
+      "passed": true,
+      "selected": [
+        "ready"
+      ],
+      "pending": [
+        "later_blocked"
+      ],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ]
+      ],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 2,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {},
+        "defer_counts": {},
+        "received": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "blocked",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463140551
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": {
+          "sequence": 2,
+          "clock_epoch": 0,
+          "frame_id": "blocked",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463140551
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463144548
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 0,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "selected": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463138785
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463143258
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463145649
+          },
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463143258
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "finished": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463138785
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463143258
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463145649
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463146528
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463143258
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "successful": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463138785
+          },
+          "first_tf_ready": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463143258
+          },
+          "selected": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463145649
+          },
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463146528
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463143258
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 1,
+          "map_tf": 1,
+          "processing_success": true,
+          "reason": ""
+        },
+        "dropped": null,
+        "deferred": null
+      }
+    },
+    {
+      "case": "pending_plus_concurrent_tail_five",
+      "passed": true,
+      "selected": [],
+      "pending": [
+        "concurrent_0",
+        "concurrent_1",
+        "concurrent_2",
+        "concurrent_3",
+        "concurrent_4"
+      ],
+      "queries": [
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ]
+      ],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 6,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {
+          "queue_capacity": 1
+        },
+        "defer_counts": {},
+        "received": {
+          "sequence": 6,
+          "clock_epoch": 0,
+          "frame_id": "blocked",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463167165
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "blocked",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463156286
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463168492
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 0,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "selected": null,
+        "finished": null,
+        "successful": null,
+        "dropped": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "blocked",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463156286
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463169512
+          },
+          "last_tf_check": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463168492
+          },
+          "deferred_at": null,
+          "tf_checks": 1,
+          "tracking_tf": 0,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "queue_capacity"
+        },
+        "deferred": null
+      }
+    },
+    {
+      "case": "no_map_preserves_pending",
+      "passed": true,
+      "selected": [],
+      "pending": [
+        "map_wait"
+      ],
+      "queries": [],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 1,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {},
+        "defer_counts": {
+          "no_map": 1
+        },
+        "received": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463177818
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": null,
+        "finished": null,
+        "successful": null,
+        "dropped": null,
+        "deferred": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463177818
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463179431
+          },
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "no_map"
+        }
+      }
+    },
+    {
+      "case": "invalid_scan_not_queued",
+      "passed": true,
+      "selected": [],
+      "pending": [],
+      "queries": [],
+      "trace": {
+        "clock_epoch": 0,
+        "retained": 1,
+        "evictions": 0,
+        "missing_updates": 0,
+        "resets": 0,
+        "drop_counts": {
+          "invalid": 1
+        },
+        "defer_counts": {},
+        "received": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463185198
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": null,
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": ""
+        },
+        "waiting": null,
+        "selected": null,
+        "finished": null,
+        "successful": null,
+        "dropped": {
+          "sequence": 1,
+          "clock_epoch": 0,
+          "frame_id": "scan",
+          "capture_ros_ns": 1000000000,
+          "receive": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463185198
+          },
+          "first_tf_ready": null,
+          "selected": null,
+          "finished": {
+            "ros_ns": 1000000000,
+            "steady_ns": 9480463186079
+          },
+          "last_tf_check": null,
+          "deferred_at": null,
+          "tf_checks": 0,
+          "tracking_tf": -1,
+          "map_tf": -1,
+          "processing_success": false,
+          "reason": "invalid"
+        },
+        "deferred": null
+      }
+    }
+  ],
+  "trace_enabled": true,
+  "binding": {
+    "path": "runs/joint_acceptance_20260923/mass_build/_navigation_math_native.cpython-310-x86_64-linux-gnu.so",
+    "sha256": "a7da70ec26936779e9851c9e5c2aaec210666858a69ee8a7d79f456982350eda"
+  },
+  "matches_reference": true,
+  "reference_sha256": "3cc8c80de48f96db5992964abd1d8cc8500f7f45aa7c083ec762eab1f60c0890"
+}

@@ -1,0 +1,43 @@
+{
+  "git_head": "b59545dc400f1e5035597a340479dcfe37870a50",
+  "status": "isolated ROS contract passed; not deployed; performance unmeasured",
+  "binding": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/native_tf_build/_native_tf_buffer.cpython-310-x86_64-linux-gnu.so",
+  "immutable_binding": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/native_tf_candidate_20260923/artifacts/495852d20675cf01274a349da749307ca1be151aa0a3cb111907ff71742fae21/_native_tf_buffer.cpython-310-x86_64-linux-gnu.so",
+  "binding_sha256": "495852d20675cf01274a349da749307ca1be151aa0a3cb111907ff71742fae21",
+  "source_sha256": {
+    "ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/native_tf_buffer.hpp": "fb5e7a7feaeb5bf92eb285b9af60f91c64067b25faa4cc66b668ffd2ace0bf12",
+    "ws_robot/src/astribot_s1_navigation_policy_native/src/native_tf_buffer.cpp": "eafa426b1238ba80b00c5c156be6e0dc6796ddf0810852d4e689a5e1c6718295",
+    "ws_robot/src/astribot_s1_navigation_policy_native/src/native_tf_buffer_pybind.cpp": "0bfdd2bc343391b8225a9fa2e3de2bd37640acd35585033389e37e335748d80e",
+    "ws_robot/src/astribot_s1_navigation_policy_native/cmake/native_tf_buffer.cmake": "e4f4fa623be361a1a28e848bf3e5752a58fb7ad8f2b7f92251f6988c2cf0b906",
+    "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt": "2b9057c899231d83fa4758909d8c54a527c0efef2e4eb791b1d014894cef062b",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/verify_native_tf_buffer.py": "c8e4cd02efbb5a8edf3c3f4964d4c426912c6cc1615d28900a990f7e9b9ebd26"
+  },
+  "tests": {
+    "count": 12,
+    "passed": 12,
+    "log": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/native_tf_candidate_20260923/contract_delivery.log",
+    "elapsed_seconds": 0.684,
+    "domain": 94,
+    "receiver_context": "private rclcpp context; no global signal handlers or logging ownership"
+  },
+  "boundary": {
+    "rollback": "Actual backwards ROS clock latches all queries including explicit latest; clear cannot unlatch; whole strategy restart and readmission required. New receiver still requires fresh current sources; TFMessage has no epoch.",
+    "unchanged": "No observer/fusion/config edits by this subagent. Capture queries exact, zero only explicitly latest, no waits or fallback. No control or ACK publishers.",
+    "closing": "cancel and join own executor; 50 ms wait timeout does not bound an already running callback.",
+    "qos": "Configured reliable depth 100; /tf volatile and /tf_static transient local. FastDDS discovery reported depth 0 (unknown).",
+    "red": "Missing candidate binding failed before implementation; first integration failures were fixture assumptions on tf2 prune ordering, discovery and reported QoS depth, corrected without relaxing receiver contract."
+  },
+  "domain94_remaining": [],
+  "observer_sha256": "38a6a1288e76b947fd46071bd5bc2b0a8125b268d8193af808443f27834f67bc",
+  "policy_sha256": "efc17d7554e17143cf729c4395b64ec20f8d63097133c34048f2de163f2098de",
+  "delivery": {
+    "target_thread": "01a09962-8e15-71e0-b9a6-a92798318698",
+    "runtime_flags": {
+      "ASTRIBOT_POLICY_NATIVE_TF": "1",
+      "ASTRIBOT_SCAN_TIMING_DIAGNOSTICS": "1"
+    },
+    "previous_diagnostic_binding_sha256": "a7da70ec26936779e9851c9e5c2aaec210666858a69ee8a7d79f456982350eda",
+    "simulation_result": "pending",
+    "recorded_at": "2026-09-23T17:02:12.822916+08:00"
+  }
+}

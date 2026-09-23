@@ -1,0 +1,282 @@
+{
+  "evidence_layer": "offline read-only analysis of recorded whole-stack R0 simulation; no counterfactual claim",
+  "root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r0_01",
+  "return_window_ros": [
+    58.594,
+    237.711
+  ],
+  "return_window_wall": [
+    9629.075476613,
+    9809.096569978
+  ],
+  "wall_duration_s": 180.02109336500143,
+  "nav_outcome": {
+    "passed": false,
+    "error": "RuntimeError(\"NAV_RESULT_TIMEOUT: {'wall': 9809.049179697, 'ros_s': 237.663, 'stamp': 237.662, 'until': 237.773974784, 'epoch': 9571784983608, 'session': 'fab51fbc-d992-4662-93f7-128a58d0c162', 'hash': 'afc9ad20553a6edee7b709a91768b35341314fb4bad66c53474b7181b2d8ceae', 'allowed': True, 'reason': 'READY_FIXED', 'hold_id': 'ed025c81-a26e-43c5-bcb2-7935505a2844_1_hold', 'request_id': 'n4_fixed_abadc964fc4f47549e5f0595ddf53862'}\")",
+    "terminal_status": 5,
+    "cleanup_complete": true,
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 36,
+      "span_s": 0.6999999999999886,
+      "start_ros_s": 237.72,
+      "end_ros_s": 238.42,
+      "drift_m": 0.0002002589670536114,
+      "rotation_rad": 0.00044432230126467687,
+      "speed_mps": 0.0002333097475686009,
+      "angular_speed_radps": 0.0005176533250050852,
+      "command_max": 0.0,
+      "fresh": true
+    },
+    "execution_events": [
+      {
+        "ros_s": 58.594,
+        "task_id": "439513d86214478e8246c620826d82e7",
+        "source": "operator",
+        "state": "ACCEPTED",
+        "reason": "",
+        "sequence": 9571722136556
+      },
+      {
+        "ros_s": 58.594,
+        "task_id": "439513d86214478e8246c620826d82e7",
+        "source": "operator",
+        "state": "EXECUTING",
+        "reason": "",
+        "sequence": 9571722136557
+      },
+      {
+        "ros_s": 237.691,
+        "task_id": "439513d86214478e8246c620826d82e7",
+        "source": "operator",
+        "state": "CANCELING",
+        "reason": "USER_CANCEL",
+        "sequence": 9571722136558
+      },
+      {
+        "ros_s": 237.721,
+        "task_id": "439513d86214478e8246c620826d82e7",
+        "source": "operator",
+        "state": "CANCELED",
+        "reason": "EXECUTOR_RESULT",
+        "sequence": 9571722136559
+      }
+    ]
+  },
+  "policy": {
+    "samples": 727,
+    "reason_counts": {
+      "CLEAR": 88,
+      "REQUIRED_COVERAGE_UNAVAILABLE": 469,
+      "CLEAR_CONFIRMATION": 164,
+      "INPUT_UNAVAILABLE": 6
+    },
+    "motion_counts": {
+      "CONTINUE": 88,
+      "HOLD": 639
+    },
+    "path_risk_counts": {
+      "CLEAR": 727
+    },
+    "corridor_counts": {
+      "NORMAL": 727
+    },
+    "scan_rejection_health": {
+      "STALE:ACQUISITION_EXPIRED": 469
+    },
+    "required_coverage_rejections_near_stationary": 455,
+    "start_maneuver_counts": {
+      "{'state': 'TURN', 'mode': 'TURN', 'reason': 'START_FULL_TURN_CLEAR', 'request_id': 9572417039749, 'evidence': {'turn_clearance_m': None}}": 34,
+      "{'state': 'IDLE', 'reason': 'REQUEST_EXPIRED'}": 693
+    }
+  },
+  "observer": {
+    "samples": 728,
+    "error_counts": {
+      "(0, '')": 728
+    }
+  },
+  "controller": {
+    "phase_samples": 3600,
+    "phase_counts": {
+      "POLICY_HOLD": 3164,
+      "ALIGN_START": 168,
+      "FOLLOW": 268
+    }
+  },
+  "envelope": {
+    "samples": 7019,
+    "states": {
+      "(True, 'READY_FIXED')": 7019
+    }
+  },
+  "motion": {
+    "samples": 8956,
+    "first": {
+      "t": 58.6,
+      "wall": 9629.082957116,
+      "x": 0.7999319354122785,
+      "y": 9.817334972596975e-05,
+      "yaw": 0.0008561620266356264,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0,
+      "frame": "odom",
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 9629.075367926
+    },
+    "last": {
+      "t": 237.7,
+      "wall": 9809.085213511,
+      "x": 0.2965589813650897,
+      "y": 0.014351322427681229,
+      "yaw": 2.621872055496369,
+      "vx": 0.00023356144566620275,
+      "vy": 1.2950135526623231e-06,
+      "wz": -0.0005182197583053494,
+      "frame": "odom",
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 9809.073507298
+    },
+    "nonzero_samples": 911
+  },
+  "commands": {
+    "samples": 18004,
+    "nonzero_samples": 1721
+  },
+  "plans": {
+    "count_in_return": 1,
+    "headers": [
+      {
+        "ros_s": 58.597,
+        "frame": "map",
+        "count": 17
+      }
+    ]
+  },
+  "limits": [
+    "Counters are sampled messages, not independent failures or exact duration fractions.",
+    "180s NAV_RESULT_TIMEOUT is the probe timeout followed by cancellation, not a planner NO_PATH result.",
+    "R0 establishes observed internal tracking TF waiting and stale-policy association with HOLD; it does not prove stale scans are the sole cause.",
+    "C++ TF R1 needs same scenario/frozen configuration and actual loaded hash; compare latency stages plus outcome and safety, not just source freshness."
+  ],
+  "hashes": {
+    "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r0_01/navigation/result.json": "2be3aa68b197d765e283e3d6e1bb81fa2022ce7c4efdf8ad9e7cd803cad99b8f",
+    "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r0_01/navigation/policy_diagnostics.jsonl": "03add1a8140713bd02057e44cd6929b7bc2756a1f1c71c77d8fd2cbba62e405a",
+    "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r0_01/r0_analysis_return.json": "4c48b687c5667681b27cc0f7818e28b5e9c10aa069ed24c293c421e847b2b266"
+  },
+  "other_input_rejections": [
+    {
+      "state_ros": 83.805,
+      "coverage_ok": true,
+      "path_risk_status": "CLEAR",
+      "observation_delivery_gap_s": 0.0005924270008108579,
+      "tight_pair_candidate": true,
+      "observation": {
+        "stamp_ns": 83745000000,
+        "inputs_valid": false,
+        "scan_age_s": 0.30000000000001137,
+        "odom_age_s": 0.060000000000016485,
+        "required_sensors_valid": true,
+        "envelope_ready": true,
+        "envelope_reason": "READY_FIXED",
+        "envelope_age_s": 0.076,
+        "path_revision": 2
+      }
+    },
+    {
+      "state_ros": 100.88900000000001,
+      "coverage_ok": true,
+      "path_risk_status": "CLEAR",
+      "observation_delivery_gap_s": 0.14454623500023445,
+      "tight_pair_candidate": false,
+      "observation": {
+        "stamp_ns": 100689000000,
+        "inputs_valid": true,
+        "scan_age_s": 0.24099999999999966,
+        "odom_age_s": 0.06099999999999284,
+        "required_sensors_valid": true,
+        "envelope_ready": true,
+        "envelope_reason": "READY_FIXED",
+        "envelope_age_s": 0.065,
+        "path_revision": 2
+      }
+    },
+    {
+      "state_ros": 144.733,
+      "coverage_ok": true,
+      "path_risk_status": "CLEAR",
+      "observation_delivery_gap_s": 0.00025581299996702,
+      "tight_pair_candidate": true,
+      "observation": {
+        "stamp_ns": 144674000000,
+        "inputs_valid": false,
+        "scan_age_s": 0.22700000000000387,
+        "odom_age_s": 0.08700000000001751,
+        "required_sensors_valid": true,
+        "envelope_ready": false,
+        "envelope_reason": "READY_FIXED",
+        "envelope_age_s": 0.07400000000000001,
+        "path_revision": 2
+      }
+    },
+    {
+      "state_ros": 175.60500000000002,
+      "coverage_ok": true,
+      "path_risk_status": "CLEAR",
+      "observation_delivery_gap_s": 0.00017648099856160115,
+      "tight_pair_candidate": true,
+      "observation": {
+        "stamp_ns": 175544000000,
+        "inputs_valid": false,
+        "scan_age_s": 0.30000000000001137,
+        "odom_age_s": 0.060000000000030695,
+        "required_sensors_valid": true,
+        "envelope_ready": true,
+        "envelope_reason": "READY_FIXED",
+        "envelope_age_s": 0.044000000000000004,
+        "path_revision": 2
+      }
+    },
+    {
+      "state_ros": 183.306,
+      "coverage_ok": true,
+      "path_risk_status": "CLEAR",
+      "observation_delivery_gap_s": 0.00027021999994758517,
+      "tight_pair_candidate": true,
+      "observation": {
+        "stamp_ns": 183250000000,
+        "inputs_valid": false,
+        "scan_age_s": 0.30000000000001137,
+        "odom_age_s": 0.060000000000002274,
+        "required_sensors_valid": true,
+        "envelope_ready": true,
+        "envelope_reason": "READY_FIXED",
+        "envelope_age_s": 0.060000000000000005,
+        "path_revision": 2
+      }
+    },
+    {
+      "state_ros": 223.597,
+      "coverage_ok": true,
+      "path_risk_status": "CLEAR",
+      "observation_delivery_gap_s": 0.0007376289995590923,
+      "tight_pair_candidate": true,
+      "observation": {
+        "stamp_ns": 223530000000,
+        "inputs_valid": false,
+        "scan_age_s": 0.2920000000000016,
+        "odom_age_s": 0.09200000000001296,
+        "required_sensors_valid": true,
+        "envelope_ready": false,
+        "envelope_reason": "READY_FIXED",
+        "envelope_age_s": 0.10800000000000001,
+        "path_revision": 2
+      }
+    }
+  ]
+}

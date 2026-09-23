@@ -1,0 +1,87 @@
+{
+  "trace": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r0_01/navigation/policy_diagnostics.jsonl",
+  "sha256": "02764ede004d223516010557f4840e73bd7b578aaa522860fce250a604cdd490",
+  "incomplete_tail_ignored": false,
+  "summary": {
+    "diagnostic_samples": 181,
+    "unique_successful_scans": 196,
+    "stages_ms": {
+      "capture_to_receive_ros": {
+        "n": 196,
+        "p50": 51.0,
+        "p95": 67.0,
+        "max": 75.0
+      },
+      "receive_to_first_tf_checked_ready": {
+        "n": 196,
+        "p50": 50.030871,
+        "p95": 71.788014,
+        "max": 93.129103
+      },
+      "receive_to_select": {
+        "n": 196,
+        "p50": 50.0424765,
+        "p95": 71.807818,
+        "max": 93.138991
+      },
+      "select_to_finish": {
+        "n": 196,
+        "p50": 29.280694,
+        "p95": 56.986159,
+        "max": 76.862139
+      }
+    },
+    "observation_publish_age_ms": {
+      "n": 181,
+      "p50": 169.0,
+      "p95": 204.0,
+      "max": 223.0
+    },
+    "constraint_publish_age_ms": {
+      "n": 181,
+      "p50": 172.0,
+      "p95": 276.0,
+      "max": 319.000001
+    },
+    "finish_to_constraint_ms": {
+      "n": 181,
+      "p50": 38.92044,
+      "p95": 135.950258,
+      "max": 168.397299
+    },
+    "constraint_over_300ms_samples": 2,
+    "unique_waiting_scans": 1,
+    "waiting_edges": {
+      "(0, -1)": 1
+    },
+    "processing_failure_reasons": {},
+    "epoch_mismatch_records": 0,
+    "negative_intervals": {
+      "capture_to_receive_ros": 0,
+      "receive_to_first_tf_checked_ready": 0,
+      "receive_to_select": 0,
+      "select_to_finish": 0,
+      "observation_publish_age": 0,
+      "constraint_publish_age": 0,
+      "finish_to_constraint": 0
+    },
+    "last_counters_by_epoch": {
+      "0": {
+        "drop_counts": {
+          "expired": 1,
+          "superseded": 36
+        },
+        "defer_counts": {},
+        "missing_updates": 0,
+        "evictions": 613,
+        "resets": 0
+      }
+    }
+  },
+  "limitations": [
+    "Sampled diagnostics, not every frame or worst-case bound.",
+    "First TF checked ready includes time before first check; it is not pure TF latency.",
+    "Per-stage distributions use unique successful epoch/sequence; publication ages use samples.",
+    "Steady compute intervals and ROS capture ages are separate; percentiles are not additive."
+  ]
+}

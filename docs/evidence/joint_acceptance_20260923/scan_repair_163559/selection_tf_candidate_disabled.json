@@ -1,0 +1,237 @@
+{
+  "layer": "offline extracted mailbox semantics, not ROS or full policy validation",
+  "source": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/observer_node.py",
+  "sha256": "429a66c304833766ee1d939a17cc4e45cf28bb8ad4ba7fc55cae6596a73e6af9",
+  "passed": true,
+  "cases": [
+    {
+      "case": "last_arrival_not_max_capture",
+      "passed": true,
+      "selected": [
+        "later_arrival"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ],
+        [
+          "odom",
+          "scan",
+          950000000
+        ],
+        [
+          "map",
+          "scan",
+          950000000
+        ]
+      ]
+    },
+    {
+      "case": "duplicate_capture_distinct_arrivals",
+      "passed": true,
+      "selected": [
+        "same_stamp_b"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ],
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ]
+      ]
+    },
+    {
+      "case": "future_not_yet_selected",
+      "passed": true,
+      "selected": [
+        "future"
+      ],
+      "pending": [
+        "future"
+      ],
+      "queries": []
+    },
+    {
+      "case": "future_becomes_current",
+      "passed": true,
+      "selected": [
+        "future"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1200000000
+        ],
+        [
+          "map",
+          "scan",
+          1200000000
+        ]
+      ]
+    },
+    {
+      "case": "age_299999999",
+      "passed": true,
+      "selected": [
+        "boundary"
+      ],
+      "pending": [],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          700000001
+        ],
+        [
+          "map",
+          "scan",
+          700000001
+        ]
+      ]
+    },
+    {
+      "case": "age_300000000",
+      "passed": true,
+      "selected": [],
+      "pending": [],
+      "queries": []
+    },
+    {
+      "case": "age_300000001",
+      "passed": true,
+      "selected": [],
+      "pending": [],
+      "queries": []
+    },
+    {
+      "case": "receive_tail_five",
+      "passed": true,
+      "selected": [],
+      "pending": [
+        "blocked_0",
+        "blocked_1",
+        "blocked_2",
+        "blocked_3",
+        "blocked_4"
+      ],
+      "queries": [
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ]
+      ]
+    },
+    {
+      "case": "last_ready_while_latest_waits",
+      "passed": true,
+      "selected": [
+        "ready"
+      ],
+      "pending": [
+        "later_blocked"
+      ],
+      "queries": [
+        [
+          "odom",
+          "scan",
+          1000000000
+        ],
+        [
+          "map",
+          "scan",
+          1000000000
+        ],
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ]
+      ]
+    },
+    {
+      "case": "pending_plus_concurrent_tail_five",
+      "passed": true,
+      "selected": [],
+      "pending": [
+        "concurrent_0",
+        "concurrent_1",
+        "concurrent_2",
+        "concurrent_3",
+        "concurrent_4"
+      ],
+      "queries": [
+        [
+          "odom",
+          "blocked",
+          1000000000
+        ]
+      ]
+    },
+    {
+      "case": "no_map_preserves_pending",
+      "passed": true,
+      "selected": [],
+      "pending": [
+        "map_wait"
+      ],
+      "queries": []
+    },
+    {
+      "case": "invalid_scan_not_queued",
+      "passed": true,
+      "selected": [],
+      "pending": [],
+      "queries": []
+    }
+  ],
+  "trace_enabled": false,
+  "matches_reference": true,
+  "reference_sha256": "3cc8c80de48f96db5992964abd1d8cc8500f7f45aa7c083ec762eab1f60c0890"
+}

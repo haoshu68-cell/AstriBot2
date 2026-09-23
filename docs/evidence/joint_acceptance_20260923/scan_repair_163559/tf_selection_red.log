@@ -1,0 +1,31 @@
+test_default_keeps_existing_tf_and_lifecycle (test_policy_tf_selection.SelectionTest) ... FAIL
+test_native_uses_one_cpp_listener_and_closes_before_node (test_policy_tf_selection.SelectionTest) ... FAIL
+
+======================================================================
+FAIL: test_default_keeps_existing_tf_and_lifecycle (test_policy_tf_selection.SelectionTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_policy_tf_selection.py", line 28, in test_default_keeps_existing_tf_and_lifecycle
+    node=self.load()
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_policy_tf_selection.py", line 16, in load
+    self.assertEqual({m.name for m in methods},{'configure_tf','destroy_node'},'native lifecycle seam missing')
+AssertionError: Items in the second set but not the first:
+'configure_tf'
+'destroy_node' : native lifecycle seam missing
+
+======================================================================
+FAIL: test_native_uses_one_cpp_listener_and_closes_before_node (test_policy_tf_selection.SelectionTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_policy_tf_selection.py", line 35, in test_native_uses_one_cpp_listener_and_closes_before_node
+    node=self.load()
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_policy_tf_selection.py", line 16, in load
+    self.assertEqual({m.name for m in methods},{'configure_tf','destroy_node'},'native lifecycle seam missing')
+AssertionError: Items in the second set but not the first:
+'configure_tf'
+'destroy_node' : native lifecycle seam missing
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.006s
+
+FAILED (failures=2)

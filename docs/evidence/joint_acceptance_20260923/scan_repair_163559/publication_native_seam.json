@@ -1,0 +1,192 @@
+{
+  "layer": "actual C++ binding plus extracted ROS adapter; no ROS graph or motion",
+  "binding": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/joint_acceptance_20260923/publication_lease_20260923/artifacts/0dc7aea368fbeea1ab66f4ab96e8e5762157a9cef4e65c95e257b45ef8bfd735/_navigation_math_native.cpython-310-x86_64-linux-gnu.so",
+  "sha256": "0dc7aea368fbeea1ab66f4ab96e8e5762157a9cef4e65c95e257b45ef8bfd735",
+  "passed": true,
+  "cases": [
+    {
+      "name": "valid",
+      "passed": true,
+      "gate": {
+        "allowed": true,
+        "lease_s": 0.07999999999999999,
+        "deadline_ns": 1300000000,
+        "reason": "OK",
+        "publication_ns": 1220000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 3,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "CONTINUE",
+      "wire_lease_s": 0.07999999999999999
+    },
+    {
+      "name": "exact_deadline",
+      "passed": true,
+      "gate": {
+        "allowed": false,
+        "lease_s": 0.0,
+        "deadline_ns": 1300000000,
+        "reason": "SOURCE_EXPIRED",
+        "publication_ns": 1300000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 3,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "HOLD",
+      "wire_lease_s": 0.3
+    },
+    {
+      "name": "observed_322ms",
+      "passed": true,
+      "gate": {
+        "allowed": false,
+        "lease_s": 0.0,
+        "deadline_ns": 1300000000,
+        "reason": "SOURCE_EXPIRED",
+        "publication_ns": 1322000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 3,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "HOLD",
+      "wire_lease_s": 0.3
+    },
+    {
+      "name": "clock_rollback",
+      "passed": true,
+      "gate": {
+        "allowed": false,
+        "lease_s": 0.0,
+        "deadline_ns": 0,
+        "reason": "CLOCK_ROLLBACK",
+        "publication_ns": 1100000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 3,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "HOLD",
+      "wire_lease_s": 0.3
+    },
+    {
+      "name": "epoch_change",
+      "passed": true,
+      "gate": {
+        "allowed": false,
+        "lease_s": 0.0,
+        "deadline_ns": 0,
+        "reason": "EPOCH_MISMATCH",
+        "publication_ns": 1220000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 4,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "HOLD",
+      "wire_lease_s": 0.3
+    },
+    {
+      "name": "missing_required",
+      "passed": true,
+      "gate": {
+        "allowed": false,
+        "lease_s": 0.0,
+        "deadline_ns": 0,
+        "reason": "EVIDENCE_INVALID",
+        "publication_ns": 1220000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 3,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "HOLD",
+      "wire_lease_s": 0.3
+    },
+    {
+      "name": "source_epoch",
+      "passed": true,
+      "gate": {
+        "allowed": false,
+        "lease_s": 0.0,
+        "deadline_ns": 0,
+        "reason": "EVIDENCE_INVALID",
+        "publication_ns": 1220000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 3,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "HOLD",
+      "wire_lease_s": 0.3
+    },
+    {
+      "name": "degraded_source",
+      "passed": true,
+      "gate": {
+        "allowed": false,
+        "lease_s": 0.0,
+        "deadline_ns": 0,
+        "reason": "EVIDENCE_INVALID",
+        "publication_ns": 1220000000,
+        "decision_ns": 1150000000,
+        "decision_epoch": 3,
+        "publication_epoch": 3,
+        "required_sources": [
+          {
+            "sensor_id": "scan",
+            "capture_ns": 1000000000,
+            "deadline_ns": 1300000000
+          }
+        ]
+      },
+      "motion": "HOLD",
+      "wire_lease_s": 0.3
+    }
+  ]
+}

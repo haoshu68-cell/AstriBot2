@@ -1,0 +1,33 @@
+{
+  "source": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r2_01/deadline_audit.json",
+  "source_sha256": "d678d02ec11f58986f9feee142cef1a8272afaf9a7520eb062af7dd7c13e1642",
+  "checked_at": "2026-09-23T17:28:14.743150+08:00",
+  "audit": {
+    "trace": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r2_01/navigation/policy_diagnostics.jsonl",
+    "sha256": "9389e959fad4aa230617a32bb6a5cb0f24ebaf80e2f0dfc7376eaf87699f13ff",
+    "proposed": {
+      "passed": true,
+      "wire_samples": 190,
+      "positive_pairs": 132,
+      "hold_samples": 58,
+      "unpaired_positive": [],
+      "error_counts": {},
+      "errors": []
+    },
+    "final": {
+      "passed": true,
+      "wire_samples": 1616,
+      "positive_pairs": 1217,
+      "hold_samples": 399,
+      "unpaired_positive": [],
+      "error_counts": {},
+      "errors": []
+    },
+    "limitations": [
+      "Checks captured wire messages and matching diagnostics; unrecorded emissions are not proven.",
+      "Lease is anchored at message stamp, never receive time.",
+      "This contract covers the listed required sensor snapshots, not every world/odom input."
+    ],
+    "passed": true
+  }
+}

@@ -1,0 +1,18 @@
+test_default_keeps_existing_tf_and_lifecycle (test_policy_tf_selection.SelectionTest) ... ok
+test_native_uses_one_cpp_listener_and_closes_before_node (test_policy_tf_selection.SelectionTest) ... ok
+test_partial_native_construction_still_closes_parent (test_policy_tf_selection.SelectionTest) ... ERROR
+
+======================================================================
+ERROR: test_partial_native_construction_still_closes_parent (test_policy_tf_selection.SelectionTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_policy_tf_selection.py", line 48, in test_partial_native_construction_still_closes_parent
+    self.assertTrue(node.destroy_node())
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/observer_node.py", line 125, in destroy_node
+    if getattr(self,'native_tf',False):self.tf.close()
+AttributeError: 'PolicyObserver' object has no attribute 'tf'
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.010s
+
+FAILED (errors=1)
