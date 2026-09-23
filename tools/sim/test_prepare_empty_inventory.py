@@ -74,6 +74,13 @@ class PrepareEmptyTest(unittest.TestCase):
     def test_valid_versioned_empty(self):
         self.assertTrue(self.valid())
 
+    def test_kinematic_policy_must_be_explicit_and_still_empty(self):
+        self.latest['diagnostic']['policy']='kinematic_inventory_v1'
+        self.assertFalse(self.valid())
+        self.assertTrue(empty_ready(self.latest, self.received, 1.1, 1_100_000_000, 'trial', 'physical', 'kinematic_inventory_v1'))
+        self.latest['source']['status']=2
+        self.assertFalse(empty_ready(self.latest, self.received, 1.1, 1_100_000_000, 'trial', 'physical', 'kinematic_inventory_v1'))
+
     def test_missing_stale_expired_future_data(self):
         self.assertFalse(empty_ready({}, {}, 1.1, 1_100_000_000, 'trial', 'physical'))
         self.assertFalse(self.valid(wall=1.31))

@@ -20,6 +20,68 @@ import time
 import uuid
 
 
+def setup_sample(motion, command, status, received, now_ros, now_wall):
+    """Verification-only precondition for fixture setup, not a base resource lock."""
+    if not motion or not command or not status or status.get('phase')!='0':return None
+    if any(not 0<=now_wall-received.get(k,float('-inf'))<.3 for k in ('motion','hold_executor','command')):return None
+    at=motion.header.stamp.sec+motion.header.stamp.nanosec*1e-9
+    if motion.header.frame_id!='odom' or not 0<at<=now_ros<at+.3:return None
+    v=motion.twist.twist;p=motion.pose.pose.position;q=motion.pose.pose.orientation
+    command_values=[getattr(getattr(command,field),axis)for field in ('linear','angular')for axis in ('x','y','z')]
+    values=[v.linear.x,v.linear.y,v.angular.z,p.x,p.y,q.x,q.y,q.z,q.w]+command_values
+    if not all(math.isfinite(x)for x in values):return None
+    if abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001:return None
+    if math.hypot(v.linear.x,v.linear.y)>=.01 or abs(v.angular.z)>=.02 or max(abs(x)for x in command_values)>=1e-6:return None
+    return dict(stamp=at,wall=now_wall,x=p.x,y=p.y,yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)))
+
+
+class PreparationWatchdog:
+    """Latch loss of the stopped setup window; never grants runtime authority."""
+    def __init__(self, sample):
+        self.origin=sample;self.last=sample;self.advanced_wall=sample['wall'];self.valid=True
+
+    def observe(self, sample):
+        if sample is None:self.valid=False;return False
+        if (sample['stamp']<self.last['stamp'] or sample['wall']<self.last['wall'] or
+                math.hypot(sample['x']-self.origin['x'],sample['y']-self.origin['y'])>.005 or
+                abs(math.remainder(sample['yaw']-self.origin['yaw'],2*math.pi))>.01):self.valid=False
+        if sample['stamp']>self.last['stamp']:self.advanced_wall=sample['wall']
+        if sample['wall']-self.advanced_wall>=.3:self.valid=False
+        self.last=sample
+        return self.valid
+
+
+def fixture_executions(registry, diagnostic):
+    """Bind all expected fixture models to independent applied execution evidence."""
+    expected={item['model']for item in registry}
+    if not expected or len(expected)!=len(registry) or len({item['object_id']for item in registry})!=len(registry):
+        raise ValueError('INVALID_FIXTURE_REGISTRY')
+    models={row[0]:row[1]for row in diagnostic['models']}
+    if len(models)!=len(diagnostic['models']):raise ValueError('DUPLICATE_MODEL_ENTITY')
+    actual={}
+    for execution in diagnostic['execution']:
+        model=models.get(execution['entity'])
+        if (model not in expected or model in actual or not execution['epoch'] or
+                execution['attached'] is not False or type(execution['accepted'])is not int or type(execution['applied'])is not int or
+                execution['accepted']<0 or execution['accepted']!=execution['applied']):
+            raise ValueError('FIXTURE_EXECUTION_IDENTITY_OR_STATE_MISMATCH')
+        actual[model]=execution['accepted']
+    if set(actual)!=expected:raise ValueError('FIXTURE_EXECUTION_SET_MISMATCH')
+    return actual
+
+
+def failed_fixture_cleanup(prepare_only, fixtures, owned_models, detach, remove):
+    # Preparation never attaches or writes PlanningScene. A failed observation
+    # cannot authorize detaching an existing object, including a reused fixture.
+    if prepare_only:return []
+    result=[]
+    for item in fixtures:
+        if item['model']not in owned_models:continue
+        try:detach(item,False);remove(remove=[item['object_id']]);result.append(dict(action='detach_'+item['model'],ok=True))
+        except Exception as error:result.append(dict(action='detach_'+item['model'],ok=False,error=str(error)))
+    return result
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--owner',type=Path,required=True)
@@ -29,21 +91,29 @@ def main():
     p.add_argument('--plugin-directory',type=Path,required=True)
     p.add_argument('--world-reference',type=Path,required=True)
     p.add_argument('--resume-registry',type=Path,help='Reuse this owned session registry after a failed matrix; no second source is loaded')
+    p.add_argument('--prepare-only',action='store_true',help='Create the same four A1 fixtures with all execution plugins and verify explicit detached EMPTY; no fault injection or attachment commands on success')
     a=p.parse_args()
     identity=json.loads(a.owner.read_text());process=Path('/proc')/str(identity['pid'])
     assert Path('/proc/sys/kernel/random/boot_id').read_text().strip()==identity['boot_id']
-    assert process.joinpath('stat').read_text().rsplit(') ',1)[1].split()[19]==identity['start_ticks']
+    assert process.joinpath('stat').read_text().rsplit(') ',1)[1].split()[19]==str(identity['start_ticks'])
     assert str(process.joinpath('exe').resolve())==identity['exe']
     argv=[v.decode() for v in process.joinpath('cmdline').read_bytes().split(b'\0')[:-1]]
     assert argv==identity['cmdline']
     assert argv[argv.index('--instance')+1]==a.session
     assert argv[argv.index('--ros-domain-id')+1]==os.environ['ROS_DOMAIN_ID']!='25'
     assert os.environ['IGN_PARTITION']=='astribot_'+a.session
+    if a.prepare_only:
+        from prepare_empty_inventory import verify_owner,CaptureReceipts,empty_ready,proof_key,ReadbackBarrier
+        verify_owner(identity,a.session,a.source)
+        import fcntl
+        navigation_lock=open('/tmp/astribot_waypoint_'+os.environ['ROS_DOMAIN_ID']+'.lock','a')
+        fcntl.flock(navigation_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     a.output.mkdir(parents=True,exist_ok=False)
 
     import rclpy
     from rclpy.parameter import Parameter
     from geometry_msgs.msg import Twist,Pose
+    from nav_msgs.msg import Odometry
     from shape_msgs.msg import SolidPrimitive
     from moveit_msgs.msg import AttachedCollisionObject
     from moveit_msgs.srv import ApplyPlanningScene,GetPlanningScene
@@ -54,6 +124,8 @@ def main():
     from rosidl_runtime_py.convert import message_to_ordereddict
     rclpy.init();node=rclpy.create_node('verify_empty_inventory',parameter_overrides=[Parameter('use_sim_time',value=True)])
     latest={};received={};trace=[];phases=[];paused=False;created=False;phantom=False
+    preparation_samples={};capture_receipts=CaptureReceipts() if a.prepare_only else None;readback=None
+    preparation_guard=None;operations=[];actually_created=[]
     reuse=json.loads(a.resume_registry.read_text()) if a.resume_registry else None
     probe=reuse[0]['model'].removesuffix('_box') if reuse else 'inventory_probe_'+uuid.uuid4().hex[:12]
     def record(key,value):
@@ -61,37 +133,52 @@ def main():
         if key=='diagnostic':data=json.loads(value.data)
         latest[key]=value if key!='diagnostic' else data
         received[key]=time.monotonic()
+        if a.prepare_only and preparation_guard is not None:check_preparation(raise_failure=False)
+        if a.prepare_only and key in ('source','ledger','geometry','diagnostic'):
+            preparation_samples[key]=data
+            capture_receipts.observe(key,data,time.monotonic())
+            if readback is not None:readback.observe(ready(),proof_key(preparation_samples),time.monotonic(),node.get_clock().now().nanoseconds)
         trace.append(dict(kind=key,wall=time.monotonic(),ros_ns=node.get_clock().now().nanoseconds,message=data))
     subs=[node.create_subscription(AttachmentState,'/payload/attachment_state',lambda v:record('ledger',v),10),
           node.create_subscription(AttachmentObservation,'/payload/attachment_observation',lambda v:record('source',v),10),
           node.create_subscription(RobotGeometryState,'/navigation/geometry_state',lambda v:record('geometry',v),10),
           node.create_subscription(String,'/payload/simulation_inventory_diagnostics',lambda v:record('diagnostic',v),10),
           node.create_subscription(Twist,'/cmd_vel',lambda v:record('command',v),10)]
+    if a.prepare_only:
+        subs += [node.create_subscription(Odometry,'/odom',lambda v:record('motion',v),10),
+                 node.create_subscription(String,'/transport/hold_executor/status',lambda v:record('hold_executor',v),10)]
     apply=node.create_client(ApplyPlanningScene,'/apply_planning_scene')
     scene=node.create_client(GetPlanningScene,'/get_planning_scene')
     def spin(seconds):
         end=time.monotonic()+seconds
-        while time.monotonic()<end:rclpy.spin_once(node,timeout_sec=.01)
+        while time.monotonic()<end:
+            rclpy.spin_once(node,timeout_sec=.01);check_preparation()
     def wait(predicate,timeout=8.):
         end=time.monotonic()+timeout
         while time.monotonic()<end:
             rclpy.spin_once(node,timeout_sec=.01)
+            check_preparation()
             if predicate():return
         raise AssertionError({k:(v.reason if hasattr(v,'reason') else v.get('reason') if isinstance(v,dict) else 'received') for k,v in latest.items()})
     def ready():
+        if a.prepare_only:
+            return check_preparation(False) and empty_ready(preparation_samples,capture_receipts.received,time.monotonic(),node.get_clock().now().nanoseconds,a.session,a.source,'kinematic_inventory_v1')
         s,g=latest.get('ledger'),latest.get('geometry')
         fresh=all(time.monotonic()-received.get(k,0)<.3 for k in ('ledger','geometry','diagnostic'))
         return fresh and s and g and s.confirmed and g.complete and g.attachment_revision==s.attachment_revision and s.observation.status in (AttachmentObservation.EMPTY,AttachmentObservation.ATTACHED)
     def stable_ready(seconds=2.,timeout=12.):
         # Receiving one healthy sample does not prove the subsequent interval.
         # Reset on every observed invalid state, including startup reconciliation.
-        start=None;end=time.monotonic()+timeout
+        start=None;last_key=None;end=time.monotonic()+timeout
         while time.monotonic()<end:
             rclpy.spin_once(node,timeout_sec=.01)
+            check_preparation()
             now=time.monotonic()
-            if not ready():start=None
+            key=proof_key(preparation_samples) if a.prepare_only and ready() else None
+            if not ready() or (a.prepare_only and key!=last_key):start=None
             elif start is None:start=now
             elif now-start>=seconds:return
+            last_key=key
         raise AssertionError('EMPTY readiness was not continuously observed for the required interval')
     def rejected():
         s,g=latest.get('ledger'),latest.get('geometry')
@@ -100,13 +187,64 @@ def main():
         command=latest.get('command')
         assert command is not None and time.monotonic()-received['command']<.3,'missing fresh stationary command'
         assert max(abs(getattr(getattr(command,field),axis)) for field in ('linear','angular') for axis in ('x','y','z'))<1e-6
+
+    def prepare_entry():
+        nonlocal preparation_guard
+        # This is a setup fixture under the navigation owner's exclusive window,
+        # not a runtime resource lock. Refuse observed hold/motion conflicts.
+        samples=[];deadline=time.monotonic()+12
+        while time.monotonic()<deadline:
+            rclpy.spin_once(node,timeout_sec=.01)
+            motion=latest.get('motion');hold=latest.get('hold_executor');command=latest.get('command')
+            sample=setup_sample(motion,command,json.loads(hold.data)if hold else None,received,node.get_clock().now().nanoseconds*1e-9,time.monotonic())
+            if sample is None:samples=[];continue
+            if samples and sample['stamp']==samples[-1]['stamp']:continue
+            if samples and (not 0<sample['stamp']-samples[-1]['stamp']<=.3 or
+                            math.hypot(sample['x']-samples[0]['x'],sample['y']-samples[0]['y'])>.005 or
+                            abs(math.remainder(sample['yaw']-samples[0]['yaw'],2*math.pi))>.01):samples=[]
+            samples.append(sample)
+            if len(samples)>=3 and sample['stamp']-samples[0]['stamp']>=.6 and sample['wall']-samples[0]['wall']>=.6:
+                preparation_guard=PreparationWatchdog(sample);return
+        raise AssertionError('PREPARATION_REQUIRES_IDLE_HOLD_AND_MEASURED_BASE_STOP')
+    def check_preparation(raise_failure=True):
+        if not a.prepare_only or preparation_guard is None:return True
+        hold=latest.get('hold_executor')
+        try:status=json.loads(hold.data)if hold else None
+        except (ValueError,TypeError):status=None
+        sample=setup_sample(latest.get('motion'),latest.get('command'),status,received,node.get_clock().now().nanoseconds*1e-9,time.monotonic())
+        valid=preparation_guard.observe(sample)
+        if raise_failure and not valid:raise RuntimeError('PREPARATION_STOP_WINDOW_REVOKED')
+        return valid
+    def run_command(argv, **kwargs):
+        if not a.prepare_only:return subprocess.run(argv,**kwargs)
+        check_preparation();verify_owner(identity,a.session,a.source)
+        # Keep receiving safety observations while a bounded operation runs.
+        # If revoked, wait for that operation's terminal result and start no more.
+        from concurrent.futures import ThreadPoolExecutor
+        operation=dict(argv=argv,completed=False,stop_window_valid=True);operations.append(operation)
+        with ThreadPoolExecutor(max_workers=1)as pool:
+            future=pool.submit(subprocess.run,argv,**kwargs)
+            while not future.done():
+                rclpy.spin_once(node,timeout_sec=.01);check_preparation(False)
+            try:result=future.result()
+            except Exception as error:
+                operation.update(error=str(error),stop_window_valid=check_preparation(False));raise
+        operation.update(completed=True,returncode=result.returncode,stop_window_valid=check_preparation(False))
+        for name in ('stdout','stderr'):
+            path=a.output/f'operation_{len(operations):03d}.{name}'
+            path.write_text(getattr(result,name)or'')
+            operation[name+'_file']=str(path.resolve())
+        operation['asset_outcome']='command terminal only; verify actual inventory before claiming asset state'
+        check_preparation()
+        return result
     def mark(name,**extra):
         s=latest.get('ledger');g=latest.get('geometry');d=latest.get('diagnostic',{})
         phases.append(dict(name=name,wall=time.monotonic(),ros_ns=node.get_clock().now().nanoseconds,
             ledger_reason=s.reason if s else None,geometry_reason=g.reason if g else None,
             revision=s.attachment_revision if s else None,source_revision=d.get('revision'),**extra))
     def ign(service,kind,request):
-        result=subprocess.run(['ign','service','-s','/world/default/'+service,'--reqtype','ignition.msgs.'+kind,
+        if a.prepare_only:verify_owner(identity,a.session,a.source)
+        result=run_command(['ign','service','-s','/world/default/'+service,'--reqtype','ignition.msgs.'+kind,
             '--reptype','ignition.msgs.Boolean','--timeout','5000','--req',request],capture_output=True,text=True,timeout=8)
         assert result.returncode==0 and 'data: true' in result.stdout,(service,result.stdout,result.stderr)
     def call(client,request):
@@ -138,13 +276,14 @@ def main():
         actual=call(scene,request).scene
         (a.output/f'scene_readback_{len(list(a.output.glob("scene_readback_*.json"))):02d}.json').write_text(json.dumps(message_to_ordereddict(actual),indent=2))
     def command(item,attached):
+        if a.prepare_only:verify_owner(identity,a.session,a.source)
         count=commands_applied.get(item['model'],0)+1;commands_applied[item['model']]=count
         if attached:
             parent='astribot_s1::'+item['physical_parent_link'];xyz=(0,-.35,.03)
         else:parent='';xyz=(-15.,-15.+fixtures.index(item)*.3,1.)
         yaw=.7 if attached and item['kind']=='sphere' else .35 if attached and item['kind']=='mesh' else 0.
         req=f'id: {count} name: '+json.dumps(parent)+f' position {{ x: {xyz[0]} y: {xyz[1]} z: {xyz[2]} }} orientation {{ z: {math.sin(yaw/2)} w: {math.cos(yaw/2)} }}'
-        result=subprocess.run(['ign','service','-s','/model/'+item['model']+'/kinematic_attachment/command',
+        result=run_command(['ign','service','-s','/model/'+item['model']+'/kinematic_attachment/command',
             '--reqtype','ignition.msgs.Pose','--reptype','ignition.msgs.Boolean','--timeout','5000','--req',req],capture_output=True,text=True,timeout=8)
         assert result.returncode==0 and 'data: true' in result.stdout,result.stderr
     def source_ids(expected):
@@ -169,6 +308,11 @@ def main():
         local=obj.object.primitive_poses[0].position
         assert max(abs(local.x-.015),abs(local.y),abs(local.z))<1e-6
     try:
+        if a.prepare_only:
+            prepare_entry()
+            if not reuse:
+                assert node.count_publishers('/payload/attachment_observation')==0,'SOURCE_ALREADY_EXISTS_USE_OWNED_REGISTRY_OR_NEW_SESSION'
+                assert 'diagnostic' not in latest,'EXISTING_INVENTORY_CANNOT_BE_REPLACED'
         # Actual published URDF is independent of ECM inventory and is checked
         # against the planning model camera structure before deriving fixed TCPs.
         urdfs={}
@@ -182,10 +326,13 @@ def main():
                 return (element.tag,sorted(element.attrib.items()),(element.text or '').strip(),[normalize(c)for c in element])
             return {e.get('name'):normalize(e) for e in root if e.tag in ('link','joint') and ('rgbd' in e.get('name','') or 'stereo' in e.get('name',''))}
         assert camera_model(urdfs['robot_state_publisher'])==camera_model(urdfs['move_group'])
+        if a.prepare_only:
+            from prepare_empty_inventory import camera_structure
+            assert camera_structure(urdfs['robot_state_publisher'])==camera_structure(urdfs['move_group'])
         (a.output/'moveit_reference.urdf').write_text(urdfs['move_group'])
         (a.output/'camera_models.json').write_text(json.dumps(dict(equal=True,physical_camera_links=[k for k in camera_model(urdfs['robot_state_publisher']) if k.endswith('_camera_link')]),indent=2))
         (a.output/'robot_reference.urdf').write_text(urdfs['robot_state_publisher'])
-        converted=subprocess.run(['ign','sdf','-p',str(a.output/'robot_reference.urdf')],capture_output=True,text=True,timeout=15)
+        converted=run_command(['ign','sdf','-p',str(a.output/'robot_reference.urdf')],capture_output=True,text=True,timeout=15)
         assert converted.returncode==0,converted.stderr;ET.fromstring(converted.stdout)
         (a.output/'robot_reference.sdf').write_text(converted.stdout)
         mesh=a.output/'payload_cube.obj'
@@ -206,10 +353,12 @@ def main():
             fixtures.append(item)
             geometry={'box':'<box><size>.08 .06 .04</size></box>','cylinder':'<cylinder><radius>.03</radius><length>.08</length></cylinder>',
                 'sphere':'<sphere><radius>.03</radius></sphere>','mesh':'<mesh><uri>'+str(mesh.resolve())+'</uri><scale>1 1 1</scale></mesh>'}[kind]
-            plugin=('<plugin filename="'+library+'" name="astribot::KinematicPayload"><parent_model>astribot_s1</parent_model><parent_link>'+item['physical_parent_link']+'</parent_link></plugin>') if index else ''
+            plugin=('<plugin filename="'+library+'" name="astribot::KinematicPayload"><parent_model>astribot_s1</parent_model><parent_link>'+item['physical_parent_link']+'</parent_link></plugin>') if index or a.prepare_only else ''
             sdf='<sdf version="1.7"><model name="'+item['model']+'"><static>true</static><pose>-15 '+str(-15+index*.3)+' 1 0 0 0</pose><link name="body"><inertial><mass>'+str(item['mass'])+'</mass><inertia><ixx>.01</ixx><iyy>.01</iyy><izz>.01</izz></inertia></inertial><collision name="shape"><pose>.015 0 0 0 0 0</pose><geometry>'+geometry+'</geometry></collision><visual name="shape"><pose>.015 0 0 0 0 0</pose><geometry>'+geometry+'</geometry></visual></link>'+plugin+'</model></sdf>'
             (a.output/(kind+'.sdf')).write_text(sdf)
-            if not reuse:ign('create','EntityFactory','sdf: '+json.dumps(sdf)+' allow_renaming: false')
+            if not reuse:
+                ign('create','EntityFactory','sdf: '+json.dumps(sdf)+' allow_renaming: false')
+                actually_created.append(item['model'])
             created_models.append(item['model'])
         registry=[{k:v for k,v in item.items()if k in ('model','object_id','physical_parent_link','attachment_link')}for item in fixtures]
         (a.output/'registry.json').write_text(json.dumps(registry,indent=2))
@@ -218,14 +367,16 @@ def main():
             '--robot-reference',str((a.output/'robot_reference.sdf').resolve()),'--plugin',str((a.plugin_directory/'libastribot_empty_inventory.so').resolve()),
             '--payload-registry',str((a.output/'registry.json').resolve()),'--robot-urdf',str((a.output/'robot_reference.urdf').resolve())]
         if not reuse:
-            loaded=subprocess.run(loader,capture_output=True,text=True,timeout=15)
+            if a.prepare_only:verify_owner(identity,a.session,a.source)
+            loaded=run_command(loader,capture_output=True,text=True,timeout=15)
             (a.output/'loader.json').write_text(json.dumps(dict(command=loader,returncode=loaded.returncode,stdout=loaded.stdout,stderr=loaded.stderr),indent=2))
             assert loaded.returncode==0,loaded.stderr
-            wait(lambda:rejected() and latest.get('diagnostic',{}).get('reason')=='PAYLOAD_REGISTRY_INCOMPLETE',12)
-            checkpoint('missing_executor_cannot_claim_empty')
-            first=fixtures[0];entity=next(row[0]for row in latest['diagnostic']['models']if row[1]==first['model'])
-            inner='<parent_model>astribot_s1</parent_model><parent_link>'+first['physical_parent_link']+'</parent_link>'
-            ign('entity/system/add','EntityPlugin_V','entity { id: '+str(entity)+' type: MODEL } plugins { name: "astribot::KinematicPayload" filename: '+json.dumps(library)+' innerxml: '+json.dumps(inner)+' }')
+            if not a.prepare_only:
+                wait(lambda:rejected() and latest.get('diagnostic',{}).get('reason')=='PAYLOAD_REGISTRY_INCOMPLETE',12)
+                checkpoint('missing_executor_cannot_claim_empty')
+                first=fixtures[0];entity=next(row[0]for row in latest['diagnostic']['models']if row[1]==first['model'])
+                inner='<parent_model>astribot_s1</parent_model><parent_link>'+first['physical_parent_link']+'</parent_link>'
+                ign('entity/system/add','EntityPlugin_V','entity { id: '+str(entity)+' type: MODEL } plugins { name: "astribot::KinematicPayload" filename: '+json.dumps(library)+' innerxml: '+json.dumps(inner)+' }')
         else:
             assert registry==reuse,'resume registry differs from the expected explicit fixture identities'
             wait(lambda: latest.get('diagnostic',{}).get('reason')=='EMPTY_INVENTORY_OBSERVED',12)
@@ -235,6 +386,23 @@ def main():
                 commands_applied[models[execution['entity']]]=execution['accepted']
             checkpoint('reuse_owned_explicit_detached_registry')
         stable_ready();assert source_ids(set());checkpoint('all_registered_explicit_detached_empty')
+        if a.prepare_only:
+            check_preparation()
+            commands_applied.update(fixture_executions(registry,latest['diagnostic']))
+            assert latest['source'].session_id==a.session and latest['source'].source_id==a.source
+            key=proof_key(preparation_samples)
+            readback=ReadbackBarrier(key,time.monotonic(),node.get_clock().now().nanoseconds)
+            request=GetPlanningScene.Request();request.components.components=4
+            actual=call(scene,request).scene
+            assert readback.observe(ready(),proof_key(preparation_samples),time.monotonic(),node.get_clock().now().nanoseconds),'PREPARE_SCENE_READBACK_VERSION_OR_LEASE_CHANGED'
+            readback=None
+            assert not actual.is_diff and not actual.robot_state.is_diff and not actual.robot_state.attached_collision_objects
+            assert ready()
+            fixture_executions(registry,latest['diagnostic'])
+            (a.output/'prepared_fixtures.json').write_text(json.dumps(dict(owner=identity,fixtures=fixtures,source=a.source,session=a.session),indent=2))
+            checkpoint('prepared_only_explicit_empty_no_attachment_or_faults')
+            success=True
+            return
         current=set()
         for item in fixtures:
             stationary();command(item,True);current.add(item['object_id'])
@@ -272,10 +440,7 @@ def main():
     finally:
         cleanup=[]
         if not success:
-            for item in fixtures:
-                if item['model'] not in created_models:continue
-                try:command(item,False);apply_objects(remove=[item['object_id']]);cleanup.append(dict(action='detach_'+item['model'],ok=True))
-                except Exception as error:cleanup.append(dict(action='detach_'+item['model'],ok=False,error=str(error)))
+            cleanup=failed_fixture_cleanup(a.prepare_only,fixtures,created_models,command,apply_objects)
         for needed,fn,label in [(paused,lambda:ign('control','WorldControl','pause: false'),'resume_world'),
                                  (phantom,lambda:scene_attachment(True),'remove_phantom'),
                                  (created,lambda:ign('remove','Entity','name: '+json.dumps(probe)+' type: MODEL'),'remove_probe')]:
@@ -283,9 +448,9 @@ def main():
                 try:fn();cleanup.append(dict(action=label,ok=True))
                 except Exception as error:cleanup.append(dict(action=label,ok=False,error=str(error)))
         (a.output/'trace.json').write_text(json.dumps(trace,indent=2))
-        report=dict(passed=success,phases=phases,cleanup=cleanup,owner=str(a.owner.resolve()),
-                    evidence='actual Gazebo kinematic attachments + physical collision/mass oracle + independent MoveIt readback; not force/contact grasp',
-                    retained_registered_models=created_models,
+        report=dict(passed=success,prepare_only=a.prepare_only,phases=phases,cleanup=cleanup,owner=str(a.owner.resolve()),
+                    evidence=('setup only: registered detached fixture snapshot; no loaded navigation, contact or inertia acceptance' if a.prepare_only else 'actual Gazebo kinematic attachments + physical collision/mass oracle + independent MoveIt readback; not force/contact grasp'),
+                    retained_registered_models=created_models,acknowledged_create_requests=actually_created,operations=operations,
                     reasons=dict(Counter(v['message'].get('reason') for v in trace if v['kind']=='ledger')))
         (a.output/'result.json').write_text(json.dumps(report,indent=2));print(json.dumps(report))
         node.destroy_node();rclpy.shutdown()

@@ -18,6 +18,21 @@ import uuid
 import xml.etree.ElementTree as ET
 
 
+def read_model_parameters(client, request, spin, timeout=10., *, clock=time.monotonic, events=None):
+    """Only model GetParameters reads may retry; discovery shares the budget."""
+    require(client.srv_name.endswith('/get_parameters'), 'READ_ONLY_PARAMETER_SERVICE_REQUIRED')
+    import sys
+    tools_directory = str(Path(__file__).resolve().parents[1])
+    if tools_directory not in sys.path:
+        sys.path.insert(0, tools_directory)
+    from run_waypoint_route import read_service
+    deadline = clock() + timeout
+    require(timeout > 0 and client.wait_for_service(timeout_sec=min(5., timeout)), 'SERVICE_UNAVAILABLE:' + client.srv_name)
+    remaining = deadline-clock()
+    require(remaining > 0, 'SERVICE_TIMEOUT:' + client.srv_name)
+    return read_service(client, request, spin, remaining, clock=clock, events=events)
+
+
 def require(condition, reason):
     if not condition:
         raise RuntimeError(reason)
@@ -106,7 +121,9 @@ class ReadbackBarrier:
         return self.valid
 
 
-def empty_ready(latest, received, wall, ros_ns, session, source):
+def empty_ready(latest, received, wall, ros_ns, session, source, policy='static_world_empty_only_v1'):
+    if policy not in ('static_world_empty_only_v1', 'kinematic_inventory_v1'):
+        return False
     if ros_ns <= 0 or any(wall - received.get(k, float('-inf')) >= .3 for k in ('source', 'ledger', 'geometry', 'diagnostic')):
         return False
     s, state, g, d = (latest[k] for k in ('source', 'ledger', 'geometry', 'diagnostic'))
@@ -125,7 +142,7 @@ def empty_ready(latest, received, wall, ros_ns, session, source):
                 and g['complete'] and g['attachment_state_confirmed'] and not g['attachment_ids']
                 and g['attachment_revision'] == state['attachment_revision'] and g['model_revision']
                 and 0 < ns(g['header']['stamp']) <= ros_ns < ns(g['valid_until'])
-                and d['policy'] == 'static_world_empty_only_v1' and d['reason'] == 'EMPTY_INVENTORY_OBSERVED'
+                and d['policy'] == policy and d['reason'] == 'EMPTY_INVENTORY_OBSERVED'
                 and d['source_epoch'] == s['source_epoch'] and d['revision'] == s['revision'] and d['clock_epoch'] == s['clock_epoch']
                 and 0 < d['stamp_ns'] <= ros_ns < d['stamp_ns'] + 300_000_000)
 
@@ -170,17 +187,12 @@ def main():
                             (RobotGeometryState, '/navigation/geometry_state', 'geometry'),
                             (String, '/payload/simulation_inventory_diagnostics', 'diagnostic')):
         node.create_subscription(typ, topic, lambda v, k=key: receive(k, v), 10)
-    def call(client, request):
-        require(client.wait_for_service(timeout_sec=5), 'SERVICE_UNAVAILABLE:' + client.srv_name)
-        future = client.call_async(request)
-        rclpy.spin_until_future_complete(node, future, timeout_sec=5)
-        require(future.done(), 'SERVICE_TIMEOUT:' + client.srv_name)
-        return future.result()
     try:
         urdfs = {}
         for target in ('robot_state_publisher', 'move_group'):
             client = node.create_client(GetParameters, '/' + target + '/get_parameters')
-            result = call(client, GetParameters.Request(names=['robot_description', 'use_sim_time']))
+            result = read_model_parameters(client, GetParameters.Request(names=['robot_description', 'use_sim_time']),
+                lambda: rclpy.spin_once(node, timeout_sec=.01), events=report.setdefault('parameter_read_attempts', []))
             require(len(result.values) == 2 and result.values[1].bool_value, 'SIMULATION_MODEL_REQUIRED:' + target)
             urdfs[target] = result.values[0].string_value
             (args.output/(target + '.urdf')).write_text(urdfs[target])
