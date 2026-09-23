@@ -1,0 +1,361 @@
+{
+  "trace": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/fixed_navigation_09/navigation/policy_diagnostics.jsonl",
+  "trace_sha256": "ae4077d1c251f054beb8f4e33be0fe880659592fb9866ad941c58d34889e168d",
+  "sampled_trace": true,
+  "percentile": "nearest rank ceil(.95*n); sampled maximum is not a timing bound",
+  "incomplete_tail_ignored": false,
+  "overall": {
+    "observation_samples": 148,
+    "state_samples": 148,
+    "state_reasons": {
+      "INPUT_UNAVAILABLE": 39,
+      "CLEAR_CONFIRMATION": 7,
+      "CLEAR": 102
+    },
+    "observation_stages_ms": {
+      "risk": {
+        "n": 148,
+        "p50": 8.394725500238565,
+        "p95": 16.135736999785877,
+        "max": 31.710642000689404
+      },
+      "scan": {
+        "n": 148,
+        "p50": 25.180797999837523,
+        "p95": 40.66215500006365,
+        "max": 62.27545000001555
+      },
+      "snapshot": {
+        "n": 148,
+        "p50": 22.18968649958697,
+        "p95": 39.73390600003768,
+        "max": 62.51667600008659
+      }
+    },
+    "state_stages_ms": {
+      "arbitration": {
+        "n": 148,
+        "p50": 0.38501600010931725,
+        "p95": 8.522555000126886,
+        "max": 28.531053999358846
+      },
+      "corridor": {
+        "n": 148,
+        "p50": 0.16431149970230763,
+        "p95": 0.27437500011728844,
+        "max": 0.5997250000291388
+      },
+      "observation": {
+        "n": 148,
+        "p50": 66.48378899990348,
+        "p95": 94.1068379997887,
+        "max": 106.73784999926283
+      },
+      "route_mailbox": {
+        "n": 148,
+        "p50": 0.16958049991444568,
+        "p95": 0.4031200005556457,
+        "max": 0.5180279995329329
+      },
+      "start_maneuver": {
+        "n": 148,
+        "p50": 0.01330699979007477,
+        "p95": 8.01088099979097,
+        "max": 27.95025499926851
+      }
+    },
+    "scan_age_ms": {
+      "n": 148,
+      "p50": 163.99999999999972,
+      "p95": 195.99999999999795,
+      "max": 204.00000000000063
+    },
+    "tracks": {
+      "min": 129,
+      "max": 2154
+    },
+    "observation_processing_ms": {
+      "n": 148,
+      "p50": 66.83975699979783,
+      "p95": 94.00178499981848,
+      "max": 106.57652700047038
+    },
+    "state_processing_ms": {
+      "n": 148,
+      "p50": 67.55479249977725,
+      "p95": 94.62158899987116,
+      "max": 107.28692099928594
+    },
+    "coverage_rejection_samples": 0,
+    "rejected_health": {},
+    "stopped_coverage_rejections": 0,
+    "independent_scan_probe": {
+      "samples": 149,
+      "receipt_age_ms": {
+        "n": 149,
+        "p50": 44.000000000004036,
+        "p95": 57.99999999999983,
+        "max": 59.000000000004604
+      },
+      "negative_age_samples": 0,
+      "tf_unavailable_samples": 0,
+      "boundary": "Probe TF buffer and receive time are not the policy worker buffer or internal queue time."
+    }
+  },
+  "phases": {
+    "goal_1": {
+      "start": {
+        "kind": "nav_started",
+        "wall": 4481.197124172,
+        "ros_s": 21.962,
+        "target_odom": [
+          0.7999997493984047,
+          1.2765417600392511e-05,
+          1.9840852727680473e-05
+        ],
+        "target_map": [
+          0.7999997493984047,
+          1.2765417600392511e-05,
+          1.9840852727680473e-05
+        ]
+      },
+      "terminal": {
+        "kind": "nav_terminal",
+        "wall": 4484.470237194,
+        "ros_s": 25.220000000000002,
+        "status": 6
+      },
+      "summary": {
+        "observation_samples": 14,
+        "state_samples": 14,
+        "state_reasons": {
+          "CLEAR_CONFIRMATION": 3,
+          "CLEAR": 6,
+          "INPUT_UNAVAILABLE": 5
+        },
+        "observation_stages_ms": {
+          "risk": {
+            "n": 14,
+            "p50": 0.7916204999673937,
+            "p95": 6.0475059999589575,
+            "max": 6.0475059999589575
+          },
+          "scan": {
+            "n": 14,
+            "p50": 13.836653999987902,
+            "p95": 22.91212100044504,
+            "max": 22.91212100044504
+          },
+          "snapshot": {
+            "n": 14,
+            "p50": 2.462536499933776,
+            "p95": 12.625199000467546,
+            "max": 12.625199000467546
+          }
+        },
+        "state_stages_ms": {
+          "arbitration": {
+            "n": 14,
+            "p50": 0.5217054999775428,
+            "p95": 11.57736500044848,
+            "max": 11.57736500044848
+          },
+          "corridor": {
+            "n": 14,
+            "p50": 0.19108749984297901,
+            "p95": 0.2664759995241184,
+            "max": 0.2664759995241184
+          },
+          "observation": {
+            "n": 14,
+            "p50": 25.16183399984584,
+            "p95": 45.85437300011108,
+            "max": 45.85437300011108
+          },
+          "route_mailbox": {
+            "n": 14,
+            "p50": 0.15065400020830566,
+            "p95": 0.4006350000054226,
+            "max": 0.4006350000054226
+          },
+          "start_maneuver": {
+            "n": 14,
+            "p50": 0.020746000245708274,
+            "p95": 11.07342500017694,
+            "max": 11.07342500017694
+          }
+        },
+        "scan_age_ms": {
+          "n": 14,
+          "p50": 119.49999999999861,
+          "p95": 142.000000000003,
+          "max": 142.000000000003
+        },
+        "tracks": {
+          "min": 129,
+          "max": 785
+        },
+        "observation_processing_ms": {
+          "n": 14,
+          "p50": 25.015375999828393,
+          "p95": 45.67329600013181,
+          "max": 45.67329600013181
+        },
+        "state_processing_ms": {
+          "n": 14,
+          "p50": 30.94982600032381,
+          "p95": 46.4433220004139,
+          "max": 46.4433220004139
+        },
+        "coverage_rejection_samples": 0,
+        "rejected_health": {},
+        "stopped_coverage_rejections": 0,
+        "independent_scan_probe": {
+          "samples": 14,
+          "receipt_age_ms": {
+            "n": 14,
+            "p50": 44.500000000001094,
+            "p95": 49.00000000000304,
+            "max": 49.00000000000304
+          },
+          "negative_age_samples": 0,
+          "tf_unavailable_samples": 0,
+          "boundary": "Probe TF buffer and receive time are not the policy worker buffer or internal queue time."
+        }
+      }
+    },
+    "goal_2": {
+      "start": {
+        "kind": "nav_started",
+        "wall": 4487.21377606,
+        "ros_s": 27.962000000000003,
+        "target_odom": [
+          0.7999997493984047,
+          1.2765417600392511e-05,
+          1.9840852727680473e-05
+        ],
+        "target_map": [
+          0.7999997493984047,
+          1.2765417600392511e-05,
+          1.9840852727680473e-05
+        ]
+      },
+      "terminal": {
+        "kind": "nav_terminal",
+        "wall": 4511.578101996,
+        "ros_s": 52.18,
+        "status": 4
+      },
+      "summary": {
+        "observation_samples": 96,
+        "state_samples": 96,
+        "state_reasons": {
+          "CLEAR_CONFIRMATION": 4,
+          "CLEAR": 92
+        },
+        "observation_stages_ms": {
+          "risk": {
+            "n": 96,
+            "p50": 10.943326500182593,
+            "p95": 16.72793899979297,
+            "max": 31.710642000689404
+          },
+          "scan": {
+            "n": 96,
+            "p50": 27.960147500380117,
+            "p95": 44.460930000241206,
+            "max": 62.27545000001555
+          },
+          "snapshot": {
+            "n": 96,
+            "p50": 25.281118500060984,
+            "p95": 44.67828799988638,
+            "max": 62.51667600008659
+          }
+        },
+        "state_stages_ms": {
+          "arbitration": {
+            "n": 96,
+            "p50": 0.37753850028821034,
+            "p95": 17.899430000397842,
+            "max": 28.531053999358846
+          },
+          "corridor": {
+            "n": 96,
+            "p50": 0.15972800019881106,
+            "p95": 0.25502599964966066,
+            "max": 0.3863649999402696
+          },
+          "observation": {
+            "n": 96,
+            "p50": 76.26751399993736,
+            "p95": 97.2234290002234,
+            "max": 106.73784999926283
+          },
+          "route_mailbox": {
+            "n": 96,
+            "p50": 0.23701899999650777,
+            "p95": 0.41696200059959665,
+            "max": 0.5180279995329329
+          },
+          "start_maneuver": {
+            "n": 96,
+            "p50": 0.01324399954683031,
+            "p95": 17.509361000520585,
+            "max": 27.95025499926851
+          }
+        },
+        "scan_age_ms": {
+          "n": 96,
+          "p50": 173.00000000000182,
+          "p95": 198.0000000000004,
+          "max": 204.00000000000063
+        },
+        "tracks": {
+          "min": 786,
+          "max": 2154
+        },
+        "observation_processing_ms": {
+          "n": 96,
+          "p50": 76.17440100011663,
+          "p95": 97.11401200002001,
+          "max": 106.57652700047038
+        },
+        "state_processing_ms": {
+          "n": 96,
+          "p50": 77.04571349995604,
+          "p95": 97.72138400057884,
+          "max": 107.28692099928594
+        },
+        "coverage_rejection_samples": 0,
+        "rejected_health": {},
+        "stopped_coverage_rejections": 0,
+        "independent_scan_probe": {
+          "samples": 97,
+          "receipt_age_ms": {
+            "n": 97,
+            "p50": 44.000000000004036,
+            "p95": 58.00000000000338,
+            "max": 59.000000000004604
+          },
+          "negative_age_samples": 0,
+          "tf_unavailable_samples": 0,
+          "boundary": "Probe TF buffer and receive time are not the policy worker buffer or internal queue time."
+        }
+      }
+    }
+  },
+  "limitations": [
+    "observer/state stage timings overlap; do not add them",
+    "no raw scan delivery or TF waiting timing inferred from this trace",
+    "correlation of track count and runtime is not full root-cause proof",
+    "no runtime or configuration changes; no new simulation"
+  ],
+  "navigation_result": {
+    "path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/fixed_navigation_09/navigation/result.json",
+    "sha256": "88f793a19cfe8a1cb999b795943cbe9a75db349f51bfac37fb0c547d9ea52886",
+    "passed": true,
+    "error": null,
+    "cleanup_complete": true
+  }
+}

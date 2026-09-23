@@ -1,0 +1,330 @@
+{
+  "trace": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/fixed_navigation_08/navigation/policy_diagnostics.jsonl",
+  "trace_sha256": "14b43e28388b244a5c2d3b401279e7e28471db3e2fcd5608d39a3a74bfae5373",
+  "sampled_trace": true,
+  "percentile": "nearest rank ceil(.95*n); sampled maximum is not a timing bound",
+  "incomplete_tail_ignored": false,
+  "overall": {
+    "observation_samples": 204,
+    "state_samples": 203,
+    "state_reasons": {
+      "INPUT_UNAVAILABLE": 21,
+      "CLEAR_CONFIRMATION": 18,
+      "CLEAR": 147,
+      "REQUIRED_COVERAGE_UNAVAILABLE": 17
+    },
+    "observation_stages_ms": {
+      "risk": {
+        "n": 204,
+        "p50": 12.036181499752274,
+        "p95": 19.646564000140643,
+        "max": 52.44482699981745
+      },
+      "scan": {
+        "n": 204,
+        "p50": 29.000160000123287,
+        "p95": 63.568904000021575,
+        "max": 84.511771000507
+      },
+      "snapshot": {
+        "n": 204,
+        "p50": 27.59237000009307,
+        "p95": 48.3898450002016,
+        "max": 71.18730999991385
+      }
+    },
+    "state_stages_ms": {
+      "arbitration": {
+        "n": 203,
+        "p50": 0.4294910004318808,
+        "p95": 76.52201799919567,
+        "max": 109.07912200036662
+      },
+      "corridor": {
+        "n": 203,
+        "p50": 0.17073500021069776,
+        "p95": 0.2662490005604923,
+        "max": 0.601677999839012
+      },
+      "observation": {
+        "n": 203,
+        "p50": 78.84131300033914,
+        "p95": 128.8496490005855,
+        "max": 137.29422399956093
+      },
+      "route_mailbox": {
+        "n": 203,
+        "p50": 0.20032100019307109,
+        "p95": 0.36292099957790924,
+        "max": 0.46159399971656967
+      },
+      "start_maneuver": {
+        "n": 203,
+        "p50": 0.014131999705568887,
+        "p95": 76.11071599967545,
+        "max": 108.74204999981885
+      }
+    },
+    "scan_age_ms": {
+      "n": 204,
+      "p50": 172.00000000000415,
+      "p95": 325.9999999999934,
+      "max": 478.9999999999992
+    },
+    "tracks": {
+      "min": 129,
+      "max": 2964
+    },
+    "observation_processing_ms": {
+      "n": 204,
+      "p50": 77.13268149973374,
+      "p95": 129.7828250008024,
+      "max": 151.38852400014002
+    },
+    "state_processing_ms": {
+      "n": 203,
+      "p50": 82.64539599986165,
+      "p95": 182.26519800009555,
+      "max": 214.41676200083748
+    },
+    "coverage_rejection_samples": 17,
+    "rejected_health": {
+      "scan:STALE:ACQUISITION_EXPIRED": 17
+    },
+    "stopped_coverage_rejections": 11
+  },
+  "phases": {
+    "goal_1": {
+      "start": {
+        "kind": "nav_started",
+        "wall": 4234.155426873,
+        "ros_s": 22.455000000000002,
+        "target_odom": [
+          0.7999997493819269,
+          1.2765291660217727e-05,
+          1.9840778820499167e-05
+        ],
+        "target_map": [
+          0.7999997493819269,
+          1.2765291660217727e-05,
+          1.9840778820499167e-05
+        ]
+      },
+      "terminal": {
+        "kind": "nav_terminal",
+        "wall": 4259.68721622,
+        "ros_s": 47.802,
+        "status": 4
+      },
+      "summary": {
+        "observation_samples": 102,
+        "state_samples": 102,
+        "state_reasons": {
+          "CLEAR_CONFIRMATION": 3,
+          "CLEAR": 99
+        },
+        "observation_stages_ms": {
+          "risk": {
+            "n": 102,
+            "p50": 10.56527249966166,
+            "p95": 15.211335000458348,
+            "max": 35.67002500039962
+          },
+          "scan": {
+            "n": 102,
+            "p50": 25.531230000069627,
+            "p95": 49.850134000735125,
+            "max": 63.568904000021575
+          },
+          "snapshot": {
+            "n": 102,
+            "p50": 22.85297900016303,
+            "p95": 37.80026699951122,
+            "max": 53.048525999656704
+          }
+        },
+        "state_stages_ms": {
+          "arbitration": {
+            "n": 102,
+            "p50": 0.3876300002048083,
+            "p95": 0.6334669997158926,
+            "max": 14.596582000194758
+          },
+          "corridor": {
+            "n": 102,
+            "p50": 0.16147899941643118,
+            "p95": 0.2581469998403918,
+            "max": 0.290833000690327
+          },
+          "observation": {
+            "n": 102,
+            "p50": 70.5249595002897,
+            "p95": 95.49305900054605,
+            "max": 98.32927499974176
+          },
+          "route_mailbox": {
+            "n": 102,
+            "p50": 0.21330100025807042,
+            "p95": 0.407274000281177,
+            "max": 0.46159399971656967
+          },
+          "start_maneuver": {
+            "n": 102,
+            "p50": 0.01313599977947888,
+            "p95": 0.023845000214350875,
+            "max": 14.18280899997626
+          }
+        },
+        "scan_age_ms": {
+          "n": 102,
+          "p50": 167.50000000000043,
+          "p95": 192.99999999999784,
+          "max": 196.00000000000506
+        },
+        "tracks": {
+          "min": 129,
+          "max": 2091
+        },
+        "observation_processing_ms": {
+          "n": 102,
+          "p50": 70.39641450001,
+          "p95": 95.32387299987022,
+          "max": 98.2121509996432
+        },
+        "state_processing_ms": {
+          "n": 102,
+          "p50": 71.05758900024739,
+          "p95": 96.26508900055342,
+          "max": 98.80729900032748
+        },
+        "coverage_rejection_samples": 0,
+        "rejected_health": {},
+        "stopped_coverage_rejections": 0
+      }
+    },
+    "goal_2": {
+      "start": {
+        "kind": "nav_started",
+        "wall": 4259.840859208,
+        "ros_s": 47.956,
+        "target_odom": [
+          -2.50460610602134e-07,
+          -3.1073313951402144e-06,
+          1.5708161675737171
+        ],
+        "target_map": [
+          -2.50460610602134e-07,
+          -3.1073313951402144e-06,
+          1.5708161675737171
+        ]
+      },
+      "terminal": {
+        "kind": "nav_terminal",
+        "wall": 4280.1926348,
+        "ros_s": 68.102,
+        "status": 6
+      },
+      "summary": {
+        "observation_samples": 75,
+        "state_samples": 75,
+        "state_reasons": {
+          "CLEAR": 46,
+          "CLEAR_CONFIRMATION": 12,
+          "REQUIRED_COVERAGE_UNAVAILABLE": 17
+        },
+        "observation_stages_ms": {
+          "risk": {
+            "n": 75,
+            "p50": 16.228522999881534,
+            "p95": 22.77870099987922,
+            "max": 52.44482699981745
+          },
+          "scan": {
+            "n": 75,
+            "p50": 37.08572599953186,
+            "p95": 72.66224400063948,
+            "max": 84.511771000507
+          },
+          "snapshot": {
+            "n": 75,
+            "p50": 36.62156900008995,
+            "p95": 50.081891999980144,
+            "max": 56.57655100003467
+          }
+        },
+        "state_stages_ms": {
+          "arbitration": {
+            "n": 75,
+            "p50": 0.5541929995160899,
+            "p95": 85.3728450001654,
+            "max": 109.07912200036662
+          },
+          "corridor": {
+            "n": 75,
+            "p50": 0.1695160008239327,
+            "p95": 0.2941880002254038,
+            "max": 0.601677999839012
+          },
+          "observation": {
+            "n": 75,
+            "p50": 104.14734300047712,
+            "p95": 135.06801899984566,
+            "max": 137.29422399956093
+          },
+          "route_mailbox": {
+            "n": 75,
+            "p50": 0.21037199985585175,
+            "p95": 0.3524389994709054,
+            "max": 0.42801699964911677
+          },
+          "start_maneuver": {
+            "n": 75,
+            "p50": 0.019766999685089104,
+            "p95": 85.02443099951051,
+            "max": 108.74204999981885
+          }
+        },
+        "scan_age_ms": {
+          "n": 75,
+          "p50": 239.00000000000432,
+          "p95": 358.99999999999466,
+          "max": 478.9999999999992
+        },
+        "tracks": {
+          "min": 2091,
+          "max": 2960
+        },
+        "observation_processing_ms": {
+          "n": 75,
+          "p50": 103.86117699999886,
+          "p95": 134.92159900033585,
+          "max": 151.38852400014002
+        },
+        "state_processing_ms": {
+          "n": 75,
+          "p50": 122.44434900003398,
+          "p95": 205.0419739998688,
+          "max": 214.41676200083748
+        },
+        "coverage_rejection_samples": 17,
+        "rejected_health": {
+          "scan:STALE:ACQUISITION_EXPIRED": 17
+        },
+        "stopped_coverage_rejections": 11
+      }
+    }
+  },
+  "limitations": [
+    "observer/state stage timings overlap; do not add them",
+    "no raw scan delivery or TF waiting timing inferred from this trace",
+    "correlation of track count and runtime is not full root-cause proof",
+    "no runtime or configuration changes; no new simulation"
+  ],
+  "navigation_result": {
+    "path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/fixed_navigation_08/navigation/result.json",
+    "sha256": "081e8a105a57b5d9137936fe3329e34c144f8fe9295d4218b004c162da20b7cd",
+    "passed": false,
+    "error": "RuntimeError('NAV_NOT_SUCCEEDED:6')",
+    "cleanup_complete": true
+  }
+}
