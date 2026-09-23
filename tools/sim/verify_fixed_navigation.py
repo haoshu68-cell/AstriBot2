@@ -77,7 +77,7 @@ def main():
     parser.add_argument('--source',default='gazebo_empty_v1')
     parser.add_argument('--profile',type=Path,required=True)
     parser.add_argument('--cold-start-receipt',type=Path,required=True,help='own runner receipt for a fresh navigator with no preceding goal writers')
-    parser.add_argument('--scenario',choices=('all','hold_cancel','consumer_pause'),default='all',help='run faults independently when another scenario has a separately recorded failure')
+    parser.add_argument('--scenario',choices=('all','return_90','hold_cancel','consumer_pause'),default='all',help='run faults independently when another scenario has a separately recorded failure')
     args=parser.parse_args()
     owner=json.loads(args.owner.read_text())
     verify_owner(owner,args.session,args.source)
@@ -366,9 +366,9 @@ def main():
         home=[origin['x'],origin['y'],yaw+math.pi/2]
         report.update(origin=origin,targets=[outward,home],initial_stop=initial_stop)
         epoch=acquire()
-        for name,target in ((('positive_outward',outward),('positive_return_90deg',home)) if args.scenario=='all' else ()):
+        for name,target in ((('positive_outward',outward),('positive_return_90deg',home)) if args.scenario in ('all','return_90') else ()):
             start_nav(target);arrival=finish_nav(target);scenarios.append(dict(name=name,passed=True,epoch=epoch,arrival=arrival))
-        for mode in (('hold_cancel','consumer_pause') if args.scenario=='all' else (args.scenario,)):
+        for mode in (('hold_cancel','consumer_pause') if args.scenario=='all' else (() if args.scenario=='return_90' else (args.scenario,))):
             if not positive(epoch):raise RuntimeError('LOST_BEFORE_MOTION')
             start=latest['odom'].copy();start_nav(outward)
             spin(lambda:nav_result.done() or (math.hypot(latest['odom']['vx'],latest['odom']['vy'])>.04 and math.hypot(latest['odom']['x']-start['x'],latest['odom']['y']-start['y'])>.025),60,'MOTION_NOT_OBSERVED',True)
