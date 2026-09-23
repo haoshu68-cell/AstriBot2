@@ -11,6 +11,27 @@ import time
 from collections import deque
 
 
+def probe_corridor_offsets(case):
+    distance = case.get('probe_corridor_m', .6)
+    if (isinstance(distance, bool) or not isinstance(distance, (int, float)) or
+            not math.isfinite(distance) or not .6 <= distance <= 1.):
+        raise ValueError('probe_corridor_m must be a finite distance in [0.6, 1.0] m')
+    return tuple(min(index*.02, distance) for index in range(math.ceil(distance/.02)+1))
+
+
+def wait_for_transform(lookup, spin, transform_error, timeout=10., clock=time.monotonic):
+    """Wait for this subscriber's TF tree before constructing the pulse corridor."""
+    deadline = clock() + timeout
+    last_error = None
+    while clock() < deadline:
+        try:
+            return lookup()
+        except transform_error as error:
+            last_error = error
+            spin()
+    raise TimeoutError('pre-motion transform unavailable before wall deadline') from last_error
+
+
 def analyze(rows, zero_s, direction, profile):
     motion = [r for r in rows if r['kind'] == 'motion']
     unique = []
@@ -53,6 +74,7 @@ def main():
     args=parser.parse_args();case=json.loads(args.case.read_text());session=json.loads(args.session.read_text())
     if case.get('schema_version')!=2 or case.get('stop_boundary')!='final_output_zero':
         raise ValueError('Stop probes require v2 with explicit final_output_zero reference boundary')
+    corridor = probe_corridor_offsets(case)
     identity=session.get('isolation',{})
     if (session.get('state')!='ready' or not identity.get('ASTRIBOT_SIM_INSTANCE') or
             identity.get('ROS_DOMAIN_ID') in (None,'25') or
@@ -79,7 +101,7 @@ def main():
     from nav_msgs.msg import Path as NavPath
     from geometry_msgs.msg import PoseStamped
     from nav2_msgs.srv import IsPathValid
-    from tf2_ros import Buffer,TransformListener
+    from tf2_ros import Buffer,TransformListener,TransformException
     from rclpy.time import Time
     from std_msgs.msg import String
     from astribot_navigation_msgs.msg import NavigationExecutionStatus
@@ -134,6 +156,7 @@ def main():
     def interrupted(*_):raise KeyboardInterrupt
     for sig in (signal.SIGINT,signal.SIGTERM):signal.signal(sig,interrupted)
     report=dict(schema_version=2,case=case['id'],verdict='INFRA_FAILURE',scenario_passed=False,
+        probe_corridor_m=corridor[-1],
         measurement_boundary='final_output_zero',
         boundary='Historical prior checked after downstream zero; complete normal smoothed stop recorded separately and requires I2 prediction validation. No hardware certification.')
     try:
@@ -149,6 +172,10 @@ def main():
             raise RuntimeError('controller use_sim_time is not boolean true')
         until=time.monotonic()+10
         while ('motion' not in state or 'geometry' not in state or now()<=0) and time.monotonic()<until:spin()
+        wait_for_transform(
+            lambda: tf.lookup_transform('map','astribot_torso_base',Time()),
+            spin, TransformException)
+        report['pre_motion_transform_ready']=True
         # Let transient task status arrive before granting this probe motion.
         quiet=time.monotonic()+2
         while time.monotonic()<quiet:spin()
@@ -160,17 +187,17 @@ def main():
         p=pose.transform.translation;q=pose.transform.rotation
         heading=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
         path=NavPath();path.header.frame_id='map';path.header.stamp=node.get_clock().now().to_msg()
-        for index in range(31):
+        for distance in corridor:
             sample=PoseStamped();sample.header=path.header;sample.pose.orientation=q
-            sample.pose.position.x=p.x+.02*index*(direction[0]*math.cos(heading)-direction[1]*math.sin(heading))
-            sample.pose.position.y=p.y+.02*index*(direction[0]*math.sin(heading)+direction[1]*math.cos(heading))
+            sample.pose.position.x=p.x+distance*(direction[0]*math.cos(heading)-direction[1]*math.sin(heading))
+            sample.pose.position.y=p.y+distance*(direction[0]*math.sin(heading)+direction[1]*math.cos(heading))
             path.poses.append(sample)
         validator=node.create_client(IsPathValid,'/is_path_valid')
         if not validator.wait_for_service(timeout_sec=5):raise RuntimeError('path validator unavailable')
         validation=validator.call_async(IsPathValid.Request(path=path));until=time.monotonic()+10
         while not validation.done() and time.monotonic()<until:spin()
         if not validation.done() or not validation.result().is_valid:
-            raise RuntimeError('complete 0.6 m pulse/stop corridor rejected by current costmap')
+            raise RuntimeError(f'complete {corridor[-1]:g} m pulse/stop corridor rejected by current costmap')
         endpoints=node.get_publishers_info_by_topic('/cmd_vel_nav_body_raw')
         report['raw_input_publishers']=[dict(node=p.node_name,namespace=p.node_namespace,gid=list(p.endpoint_gid)) for p in endpoints]
         if (sum(p.node_name==node.get_name() and p.node_namespace==node.get_namespace() for p in endpoints)!=1 or
@@ -181,8 +208,8 @@ def main():
             spin();t=now()
             if (state.get('active') or state['active_actions'] or state.get('foreign_command') or time.monotonic()-state['motion_wall']>.5 or
                     not 0<=t-state['motion']['source_s']<=.2):raise RuntimeError('task ownership or feedback changed')
-            if math.hypot(state['motion']['x']-origin['x'],state['motion']['y']-origin['y'])>.6:
-                raise RuntimeError('probe exceeded 0.6 m displacement')
+            if math.hypot(state['motion']['x']-origin['x'],state['motion']['y']-origin['y'])>corridor[-1]:
+                raise RuntimeError(f'probe exceeded {corridor[-1]:g} m displacement')
             if t>=next_send:
                 if t-started>=1.6:
                     if zero_s is None:zero_s=t
