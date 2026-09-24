@@ -144,18 +144,16 @@ TEST_F(PayloadTransition, RejectsContextIndexExpiryAndWrongTransition) {
 
 TEST_F(PayloadTransition, RejectsUnboundOrEmptyTargetBody) {
   auto& target=request.scene.robot_state.attached_collision_objects.front();
-  target.object.header.frame_id="astribot_torso_base";expectRejected("TARGET_FRAME_INVALID");
+  target.object.header.frame_id="astribot_torso_base";expectRejected("ATTACHED_FRAME_UNSUPPORTED");
   target.object.header.frame_id="tcp";target.object.primitives.clear();target.object.primitive_poses.clear();
   expectRejected("TARGET_GEOMETRY_INVALID");
 }
 
-TEST_F(PayloadTransition, RejectsAcmTransformAndOctomapMetadataChanges) {
+TEST_F(PayloadTransition, RejectsAcmOctomapOriginAndMetadataChanges) {
   const auto valid=request.scene;
   request.scene.allowed_collision_matrix.default_entry_names.push_back("wall");
   request.scene.allowed_collision_matrix.default_entry_values.push_back(true);expectRejected("SCENE_CHANGED");
-  request.scene=valid;geometry_msgs::msg::TransformStamped transform;
-  transform.header.frame_id="astribot_torso_base";transform.child_frame_id="unexpected";
-  transform.transform.rotation.w=1.;request.scene.fixed_frame_transforms.push_back(transform);expectRejected("SCENE_CHANGED");
+  request.scene=valid;request.scene.world.octomap.origin.position.x=.000001;expectRejected("SCENE_CHANGED");
   request.scene=valid;request.scene.world.octomap.octomap.resolution=.01;expectRejected("SCENE_CHANGED");
 }
 
@@ -195,4 +193,37 @@ TEST_F(PayloadTransition, LaterOccupancyCheckCannotRecoverOldSmallBody) {
   robot_trajectory::RobotTrajectory trajectory(*confirmed[4].trajectory,true);
   EXPECT_FALSE(astribot_s1_manipulation::validateExternalTrajectory(scene,trajectory,reason,.1,.1));
   EXPECT_NE(reason.find("EXTERNAL_COLLISION"),std::string::npos)<<reason;
+}
+
+TEST_F(PayloadTransition, UnreferencedTransformDriftAllowsAttachAndConfirmedReadback) {
+  geometry_msgs::msg::TransformStamped transform;
+  transform.header.frame_id="aft_mapped";transform.child_frame_id="astribot_torso_base";
+  transform.transform.rotation.w=1.;transform.transform.translation.x=.000627574547;
+  binding.input_scene.fixed_frame_transforms={transform};
+  transform.transform.translation.x=.000594694690;
+  request.scene.fixed_frame_transforms={transform};
+  auto confirmed=validate();
+  binding.transaction_id=request.transaction_id;binding.confirmed_scene=request.scene;stages=confirmed;
+  request.scene.fixed_frame_transforms.front().transform.translation.x=.00058;
+  EXPECT_NO_THROW(validate());
+}
+
+TEST_F(PayloadTransition, RejectsUnchangedExternalFrameOnWorldGeometry) {
+  binding.input_scene.world.collision_objects.back().header.frame_id="aft_mapped";
+  request.scene.world.collision_objects.front().header.frame_id="aft_mapped";
+  expectRejected("WORLD_FRAME_UNSUPPORTED");
+}
+
+TEST_F(PayloadTransition, RejectsExternalFrameBeforeOmittingAuthorizedPayload) {
+  binding.input_scene.world.collision_objects.front().header.frame_id="aft_mapped";
+  expectRejected("WORLD_FRAME_UNSUPPORTED");
+}
+
+TEST_F(PayloadTransition, RejectsUnchangedUnknownAttachmentLink) {
+  moveit_msgs::msg::AttachedCollisionObject other;
+  other.object=box("other",.02,0.,2.);other.link_name="external_link";
+  other.object.header.frame_id=other.link_name;
+  binding.input_scene.robot_state.attached_collision_objects.push_back(other);
+  request.scene.robot_state.attached_collision_objects.push_back(other);
+  expectRejected("ATTACHED_LINK_UNKNOWN");
 }

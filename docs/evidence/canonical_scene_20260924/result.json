@@ -1,0 +1,66 @@
+{
+  "scope": "Canonical fixed-base scene contract; offline C++ only; no ROS/Gazebo launched.",
+  "api": "astribot::transport::canonicalScene(PlanningScene, const std::string&, const std::set<std::string>&)",
+  "native_api": "astribot::transport::bind_scene(PlanningScene, const std::set<std::string>& known_links = {})",
+  "install_prefix": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc",
+  "cmake_dir": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc/share/astribot_s1_transport_mtc/cmake",
+  "build_parallel_jobs": 1,
+  "ctest": {
+    "mtc": "5/5 passed",
+    "native_isolated_scene_binding": "1/1 passed"
+  },
+  "red_tests": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/payload_red.xml",
+      "tests": 15,
+      "failures": 4
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/native_red.xml",
+      "tests": 4,
+      "failures": 2
+    }
+  ],
+  "green_tests": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/build/test_results/astribot_s1_transport_mtc/canonical_scene_test.gtest.xml",
+      "tests": 5,
+      "failures": 0
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/build/test_results/astribot_s1_transport_mtc/payload_transition_test.gtest.xml",
+      "tests": 15,
+      "failures": 0
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/native_test_build/test_results/canonical_native_binding_test/scene_binding_test.gtest.xml",
+      "tests": 5,
+      "failures": 0
+    }
+  ],
+  "artifact_sha256": {
+    "ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/canonical_scene.hpp": "894332d448be9e9b0261c3e00e4eeaba3bf595a795feb7c41f6abb348853c57c",
+    "ws_robot/src/astribot_s1_transport_mtc/src/canonical_scene.cpp": "932f03ffe5b36af2fbea0473870c6d1d3874fed884a616caa00bba639ee1b7ed",
+    "ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp": "6797ccf1f649aedfad5b157ff8d044018cbd90ab04f43681704bfe1e3ae082d3",
+    "ws_robot/src/astribot_s1_transport_mtc/src/payload_transition.cpp": "c2c78aaf29f7bb6fda58b8c5bb40e6349debc81392525b1414ea65c38dc9339c",
+    "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/scene_binding.hpp": "a243b336456187eedcdace72ff9157c472b2ac5510396af18d6ca5cf9294cee8",
+    "ws_robot/src/astribot_s1_transport_native/src/scene_binding.cpp": "cabfda2fdf5ed02cac60e9057417fc0493e823998d3fd2666c2d7812f6620303",
+    "runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc/lib/libtransport_scene_signature.so": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2",
+    "runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc/lib/astribot_s1_transport_mtc/mtc_planner": "dc73158b0dfbded615032efd2d32d7fc7f8a5994be6c3ad42b4884cb6b15849d"
+  },
+  "logs": [
+    "ctest_final.log",
+    "native_ctest_final.log",
+    "payload_test_ldd.log",
+    "native_test_ldd.log",
+    "build_green.log",
+    "build_final.log",
+    "native_build_final.log",
+    "payload_red.log",
+    "native_red.log"
+  ],
+  "initial_test_environment_failure": "ctest_green.log shows an older LD_LIBRARY_PATH overlay shadowing the newly built shared library; final commands prepend new build/install lib and ldd verifies the resolved library.",
+  "build_warnings": "Existing mtc_planner cached_payload_={} explicit-constructor warnings and serial LTO warning remain. New test reset warnings were removed before final build.",
+  "causal_limit": "READY scene01 actual native before/after scene pair was not retained. Saved pre-dispatch scenes and red tests demonstrate the algorithm defect; runtime closed-loop verification remains pending.",
+  "protected_scope": "No edits to native CMakeLists.txt, hold_executor.cpp or payload_scene files; no runtime processes started."
+}

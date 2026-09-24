@@ -1,0 +1,66 @@
+Consolidate compiler generated dependencies of target transport_scene_signature
+[  3%] Building CXX object CMakeFiles/transport_scene_signature.dir/src/canonical_octomap.cpp.o
+[  7%] Building CXX object CMakeFiles/transport_scene_signature.dir/src/canonical_scene.cpp.o
+[ 11%] Linking CXX shared library libtransport_scene_signature.so
+[ 11%] Built target transport_scene_signature
+[ 14%] Building CXX object CMakeFiles/execution_guard.dir/src/execution_guard.cpp.o
+[ 18%] Linking CXX executable execution_guard
+[ 18%] Built target execution_guard
+[ 22%] Building CXX object CMakeFiles/mtc_planner.dir/src/mtc_planner.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp: In member function ‘void Planner::run(const std::shared_ptr<rclcpp_action::ServerGoalHandle<astribot_transport_msgs::action::PlanManipulation> >&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  145 |     {std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};}
+      |                                                                                                                ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:363:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  363 |       std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};
+      |                                                                                                                 ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:363:113: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:363:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:363:113: note: in C++11 and above a default constructor can be explicit
+[ 25%] Building CXX object CMakeFiles/mtc_planner.dir/src/payload_transition.cpp.o
+[ 29%] Linking CXX executable mtc_planner
+[ 29%] Built target mtc_planner
+Consolidate compiler generated dependencies of target gtest_main
+[ 37%] Built target gtest_main
+Consolidate compiler generated dependencies of target gtest
+[ 44%] Built target gtest
+[ 48%] Building CXX object CMakeFiles/canonical_scene_test.dir/test/canonical_scene_test.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/canonical_scene_test.cpp: In member function ‘virtual void CanonicalScene_RejectsMultiDofStateInsteadOfDiscardingIt_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/canonical_scene_test.cpp:45:44: warning: converting to ‘sensor_msgs::msg::MultiDOFJointState_<std::allocator<void> >’ from initializer list would use explicit constructor ‘sensor_msgs::msg::MultiDOFJointState_<ContainerAllocator>::MultiDOFJointState_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+   45 |   scene.robot_state.multi_dof_joint_state={};
+      |                                            ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/canonical_scene_test.cpp:45:44: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/canonical_scene_test.cpp:48:44: warning: converting to ‘sensor_msgs::msg::MultiDOFJointState_<std::allocator<void> >’ from initializer list would use explicit constructor ‘sensor_msgs::msg::MultiDOFJointState_<ContainerAllocator>::MultiDOFJointState_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+   48 |   scene.robot_state.multi_dof_joint_state={};
+      |                                            ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/canonical_scene_test.cpp:48:44: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/canonical_scene_test.cpp:51:44: warning: converting to ‘sensor_msgs::msg::MultiDOFJointState_<std::allocator<void> >’ from initializer list would use explicit constructor ‘sensor_msgs::msg::MultiDOFJointState_<ContainerAllocator>::MultiDOFJointState_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+   51 |   scene.robot_state.multi_dof_joint_state={};
+      |                                            ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/canonical_scene_test.cpp:51:44: note: in C++11 and above a default constructor can be explicit
+[ 51%] Linking CXX executable canonical_scene_test
+[ 51%] Built target canonical_scene_test
+Consolidate compiler generated dependencies of target payload_transition_test
+[ 55%] Building CXX object CMakeFiles/payload_transition_test.dir/test/payload_transition_test.cpp.o
+[ 59%] Building CXX object CMakeFiles/payload_transition_test.dir/src/payload_transition.cpp.o
+[ 62%] Linking CXX executable payload_transition_test
+[ 62%] Built target payload_transition_test
+[ 66%] Building CXX object CMakeFiles/execution_guard_test.dir/test/execution_guard_test.cpp.o
+[ 70%] Linking CXX executable execution_guard_test
+[ 70%] Built target execution_guard_test
+[ 74%] Building CXX object CMakeFiles/joint_margin_test.dir/test/joint_margin_test.cpp.o
+[ 77%] Linking CXX executable joint_margin_test
+[ 77%] Built target joint_margin_test
+[ 81%] Building CXX object native_scene/CMakeFiles/transport_scene_core.dir/__/src/canonical_octomap.cpp.o
+[ 85%] Linking CXX static library libtransport_scene_core.a
+[ 85%] Built target transport_scene_core
+[ 88%] Building CXX object native_scene/CMakeFiles/_transport_scene_native.dir/__/src/transport_scene_pybind.cpp.o
+[ 92%] Linking CXX shared module _transport_scene_native.cpython-310-x86_64-linux-gnu.so
+lto-wrapper: warning: using serial compilation of 2 LTRANS jobs
+[ 92%] Built target _transport_scene_native
+[ 96%] Building CXX object native_scene/CMakeFiles/canonical_octomap_test.dir/__/test/canonical_octomap_test.cpp.o
+[100%] Linking CXX executable canonical_octomap_test
+[100%] Built target canonical_octomap_test

@@ -1,0 +1,34 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from SceneBinding
+[ RUN      ] SceneBinding.RejectsDiffAndBindsWorldAttachmentsAndCollisionPolicy
+[       OK ] SceneBinding.RejectsDiffAndBindsWorldAttachmentsAndCollisionPolicy (0 ms)
+[ RUN      ] SceneBinding.SourceStampsOrderingAndIndependentJointSamplesDoNotChangeGeometry
+[       OK ] SceneBinding.SourceStampsOrderingAndIndependentJointSamplesDoNotChangeGeometry (0 ms)
+[ RUN      ] SceneBinding.IgnoresUnreferencedExternalTransformDrift
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/test/scene_binding_test.cpp:28: Failure
+Expected equality of these values:
+  bind_scene(a)
+    Which is: (816-byte object <E0-4C 9B-6F FE-7F 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 F8-4C 9B-6F FE-7F 00-00 00-00 00-00 00-00 00-00 08-4D 9B-6F FE-7F 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 ... 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00>, "")
+  bind_scene(b)
+    Which is: (816-byte object <30-50 9B-6F FE-7F 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 61-66 74-5F 6D-61 70-70 00-00 00-00 00-00 00-00 58-50 9B-6F FE-7F 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 ... 00-00 00-00 00-00 00-00 00-ED AF-A0 A9-5C 00-00 50-53 9B-6F FE-7F 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-ED AF-A0 A9-5C 00-00>, "")
+[  FAILED  ] SceneBinding.IgnoresUnreferencedExternalTransformDrift (0 ms)
+[ RUN      ] SceneBinding.RejectsReferencedExternalFrameAndUnknownAttachedLink
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/test/scene_binding_test.cpp:33: Failure
+Expected: bind_scene(scene) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/test/scene_binding_test.cpp:37: Failure
+Expected: bind_scene(scene) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+[  FAILED  ] SceneBinding.RejectsReferencedExternalFrameAndUnknownAttachedLink (0 ms)
+[----------] 4 tests from SceneBinding (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 2 tests.
+[  FAILED  ] 2 tests, listed below:
+[  FAILED  ] SceneBinding.IgnoresUnreferencedExternalTransformDrift
+[  FAILED  ] SceneBinding.RejectsReferencedExternalFrameAndUnknownAttachedLink
+
+ 2 FAILED TESTS

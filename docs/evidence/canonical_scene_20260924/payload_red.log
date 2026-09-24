@@ -1,0 +1,129 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 15 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 15 tests from PayloadTransition
+[ RUN      ] PayloadTransition.AttachReplacesEveryWaypointAndKeepsPathAndStagePolicy
+[INFO] [1790222258.584774987] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.584784788] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790222258.585056081] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.585063193] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.585218577] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.585220529] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] PayloadTransition.AttachReplacesEveryWaypointAndKeepsPathAndStagePolicy (1 ms)
+[ RUN      ] PayloadTransition.InflatedPayloadRejectsPreviouslyClearPathWithoutMutatingCache
+[INFO] [1790222258.585331820] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.585333540] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790222258.585387597] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.585389896] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.585463734] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.585465536] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] PayloadTransition.InflatedPayloadRejectsPreviouslyClearPathWithoutMutatingCache (0 ms)
+[ RUN      ] PayloadTransition.DetachRemovesStaleTrajectoryBodyAndUsesActualWorldPose
+[INFO] [1790222258.585562317] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.585563743] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[ERROR] [1790222258.585621403] [moveit_robot_state.robot_state]: Attached body 'payload' not found
+[INFO] [1790222258.585626591] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.585628517] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[ERROR] [1790222258.585672303] [moveit_robot_state.robot_state]: Attached body 'payload' not found
+[INFO] [1790222258.585675592] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.585677116] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] PayloadTransition.DetachRemovesStaleTrajectoryBodyAndUsesActualWorldPose (0 ms)
+[ RUN      ] PayloadTransition.RejectsStaticWorldAndOtherAttachmentChanges
+[INFO] [1790222258.585761605] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.585762968] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsStaticWorldAndOtherAttachmentChanges (0 ms)
+[ RUN      ] PayloadTransition.RejectsContextIndexExpiryAndWrongTransition
+[INFO] [1790222258.585837287] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.585838769] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsContextIndexExpiryAndWrongTransition (0 ms)
+[ RUN      ] PayloadTransition.RejectsUnboundOrEmptyTargetBody
+[INFO] [1790222258.585890820] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.585892036] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsUnboundOrEmptyTargetBody (0 ms)
+[ RUN      ] PayloadTransition.RejectsAcmTransformAndOctomapMetadataChanges
+[INFO] [1790222258.585946201] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.585947363] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsAcmTransformAndOctomapMetadataChanges (0 ms)
+[ RUN      ] PayloadTransition.RejectsMissingDuplicateAndAmbiguousTarget
+[INFO] [1790222258.585995426] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.585996592] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsMissingDuplicateAndAmbiguousTarget (1 ms)
+[ RUN      ] PayloadTransition.RejectsMalformedShapeAndWrongLink
+[INFO] [1790222258.586050174] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.586051327] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsMalformedShapeAndWrongLink (0 ms)
+[ RUN      ] PayloadTransition.RepeatRequiresSameTransactionAndActualScene
+[INFO] [1790222258.586098864] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.586099989] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790222258.586135489] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586137629] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.586228487] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586230226] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.586320546] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586322122] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.586402484] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586403957] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] PayloadTransition.RepeatRequiresSameTransactionAndActualScene (0 ms)
+[ RUN      ] PayloadTransition.LaterOccupancyCheckCannotRecoverOldSmallBody
+[INFO] [1790222258.586513373] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.586514742] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790222258.586574024] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586578375] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.586658903] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586660455] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.586882120] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586885804] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.586968578] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.586970197] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] PayloadTransition.LaterOccupancyCheckCannotRecoverOldSmallBody (1 ms)
+[ RUN      ] PayloadTransition.UnreferencedTransformDriftAllowsAttachAndConfirmedReadback
+[INFO] [1790222258.587063281] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.587064673] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+unknown file: Failure
+C++ exception with description "MTC_PAYLOAD_SCENE_CHANGED" thrown in the test body.
+[  FAILED  ] PayloadTransition.UnreferencedTransformDriftAllowsAttachAndConfirmedReadback (0 ms)
+[ RUN      ] PayloadTransition.RejectsUnchangedExternalFrameOnWorldGeometry
+[INFO] [1790222258.587145689] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.587147063] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790222258.587191526] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.587193379] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.587273621] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.587275091] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp:80: Failure
+Failed
+accepted invalid transition
+[  FAILED  ] PayloadTransition.RejectsUnchangedExternalFrameOnWorldGeometry (0 ms)
+[ RUN      ] PayloadTransition.RejectsExternalFrameBeforeOmittingAuthorizedPayload
+[INFO] [1790222258.587370219] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.587371446] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790222258.587423938] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.587426334] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.587508225] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.587511902] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp:80: Failure
+Failed
+accepted invalid transition
+[  FAILED  ] PayloadTransition.RejectsExternalFrameBeforeOmittingAuthorizedPayload (0 ms)
+[ RUN      ] PayloadTransition.RejectsUnchangedUnknownAttachmentLink
+[INFO] [1790222258.587610012] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790222258.587611408] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790222258.587665323] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.587667435] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790222258.587757140] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790222258.587760178] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp:80: Failure
+Failed
+accepted invalid transition
+[  FAILED  ] PayloadTransition.RejectsUnchangedUnknownAttachmentLink (0 ms)
+[----------] 15 tests from PayloadTransition (3 ms total)
+
+[----------] Global test environment tear-down
+[==========] 15 tests from 1 test suite ran. (3 ms total)
+[  PASSED  ] 11 tests.
+[  FAILED  ] 4 tests, listed below:
+[  FAILED  ] PayloadTransition.UnreferencedTransformDriftAllowsAttachAndConfirmedReadback
+[  FAILED  ] PayloadTransition.RejectsUnchangedExternalFrameOnWorldGeometry
+[  FAILED  ] PayloadTransition.RejectsExternalFrameBeforeOmittingAuthorizedPayload
+[  FAILED  ] PayloadTransition.RejectsUnchangedUnknownAttachmentLink
+
+ 4 FAILED TESTS

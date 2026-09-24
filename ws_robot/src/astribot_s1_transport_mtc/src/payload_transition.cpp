@@ -1,5 +1,6 @@
 #include "astribot_s1_transport_mtc/payload_transition.hpp"
 #include "astribot_s1_transport_mtc/canonical_octomap.hpp"
+#include "astribot_s1_transport_mtc/canonical_scene.hpp"
 #include <astribot_s1_manipulation/external_trajectory_validator.hpp>
 #include <algorithm>
 #include <cmath>
@@ -25,7 +26,6 @@ moveit_msgs::msg::PlanningScene fixedScene(moveit_msgs::msg::PlanningScene scene
   }),attached.end());
   std::sort(attached.begin(),attached.end(),[](const auto& a,const auto& b){return a.object.id<b.object.id;});
   for(auto& object:attached)object.object.header.stamp=builtin_interfaces::msg::Time();
-  for(auto& transform:scene.fixed_frame_transforms)transform.header.stamp=builtin_interfaces::msg::Time();
   scene.world.octomap.header.stamp=builtin_interfaces::msg::Time();
   scene.world.octomap.octomap.header.stamp=builtin_interfaces::msg::Time();
   scene.world.octomap.octomap.data.clear();
@@ -83,14 +83,25 @@ std::vector<CachedStage> revalidatePayloadTransition(
   if((!attach && binding.operation!="PLACE") || stages[3].id!=(attach?"ATTACH_CONFIRM":"DETACH_CONFIRM"))
     throw std::runtime_error("MTC_PAYLOAD_STAGE_INVALID");
   if(request.transaction_id.empty())throw std::runtime_error("MTC_PAYLOAD_TRANSACTION_REQUIRED");
+  const auto& reference=*stages[request.start_index].scene;
+  const auto& links=reference.getRobotModel()->getLinkModelNames();
+  const std::set<std::string> known_links(links.begin(),links.end());
+  // Validate every object before the authorized payload is omitted from the
+  // static comparison. The same contract also bounds the planner's input.
+  const auto current_scene=astribot::transport::canonicalScene(
+    request.scene,reference.getPlanningFrame(),known_links);
+  const auto input_scene=astribot::transport::canonicalScene(
+    binding.input_scene,reference.getPlanningFrame(),known_links);
   if(!binding.transaction_id.empty()) {
     if(binding.transaction_id!=request.transaction_id)throw std::runtime_error("MTC_PAYLOAD_TRANSACTION_CHANGED");
-    if(fixedScene(binding.confirmed_scene,"")!=fixedScene(request.scene,""))
+    const auto confirmed_scene=astribot::transport::canonicalScene(
+      binding.confirmed_scene,reference.getPlanningFrame(),known_links);
+    if(fixedScene(confirmed_scene,"")!=fixedScene(current_scene,""))
       throw std::runtime_error("MTC_PAYLOAD_CONFIRMED_SCENE_CHANGED");
   }
-  if(fixedScene(binding.input_scene,binding.object_id)!=fixedScene(request.scene,binding.object_id))
+  if(fixedScene(input_scene,binding.object_id)!=fixedScene(current_scene,binding.object_id))
     throw std::runtime_error("MTC_PAYLOAD_SCENE_CHANGED");
-  const auto& map=request.scene.world.octomap;
+  const auto& map=current_scene.world.octomap;
   const auto& p=map.origin.position;const auto& q=map.origin.orientation;
   if(map.header.frame_id!="astribot_torso_base" || !std::isfinite(p.x+p.y+p.z+q.x+q.y+q.z+q.w) ||
      std::abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001)
@@ -101,9 +112,9 @@ std::vector<CachedStage> revalidatePayloadTransition(
   const moveit_msgs::msg::CollisionObject* world_target=nullptr;
   const moveit_msgs::msg::AttachedCollisionObject* attached_target=nullptr;
   size_t world_count=0,attached_count=0;
-  for(const auto& object:request.scene.world.collision_objects)
+  for(const auto& object:current_scene.world.collision_objects)
     if(object.id==binding.object_id){world_target=&object;++world_count;}
-  for(const auto& object:request.scene.robot_state.attached_collision_objects)
+  for(const auto& object:current_scene.robot_state.attached_collision_objects)
     if(object.object.id==binding.object_id){attached_target=&object;++attached_count;}
   if(world_count!=(attach?0u:1u) || attached_count!=(attach?1u:0u))
     throw std::runtime_error("MTC_PAYLOAD_TARGET_STATE_INVALID");

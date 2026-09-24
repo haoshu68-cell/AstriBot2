@@ -13,6 +13,7 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 #include "astribot_s1_transport_mtc/joint_margin.hpp"
 #include "astribot_s1_transport_mtc/canonical_octomap.hpp"
+#include "astribot_s1_transport_mtc/canonical_scene.hpp"
 #include "astribot_s1_transport_mtc/payload_transition.hpp"
 
 namespace mtc=moveit::task_constructor;
@@ -167,8 +168,10 @@ class Planner {
         // Always clear active_ before task destruction, including exceptional exits.
         struct Clear {Planner* p;~Clear(){std::lock_guard<std::mutex> g(p->mutex_);p->active_=nullptr;}} clear{this};
         auto scene=std::make_shared<planning_scene::PlanningScene>(task.getRobotModel());
-        scene->setPlanningSceneMsg(goal->scene);
-        if(scene->getPlanningFrame()!="astribot_torso_base") throw std::runtime_error("FIXED_BASE_FRAME_REQUIRED");
+        const auto& links=task.getRobotModel()->getLinkModelNames();
+        const auto canonical_scene=astribot::transport::canonicalScene(
+          goal->scene,scene->getPlanningFrame(),std::set<std::string>(links.begin(),links.end()));
+        scene->setPlanningSceneMsg(canonical_scene);
         const bool attached=scene->getCurrentState().hasAttachedBody(goal->object_id);
         if((goal->operation=="PLACE")!=attached ||
            (!attached && !scene->getWorld()->hasObject(goal->object_id)))throw std::runtime_error("OBJECT_STATE_MISMATCH");
@@ -347,7 +350,7 @@ class Planner {
             {std::lock_guard<std::mutex> guard(mutex_);cached_stages_=std::move(cached_candidate);
              cached_context_=goal->context_id;cached_at_=std::chrono::steady_clock::now();
              cached_payload_.object_id=goal->object_id;cached_payload_.operation=goal->operation;
-             cached_payload_.input_scene=goal->scene;
+             cached_payload_.input_scene=canonical_scene;
              cached_octomap_metadata_=goal->scene.world.octomap;cached_octomap_metadata_.octomap.data.clear();}
             break;
           }
