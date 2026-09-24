@@ -1,0 +1,246 @@
+{
+  "recorded_at": "2026-09-24T23:18:05.106176+08:00",
+  "verification": "Read-only artifact and raw coordinator protocol verification; no build, tests or ROS launched by this window.",
+  "verified_candidate_artifacts": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/native_install/lib/astribot_s1_transport_native/trajectory_executor",
+      "sha256": "84b8c2d127607a14e3936672e6597f4ea6daf395e7f609717c778695a0999b99"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/native_install/lib/libarm_hold_core.so",
+      "sha256": "f81c570057d43eb3392ed9e3c15c7f2dd6c9b35af300092d77201d365a76b46e"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/native_install/lib/libfixed_station_navigation.so",
+      "sha256": "34a08ca131511f2f0e54d53014b59557b118ac21e6d6bf2c8f333f6652dc913d"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/mtc_install/lib/astribot_s1_transport_mtc/mtc_planner",
+      "sha256": "cfe4b67ec5fe42def9c456b02eeb69ef50dab6adce1ba4f89cc48b3c07acd6e6"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/mtc_install/lib/libtransport_scene_signature.so",
+      "sha256": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2"
+    }
+  ],
+  "frozen_source": [
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp",
+      "sha256": "7dc3777c424f0b32a767f22bcf90f77a6e54ab29007aef0d7a319a1e38363a50"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/verify_full_manipulation.py",
+      "sha256": "252b7c1e6e4f4c680151c3cdb94f8d1c56de43c6892a567638184023f7e89c32"
+    }
+  ],
+  "cases": [
+    {
+      "case": "geometry_wait_41",
+      "outcome": {
+        "status": 5,
+        "reason": "TASK_CANCELED",
+        "resources_released": true
+      },
+      "assertions_passed": {
+        "event": "assertions_passed",
+        "wall": 18352.462766461,
+        "confirmed_stages": [
+          "PREGRASP",
+          "GRASP_APPROACH",
+          "GRASP_CONFIRM",
+          "LIFT",
+          "TRANSPORT_POSTURE"
+        ],
+        "payload_confirmed": 1
+      },
+      "owned_process_exit": {
+        "event": "owned_process_exit",
+        "wall": 18352.803546904,
+        "processes": [
+          {
+            "pid": 490529,
+            "returncode": 0
+          },
+          {
+            "pid": 490527,
+            "returncode": 0
+          },
+          {
+            "pid": 490528,
+            "returncode": 0
+          }
+        ]
+      },
+      "artifact_hashes": {
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/test/verify_full_manipulation.py": "252b7c1e6e4f4c680151c3cdb94f8d1c56de43c6892a567638184023f7e89c32",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/native_install/lib/astribot_s1_transport_native/trajectory_executor": "84b8c2d127607a14e3936672e6597f4ea6daf395e7f609717c778695a0999b99",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/continuous_build/full_physical_fixture": "ce52f6cf58b950b951d77a079bed4fe4291c11f0b6015c0976e76ff3f369e48a",
+        "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_payload_state/lib/astribot_s1_payload_state/payload_state": "7260d5691bf0aba985a22ee0e0bb16ed988d90f2a674608babf32aa3860715db"
+      },
+      "jtc_submissions": 30,
+      "lift_submissions": 6,
+      "invalid_geometry_total": 3,
+      "invalid_geometry_physical_to_revalidation": 1,
+      "payload_commits": 1,
+      "journal_final_phase": 0
+    },
+    {
+      "case": "geometry_model_changed_42",
+      "outcome": {
+        "status": 6,
+        "reason": "RESOURCE_RECOVERY_REQUIRED:MTC_CONTEXT_CHANGED",
+        "resources_released": false
+      },
+      "assertions_passed": {
+        "event": "assertions_passed",
+        "wall": 18381.348395149,
+        "confirmed_stages": [
+          "PREGRASP",
+          "GRASP_APPROACH",
+          "GRASP_CONFIRM"
+        ],
+        "payload_confirmed": 0
+      },
+      "owned_process_exit": {
+        "event": "owned_process_exit",
+        "wall": 18381.739982519,
+        "processes": [
+          {
+            "pid": 493296,
+            "returncode": 0
+          },
+          {
+            "pid": 493294,
+            "returncode": 0
+          },
+          {
+            "pid": 493295,
+            "returncode": 0
+          }
+        ]
+      },
+      "artifact_hashes": {
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/test/verify_full_manipulation.py": "252b7c1e6e4f4c680151c3cdb94f8d1c56de43c6892a567638184023f7e89c32",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/native_install/lib/astribot_s1_transport_native/trajectory_executor": "84b8c2d127607a14e3936672e6597f4ea6daf395e7f609717c778695a0999b99",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/continuous_build/full_physical_fixture": "ce52f6cf58b950b951d77a079bed4fe4291c11f0b6015c0976e76ff3f369e48a",
+        "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_payload_state/lib/astribot_s1_payload_state/payload_state": "7260d5691bf0aba985a22ee0e0bb16ed988d90f2a674608babf32aa3860715db"
+      },
+      "jtc_submissions": 18,
+      "lift_submissions": 0,
+      "invalid_geometry_total": 7,
+      "invalid_geometry_physical_to_revalidation": 5,
+      "payload_commits": 0,
+      "journal_final_phase": 5
+    }
+  ],
+  "copies": [
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol_summary.json",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol_summary.json",
+      "sha256": "5fc58992ab74b28cdb8ef1109ddfec0e32dcd0919c46384aa5f5648ffd8bf668"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/candidate_binding.json",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/candidate_binding.json",
+      "sha256": "7344f5c6b2f0495a10d3bbe54f26e0f99aca6a1fe0a58a0acb9b3c7e6820916f"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/build.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/build.log",
+      "sha256": "d5206aa0dbf9a0c9fc06fc26357e3281b09297f0bcae7fb0b7c2b1035112c25d"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/install.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/install.log",
+      "sha256": "6b11fe13521d5a357bec2f92ceb8c74c2d0aef0900773ac07b4ab8d4d58b47db"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/ldd.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/ldd.log",
+      "sha256": "b1b029ddc561e333b704bfde990cbe7eda31cfb272bbc2b1d033d11f8985d459"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/overlay.bash",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/overlay.bash",
+      "sha256": "d5386a7cc37c68d61c0479b98a5381ee47571d3bcdae8610b13a82f5a9540245"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/geometry_wait_41.bash",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/geometry_wait_41.bash",
+      "sha256": "168ef09e02937de85605b98c41822b6f8b26d4f85201af69f1c28d630ba01774"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/geometry_model_changed_42.bash",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/geometry_model_changed_42.bash",
+      "sha256": "84ae62375cf151597eb72b99eadf0b430f28c8d3378fef7bf7f708306e220a91"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_model_changed_42.json",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_model_changed_42.json",
+      "sha256": "3dbf8f8e42920c078c9e2ba998ccb5e3757ebefb0a686fc7b15a283da9cd0cbe"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_model_changed_42.ledger.jsonl",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_model_changed_42.ledger.jsonl",
+      "sha256": "2a6adc94ea75c113150ae6082cff75ac1fc746fc4c9a3715e9037d351170752f"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_model_changed_42.ledger.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_model_changed_42.ledger.log",
+      "sha256": "8b9bda9bfcb804bad690fa8c65ad777bb7af73a43f3d7870f92e0b4666e2edba"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_model_changed_42.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_model_changed_42.log",
+      "sha256": "6013fc8e4e1faed8d073737021b575f2aa7548f80c5bdcc7ad05cbd32dd7277b"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_model_changed_42.physical.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_model_changed_42.physical.log",
+      "sha256": "6083e7ad271a4add7b6a3d3660a4bff988e4345c40f2c7f91b392f82ae24e71a"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_wait_41.json",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_wait_41.json",
+      "sha256": "0230c18f70321de30013889ef2cdc466a717400756f0c478da3ea43dc13c740f"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_wait_41.ledger.jsonl",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_wait_41.ledger.jsonl",
+      "sha256": "7c41f143eb81fe6259ef7214e3ec91d901977cc472959c2c21f5a7d71b7c2d9b"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_wait_41.ledger.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_wait_41.ledger.log",
+      "sha256": "3c11c2fa7206191a6315e6099202e1deca6c7a8ad8456d52429bed6d492f009b"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_wait_41.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_wait_41.log",
+      "sha256": "a2db9cc518192b13456536ffc04eb79b0403e5cead962ba684f7b4e8701019d0"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_geometry_transition_2307/protocol/geometry_wait_41.physical.log",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/protocol/geometry_wait_41.physical.log",
+      "sha256": "8233b4b48810e01054ba5ff28405790a77efab2b19a76c1092af3922dd2dce9c"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/candidate_binding.json",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/rigid_mtc_candidate_binding.json",
+      "sha256": "65c60ae902c905970d3deb00b8db063b9cabcd75be12580efebe3024b4f29dc3"
+    },
+    {
+      "source": "/home/yjh/.local/state/astribot/transport/domain_41.jsonl",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/domain_41.jsonl",
+      "sha256": "94fc19f285f1c386a1769adf66fecf41bd9696d809289c1584a770ffe7fa3373"
+    },
+    {
+      "source": "/home/yjh/.local/state/astribot/transport/domain_42.jsonl",
+      "copy": "docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verified_protocol/domain_42.jsonl",
+      "sha256": "71552ac058169845221f93ee6ea8e4e4bb02303d823c9d1becc488a589a7deae"
+    }
+  ],
+  "evidence_layer": "Synthetic six-stage protocol, real C++ executor and ledger; not actual Gazebo/complete Transfer or hardware acceptance.",
+  "actual_scene14": "Coordinator preparing domain77; outcome pending.",
+  "performance": "NOT_MEASURED"
+}

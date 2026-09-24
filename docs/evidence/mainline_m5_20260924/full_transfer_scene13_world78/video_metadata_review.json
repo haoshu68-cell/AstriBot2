@@ -1,0 +1,525 @@
+{
+  "scope": "Read-only metadata review; no M5 video decoding or visual review",
+  "case_result": {
+    "passed": false,
+    "error": "RuntimeError('full_transfer exit 1')",
+    "finished_wall": 1790262398.756291,
+    "cleanup_complete": true,
+    "video_decode": {
+      "decoded_frames": 597,
+      "sidecar_rows": 597,
+      "metadata_frames": 597,
+      "passed": true
+    }
+  },
+  "video_metadata": {
+    "frames": 597,
+    "encoding_fps": 10,
+    "wall_duration_s": 109.90203650100011,
+    "timing": "10 fps received frames; not a wall-time performance measurement",
+    "clock_semantics": "observed_clock is latest received /clock and its receive times; null before first clock",
+    "stage_frames": [
+      {
+        "frame": 61,
+        "stage": "WAITING_FOR_TASK",
+        "wall_time": 1790262287.1633608,
+        "raw_status": {
+          "authority_reason": "IDLE",
+          "cleanup_reason": "",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "",
+          "phase": "0",
+          "reason": "WAITING_FOR_TASK"
+        },
+        "status_receive_seq": 1
+      },
+      {
+        "frame": 209,
+        "stage": "RESERVED",
+        "wall_time": 1790262308.3214853,
+        "raw_status": {
+          "authority_reason": "RESERVED",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "1",
+          "reason": "RESERVED",
+          "stage_id": "",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 422
+      },
+      {
+        "frame": 209,
+        "stage": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+        "wall_time": 1790262308.3514833,
+        "raw_status": {
+          "authority_reason": "RESERVED",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "1",
+          "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+          "stage_id": "",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 423
+      },
+      {
+        "frame": 209,
+        "stage": "PLANNING_COMPLETE_OPERATION",
+        "wall_time": 1790262308.4515407,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "PLANNING_COMPLETE_OPERATION",
+          "stage_id": "",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 425
+      },
+      {
+        "frame": 348,
+        "stage": "WAITING_FOR_EXECUTION_GUARD",
+        "wall_time": 1790262339.9515321,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1055
+      },
+      {
+        "frame": 348,
+        "stage": "EXECUTING_MTC_STAGE:PREGRASP",
+        "wall_time": 1790262340.001994,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1056
+      },
+      {
+        "frame": 412,
+        "stage": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+        "wall_time": 1790262353.4042645,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1323
+      },
+      {
+        "frame": 418,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790262355.4024112,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1363
+      },
+      {
+        "frame": 419,
+        "stage": "WAITING_FOR_EXECUTION_GUARD",
+        "wall_time": 1790262355.572086,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1366
+      },
+      {
+        "frame": 419,
+        "stage": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+        "wall_time": 1790262355.6516616,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1368
+      },
+      {
+        "frame": 433,
+        "stage": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+        "wall_time": 1790262357.81758,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1411
+      },
+      {
+        "frame": 441,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790262359.9514256,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1454
+      },
+      {
+        "frame": 442,
+        "stage": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+        "wall_time": 1790262360.1115382,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1457
+      },
+      {
+        "frame": 459,
+        "stage": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+        "wall_time": 1790262363.568183,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1526
+      },
+      {
+        "frame": 470,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790262366.0012922,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1575
+      },
+      {
+        "frame": 471,
+        "stage": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+        "wall_time": 1790262366.1564534,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1578
+      },
+      {
+        "frame": 471,
+        "stage": "WAITING_FOR_PHYSICAL_APPLICATION",
+        "wall_time": 1790262366.2063155,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PHYSICAL_APPLICATION",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1579
+      },
+      {
+        "frame": 471,
+        "stage": "MTC_CONTEXT_CHANGED",
+        "wall_time": 1790262366.3552716,
+        "raw_status": {
+          "authority_reason": "MTC_CONTEXT_CHANGED",
+          "cleanup_reason": "GEOMETRY_UNCONFIRMED",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "4",
+          "reason": "MTC_CONTEXT_CHANGED",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1582
+      }
+    ],
+    "last_status": {
+      "stage": "MTC_CONTEXT_CHANGED",
+      "object_state": "phase=5 | hold_confirmed=False"
+    }
+  },
+  "sidecar": {
+    "rows": 597,
+    "first_frame_index": 0,
+    "last_frame_index": 596,
+    "contiguous_indices": true,
+    "first_frame": {
+      "frame_index": 0,
+      "overview": {
+        "receive_monotonic_ns": 17754722116760,
+        "receive_wall_ns": 1790262286331894045,
+        "observed_clock": null,
+        "source_ns": 35821000000,
+        "frame_id": "normal_grasp_observer/camera_link/overview",
+        "topic": "/transport/overview"
+      },
+      "head": null,
+      "status": {
+        "receive_seq": 0,
+        "raw_status": null,
+        "receive_monotonic_ns": null,
+        "receive_wall_ns": null,
+        "observed_clock": null
+      },
+      "encode_started_monotonic_ns": 17754727660227,
+      "encode_finished_monotonic_ns": 17754732594398
+    },
+    "last_frame": {
+      "frame_index": 596,
+      "overview": {
+        "receive_monotonic_ns": 17864446998315,
+        "receive_wall_ns": 1790262396056769486,
+        "observed_clock": {
+          "source_ns": 128234000000,
+          "receive_monotonic_ns": 17864445387258,
+          "receive_wall_ns": 1790262396055158317
+        },
+        "source_ns": 128200000000,
+        "frame_id": "normal_grasp_observer/camera_link/overview",
+        "topic": "/transport/overview"
+      },
+      "head": {
+        "receive_monotonic_ns": 17864431547525,
+        "receive_wall_ns": 1790262396041319291,
+        "observed_clock": {
+          "source_ns": 128220000000,
+          "receive_monotonic_ns": 17864430112732,
+          "receive_wall_ns": 1790262396039883976
+        },
+        "source_ns": 128200000000,
+        "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+        "topic": "/camera/raw/head_rgbd/image"
+      },
+      "status": {
+        "receive_monotonic_ns": 17864442562326,
+        "receive_wall_ns": 1790262396052333528,
+        "observed_clock": {
+          "source_ns": 128231000000,
+          "receive_monotonic_ns": 17864441977581,
+          "receive_wall_ns": 1790262396051748826
+        },
+        "receive_seq": 2176,
+        "raw_status": {
+          "authority_reason": "RESOURCE_RECOVERY_REQUIRED:MTC_CONTEXT_CHANGED",
+          "cleanup_reason": "GEOMETRY_UNCONFIRMED",
+          "context_id": "cf1b0542156b4ce49828e35f0ad35f1f_op_1_PICK",
+          "epoch": "7288262b-491b-4aba-a978-12e3e4dd08d7",
+          "hold_confirmed": false,
+          "hold_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "7288262b-491b-4aba-a978-12e3e4dd08d7_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "5",
+          "reason": "MTC_CONTEXT_CHANGED",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_dfeca583499e49559238c52c5633f08b",
+          "task_phase": "PICK"
+        }
+      },
+      "encode_started_monotonic_ns": 17864450488881,
+      "encode_finished_monotonic_ns": 17864452912782
+    }
+  },
+  "limits": [
+    "Owner full decode reused; M5 did not independently decode or inspect video frames.",
+    "Stage captions are observations; parent result and journal establish completion.",
+    "Simulator physical attachment is not contact-force or real-hardware validation.",
+    "Process cleanup is not business resource release; this case remained UNRESOLVED."
+  ]
+}

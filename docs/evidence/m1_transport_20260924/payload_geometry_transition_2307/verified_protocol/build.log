@@ -1,0 +1,20 @@
+[  4%] Built target fixed_station_navigation
+[  8%] Built target astribot_s1_transport_native__cpp
+[ 29%] Built target arm_hold_core
+[ 37%] Built target trajectory_scene_binding
+[ 62%] Built target astribot_s1_transport_native__rosidl_typesupport_cpp
+[ 70%] Built target payload_client
+[ 79%] Built target payload_frames
+[ 83%] Built target payload_scene
+[ 91%] Built target fixed_station_scene
+Consolidate compiler generated dependencies of target trajectory_executor
+[ 95%] Building CXX object CMakeFiles/trajectory_executor.dir/src/hold_executor.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp: In member function ‘void astribot::transport::HoldExecutor::validate_transfer_goal(const Goal&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:291:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  291 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |   ^~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:291:62: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  291 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |                                                              ^~~
+[100%] Linking CXX executable trajectory_executor
+[100%] Built target trajectory_executor

@@ -1,0 +1,127 @@
+--- docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/hold_executor_before.cpp
++++ ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -904,7 +904,13 @@
+   check_payload_raw();
+   if(hold_confirmed_)return; // M2 may now grant navigation with this same hold.
+   if(!manipulation_ready(ros,steady)){stopping(reason_);return;}
+-  if(geometry_->source_id!=reference_geometry_.source_id||geometry_->clock_epoch!=reference_geometry_.clock_epoch||geometry_->model_revision!=reference_geometry_.model_revision||(payload_phase_==PayloadPhase::NONE&&geometry_->attachment_revision!=reference_geometry_.attachment_revision)){stopping("MTC_CONTEXT_CHANGED");return;}
++  // Incomplete geometry retains its publisher identity, but leaves model/clock
++  // versions unset during attachment reconciliation. Only confirmed geometry
++  // can assert those versions; advance_payload retains its commit barriers.
++  if(geometry_->source_id!=reference_geometry_.source_id||
++     ((payload_phase_==PayloadPhase::NONE||(geometry_->complete&&geometry_->attachment_state_confirmed))&&
++      (geometry_->clock_epoch!=reference_geometry_.clock_epoch||geometry_->model_revision!=reference_geometry_.model_revision||
++       (payload_phase_==PayloadPhase::NONE&&geometry_->attachment_revision!=reference_geometry_.attachment_revision)))){stopping("MTC_CONTEXT_CHANGED");return;}
+   const auto&a=odom_->pose.pose;const auto&b=reference_base_.pose.pose;
+   const double dot=std::abs(a.orientation.x*b.orientation.x+a.orientation.y*b.orientation.y+a.orientation.z*b.orientation.z+a.orientation.w*b.orientation.w);
+   if(odom_->header.frame_id!=reference_base_.header.frame_id||std::hypot(std::hypot(a.position.x-b.position.x,a.position.y-b.position.y),a.position.z-b.position.z)>.02||2*std::acos(std::min(1.,dot))>.02){stopping("MTC_BASE_MOVED");return;}
+--- docs/evidence/m1_transport_20260924/payload_geometry_transition_2307/verify_full_manipulation_before.py
++++ ws_robot/src/astribot_s1_transport_native/test/verify_full_manipulation.py
+@@ -47,7 +47,7 @@
+ 
+ def main():
+     p=argparse.ArgumentParser(description=__doc__)
+-    p.add_argument('--mode',choices=['normal','delayed_ledger','revision_changed','late_invalid'],required=True)
++    p.add_argument('--mode',choices=['normal','delayed_ledger','revision_changed','late_invalid','geometry_model_changed'],required=True)
+     p.add_argument('--late-kind',choices=['revision','unknown'],default='revision')
+     p.add_argument('--expect-unsafe',action='store_true',help='Diagnostic RED: require old executor to submit after known invalid raw')
+     p.add_argument('--operation',choices=['PICK','PLACE'],required=True)
+@@ -80,7 +80,7 @@
+     if physical['attached']:scene_state.robot_state.attached_collision_objects=[body()]
+     else:
+         o=body().object;o.header.frame_id=base;o.pose.position.x=.1;o.pose.position.z=1.;o.primitives[0].dimensions=[.06,.06,.12];scene_state.world.collision_objects=[o]
+-    scene_applied_at=None;revision_injected=False;late_injected=False;late_raw_sent=False
++    scene_applied_at=None;revision_injected=False;late_injected=False;late_raw_sent=False;geometry_model_injected=False
+     operation_order=[('PREGRASP','ARM'),('GRASP_APPROACH','ARM'),('GRASP_CONFIRM','GRIPPER'),('ATTACH_CONFIRM','ATTACH'),('LIFT','ARM'),('TRANSPORT_POSTURE','ARM')] if args.operation=='PICK' else [('PREPLACE','ARM'),('PLACE_APPROACH','ARM'),('RELEASE','GRIPPER'),('DETACH_CONFIRM','DETACH'),('RETREAT','ARM'),('STOW','ARM')]
+ 
+     motion_indices=[i for i,(_,kind) in enumerate(operation_order) if kind in ('ARM','GRIPPER')]
+@@ -226,7 +226,7 @@
+     odom=fixture.create_publisher(Odometry,'/odom',qos_profile_sensor_data);envelopes=fixture.create_publisher(NavigationEnvelopeV2,'/navigation/envelope_v2',10)
+     guard_pub=fixture.create_publisher(ExecutionGuardStatus,'/transport/execution_guard/status',10)
+     def publish():
+-        nonlocal sequence,revision_injected,late_raw_sent
++        nonlocal sequence,revision_injected,late_raw_sent,geometry_model_injected
+         sequence+=1
+         at=stamp(-.02);at_ns=at.sec*10**9+at.nanosec
+         until_ns=at_ns+300000000;until=Time(sec=until_ns//10**9,nanosec=until_ns%10**9)
+@@ -251,8 +251,18 @@
+         g.complete=g.attachment_state_confirmed=bool(state and state.confirmed)
+         g.attachment_revision=state.attachment_revision if state else ''
+         g.attachment_ids=[v.object.id for v in state.observation.objects] if state and state.confirmed else []
+-        g.joints.header.stamp=at;g.joints.name=list(joint_snapshot);g.joints.position=list(joint_snapshot.values());g.joint_position_error_bounds=[.004]*22;g.joint_source_stamps=[at]*22;geometry.publish(g);joint_pub.publish(g.joints)
+-        geometry_samples.append(dict(wall=time.monotonic(),capture_ns=at_ns,confirmed=g.complete,positions=joint_snapshot))
++        g.joints.header.stamp=at;g.joints.name=list(joint_snapshot);g.joints.position=list(joint_snapshot.values());g.joint_position_error_bounds=[.004]*22;g.joint_source_stamps=[at]*22
++        joint_pub.publish(g.joints) # Actual joint evidence remains available during ledger reconciliation.
++        if not g.complete:
++            # Match the real geometry publisher's error message: identity fields
++            # not established by a complete snapshot remain unset, not invented.
++            g=RobotGeometryState();g.header.frame_id=base;g.published_at=stamp();g.source_id='m1_fixture';g.sequence=sequence;g.reason='ATTACHMENT_UNCONFIRMED'
++        elif args.mode=='geometry_model_changed' and state.observation.revision==2:
++            g.model_revision='different_model'
++            if not geometry_model_injected:
++                geometry_model_injected=True;event('complete_geometry_model_changed',source_id=g.source_id,clock_epoch=g.clock_epoch,model_revision=g.model_revision,attachment_revision=g.attachment_revision)
++        geometry.publish(g)
++        geometry_samples.append(dict(wall=time.monotonic(),capture_ns=at_ns,confirmed=g.complete,positions=joint_snapshot,source_id=g.source_id,clock_epoch=g.clock_epoch,model_revision=g.model_revision,attachment_revision=g.attachment_revision))
+         od=Odometry();od.header.stamp=at;od.header.frame_id='odom';od.child_frame_id=base;od.pose.pose.orientation.w=1.;odom.publish(od)
+         e=NavigationEnvelopeV2();e.header.stamp=at;e.valid_until=stamp(.28);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE if navigation else e.HOLD;e.navigation_allowed=navigation;envelopes.publish(e)
+         guard_pub.publish(ExecutionGuardStatus(stamp=at,joint_stamp=at,base_stamp=at,context_id=guard['context'],active=guard['active'],healthy=guard['active'],reason='EXECUTION_WITHIN_BOUNDS'))
+@@ -331,6 +341,13 @@
+                 applied=next(e['wall'] for e in events if e['event']=='scene_applied')
+                 confirmed=next(e['wall'] for e in events if e['event']=='ledger' and e['confirmed'] and e['revision']==2)
+                 assert confirmed>applied
++                physical_at=next(e['wall'] for e in events if e['event']=='physical_command')
++                revalidated_at=events[revalidation]['wall']
++                unknown=[v for v in geometry_samples if physical_at<v['wall']<revalidated_at and not v['confirmed']]
++                assert unknown and all(v['model_revision']==v['attachment_revision']=='' and v['clock_epoch']==0 for v in unknown)
++                assert not any(e['event']=='send' and e['controller']!='mtc' and physical_at<e['wall']<revalidated_at for e in events)
++                assert not any(s['reason']=='MTC_CONTEXT_CHANGED' for s in statuses)
++                event('incomplete_geometry_wait_verified',samples=len(unknown),first_wall=unknown[0]['wall'],last_wall=unknown[-1]['wall'])
+             cancel_future=handle.cancel_goal_async();wait(cancel_future.done,3,'cancel');assert cancel_future.result().goals_canceling
+         wait(terminal.done,15,'terminal');result_value=terminal.result();outcome=dict(status=result_value.status,reason=result_value.result.reason,resources_released=result_value.result.resources_released)
+         if args.mode=='late_invalid':
+@@ -342,6 +359,11 @@
+                 assert len([e for e in events if e['event']=='send' and e['controller']!='mtc'])==18
+                 assert not outcome['resources_released'] and 'PAYLOAD_RAW_' in outcome['reason']
+             event('late_invalid_result',unsafe_submissions=len(subsequent),expected_old_defect=args.expect_unsafe)
++        elif args.mode=='geometry_model_changed':
++            assert geometry_model_injected and not any(h for _,h in holds)
++            assert len([e for e in events if e['event']=='send' and e['controller']!='mtc'])==18
++            assert not any(e['event']=='payload_revalidate' for e in events)
++            assert not outcome['resources_released'] and outcome['reason']=='RESOURCE_RECOVERY_REQUIRED:MTC_CONTEXT_CHANGED'
+         elif args.mode=='revision_changed':
+             assert not any(h for _,h in holds)
+             assert len([e for e in events if e['event']=='send' and e['controller']!='mtc'])==18
+@@ -350,7 +372,7 @@
+         else:assert outcome['resources_released'] and outcome['reason']=='TASK_CANCELED'
+         # Verify every actual child UUID, endpoint and inter-stage settling
+         # window independently of the executor's own stage_confirmed journal.
+-        completed_count=3 if args.mode in ('revision_changed','late_invalid') else 5
++        completed_count=3 if args.mode in ('revision_changed','late_invalid','geometry_model_changed') else 5
+         for ordinal,index in enumerate(motion_indices[:completed_count]):
+             stage=operation_order[index][0]
+             sends=[e for e in events if e['event']=='send' and e['stage']==stage]
+@@ -363,7 +385,7 @@
+             if ordinal+1<completed_count:
+                 next_stage=operation_order[motion_indices[ordinal+1]][0]
+                 cutoff=min(e['wall'] for e in events if e['event']=='send' and e['stage']==next_stage)
+-            elif args.mode in ('revision_changed','late_invalid'):
++            elif args.mode in ('revision_changed','late_invalid','geometry_model_changed'):
+                 cutoff=next(e['wall'] for e in events if e['event']=='physical_command')
+             else:cutoff=next(at for at,confirmed in holds if confirmed)
+             # The payload transaction may sit between motion segments, so also
+@@ -378,10 +400,12 @@
+         stages=[v['details']['stage_id'] for v in records if v['event']=='stage_confirmed']
+         expected=[name for name,kind in operation_order if kind in ('ARM','GRIPPER')]
+         assert stages[:3]==expected[:3]
+-        if args.mode not in ('revision_changed','late_invalid'):assert stages==expected
++        if args.mode not in ('revision_changed','late_invalid','geometry_model_changed'):assert stages==expected
+         payload_confirmed=[v for v in records if v['event']=='payload_transaction_confirmed']
+-        assert len(payload_confirmed)==(0 if args.mode=='revision_changed' or (args.mode=='late_invalid' and not args.expect_unsafe) else 1)
+-        if args.mode in ('revision_changed','late_invalid') and not args.expect_unsafe:assert records[-1]['phase']==5
++        assert len(payload_confirmed)==(0 if args.mode in ('revision_changed','geometry_model_changed') or (args.mode=='late_invalid' and not args.expect_unsafe) else 1)
++        if args.mode in ('revision_changed','late_invalid','geometry_model_changed') and not args.expect_unsafe:assert records[-1]['phase']==5
++        if args.mode=='geometry_model_changed':
++            assert next(v['reason'] for v in records if v['event']=='stop_requested')=='MTC_CONTEXT_CHANGED'
+         if args.mode=='late_invalid' and not args.expect_unsafe:
+             initial=next(v['reason'] for v in records if v['event']=='stop_requested')
+             assert initial.startswith('PAYLOAD_RAW_')
