@@ -1,0 +1,511 @@
+{
+  "evidence_layer": "offline independent analysis of one completed owned simulation",
+  "source_directory": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02",
+  "task_id": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+  "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+  "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+  "source_sha256": {
+    "first_stage/result.json": "75ad591a37b165c773a06a55ee137ce0717c9426210a684cccdaca3aded37224",
+    "own_lease_journal.json": "09efdf76c5874d5e61ff38024dc32bd89f292b5cd11af2360fab5333be5be82a",
+    "guard_raw.json": "116af540f675959bfc0823ea812790bdd9216883660d99ab47ee4d489e7854e0",
+    "mtc_parameters_pre_action.json": "307709e7dc97f94f8b39a56a3db0521bdf1f6c98779a3bb8e04be5d40e29b06e",
+    "manipulation_runtime_manifest.json": "0bcdaf44b0034275534f735cfe157059a2eb39260b9919bfd1f6d3d0add03348",
+    "executor_status_raw.json": "b0f018fdb825d45017bd6e11179f93cc4079c874bfdd5219046957367ea67395",
+    "runtime_manifest.json": "3ffa53b2dc3b52dc947ccca2e3dfa25182735f2aabfe65a059f88a43eadcebed",
+    "gz_control_runtime_manifest.json": "4c9bbbe280476b9546d9eb7c5fe085daf43cea768033114e8526f18ec285d342",
+    "transport_skills.log": "789e4972cbcb744b4b5c445899b588da01ee27f42f1460df498c32f30df0f3f0",
+    "result.json": "db1b934b60242edf05cbf584490a76075cc8202fdba6eb248c1e895c0684016d",
+    "post_cleanup_identity_audit.json": "60b33d3de2f98e114daab014cc246a03fbf14ee71c1918f902297647970996f1"
+  },
+  "runtime_identity": [
+    {
+      "identity": {
+        "pid": 3158160,
+        "start_ticks": "8222348",
+        "boot_id": "2063685d-c834-4d96-ad01-6ea8bd8cd80e",
+        "exe": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib/astribot_s1_transport_native/trajectory_executor",
+        "cmdline": [
+          "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib/astribot_s1_transport_native/trajectory_executor",
+          "--ros-args",
+          "-p",
+          "use_sim_time:=true",
+          "-p",
+          "simulation_commissioning:=true",
+          "-p",
+          "scene_evidence_directory:=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr"
+        ]
+      },
+      "executable_sha256": "c8bc8e9472c14e0ff355d83438e067b39e007496aee7c253a8cd345a2601f7c7",
+      "libraries": {
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib/astribot_s1_transport_native/trajectory_executor": "c8bc8e9472c14e0ff355d83438e067b39e007496aee7c253a8cd345a2601f7c7",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib/libarm_hold_core.so": "dacd95e520dd02baca3b6dc57e4606a7e8a5117631696f4d1809560d656eab1c",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib/libastribot_s1_transport_native__rosidl_typesupport_cpp.so": "28d27edbd2ac672dfd547b0c15ae87ba118cb10b040779954a4294571e7e1e33",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib/libastribot_s1_transport_native__rosidl_typesupport_fastrtps_cpp.so": "ecd9593445a165a87cb4882ab0838c191c00cc3d02db17fd67b75e5791b52f7a",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib/libastribot_s1_transport_native__rosidl_typesupport_introspection_cpp.so": "773342c84a40bb7c6c18856c10c39f6f7c7c337f1ca06567274c5ec40291d63e",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib/libtransport_scene_signature.so": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2"
+      },
+      "current_file_sha256_matches_recorded": true
+    },
+    {
+      "identity": {
+        "pid": 3159637,
+        "start_ticks": "8222674",
+        "boot_id": "2063685d-c834-4d96-ad01-6ea8bd8cd80e",
+        "exe": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib/astribot_s1_transport_mtc/mtc_planner",
+        "cmdline": [
+          "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib/astribot_s1_transport_mtc/mtc_planner",
+          "--ros-args",
+          "--log-level",
+          "info",
+          "--disable-external-lib-logs",
+          "--ros-args",
+          "--params-file",
+          "/tmp/launch_params_cm_xukc9",
+          "--params-file",
+          "/tmp/launch_params_rgatejfy"
+        ]
+      },
+      "executable_sha256": "9a9aeed9769f4fdaa33d5db374b6338c8030d1ccc9070e40e0e8cae78ebfce1f",
+      "libraries": {
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/lib/libastribot_s1_manipulation_core.so": "326330a70c777004cab30f353260a8e756351c243050de9a41bfe00d39ec6fc4",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/lib/libastribot_s1_manipulation_gripper.so": "7a596e435bb0fc1e37c5d89e54b17830262d59961ef9dfa3f739a2929fbb35a3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib/astribot_s1_transport_mtc/mtc_planner": "9a9aeed9769f4fdaa33d5db374b6338c8030d1ccc9070e40e0e8cae78ebfce1f",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib/libtransport_scene_signature.so": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2"
+      },
+      "current_file_sha256_matches_recorded": true
+    }
+  ],
+  "parameters": {
+    "trajectory_time_scaling": 2.5,
+    "max_velocity_scaling": 0.1,
+    "max_acceleration_scaling": 0.1,
+    "joint_limit_margin_rad": 0.1
+  },
+  "pre_action_parameters": {
+    "trajectory_time_scaling": 2.5,
+    "max_velocity_scaling": 0.1,
+    "max_acceleration_scaling": 0.1,
+    "joint_limit_margin_rad": 0.1
+  },
+  "cdr": [
+    {
+      "bytes": 88876,
+      "controller": "",
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/stage_trajectory.cdr",
+      "role": "stage",
+      "sha256": "316d0cb60847378161a6fb38a7ce645351235bacf9ca63f4326188b9e6fc4ebe",
+      "actual_bytes": 88876,
+      "joint_names": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7"
+      ],
+      "points": 426,
+      "start_s": 0.0,
+      "duration_s": 7.619381332,
+      "node_max_abs_velocity_rad_s": 0.3204961346337356,
+      "node_max_abs_acceleration_rad_s2": 0.6542585552509332
+    },
+    {
+      "bytes": 88924,
+      "controller": "arm_left_controller",
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/arm_left_controller_goal.cdr",
+      "role": "controller_goal",
+      "sha256": "a99e3ea32ce0553ede224eb2341f15092eb8bb2c90f6e2a020e6e09ccbac7856",
+      "actual_bytes": 88924,
+      "joint_names": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7"
+      ],
+      "points": 426,
+      "start_s": 0.0,
+      "duration_s": 7.619381332,
+      "node_max_abs_velocity_rad_s": 0.3204961346337356,
+      "node_max_abs_acceleration_rad_s2": 0.6542585552509332
+    },
+    {
+      "bytes": 452,
+      "controller": "arm_right_controller",
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/arm_right_controller_goal.cdr",
+      "role": "controller_goal",
+      "sha256": "2487a0582513097b1ab150c010afd57c88c0df09fde275e329b534d77d0ec8d5",
+      "actual_bytes": 452,
+      "joint_names": [
+        "astribot_arm_right_joint_1",
+        "astribot_arm_right_joint_2",
+        "astribot_arm_right_joint_3",
+        "astribot_arm_right_joint_4",
+        "astribot_arm_right_joint_5",
+        "astribot_arm_right_joint_6",
+        "astribot_arm_right_joint_7"
+      ],
+      "points": 1,
+      "start_s": 7.619381332,
+      "duration_s": 7.619381332,
+      "node_max_abs_velocity_rad_s": 0.0,
+      "node_max_abs_acceleration_rad_s2": 0
+    },
+    {
+      "bytes": 164,
+      "controller": "gripper_left_controller",
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/gripper_left_controller_goal.cdr",
+      "role": "controller_goal",
+      "sha256": "280a14d98ee4f1db5f474d4d4220e8d2aa92c38ed8a30a0f40e5e16b03ed9c42",
+      "actual_bytes": 164,
+      "joint_names": [
+        "astribot_gripper_left_joint_L1"
+      ],
+      "points": 1,
+      "start_s": 7.619381332,
+      "duration_s": 7.619381332,
+      "node_max_abs_velocity_rad_s": 0.0,
+      "node_max_abs_acceleration_rad_s2": 0
+    },
+    {
+      "bytes": 164,
+      "controller": "gripper_right_controller",
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/gripper_right_controller_goal.cdr",
+      "role": "controller_goal",
+      "sha256": "9020f733ef03275c18d9f9b215d8762138b578829146b9b12732d199ac2d072a",
+      "actual_bytes": 164,
+      "joint_names": [
+        "astribot_gripper_right_joint_L1"
+      ],
+      "points": 1,
+      "start_s": 7.619381332,
+      "duration_s": 7.619381332,
+      "node_max_abs_velocity_rad_s": 0.0,
+      "node_max_abs_acceleration_rad_s2": 0
+    },
+    {
+      "bytes": 204,
+      "controller": "head_controller",
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/head_controller_goal.cdr",
+      "role": "controller_goal",
+      "sha256": "c31dd6a6a5234a3605da8e9cf8139c5017bcc8620b6e867df9391401a489c159",
+      "actual_bytes": 204,
+      "joint_names": [
+        "astribot_head_joint_1",
+        "astribot_head_joint_2"
+      ],
+      "points": 1,
+      "start_s": 7.619381332,
+      "duration_s": 7.619381332,
+      "node_max_abs_velocity_rad_s": 0.0,
+      "node_max_abs_acceleration_rad_s2": 0
+    },
+    {
+      "bytes": 292,
+      "controller": "torso_controller",
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/torso_controller_goal.cdr",
+      "role": "controller_goal",
+      "sha256": "c818d00b806f562bb824f0e6493d11694c310d509f30553c140f92f12918c413",
+      "actual_bytes": 292,
+      "joint_names": [
+        "astribot_torso_joint_1",
+        "astribot_torso_joint_2",
+        "astribot_torso_joint_3",
+        "astribot_torso_joint_4"
+      ],
+      "points": 1,
+      "start_s": 7.619381332,
+      "duration_s": 7.619381332,
+      "node_max_abs_velocity_rad_s": 0.0,
+      "node_max_abs_acceleration_rad_s2": 0
+    }
+  ],
+  "stage_equals_actual_left_goal": true,
+  "capture_ros_s": 70.671,
+  "jtc_inferred_start_ros_s": 70.68,
+  "same_run_pre_scaling_log": {
+    "first_stage": "[mtc_planner-3] [INFO] [1790225705.653805771] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=3.048s waypoints=426 max_vel=0.801rad/s (astribot_arm_left_joint_5) max_acc=4.089rad/s^2 (astribot_arm_left_joint_5) peak_vel_util=5.6% source=trajectory",
+    "note": "Rounded IPTP log says 426 points, 3.048 s, 0.801 rad/s, 4.089 rad/s^2; compatible with the CDR after t*2.5, v/2.5, a/6.25. The full unscaled instance was not captured."
+  },
+  "jtc": {
+    "topic": "/arm_left_controller/controller_state",
+    "samples": 346,
+    "joint_rows": 2422,
+    "source_ros_window": [
+      70.69,
+      78.29
+    ],
+    "trajectory_time_window": [
+      0.01,
+      7.61
+    ],
+    "source_gap_s_max": 0.04999999999999716,
+    "receive_gap_s_max": 0.09093952800321858,
+    "max_sample_abs_position_error_rad": 0.032049613341732286,
+    "peak_error_sample": {
+      "source_ros_s": 72.98,
+      "receive_ros_s": 72.98,
+      "receive_monotonic_s": 82292.252056913,
+      "trajectory_time_s": 2.3,
+      "segment": 203,
+      "joint": "astribot_arm_left_joint_5",
+      "desired_position": -0.6416775855360495,
+      "actual_position": -0.6096279721943172,
+      "position_error": -0.032049613341732286,
+      "message_position_error": -0.032049613341732286,
+      "desired_velocity": -0.3204961249100796,
+      "actual_velocity": -0.320496133960296,
+      "desired_acceleration": -2.1211870396859334e-06,
+      "replayed_position": -0.6416775855360495,
+      "replayed_velocity": -0.32049612491013413,
+      "replayed_acceleration": -2.1212174830399847e-06
+    },
+    "max_message_error_disagreement_rad": 0.0,
+    "max_sample_abs_desired_velocity_rad_s": 0.3204961846572929,
+    "max_sample_abs_desired_acceleration_rad_s2": 1.4197893181562526,
+    "max_sample_abs_actual_velocity_rad_s": 0.3205467282685819,
+    "quintic_replay_max_difference": {
+      "position": 2.55351295663786e-15,
+      "velocity": 7.786549183208535e-13,
+      "acceleration": 2.616377271618895e-10
+    },
+    "replay_method": "quintic Hermite interpolation of CDR p/v/a at each recorded desired.time_from_start; no controller process invoked"
+  },
+  "guard": {
+    "active_samples": 459,
+    "states": [
+      {
+        "healthy": false,
+        "reason": "WAITING_FOR_EXECUTION_EVIDENCE",
+        "count": 2
+      },
+      {
+        "healthy": true,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "count": 457
+      }
+    ],
+    "source_ros_window": [
+      70.606,
+      78.976
+    ],
+    "max_sample_joint_error_rad": 0.032049613341732286,
+    "peak_sample": {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 72,
+          "nanosec": 981000000
+        },
+        "joint_stamp": {
+          "sec": 72,
+          "nanosec": 980000000
+        },
+        "base_stamp": {
+          "sec": 72,
+          "nanosec": 980000000
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": true,
+        "healthy": true,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "maximum_joint_error_rad": 0.032049613341732286,
+        "base_translation_m": 1.1840983079960082e-06,
+        "base_rotation_rad": 2.014910309777985e-06
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82292254200691,
+      "receive_wall_ns": 1790225708376882111,
+      "ros_now_ns": 72979000000
+    },
+    "max_sample_base_translation_m": 5.616120011008664e-05,
+    "max_sample_base_rotation_rad": 0.0001825577279513594
+  },
+  "six_child_successes": true,
+  "child_terminal_journal_entries": [
+    [
+      21,
+      {
+        "controller": "arm_left_controller",
+        "result_code": 4,
+        "success": true,
+        "uuid": "660f3aee60c67f16ee8cacb85983f7da"
+      }
+    ],
+    [
+      22,
+      {
+        "controller": "arm_right_controller",
+        "result_code": 4,
+        "success": true,
+        "uuid": "51e0cbea22f909d7e121240ab68bf706"
+      }
+    ],
+    [
+      23,
+      {
+        "controller": "gripper_left_controller",
+        "result_code": 4,
+        "success": true,
+        "uuid": "3c3ce09e33afb322f9cf008ab0ea091d"
+      }
+    ],
+    [
+      24,
+      {
+        "controller": "gripper_right_controller",
+        "result_code": 4,
+        "success": true,
+        "uuid": "54b42024a98583179e62550323e8faf8"
+      }
+    ],
+    [
+      25,
+      {
+        "controller": "head_controller",
+        "result_code": 4,
+        "success": true,
+        "uuid": "1672233542164127ae526331b3083a24"
+      }
+    ],
+    [
+      26,
+      {
+        "controller": "torso_controller",
+        "result_code": 4,
+        "success": true,
+        "uuid": "21181806642dbc68f26c467785b2c306"
+      }
+    ]
+  ],
+  "hold_observed": {
+    "journal_indices": [
+      27
+    ],
+    "feedback_samples": 1,
+    "first_feedback": {
+      "wall": 82298.966628639,
+      "ros_s": 79.02900000000001,
+      "goal_id": "b05110d71a634437917052ac984e7873",
+      "feedback": {
+        "phase": "3",
+        "reason": "FIRST_STAGE_HOLD_CONFIRMED",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+        "hold_confirmed": true,
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "stage_id": "PREGRASP"
+      }
+    },
+    "last_feedback": {
+      "wall": 82298.966628639,
+      "ros_s": 79.02900000000001,
+      "goal_id": "b05110d71a634437917052ac984e7873",
+      "feedback": {
+        "phase": "3",
+        "reason": "FIRST_STAGE_HOLD_CONFIRMED",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+        "hold_confirmed": true,
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "stage_id": "PREGRASP"
+      }
+    },
+    "status_samples": 38,
+    "first_status": {
+      "index": 1242,
+      "source_ns": null,
+      "data": {
+        "data": "{\"authority_reason\":\"HOLDING\",\"epoch\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c\",\"hold_confirmed\":true,\"hold_id\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold\",\"hold_reason\":\"HOLD_CONFIRMED\",\"lease_id\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1\",\"phase\":\"3\",\"reason\":\"FIRST_STAGE_HOLD_CONFIRMED\"}"
+      },
+      "kind": "status",
+      "topic": "/transport/hold_executor/status",
+      "receive_monotonic_ns": 82298966677995,
+      "receive_wall_ns": 1790225715089359412,
+      "ros_now_ns": 79027000000,
+      "decoded": {
+        "authority_reason": "HOLDING",
+        "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "hold_confirmed": true,
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+        "hold_reason": "HOLD_CONFIRMED",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "phase": "3",
+        "reason": "FIRST_STAGE_HOLD_CONFIRMED"
+      }
+    },
+    "last_status": {
+      "index": 1279,
+      "source_ns": null,
+      "data": {
+        "data": "{\"authority_reason\":\"HOLDING\",\"epoch\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c\",\"hold_confirmed\":true,\"hold_id\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold\",\"hold_reason\":\"HOLD_CONFIRMED\",\"lease_id\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1\",\"phase\":\"3\",\"reason\":\"FIRST_STAGE_HOLD_CONFIRMED\"}"
+      },
+      "kind": "status",
+      "topic": "/transport/hold_executor/status",
+      "receive_monotonic_ns": 82300814119112,
+      "receive_wall_ns": 1790225716936800529,
+      "ros_now_ns": 80685000000,
+      "decoded": {
+        "authority_reason": "HOLDING",
+        "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "hold_confirmed": true,
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+        "hold_reason": "HOLD_CONFIRMED",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "phase": "3",
+        "reason": "FIRST_STAGE_HOLD_CONFIRMED"
+      }
+    }
+  },
+  "endpoint": {
+    "source_ros_s": 79.02,
+    "actual_vs_cdr_endpoint_max_error_rad": 1.4077759133979129e-06,
+    "desired_vs_cdr_endpoint_max_error_rad": 0.0,
+    "actual_max_abs_velocity_rad_s": 1.564196776242158e-05
+  },
+  "protocol": {
+    "overall_passed": false,
+    "error": "AttributeError(\"'EnvelopeApplyStatus' object has no attribute 'mode'\")",
+    "acks_recorded": 0,
+    "cleanup_complete": false,
+    "hold_handle_unresolved": true,
+    "resource_disposition": "STOP_UNPROVEN_HOLD_NOT_CANCELLED_OWNING_SIMULATION_TEARDOWN_REQUIRED",
+    "final_journal_events": [
+      {
+        "event": "quarantined",
+        "phase": 5,
+        "reason": "RESOURCE_LEASE_EXPIRED",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1"
+      },
+      {
+        "event": "navigation_revoked",
+        "phase": 5,
+        "reason": "RESOURCE_LEASE_EXPIRED",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1"
+      }
+    ],
+    "six_consumer_acks": "not verified",
+    "cancel_release": "not verified"
+  },
+  "outer_process_cleanup": {
+    "cleanup_complete": true,
+    "identity_audit_records": 25,
+    "all_recorded_owned_processes_stopped": true,
+    "not_business_resource_release": true
+  },
+  "limits": [
+    "Sampled maxima are not continuous-time upper bounds.",
+    "Only left-arm JTC state was recorded in first_stage/result.json; other controllers have Goal CDR and terminal evidence.",
+    "This 426-point path differs from the old 717-point path: no exact old/new trajectory A/B or unique causal attribution.",
+    "The live run used the recorded scale=2.5 candidate; no full unscaled instance of this exact path was captured to directly measure the ratio.",
+    "Motion success and Hold observation do not imply complete protocol PASS; ACK collection failed and lease subsequently expired into quarantine.",
+    "Journal issued_at/valid_until are lease fields, not per-event timestamps: no exact quarantine time is inferred from them.",
+    "No new ROS nodes, simulation, rebuild or GPU computation. Original tracking issue start/checkpoint remain 12:15/13:15."
+  ]
+}

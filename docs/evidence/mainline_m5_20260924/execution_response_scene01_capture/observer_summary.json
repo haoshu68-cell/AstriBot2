@@ -1,0 +1,1732 @@
+{
+  "schema": "astribot.m5.execution_response_observer_summary/1",
+  "scope": "Offline observer receive metadata only; 0 parent Action submissions; no motion coverage acceptance",
+  "capture": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/m5_observer",
+  "observation_status": "INCOMPLETE",
+  "sampling_criteria_status": "INCOMPLETE",
+  "analyzer_exit_code": 1,
+  "observer_returncode": 130,
+  "topics_configured": 41,
+  "topics_present_postwarmup": 34,
+  "capture_interval": {
+    "start_steady_ns": 81978097557756,
+    "end_steady_ns": 82022729063671,
+    "start_wall_ns": 1790225394220241539,
+    "end_wall_ns": 1790225438851745356,
+    "duration_steady_s": 44.631505915000005,
+    "warmup_s": 2.0,
+    "metrics_start_steady_ns": 81980097557756,
+    "metrics_duration_s": 42.631505915000005
+  },
+  "writer": {
+    "completed": false,
+    "interrupted": true,
+    "writer_dropped": 0,
+    "writer_queue_peak": 17,
+    "error": null,
+    "writer_error": null
+  },
+  "method": {
+    "receive_gap": "adjacent receive_monotonic_ns differences within post-warmup window; strict >250000000 ns threshold",
+    "source_gap": "adjacent received header source stamps, not all sensor emissions",
+    "raw_source_age": "latest observed /clock minus source header stamp; asynchronous callback observation, not end-to-end latency",
+    "health_source_age": "latest observed /clock minus data.capture_stamp; epoch identity preserved",
+    "steady_age": "time since observer first saw same epoch and capture stamp, not acquisition latency",
+    "stereo_250ms": "descriptive only; configured gap_budget_sec is null so no stereo 250ms acceptance claim"
+  },
+  "raw_streams": {
+    "/camera/raw/head_rgbd/image": {
+      "samples": 794,
+      "samples_full_window": 804,
+      "receive_interval_wall_sec": {
+        "samples": 793,
+        "percentile_method": "linear",
+        "min": 0.035148073,
+        "max": 0.20939795100000003,
+        "p50": 0.051287194,
+        "p95": 0.0645135072,
+        "p99": 0.10763511540000008
+      },
+      "source_interval_sec": {
+        "samples": 793,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.15000000000000002,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.1
+      },
+      "source_age_ros_sec": {
+        "samples": 794,
+        "percentile_method": "linear",
+        "min": 0.02,
+        "max": 0.05,
+        "p50": 0.027000000000000003,
+        "p95": 0.035,
+        "p99": 0.038
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.000214865,
+      "tail_silence_wall_sec": 0.092810507,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23500000000,
+      "source_ns_last_postwarmup": 64400000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64400000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992401073281,
+        "next_receive_steady_ns": 81992610471232,
+        "previous_source_ns": 35300000000,
+        "next_source_ns": 35400000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/head_rgbd/camera_info": {
+      "samples": 802,
+      "samples_full_window": 814,
+      "receive_interval_wall_sec": {
+        "samples": 801,
+        "percentile_method": "linear",
+        "min": 0.037276324,
+        "max": 0.20165876300000002,
+        "p50": 0.050943355,
+        "p95": 0.062120674,
+        "p99": 0.10604711500000001
+      },
+      "source_interval_sec": {
+        "samples": 801,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.1,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.1
+      },
+      "source_age_ros_sec": {
+        "samples": 802,
+        "percentile_method": "linear",
+        "min": 0.01,
+        "max": 0.037000000000000005,
+        "p50": 0.02,
+        "p95": 0.028,
+        "p99": 0.030000000000000002
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.10051058800000001,
+      "tail_silence_wall_sec": 0.004337671,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23600000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 22950000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81998274155367,
+        "next_receive_steady_ns": 81998475814130,
+        "previous_source_ns": 40850000000,
+        "next_source_ns": 40950000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/head_rgbd/depth_image": {
+      "samples": 737,
+      "samples_full_window": 747,
+      "receive_interval_wall_sec": {
+        "samples": 736,
+        "percentile_method": "linear",
+        "min": 0.038870862,
+        "max": 0.21004264900000003,
+        "p50": 0.05175484700000001,
+        "p95": 0.104770555,
+        "p99": 0.15003321039999998
+      },
+      "source_interval_sec": {
+        "samples": 736,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.2,
+        "p50": 0.05,
+        "p95": 0.1,
+        "p99": 0.1
+      },
+      "source_age_ros_sec": {
+        "samples": 737,
+        "percentile_method": "linear",
+        "min": 0.018000000000000002,
+        "max": 0.05,
+        "p50": 0.027000000000000003,
+        "p95": 0.035,
+        "p99": 0.038
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.047337463,
+      "tail_silence_wall_sec": 0.047168765,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64450000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64450000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 82019782675217,
+        "next_receive_steady_ns": 82019992717866,
+        "previous_source_ns": 61700000000,
+        "next_source_ns": 61900000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/torso_rgbd/image": {
+      "samples": 737,
+      "samples_full_window": 747,
+      "receive_interval_wall_sec": {
+        "samples": 736,
+        "percentile_method": "linear",
+        "min": 0.041672932,
+        "max": 0.20932845300000003,
+        "p50": 0.0515868005,
+        "p95": 0.1033889535,
+        "p99": 0.13661427894999953
+      },
+      "source_interval_sec": {
+        "samples": 736,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.2,
+        "p50": 0.05,
+        "p95": 0.1,
+        "p99": 0.1
+      },
+      "source_age_ros_sec": {
+        "samples": 737,
+        "percentile_method": "linear",
+        "min": 0.005,
+        "max": 0.021,
+        "p50": 0.008,
+        "p95": 0.014,
+        "p99": 0.016639999999999988
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.030907677,
+      "tail_silence_wall_sec": 0.015885522000000003,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 82006391363777,
+        "next_receive_steady_ns": 82006600692230,
+        "previous_source_ns": 48600000000,
+        "next_source_ns": 48800000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/torso_rgbd/camera_info": {
+      "samples": 820,
+      "samples_full_window": 832,
+      "receive_interval_wall_sec": {
+        "samples": 819,
+        "percentile_method": "linear",
+        "min": 0.041705447,
+        "max": 0.118706666,
+        "p50": 0.051308428,
+        "p95": 0.0583669352,
+        "p99": 0.06992594709999957
+      },
+      "source_interval_sec": {
+        "samples": 819,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.05,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.05
+      },
+      "source_age_ros_sec": {
+        "samples": 820,
+        "percentile_method": "linear",
+        "min": 0.0,
+        "max": 0.015000000000000001,
+        "p50": 0.001,
+        "p95": 0.009000000000000001,
+        "p99": 0.01
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.023145039000000003,
+      "tail_silence_wall_sec": 0.020896008,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 22950000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992425370096,
+        "next_receive_steady_ns": 81992544076762,
+        "previous_source_ns": 35350000000,
+        "next_source_ns": 35400000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/torso_rgbd/depth_image": {
+      "samples": 690,
+      "samples_full_window": 699,
+      "receive_interval_wall_sec": {
+        "samples": 689,
+        "percentile_method": "linear",
+        "min": 0.041493738,
+        "max": 0.27046785900000003,
+        "p50": 0.051630220000000004,
+        "p95": 0.10864157080000002,
+        "p99": 0.16016472564000003
+      },
+      "source_interval_sec": {
+        "samples": 689,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.2,
+        "p50": 0.05,
+        "p95": 0.1,
+        "p99": 0.15000000000000002
+      },
+      "source_age_ros_sec": {
+        "samples": 690,
+        "percentile_method": "linear",
+        "min": 0.005,
+        "max": 0.021,
+        "p50": 0.008,
+        "p95": 0.014,
+        "p99": 0.016
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.029111754,
+      "tail_silence_wall_sec": 0.017342526,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "FAIL",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 1,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992431111025,
+        "next_receive_steady_ns": 81992701578884,
+        "previous_source_ns": 35350000000,
+        "next_source_ns": 35500000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 270467859,
+          "previous_receive_steady_ns": 81992431111025,
+          "next_receive_steady_ns": 81992701578884,
+          "previous_source_ns": 35350000000,
+          "next_source_ns": 35500000000,
+          "source_gap_ns": 150000000
+        }
+      ]
+    },
+    "/camera/raw/left_wrist_rgbd/image": {
+      "samples": 715,
+      "samples_full_window": 724,
+      "receive_interval_wall_sec": {
+        "samples": 714,
+        "percentile_method": "linear",
+        "min": 0.038557436,
+        "max": 0.24478011300000002,
+        "p50": 0.0515729935,
+        "p95": 0.10759949845000001,
+        "p99": 0.15565245626000002
+      },
+      "source_interval_sec": {
+        "samples": 714,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.15000000000000002,
+        "p50": 0.05,
+        "p95": 0.1,
+        "p99": 0.15000000000000002
+      },
+      "source_age_ros_sec": {
+        "samples": 715,
+        "percentile_method": "linear",
+        "min": 0.007,
+        "max": 0.045000000000000005,
+        "p50": 0.013000000000000001,
+        "p95": 0.021,
+        "p99": 0.023000000000000003
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.037535471,
+      "tail_silence_wall_sec": 0.01071877,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992330239831,
+        "next_receive_steady_ns": 81992575019944,
+        "previous_source_ns": 35250000000,
+        "next_source_ns": 35400000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/left_wrist_rgbd/camera_info": {
+      "samples": 800,
+      "samples_full_window": 812,
+      "receive_interval_wall_sec": {
+        "samples": 799,
+        "percentile_method": "linear",
+        "min": 0.041436816,
+        "max": 0.205856474,
+        "p50": 0.051063232,
+        "p95": 0.061484600400000006,
+        "p99": 0.10508366851999996
+      },
+      "source_interval_sec": {
+        "samples": 799,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.15000000000000002,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.1
+      },
+      "source_age_ros_sec": {
+        "samples": 800,
+        "percentile_method": "linear",
+        "min": 0.005,
+        "max": 0.022000000000000002,
+        "p50": 0.008,
+        "p95": 0.014,
+        "p99": 0.017
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.031533549,
+      "tail_silence_wall_sec": 0.015494628000000002,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 22950000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992432675267,
+        "next_receive_steady_ns": 81992638531741,
+        "previous_source_ns": 35350000000,
+        "next_source_ns": 35450000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/left_wrist_rgbd/depth_image": {
+      "samples": 668,
+      "samples_full_window": 677,
+      "receive_interval_wall_sec": {
+        "samples": 667,
+        "percentile_method": "linear",
+        "min": 0.038189532000000005,
+        "max": 0.250833482,
+        "p50": 0.052567687,
+        "p95": 0.11264745689999997,
+        "p99": 0.20054755920000003
+      },
+      "source_interval_sec": {
+        "samples": 667,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.25,
+        "p50": 0.05,
+        "p95": 0.1,
+        "p99": 0.2
+      },
+      "source_age_ros_sec": {
+        "samples": 668,
+        "percentile_method": "linear",
+        "min": 0.006,
+        "max": 0.025,
+        "p50": 0.012,
+        "p95": 0.02,
+        "p99": 0.022000000000000002
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.033619431000000005,
+      "tail_silence_wall_sec": 0.06058368,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "FAIL",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64450000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64450000000,
+      "receive_gaps_over_250ms": 1,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 82013543249174,
+        "next_receive_steady_ns": 82013794082656,
+        "previous_source_ns": 55600000000,
+        "next_source_ns": 55850000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 250833482,
+          "previous_receive_steady_ns": 82013543249174,
+          "next_receive_steady_ns": 82013794082656,
+          "previous_source_ns": 55600000000,
+          "next_source_ns": 55850000000,
+          "source_gap_ns": 250000000
+        }
+      ]
+    },
+    "/camera/raw/right_wrist_rgbd/image": {
+      "samples": 697,
+      "samples_full_window": 705,
+      "receive_interval_wall_sec": {
+        "samples": 696,
+        "percentile_method": "linear",
+        "min": 0.037102714,
+        "max": 0.257389531,
+        "p50": 0.052185508500000005,
+        "p95": 0.1081898265,
+        "p99": 0.16097552675000001
+      },
+      "source_interval_sec": {
+        "samples": 696,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.25,
+        "p50": 0.05,
+        "p95": 0.1,
+        "p99": 0.15000000000000002
+      },
+      "source_age_ros_sec": {
+        "samples": 697,
+        "percentile_method": "linear",
+        "min": 0.01,
+        "max": 0.037000000000000005,
+        "p50": 0.02,
+        "p95": 0.028,
+        "p99": 0.030000000000000002
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.101205717,
+      "tail_silence_wall_sec": 0.0047984080000000005,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "FAIL",
+      "source_ns_first_postwarmup": 23600000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 2,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 82002470739680,
+        "next_receive_steady_ns": 82002728129211,
+        "previous_source_ns": 44750000000,
+        "next_source_ns": 45000000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 256247238,
+          "previous_receive_steady_ns": 81992335829538,
+          "next_receive_steady_ns": 81992592076776,
+          "previous_source_ns": 35250000000,
+          "next_source_ns": 35400000000,
+          "source_gap_ns": 150000000
+        },
+        {
+          "receive_gap_ns": 257389531,
+          "previous_receive_steady_ns": 82002470739680,
+          "next_receive_steady_ns": 82002728129211,
+          "previous_source_ns": 44750000000,
+          "next_source_ns": 45000000000,
+          "source_gap_ns": 250000000
+        }
+      ]
+    },
+    "/camera/raw/right_wrist_rgbd/camera_info": {
+      "samples": 805,
+      "samples_full_window": 817,
+      "receive_interval_wall_sec": {
+        "samples": 804,
+        "percentile_method": "linear",
+        "min": 0.038514341,
+        "max": 0.19097288,
+        "p50": 0.0510571245,
+        "p95": 0.06226641799999998,
+        "p99": 0.10540841572000002
+      },
+      "source_interval_sec": {
+        "samples": 804,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.1,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.1
+      },
+      "source_age_ros_sec": {
+        "samples": 805,
+        "percentile_method": "linear",
+        "min": 0.007,
+        "max": 0.045000000000000005,
+        "p50": 0.013000000000000001,
+        "p95": 0.021,
+        "p99": 0.023000000000000003
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.037750255,
+      "tail_silence_wall_sec": 0.010570875,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "PASS",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64500000000,
+      "source_ns_first_full": 22950000000,
+      "source_ns_last_full": 64500000000,
+      "receive_gaps_over_250ms": 0,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992384207788,
+        "next_receive_steady_ns": 81992575180668,
+        "previous_source_ns": 35300000000,
+        "next_source_ns": 35400000000
+      },
+      "receive_gaps_over_250ms_details": []
+    },
+    "/camera/raw/right_wrist_rgbd/depth_image": {
+      "samples": 643,
+      "samples_full_window": 653,
+      "receive_interval_wall_sec": {
+        "samples": 642,
+        "percentile_method": "linear",
+        "min": 0.03722062,
+        "max": 0.36550745500000004,
+        "p50": 0.053011415500000006,
+        "p95": 0.14831930364999982,
+        "p99": 0.1711862208300002
+      },
+      "source_interval_sec": {
+        "samples": 642,
+        "percentile_method": "linear",
+        "min": 0.05,
+        "max": 0.35000000000000003,
+        "p50": 0.05,
+        "p95": 0.1474999999999966,
+        "p99": 0.15000000000000002
+      },
+      "source_age_ros_sec": {
+        "samples": 643,
+        "percentile_method": "linear",
+        "min": 0.01,
+        "max": 0.05,
+        "p50": 0.02,
+        "p95": 0.027000000000000003,
+        "p99": 0.029
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.039250183,
+      "tail_silence_wall_sec": 0.05182611,
+      "gap_budget_sec": 0.25,
+      "gap_budget_status": "FAIL",
+      "source_ns_first_postwarmup": 23550000000,
+      "source_ns_last_postwarmup": 64450000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64450000000,
+      "receive_gaps_over_250ms": 3,
+      "source_gaps_over_250ms": 1,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 82003585953735,
+        "next_receive_steady_ns": 82003951461190,
+        "previous_source_ns": 45850000000,
+        "next_source_ns": 46200000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 262790787,
+          "previous_receive_steady_ns": 81983282314165,
+          "next_receive_steady_ns": 81983545104952,
+          "previous_source_ns": 26500000000,
+          "next_source_ns": 26750000000,
+          "source_gap_ns": 250000000
+        },
+        {
+          "receive_gap_ns": 253051961,
+          "previous_receive_steady_ns": 81992335159709,
+          "next_receive_steady_ns": 81992588211670,
+          "previous_source_ns": 35250000000,
+          "next_source_ns": 35400000000,
+          "source_gap_ns": 150000000
+        },
+        {
+          "receive_gap_ns": 365507455,
+          "previous_receive_steady_ns": 82003585953735,
+          "next_receive_steady_ns": 82003951461190,
+          "previous_source_ns": 45850000000,
+          "next_source_ns": 46200000000,
+          "source_gap_ns": 350000000
+        }
+      ]
+    },
+    "/camera/raw/head_stereo_left/image_raw": {
+      "samples": 203,
+      "samples_full_window": 205,
+      "receive_interval_wall_sec": {
+        "samples": 202,
+        "percentile_method": "linear",
+        "min": 0.19981832500000002,
+        "max": 0.521372798,
+        "p50": 0.20542175750000002,
+        "p95": 0.2189012016,
+        "p99": 0.3078070058900003
+      },
+      "source_interval_sec": {
+        "samples": 202,
+        "percentile_method": "linear",
+        "min": 0.2,
+        "max": 0.4,
+        "p50": 0.2,
+        "p95": 0.2,
+        "p99": 0.2
+      },
+      "source_age_ros_sec": {
+        "samples": 203,
+        "percentile_method": "linear",
+        "min": 0.001,
+        "max": 0.01,
+        "p50": 0.004,
+        "p95": 0.006,
+        "p99": 0.007
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.074918236,
+      "tail_silence_wall_sec": 0.131392278,
+      "gap_budget_sec": null,
+      "gap_budget_status": "NOT_EVALUATED",
+      "source_ns_first_postwarmup": 23600000000,
+      "source_ns_last_postwarmup": 64400000000,
+      "source_ns_first_full": 23200000000,
+      "source_ns_last_full": 64400000000,
+      "receive_gaps_over_250ms": 4,
+      "source_gaps_over_250ms": 2,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992268456921,
+        "next_receive_steady_ns": 81992789829719,
+        "previous_source_ns": 35200000000,
+        "next_source_ns": 35600000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 275222927,
+          "previous_receive_steady_ns": 81981225802469,
+          "next_receive_steady_ns": 81981501025396,
+          "previous_source_ns": 24600000000,
+          "next_source_ns": 24800000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 521372798,
+          "previous_receive_steady_ns": 81992268456921,
+          "next_receive_steady_ns": 81992789829719,
+          "previous_source_ns": 35200000000,
+          "next_source_ns": 35600000000,
+          "source_gap_ns": 400000000
+        },
+        {
+          "receive_gap_ns": 308136138,
+          "previous_receive_steady_ns": 81998202187121,
+          "next_receive_steady_ns": 81998510323259,
+          "previous_source_ns": 40800000000,
+          "next_source_ns": 41000000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 411380371,
+          "previous_receive_steady_ns": 82016392998217,
+          "next_receive_steady_ns": 82016804378588,
+          "previous_source_ns": 58400000000,
+          "next_source_ns": 58800000000,
+          "source_gap_ns": 400000000
+        }
+      ]
+    },
+    "/camera/raw/head_stereo_left/camera_info": {
+      "samples": 205,
+      "samples_full_window": 208,
+      "receive_interval_wall_sec": {
+        "samples": 204,
+        "percentile_method": "linear",
+        "min": 0.19989317,
+        "max": 0.309697724,
+        "p50": 0.20542556150000002,
+        "p95": 0.21781404615000002,
+        "p99": 0.26594958928
+      },
+      "source_interval_sec": {
+        "samples": 204,
+        "percentile_method": "linear",
+        "min": 0.2,
+        "max": 0.2,
+        "p50": 0.2,
+        "p95": 0.2,
+        "p99": 0.2
+      },
+      "source_age_ros_sec": {
+        "samples": 205,
+        "percentile_method": "linear",
+        "min": -0.009000000000000001,
+        "max": 0.002,
+        "p50": 0.0,
+        "p95": 0.001,
+        "p99": 0.001
+      },
+      "source_age_negative_future_samples": 1,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.072863596,
+      "tail_silence_wall_sec": 0.138979178,
+      "gap_budget_sec": null,
+      "gap_budget_status": "NOT_EVALUATED",
+      "source_ns_first_postwarmup": 23600000000,
+      "source_ns_last_postwarmup": 64400000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64400000000,
+      "receive_gaps_over_250ms": 4,
+      "source_gaps_over_250ms": 0,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81998198483795,
+        "next_receive_steady_ns": 81998508181519,
+        "previous_source_ns": 40800000000,
+        "next_source_ns": 41000000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 273195216,
+          "previous_receive_steady_ns": 81981223167962,
+          "next_receive_steady_ns": 81981496363178,
+          "previous_source_ns": 24600000000,
+          "next_source_ns": 24800000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 266258941,
+          "previous_receive_steady_ns": 81992264212905,
+          "next_receive_steady_ns": 81992530471846,
+          "previous_source_ns": 35200000000,
+          "next_source_ns": 35400000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 255947217,
+          "previous_receive_steady_ns": 81992530471846,
+          "next_receive_steady_ns": 81992786419063,
+          "previous_source_ns": 35400000000,
+          "next_source_ns": 35600000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 309697724,
+          "previous_receive_steady_ns": 81998198483795,
+          "next_receive_steady_ns": 81998508181519,
+          "previous_source_ns": 40800000000,
+          "next_source_ns": 41000000000,
+          "source_gap_ns": 200000000
+        }
+      ]
+    },
+    "/camera/raw/head_stereo_right/image_raw": {
+      "samples": 204,
+      "samples_full_window": 206,
+      "receive_interval_wall_sec": {
+        "samples": 203,
+        "percentile_method": "linear",
+        "min": 0.19907716900000003,
+        "max": 0.41314756,
+        "p50": 0.20513186100000003,
+        "p95": 0.22357840129999998,
+        "p99": 0.2821292374999999
+      },
+      "source_interval_sec": {
+        "samples": 203,
+        "percentile_method": "linear",
+        "min": 0.2,
+        "max": 0.4,
+        "p50": 0.2,
+        "p95": 0.2,
+        "p99": 0.2
+      },
+      "source_age_ros_sec": {
+        "samples": 204,
+        "percentile_method": "linear",
+        "min": 0.004,
+        "max": 0.015000000000000001,
+        "p50": 0.007,
+        "p95": 0.01,
+        "p99": 0.011000000000000001
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.07879082000000001,
+      "tail_silence_wall_sec": 0.12394635000000001,
+      "gap_budget_sec": null,
+      "gap_budget_status": "NOT_EVALUATED",
+      "source_ns_first_postwarmup": 23600000000,
+      "source_ns_last_postwarmup": 64400000000,
+      "source_ns_first_full": 23200000000,
+      "source_ns_last_full": 64400000000,
+      "receive_gaps_over_250ms": 4,
+      "source_gaps_over_250ms": 1,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 82020279318742,
+        "next_receive_steady_ns": 82020692466302,
+        "previous_source_ns": 62200000000,
+        "next_source_ns": 62600000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 282313770,
+          "previous_receive_steady_ns": 81981227892987,
+          "next_receive_steady_ns": 81981510206757,
+          "previous_source_ns": 24600000000,
+          "next_source_ns": 24800000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 273087145,
+          "previous_receive_steady_ns": 81992271325204,
+          "next_receive_steady_ns": 81992544412349,
+          "previous_source_ns": 35200000000,
+          "next_source_ns": 35400000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 307650646,
+          "previous_receive_steady_ns": 81998205258957,
+          "next_receive_steady_ns": 81998512909603,
+          "previous_source_ns": 40800000000,
+          "next_source_ns": 41000000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 413147560,
+          "previous_receive_steady_ns": 82020279318742,
+          "next_receive_steady_ns": 82020692466302,
+          "previous_source_ns": 62200000000,
+          "next_source_ns": 62600000000,
+          "source_gap_ns": 400000000
+        }
+      ]
+    },
+    "/camera/raw/head_stereo_right/camera_info": {
+      "samples": 204,
+      "samples_full_window": 207,
+      "receive_interval_wall_sec": {
+        "samples": 203,
+        "percentile_method": "linear",
+        "min": 0.199812615,
+        "max": 0.5218203570000001,
+        "p50": 0.20533273400000002,
+        "p95": 0.2171885652,
+        "p99": 0.2747296514399997
+      },
+      "source_interval_sec": {
+        "samples": 203,
+        "percentile_method": "linear",
+        "min": 0.2,
+        "max": 0.4,
+        "p50": 0.2,
+        "p95": 0.2,
+        "p99": 0.2
+      },
+      "source_age_ros_sec": {
+        "samples": 204,
+        "percentile_method": "linear",
+        "min": 0.001,
+        "max": 0.01,
+        "p50": 0.004,
+        "p95": 0.006,
+        "p99": 0.007
+      },
+      "source_age_negative_future_samples": 0,
+      "source_regressions": 0,
+      "duplicate_source_intervals": 0,
+      "initial_silence_wall_sec": 0.07502291,
+      "tail_silence_wall_sec": 0.131192382,
+      "gap_budget_sec": null,
+      "gap_budget_status": "NOT_EVALUATED",
+      "source_ns_first_postwarmup": 23600000000,
+      "source_ns_last_postwarmup": 64400000000,
+      "source_ns_first_full": 23000000000,
+      "source_ns_last_full": 64400000000,
+      "receive_gaps_over_250ms": 3,
+      "source_gaps_over_250ms": 1,
+      "worst_receive_gap_endpoint": {
+        "previous_receive_steady_ns": 81992268586138,
+        "next_receive_steady_ns": 81992790406495,
+        "previous_source_ns": 35200000000,
+        "next_source_ns": 35600000000
+      },
+      "receive_gaps_over_250ms_details": [
+        {
+          "receive_gap_ns": 275261712,
+          "previous_receive_steady_ns": 81981225925616,
+          "next_receive_steady_ns": 81981501187328,
+          "previous_source_ns": 24600000000,
+          "next_source_ns": 24800000000,
+          "source_gap_ns": 200000000
+        },
+        {
+          "receive_gap_ns": 521820357,
+          "previous_receive_steady_ns": 81992268586138,
+          "next_receive_steady_ns": 81992790406495,
+          "previous_source_ns": 35200000000,
+          "next_source_ns": 35600000000,
+          "source_gap_ns": 400000000
+        },
+        {
+          "receive_gap_ns": 308097702,
+          "previous_receive_steady_ns": 81998202327523,
+          "next_receive_steady_ns": 81998510425225,
+          "previous_source_ns": 40800000000,
+          "next_source_ns": 41000000000,
+          "source_gap_ns": 200000000
+        }
+      ]
+    }
+  },
+  "health_streams": {
+    "/perception/camera_health/head_rgbd": {
+      "presence": "PRESENT",
+      "samples_postwarmup": 853,
+      "samples_full_window": 897,
+      "full_state_counts": {
+        "OK": 884,
+        "STALE": 13
+      },
+      "full_reason_counts": {
+        "CAMERA_READY": 884,
+        "CAMERA_STALE": 13
+      },
+      "postwarmup_health": {
+        "valid_samples": 853,
+        "invalid_samples": 0,
+        "state_counts": {
+          "OK": 853
+        },
+        "reason_counts": {
+          "CAMERA_READY": 853
+        },
+        "epochs": [
+          "gazebo_camera:81947948075353:3389775745:g6"
+        ],
+        "capture_age_ros_sec": {
+          "samples": 853,
+          "percentile_method": "linear",
+          "min": 0.023000000000000003,
+          "max": 0.14,
+          "p50": 0.052000000000000005,
+          "p95": 0.078,
+          "p99": 0.082
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 853,
+          "percentile_method": "linear",
+          "min": 0.0,
+          "max": 0.10996551600000001,
+          "p50": 0.0,
+          "p95": 0.0495716422,
+          "p99": 0.05183733192000001
+        },
+        "capture_steady_tail_age_sec": 0.023959340000000003,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency"
+      },
+      "full_capture_age_ros_sec": {
+        "samples": 889,
+        "percentile_method": "linear",
+        "min": 0.001,
+        "max": 0.14,
+        "p50": 0.051000000000000004,
+        "p95": 0.078,
+        "p99": 0.082
+      },
+      "invalid_full_window": {
+        "count": 13,
+        "postwarmup_count": 0,
+        "first_receive_offset_s": 0.0070347330000000005,
+        "last_receive_offset_s": 1.356894,
+        "max_capture_age_ros_sec": 0.051000000000000004
+      }
+    },
+    "/perception/projection_health/head_rgbd": {
+      "presence": "PRESENT",
+      "samples_postwarmup": 2126,
+      "samples_full_window": 2218,
+      "full_state_counts": {
+        "INVALID": 25,
+        "READY": 2193
+      },
+      "full_reason_counts": {
+        "OUTPUT_STALE": 25,
+        "OK": 2193
+      },
+      "postwarmup_health": {
+        "valid_samples": 2126,
+        "invalid_samples": 0,
+        "state_counts": {
+          "READY": 2126
+        },
+        "reason_counts": {
+          "OK": 2126
+        },
+        "epochs": [
+          "3128138-81947960206499:6"
+        ],
+        "capture_age_ros_sec": {
+          "samples": 2126,
+          "percentile_method": "linear",
+          "min": 0.02,
+          "max": 0.1,
+          "p50": 0.054000000000000006,
+          "p95": 0.07675,
+          "p99": 0.082
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 2126,
+          "percentile_method": "linear",
+          "min": 0.0,
+          "max": 0.11970837100000001,
+          "p50": 0.019795994000000004,
+          "p95": 0.04089315025,
+          "p99": 0.05898696425
+        },
+        "capture_steady_tail_age_sec": 0.046036444,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency",
+        "pending_depth": {
+          "samples": 2126,
+          "percentile_method": "linear",
+          "min": 0,
+          "max": 1,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "pending_depth_scope": "Sampled application latest-pending slot only",
+        "dds_queue_occupancy": "NOT_MEASURED"
+      },
+      "full_capture_age_ros_sec": {
+        "samples": 2217,
+        "percentile_method": "linear",
+        "min": 0.001,
+        "max": 0.1,
+        "p50": 0.052000000000000005,
+        "p95": 0.076,
+        "p99": 0.082
+      },
+      "invalid_full_window": {
+        "count": 25,
+        "postwarmup_count": 0,
+        "first_receive_offset_s": 0.147372628,
+        "last_receive_offset_s": 1.385559475,
+        "max_capture_age_ros_sec": 0.051000000000000004
+      }
+    },
+    "/perception/camera_health/torso_rgbd": {
+      "presence": "PRESENT",
+      "samples_postwarmup": 853,
+      "samples_full_window": 894,
+      "full_state_counts": {
+        "OK": 881,
+        "STALE": 13
+      },
+      "full_reason_counts": {
+        "CAMERA_READY": 881,
+        "CAMERA_STALE": 13
+      },
+      "postwarmup_health": {
+        "valid_samples": 853,
+        "invalid_samples": 0,
+        "state_counts": {
+          "OK": 853
+        },
+        "reason_counts": {
+          "CAMERA_READY": 853
+        },
+        "epochs": [
+          "gazebo_camera:81947955969250:1401920722:g6"
+        ],
+        "capture_age_ros_sec": {
+          "samples": 853,
+          "percentile_method": "linear",
+          "min": 0.006,
+          "max": 0.12100000000000001,
+          "p50": 0.038,
+          "p95": 0.058,
+          "p99": 0.065
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 853,
+          "percentile_method": "linear",
+          "min": 0.0,
+          "max": 0.11059806400000001,
+          "p50": 0.0,
+          "p95": 0.0491255154,
+          "p99": 0.050997140960000006
+        },
+        "capture_steady_tail_age_sec": 0.014681487000000002,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency"
+      },
+      "full_capture_age_ros_sec": {
+        "samples": 891,
+        "percentile_method": "linear",
+        "min": 0.001,
+        "max": 0.12100000000000001,
+        "p50": 0.038,
+        "p95": 0.058,
+        "p99": 0.065
+      },
+      "invalid_full_window": {
+        "count": 13,
+        "postwarmup_count": 0,
+        "first_receive_offset_s": 0.158011347,
+        "last_receive_offset_s": 1.3660490470000002,
+        "max_capture_age_ros_sec": 0.051000000000000004
+      }
+    },
+    "/perception/projection_health/torso_rgbd": {
+      "presence": "PRESENT",
+      "samples_postwarmup": 2130,
+      "samples_full_window": 2224,
+      "full_state_counts": {
+        "INVALID": 27,
+        "READY": 2197
+      },
+      "full_reason_counts": {
+        "OUTPUT_STALE": 27,
+        "OK": 2197
+      },
+      "postwarmup_health": {
+        "valid_samples": 2130,
+        "invalid_samples": 0,
+        "state_counts": {
+          "READY": 2130
+        },
+        "reason_counts": {
+          "OK": 2130
+        },
+        "epochs": [
+          "3128140-81947966056779:6"
+        ],
+        "capture_age_ros_sec": {
+          "samples": 2130,
+          "percentile_method": "linear",
+          "min": 0.005,
+          "max": 0.07,
+          "p50": 0.034,
+          "p95": 0.058,
+          "p99": 0.063
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 2130,
+          "percentile_method": "linear",
+          "min": 0.0,
+          "max": 0.09791959,
+          "p50": 0.019517522000000002,
+          "p95": 0.040249094400000004,
+          "p99": 0.041974402810000006
+        },
+        "capture_steady_tail_age_sec": 0.058228963,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency",
+        "pending_depth": {
+          "samples": 2130,
+          "percentile_method": "linear",
+          "min": 0,
+          "max": 1,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0
+        },
+        "pending_depth_scope": "Sampled application latest-pending slot only",
+        "dds_queue_occupancy": "NOT_MEASURED"
+      },
+      "full_capture_age_ros_sec": {
+        "samples": 2222,
+        "percentile_method": "linear",
+        "min": 0.001,
+        "max": 0.07,
+        "p50": 0.034,
+        "p95": 0.058,
+        "p99": 0.06278999999999997
+      },
+      "invalid_full_window": {
+        "count": 27,
+        "postwarmup_count": 0,
+        "first_receive_offset_s": 0.154639628,
+        "last_receive_offset_s": 1.3730511010000002,
+        "max_capture_age_ros_sec": 0.051000000000000004
+      }
+    },
+    "/perception/camera_health/left_wrist_rgbd": {
+      "presence": "MISSING",
+      "samples_postwarmup": 0,
+      "samples_full_window": 0,
+      "full_state_counts": {},
+      "full_reason_counts": {},
+      "postwarmup_health": {
+        "valid_samples": 0,
+        "invalid_samples": 0,
+        "state_counts": {},
+        "reason_counts": {},
+        "epochs": [],
+        "capture_age_ros_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_steady_tail_age_sec": null,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency"
+      }
+    },
+    "/perception/projection_health/left_wrist_rgbd": {
+      "presence": "MISSING",
+      "samples_postwarmup": 0,
+      "samples_full_window": 0,
+      "full_state_counts": {},
+      "full_reason_counts": {},
+      "postwarmup_health": {
+        "valid_samples": 0,
+        "invalid_samples": 0,
+        "state_counts": {},
+        "reason_counts": {},
+        "epochs": [],
+        "capture_age_ros_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_steady_tail_age_sec": null,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency",
+        "pending_depth": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "pending_depth_scope": "Sampled application latest-pending slot only",
+        "dds_queue_occupancy": "NOT_MEASURED"
+      }
+    },
+    "/perception/camera_health/right_wrist_rgbd": {
+      "presence": "MISSING",
+      "samples_postwarmup": 0,
+      "samples_full_window": 0,
+      "full_state_counts": {},
+      "full_reason_counts": {},
+      "postwarmup_health": {
+        "valid_samples": 0,
+        "invalid_samples": 0,
+        "state_counts": {},
+        "reason_counts": {},
+        "epochs": [],
+        "capture_age_ros_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_steady_tail_age_sec": null,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency"
+      }
+    },
+    "/perception/projection_health/right_wrist_rgbd": {
+      "presence": "MISSING",
+      "samples_postwarmup": 0,
+      "samples_full_window": 0,
+      "full_state_counts": {},
+      "full_reason_counts": {},
+      "postwarmup_health": {
+        "valid_samples": 0,
+        "invalid_samples": 0,
+        "state_counts": {},
+        "reason_counts": {},
+        "epochs": [],
+        "capture_age_ros_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_age_negative_future_samples": 0,
+        "capture_age_unavailable_samples": 0,
+        "capture_steady_age_sec": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "capture_steady_tail_age_sec": null,
+        "steady_age_scope": "Time since observer first saw same epoch and capture stamp; not acquisition latency",
+        "pending_depth": {
+          "samples": 0,
+          "percentile_method": "linear"
+        },
+        "pending_depth_scope": "Sampled application latest-pending slot only",
+        "dds_queue_occupancy": "NOT_MEASURED"
+      }
+    }
+  },
+  "clock": {
+    "source_advance_sec": 40.993,
+    "receive_steady_span_sec": 42.629291974000004,
+    "observed_rtf": 0.9616157834618039,
+    "rtf_status": "OBSERVED",
+    "frozen_source_intervals": 0,
+    "source_regressions": 0,
+    "scope": "Source clock advance divided by observer steady receive span; not Gazebo execution timing"
+  },
+  "guard": {
+    "topic": "/transport/execution_guard/status",
+    "samples_full_window": 2224,
+    "samples_postwarmup": 2132,
+    "header_source_ns_unavailable": 2224,
+    "reason_counts_full": {
+      "": 2224
+    },
+    "active_counts_full": {
+      "False": 2224
+    },
+    "healthy_counts_full": {
+      "False": 2224
+    },
+    "context_ids": [
+      ""
+    ],
+    "first_event": {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 22,
+          "nanosec": 933000000
+        },
+        "joint_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "base_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "context_id": "",
+        "active": false,
+        "healthy": false,
+        "reason": "",
+        "maximum_joint_error_rad": 0.0,
+        "base_translation_m": 0.0,
+        "base_rotation_rad": 0.0
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 81978289881279,
+      "receive_wall_ns": 1790225394412562707,
+      "ros_now_ns": 22933000000
+    },
+    "last_event": {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 64,
+          "nanosec": 517000000
+        },
+        "joint_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "base_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "context_id": "",
+        "active": false,
+        "healthy": false,
+        "reason": "",
+        "maximum_joint_error_rad": 0.0,
+        "base_translation_m": 0.0,
+        "base_rotation_rad": 0.0
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82022722730005,
+      "receive_wall_ns": 1790225438845411620,
+      "ros_now_ns": 64517000000
+    },
+    "per_reason_ranges": {
+      "": {
+        "samples": 2224,
+        "first_receive_steady_ns": 81978289881279,
+        "last_receive_steady_ns": 82022722730005,
+        "first_data_stamp_ns": 22933000000,
+        "last_data_stamp_ns": 64517000000,
+        "data_stamp_regressions": 0
+      }
+    }
+  },
+  "native_phase": {
+    "samples_full_window": 885,
+    "reason_counts": {
+      "WAITING_FOR_TASK": 885
+    },
+    "phase_counts": {
+      "0": 885
+    },
+    "first_raw_status": {
+      "authority_reason": "IDLE",
+      "epoch": "ace92871-dfe2-4b15-9403-3023fb7ecb7f",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    "last_raw_status": {
+      "authority_reason": "IDLE",
+      "epoch": "ace92871-dfe2-4b15-9403-3023fb7ecb7f",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    }
+  },
+  "action_evidence": {
+    "parent_submission_events": 0,
+    "feedback_records": 0,
+    "error": "ValueError('STALE_LEDGER_CAPTURE')",
+    "observer_pre_action_receipt_present": true
+  },
+  "sha256": {
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/m5_observer/manifest.json": "4e4a75df59886eba5eb5a5deffe86663653fdac1e3f9e4173ffbe183d912ce91",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/m5_observer/events.jsonl": "1e852913fc44adcaf15d4fee637756c9f950fda07241d2d5d2d7f5ebc13f67e9",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/m5_observer/session_snapshot.json": "0dd02f22aea1d9791746c1c069a620a59cf699e93a4d5db9c4cfe29bb38ad1e6",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/execution_response_scene01_capture/observer_analysis.json": "65d6136bd3977aafe5f8a92e9f0735681d471ecffff63299fba23c33082b7070",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/observer_pre_action.json": "5739d8b032f6f3868e8a80baff804aa33c75e6b265d9ea084a8afff485d0cc3a",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/used_run_first_stage.py": "13af6d905e43c747890a6e34b776792b749ede957737fd72b22e0f2eeb1fc3ae",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/used_verify_first_stage.py": "11d3ec039751a99b76d5dd7edabb75f710463f84f83349aa69e291bb2e5779f5",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/used_observer_topics.json": "8afd2cf3f187d80f388366e8b1eaaa0bee950a5ca27fd16ecdf9240c5d1f8bad",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/analyze_m5_capture.py": "a2b60b66408bd59d2643fd3e5f3f74d22aa31c2612d13ee73267d229b91dc35b"
+  },
+  "events_total": 83249,
+  "depth_worst_gap_raw_bag_association": {
+    "raw_bag_start_steady_ns": 81989751067665,
+    "raw_bag_end_steady_ns": 81995289124833,
+    "scope": "Temporal overlap only, not attribution; clock ros_now is observer latest /clock and its age relative itself is tautologically zero",
+    "streams": {
+      "/camera/raw/torso_rgbd/depth_image": {
+        "previous": {
+          "receive_steady_ns": 81992431111025,
+          "source_ns": 35350000000,
+          "latest_observed_clock_ns": 35356000000,
+          "source_age_ros_ns": 6000000,
+          "last_clock_receive_steady_ns": 81992428286339,
+          "clock_receive_age_steady_ns": 2824686
+        },
+        "next": {
+          "receive_steady_ns": 81992701578884,
+          "source_ns": 35500000000,
+          "latest_observed_clock_ns": 35517000000,
+          "source_age_ros_ns": 17000000,
+          "last_clock_receive_steady_ns": 81992699382564,
+          "clock_receive_age_steady_ns": 2196320
+        },
+        "receive_gap_ns": 270467859,
+        "source_gap_ns": 150000000,
+        "overlaps_raw_bag_process_window": true,
+        "nearby_clock_intervals_count": 133,
+        "nearby_clock_max_receive_gap_ns": 17451281,
+        "nearby_clock_max_source_gap_ns": 15000000,
+        "nearby_clock_worst_endpoints": {
+          "previous_receive_steady_ns": 81992498098572,
+          "next_receive_steady_ns": 81992515549853,
+          "previous_source_ns": 35375000000,
+          "next_source_ns": 35390000000
+        },
+        "nearby_clock_regressions": 0
+      },
+      "/camera/raw/left_wrist_rgbd/depth_image": {
+        "previous": {
+          "receive_steady_ns": 82013543249174,
+          "source_ns": 55600000000,
+          "latest_observed_clock_ns": 55614000000,
+          "source_age_ros_ns": 14000000,
+          "last_clock_receive_steady_ns": 82013542160840,
+          "clock_receive_age_steady_ns": 1088334
+        },
+        "next": {
+          "receive_steady_ns": 82013794082656,
+          "source_ns": 55850000000,
+          "latest_observed_clock_ns": 55858000000,
+          "source_age_ros_ns": 8000000,
+          "last_clock_receive_steady_ns": 82013789587913,
+          "clock_receive_age_steady_ns": 4494743
+        },
+        "receive_gap_ns": 250833482,
+        "source_gap_ns": 250000000,
+        "overlaps_raw_bag_process_window": false,
+        "nearby_clock_intervals_count": 242,
+        "nearby_clock_max_receive_gap_ns": 5724060,
+        "nearby_clock_max_source_gap_ns": 4000000,
+        "nearby_clock_worst_endpoints": {
+          "previous_receive_steady_ns": 82013739858416,
+          "next_receive_steady_ns": 82013745582476,
+          "previous_source_ns": 55814000000,
+          "next_source_ns": 55815000000
+        },
+        "nearby_clock_regressions": 0
+      },
+      "/camera/raw/right_wrist_rgbd/depth_image": {
+        "previous": {
+          "receive_steady_ns": 82003585953735,
+          "source_ns": 45850000000,
+          "latest_observed_clock_ns": 45867000000,
+          "source_age_ros_ns": 17000000,
+          "last_clock_receive_steady_ns": 82003584783228,
+          "clock_receive_age_steady_ns": 1170507
+        },
+        "next": {
+          "receive_steady_ns": 82003951461190,
+          "source_ns": 46200000000,
+          "latest_observed_clock_ns": 46223000000,
+          "source_age_ros_ns": 23000000,
+          "last_clock_receive_steady_ns": 82003950927651,
+          "clock_receive_age_steady_ns": 533539
+        },
+        "receive_gap_ns": 365507455,
+        "source_gap_ns": 350000000,
+        "overlaps_raw_bag_process_window": false,
+        "nearby_clock_intervals_count": 355,
+        "nearby_clock_max_receive_gap_ns": 4753069,
+        "nearby_clock_max_source_gap_ns": 2000000,
+        "nearby_clock_worst_endpoints": {
+          "previous_receive_steady_ns": 82003835508479,
+          "next_receive_steady_ns": 82003840261548,
+          "previous_source_ns": 46108000000,
+          "next_source_ns": 46110000000
+        },
+        "nearby_clock_regressions": 0
+      },
+      "/camera/raw/head_rgbd/depth_image": {
+        "previous": {
+          "receive_steady_ns": 82019782675217,
+          "source_ns": 61700000000,
+          "latest_observed_clock_ns": 61720000000,
+          "source_age_ros_ns": 20000000,
+          "last_clock_receive_steady_ns": 82019779029228,
+          "clock_receive_age_steady_ns": 3645989
+        },
+        "next": {
+          "receive_steady_ns": 82019992717866,
+          "source_ns": 61900000000,
+          "latest_observed_clock_ns": 61929000000,
+          "source_age_ros_ns": 29000000,
+          "last_clock_receive_steady_ns": 82019990041952,
+          "clock_receive_age_steady_ns": 2675914
+        },
+        "receive_gap_ns": 210042649,
+        "source_gap_ns": 200000000,
+        "overlaps_raw_bag_process_window": false,
+        "nearby_clock_intervals_count": 207,
+        "nearby_clock_max_receive_gap_ns": 6688516,
+        "nearby_clock_max_source_gap_ns": 3000000,
+        "nearby_clock_worst_endpoints": {
+          "previous_receive_steady_ns": 82019968634971,
+          "next_receive_steady_ns": 82019975323487,
+          "previous_source_ns": 61908000000,
+          "next_source_ns": 61910000000
+        },
+        "nearby_clock_regressions": 0
+      }
+    }
+  },
+  "topics_present_full_window": 35,
+  "missing_topics_postwarmup": [
+    "/perception/camera_health/left_wrist_rgbd",
+    "/perception/projection_health/left_wrist_rgbd",
+    "/manipulation/camera/left_wrist_rgbd/points",
+    "/perception/camera_health/right_wrist_rgbd",
+    "/perception/projection_health/right_wrist_rgbd",
+    "/manipulation/camera/right_wrist_rgbd/points",
+    "/tf_static"
+  ],
+  "missing_topics_full_window": [
+    "/perception/camera_health/left_wrist_rgbd",
+    "/perception/projection_health/left_wrist_rgbd",
+    "/manipulation/camera/left_wrist_rgbd/points",
+    "/perception/camera_health/right_wrist_rgbd",
+    "/perception/projection_health/right_wrist_rgbd",
+    "/manipulation/camera/right_wrist_rgbd/points"
+  ],
+  "tf_static": {
+    "samples": 0,
+    "samples_full_window": 10,
+    "presence": "MISSING",
+    "interpretation": "MISSING refers to post-warmup metrics only; retained startup samples are present in events.jsonl"
+  }
+}

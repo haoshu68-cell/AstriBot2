@@ -1,0 +1,2319 @@
+{
+  "schema": "astribot.m5.action_guard_audit/1",
+  "reviewed_at_utc": "2026-09-24T05:01:36.955801+00:00",
+  "evidence_layer": "Offline audit of ended simulation JSON and recorded source/receive metadata; not a new runtime validation",
+  "input_root": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02",
+  "input_sha256": {
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/first_stage/result.json": "75ad591a37b165c773a06a55ee137ce0717c9426210a684cccdaca3aded37224",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/result.json": "db1b934b60242edf05cbf584490a76075cc8202fdba6eb248c1e895c0684016d",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/own_lease_journal.json": "09efdf76c5874d5e61ff38024dc32bd89f292b5cd11af2360fab5333be5be82a",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/guard_raw.json": "116af540f675959bfc0823ea812790bdd9216883660d99ab47ee4d489e7854e0",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/executor_status_raw.json": "b0f018fdb825d45017bd6e11179f93cc4079c874bfdd5219046957367ea67395",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/first_stage.frames.jsonl": "c5e9976df79f7a4d5e8d3b41f7967b48e262a44668746ae59acb8b20273bf1eb",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/first_stage.json": "0dc7985a1e9d10b456d182285f795f73b42442ed5abd52b57a239dff3c52495f",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/m5_observer/manifest.json": "fdfe0741e8ebdf533baa635927469a8e50d8962145cf0ff53690daf48f42b2c5",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/used_verify_first_stage.py": "902035e467b605b3f1682cc58d9e9e28b6fff1e2aa3f7ec8551dcb9f15ef824d",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/post_cleanup_identity_audit.json": "60b33d3de2f98e114daab014cc246a03fbf14ee71c1918f902297647970996f1",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_msgs/msg/EnvelopeApplyStatus.msg": "5ee3ef52e9c0b0bcc2cfc2417efce2af3cb3f1f4971ed5c8f75fd3cf56346c86",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_navigation_msgs/local/lib/python3.10/dist-packages/astribot_navigation_msgs/msg/_envelope_apply_status.py": "c80b7f83bcfc0c78dcdd1062a26115f7bb7b207927a56584a2cfe76a59f24ada",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/m5_observer/events.jsonl": "e0ad9db785509a5a2b13cce46fc0ba7cefd08d6b8805c310dd39f4a1e253ad9d"
+  },
+  "operations": {
+    "ros_initialized": false,
+    "ros_commands_executed": false,
+    "gpu_used": false,
+    "video_decoded_or_encoded": false,
+    "runtime_reexecuted": false,
+    "source_or_test_files_modified": false,
+    "only_new_output": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/execution_response_scene02_motion/action_guard_audit.json"
+  },
+  "identity": {
+    "task_id": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+    "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+    "parent_request": "m1_request_b74e064d1eca4804b26193c111424480",
+    "owned_hold_identity": [
+      "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+      "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+      "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold"
+    ]
+  },
+  "verdict": {
+    "first_pregrasp_stage_to_confirmed_hold": "OBSERVED",
+    "full_pick": "NOT_COMPLETED_OR_CLAIMED",
+    "six_controller_child_terminals": "OBSERVED_SUCCESS",
+    "six_navigation_envelope_acks": "NOT_MEASURED",
+    "normal_parent_cancel_and_release": "NOT_PROVEN",
+    "post_action_stopped_handoff": "NOT_PROVEN",
+    "outer_process_teardown": "RECORDED_COMPLETE_NOT_RESOURCE_RELEASE",
+    "overall_first_stage_test_passed": false
+  },
+  "parent_action": {
+    "submission": {
+      "kind": "parent_submission",
+      "wall": 82260.881526054,
+      "ros_s": 42.868,
+      "goal": {
+        "task_id": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+        "request_id": "m1_request_b74e064d1eca4804b26193c111424480",
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "operation": "PICK",
+        "object_id": "transport_box_01",
+        "pre_target": {
+          "header": {
+            "stamp": {
+              "sec": 42,
+              "nanosec": 868000000
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "pose": {
+            "position": {
+              "x": 0.1000445289153885,
+              "y": 0.6999855360451883,
+              "z": 1.0957761735716667
+            },
+            "orientation": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5,
+              "w": 0.5
+            }
+          }
+        },
+        "target": {
+          "header": {
+            "stamp": {
+              "sec": 42,
+              "nanosec": 868000000
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "pose": {
+            "position": {
+              "x": 0.1000445289153885,
+              "y": 0.6999855360451883,
+              "z": 1.0657761735716667
+            },
+            "orientation": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5,
+              "w": 0.5
+            }
+          }
+        },
+        "exit_targets": [
+          {
+            "header": {
+              "stamp": {
+                "sec": 42,
+                "nanosec": 868000000
+              },
+              "frame_id": "astribot_torso_base"
+            },
+            "pose": {
+              "position": {
+                "x": 0.1000445289153885,
+                "y": 0.6999855360451883,
+                "z": 1.0957761735716667
+              },
+              "orientation": {
+                "x": 0.5,
+                "y": 0.5,
+                "z": 0.5,
+                "w": 0.5
+              }
+            }
+          }
+        ],
+        "touch_links": [
+          "astribot_arm_left_link_7",
+          "astribot_gripper_left_base",
+          "astribot_gripper_left_Link_L11",
+          "astribot_gripper_left_Link_L2",
+          "astribot_gripper_left_Link_R11",
+          "astribot_gripper_left_Link_R2"
+        ],
+        "grasp_width_m": 0.06
+      },
+      "goal_uuid": "b05110d71a634437917052ac984e7873"
+    },
+    "acceptance": "Feedback and active owned handle establish acceptance, but a separately timestamped acceptance response is not recorded.",
+    "feedback_count": 762,
+    "feedback_transitions": [
+      {
+        "feedback_index": 0,
+        "wall": 82260.913756386,
+        "ros_s": 42.969,
+        "goal_id": "b05110d71a634437917052ac984e7873",
+        "feedback": {
+          "phase": "1",
+          "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_confirmed": false,
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "stage_id": ""
+        }
+      },
+      {
+        "feedback_index": 1,
+        "wall": 82260.963942869,
+        "ros_s": 43.016000000000005,
+        "goal_id": "b05110d71a634437917052ac984e7873",
+        "feedback": {
+          "phase": "2",
+          "reason": "PLANNING_COMPLETE_OPERATION",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_confirmed": false,
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "stage_id": ""
+        }
+      },
+      {
+        "feedback_index": 577,
+        "wall": 82289.764194006,
+        "ros_s": 70.607,
+        "goal_id": "b05110d71a634437917052ac984e7873",
+        "feedback": {
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_confirmed": false,
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "stage_id": "PREGRASP"
+        }
+      },
+      {
+        "feedback_index": 579,
+        "wall": 82289.863465815,
+        "ros_s": 70.70400000000001,
+        "goal_id": "b05110d71a634437917052ac984e7873",
+        "feedback": {
+          "phase": "2",
+          "reason": "EXECUTING_FIRST_MTC_STAGE",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_confirmed": false,
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "stage_id": "PREGRASP"
+        }
+      },
+      {
+        "feedback_index": 761,
+        "wall": 82298.966628639,
+        "ros_s": 79.02900000000001,
+        "goal_id": "b05110d71a634437917052ac984e7873",
+        "feedback": {
+          "phase": "3",
+          "reason": "FIRST_STAGE_HOLD_CONFIRMED",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_confirmed": true,
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "stage_id": "PREGRASP"
+        }
+      }
+    ],
+    "terminal": null,
+    "terminal_recorded": false,
+    "navigation_goals_sent": 0,
+    "scope": "Submitted operation is PICK, while executed/confirmed stage is PREGRASP; FIRST_STAGE_HOLD_CONFIRMED is feedback with parent handle still unresolved, not a completed PICK result."
+  },
+  "execution_window": {
+    "definition": "Observer-received EXECUTING_FIRST_MTC_STAGE feedback to first observer-received FIRST_STAGE_HOLD_CONFIRMED feedback; not exact physical motion boundaries",
+    "start_ros_s": 70.70400000000001,
+    "end_ros_s": 79.02900000000001,
+    "start_monotonic_ns": 82289863465815,
+    "end_monotonic_ns": 82298966628639,
+    "duration_ros_s": 8.325000000000003,
+    "duration_monotonic_s": 9.103162824,
+    "held_joint_stamp": {
+      "sec": 78,
+      "nanosec": 940000000
+    },
+    "first_stage_evidence": {
+      "max_joint_change_rad": 1.1866187141138724,
+      "endpoint_max_error_rad": 3.2703456984695123e-06,
+      "endpoint_source": "fresh arm_left_controller/controller_state reference/desired after six journal terminal successes",
+      "jtc_state": {
+        "wall": 82298.957879894,
+        "ros_s": 79.02,
+        "message": {
+          "header": {
+            "stamp": {
+              "sec": 79,
+              "nanosec": 20000000
+            },
+            "frame_id": ""
+          },
+          "joint_names": [
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7"
+          ],
+          "reference": {
+            "positions": [
+              0.019721387961532725,
+              -1.319593598798964,
+              -0.6242363874449339,
+              0.5674179577402184,
+              -1.0402894584072935,
+              -0.30625866852013744,
+              -1.1866219844895218
+            ],
+            "velocities": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "accelerations": [
+              0.09667669287687344,
+              0.22741964557880107,
+              0.2553788500505349,
+              0.17418852385933434,
+              0.10220246910555195,
+              0.0796734835086607,
+              0.32475127189152564
+            ],
+            "effort": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 710000000
+            }
+          },
+          "feedback": {
+            "positions": [
+              0.01972180706163338,
+              -1.3195926129380937,
+              -0.624235280345836,
+              0.5674187128508021,
+              -1.0402890153667024,
+              -0.30625832314022633,
+              -1.1866205767136084
+            ],
+            "velocities": [
+              -4.65652867087621e-06,
+              -1.0953893546997351e-05,
+              -1.2300575886692562e-05,
+              -8.389963455766142e-06,
+              -4.9226839600488685e-06,
+              -3.837552545408587e-06,
+              -1.564196776242158e-05
+            ],
+            "accelerations": [],
+            "effort": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 710000000
+            }
+          },
+          "error": {
+            "positions": [
+              -4.1910010065496217e-07,
+              -9.858608702728588e-07,
+              -1.1070990979522577e-06,
+              -7.551105837277916e-07,
+              -4.4304059110267247e-07,
+              -3.4537991111527333e-07,
+              -1.4077759133979129e-06
+            ],
+            "velocities": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "accelerations": [],
+            "effort": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          },
+          "output": {
+            "positions": [
+              0.019721387961532725,
+              -1.319593598798964,
+              -0.6242363874449339,
+              0.5674179577402184,
+              -1.0402894584072935,
+              -0.30625866852013744,
+              -1.1866219844895218
+            ],
+            "velocities": [],
+            "accelerations": [],
+            "effort": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          },
+          "desired": {
+            "positions": [
+              0.019721387961532725,
+              -1.319593598798964,
+              -0.6242363874449339,
+              0.5674179577402184,
+              -1.0402894584072935,
+              -0.30625866852013744,
+              -1.1866219844895218
+            ],
+            "velocities": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "accelerations": [
+              0.09667669287687344,
+              0.22741964557880107,
+              0.2553788500505349,
+              0.17418852385933434,
+              0.10220246910555195,
+              0.0796734835086607,
+              0.32475127189152564
+            ],
+            "effort": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 710000000
+            }
+          },
+          "actual": {
+            "positions": [
+              0.01972180706163338,
+              -1.3195926129380937,
+              -0.624235280345836,
+              0.5674187128508021,
+              -1.0402890153667024,
+              -0.30625832314022633,
+              -1.1866205767136084
+            ],
+            "velocities": [
+              -4.65652867087621e-06,
+              -1.0953893546997351e-05,
+              -1.2300575886692562e-05,
+              -8.389963455766142e-06,
+              -4.9226839600488685e-06,
+              -3.837552545408587e-06,
+              -1.564196776242158e-05
+            ],
+            "accelerations": [],
+            "effort": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 710000000
+            }
+          },
+          "multi_dof_joint_names": [],
+          "multi_dof_reference": {
+            "transforms": [],
+            "velocities": [],
+            "accelerations": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          },
+          "multi_dof_feedback": {
+            "transforms": [],
+            "velocities": [],
+            "accelerations": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          },
+          "multi_dof_error": {
+            "transforms": [],
+            "velocities": [],
+            "accelerations": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          },
+          "multi_dof_output": {
+            "transforms": [],
+            "velocities": [],
+            "accelerations": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          },
+          "multi_dof_desired": {
+            "transforms": [],
+            "velocities": [],
+            "accelerations": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          },
+          "multi_dof_actual": {
+            "transforms": [],
+            "velocities": [],
+            "accelerations": [],
+            "time_from_start": {
+              "sec": 0,
+              "nanosec": 0
+            }
+          }
+        }
+      },
+      "stage": "PREGRASP"
+    }
+  },
+  "child_actions": {
+    "event_counts": {
+      "child_submission": 6,
+      "child_response": 6,
+      "child_terminal": 6
+    },
+    "controllers": {
+      "arm_left_controller": {
+        "child_submission": {
+          "journal_index": 9,
+          "details": {
+            "controller": "arm_left_controller"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_response": {
+          "journal_index": 15,
+          "details": {
+            "controller": "arm_left_controller",
+            "uuid": "660f3aee60c67f16ee8cacb85983f7da"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_terminal": {
+          "journal_index": 21,
+          "details": {
+            "controller": "arm_left_controller",
+            "result_code": 4,
+            "success": true,
+            "uuid": "660f3aee60c67f16ee8cacb85983f7da"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 78155000000,
+          "lease_valid_until_ns": 80155000000
+        }
+      },
+      "arm_right_controller": {
+        "child_submission": {
+          "journal_index": 10,
+          "details": {
+            "controller": "arm_right_controller"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_response": {
+          "journal_index": 16,
+          "details": {
+            "controller": "arm_right_controller",
+            "uuid": "51e0cbea22f909d7e121240ab68bf706"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_terminal": {
+          "journal_index": 22,
+          "details": {
+            "controller": "arm_right_controller",
+            "result_code": 4,
+            "success": true,
+            "uuid": "51e0cbea22f909d7e121240ab68bf706"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 78155000000,
+          "lease_valid_until_ns": 80155000000
+        }
+      },
+      "gripper_left_controller": {
+        "child_submission": {
+          "journal_index": 11,
+          "details": {
+            "controller": "gripper_left_controller"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_response": {
+          "journal_index": 17,
+          "details": {
+            "controller": "gripper_left_controller",
+            "uuid": "3c3ce09e33afb322f9cf008ab0ea091d"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_terminal": {
+          "journal_index": 23,
+          "details": {
+            "controller": "gripper_left_controller",
+            "result_code": 4,
+            "success": true,
+            "uuid": "3c3ce09e33afb322f9cf008ab0ea091d"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 78343000000,
+          "lease_valid_until_ns": 80343000000
+        }
+      },
+      "gripper_right_controller": {
+        "child_submission": {
+          "journal_index": 12,
+          "details": {
+            "controller": "gripper_right_controller"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_response": {
+          "journal_index": 18,
+          "details": {
+            "controller": "gripper_right_controller",
+            "uuid": "54b42024a98583179e62550323e8faf8"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_terminal": {
+          "journal_index": 24,
+          "details": {
+            "controller": "gripper_right_controller",
+            "result_code": 4,
+            "success": true,
+            "uuid": "54b42024a98583179e62550323e8faf8"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 78343000000,
+          "lease_valid_until_ns": 80343000000
+        }
+      },
+      "head_controller": {
+        "child_submission": {
+          "journal_index": 13,
+          "details": {
+            "controller": "head_controller"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_response": {
+          "journal_index": 19,
+          "details": {
+            "controller": "head_controller",
+            "uuid": "1672233542164127ae526331b3083a24"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_terminal": {
+          "journal_index": 25,
+          "details": {
+            "controller": "head_controller",
+            "result_code": 4,
+            "success": true,
+            "uuid": "1672233542164127ae526331b3083a24"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 78343000000,
+          "lease_valid_until_ns": 80343000000
+        }
+      },
+      "torso_controller": {
+        "child_submission": {
+          "journal_index": 14,
+          "details": {
+            "controller": "torso_controller"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_response": {
+          "journal_index": 20,
+          "details": {
+            "controller": "torso_controller",
+            "uuid": "21181806642dbc68f26c467785b2c306"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 70651000000,
+          "lease_valid_until_ns": 72651000000
+        },
+        "child_terminal": {
+          "journal_index": 26,
+          "details": {
+            "controller": "torso_controller",
+            "result_code": 4,
+            "success": true,
+            "uuid": "21181806642dbc68f26c467785b2c306"
+          },
+          "event_ros_ns": null,
+          "event_monotonic_ns": null,
+          "lease_issued_at_ns": 78343000000,
+          "lease_valid_until_ns": 80343000000
+        }
+      }
+    },
+    "uuid_and_success_checks": {
+      "arm_left_controller": true,
+      "arm_right_controller": true,
+      "gripper_left_controller": true,
+      "gripper_right_controller": true,
+      "head_controller": true,
+      "torso_controller": true
+    },
+    "event_time_limitation": "Top-level journal issued_at/valid_until are resource lease times, not child event timestamps. Child submission/response/terminal event ROS and steady times are absent. Their order and UUIDs are usable; do not report the lease issued_at as action latency or ACK time.",
+    "trajectory_evidence": [
+      {
+        "journal_index": 8,
+        "details": {
+          "context": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "files": [
+            {
+              "bytes": 88876,
+              "controller": "",
+              "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/stage_trajectory.cdr",
+              "role": "stage"
+            },
+            {
+              "bytes": 88924,
+              "controller": "arm_left_controller",
+              "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/arm_left_controller_goal.cdr",
+              "role": "controller_goal"
+            },
+            {
+              "bytes": 452,
+              "controller": "arm_right_controller",
+              "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/arm_right_controller_goal.cdr",
+              "role": "controller_goal"
+            },
+            {
+              "bytes": 164,
+              "controller": "gripper_left_controller",
+              "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/gripper_left_controller_goal.cdr",
+              "role": "controller_goal"
+            },
+            {
+              "bytes": 164,
+              "controller": "gripper_right_controller",
+              "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/gripper_right_controller_goal.cdr",
+              "role": "controller_goal"
+            },
+            {
+              "bytes": 204,
+              "controller": "head_controller",
+              "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/head_controller_goal.cdr",
+              "role": "controller_goal"
+            },
+            {
+              "bytes": 292,
+              "controller": "torso_controller",
+              "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/native_scene_cdr/f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1/torso_controller_goal.cdr",
+              "role": "controller_goal"
+            }
+          ],
+          "ros_ns": 70671000000,
+          "stage": "PREGRASP",
+          "steady_ns": 82289829582207
+        },
+        "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "event": "trajectory_evidence",
+        "issued_at": 70651000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "owner": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 145,
+        "request": "m1_request_b74e064d1eca4804b26193c111424480",
+        "requests": [
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_052f100bf824488983b790f752824739"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_10424bb9b5f84441bb8ed14f6037c670"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_1cc2b186a7144ca7842642e1059bca87"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_518a431f69c54ce4b07bacd7dc2aca04"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_905949c27bf941dcae8cc188d0d4c571"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_a82cc87f04f845f5baa1653b36bd4288"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c66e4ee4c9104942af4df9561a0b2d1e"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c98b6b706e604f5e918c654fb5848582"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_cfcfe04f6850482b8d9c615ea5aeb965"
+          ],
+          [
+            "m1_task_2f21dcb7780946c182face1bf71ba1f8",
+            "m1_request_0e7899a4e19c4386ac217e48e3e5a61b"
+          ],
+          [
+            "m1_task_59fda05391c54fdc9c25d09e55db0c0e",
+            "m1_request_2f1c3f134ee14094ac12e600963a2bae"
+          ],
+          [
+            "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+            "m1_request_b74e064d1eca4804b26193c111424480"
+          ],
+          [
+            "m1_task_cc06a8777c51476f87d989d3c3a378ac",
+            "m1_request_58637df501d947c5a980d1bcc47ee99e"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 72651000000
+      }
+    ],
+    "navigation_revocation_before_arm": {
+      "journal_indices": [
+        1,
+        29
+      ],
+      "first_child_submission_index": 9,
+      "first_revocation_details": {
+        "epoch": 82215960556207
+      },
+      "scope": "Resource journal revocation readback ordering, not six EnvelopeApplyStatus acknowledgments."
+    }
+  },
+  "guard": {
+    "topic": "/transport/execution_guard/status",
+    "message_type": "astribot_transport_msgs/msg/ExecutionGuardStatus",
+    "raw_message_fields": [
+      "stamp",
+      "joint_stamp",
+      "base_stamp",
+      "context_id",
+      "active",
+      "healthy",
+      "reason",
+      "maximum_joint_error_rad",
+      "base_translation_m",
+      "base_rotation_rad"
+    ],
+    "top_level_source_ns_semantics": "null because message has no header; data.stamp is guard publication ROS time, joint_stamp/base_stamp are source observation times",
+    "total_samples": 3210,
+    "context_samples": 557,
+    "context_active_samples": 459,
+    "context_active_reason_counts": {
+      "WAITING_FOR_EXECUTION_EVIDENCE": 2,
+      "EXECUTION_WITHIN_BOUNDS": 457
+    },
+    "context_active_unhealthy_samples": 2,
+    "transitions": [
+      {
+        "guard_raw_index": 2653,
+        "source_ns": null,
+        "data": {
+          "stamp": {
+            "sec": 70,
+            "nanosec": 606000000
+          },
+          "joint_stamp": {
+            "sec": 0,
+            "nanosec": 0
+          },
+          "base_stamp": {
+            "sec": 0,
+            "nanosec": 0
+          },
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "active": true,
+          "healthy": false,
+          "reason": "WAITING_FOR_EXECUTION_EVIDENCE",
+          "maximum_joint_error_rad": 0.0,
+          "base_translation_m": 0.0,
+          "base_rotation_rad": 0.0
+        },
+        "kind": "status",
+        "topic": "/transport/execution_guard/status",
+        "receive_monotonic_ns": 82289762578081,
+        "receive_wall_ns": 1790225705885259436,
+        "ros_now_ns": 70606000000
+      },
+      {
+        "guard_raw_index": 2655,
+        "source_ns": null,
+        "data": {
+          "stamp": {
+            "sec": 70,
+            "nanosec": 636000000
+          },
+          "joint_stamp": {
+            "sec": 70,
+            "nanosec": 630000000
+          },
+          "base_stamp": {
+            "sec": 70,
+            "nanosec": 620000000
+          },
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "active": true,
+          "healthy": true,
+          "reason": "EXECUTION_WITHIN_BOUNDS",
+          "maximum_joint_error_rad": 1.8866463946665135e-11,
+          "base_translation_m": 0.0,
+          "base_rotation_rad": 0.0
+        },
+        "kind": "status",
+        "topic": "/transport/execution_guard/status",
+        "receive_monotonic_ns": 82289792804544,
+        "receive_wall_ns": 1790225705915485877,
+        "ros_now_ns": 70634000000
+      },
+      {
+        "guard_raw_index": 3112,
+        "source_ns": null,
+        "data": {
+          "stamp": {
+            "sec": 78,
+            "nanosec": 976000000
+          },
+          "joint_stamp": {
+            "sec": 78,
+            "nanosec": 950000000
+          },
+          "base_stamp": {
+            "sec": 78,
+            "nanosec": 960000000
+          },
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "active": false,
+          "healthy": false,
+          "reason": "EXECUTION_WITHIN_BOUNDS",
+          "maximum_joint_error_rad": 2.943311010250582e-06,
+          "base_translation_m": 5.616120011008664e-05,
+          "base_rotation_rad": 0.0001825577279513594
+        },
+        "kind": "status",
+        "topic": "/transport/execution_guard/status",
+        "receive_monotonic_ns": 82298913337903,
+        "receive_wall_ns": 1790225715036019283,
+        "ros_now_ns": 78976000000
+      }
+    ],
+    "active_sampled_maxima": {
+      "maximum_joint_error_rad": {
+        "source_ns": null,
+        "data": {
+          "stamp": {
+            "sec": 72,
+            "nanosec": 981000000
+          },
+          "joint_stamp": {
+            "sec": 72,
+            "nanosec": 980000000
+          },
+          "base_stamp": {
+            "sec": 72,
+            "nanosec": 980000000
+          },
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "active": true,
+          "healthy": true,
+          "reason": "EXECUTION_WITHIN_BOUNDS",
+          "maximum_joint_error_rad": 0.032049613341732286,
+          "base_translation_m": 1.1840983079960082e-06,
+          "base_rotation_rad": 2.014910309777985e-06
+        },
+        "kind": "status",
+        "topic": "/transport/execution_guard/status",
+        "receive_monotonic_ns": 82292254200691,
+        "receive_wall_ns": 1790225708376882111,
+        "ros_now_ns": 72979000000
+      },
+      "base_translation_m": {
+        "source_ns": null,
+        "data": {
+          "stamp": {
+            "sec": 77,
+            "nanosec": 309000000
+          },
+          "joint_stamp": {
+            "sec": 77,
+            "nanosec": 290000000
+          },
+          "base_stamp": {
+            "sec": 77,
+            "nanosec": 300000000
+          },
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "active": true,
+          "healthy": true,
+          "reason": "EXECUTION_WITHIN_BOUNDS",
+          "maximum_joint_error_rad": 0.016422270206115863,
+          "base_translation_m": 5.616120011008664e-05,
+          "base_rotation_rad": 0.0001825577279513594
+        },
+        "kind": "status",
+        "topic": "/transport/execution_guard/status",
+        "receive_monotonic_ns": 82297072739646,
+        "receive_wall_ns": 1790225713195421149,
+        "ros_now_ns": 77309000000
+      },
+      "base_rotation_rad": {
+        "source_ns": null,
+        "data": {
+          "stamp": {
+            "sec": 77,
+            "nanosec": 309000000
+          },
+          "joint_stamp": {
+            "sec": 77,
+            "nanosec": 290000000
+          },
+          "base_stamp": {
+            "sec": 77,
+            "nanosec": 300000000
+          },
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "active": true,
+          "healthy": true,
+          "reason": "EXECUTION_WITHIN_BOUNDS",
+          "maximum_joint_error_rad": 0.016422270206115863,
+          "base_translation_m": 5.616120011008664e-05,
+          "base_rotation_rad": 0.0001825577279513594
+        },
+        "kind": "status",
+        "topic": "/transport/execution_guard/status",
+        "receive_monotonic_ns": 82297072739646,
+        "receive_wall_ns": 1790225713195421149,
+        "ros_now_ns": 77309000000
+      }
+    },
+    "execution_receive_window": {
+      "samples": 456,
+      "active_samples": 453,
+      "active_unhealthy_samples": 0,
+      "inactive_samples": 3
+    },
+    "interpretation": "Two active/unhealthy WAITING_FOR_EXECUTION_EVIDENCE samples precede EXECUTING feedback; no unhealthy active guard sample observed inside that feedback window. After guard deactivation healthy=false while reason retains EXECUTION_WITHIN_BOUNDS; do not classify inactive=false health as a new execution fault. Maxima are sampled published guard metrics, not continuous hard bounds.",
+    "raw_extraction_matches_original_events": true
+  },
+  "envelope_ack_audit": {
+    "topic": "/navigation/envelope_applied",
+    "message_type": "astribot_navigation_msgs/msg/EnvelopeApplyStatus",
+    "schema_fields": [
+      {
+        "type": "std_msgs/Header",
+        "name": "header"
+      },
+      {
+        "type": "string",
+        "name": "coordinator_session_id"
+      },
+      {
+        "type": "string",
+        "name": "consumer_id"
+      },
+      {
+        "type": "uint64",
+        "name": "envelope_epoch"
+      },
+      {
+        "type": "string",
+        "name": "installed_geometry_hash"
+      },
+      {
+        "type": "bool",
+        "name": "applied"
+      },
+      {
+        "type": "string",
+        "name": "reason"
+      }
+    ],
+    "mode_field_present": false,
+    "schema_provenance": "Current source and installed generated Python schema read offline, both lack mode; historical runtime AttributeError independently demonstrates absence in the message used for this run. Schema files are not an asserted frozen historical endpoint introspection.",
+    "expected_consumers": [
+      "controller",
+      "global_costmap",
+      "local_costmap",
+      "planner",
+      "policy",
+      "protection"
+    ],
+    "first_stage_recorded_acks": [],
+    "observer_topic_subscribed": false,
+    "observer_ack_message_count": 0,
+    "per_consumer": [
+      {
+        "consumer_id": "controller",
+        "ack_record": null,
+        "source_stamp_ns": null,
+        "receive_monotonic_ns": null,
+        "verdict": "NOT_RECORDED"
+      },
+      {
+        "consumer_id": "global_costmap",
+        "ack_record": null,
+        "source_stamp_ns": null,
+        "receive_monotonic_ns": null,
+        "verdict": "NOT_RECORDED"
+      },
+      {
+        "consumer_id": "local_costmap",
+        "ack_record": null,
+        "source_stamp_ns": null,
+        "receive_monotonic_ns": null,
+        "verdict": "NOT_RECORDED"
+      },
+      {
+        "consumer_id": "planner",
+        "ack_record": null,
+        "source_stamp_ns": null,
+        "receive_monotonic_ns": null,
+        "verdict": "NOT_RECORDED"
+      },
+      {
+        "consumer_id": "policy",
+        "ack_record": null,
+        "source_stamp_ns": null,
+        "receive_monotonic_ns": null,
+        "verdict": "NOT_RECORDED"
+      },
+      {
+        "consumer_id": "protection",
+        "ack_record": null,
+        "source_stamp_ns": null,
+        "receive_monotonic_ns": null,
+        "verdict": "NOT_RECORDED"
+      }
+    ],
+    "recorded_envelopes": [
+      {
+        "wall": 82298.981653454,
+        "ros_s": 79.04400000000001,
+        "stamp": 79.044,
+        "until": 79.141901822,
+        "session": "71252eb6-ad6b-4c41-b36a-0484277b3005",
+        "epoch": 82215960556208,
+        "request": "mass_fixed_d964f0444534479b9707edbea7b6b4ff",
+        "hash": "742c6da07410e2a3315388a22acd3805ba611268edc23fe153f194973527f9ae",
+        "mode": 1,
+        "mass": 0.0,
+        "allowed": false,
+        "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold"
+      },
+      {
+        "wall": 82298.982943489,
+        "ros_s": 79.045,
+        "stamp": 79.045,
+        "until": 79.141901822,
+        "session": "71252eb6-ad6b-4c41-b36a-0484277b3005",
+        "epoch": 82215960556208,
+        "request": "mass_fixed_d964f0444534479b9707edbea7b6b4ff",
+        "hash": "742c6da07410e2a3315388a22acd3805ba611268edc23fe153f194973527f9ae",
+        "mode": 1,
+        "mass": 0.0,
+        "allowed": false,
+        "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy",
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold"
+      }
+    ],
+    "interpretation": "Recorded envelope was navigation_allowed=false and WAITING_FOR six consumers then five (protection no longer in pending reason); this coordinator reason is not a raw six-ACK proof. Callback builds dict before append and fails on msg.mode, so zero saved ACKs means recording failed, not that no ACK was published.",
+    "invalid_callback_source": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/used_verify_first_stage.py",
+      "line": 297,
+      "expression": "mode=msg.mode"
+    },
+    "first_stage_error": "AttributeError(\"'EnvelopeApplyStatus' object has no attribute 'mode'\")"
+  },
+  "cleanup_and_release": {
+    "probe_cleanup_complete": false,
+    "probe_cleanup_errors": [
+      "stop:AttributeError(\"'EnvelopeApplyStatus' object has no attribute 'mode'\")"
+    ],
+    "resource_disposition": "STOP_UNPROVEN_HOLD_NOT_CANCELLED_OWNING_SIMULATION_TEARDOWN_REQUIRED",
+    "hold_handle_unresolved": true,
+    "parent_terminal_present": false,
+    "cleanup_stop_present": false,
+    "unreleased_hold_terminal_present": false,
+    "hold_released_events": [],
+    "cancel_events": [],
+    "last_renew_events": [
+      {
+        "wall": 82298.630882684,
+        "kind": "response",
+        "accepted": true,
+        "reason": "RENEWED"
+      },
+      {
+        "wall": 82298.830824552,
+        "kind": "request",
+        "sequence": 190,
+        "lease": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1"
+      },
+      {
+        "wall": 82298.831537076,
+        "kind": "response",
+        "accepted": true,
+        "reason": "RENEWED"
+      }
+    ],
+    "journal_post_hold": [
+      {
+        "journal_index": 27,
+        "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "event": "hold_confirmed",
+        "issued_at": 78902000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "owner": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+        "phase": 3,
+        "reason": "HOLDING",
+        "renewal_sequence": 190,
+        "request": "m1_request_b74e064d1eca4804b26193c111424480",
+        "requests": [
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_052f100bf824488983b790f752824739"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_10424bb9b5f84441bb8ed14f6037c670"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_1cc2b186a7144ca7842642e1059bca87"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_518a431f69c54ce4b07bacd7dc2aca04"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_905949c27bf941dcae8cc188d0d4c571"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_a82cc87f04f845f5baa1653b36bd4288"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c66e4ee4c9104942af4df9561a0b2d1e"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c98b6b706e604f5e918c654fb5848582"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_cfcfe04f6850482b8d9c615ea5aeb965"
+          ],
+          [
+            "m1_task_2f21dcb7780946c182face1bf71ba1f8",
+            "m1_request_0e7899a4e19c4386ac217e48e3e5a61b"
+          ],
+          [
+            "m1_task_59fda05391c54fdc9c25d09e55db0c0e",
+            "m1_request_2f1c3f134ee14094ac12e600963a2bae"
+          ],
+          [
+            "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+            "m1_request_b74e064d1eca4804b26193c111424480"
+          ],
+          [
+            "m1_task_cc06a8777c51476f87d989d3c3a378ac",
+            "m1_request_58637df501d947c5a980d1bcc47ee99e"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 80902000000
+      },
+      {
+        "journal_index": 28,
+        "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "event": "quarantined",
+        "issued_at": 78902000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "owner": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+        "phase": 5,
+        "reason": "RESOURCE_LEASE_EXPIRED",
+        "renewal_sequence": 190,
+        "request": "m1_request_b74e064d1eca4804b26193c111424480",
+        "requests": [
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_052f100bf824488983b790f752824739"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_10424bb9b5f84441bb8ed14f6037c670"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_1cc2b186a7144ca7842642e1059bca87"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_518a431f69c54ce4b07bacd7dc2aca04"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_905949c27bf941dcae8cc188d0d4c571"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_a82cc87f04f845f5baa1653b36bd4288"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c66e4ee4c9104942af4df9561a0b2d1e"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c98b6b706e604f5e918c654fb5848582"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_cfcfe04f6850482b8d9c615ea5aeb965"
+          ],
+          [
+            "m1_task_2f21dcb7780946c182face1bf71ba1f8",
+            "m1_request_0e7899a4e19c4386ac217e48e3e5a61b"
+          ],
+          [
+            "m1_task_59fda05391c54fdc9c25d09e55db0c0e",
+            "m1_request_2f1c3f134ee14094ac12e600963a2bae"
+          ],
+          [
+            "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+            "m1_request_b74e064d1eca4804b26193c111424480"
+          ],
+          [
+            "m1_task_cc06a8777c51476f87d989d3c3a378ac",
+            "m1_request_58637df501d947c5a980d1bcc47ee99e"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 80902000000
+      },
+      {
+        "journal_index": 29,
+        "details": {
+          "epoch": 82215960556208
+        },
+        "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "event": "navigation_revoked",
+        "issued_at": 78902000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "owner": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+        "phase": 5,
+        "reason": "RESOURCE_LEASE_EXPIRED",
+        "renewal_sequence": 190,
+        "request": "m1_request_b74e064d1eca4804b26193c111424480",
+        "requests": [
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_052f100bf824488983b790f752824739"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_10424bb9b5f84441bb8ed14f6037c670"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_1cc2b186a7144ca7842642e1059bca87"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_518a431f69c54ce4b07bacd7dc2aca04"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_905949c27bf941dcae8cc188d0d4c571"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_a82cc87f04f845f5baa1653b36bd4288"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c66e4ee4c9104942af4df9561a0b2d1e"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_c98b6b706e604f5e918c654fb5848582"
+          ],
+          [
+            "I0_2_mass_stationary",
+            "mass_hold_cfcfe04f6850482b8d9c615ea5aeb965"
+          ],
+          [
+            "m1_task_2f21dcb7780946c182face1bf71ba1f8",
+            "m1_request_0e7899a4e19c4386ac217e48e3e5a61b"
+          ],
+          [
+            "m1_task_59fda05391c54fdc9c25d09e55db0c0e",
+            "m1_request_2f1c3f134ee14094ac12e600963a2bae"
+          ],
+          [
+            "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+            "m1_request_b74e064d1eca4804b26193c111424480"
+          ],
+          [
+            "m1_task_cc06a8777c51476f87d989d3c3a378ac",
+            "m1_request_58637df501d947c5a980d1bcc47ee99e"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 80902000000
+      }
+    ],
+    "quarantine_event_time": "NOT_RECORDED; lease valid_until=80.902s is an expiry bound, not the journal event observation time.",
+    "last_executor_status_for_lease": {
+      "source_ns": null,
+      "data": {
+        "data": "{\"authority_reason\":\"HOLDING\",\"epoch\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c\",\"hold_confirmed\":true,\"hold_id\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold\",\"hold_reason\":\"HOLD_CONFIRMED\",\"lease_id\":\"f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1\",\"phase\":\"3\",\"reason\":\"FIRST_STAGE_HOLD_CONFIRMED\"}"
+      },
+      "kind": "status",
+      "topic": "/transport/hold_executor/status",
+      "receive_monotonic_ns": 82300814119112,
+      "receive_wall_ns": 1790225716936800529,
+      "ros_now_ns": 80685000000
+    },
+    "last_guard_for_context": {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 80,
+          "nanosec": 726000000
+        },
+        "joint_stamp": {
+          "sec": 78,
+          "nanosec": 950000000
+        },
+        "base_stamp": {
+          "sec": 78,
+          "nanosec": 960000000
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": false,
+        "healthy": false,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "maximum_joint_error_rad": 2.943311010250582e-06,
+        "base_translation_m": 5.616120011008664e-05,
+        "base_rotation_rad": 0.0001825577279513594
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82300852388513,
+      "receive_wall_ns": 1790225716975069860,
+      "ros_now_ns": 80724000000
+    },
+    "outer_run_cleanup_complete": true,
+    "outer_identity_audit_entries": 25,
+    "outer_same_process_alive_count": 0,
+    "interpretation": "Normal release is not proved. stop() raised the same ACK AttributeError during cleanup, resource disposition explicitly leaves Hold uncancelled, parent terminal and stop proof are absent. Later journal records RESOURCE_LEASE_EXPIRED quarantine and navigation revocation. Outer process teardown and process disappearance do not replace stop/cancel/resource-release protocol evidence."
+  },
+  "frame_time_alignment": {
+    "basis": "Same-host monotonic callback receive timestamps; action/guard ROS stamps remain distinct. No video decoding in this audit.",
+    "sidecar_rows": 383,
+    "summary_frames": 383,
+    "recorded_owner_decode_verification": {
+      "decoded_frames": 383,
+      "sidecar_rows": 383,
+      "metadata_frames": 383,
+      "passed": true
+    },
+    "owner_decode_verification_repeated": false,
+    "key_events": [
+      {
+        "event": "parent_submission",
+        "event_ros_s": 42.868,
+        "event_observer_monotonic_ns": 82260881526054,
+        "neighboring_encoded_frame_calls": [
+          {
+            "relative_receive_ms": -206.501214,
+            "frame_index": 182,
+            "overview": {
+              "receive_monotonic_ns": 82260675024840,
+              "receive_wall_ns": 1790225676797706302,
+              "observed_clock": {
+                "source_ns": 42739000000,
+                "receive_monotonic_ns": 82260673973936,
+                "receive_wall_ns": 1790225676796655473
+              },
+              "source_ns": 42700000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82260659084817,
+              "receive_wall_ns": 1790225676781766466,
+              "observed_clock": {
+                "source_ns": 42723000000,
+                "receive_monotonic_ns": 82260657813133,
+                "receive_wall_ns": 1790225676780494815
+              },
+              "source_ns": 42700000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82260662207499,
+              "receive_wall_ns": 1790225676784889063,
+              "observed_clock": {
+                "source_ns": 42727000000,
+                "receive_monotonic_ns": 82260661277255,
+                "receive_wall_ns": 1790225676783958787
+              },
+              "receive_seq": 445,
+              "raw_status": {
+                "authority_reason": "IDLE",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "",
+                "phase": "0",
+                "reason": "WAITING_FOR_TASK"
+              }
+            },
+            "encode_started_monotonic_ns": 82260678741534,
+            "encode_finished_monotonic_ns": 82260681348444
+          },
+          {
+            "relative_receive_ms": 355.529912,
+            "frame_index": 183,
+            "overview": {
+              "receive_monotonic_ns": 82261237055966,
+              "receive_wall_ns": 1790225677359737620,
+              "observed_clock": {
+                "source_ns": 43252000000,
+                "receive_monotonic_ns": 82261235715427,
+                "receive_wall_ns": 1790225677358397078
+              },
+              "source_ns": 43200000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82261220292710,
+              "receive_wall_ns": 1790225677342974759,
+              "observed_clock": {
+                "source_ns": 43234000000,
+                "receive_monotonic_ns": 82261217164118,
+                "receive_wall_ns": 1790225677339845684
+              },
+              "source_ns": 43200000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82261213014749,
+              "receive_wall_ns": 1790225677335696202,
+              "observed_clock": {
+                "source_ns": 43229000000,
+                "receive_monotonic_ns": 82261212093393,
+                "receive_wall_ns": 1790225677334774935
+              },
+              "receive_seq": 456,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "PLANNING_COMPLETE_OPERATION"
+              }
+            },
+            "encode_started_monotonic_ns": 82261240813009,
+            "encode_finished_monotonic_ns": 82261243739480
+          }
+        ]
+      },
+      {
+        "event": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+        "event_ros_s": 42.969,
+        "event_observer_monotonic_ns": 82260913756386,
+        "neighboring_encoded_frame_calls": [
+          {
+            "relative_receive_ms": -238.731546,
+            "frame_index": 182,
+            "overview": {
+              "receive_monotonic_ns": 82260675024840,
+              "receive_wall_ns": 1790225676797706302,
+              "observed_clock": {
+                "source_ns": 42739000000,
+                "receive_monotonic_ns": 82260673973936,
+                "receive_wall_ns": 1790225676796655473
+              },
+              "source_ns": 42700000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82260659084817,
+              "receive_wall_ns": 1790225676781766466,
+              "observed_clock": {
+                "source_ns": 42723000000,
+                "receive_monotonic_ns": 82260657813133,
+                "receive_wall_ns": 1790225676780494815
+              },
+              "source_ns": 42700000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82260662207499,
+              "receive_wall_ns": 1790225676784889063,
+              "observed_clock": {
+                "source_ns": 42727000000,
+                "receive_monotonic_ns": 82260661277255,
+                "receive_wall_ns": 1790225676783958787
+              },
+              "receive_seq": 445,
+              "raw_status": {
+                "authority_reason": "IDLE",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "",
+                "phase": "0",
+                "reason": "WAITING_FOR_TASK"
+              }
+            },
+            "encode_started_monotonic_ns": 82260678741534,
+            "encode_finished_monotonic_ns": 82260681348444
+          },
+          {
+            "relative_receive_ms": 323.29958,
+            "frame_index": 183,
+            "overview": {
+              "receive_monotonic_ns": 82261237055966,
+              "receive_wall_ns": 1790225677359737620,
+              "observed_clock": {
+                "source_ns": 43252000000,
+                "receive_monotonic_ns": 82261235715427,
+                "receive_wall_ns": 1790225677358397078
+              },
+              "source_ns": 43200000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82261220292710,
+              "receive_wall_ns": 1790225677342974759,
+              "observed_clock": {
+                "source_ns": 43234000000,
+                "receive_monotonic_ns": 82261217164118,
+                "receive_wall_ns": 1790225677339845684
+              },
+              "source_ns": 43200000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82261213014749,
+              "receive_wall_ns": 1790225677335696202,
+              "observed_clock": {
+                "source_ns": 43229000000,
+                "receive_monotonic_ns": 82261212093393,
+                "receive_wall_ns": 1790225677334774935
+              },
+              "receive_seq": 456,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "PLANNING_COMPLETE_OPERATION"
+              }
+            },
+            "encode_started_monotonic_ns": 82261240813009,
+            "encode_finished_monotonic_ns": 82261243739480
+          }
+        ]
+      },
+      {
+        "event": "PLANNING_COMPLETE_OPERATION",
+        "event_ros_s": 43.016000000000005,
+        "event_observer_monotonic_ns": 82260963942869,
+        "neighboring_encoded_frame_calls": [
+          {
+            "relative_receive_ms": -288.918029,
+            "frame_index": 182,
+            "overview": {
+              "receive_monotonic_ns": 82260675024840,
+              "receive_wall_ns": 1790225676797706302,
+              "observed_clock": {
+                "source_ns": 42739000000,
+                "receive_monotonic_ns": 82260673973936,
+                "receive_wall_ns": 1790225676796655473
+              },
+              "source_ns": 42700000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82260659084817,
+              "receive_wall_ns": 1790225676781766466,
+              "observed_clock": {
+                "source_ns": 42723000000,
+                "receive_monotonic_ns": 82260657813133,
+                "receive_wall_ns": 1790225676780494815
+              },
+              "source_ns": 42700000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82260662207499,
+              "receive_wall_ns": 1790225676784889063,
+              "observed_clock": {
+                "source_ns": 42727000000,
+                "receive_monotonic_ns": 82260661277255,
+                "receive_wall_ns": 1790225676783958787
+              },
+              "receive_seq": 445,
+              "raw_status": {
+                "authority_reason": "IDLE",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "",
+                "phase": "0",
+                "reason": "WAITING_FOR_TASK"
+              }
+            },
+            "encode_started_monotonic_ns": 82260678741534,
+            "encode_finished_monotonic_ns": 82260681348444
+          },
+          {
+            "relative_receive_ms": 273.113097,
+            "frame_index": 183,
+            "overview": {
+              "receive_monotonic_ns": 82261237055966,
+              "receive_wall_ns": 1790225677359737620,
+              "observed_clock": {
+                "source_ns": 43252000000,
+                "receive_monotonic_ns": 82261235715427,
+                "receive_wall_ns": 1790225677358397078
+              },
+              "source_ns": 43200000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82261220292710,
+              "receive_wall_ns": 1790225677342974759,
+              "observed_clock": {
+                "source_ns": 43234000000,
+                "receive_monotonic_ns": 82261217164118,
+                "receive_wall_ns": 1790225677339845684
+              },
+              "source_ns": 43200000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82261213014749,
+              "receive_wall_ns": 1790225677335696202,
+              "observed_clock": {
+                "source_ns": 43229000000,
+                "receive_monotonic_ns": 82261212093393,
+                "receive_wall_ns": 1790225677334774935
+              },
+              "receive_seq": 456,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "PLANNING_COMPLETE_OPERATION"
+              }
+            },
+            "encode_started_monotonic_ns": 82261240813009,
+            "encode_finished_monotonic_ns": 82261243739480
+          }
+        ]
+      },
+      {
+        "event": "WAITING_FOR_EXECUTION_GUARD",
+        "event_ros_s": 70.607,
+        "event_observer_monotonic_ns": 82289764194006,
+        "neighboring_encoded_frame_calls": [
+          {
+            "relative_receive_ms": -66.403402,
+            "frame_index": 334,
+            "overview": {
+              "receive_monotonic_ns": 82289697790604,
+              "receive_wall_ns": 1790225705820472189,
+              "observed_clock": {
+                "source_ns": 70545000000,
+                "receive_monotonic_ns": 82289696596299,
+                "receive_wall_ns": 1790225705819277774
+              },
+              "source_ns": 70500000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82289681406579,
+              "receive_wall_ns": 1790225705804088225,
+              "observed_clock": {
+                "source_ns": 70528000000,
+                "receive_monotonic_ns": 82289680105559,
+                "receive_wall_ns": 1790225705802787832
+              },
+              "source_ns": 70500000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82289663826633,
+              "receive_wall_ns": 1790225705786508049,
+              "observed_clock": {
+                "source_ns": 70512000000,
+                "receive_monotonic_ns": 82289663663028,
+                "receive_wall_ns": 1790225705786344477
+              },
+              "receive_seq": 1024,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "PLANNING_COMPLETE_OPERATION"
+              }
+            },
+            "encode_started_monotonic_ns": 82289703572046,
+            "encode_finished_monotonic_ns": 82289706776363
+          },
+          {
+            "relative_receive_ms": 42.486793,
+            "frame_index": 335,
+            "overview": {
+              "receive_monotonic_ns": 82289806680799,
+              "receive_wall_ns": 1790225705929362402,
+              "observed_clock": {
+                "source_ns": 70649000000,
+                "receive_monotonic_ns": 82289805435540,
+                "receive_wall_ns": 1790225705928117160
+              },
+              "source_ns": 70600000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82289790168745,
+              "receive_wall_ns": 1790225705912850288,
+              "observed_clock": {
+                "source_ns": 70632000000,
+                "receive_monotonic_ns": 82289789189519,
+                "receive_wall_ns": 1790225705911871303
+              },
+              "source_ns": 70600000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82289763806177,
+              "receive_wall_ns": 1790225705886487722,
+              "observed_clock": {
+                "source_ns": 70607000000,
+                "receive_monotonic_ns": 82289762747833,
+                "receive_wall_ns": 1790225705885429633
+              },
+              "receive_seq": 1026,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "WAITING_FOR_EXECUTION_GUARD"
+              }
+            },
+            "encode_started_monotonic_ns": 82289812472701,
+            "encode_finished_monotonic_ns": 82289816268205
+          }
+        ]
+      },
+      {
+        "event": "EXECUTING_FIRST_MTC_STAGE",
+        "event_ros_s": 70.70400000000001,
+        "event_observer_monotonic_ns": 82289863465815,
+        "neighboring_encoded_frame_calls": [
+          {
+            "relative_receive_ms": -56.785016,
+            "frame_index": 335,
+            "overview": {
+              "receive_monotonic_ns": 82289806680799,
+              "receive_wall_ns": 1790225705929362402,
+              "observed_clock": {
+                "source_ns": 70649000000,
+                "receive_monotonic_ns": 82289805435540,
+                "receive_wall_ns": 1790225705928117160
+              },
+              "source_ns": 70600000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82289790168745,
+              "receive_wall_ns": 1790225705912850288,
+              "observed_clock": {
+                "source_ns": 70632000000,
+                "receive_monotonic_ns": 82289789189519,
+                "receive_wall_ns": 1790225705911871303
+              },
+              "source_ns": 70600000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82289763806177,
+              "receive_wall_ns": 1790225705886487722,
+              "observed_clock": {
+                "source_ns": 70607000000,
+                "receive_monotonic_ns": 82289762747833,
+                "receive_wall_ns": 1790225705885429633
+              },
+              "receive_seq": 1026,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "WAITING_FOR_EXECUTION_GUARD"
+              }
+            },
+            "encode_started_monotonic_ns": 82289812472701,
+            "encode_finished_monotonic_ns": 82289816268205
+          },
+          {
+            "relative_receive_ms": 42.858687,
+            "frame_index": 336,
+            "overview": {
+              "receive_monotonic_ns": 82289906324502,
+              "receive_wall_ns": 1790225706029006264,
+              "observed_clock": {
+                "source_ns": 70743000000,
+                "receive_monotonic_ns": 82289904332062,
+                "receive_wall_ns": 1790225706027013606
+              },
+              "source_ns": 70700000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82289889947404,
+              "receive_wall_ns": 1790225706012628863,
+              "observed_clock": {
+                "source_ns": 70726000000,
+                "receive_monotonic_ns": 82289888413944,
+                "receive_wall_ns": 1790225706011095811
+              },
+              "source_ns": 70700000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82289863454722,
+              "receive_wall_ns": 1790225705986136267,
+              "observed_clock": {
+                "source_ns": 70704000000,
+                "receive_monotonic_ns": 82289862578058,
+                "receive_wall_ns": 1790225705985259605
+              },
+              "receive_seq": 1028,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "NO_HOLD",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "EXECUTING_FIRST_MTC_STAGE"
+              }
+            },
+            "encode_started_monotonic_ns": 82289911936056,
+            "encode_finished_monotonic_ns": 82289916745189
+          }
+        ]
+      },
+      {
+        "event": "FIRST_STAGE_HOLD_CONFIRMED",
+        "event_ros_s": 79.02900000000001,
+        "event_observer_monotonic_ns": 82298966628639,
+        "neighboring_encoded_frame_calls": [
+          {
+            "relative_receive_ms": -89.518491,
+            "frame_index": 374,
+            "overview": {
+              "receive_monotonic_ns": 82298877110148,
+              "receive_wall_ns": 1790225714999791763,
+              "observed_clock": {
+                "source_ns": 78944000000,
+                "receive_monotonic_ns": 82298874883114,
+                "receive_wall_ns": 1790225714997564795
+              },
+              "source_ns": 78900000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82298857183913,
+              "receive_wall_ns": 1790225714979865907,
+              "observed_clock": {
+                "source_ns": 78924000000,
+                "receive_monotonic_ns": 82298855373386,
+                "receive_wall_ns": 1790225714978055288
+              },
+              "source_ns": 78900000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82298863257611,
+              "receive_wall_ns": 1790225714985939220,
+              "observed_clock": {
+                "source_ns": 78933000000,
+                "receive_monotonic_ns": 82298862363230,
+                "receive_wall_ns": 1790225714985044852
+              },
+              "receive_seq": 1208,
+              "raw_status": {
+                "authority_reason": "EXECUTING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": false,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "WAITING_FOR_MEASURED_SETTLING",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "2",
+                "reason": "EXECUTING_FIRST_MTC_STAGE"
+              }
+            },
+            "encode_started_monotonic_ns": 82298882340824,
+            "encode_finished_monotonic_ns": 82298885106314
+          },
+          {
+            "relative_receive_ms": 255.15273,
+            "frame_index": 375,
+            "overview": {
+              "receive_monotonic_ns": 82299221781369,
+              "receive_wall_ns": 1790225715344463234,
+              "observed_clock": {
+                "source_ns": 79253000000,
+                "receive_monotonic_ns": 82299220629905,
+                "receive_wall_ns": 1790225715343311561
+              },
+              "source_ns": 79200000000,
+              "frame_id": "normal_grasp_observer/camera_link/overview",
+              "topic": "/transport/overview"
+            },
+            "head": {
+              "receive_monotonic_ns": 82299199051059,
+              "receive_wall_ns": 1790225715321733000,
+              "observed_clock": {
+                "source_ns": 79236000000,
+                "receive_monotonic_ns": 82299195323150,
+                "receive_wall_ns": 1790225715318004835
+              },
+              "source_ns": 79200000000,
+              "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+              "topic": "/camera/raw/head_rgbd/image"
+            },
+            "status": {
+              "receive_monotonic_ns": 82299213714884,
+              "receive_wall_ns": 1790225715336396287,
+              "observed_clock": {
+                "source_ns": 79250000000,
+                "receive_monotonic_ns": 82299213584944,
+                "receive_wall_ns": 1790225715336266415
+              },
+              "receive_seq": 1215,
+              "raw_status": {
+                "authority_reason": "HOLDING",
+                "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+                "hold_confirmed": true,
+                "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+                "hold_reason": "HOLD_CONFIRMED",
+                "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+                "phase": "3",
+                "reason": "FIRST_STAGE_HOLD_CONFIRMED"
+              }
+            },
+            "encode_started_monotonic_ns": 82299227763820,
+            "encode_finished_monotonic_ns": 82299231885344
+          }
+        ]
+      }
+    ],
+    "executing_feedback_receive_window": {
+      "frame_count": 39,
+      "first_frame_index": 336,
+      "last_frame_index": 374,
+      "status_reason_counts": {
+        "EXECUTING_FIRST_MTC_STAGE": 39
+      }
+    },
+    "video_status_transition_rows": [
+      {
+        "frame": 335,
+        "stage": "WAITING_FOR_EXECUTION_GUARD",
+        "wall_time": 1790225705.8864877,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_confirmed": false,
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD"
+        },
+        "status_receive_seq": 1026
+      },
+      {
+        "frame": 336,
+        "stage": "EXECUTING_FIRST_MTC_STAGE",
+        "wall_time": 1790225705.9861364,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_confirmed": false,
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "phase": "2",
+          "reason": "EXECUTING_FIRST_MTC_STAGE"
+        },
+        "status_receive_seq": 1028
+      },
+      {
+        "frame": 375,
+        "stage": "FIRST_STAGE_HOLD_CONFIRMED",
+        "wall_time": 1790225715.0890903,
+        "raw_status": {
+          "authority_reason": "HOLDING",
+          "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_confirmed": true,
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_reason": "HOLD_CONFIRMED",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "phase": "3",
+          "reason": "FIRST_STAGE_HOLD_CONFIRMED"
+        },
+        "status_receive_seq": 1210
+      }
+    ],
+    "limitation": "Frame indexes count actual writer calls and sidecar metadata, not independently inspected visual movement. A status tag is the most recently received status at encoding, not necessarily synchronized to image capture. Full physical stop, PICK completion and smooth coverage do not follow from 39 executing-tagged frames."
+  },
+  "verification": {
+    "raw_guard_and_executor_status_extractions_match_original_events": {
+      "/transport/execution_guard/status": true,
+      "/transport/hold_executor/status": true
+    },
+    "six_child_controller_uuid_terminal_checks": {
+      "arm_left_controller": true,
+      "arm_right_controller": true,
+      "gripper_left_controller": true,
+      "gripper_right_controller": true,
+      "head_controller": true,
+      "torso_controller": true
+    },
+    "input_ack_count_zero": true,
+    "no_ack_in_observer_topics_or_events": true,
+    "sidecar_indexes_contiguous": true,
+    "sidecar_count_matches_summary": true
+  }
+}

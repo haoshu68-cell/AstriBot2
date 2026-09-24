@@ -1,0 +1,3767 @@
+{
+  "schema": "astribot.m5.motion_observer_summary/1",
+  "scope": "Actual first-stage execution feedback window; not continuous visibility or release acceptance; cleanup ACK.mode exception prevents release claim",
+  "capture": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/m5_observer",
+  "observation_status": "INCOMPLETE",
+  "sampling_criteria_status": "INCOMPLETE",
+  "observer_returncode": 130,
+  "topics_configured": 41,
+  "topics_present_full_window": 34,
+  "topics_present_postwarmup": 33,
+  "missing_topics_full_window": [
+    "/perception/camera_health/left_wrist_rgbd",
+    "/perception/projection_health/left_wrist_rgbd",
+    "/manipulation/camera/left_wrist_rgbd/points",
+    "/perception/camera_health/right_wrist_rgbd",
+    "/perception/projection_health/right_wrist_rgbd",
+    "/manipulation/camera/right_wrist_rgbd/points",
+    "/cmd_vel_policy_input"
+  ],
+  "tf_static": {
+    "samples_full_window": 8,
+    "samples": 0,
+    "presence": "MISSING"
+  },
+  "events_total": 116257,
+  "capture_window": {
+    "start_steady_ns": 82236569195790,
+    "end_steady_ns": 82300857532401,
+    "duration_steady_s": 64.288336611,
+    "warmup_s": 2.0,
+    "metrics_start_steady_ns": 82238569195790
+  },
+  "motion_window": {
+    "start_steady_ns": 82289863465815,
+    "end_steady_ns": 82298966628639,
+    "duration_steady_s": 9.103162824,
+    "start_ros_ns": 70704000000,
+    "end_ros_ns": 79029000000,
+    "source": "Owner/probe first EXECUTING feedback through first FIRST_STAGE_HOLD_CONFIRMED feedback",
+    "acceptance": "Execution feedback interval, not release completion"
+  },
+  "writer": {
+    "completed": false,
+    "interrupted": true,
+    "writer_dropped": 0,
+    "writer_queue_peak": 19,
+    "error": null,
+    "writer_error": null
+  },
+  "method": {
+    "source_interval": "Adjacent received header stamps; not direct acquisition history",
+    "receive_interval": "Adjacent receive_monotonic_ns; gap>250ms uses strict integer comparison",
+    "motion_boundary": "Interior gaps computed from samples received within feedback window; boundary silence and intersecting gaps reported separately",
+    "health_age": "latest observed /clock minus data.capture_stamp; same epoch/capture steady age is not acquisition latency",
+    "incomplete": "Owned SIGINT exit130 means INCOMPLETE; no 300s sampling PASS"
+  },
+  "windows": {
+    "full": {
+      "raw_streams": {
+        "/camera/raw/torso_rgbd/camera_info": {
+          "samples": 1186,
+          "receive_gap_s": {
+            "samples": 1185,
+            "percentile_method": "linear",
+            "min": 0.039733838,
+            "max": 0.430516516,
+            "p50": 0.052271334,
+            "p95": 0.060800837999999996,
+            "p99": 0.09345710116000051
+          },
+          "source_gap_s": {
+            "samples": 1185,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.05
+          },
+          "receive_gaps_over_250ms": 3,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.366298624,
+          "tail_silence_s": 0.031008442,
+          "source_first_ns": 21300000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1186,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.025,
+            "p50": 0.0,
+            "p95": 0.009000000000000001,
+            "p99": 0.01
+          },
+          "intersecting_receive_gap_max_s": 0.430516516,
+          "intersecting_receive_gaps_over_250ms": 3,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82236935494414,
+              "source_ns": 21300000000,
+              "ros_now_ns": 21301000000
+            },
+            {
+              "receive_monotonic_ns": 82237366010930,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/camera_info": {
+          "samples": 1158,
+          "receive_gap_s": {
+            "samples": 1157,
+            "percentile_method": "linear",
+            "min": 0.034912553,
+            "max": 0.43349074000000004,
+            "p50": 0.052069031,
+            "p95": 0.06629907220000002,
+            "p99": 0.11213470772000002
+          },
+          "source_gap_s": {
+            "samples": 1157,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 3,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.373544694,
+          "tail_silence_s": 0.021815008,
+          "source_first_ns": 21300000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1158,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.035,
+            "p50": 0.008,
+            "p95": 0.015000000000000001,
+            "p99": 0.018000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.43349074000000004,
+          "intersecting_receive_gaps_over_250ms": 3,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82236942740484,
+              "source_ns": 21300000000,
+              "ros_now_ns": 21301000000
+            },
+            {
+              "receive_monotonic_ns": 82237376231224,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            }
+          ]
+        },
+        "/camera/raw/torso_rgbd/depth_image": {
+          "samples": 998,
+          "receive_gap_s": {
+            "samples": 997,
+            "percentile_method": "linear",
+            "min": 0.034734083,
+            "max": 0.343844721,
+            "p50": 0.052940145,
+            "p95": 0.1108577654,
+            "p99": 0.17179884731999992
+          },
+          "source_gap_s": {
+            "samples": 997,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 4,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.8057076110000001,
+          "tail_silence_s": 0.024194410000000003,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 998,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.035,
+            "p50": 0.007,
+            "p95": 0.014,
+            "p99": 0.017029999999999972
+          },
+          "intersecting_receive_gap_max_s": 0.343844721,
+          "intersecting_receive_gaps_over_250ms": 4,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237374903401,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            },
+            {
+              "receive_monotonic_ns": 82237718748122,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            }
+          ]
+        },
+        "/camera/raw/torso_rgbd/image": {
+          "samples": 1056,
+          "receive_gap_s": {
+            "samples": 1055,
+            "percentile_method": "linear",
+            "min": 0.034736198,
+            "max": 0.796843419,
+            "p50": 0.052475535000000004,
+            "p95": 0.1082259464,
+            "p99": 0.16088276718000002
+          },
+          "source_gap_s": {
+            "samples": 1055,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.2,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 1,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.8066388000000001,
+          "tail_silence_s": 0.022687378,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1056,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.034,
+            "p50": 0.008,
+            "p95": 0.015000000000000001,
+            "p99": 0.018000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.796843419,
+          "intersecting_receive_gaps_over_250ms": 1,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237375834590,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            },
+            {
+              "receive_monotonic_ns": 82238172678009,
+              "source_ns": 21500000000,
+              "ros_now_ns": 21507000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/image": {
+          "samples": 1011,
+          "receive_gap_s": {
+            "samples": 1010,
+            "percentile_method": "linear",
+            "min": 0.035961601,
+            "max": 0.45361591300000004,
+            "p50": 0.053235131500000005,
+            "p95": 0.10975456744999998,
+            "p99": 0.16327753051999994
+          },
+          "source_gap_s": {
+            "samples": 1010,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.2,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.810056603,
+          "tail_silence_s": 0.016671247,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1011,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.04,
+            "p50": 0.013000000000000001,
+            "p95": 0.021,
+            "p99": 0.025799999999999955
+          },
+          "intersecting_receive_gap_max_s": 0.45361591300000004,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237724548590,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            },
+            {
+              "receive_monotonic_ns": 82238178164503,
+              "source_ns": 21500000000,
+              "ros_now_ns": 21513000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/camera_info": {
+          "samples": 1162,
+          "receive_gap_s": {
+            "samples": 1161,
+            "percentile_method": "linear",
+            "min": 0.036020123,
+            "max": 0.45394348100000004,
+            "p50": 0.052191956000000005,
+            "p95": 0.064302919,
+            "p99": 0.11099176740000005
+          },
+          "source_gap_s": {
+            "samples": 1161,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.8105346680000001,
+          "tail_silence_s": 0.016324814,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1162,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.04,
+            "p50": 0.013000000000000001,
+            "p95": 0.021,
+            "p99": 0.0247800000000002
+          },
+          "intersecting_receive_gap_max_s": 0.45394348100000004,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237724735727,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            },
+            {
+              "receive_monotonic_ns": 82238178679208,
+              "source_ns": 21500000000,
+              "ros_now_ns": 21514000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/depth_image": {
+          "samples": 894,
+          "receive_gap_s": {
+            "samples": 893,
+            "percentile_method": "linear",
+            "min": 0.033785119,
+            "max": 0.796764903,
+            "p50": 0.054595201,
+            "p95": 0.1485595008,
+            "p99": 0.20881038412000066
+          },
+          "source_gap_s": {
+            "samples": 893,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.30000000000000004,
+            "p50": 0.05,
+            "p95": 0.15000000000000002,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 7,
+          "source_gaps_over_250ms": 3,
+          "initial_silence_s": 0.817889792,
+          "tail_silence_s": 0.010342716,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 894,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.048,
+            "p50": 0.02,
+            "p95": 0.028,
+            "p99": 0.031000000000000003
+          },
+          "intersecting_receive_gap_max_s": 0.796764903,
+          "intersecting_receive_gaps_over_250ms": 7,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237387085582,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            },
+            {
+              "receive_monotonic_ns": 82238183850485,
+              "source_ns": 21500000000,
+              "ros_now_ns": 21520000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/camera_info": {
+          "samples": 1139,
+          "receive_gap_s": {
+            "samples": 1138,
+            "percentile_method": "linear",
+            "min": 0.033560959,
+            "max": 0.341769066,
+            "p50": 0.052393157,
+            "p95": 0.08505854304999963,
+            "p99": 0.11343666178999998
+          },
+          "source_gap_s": {
+            "samples": 1138,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.8184348840000001,
+          "tail_silence_s": 0.009465173,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1139,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.048,
+            "p50": 0.02,
+            "p95": 0.029,
+            "p99": 0.034619999999999894
+          },
+          "intersecting_receive_gap_max_s": 0.341769066,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237387630674,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            },
+            {
+              "receive_monotonic_ns": 82237729399740,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/image": {
+          "samples": 975,
+          "receive_gap_s": {
+            "samples": 974,
+            "percentile_method": "linear",
+            "min": 0.033867157,
+            "max": 0.798189915,
+            "p50": 0.05367870450000001,
+            "p95": 0.11316565324999993,
+            "p99": 0.17873162661999983
+          },
+          "source_gap_s": {
+            "samples": 974,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 3,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.8190079450000001,
+          "tail_silence_s": 0.008768331,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 975,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.048,
+            "p50": 0.02,
+            "p95": 0.028,
+            "p99": 0.035
+          },
+          "intersecting_receive_gap_max_s": 0.798189915,
+          "intersecting_receive_gaps_over_250ms": 3,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237388203735,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            },
+            {
+              "receive_monotonic_ns": 82238186393650,
+              "source_ns": 21500000000,
+              "ros_now_ns": 21520000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/depth_image": {
+          "samples": 1039,
+          "receive_gap_s": {
+            "samples": 1038,
+            "percentile_method": "linear",
+            "min": 0.034267953000000004,
+            "max": 0.844833896,
+            "p50": 0.053125954,
+            "p95": 0.10978951855,
+            "p99": 0.16193669504
+          },
+          "source_gap_s": {
+            "samples": 1038,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 3,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.8250939460000001,
+          "tail_silence_s": 0.00324191,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1039,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.05,
+            "p50": 0.027000000000000003,
+            "p95": 0.035,
+            "p99": 0.041239999999999784
+          },
+          "intersecting_receive_gap_max_s": 0.844833896,
+          "intersecting_receive_gaps_over_250ms": 3,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237394289736,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            },
+            {
+              "receive_monotonic_ns": 82238239123632,
+              "source_ns": 21550000000,
+              "ros_now_ns": 21575000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/image": {
+          "samples": 1092,
+          "receive_gap_s": {
+            "samples": 1091,
+            "percentile_method": "linear",
+            "min": 0.034998924,
+            "max": 0.339918027,
+            "p50": 0.052939953000000005,
+            "p95": 0.103628704,
+            "p99": 0.11781421629999998
+          },
+          "source_gap_s": {
+            "samples": 1091,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.826622293,
+          "tail_silence_s": 0.0017102670000000001,
+          "source_first_ns": 21350000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1092,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.049,
+            "p50": 0.028,
+            "p95": 0.036000000000000004,
+            "p99": 0.04108999999999992
+          },
+          "intersecting_receive_gap_max_s": 0.339918027,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237395818083,
+              "source_ns": 21350000000,
+              "ros_now_ns": 21351000000
+            },
+            {
+              "receive_monotonic_ns": 82237735736110,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_left/camera_info": {
+          "samples": 297,
+          "receive_gap_s": {
+            "samples": 296,
+            "percentile_method": "linear",
+            "min": 0.200460783,
+            "max": 0.557382405,
+            "p50": 0.208250088,
+            "p95": 0.2303085555,
+            "p99": 0.29452063930000016
+          },
+          "source_gap_s": {
+            "samples": 296,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.2,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 7,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 1.139224574,
+          "tail_silence_s": 0.144921995,
+          "source_first_ns": 21400000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 297,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.004,
+            "p50": 0.0,
+            "p95": 0.001,
+            "p99": 0.001
+          },
+          "intersecting_receive_gap_max_s": 0.557382405,
+          "intersecting_receive_gaps_over_250ms": 7,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237708420364,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            },
+            {
+              "receive_monotonic_ns": 82238265802769,
+              "source_ns": 21600000000,
+              "ros_now_ns": 21601000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_left/image_raw": {
+          "samples": 296,
+          "receive_gap_s": {
+            "samples": 295,
+            "percentile_method": "linear",
+            "min": 0.199021993,
+            "max": 0.556765411,
+            "p50": 0.20822816000000002,
+            "p95": 0.23346207200000005,
+            "p99": 0.3082715388000001
+          },
+          "source_gap_s": {
+            "samples": 295,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.4,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 8,
+          "source_gaps_over_250ms": 1,
+          "initial_silence_s": 1.141847636,
+          "tail_silence_s": 0.14197573800000002,
+          "source_first_ns": 21400000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 296,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.02,
+            "p50": 0.004,
+            "p95": 0.006,
+            "p99": 0.011200000000000047
+          },
+          "intersecting_receive_gap_max_s": 0.556765411,
+          "intersecting_receive_gaps_over_250ms": 8,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237711043426,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            },
+            {
+              "receive_monotonic_ns": 82238267808837,
+              "source_ns": 21600000000,
+              "ros_now_ns": 21604000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_right/camera_info": {
+          "samples": 295,
+          "receive_gap_s": {
+            "samples": 294,
+            "percentile_method": "linear",
+            "min": 0.19906288200000002,
+            "max": 0.5567782680000001,
+            "p50": 0.2083406485,
+            "p95": 0.2348903506,
+            "p99": 0.3238808593999994
+          },
+          "source_gap_s": {
+            "samples": 294,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.4,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 9,
+          "source_gaps_over_250ms": 2,
+          "initial_silence_s": 1.141988593,
+          "tail_silence_s": 0.14180072500000002,
+          "source_first_ns": 21400000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 295,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.02,
+            "p50": 0.004,
+            "p95": 0.006,
+            "p99": 0.01124000000000001
+          },
+          "intersecting_receive_gap_max_s": 0.5567782680000001,
+          "intersecting_receive_gaps_over_250ms": 9,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237711184383,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            },
+            {
+              "receive_monotonic_ns": 82238267962651,
+              "source_ns": 21600000000,
+              "ros_now_ns": 21604000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_right/image_raw": {
+          "samples": 296,
+          "receive_gap_s": {
+            "samples": 295,
+            "percentile_method": "linear",
+            "min": 0.19881251000000003,
+            "max": 0.556839559,
+            "p50": 0.208312239,
+            "p95": 0.23388607640000003,
+            "p99": 0.31180737426000005
+          },
+          "source_gap_s": {
+            "samples": 295,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.4,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 8,
+          "source_gaps_over_250ms": 1,
+          "initial_silence_s": 1.144093564,
+          "tail_silence_s": 0.13891789300000001,
+          "source_first_ns": 21400000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 296,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.025,
+            "p50": 0.007,
+            "p95": 0.01,
+            "p99": 0.014300000000000068
+          },
+          "intersecting_receive_gap_max_s": 0.556839559,
+          "intersecting_receive_gaps_over_250ms": 8,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82237713289354,
+              "source_ns": 21400000000,
+              "ros_now_ns": 21401000000
+            },
+            {
+              "receive_monotonic_ns": 82238270128913,
+              "source_ns": 21600000000,
+              "ros_now_ns": 21607000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/depth_image": {
+          "samples": 911,
+          "receive_gap_s": {
+            "samples": 910,
+            "percentile_method": "linear",
+            "min": 0.033564112,
+            "max": 0.264959382,
+            "p50": 0.05411231550000001,
+            "p95": 0.15209387600000002,
+            "p99": 0.20628756668
+          },
+          "source_gap_s": {
+            "samples": 910,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.15000000000000002,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 4,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 1.718713426,
+          "tail_silence_s": 0.11899946700000001,
+          "source_first_ns": 21600000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 911,
+            "percentile_method": "linear",
+            "min": 0.006,
+            "max": 0.04,
+            "p50": 0.012,
+            "p95": 0.02,
+            "p99": 0.026000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.264959382,
+          "intersecting_receive_gaps_over_250ms": 4,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82291354784985,
+              "source_ns": 72100000000,
+              "ros_now_ns": 72109000000
+            },
+            {
+              "receive_monotonic_ns": 82291619744367,
+              "source_ns": 72350000000,
+              "ros_now_ns": 72364000000
+            }
+          ]
+        }
+      },
+      "health_streams": {
+        "/perception/camera_health/head_rgbd": {
+          "samples": 1286,
+          "state_counts": {
+            "OK": 1278,
+            "STALE": 8
+          },
+          "reason_counts": {
+            "CAMERA_READY": 1278,
+            "CAMERA_STALE": 8
+          },
+          "valid_samples": 1278,
+          "invalid_samples": 8,
+          "epochs": [
+            "gazebo_camera:82207957405158:659910483:g2",
+            "gazebo_camera:82207957405158:659910483:g3",
+            "gazebo_camera:82207957405158:659910483:g4",
+            "gazebo_camera:82207957405158:659910483:g5",
+            "gazebo_camera:82207957405158:659910483:g6"
+          ],
+          "capture_age_ros_s": {
+            "samples": 1286,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.12000000000000001,
+            "p50": 0.055,
+            "p95": 0.078,
+            "p99": 0.083
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 1286,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.20041529500000002,
+            "p50": 0.0,
+            "p95": 0.05006985975,
+            "p99": 0.09954305020000005
+          }
+        },
+        "/perception/projection_health/head_rgbd": {
+          "samples": 3198,
+          "state_counts": {
+            "READY": 3176,
+            "INVALID": 22
+          },
+          "reason_counts": {
+            "OK": 3176,
+            "OUTPUT_STALE": 22
+          },
+          "valid_samples": 3176,
+          "invalid_samples": 22,
+          "epochs": [
+            "3154587-82207945637378:2",
+            "3154587-82207945637378:3",
+            "3154587-82207945637378:4",
+            "3154587-82207945637378:5",
+            "3154587-82207945637378:6"
+          ],
+          "capture_age_ros_s": {
+            "samples": 3198,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.1,
+            "p50": 0.053000000000000005,
+            "p95": 0.077,
+            "p99": 0.082
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 3198,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.224707228,
+            "p50": 0.0198351795,
+            "p95": 0.04148579565,
+            "p99": 0.09985622285999995
+          },
+          "pending_depth_max": 0
+        },
+        "/perception/camera_health/torso_rgbd": {
+          "samples": 1287,
+          "state_counts": {
+            "OK": 1278,
+            "STALE": 9
+          },
+          "reason_counts": {
+            "CAMERA_READY": 1278,
+            "CAMERA_STALE": 9
+          },
+          "valid_samples": 1278,
+          "invalid_samples": 9,
+          "epochs": [
+            "gazebo_camera:82207965410556:4140620482:g1",
+            "gazebo_camera:82207965410556:4140620482:g2",
+            "gazebo_camera:82207965410556:4140620482:g3",
+            "gazebo_camera:82207965410556:4140620482:g4",
+            "gazebo_camera:82207965410556:4140620482:g5"
+          ],
+          "capture_age_ros_s": {
+            "samples": 1287,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.115,
+            "p50": 0.037000000000000005,
+            "p95": 0.058,
+            "p99": 0.0631400000000001
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 1287,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.202357689,
+            "p50": 0.0,
+            "p95": 0.0497493361,
+            "p99": 0.05419390534000012
+          }
+        },
+        "/perception/projection_health/torso_rgbd": {
+          "samples": 3182,
+          "state_counts": {
+            "READY": 3163,
+            "INVALID": 19
+          },
+          "reason_counts": {
+            "OK": 3163,
+            "OUTPUT_STALE": 19
+          },
+          "valid_samples": 3163,
+          "invalid_samples": 19,
+          "epochs": [
+            "3154589-82207964993092:4",
+            "3154589-82207964993092:5",
+            "3154589-82207964993092:6",
+            "3154589-82207964993092:7"
+          ],
+          "capture_age_ros_s": {
+            "samples": 3182,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.07,
+            "p50": 0.032,
+            "p95": 0.057,
+            "p99": 0.062000000000000006
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 3182,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.220584143,
+            "p50": 0.019241849000000002,
+            "p95": 0.0405121167,
+            "p99": 0.07934820102000002
+          },
+          "pending_depth_max": 1
+        }
+      },
+      "guard": {
+        "samples": 3210,
+        "reason_counts": {
+          "": 2653,
+          "WAITING_FOR_EXECUTION_EVIDENCE": 2,
+          "EXECUTION_WITHIN_BOUNDS": 555
+        },
+        "active_counts": {
+          "False": 2751,
+          "True": 459
+        },
+        "healthy_counts": {
+          "False": 2753,
+          "True": 457
+        },
+        "context_ids": [
+          "",
+          "m1_context_a115642e1aac4045a6e183d0d6b283b6"
+        ],
+        "maximum_joint_error_rad": 0.032049613341732286,
+        "per_reason_ranges": {
+          "": {
+            "samples": 2653,
+            "first_receive_steady_ns": 82236712461871,
+            "last_receive_steady_ns": 82289752131116,
+            "first_data_stamp": {
+              "sec": 21,
+              "nanosec": 263000000
+            },
+            "last_data_stamp": {
+              "sec": 70,
+              "nanosec": 596000000
+            }
+          },
+          "WAITING_FOR_EXECUTION_EVIDENCE": {
+            "samples": 2,
+            "first_receive_steady_ns": 82289762578081,
+            "last_receive_steady_ns": 82289773173018,
+            "first_data_stamp": {
+              "sec": 70,
+              "nanosec": 606000000
+            },
+            "last_data_stamp": {
+              "sec": 70,
+              "nanosec": 613000000
+            }
+          },
+          "EXECUTION_WITHIN_BOUNDS": {
+            "samples": 555,
+            "first_receive_steady_ns": 82289792804544,
+            "last_receive_steady_ns": 82300852388513,
+            "first_data_stamp": {
+              "sec": 70,
+              "nanosec": 636000000
+            },
+            "last_data_stamp": {
+              "sec": 80,
+              "nanosec": 726000000
+            }
+          }
+        }
+      },
+      "native_phase": {
+        "samples": 1280,
+        "phase_counts": {
+          "0": 483,
+          "1": 1,
+          "2": 758,
+          "3": 38
+        },
+        "reason_counts": {
+          "WAITING_FOR_TASK": 483,
+          "WAITING_FOR_NAVIGATION_REVOCATION_READBACK": 1,
+          "PLANNING_COMPLETE_OPERATION": 574,
+          "WAITING_FOR_EXECUTION_GUARD": 2,
+          "EXECUTING_FIRST_MTC_STAGE": 182,
+          "FIRST_STAGE_HOLD_CONFIRMED": 38
+        },
+        "last_raw": {
+          "authority_reason": "HOLDING",
+          "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_confirmed": true,
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_reason": "HOLD_CONFIRMED",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "phase": "3",
+          "reason": "FIRST_STAGE_HOLD_CONFIRMED"
+        }
+      }
+    },
+    "postwarmup": {
+      "raw_streams": {
+        "/camera/raw/torso_rgbd/camera_info": {
+          "samples": 1174,
+          "receive_gap_s": {
+            "samples": 1173,
+            "percentile_method": "linear",
+            "min": 0.039733838,
+            "max": 0.140628361,
+            "p50": 0.052265194,
+            "p95": 0.0605280444,
+            "p99": 0.07636314559999997
+          },
+          "source_gap_s": {
+            "samples": 1173,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.05
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.020139617000000002,
+          "tail_silence_s": 0.031008442,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1174,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.025,
+            "p50": 0.0,
+            "p95": 0.009000000000000001,
+            "p99": 0.01
+          },
+          "intersecting_receive_gap_max_s": 0.140628361,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82240116309616,
+              "source_ns": 23350000000,
+              "ros_now_ns": 23350000000
+            },
+            {
+              "receive_monotonic_ns": 82240256937977,
+              "source_ns": 23400000000,
+              "ros_now_ns": 23413000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/camera_info": {
+          "samples": 1146,
+          "receive_gap_s": {
+            "samples": 1145,
+            "percentile_method": "linear",
+            "min": 0.034912553,
+            "max": 0.192119061,
+            "p50": 0.052057610000000004,
+            "p95": 0.06393531019999998,
+            "p99": 0.10995952803999996
+          },
+          "source_gap_s": {
+            "samples": 1145,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.029150613000000002,
+          "tail_silence_s": 0.021815008,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1146,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.035,
+            "p50": 0.008,
+            "p95": 0.015000000000000001,
+            "p99": 0.018000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.192119061,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82240074584057,
+              "source_ns": 23300000000,
+              "ros_now_ns": 23309000000
+            },
+            {
+              "receive_monotonic_ns": 82240266703118,
+              "source_ns": 23400000000,
+              "ros_now_ns": 23418000000
+            }
+          ]
+        },
+        "/camera/raw/torso_rgbd/depth_image": {
+          "samples": 990,
+          "receive_gap_s": {
+            "samples": 989,
+            "percentile_method": "linear",
+            "min": 0.034734083,
+            "max": 0.284012883,
+            "p50": 0.05291374,
+            "p95": 0.11062183059999998,
+            "p99": 0.16304952404000003
+          },
+          "source_gap_s": {
+            "samples": 989,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.026299875,
+          "tail_silence_s": 0.024194410000000003,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 990,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.035,
+            "p50": 0.0075,
+            "p95": 0.014,
+            "p99": 0.017110000000000014
+          },
+          "intersecting_receive_gap_max_s": 0.284012883,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82256718924353,
+              "source_ns": 39100000000,
+              "ros_now_ns": 39107000000
+            },
+            {
+              "receive_monotonic_ns": 82257002937236,
+              "source_ns": 39300000000,
+              "ros_now_ns": 39305000000
+            }
+          ]
+        },
+        "/camera/raw/torso_rgbd/image": {
+          "samples": 1049,
+          "receive_gap_s": {
+            "samples": 1048,
+            "percentile_method": "linear",
+            "min": 0.034736198,
+            "max": 0.22534995900000002,
+            "p50": 0.0524549505,
+            "p95": 0.10810305895,
+            "p99": 0.16068997605000002
+          },
+          "source_gap_s": {
+            "samples": 1048,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.2,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.028977547000000003,
+          "tail_silence_s": 0.022687378,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1049,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.034,
+            "p50": 0.008,
+            "p95": 0.015000000000000001,
+            "p99": 0.018000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.22534995900000002,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82284910698282,
+              "source_ns": 65950000000,
+              "ros_now_ns": 65957000000
+            },
+            {
+              "receive_monotonic_ns": 82285136048241,
+              "source_ns": 66150000000,
+              "ros_now_ns": 66157000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/image": {
+          "samples": 1001,
+          "receive_gap_s": {
+            "samples": 1000,
+            "percentile_method": "linear",
+            "min": 0.035961601,
+            "max": 0.241380914,
+            "p50": 0.053235131500000005,
+            "p95": 0.10861487184999996,
+            "p99": 0.16024940559999998
+          },
+          "source_gap_s": {
+            "samples": 1000,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.2,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.034755173,
+          "tail_silence_s": 0.016671247,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1001,
+            "percentile_method": "linear",
+            "min": 0.007,
+            "max": 0.04,
+            "p50": 0.013000000000000001,
+            "p95": 0.021,
+            "p99": 0.026000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.241380914,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82240077487997,
+              "source_ns": 23300000000,
+              "ros_now_ns": 23312000000
+            },
+            {
+              "receive_monotonic_ns": 82240318868911,
+              "source_ns": 23450000000,
+              "ros_now_ns": 23467000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/camera_info": {
+          "samples": 1152,
+          "receive_gap_s": {
+            "samples": 1151,
+            "percentile_method": "linear",
+            "min": 0.036020123,
+            "max": 0.190896008,
+            "p50": 0.052191956000000005,
+            "p95": 0.0638472335,
+            "p99": 0.10837994850000002
+          },
+          "source_gap_s": {
+            "samples": 1151,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.035052422,
+          "tail_silence_s": 0.016324814,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1152,
+            "percentile_method": "linear",
+            "min": 0.007,
+            "max": 0.04,
+            "p50": 0.013000000000000001,
+            "p95": 0.021,
+            "p99": 0.02498000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.190896008,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82256834012779,
+              "source_ns": 39200000000,
+              "ros_now_ns": 39217000000
+            },
+            {
+              "receive_monotonic_ns": 82257024908787,
+              "source_ns": 39300000000,
+              "ros_now_ns": 39318000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/depth_image": {
+          "samples": 885,
+          "receive_gap_s": {
+            "samples": 884,
+            "percentile_method": "linear",
+            "min": 0.033785119,
+            "max": 0.430805072,
+            "p50": 0.0546182395,
+            "p95": 0.14838302044999999,
+            "p99": 0.2035687293499998
+          },
+          "source_gap_s": {
+            "samples": 884,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.30000000000000004,
+            "p50": 0.05,
+            "p95": 0.15000000000000002,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 6,
+          "source_gaps_over_250ms": 3,
+          "initial_silence_s": 0.041794608000000004,
+          "tail_silence_s": 0.010342716,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 885,
+            "percentile_method": "linear",
+            "min": 0.009000000000000001,
+            "max": 0.048,
+            "p50": 0.02,
+            "p95": 0.028,
+            "p99": 0.031000000000000003
+          },
+          "intersecting_receive_gap_max_s": 0.430805072,
+          "intersecting_receive_gaps_over_250ms": 6,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82250557769643,
+              "source_ns": 33300000000,
+              "ros_now_ns": 33320000000
+            },
+            {
+              "receive_monotonic_ns": 82250988574715,
+              "source_ns": 33600000000,
+              "ros_now_ns": 33627000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/camera_info": {
+          "samples": 1128,
+          "receive_gap_s": {
+            "samples": 1127,
+            "percentile_method": "linear",
+            "min": 0.033560959,
+            "max": 0.16543074300000002,
+            "p50": 0.05238827,
+            "p95": 0.08180808690000005,
+            "p99": 0.11071495490000001
+          },
+          "source_gap_s": {
+            "samples": 1127,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.042582389000000005,
+          "tail_silence_s": 0.009465173,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1128,
+            "percentile_method": "linear",
+            "min": 0.011000000000000001,
+            "max": 0.048,
+            "p50": 0.02,
+            "p95": 0.029,
+            "p99": 0.034730000000000025
+          },
+          "intersecting_receive_gap_max_s": 0.16543074300000002,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82247511071576,
+              "source_ns": 30350000000,
+              "ros_now_ns": 30369000000
+            },
+            {
+              "receive_monotonic_ns": 82247676502319,
+              "source_ns": 30500000000,
+              "ros_now_ns": 30520000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/image": {
+          "samples": 966,
+          "receive_gap_s": {
+            "samples": 965,
+            "percentile_method": "linear",
+            "min": 0.033867157,
+            "max": 0.275708391,
+            "p50": 0.053694897000000005,
+            "p95": 0.11281912059999999,
+            "p99": 0.17471351684000005
+          },
+          "source_gap_s": {
+            "samples": 965,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.043235729,
+          "tail_silence_s": 0.008768331,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 966,
+            "percentile_method": "linear",
+            "min": 0.011000000000000001,
+            "max": 0.048,
+            "p50": 0.02,
+            "p95": 0.028,
+            "p99": 0.035
+          },
+          "intersecting_receive_gap_max_s": 0.275708391,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82295766692905,
+              "source_ns": 76200000000,
+              "ros_now_ns": 76218000000
+            },
+            {
+              "receive_monotonic_ns": 82296042401296,
+              "source_ns": 76450000000,
+              "ros_now_ns": 76471000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/depth_image": {
+          "samples": 1031,
+          "receive_gap_s": {
+            "samples": 1030,
+            "percentile_method": "linear",
+            "min": 0.034267953000000004,
+            "max": 0.263179775,
+            "p50": 0.05311795750000001,
+            "p95": 0.1096205101,
+            "p99": 0.16140799918000007
+          },
+          "source_gap_s": {
+            "samples": 1030,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.050149690000000004,
+          "tail_silence_s": 0.00324191,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1031,
+            "percentile_method": "linear",
+            "min": 0.017,
+            "max": 0.05,
+            "p50": 0.027000000000000003,
+            "p95": 0.035,
+            "p99": 0.04140000000000009
+          },
+          "intersecting_receive_gap_max_s": 0.263179775,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82292882932927,
+              "source_ns": 73550000000,
+              "ros_now_ns": 73581000000
+            },
+            {
+              "receive_monotonic_ns": 82293146112702,
+              "source_ns": 73800000000,
+              "ros_now_ns": 73830000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/image": {
+          "samples": 1082,
+          "receive_gap_s": {
+            "samples": 1081,
+            "percentile_method": "linear",
+            "min": 0.034998924,
+            "max": 0.158259918,
+            "p50": 0.052939841,
+            "p95": 0.102831371,
+            "p99": 0.11502991620000008
+          },
+          "source_gap_s": {
+            "samples": 1081,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.051670154,
+          "tail_silence_s": 0.0017102670000000001,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80700000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 1082,
+            "percentile_method": "linear",
+            "min": 0.017,
+            "max": 0.049,
+            "p50": 0.028,
+            "p95": 0.036000000000000004,
+            "p99": 0.04119000000000006
+          },
+          "intersecting_receive_gap_max_s": 0.158259918,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82278053036590,
+              "source_ns": 59350000000,
+              "ros_now_ns": 59377000000
+            },
+            {
+              "receive_monotonic_ns": 82278211296508,
+              "source_ns": 59500000000,
+              "ros_now_ns": 59529000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_left/camera_info": {
+          "samples": 294,
+          "receive_gap_s": {
+            "samples": 293,
+            "percentile_method": "linear",
+            "min": 0.200460783,
+            "max": 0.31872158500000003,
+            "p50": 0.20818841500000002,
+            "p95": 0.230121073,
+            "p99": 0.2870799972399999
+          },
+          "source_gap_s": {
+            "samples": 293,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.2,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 6,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.11914287600000001,
+          "tail_silence_s": 0.144921995,
+          "source_first_ns": 22000000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 294,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.004,
+            "p50": 0.0,
+            "p95": 0.001,
+            "p99": 0.001
+          },
+          "intersecting_receive_gap_max_s": 0.31872158500000003,
+          "intersecting_receive_gaps_over_250ms": 6,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82250638530249,
+              "source_ns": 33400000000,
+              "ros_now_ns": 33400000000
+            },
+            {
+              "receive_monotonic_ns": 82250957251834,
+              "source_ns": 33600000000,
+              "ros_now_ns": 33600000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_left/image_raw": {
+          "samples": 293,
+          "receive_gap_s": {
+            "samples": 292,
+            "percentile_method": "linear",
+            "min": 0.199021993,
+            "max": 0.419017527,
+            "p50": 0.208136534,
+            "p95": 0.23172069134999998,
+            "p99": 0.2984687955899997
+          },
+          "source_gap_s": {
+            "samples": 292,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.4,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 7,
+          "source_gaps_over_250ms": 1,
+          "initial_silence_s": 0.123188641,
+          "tail_silence_s": 0.14197573800000002,
+          "source_first_ns": 22000000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 293,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.02,
+            "p50": 0.004,
+            "p95": 0.006,
+            "p99": 0.011319999999999938
+          },
+          "intersecting_receive_gap_max_s": 0.419017527,
+          "intersecting_receive_gaps_over_250ms": 7,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82274076456084,
+              "source_ns": 55600000000,
+              "ros_now_ns": 55604000000
+            },
+            {
+              "receive_monotonic_ns": 82274495473611,
+              "source_ns": 56000000000,
+              "ros_now_ns": 56003000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_right/camera_info": {
+          "samples": 292,
+          "receive_gap_s": {
+            "samples": 291,
+            "percentile_method": "linear",
+            "min": 0.19906288200000002,
+            "max": 0.419031708,
+            "p50": 0.20827298800000002,
+            "p95": 0.2338421175,
+            "p99": 0.30863030190000024
+          },
+          "source_gap_s": {
+            "samples": 291,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.4,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 8,
+          "source_gaps_over_250ms": 2,
+          "initial_silence_s": 0.12334658300000001,
+          "tail_silence_s": 0.14180072500000002,
+          "source_first_ns": 22000000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 292,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.02,
+            "p50": 0.004,
+            "p95": 0.006,
+            "p99": 0.011359999999999901
+          },
+          "intersecting_receive_gap_max_s": 0.419031708,
+          "intersecting_receive_gaps_over_250ms": 8,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82274076573901,
+              "source_ns": 55600000000,
+              "ros_now_ns": 55604000000
+            },
+            {
+              "receive_monotonic_ns": 82274495605609,
+              "source_ns": 56000000000,
+              "ros_now_ns": 56003000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_right/image_raw": {
+          "samples": 293,
+          "receive_gap_s": {
+            "samples": 292,
+            "percentile_method": "linear",
+            "min": 0.19881251000000003,
+            "max": 0.417248229,
+            "p50": 0.20826147450000002,
+            "p95": 0.23339527065000001,
+            "p99": 0.2995749062399997
+          },
+          "source_gap_s": {
+            "samples": 292,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.4,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 7,
+          "source_gaps_over_250ms": 1,
+          "initial_silence_s": 0.12547281200000002,
+          "tail_silence_s": 0.13891789300000001,
+          "source_first_ns": 22000000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 293,
+            "percentile_method": "linear",
+            "min": 0.003,
+            "max": 0.025,
+            "p50": 0.007,
+            "p95": 0.01,
+            "p99": 0.014479999999999904
+          },
+          "intersecting_receive_gap_max_s": 0.417248229,
+          "intersecting_receive_gaps_over_250ms": 7,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82289972030688,
+              "source_ns": 70800000000,
+              "ros_now_ns": 70807000000
+            },
+            {
+              "receive_monotonic_ns": 82290389278917,
+              "source_ns": 71200000000,
+              "ros_now_ns": 71208000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/depth_image": {
+          "samples": 905,
+          "receive_gap_s": {
+            "samples": 904,
+            "percentile_method": "linear",
+            "min": 0.033564112,
+            "max": 0.264959382,
+            "p50": 0.054145678,
+            "p95": 0.15213068600000001,
+            "p99": 0.20631859556000004
+          },
+          "source_gap_s": {
+            "samples": 904,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.15000000000000002,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 4,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.033366138000000004,
+          "tail_silence_s": 0.11899946700000001,
+          "source_first_ns": 21900000000,
+          "source_last_ns": 80600000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 905,
+            "percentile_method": "linear",
+            "min": 0.006,
+            "max": 0.04,
+            "p50": 0.012,
+            "p95": 0.02,
+            "p99": 0.026000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.264959382,
+          "intersecting_receive_gaps_over_250ms": 4,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82291354784985,
+              "source_ns": 72100000000,
+              "ros_now_ns": 72109000000
+            },
+            {
+              "receive_monotonic_ns": 82291619744367,
+              "source_ns": 72350000000,
+              "ros_now_ns": 72364000000
+            }
+          ]
+        }
+      },
+      "health_streams": {
+        "/perception/camera_health/head_rgbd": {
+          "samples": 1245,
+          "state_counts": {
+            "OK": 1245
+          },
+          "reason_counts": {
+            "CAMERA_READY": 1245
+          },
+          "valid_samples": 1245,
+          "invalid_samples": 0,
+          "epochs": [
+            "gazebo_camera:82207957405158:659910483:g6"
+          ],
+          "capture_age_ros_s": {
+            "samples": 1245,
+            "percentile_method": "linear",
+            "min": 0.019,
+            "max": 0.12000000000000001,
+            "p50": 0.056,
+            "p95": 0.078,
+            "p99": 0.083
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 1245,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.101787813,
+            "p50": 0.0,
+            "p95": 0.04980556060000001,
+            "p99": 0.051797679599999986
+          }
+        },
+        "/perception/projection_health/head_rgbd": {
+          "samples": 3107,
+          "state_counts": {
+            "READY": 3107
+          },
+          "reason_counts": {
+            "OK": 3107
+          },
+          "valid_samples": 3107,
+          "invalid_samples": 0,
+          "epochs": [
+            "3154587-82207945637378:6"
+          ],
+          "capture_age_ros_s": {
+            "samples": 3107,
+            "percentile_method": "linear",
+            "min": 0.019,
+            "max": 0.1,
+            "p50": 0.054000000000000006,
+            "p95": 0.077,
+            "p99": 0.082
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 3107,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.12213185400000001,
+            "p50": 0.019789752,
+            "p95": 0.0411150374,
+            "p99": 0.05972652204000001
+          },
+          "pending_depth_max": 0
+        },
+        "/perception/camera_health/torso_rgbd": {
+          "samples": 1246,
+          "state_counts": {
+            "OK": 1246
+          },
+          "reason_counts": {
+            "CAMERA_READY": 1246
+          },
+          "valid_samples": 1246,
+          "invalid_samples": 0,
+          "epochs": [
+            "gazebo_camera:82207965410556:4140620482:g5"
+          ],
+          "capture_age_ros_s": {
+            "samples": 1246,
+            "percentile_method": "linear",
+            "min": 0.006,
+            "max": 0.078,
+            "p50": 0.037000000000000005,
+            "p95": 0.058,
+            "p99": 0.063
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 1246,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.10198294100000001,
+            "p50": 0.0,
+            "p95": 0.049065283,
+            "p99": 0.05105701175
+          }
+        },
+        "/perception/projection_health/torso_rgbd": {
+          "samples": 3109,
+          "state_counts": {
+            "READY": 3109
+          },
+          "reason_counts": {
+            "OK": 3109
+          },
+          "valid_samples": 3109,
+          "invalid_samples": 0,
+          "epochs": [
+            "3154589-82207964993092:7"
+          ],
+          "capture_age_ros_s": {
+            "samples": 3109,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.07,
+            "p50": 0.033,
+            "p95": 0.057,
+            "p99": 0.062000000000000006
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 3109,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.11704141400000001,
+            "p50": 0.019184881,
+            "p95": 0.0402845374,
+            "p99": 0.058216090400000024
+          },
+          "pending_depth_max": 1
+        }
+      },
+      "guard": {
+        "samples": 3117,
+        "reason_counts": {
+          "": 2560,
+          "WAITING_FOR_EXECUTION_EVIDENCE": 2,
+          "EXECUTION_WITHIN_BOUNDS": 555
+        },
+        "active_counts": {
+          "False": 2658,
+          "True": 459
+        },
+        "healthy_counts": {
+          "False": 2660,
+          "True": 457
+        },
+        "context_ids": [
+          "",
+          "m1_context_a115642e1aac4045a6e183d0d6b283b6"
+        ],
+        "maximum_joint_error_rad": 0.032049613341732286,
+        "per_reason_ranges": {
+          "": {
+            "samples": 2560,
+            "first_receive_steady_ns": 82238572109324,
+            "last_receive_steady_ns": 82289752131116,
+            "first_data_stamp": {
+              "sec": 21,
+              "nanosec": 887000000
+            },
+            "last_data_stamp": {
+              "sec": 70,
+              "nanosec": 596000000
+            }
+          },
+          "WAITING_FOR_EXECUTION_EVIDENCE": {
+            "samples": 2,
+            "first_receive_steady_ns": 82289762578081,
+            "last_receive_steady_ns": 82289773173018,
+            "first_data_stamp": {
+              "sec": 70,
+              "nanosec": 606000000
+            },
+            "last_data_stamp": {
+              "sec": 70,
+              "nanosec": 613000000
+            }
+          },
+          "EXECUTION_WITHIN_BOUNDS": {
+            "samples": 555,
+            "first_receive_steady_ns": 82289792804544,
+            "last_receive_steady_ns": 82300852388513,
+            "first_data_stamp": {
+              "sec": 70,
+              "nanosec": 636000000
+            },
+            "last_data_stamp": {
+              "sec": 80,
+              "nanosec": 726000000
+            }
+          }
+        }
+      },
+      "native_phase": {
+        "samples": 1242,
+        "phase_counts": {
+          "0": 445,
+          "1": 1,
+          "2": 758,
+          "3": 38
+        },
+        "reason_counts": {
+          "WAITING_FOR_TASK": 445,
+          "WAITING_FOR_NAVIGATION_REVOCATION_READBACK": 1,
+          "PLANNING_COMPLETE_OPERATION": 574,
+          "WAITING_FOR_EXECUTION_GUARD": 2,
+          "EXECUTING_FIRST_MTC_STAGE": 182,
+          "FIRST_STAGE_HOLD_CONFIRMED": 38
+        },
+        "last_raw": {
+          "authority_reason": "HOLDING",
+          "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_confirmed": true,
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_reason": "HOLD_CONFIRMED",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "phase": "3",
+          "reason": "FIRST_STAGE_HOLD_CONFIRMED"
+        }
+      }
+    },
+    "motion": {
+      "raw_streams": {
+        "/camera/raw/torso_rgbd/camera_info": {
+          "samples": 164,
+          "receive_gap_s": {
+            "samples": 163,
+            "percentile_method": "linear",
+            "min": 0.044897154,
+            "max": 0.12029560400000001,
+            "p50": 0.054337917000000006,
+            "p95": 0.0670625905,
+            "p99": 0.10664908102000001
+          },
+          "source_gap_s": {
+            "samples": 163,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.06899999999999978
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.050723085,
+          "tail_silence_s": 0.02204261,
+          "source_first_ns": 70750000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 164,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.012,
+            "p50": 0.0,
+            "p95": 0.008,
+            "p99": 0.01
+          },
+          "intersecting_receive_gap_max_s": 0.12029560400000001,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82297360156786,
+              "source_ns": 77550000000,
+              "ros_now_ns": 77550000000
+            },
+            {
+              "receive_monotonic_ns": 82297480452390,
+              "source_ns": 77650000000,
+              "ros_now_ns": 77652000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/camera_info": {
+          "samples": 162,
+          "receive_gap_s": {
+            "samples": 161,
+            "percentile_method": "linear",
+            "min": 0.042425898000000004,
+            "max": 0.115690501,
+            "p50": 0.054242338,
+            "p95": 0.070806455,
+            "p99": 0.11226815340000001
+          },
+          "source_gap_s": {
+            "samples": 161,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.007206395000000001,
+          "tail_silence_s": 0.010355432000000001,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 162,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.022000000000000002,
+            "p50": 0.008,
+            "p95": 0.015000000000000001,
+            "p99": 0.018000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.115690501,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82297198134140,
+              "source_ns": 77400000000,
+              "ros_now_ns": 77415000000
+            },
+            {
+              "receive_monotonic_ns": 82297313824641,
+              "source_ns": 77500000000,
+              "ros_now_ns": 77510000000
+            }
+          ]
+        },
+        "/camera/raw/torso_rgbd/depth_image": {
+          "samples": 138,
+          "receive_gap_s": {
+            "samples": 137,
+            "percentile_method": "linear",
+            "min": 0.043006341000000003,
+            "max": 0.19784504800000002,
+            "p50": 0.054998161000000004,
+            "p95": 0.11385679939999997,
+            "p99": 0.17832983507999983
+          },
+          "source_gap_s": {
+            "samples": 137,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.0052513640000000006,
+          "tail_silence_s": 0.012401805,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 138,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.018000000000000002,
+            "p50": 0.007,
+            "p95": 0.014,
+            "p99": 0.016259999999999993
+          },
+          "intersecting_receive_gap_max_s": 0.19784504800000002,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82296642563162,
+              "source_ns": 76950000000,
+              "ros_now_ns": 76958000000
+            },
+            {
+              "receive_monotonic_ns": 82296840408210,
+              "source_ns": 77100000000,
+              "ros_now_ns": 77106000000
+            }
+          ]
+        },
+        "/camera/raw/torso_rgbd/image": {
+          "samples": 145,
+          "receive_gap_s": {
+            "samples": 144,
+            "percentile_method": "linear",
+            "min": 0.042091716,
+            "max": 0.21597302200000001,
+            "p50": 0.054398451,
+            "p95": 0.11815144979999997,
+            "p99": 0.17447437879
+          },
+          "source_gap_s": {
+            "samples": 144,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.2,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.006699171,
+          "tail_silence_s": 0.010538319,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 145,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.018000000000000002,
+            "p50": 0.008,
+            "p95": 0.015000000000000001,
+            "p99": 0.017120000000000007
+          },
+          "intersecting_receive_gap_max_s": 0.21597302200000001,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82298575370290,
+              "source_ns": 78650000000,
+              "ros_now_ns": 78658000000
+            },
+            {
+              "receive_monotonic_ns": 82298791343312,
+              "source_ns": 78850000000,
+              "ros_now_ns": 78859000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/image": {
+          "samples": 150,
+          "receive_gap_s": {
+            "samples": 149,
+            "percentile_method": "linear",
+            "min": 0.043748528,
+            "max": 0.16646455100000002,
+            "p50": 0.054621821,
+            "p95": 0.1078467216,
+            "p99": 0.15910381600000006
+          },
+          "source_gap_s": {
+            "samples": 149,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.15000000000000002,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.013605845,
+          "tail_silence_s": 0.001499805,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 150,
+            "percentile_method": "linear",
+            "min": 0.007,
+            "max": 0.029,
+            "p50": 0.013000000000000001,
+            "p95": 0.022000000000000002,
+            "p99": 0.026000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.16646455100000002,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82297497061978,
+              "source_ns": 77650000000,
+              "ros_now_ns": 77660000000
+            },
+            {
+              "receive_monotonic_ns": 82297663526529,
+              "source_ns": 77800000000,
+              "ros_now_ns": 77814000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/camera_info": {
+          "samples": 165,
+          "receive_gap_s": {
+            "samples": 164,
+            "percentile_method": "linear",
+            "min": 0.042171137000000004,
+            "max": 0.12018574100000001,
+            "p50": 0.0539492015,
+            "p95": 0.0658852784,
+            "p99": 0.10974849084000002
+          },
+          "source_gap_s": {
+            "samples": 164,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.05,
+            "p99": 0.06850000000000023
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.013860471000000001,
+          "tail_silence_s": 0.001271171,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 165,
+            "percentile_method": "linear",
+            "min": 0.007,
+            "max": 0.029,
+            "p50": 0.013000000000000001,
+            "p95": 0.022000000000000002,
+            "p99": 0.026000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.12018574100000001,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82297318964794,
+              "source_ns": 77500000000,
+              "ros_now_ns": 77515000000
+            },
+            {
+              "receive_monotonic_ns": 82297439150535,
+              "source_ns": 77600000000,
+              "ros_now_ns": 77618000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/depth_image": {
+          "samples": 126,
+          "receive_gap_s": {
+            "samples": 125,
+            "percentile_method": "linear",
+            "min": 0.041167371,
+            "max": 0.36934099800000003,
+            "p50": 0.054595201,
+            "p95": 0.1494803168,
+            "p99": 0.23979512464000013
+          },
+          "source_gap_s": {
+            "samples": 125,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.30000000000000004,
+            "p50": 0.05,
+            "p95": 0.15000000000000002,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 1,
+          "source_gaps_over_250ms": 1,
+          "initial_silence_s": 0.018363438000000003,
+          "tail_silence_s": 0.060587275,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 78950000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 126,
+            "percentile_method": "linear",
+            "min": 0.012,
+            "max": 0.041,
+            "p50": 0.02,
+            "p95": 0.026000000000000002,
+            "p99": 0.031
+          },
+          "intersecting_receive_gap_max_s": 0.36934099800000003,
+          "intersecting_receive_gaps_over_250ms": 1,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82296658881597,
+              "source_ns": 76950000000,
+              "ros_now_ns": 76970000000
+            },
+            {
+              "receive_monotonic_ns": 82297028222595,
+              "source_ns": 77250000000,
+              "ros_now_ns": 77269000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/camera_info": {
+          "samples": 158,
+          "receive_gap_s": {
+            "samples": 157,
+            "percentile_method": "linear",
+            "min": 0.041860693000000004,
+            "max": 0.126560276,
+            "p50": 0.053992769,
+            "p95": 0.09915596659999987,
+            "p99": 0.11728292867999998
+          },
+          "source_gap_s": {
+            "samples": 157,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.059999999999999436,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.019506665000000003,
+          "tail_silence_s": 0.05975218,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 78950000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 158,
+            "percentile_method": "linear",
+            "min": 0.014,
+            "max": 0.042,
+            "p50": 0.02,
+            "p95": 0.029150000000000006,
+            "p99": 0.03643000000000001
+          },
+          "intersecting_receive_gap_max_s": 0.126560276,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82294133461172,
+              "source_ns": 74700000000,
+              "ros_now_ns": 74732000000
+            },
+            {
+              "receive_monotonic_ns": 82294260021448,
+              "source_ns": 74800000000,
+              "ros_now_ns": 74836000000
+            }
+          ]
+        },
+        "/camera/raw/right_wrist_rgbd/image": {
+          "samples": 138,
+          "receive_gap_s": {
+            "samples": 137,
+            "percentile_method": "linear",
+            "min": 0.043964774000000005,
+            "max": 0.275708391,
+            "p50": 0.054306555000000006,
+            "p95": 0.1209486526,
+            "p99": 0.17155530435999983
+          },
+          "source_gap_s": {
+            "samples": 137,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 1,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.073442164,
+          "tail_silence_s": 0.058926681,
+          "source_first_ns": 70750000000,
+          "source_last_ns": 78950000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 138,
+            "percentile_method": "linear",
+            "min": 0.014,
+            "max": 0.042,
+            "p50": 0.0205,
+            "p95": 0.029150000000000006,
+            "p99": 0.03663
+          },
+          "intersecting_receive_gap_max_s": 0.275708391,
+          "intersecting_receive_gaps_over_250ms": 1,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82295766692905,
+              "source_ns": 76200000000,
+              "ros_now_ns": 76218000000
+            },
+            {
+              "receive_monotonic_ns": 82296042401296,
+              "source_ns": 76450000000,
+              "ros_now_ns": 76471000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/depth_image": {
+          "samples": 142,
+          "receive_gap_s": {
+            "samples": 141,
+            "percentile_method": "linear",
+            "min": 0.041920904,
+            "max": 0.263179775,
+            "p50": 0.054429979,
+            "p95": 0.11591358,
+            "p99": 0.1840675568
+          },
+          "source_gap_s": {
+            "samples": 141,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.15000000000000002
+          },
+          "receive_gaps_over_250ms": 1,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.025316292,
+          "tail_silence_s": 0.051815453000000004,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 78950000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 142,
+            "percentile_method": "linear",
+            "min": 0.018000000000000002,
+            "max": 0.048,
+            "p50": 0.028,
+            "p95": 0.034949999999999995,
+            "p99": 0.04518000000000001
+          },
+          "intersecting_receive_gap_max_s": 0.263179775,
+          "intersecting_receive_gaps_over_250ms": 1,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82292882932927,
+              "source_ns": 73550000000,
+              "ros_now_ns": 73581000000
+            },
+            {
+              "receive_monotonic_ns": 82293146112702,
+              "source_ns": 73800000000,
+              "ros_now_ns": 73830000000
+            }
+          ]
+        },
+        "/camera/raw/head_rgbd/image": {
+          "samples": 157,
+          "receive_gap_s": {
+            "samples": 156,
+            "percentile_method": "linear",
+            "min": 0.04090209,
+            "max": 0.121676141,
+            "p50": 0.05443139650000001,
+            "p95": 0.1021669505,
+            "p99": 0.11084245605
+          },
+          "source_gap_s": {
+            "samples": 156,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.1,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.1
+          },
+          "receive_gaps_over_250ms": 0,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.027920409,
+          "tail_silence_s": 0.049882183000000004,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 78950000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 157,
+            "percentile_method": "linear",
+            "min": 0.019,
+            "max": 0.049,
+            "p50": 0.028,
+            "p95": 0.037000000000000005,
+            "p99": 0.04544
+          },
+          "intersecting_receive_gap_max_s": 0.121676141,
+          "intersecting_receive_gaps_over_250ms": 0,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82293658872710,
+              "source_ns": 74300000000,
+              "ros_now_ns": 74324000000
+            },
+            {
+              "receive_monotonic_ns": 82293780548851,
+              "source_ns": 74400000000,
+              "ros_now_ns": 74429000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_left/camera_info": {
+          "samples": 42,
+          "receive_gap_s": {
+            "samples": 41,
+            "percentile_method": "linear",
+            "min": 0.20230924500000003,
+            "max": 0.286477201,
+            "p50": 0.21426223200000002,
+            "p95": 0.251730494,
+            "p99": 0.27593200580000005
+          },
+          "source_gap_s": {
+            "samples": 41,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.2,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 3,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.10065377,
+          "tail_silence_s": 0.029353335,
+          "source_first_ns": 70800000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 42,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.001,
+            "p50": 0.0,
+            "p95": 0.001,
+            "p99": 0.001
+          },
+          "intersecting_receive_gap_max_s": 0.286477201,
+          "intersecting_receive_gaps_over_250ms": 3,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82296184572797,
+              "source_ns": 76600000000,
+              "ros_now_ns": 76601000000
+            },
+            {
+              "receive_monotonic_ns": 82296471049998,
+              "source_ns": 76800000000,
+              "ros_now_ns": 76801000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_left/image_raw": {
+          "samples": 42,
+          "receive_gap_s": {
+            "samples": 41,
+            "percentile_method": "linear",
+            "min": 0.20399971800000002,
+            "max": 0.28436424800000004,
+            "p50": 0.21454303100000002,
+            "p95": 0.251887336,
+            "p99": 0.27351473760000006
+          },
+          "source_gap_s": {
+            "samples": 41,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.2,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 3,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.104468484,
+          "tail_silence_s": 0.024795677000000002,
+          "source_first_ns": 70800000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 42,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.007,
+            "p50": 0.004,
+            "p95": 0.005949999999999996,
+            "p99": 0.006589999999999997
+          },
+          "intersecting_receive_gap_max_s": 0.28436424800000004,
+          "intersecting_receive_gaps_over_250ms": 3,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82296191816125,
+              "source_ns": 76600000000,
+              "ros_now_ns": 76607000000
+            },
+            {
+              "receive_monotonic_ns": 82296476180373,
+              "source_ns": 76800000000,
+              "ros_now_ns": 76805000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_right/camera_info": {
+          "samples": 42,
+          "receive_gap_s": {
+            "samples": 41,
+            "percentile_method": "linear",
+            "min": 0.20401495600000003,
+            "max": 0.284420518,
+            "p50": 0.21452131800000002,
+            "p95": 0.251916969,
+            "p99": 0.27355782880000007
+          },
+          "source_gap_s": {
+            "samples": 41,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.2,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.2
+          },
+          "receive_gaps_over_250ms": 3,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.10456876000000001,
+          "tail_silence_s": 0.024151899,
+          "source_first_ns": 70800000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 42,
+            "percentile_method": "linear",
+            "min": 0.001,
+            "max": 0.007,
+            "p50": 0.004,
+            "p95": 0.005949999999999996,
+            "p99": 0.006589999999999997
+          },
+          "intersecting_receive_gap_max_s": 0.284420518,
+          "intersecting_receive_gaps_over_250ms": 3,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82296191940671,
+              "source_ns": 76600000000,
+              "ros_now_ns": 76607000000
+            },
+            {
+              "receive_monotonic_ns": 82296476361189,
+              "source_ns": 76800000000,
+              "ros_now_ns": 76805000000
+            }
+          ]
+        },
+        "/camera/raw/head_stereo_right/image_raw": {
+          "samples": 41,
+          "receive_gap_s": {
+            "samples": 40,
+            "percentile_method": "linear",
+            "min": 0.202594048,
+            "max": 0.417248229,
+            "p50": 0.21625867800000004,
+            "p95": 0.2604406673,
+            "p99": 0.36369394886999995
+          },
+          "source_gap_s": {
+            "samples": 40,
+            "percentile_method": "linear",
+            "min": 0.2,
+            "max": 0.4,
+            "p50": 0.2,
+            "p95": 0.2,
+            "p99": 0.3219999999999999
+          },
+          "receive_gaps_over_250ms": 4,
+          "source_gaps_over_250ms": 1,
+          "initial_silence_s": 0.108564873,
+          "tail_silence_s": 0.02168203,
+          "source_first_ns": 70800000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 41,
+            "percentile_method": "linear",
+            "min": 0.004,
+            "max": 0.012,
+            "p50": 0.007,
+            "p95": 0.01,
+            "p99": 0.011200000000000003
+          },
+          "intersecting_receive_gap_max_s": 0.417248229,
+          "intersecting_receive_gaps_over_250ms": 4,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82289972030688,
+              "source_ns": 70800000000,
+              "ros_now_ns": 70807000000
+            },
+            {
+              "receive_monotonic_ns": 82290389278917,
+              "source_ns": 71200000000,
+              "ros_now_ns": 71208000000
+            }
+          ]
+        },
+        "/camera/raw/left_wrist_rgbd/depth_image": {
+          "samples": 131,
+          "receive_gap_s": {
+            "samples": 130,
+            "percentile_method": "linear",
+            "min": 0.041582542,
+            "max": 0.264959382,
+            "p50": 0.05495478000000001,
+            "p95": 0.13044085109999998,
+            "p99": 0.2497101258299997
+          },
+          "source_gap_s": {
+            "samples": 130,
+            "percentile_method": "linear",
+            "min": 0.05,
+            "max": 0.25,
+            "p50": 0.05,
+            "p95": 0.1,
+            "p99": 0.23549999999999968
+          },
+          "receive_gaps_over_250ms": 2,
+          "source_gaps_over_250ms": 0,
+          "initial_silence_s": 0.012176221000000001,
+          "tail_silence_s": 0.0035488610000000004,
+          "source_first_ns": 70700000000,
+          "source_last_ns": 79000000000,
+          "source_regressions": 0,
+          "duplicate_source_intervals": 0,
+          "source_age_ros_s": {
+            "samples": 131,
+            "percentile_method": "linear",
+            "min": 0.007,
+            "max": 0.029,
+            "p50": 0.012,
+            "p95": 0.0205,
+            "p99": 0.026000000000000002
+          },
+          "intersecting_receive_gap_max_s": 0.264959382,
+          "intersecting_receive_gaps_over_250ms": 2,
+          "worst_gap_endpoints": [
+            {
+              "receive_monotonic_ns": 82291354784985,
+              "source_ns": 72100000000,
+              "ros_now_ns": 72109000000
+            },
+            {
+              "receive_monotonic_ns": 82291619744367,
+              "source_ns": 72350000000,
+              "ros_now_ns": 72364000000
+            }
+          ]
+        }
+      },
+      "health_streams": {
+        "/perception/camera_health/head_rgbd": {
+          "samples": 182,
+          "state_counts": {
+            "OK": 182
+          },
+          "reason_counts": {
+            "CAMERA_READY": 182
+          },
+          "valid_samples": 182,
+          "invalid_samples": 0,
+          "epochs": [
+            "gazebo_camera:82207957405158:659910483:g6"
+          ],
+          "capture_age_ros_s": {
+            "samples": 182,
+            "percentile_method": "linear",
+            "min": 0.027000000000000003,
+            "max": 0.12000000000000001,
+            "p50": 0.054000000000000006,
+            "p95": 0.08,
+            "p99": 0.08938
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 182,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.054525845,
+            "p50": 0.0,
+            "p95": 0.04995049715,
+            "p99": 0.05290298500000001
+          }
+        },
+        "/perception/projection_health/head_rgbd": {
+          "samples": 455,
+          "state_counts": {
+            "READY": 455
+          },
+          "reason_counts": {
+            "OK": 455
+          },
+          "valid_samples": 455,
+          "invalid_samples": 0,
+          "epochs": [
+            "3154587-82207945637378:6"
+          ],
+          "capture_age_ros_s": {
+            "samples": 455,
+            "percentile_method": "linear",
+            "min": 0.021,
+            "max": 0.09000000000000001,
+            "p50": 0.053000000000000005,
+            "p95": 0.07629999999999995,
+            "p99": 0.08237999999999994
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 455,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.08159057600000001,
+            "p50": 0.019859775,
+            "p95": 0.0411664823,
+            "p99": 0.05998073624
+          },
+          "pending_depth_max": 0
+        },
+        "/perception/camera_health/torso_rgbd": {
+          "samples": 182,
+          "state_counts": {
+            "OK": 182
+          },
+          "reason_counts": {
+            "CAMERA_READY": 182
+          },
+          "valid_samples": 182,
+          "invalid_samples": 0,
+          "epochs": [
+            "gazebo_camera:82207965410556:4140620482:g5"
+          ],
+          "capture_age_ros_s": {
+            "samples": 182,
+            "percentile_method": "linear",
+            "min": 0.007,
+            "max": 0.065,
+            "p50": 0.037000000000000005,
+            "p95": 0.058,
+            "p99": 0.06319
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 182,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.051685958000000004,
+            "p50": 0.0,
+            "p95": 0.04988043510000001,
+            "p99": 0.05109779416000001
+          }
+        },
+        "/perception/projection_health/torso_rgbd": {
+          "samples": 455,
+          "state_counts": {
+            "READY": 455
+          },
+          "reason_counts": {
+            "OK": 455
+          },
+          "valid_samples": 455,
+          "invalid_samples": 0,
+          "epochs": [
+            "3154589-82207964993092:7"
+          ],
+          "capture_age_ros_s": {
+            "samples": 455,
+            "percentile_method": "linear",
+            "min": 0.005,
+            "max": 0.07,
+            "p50": 0.034,
+            "p95": 0.058,
+            "p99": 0.064
+          },
+          "capture_age_unavailable": 0,
+          "capture_age_negative": 0,
+          "same_capture_steady_age_s": {
+            "samples": 455,
+            "percentile_method": "linear",
+            "min": 0.0,
+            "max": 0.100076095,
+            "p50": 0.019604878000000003,
+            "p95": 0.0410000764,
+            "p99": 0.05997934904
+          },
+          "pending_depth_max": 0
+        }
+      },
+      "guard": {
+        "samples": 456,
+        "reason_counts": {
+          "EXECUTION_WITHIN_BOUNDS": 456
+        },
+        "active_counts": {
+          "True": 453,
+          "False": 3
+        },
+        "healthy_counts": {
+          "True": 453,
+          "False": 3
+        },
+        "context_ids": [
+          "m1_context_a115642e1aac4045a6e183d0d6b283b6"
+        ],
+        "maximum_joint_error_rad": 0.032049613341732286,
+        "per_reason_ranges": {
+          "EXECUTION_WITHIN_BOUNDS": {
+            "samples": 456,
+            "first_receive_steady_ns": 82289873553391,
+            "last_receive_steady_ns": 82298952420114,
+            "first_data_stamp": {
+              "sec": 70,
+              "nanosec": 712000000
+            },
+            "last_data_stamp": {
+              "sec": 79,
+              "nanosec": 14000000
+            }
+          }
+        }
+      },
+      "native_phase": {
+        "samples": 182,
+        "phase_counts": {
+          "2": 182
+        },
+        "reason_counts": {
+          "EXECUTING_FIRST_MTC_STAGE": 182
+        },
+        "last_raw": {
+          "authority_reason": "EXECUTING",
+          "epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+          "hold_confirmed": false,
+          "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+          "hold_reason": "HOLD_CONFIRMED",
+          "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+          "phase": "2",
+          "reason": "EXECUTING_FIRST_MTC_STAGE"
+        }
+      }
+    }
+  },
+  "sha256": {
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/m5_observer/manifest.json": "fdfe0741e8ebdf533baa635927469a8e50d8962145cf0ff53690daf48f42b2c5",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/m5_observer/events.jsonl": "e0ad9db785509a5a2b13cce46fc0ba7cefd08d6b8805c310dd39f4a1e253ad9d",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/m5_observer/session_snapshot.json": "147897861dac03a53201bd7739f2ce7150ed9e475a3a0f1dc416d615579aeb86",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/observer_pre_action.json": "eb04fe21b4e8212939de3b421ad9ee91c29c0731cc52c5eb248a6398a9b4c683",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/first_stage/result.json": "75ad591a37b165c773a06a55ee137ce0717c9426210a684cccdaca3aded37224",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/execution_response_scene02_motion/observer_analysis.json": "78470f6fd1472858094277af6fe1e5c25954dc0256e9128044982f3783572f9b",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/analyze_m5_capture.py": "a2b60b66408bd59d2643fd3e5f3f74d22aa31c2612d13ee73267d229b91dc35b"
+  },
+  "guard_motion_not_active_or_healthy": [
+    {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 78,
+          "nanosec": 976000000
+        },
+        "joint_stamp": {
+          "sec": 78,
+          "nanosec": 950000000
+        },
+        "base_stamp": {
+          "sec": 78,
+          "nanosec": 960000000
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": false,
+        "healthy": false,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "maximum_joint_error_rad": 2.943311010250582e-06,
+        "base_translation_m": 5.616120011008664e-05,
+        "base_rotation_rad": 0.0001825577279513594
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82298913337903,
+      "receive_wall_ns": 1790225715036019283,
+      "ros_now_ns": 78976000000
+    },
+    {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 78,
+          "nanosec": 996000000
+        },
+        "joint_stamp": {
+          "sec": 78,
+          "nanosec": 950000000
+        },
+        "base_stamp": {
+          "sec": 78,
+          "nanosec": 960000000
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": false,
+        "healthy": false,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "maximum_joint_error_rad": 2.943311010250582e-06,
+        "base_translation_m": 5.616120011008664e-05,
+        "base_rotation_rad": 0.0001825577279513594
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82298932563356,
+      "receive_wall_ns": 1790225715055244696,
+      "ros_now_ns": 78997000000
+    },
+    {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 79,
+          "nanosec": 14000000
+        },
+        "joint_stamp": {
+          "sec": 78,
+          "nanosec": 950000000
+        },
+        "base_stamp": {
+          "sec": 78,
+          "nanosec": 960000000
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": false,
+        "healthy": false,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "maximum_joint_error_rad": 2.943311010250582e-06,
+        "base_translation_m": 5.616120011008664e-05,
+        "base_rotation_rad": 0.0001825577279513594
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82298952420114,
+      "receive_wall_ns": 1790225715075101716,
+      "ros_now_ns": 79014000000
+    }
+  ],
+  "guard_state_transitions": [
+    {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 21,
+          "nanosec": 263000000
+        },
+        "joint_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "base_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "context_id": "",
+        "active": false,
+        "healthy": false,
+        "reason": "",
+        "maximum_joint_error_rad": 0.0,
+        "base_translation_m": 0.0,
+        "base_rotation_rad": 0.0
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82236712461871,
+      "receive_wall_ns": 1790225652835143408,
+      "ros_now_ns": 0
+    },
+    {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 70,
+          "nanosec": 606000000
+        },
+        "joint_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "base_stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": true,
+        "healthy": false,
+        "reason": "WAITING_FOR_EXECUTION_EVIDENCE",
+        "maximum_joint_error_rad": 0.0,
+        "base_translation_m": 0.0,
+        "base_rotation_rad": 0.0
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82289762578081,
+      "receive_wall_ns": 1790225705885259436,
+      "ros_now_ns": 70606000000
+    },
+    {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 70,
+          "nanosec": 636000000
+        },
+        "joint_stamp": {
+          "sec": 70,
+          "nanosec": 630000000
+        },
+        "base_stamp": {
+          "sec": 70,
+          "nanosec": 620000000
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": true,
+        "healthy": true,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "maximum_joint_error_rad": 1.8866463946665135e-11,
+        "base_translation_m": 0.0,
+        "base_rotation_rad": 0.0
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82289792804544,
+      "receive_wall_ns": 1790225705915485877,
+      "ros_now_ns": 70634000000
+    },
+    {
+      "source_ns": null,
+      "data": {
+        "stamp": {
+          "sec": 78,
+          "nanosec": 976000000
+        },
+        "joint_stamp": {
+          "sec": 78,
+          "nanosec": 950000000
+        },
+        "base_stamp": {
+          "sec": 78,
+          "nanosec": 960000000
+        },
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "active": false,
+        "healthy": false,
+        "reason": "EXECUTION_WITHIN_BOUNDS",
+        "maximum_joint_error_rad": 2.943311010250582e-06,
+        "base_translation_m": 5.616120011008664e-05,
+        "base_rotation_rad": 0.0001825577279513594
+      },
+      "kind": "status",
+      "topic": "/transport/execution_guard/status",
+      "receive_monotonic_ns": 82298913337903,
+      "receive_wall_ns": 1790225715036019283,
+      "ros_now_ns": 78976000000
+    }
+  ],
+  "health_epoch_transitions": {
+    "/perception/camera_health/head_rgbd": [
+      {
+        "epoch": "gazebo_camera:82207957405158:659910483:g2",
+        "receive_steady_ns": 82236725833168,
+        "receive_offset_s": 0.15663737800000002,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 150000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207957405158:659910483:g3",
+        "receive_steady_ns": 82236912656410,
+        "receive_offset_s": 0.34346062,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 250000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207957405158:659910483:g4",
+        "receive_steady_ns": 82237212366809,
+        "receive_offset_s": 0.6431710190000001,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 300000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207957405158:659910483:g5",
+        "receive_steady_ns": 82237662373676,
+        "receive_offset_s": 1.093177886,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 350000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207957405158:659910483:g6",
+        "receive_steady_ns": 82238012584802,
+        "receive_offset_s": 1.4433890120000001,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 400000000
+        }
+      }
+    ],
+    "/perception/projection_health/head_rgbd": [
+      {
+        "epoch": "3154587-82207945637378:2",
+        "receive_steady_ns": 82236725974841,
+        "receive_offset_s": 0.156779051,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 250000000
+        }
+      },
+      {
+        "epoch": "3154587-82207945637378:3",
+        "receive_steady_ns": 82236888848506,
+        "receive_offset_s": 0.319652716,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 250000000
+        }
+      },
+      {
+        "epoch": "3154587-82207945637378:4",
+        "receive_steady_ns": 82237208845334,
+        "receive_offset_s": 0.6396495440000001,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 300000000
+        }
+      },
+      {
+        "epoch": "3154587-82207945637378:5",
+        "receive_steady_ns": 82237648685868,
+        "receive_offset_s": 1.079490078,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 350000000
+        }
+      },
+      {
+        "epoch": "3154587-82207945637378:6",
+        "receive_steady_ns": 82237988771824,
+        "receive_offset_s": 1.419576034,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 400000000
+        }
+      }
+    ],
+    "/perception/camera_health/torso_rgbd": [
+      {
+        "epoch": "gazebo_camera:82207965410556:4140620482:g1",
+        "receive_steady_ns": 82236726077132,
+        "receive_offset_s": 0.156881342,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 150000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207965410556:4140620482:g2",
+        "receive_steady_ns": 82236879589436,
+        "receive_offset_s": 0.310393646,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 250000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207965410556:4140620482:g3",
+        "receive_steady_ns": 82237229916670,
+        "receive_offset_s": 0.6607208800000001,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 300000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207965410556:4140620482:g4",
+        "receive_steady_ns": 82237629751605,
+        "receive_offset_s": 1.060555815,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 350000000
+        }
+      },
+      {
+        "epoch": "gazebo_camera:82207965410556:4140620482:g5",
+        "receive_steady_ns": 82237979973107,
+        "receive_offset_s": 1.4107773170000002,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 400000000
+        }
+      }
+    ],
+    "/perception/projection_health/torso_rgbd": [
+      {
+        "epoch": "3154589-82207964993092:4",
+        "receive_steady_ns": 82237114897807,
+        "receive_offset_s": 0.545702017,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 300000000
+        }
+      },
+      {
+        "epoch": "3154589-82207964993092:5",
+        "receive_steady_ns": 82237193747731,
+        "receive_offset_s": 0.624551941,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 300000000
+        }
+      },
+      {
+        "epoch": "3154589-82207964993092:6",
+        "receive_steady_ns": 82237632781820,
+        "receive_offset_s": 1.06358603,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 350000000
+        }
+      },
+      {
+        "epoch": "3154589-82207964993092:7",
+        "receive_steady_ns": 82237972723530,
+        "receive_offset_s": 1.4035277400000001,
+        "capture_stamp": {
+          "sec": 21,
+          "nanosec": 400000000
+        }
+      }
+    ]
+  },
+  "health_invalid_ranges": {
+    "/perception/camera_health/head_rgbd": {
+      "count": 8,
+      "first_receive_offset_s": 0.34346062,
+      "last_receive_offset_s": 1.4433890120000001
+    },
+    "/perception/projection_health/head_rgbd": {
+      "count": 22,
+      "first_receive_offset_s": 0.319652716,
+      "last_receive_offset_s": 1.460011964
+    },
+    "/perception/camera_health/torso_rgbd": {
+      "count": 9,
+      "first_receive_offset_s": 0.310393646,
+      "last_receive_offset_s": 1.4605443020000002
+    },
+    "/perception/projection_health/torso_rgbd": {
+      "count": 19,
+      "first_receive_offset_s": 0.624551941,
+      "last_receive_offset_s": 1.463500005
+    }
+  },
+  "motion_depth_gap_events_over_250ms": {
+    "/camera/raw/torso_rgbd/depth_image": [],
+    "/camera/raw/right_wrist_rgbd/depth_image": [
+      {
+        "receive_gap_ns": 369340998,
+        "source_gap_ns": 300000000,
+        "previous": {
+          "receive_monotonic_ns": 82296658881597,
+          "source_ns": 76950000000,
+          "ros_now_ns": 76970000000
+        },
+        "next": {
+          "receive_monotonic_ns": 82297028222595,
+          "source_ns": 77250000000,
+          "ros_now_ns": 77269000000
+        }
+      }
+    ],
+    "/camera/raw/head_rgbd/depth_image": [
+      {
+        "receive_gap_ns": 263179775,
+        "source_gap_ns": 250000000,
+        "previous": {
+          "receive_monotonic_ns": 82292882932927,
+          "source_ns": 73550000000,
+          "ros_now_ns": 73581000000
+        },
+        "next": {
+          "receive_monotonic_ns": 82293146112702,
+          "source_ns": 73800000000,
+          "ros_now_ns": 73830000000
+        }
+      }
+    ],
+    "/camera/raw/left_wrist_rgbd/depth_image": [
+      {
+        "receive_gap_ns": 264959382,
+        "source_gap_ns": 250000000,
+        "previous": {
+          "receive_monotonic_ns": 82291354784985,
+          "source_ns": 72100000000,
+          "ros_now_ns": 72109000000
+        },
+        "next": {
+          "receive_monotonic_ns": 82291619744367,
+          "source_ns": 72350000000,
+          "ros_now_ns": 72364000000
+        }
+      },
+      {
+        "receive_gap_ns": 264405317,
+        "source_gap_ns": 250000000,
+        "previous": {
+          "receive_monotonic_ns": 82298580092937,
+          "source_ns": 78650000000,
+          "ros_now_ns": 78662000000
+        },
+        "next": {
+          "receive_monotonic_ns": 82298844498254,
+          "source_ns": 78900000000,
+          "ros_now_ns": 78911000000
+        }
+      }
+    ]
+  },
+  "probe_motion_boundary_records": {
+    "execution": {
+      "wall": 82289.863465815,
+      "ros_s": 70.70400000000001,
+      "goal_id": "b05110d71a634437917052ac984e7873",
+      "feedback": {
+        "phase": "2",
+        "reason": "EXECUTING_FIRST_MTC_STAGE",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+        "hold_confirmed": false,
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "stage_id": "PREGRASP"
+      }
+    },
+    "hold": {
+      "wall": 82298.966628639,
+      "ros_s": 79.02900000000001,
+      "goal_id": "b05110d71a634437917052ac984e7873",
+      "feedback": {
+        "phase": "3",
+        "reason": "FIRST_STAGE_HOLD_CONFIRMED",
+        "lease_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+        "resource_epoch": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+        "hold_id": "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold",
+        "hold_confirmed": true,
+        "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+        "stage_id": "PREGRASP"
+      }
+    }
+  },
+  "probe_summary": {
+    "passed": false,
+    "error": "AttributeError(\"'EnvelopeApplyStatus' object has no attribute 'mode'\")",
+    "cleanup_complete": false,
+    "resource_disposition": "STOP_UNPROVEN_HOLD_NOT_CANCELLED_OWNING_SIMULATION_TEARDOWN_REQUIRED",
+    "cleanup_errors": [
+      "stop:AttributeError(\"'EnvelopeApplyStatus' object has no attribute 'mode'\")"
+    ],
+    "parent_terminal": null,
+    "parent_submission_events": 1
+  }
+}

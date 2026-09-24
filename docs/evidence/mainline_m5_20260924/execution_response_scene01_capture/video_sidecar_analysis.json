@@ -1,0 +1,277 @@
+{
+  "schema": "astribot.m5.video_sidecar_analysis/1",
+  "scope": "Actual stationary scene metadata audit. No Action was sent; not motion/Hold acceptance.",
+  "source_directory": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01",
+  "source_sha256": {
+    "first_stage.frames.jsonl": "f98654cd9d5ea110add2f4942155afb1bf2421453e9eb31aa1151e0886186f9f",
+    "first_stage.json": "1e11f4578be2cb54fb52c337f2ed4915077a94d1fc53dc38ee300375d7600d80",
+    "result.json": "bd178815d0c294f8dcd4f6bbdde6f137b80c8b1be0849bc463663a251b76ee21",
+    "first_stage/result.json": "a776eeefdf52f72fcffce73f069542b5ba826902db2e8e112876b50835e3f6b5",
+    "observer_pre_action.json": "5739d8b032f6f3868e8a80baff804aa33c75e6b265d9ea084a8afff485d0cc3a",
+    "head_raw_summary.json": "786d372fd7f691022b41acff16eae520b5011755be3df41ddc705dd06180fb81",
+    "m5_observer/manifest.json": "4e4a75df59886eba5eb5a5deffe86663653fdac1e3f9e4173ffbe183d912ce91",
+    "post_cleanup_identity_audit.json": "21cef18af2505b9b5946dc45809133b5a92f4e4924e77f078cac9cef5283e458"
+  },
+  "analyzer_sha256": "2b6c8fbdd00488dc07e178d945321c2c552f0b5dae1e922a881315964bce01f7",
+  "video_integrity": {
+    "sidecar_rows": 307,
+    "summary_frames": 307,
+    "owner_decoded_frames": 307,
+    "owner_decode_passed": true,
+    "independently_decoded_in_this_analysis": false,
+    "contiguous_indices": true,
+    "status_references_exact": true,
+    "recorder_returncode": -2,
+    "stop_interpretation": "Owner-controlled SIGINT; retained finally output, not normal duration completion"
+  },
+  "coverage": {
+    "overview_first_source_ns": 23059000000,
+    "overview_last_source_ns": 64200000000,
+    "source_span_sec": 41.141,
+    "first_receive_monotonic_ns": 81979236833805,
+    "last_receive_monotonic_ns": 82022419156278,
+    "receive_span_sec": 43.182322473,
+    "recorder_loop_wall_sec": 44.27569086800213,
+    "encoded_playback_sec": 30.7,
+    "native_status_events": 865,
+    "native_status_reasons": {
+      "WAITING_FOR_TASK": 865
+    },
+    "drawn_status_reasons": {
+      "NO_STATUS_YET": 1,
+      "WAITING_FOR_TASK": 306
+    },
+    "pre_action_receipt_receive_sec": 82001.581184515,
+    "probe_error": "ValueError('STALE_LEDGER_CAPTURE')",
+    "feedback_count": 0,
+    "envelope_count": 0,
+    "ack_count": 0,
+    "pending_hold_uuid": null,
+    "action_result": "NOT_SENT",
+    "actual_motion_validation": "NOT_RUN",
+    "hold_acceptance": "NOT_RUN"
+  },
+  "overview": {
+    "receive_gap_ms": {
+      "samples": 306,
+      "percentile_method": "linear",
+      "min": 6.558036,
+      "max": 608.251914,
+      "p50": 107.5463125,
+      "p95": 375.13072725,
+      "p99": 528.3089429999999
+    },
+    "source_gap_ms": {
+      "samples": 306,
+      "percentile_method": "linear",
+      "min": 1.0,
+      "max": 600.0,
+      "p50": 100.0,
+      "p95": 300.0,
+      "p99": 500.0
+    },
+    "receive_gaps_over_250ms": 37,
+    "duplicate_source_intervals": 0,
+    "source_regressions": 0,
+    "source_age_vs_latest_observed_clock_ms": {
+      "samples": 307,
+      "percentile_method": "linear",
+      "min": -1.0,
+      "max": 54.0,
+      "p50": 46.0,
+      "p95": 54.0,
+      "p99": 54.0
+    },
+    "negative_ros_age_samples": 5,
+    "observed_clock_residence_ms": {
+      "samples": 307,
+      "percentile_method": "linear",
+      "min": 0.547824,
+      "max": 19.49948,
+      "p50": 1.450711,
+      "p95": 2.3221727999999993,
+      "p99": 5.9103103599999995
+    },
+    "top_receive_gaps": [
+      {
+        "from_frame": 69,
+        "to_frame": 70,
+        "receive_gap_ms": 608.251914,
+        "source_gap_ms": 600.0,
+        "from_source_ns": 26600000000,
+        "to_source_ns": 27200000000,
+        "from_receive_monotonic_ns": 81983425609842,
+        "to_receive_monotonic_ns": 81984033861756,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 298,
+        "to_frame": 299,
+        "receive_gap_ms": 541.743641,
+        "source_gap_ms": 500.0,
+        "from_source_ns": 62900000000,
+        "to_source_ns": 63400000000,
+        "from_receive_monotonic_ns": 82021056116310,
+        "to_receive_monotonic_ns": 82021597859951,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 99,
+        "to_frame": 100,
+        "receive_gap_ms": 535.779706,
+        "source_gap_ms": 500.0,
+        "from_source_ns": 32200000000,
+        "to_source_ns": 32700000000,
+        "from_receive_monotonic_ns": 81989180004446,
+        "to_receive_monotonic_ns": 81989715784152,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 117,
+        "to_frame": 118,
+        "receive_gap_ms": 528.657116,
+        "source_gap_ms": 400.0,
+        "from_source_ns": 35100000000,
+        "to_source_ns": 35500000000,
+        "from_receive_monotonic_ns": 81992207694642,
+        "to_receive_monotonic_ns": 81992736351758,
+        "overlaps_raw_bag_process_window": true
+      },
+      {
+        "from_frame": 152,
+        "to_frame": 153,
+        "receive_gap_ms": 521.693656,
+        "source_gap_ms": 400.0,
+        "from_source_ns": 40700000000,
+        "to_source_ns": 41100000000,
+        "from_receive_monotonic_ns": 81998140628836,
+        "to_receive_monotonic_ns": 81998662322492,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 229,
+        "to_frame": 230,
+        "receive_gap_ms": 504.70191,
+        "source_gap_ms": 500.0,
+        "from_source_ns": 52600000000,
+        "to_source_ns": 53100000000,
+        "from_receive_monotonic_ns": 82010512472321,
+        "to_receive_monotonic_ns": 82011017174231,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 178,
+        "to_frame": 179,
+        "receive_gap_ms": 502.803811,
+        "source_gap_ms": 500.0,
+        "from_source_ns": 45000000000,
+        "to_source_ns": 45500000000,
+        "from_receive_monotonic_ns": 82002754591452,
+        "to_receive_monotonic_ns": 82003257395263,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 208,
+        "to_frame": 209,
+        "receive_gap_ms": 500.787513,
+        "source_gap_ms": 500.0,
+        "from_source_ns": 49200000000,
+        "to_source_ns": 49700000000,
+        "from_receive_monotonic_ns": 82007050509700,
+        "to_receive_monotonic_ns": 82007551297213,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 221,
+        "to_frame": 222,
+        "receive_gap_ms": 498.991045,
+        "source_gap_ms": 500.0,
+        "from_source_ns": 51400000000,
+        "to_source_ns": 51900000000,
+        "from_receive_monotonic_ns": 82009288516868,
+        "to_receive_monotonic_ns": 82009787507913,
+        "overlaps_raw_bag_process_window": false
+      },
+      {
+        "from_frame": 157,
+        "to_frame": 158,
+        "receive_gap_ms": 458.029829,
+        "source_gap_ms": 400.0,
+        "from_source_ns": 41600000000,
+        "to_source_ns": 42000000000,
+        "from_receive_monotonic_ns": 81999188394272,
+        "to_receive_monotonic_ns": 81999646424101,
+        "overlaps_raw_bag_process_window": false
+      }
+    ]
+  },
+  "head_inset": {
+    "present_frames": 260,
+    "missing_frames": 47,
+    "first_present_frame_index": 47,
+    "first_present_overview_source_ns": 23500000000,
+    "first_present_after_first_overview_receive_sec": 0.876762498,
+    "unique_source_stamps": 260,
+    "consecutive_reused_source_count": 0,
+    "consecutive_reused_receipt_count": 0,
+    "cache_residence_at_overview_receive_ms": {
+      "samples": 260,
+      "percentile_method": "linear",
+      "min": 12.401284,
+      "max": 36.876829,
+      "p50": 17.2543925,
+      "p95": 21.035051649999996,
+      "p99": 24.17415828000005
+    },
+    "source_age_vs_overview_latest_clock_ms": {
+      "samples": 260,
+      "percentile_method": "linear",
+      "min": 36.0,
+      "max": 54.0,
+      "p50": 47.0,
+      "p95": 54.0,
+      "p99": 54.0
+    },
+    "negative_ros_age_samples": 0,
+    "source_regressions_in_visible_samples": 0,
+    "scope": "Only head samples selected for inset; not the full head topic, and cache residence is not capture-to-display latency"
+  },
+  "recorder_work": {
+    "encode_call_ms": {
+      "samples": 307,
+      "percentile_method": "linear",
+      "min": 2.068246,
+      "max": 6.349792,
+      "p50": 2.690115,
+      "p95": 4.1668110999999985,
+      "p99": 5.04572788
+    },
+    "receive_to_encode_start_ms": {
+      "samples": 307,
+      "percentile_method": "linear",
+      "min": 3.302206,
+      "max": 6.593782,
+      "p50": 3.99897,
+      "p95": 5.7367506,
+      "p99": 5.888302599999999
+    }
+  },
+  "raw_bag": {
+    "process_elapsed_sec": 5.538057167999796,
+    "returncode": 124,
+    "actual_bag_record_span_sec": 2.525252108,
+    "not_activated": [
+      "/manipulation/single_box/head_rgbd/points",
+      "/perception/projection_health/single_box/head_rgbd"
+    ],
+    "missing_topics": [],
+    "exact_stamp_tuple_audit": "NOT_PERFORMED",
+    "scope": "Seven baseline topics only; not full M3 source/model input"
+  },
+  "limits": [
+    "No video re-encode or additional decode was performed; decoded frame count is owner evidence.",
+    "Playback time is fixed-fps and not wall time. Receive gaps characterize this callback, not proven rendering/DDS causes.",
+    "Latest observed clock can lag; ROS age and steady cache residence are different clocks and meanings.",
+    "No action was sent, so no motion-window source coverage or Hold acceptance can be inferred."
+  ]
+}
