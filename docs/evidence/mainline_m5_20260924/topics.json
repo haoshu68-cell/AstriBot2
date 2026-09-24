@@ -1,0 +1,347 @@
+{
+  "scope": "Raw six-camera presence/timing baseline. Optional inputs do not imply M5 motion coverage acceptance. Stage source must be provided explicitly.",
+  "topics": [
+    {
+      "topic": "/camera/raw/head_rgbd/image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "head_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/head_rgbd/camera_info",
+      "kind": "info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "camera": "head_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/head_rgbd/depth_image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "head_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/camera_health/head_rgbd",
+      "kind": "raw_health",
+      "type": "astribot_perception_msgs/msg/CameraHealth",
+      "camera": "head_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/projection_health/head_rgbd",
+      "kind": "projection_health",
+      "type": "astribot_perception_msgs/msg/ProjectionHealth",
+      "camera": "head_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/head_rgbd/points_raw",
+      "kind": "cloud",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "camera": "head_rgbd",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/head_rgbd/points",
+      "kind": "cloud",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "camera": "head_rgbd",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/torso_rgbd/image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "torso_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/torso_rgbd/camera_info",
+      "kind": "info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "camera": "torso_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/torso_rgbd/depth_image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "torso_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/camera_health/torso_rgbd",
+      "kind": "raw_health",
+      "type": "astribot_perception_msgs/msg/CameraHealth",
+      "camera": "torso_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/projection_health/torso_rgbd",
+      "kind": "projection_health",
+      "type": "astribot_perception_msgs/msg/ProjectionHealth",
+      "camera": "torso_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/torso_rgbd/points_raw",
+      "kind": "cloud",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "camera": "torso_rgbd",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/torso_rgbd/points",
+      "kind": "cloud",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "camera": "torso_rgbd",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/left_wrist_rgbd/image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "left_wrist_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/left_wrist_rgbd/camera_info",
+      "kind": "info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "camera": "left_wrist_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/left_wrist_rgbd/depth_image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "left_wrist_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/camera_health/left_wrist_rgbd",
+      "kind": "raw_health",
+      "type": "astribot_perception_msgs/msg/CameraHealth",
+      "camera": "left_wrist_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/projection_health/left_wrist_rgbd",
+      "kind": "projection_health",
+      "type": "astribot_perception_msgs/msg/ProjectionHealth",
+      "camera": "left_wrist_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/manipulation/camera/left_wrist_rgbd/points",
+      "kind": "cloud",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "camera": "left_wrist_rgbd",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/right_wrist_rgbd/image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "right_wrist_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/right_wrist_rgbd/camera_info",
+      "kind": "info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "camera": "right_wrist_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/right_wrist_rgbd/depth_image",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "right_wrist_rgbd",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/camera_health/right_wrist_rgbd",
+      "kind": "raw_health",
+      "type": "astribot_perception_msgs/msg/CameraHealth",
+      "camera": "right_wrist_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/perception/projection_health/right_wrist_rgbd",
+      "kind": "projection_health",
+      "type": "astribot_perception_msgs/msg/ProjectionHealth",
+      "camera": "right_wrist_rgbd",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/manipulation/camera/right_wrist_rgbd/points",
+      "kind": "cloud",
+      "type": "sensor_msgs/msg/PointCloud2",
+      "camera": "right_wrist_rgbd",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": 0.25
+    },
+    {
+      "topic": "/camera/raw/head_stereo_left/image_raw",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "head_stereo_left",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/camera/raw/head_stereo_left/camera_info",
+      "kind": "info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "camera": "head_stereo_left",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/camera/raw/head_stereo_right/image_raw",
+      "kind": "image",
+      "type": "sensor_msgs/msg/Image",
+      "camera": "head_stereo_right",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/camera/raw/head_stereo_right/camera_info",
+      "kind": "info",
+      "type": "sensor_msgs/msg/CameraInfo",
+      "camera": "head_stereo_right",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/clock",
+      "kind": "clock",
+      "type": "rosgraph_msgs/msg/Clock",
+      "qos": "sensor",
+      "required": true,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/tf",
+      "kind": "tf",
+      "type": "tf2_msgs/msg/TFMessage",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/tf_static",
+      "kind": "tf_static",
+      "type": "tf2_msgs/msg/TFMessage",
+      "qos": "latched",
+      "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/joint_states",
+      "kind": "joints",
+      "type": "sensor_msgs/msg/JointState",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/odom",
+      "kind": "odom",
+      "type": "nav_msgs/msg/Odometry",
+      "qos": "sensor",
+      "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/cmd_vel_policy_input",
+      "kind": "twist",
+      "type": "geometry_msgs/msg/Twist",
+      "qos": "reliable",
+      "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/cmd_vel",
+      "kind": "twist",
+      "type": "geometry_msgs/msg/Twist",
+      "qos": "reliable",
+      "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/navigation_policy/constraint",
+      "kind": "constraint",
+      "type": "astribot_navigation_msgs/msg/MotionConstraint",
+      "qos": "reliable",
+      "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/navigation_policy/protection_state",
+      "kind": "protection",
+      "type": "std_msgs/msg/String",
+      "qos": "reliable",
+      "required": false,
+      "gap_budget_sec": null
+    }
+  ]
+}
