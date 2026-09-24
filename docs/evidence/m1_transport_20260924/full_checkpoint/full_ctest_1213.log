@@ -1,0 +1,61 @@
+Internal ctest changing into directory: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build
+Test project /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build
+      Start  1: payload_command_test
+ 1/10 Test  #1: payload_command_test .............   Passed    0.05 sec
+      Start  2: payload_client_test
+ 2/10 Test  #2: payload_client_test ..............   Passed    0.54 sec
+      Start  3: payload_frames_test
+ 3/10 Test  #3: payload_frames_test ..............   Passed    0.07 sec
+      Start  4: payload_scene_test
+ 4/10 Test  #4: payload_scene_test ...............***Failed    0.05 sec
+-- run_test.py: invoking following command in '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build':
+ - /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/payload_scene_test --gtest_output=xml:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/payload_scene_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 2 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 2 tests from PayloadScene
+[ RUN      ] PayloadScene.CopiesActualConservativeBodyAndRejectsUnrelatedSceneChanges
+unknown file: Failure
+C++ exception with description "MTC_OCTOMAP_FRAME_UNSUPPORTED" thrown in the test body.
+[  FAILED  ] PayloadScene.CopiesActualConservativeBodyAndRejectsUnrelatedSceneChanges (1 ms)
+[ RUN      ] PayloadScene.DetachPreservesPhysicalGeometryAtMeasuredPoseAndFullInventory
+unknown file: Failure
+C++ exception with description "MTC_OCTOMAP_FRAME_UNSUPPORTED" thrown in the test body.
+[  FAILED  ] PayloadScene.DetachPreservesPhysicalGeometryAtMeasuredPoseAndFullInventory (0 ms)
+[----------] 2 tests from PayloadScene (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 2 tests, listed below:
+[  FAILED  ] PayloadScene.CopiesActualConservativeBodyAndRejectsUnrelatedSceneChanges
+[  FAILED  ] PayloadScene.DetachPreservesPhysicalGeometryAtMeasuredPoseAndFullInventory
+
+ 2 FAILED TESTS
+-- run_test.py: return code 1
+-- run_test.py: inject classname prefix into gtest result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/payload_scene_test.gtest.xml'
+-- run_test.py: verify result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/payload_scene_test.gtest.xml'
+
+      Start  5: mtc_plan_test
+ 5/10 Test  #5: mtc_plan_test ....................   Passed    0.06 sec
+      Start  6: scene_binding_test
+ 6/10 Test  #6: scene_binding_test ...............   Passed    0.06 sec
+      Start  7: resource_authority_test
+ 7/10 Test  #7: resource_authority_test ..........   Passed    0.05 sec
+      Start  8: child_actions_test
+ 8/10 Test  #8: child_actions_test ...............   Passed    0.05 sec
+      Start  9: resource_journal_test
+ 9/10 Test  #9: resource_journal_test ............   Passed    0.06 sec
+      Start 10: arm_hold_test
+10/10 Test #10: arm_hold_test ....................   Passed    0.05 sec
+
+90% tests passed, 1 tests failed out of 10
+
+Label Time Summary:
+gtest    =   1.04 sec*proc (10 tests)
+
+Total Test time (real) =   1.04 sec
+
+The following tests FAILED:
+	  4 - payload_scene_test (Failed)
+Errors while running CTest

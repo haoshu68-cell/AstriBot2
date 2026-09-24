@@ -1,0 +1,6 @@
+# Validated frozen first-stage candidate; this only sets package resolution.
+source /home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/overlay.bash
+source /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc/share/astribot_s1_transport_mtc/local_setup.bash
+source /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/install/astribot_s1_transport_native/share/astribot_s1_transport_native/local_setup.bash
+export LD_LIBRARY_PATH=/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/install/astribot_s1_transport_native/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc/lib:"$LD_LIBRARY_PATH"
+export CMAKE_PREFIX_PATH=/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/install/astribot_s1_transport_native:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc:"$CMAKE_PREFIX_PATH"

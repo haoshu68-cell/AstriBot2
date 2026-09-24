@@ -1,0 +1,114 @@
+{
+  "scope": "Actual frozen first-stage simulation; not full PICK/PLACE or narrow passage acceptance",
+  "first_stage_passed": false,
+  "scene_recheck_passed": true,
+  "initialization_passed": true,
+  "planner_terminal_success": true,
+  "submitted_controllers": [
+    "arm_left_controller",
+    "arm_right_controller",
+    "gripper_left_controller",
+    "gripper_right_controller",
+    "head_controller",
+    "torso_controller"
+  ],
+  "controller_terminal": [
+    {
+      "controller": "arm_left_controller",
+      "result_code": 5,
+      "success": false,
+      "uuid": "4ee2f7625dbd5f318deed9fb3caeccea"
+    },
+    {
+      "controller": "arm_right_controller",
+      "result_code": 5,
+      "success": false,
+      "uuid": "701b2441d99f2bd95f2ac755dea49bef"
+    },
+    {
+      "controller": "gripper_left_controller",
+      "result_code": 5,
+      "success": false,
+      "uuid": "2f5770d111c4d07bbb4f9bbb901d2bf9"
+    },
+    {
+      "controller": "gripper_right_controller",
+      "result_code": 5,
+      "success": false,
+      "uuid": "aa22db28ec8ff9ac943f298164d0ebc9"
+    },
+    {
+      "controller": "head_controller",
+      "result_code": 5,
+      "success": false,
+      "uuid": "a9d0827392624dc2c24da11ba34a20e5"
+    },
+    {
+      "controller": "torso_controller",
+      "result_code": 5,
+      "success": false,
+      "uuid": "161c535599e8878afca5d2ce676aad6b"
+    }
+  ],
+  "parent_terminal": {
+    "status": 5,
+    "result": {
+      "resources_released": true,
+      "reason": "EXECUTION_GUARD_UNHEALTHY",
+      "lease_id": "14274b04-9956-4947-98cd-21a64c83a736_1"
+    }
+  },
+  "probe_error": "RuntimeError('UNEXPECTED_MOTION')",
+  "execution_motion": {
+    "source": "recorded /odom, /cmd_vel and left JointTrajectoryControllerState",
+    "first_odom_threshold_crossing": {
+      "t": 38.66,
+      "wall": 79845.139414077,
+      "x": -0.00023381464430570422,
+      "y": -2.5963945333193238e-05,
+      "yaw": -0.0004658534919648122,
+      "vx": 0.006747055727482616,
+      "vy": -0.0016701708043938435,
+      "wz": -0.06516136963909958,
+      "frame": "odom",
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 79845.124424857
+    },
+    "max_base_speed_mps": 0.006950700073057789,
+    "max_base_yaw_rate_radps": 0.06516136963909958,
+    "net_base_displacement_m": 0.00029137546699892545,
+    "max_command_mixed": 0.0,
+    "max_left_joint_tracking_error_rad": 0.05132975402259202,
+    "guard_status_topic_recorded": false,
+    "clock_rollback_proven": false
+  },
+  "cleanup_stop": {
+    "passed": true,
+    "samples": 36,
+    "span_s": 0.6999999999999957,
+    "start_ros_s": 38.7,
+    "end_ros_s": 39.4,
+    "drift_m": 0.00025377364200789693,
+    "rotation_rad": 0.0003010036017182412,
+    "speed_mps": 0.006009003835868482,
+    "angular_speed_radps": 0.01370026329823304,
+    "command_max": 0.0,
+    "fresh": true
+  },
+  "resources": "RELEASE_CONFIRMED",
+  "cleanup_complete": true,
+  "clean_shutdown": false,
+  "clock_rollback_proven": false,
+  "source": "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01",
+  "inputs": {
+    "first_stage/result.json": "430f773197e80d9c655cdb18b4d3e5613d56179869134753bc36d6a525b04a47",
+    "own_lease_journal.json": "94a7195162ad6dc9744d020061ab1cf2f6f315834cb0ba9cc99dd09f11be1a97",
+    "raw_scene_manifest.json": "223c7dfaea25867aafbee73aa3ff2108379c49462805d968834e21f8ee5ff4e2",
+    "post_cleanup_identity_audit.json": "19afac2468ae7fa6192a6eab1fdd128a8c9f6673578aaf622ff5340d0b8e2278",
+    "actual_candidate_identity.json": "01d086a0b6eb7234c9842b9c2876318c25bf86dcbb20c1c89f87ff72b099b8e5",
+    "execution_motion_summary.json": "05ac117fa11ea95d395f4f4a221966ae0598bf8e293d471a5967ad8f4c5fcb94"
+  },
+  "shutdown_fault": "MoveGroup -11 during SIGINT unload"
+}

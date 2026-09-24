@@ -1,0 +1,122 @@
+--- a/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -18,6 +18,7 @@
+ #include <astribot_s1_transport_native/action/hold_resources.hpp>
+ #include <astribot_s1_transport_native/srv/renew_hold.hpp>
+ #include <rclcpp/rclcpp.hpp>
++#include <rclcpp/serialization.hpp>
+ #include <rclcpp_action/rclcpp_action.hpp>
+ #include <control_msgs/action/follow_joint_trajectory.hpp>
+ #include <controller_manager_msgs/srv/list_controllers.hpp>
+@@ -94,6 +95,7 @@
+    response->reason=response->accepted?"RENEWED":authority_->reason();
+   });
+ #ifdef PLAN_TO_HOLD_EXECUTOR
++  scene_evidence_directory_=declare_parameter<std::string>("scene_evidence_directory","");
+   planner_=rclcpp_action::create_client<Planner>(this,"/transport/plan_manipulation");
+   scenes_=create_client<SceneQuery>("/get_planning_scene");
+   guard_client_=create_client<GuardService>("/transport/execution_guard/set");
+@@ -120,6 +122,33 @@
+  }
+ private:
+ #ifdef PLAN_TO_HOLD_EXECUTOR
++ // Validation-only capture in this frozen source snapshot. At most two bounded
++ // raw CDR files per lease; overwrite uses one additional bounded temporary
++ // file. Journal paths identify first/last captures, not a retained history.
++ // Offline manifests compute SHA256 after exit.
++ void capture_scene(const moveit_msgs::msg::PlanningScene &scene,bool recheck) {
++  if(scene_evidence_directory_.empty())return;
++  rclcpp::Serialization<moveit_msgs::msg::PlanningScene> codec;
++  rclcpp::SerializedMessage encoded;codec.serialize_message(&scene,&encoded);
++  const auto &bytes=encoded.get_rcl_serialized_message();
++  if(bytes.buffer_length>16u*1024u*1024u)throw std::runtime_error("SCENE_EVIDENCE_SIZE_LIMIT");
++  const auto directory=std::filesystem::path(scene_evidence_directory_)/authority_->lease_id();
++  std::filesystem::create_directories(directory);
++  const auto path=directory/(recheck?"last_recheck_scene.cdr":"initial_scene.cdr");
++  const auto temporary=path.string()+".tmp";
++  {
++   std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
++   output.write(reinterpret_cast<const char*>(bytes.buffer),bytes.buffer_length);
++   output.flush();
++   output.close();
++   if(!output)throw std::runtime_error("SCENE_EVIDENCE_WRITE_FAILED");
++  }
++  std::filesystem::rename(temporary,path);
++  if(!authority_->record("scene_evidence",{{"context",parent_->get_goal()->context_id},
++      {"role",recheck?"recheck":"initial"},{"path",path.string()},
++      {"bytes",bytes.buffer_length},{"ros_ns",now().nanoseconds()},{"steady_ns",wall()}}))
++   throw std::runtime_error(authority_->reason());
++ }
+  bool manipulation_ready(int64_t ros,int64_t steady) {
+   if(!odom_||ns(odom_->header.stamp)<=0||ros<ns(odom_->header.stamp)||ros-ns(odom_->header.stamp)>300*MS||steady-odom_received_>300*MS){reason_="MTC_BASE_STATE_STALE";return false;}
+   const auto &v=odom_->twist.twist;const auto &p=odom_->pose.pose.position;const auto &q=odom_->pose.pose.orientation;
+@@ -158,6 +187,7 @@
+    if(stop_at_)return;
+    try {
+     auto scene=f.get()->scene;
++    capture_scene(scene,recheck);
+     if(!geometry_fresh(now().nanoseconds(),wall())||!manipulation_ready(now().nanoseconds(),wall()))throw std::runtime_error(reason_);
+     auto signature=bind_scene(scene);
+     if(recheck){
+@@ -541,6 +571,7 @@
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;rclcpp::Subscription<Envelope>::SharedPtr envelope_sub_;rclcpp::Subscription<GuardState>::SharedPtr guard_sub_;
+  std::optional<nav_msgs::msg::Odometry> odom_;std::optional<Envelope> envelope_;std::optional<GuardState> guard_state_;
+  nav_msgs::msg::Odometry reference_base_;Geometry reference_geometry_;Envelope reference_envelope_;
++ std::string scene_evidence_directory_;
+  SceneBinding scene_binding_;std::unique_ptr<MtcPlan> plan_;trajectory_msgs::msg::JointTrajectory trajectory_;
+  SceneBinding revalidation_binding_;
+  std::map<std::string,double> endpoint_;std::string stage_id_;
+--- a/ws_robot/src/astribot_s1_transport_native/CMakeLists.txt
++++ b/ws_robot/src/astribot_s1_transport_native/CMakeLists.txt
+@@ -36,7 +36,7 @@
+ target_link_libraries(hold_executor "${cpp_typesupport_target}")
+ add_library(trajectory_scene_binding STATIC src/scene_binding.cpp)
+ target_compile_features(trajectory_scene_binding PUBLIC cxx_std_17)
+-target_include_directories(trajectory_scene_binding PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
++target_include_directories(trajectory_scene_binding PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+ ament_target_dependencies(trajectory_scene_binding moveit_msgs)
+ target_link_libraries(trajectory_scene_binding astribot_s1_transport_mtc::transport_scene_signature)
+ add_executable(trajectory_executor src/hold_executor.cpp)
+@@ -47,10 +47,10 @@
+ ament_target_dependencies(trajectory_executor rclcpp rclcpp_action control_msgs controller_manager_msgs std_msgs geometry_msgs nav_msgs moveit_msgs astribot_transport_msgs)
+ install(TARGETS trajectory_executor DESTINATION lib/${PROJECT_NAME})
+ install(TARGETS hold_executor DESTINATION lib/${PROJECT_NAME})
+-install(TARGETS arm_hold_core payload_client EXPORT arm_hold_targets ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
++install(TARGETS arm_hold_core payload_client trajectory_scene_binding EXPORT arm_hold_targets ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
+ install(DIRECTORY include/ DESTINATION include)
+ ament_export_targets(arm_hold_targets HAS_LIBRARY_TARGET)
+-ament_export_dependencies(astribot_navigation_msgs astribot_transport_msgs controller_manager_msgs nlohmann_json ignition-transport11 rosidl_default_runtime)
++ament_export_dependencies(astribot_navigation_msgs astribot_transport_msgs controller_manager_msgs nlohmann_json ignition-transport11 rosidl_default_runtime astribot_s1_transport_mtc moveit_msgs)
+ if(BUILD_TESTING)
+   find_package(ament_cmake_gtest REQUIRED)
+   ament_add_gtest(payload_command_test test/payload_command_test.cpp)
+--- a/ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py
++++ b/ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py
+@@ -23,6 +23,7 @@
+ from controller_manager_msgs.srv import ListControllers
+ from rosgraph_msgs.msg import Clock
+ from nav_msgs.msg import Odometry
++from geometry_msgs.msg import TransformStamped
+ from std_msgs.msg import String
+ from moveit_msgs.srv import GetPlanningScene
+ from trajectory_msgs.msg import JointTrajectoryPoint
+@@ -105,6 +106,10 @@
+     def scene(req,res):
+         nonlocal scene_calls
+         scene_calls+=1;res.scene.robot_state.joint_state.name=list(positions);res.scene.robot_state.joint_state.position=list(positions.values())
++        res.scene.world.octomap.header.frame_id='astribot_torso_base';res.scene.world.octomap.origin.orientation.w=1.
++        external=TransformStamped();external.header.frame_id='aft_mapped';external.child_frame_id='astribot_torso_base'
++        external.transform.rotation.w=1.;external.transform.translation.x=scene_calls*0.00001
++        res.scene.fixed_frame_transforms=[external]
+         if args.mode=='navigation_positive':
+             e=NavigationEnvelopeV2();e.header.stamp=stamp();e.valid_until=stamp(.3);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE;e.navigation_allowed=True;envelopes.publish(e);stop.wait(.1)
+         if args.mode=='coordinator_changed':
+@@ -173,7 +178,7 @@
+             stop.wait(.01)
+         raise AssertionError(label)
+     try:
+-        process=subprocess.Popen([str(args.executable.resolve()),'--ros-args','-p','use_sim_time:=true','-p','simulation_commissioning:=true'],stdout=log,stderr=subprocess.STDOUT)
++        process=subprocess.Popen([str(args.executable.resolve()),'--ros-args','-p','use_sim_time:=true','-p','simulation_commissioning:=true','-p','scene_evidence_directory:='+str(args.output.with_suffix(''))+'_cdr'],stdout=log,stderr=subprocess.STDOUT)
+         wait(lambda:action.server_is_ready() and len(statuses)>8,8,'startup')
+         goal=PlanToHold.Goal(task_id='test_'+uuid.uuid4().hex,request_id='request',context_id='context',operation='PICK',object_id='box',grasp_width_m=.04)
+         goal.pre_target.header.frame_id=goal.target.header.frame_id='astribot_torso_base';goal.pre_target.pose.orientation.w=goal.target.pose.orientation.w=1.;goal.exit_targets=[goal.pre_target]
