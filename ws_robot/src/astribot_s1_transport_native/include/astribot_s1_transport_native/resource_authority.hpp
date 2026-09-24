@@ -18,6 +18,15 @@ public:
  std::optional<ResourceGrant> grant(int64_t now,int64_t steady);
  void submitted(int64_t now,int64_t steady);
  void holding(int64_t now,int64_t steady);
+ // The same owner may start another operation only from a measured Hold.
+ // Evidence booleans are supplied by the executor after its own live checks.
+ bool continue_from_hold(const std::string &lease,const std::string &epoch,
+                         const std::string &context,uint64_t sequence,
+                         bool all_children_terminal,bool measured_safe,
+                         int64_t now,int64_t steady);
+ bool complete(const std::string &lease,const std::string &epoch,
+               bool all_children_terminal,bool measured_safe,bool final_state_confirmed,
+               int64_t now,int64_t steady);
  bool record(const std::string &event,const nlohmann::json &details);
  void stop(const std::string &reason,int64_t now,int64_t steady);
  void uncertain_result(const std::string &reason,int64_t now,int64_t steady);
@@ -34,7 +43,9 @@ private:
  std::string epoch_,request_,reason_="IDLE";std::set<std::string> joints_;
  Commit commit_;ResourcePhase phase_=ResourcePhase::IDLE;ResourceGrant lease_;
  std::set<std::pair<std::string,std::string>> requests_;
- uint64_t number_=0,renewal_=0;bool side_effects_=false,storage_failed_=false;
+ uint64_t number_=0,renewal_=0,operation_sequence_=0;
+ std::string operation_context_;
+ bool side_effects_=false,storage_failed_=false;
  int64_t last_ros_=-1,last_steady_=-1;
 };
 }

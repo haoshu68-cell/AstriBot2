@@ -78,4 +78,76 @@ TEST(ResourceAuthority, FailedReleaseCommitKeepsResourcesQuarantined) {
  EXPECT_FALSE(a.release(true,true,T,T));EXPECT_EQ(a.phase(),ResourcePhase::QUARANTINED);
  EXPECT_FALSE(a.acquire("other","r",T,T).accepted);
 }
+TEST_F(AuthorityFixture, ContinueOperationPreservesLeaseAndDoesNotRenewIt) {
+ ASSERT_TRUE(acquire().accepted);a.submitted(T,T);a.holding(T+MS,T+MS);
+ const auto original=*a.grant(T+MS,T+MS);
+ ASSERT_TRUE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+2*MS,T+2*MS));
+ EXPECT_EQ(a.phase(),ResourcePhase::RESERVED);
+ const auto continued=*a.grant(T+2*MS,T+2*MS);
+ EXPECT_EQ(continued.owner_id,original.owner_id);EXPECT_EQ(continued.lease_id,original.lease_id);
+ EXPECT_EQ(continued.epoch,original.epoch);EXPECT_EQ(continued.valid_until,original.valid_until);
+ EXPECT_EQ(records.back()["event"],"operation_continuation_committed");
+ EXPECT_TRUE(records.back()["side_effects"].get<bool>());
+ a.submitted(T+3*MS,T+3*MS);a.holding(T+4*MS,T+4*MS);
+ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+5*MS,T+5*MS));
+ EXPECT_EQ(a.phase(),ResourcePhase::HOLDING);
+}
+TEST_F(AuthorityFixture, ContinueRequiresCurrentIdentityHoldAndBothEvidenceBoundaries) {
+ ASSERT_TRUE(acquire().accepted);const auto g=*a.grant(T,T);
+ EXPECT_FALSE(a.continue_from_hold(g.lease_id,g.epoch,"place",1,true,true,T,T));
+ a.submitted(T,T);a.holding(T,T);
+ EXPECT_FALSE(a.continue_from_hold("wrong",g.epoch,"place",1,true,true,T,T));
+ EXPECT_FALSE(a.continue_from_hold(g.lease_id,"wrong","place",1,true,true,T,T));
+ EXPECT_FALSE(a.continue_from_hold(g.lease_id,g.epoch,"place",1,false,true,T,T));
+ EXPECT_FALSE(a.continue_from_hold(g.lease_id,g.epoch,"place",1,true,false,T,T));
+ EXPECT_FALSE(a.continue_from_hold(g.lease_id,g.epoch,"place",2,true,true,T,T));
+ a.stop("CANCELED",T,T);
+ EXPECT_FALSE(a.continue_from_hold(g.lease_id,g.epoch,"place",1,true,true,T,T));
+}
+TEST_F(AuthorityFixture, SuccessfulCompletionCommitsThenReleasesWithoutCancellation) {
+ ASSERT_TRUE(acquire().accepted);const auto g=*a.grant(T,T);a.submitted(T,T);a.holding(T,T);
+ EXPECT_FALSE(a.complete(g.lease_id,g.epoch,false,true,true,T,T));
+ EXPECT_FALSE(a.complete(g.lease_id,g.epoch,true,false,true,T,T));
+ EXPECT_FALSE(a.complete(g.lease_id,g.epoch,true,true,false,T,T));
+ EXPECT_FALSE(a.complete("wrong",g.epoch,true,true,true,T,T));
+ ASSERT_TRUE(a.complete(g.lease_id,g.epoch,true,true,true,T,T));
+ EXPECT_EQ(records[records.size()-2]["event"],"result_success_release_pending");
+ EXPECT_EQ(records[records.size()-2]["phase"],int(ResourcePhase::HOLDING));
+ EXPECT_EQ(records.back()["event"],"resource_handoff_committed");
+ EXPECT_EQ(a.phase(),ResourcePhase::IDLE);
+ for(const auto &record:records)EXPECT_NE(record["event"],"stop_requested");
+ EXPECT_FALSE(a.complete(g.lease_id,g.epoch,true,true,true,T,T));
+ ResourceAuthority restarted("next_boot",joints(),[](const auto &){},records.back());
+ EXPECT_TRUE(restarted.acquire("task","request",T,T).duplicate);
+ EXPECT_TRUE(restarted.acquire("other","request",T,T).accepted);
+}
+TEST_F(AuthorityFixture, CancellationPreventsNormalCompletion) {
+ ASSERT_TRUE(acquire().accepted);const auto g=*a.grant(T,T);a.submitted(T,T);a.holding(T,T);
+ a.stop("CANCELED",T,T);
+ EXPECT_FALSE(a.complete(g.lease_id,g.epoch,true,true,true,T,T));
+ EXPECT_EQ(a.phase(),ResourcePhase::STOPPING);
+}
+TEST(ResourceAuthority, ContinuationPersistenceFailureKeepsOwnershipUnresolved) {
+ ResourceAuthority a("boot",joints(),[](const auto &r){
+   if(r.at("event")=="operation_continuation_committed")throw std::runtime_error("disk");
+ });
+ ASSERT_TRUE(a.acquire("task","r",T,T).accepted);const auto g=*a.grant(T,T);a.submitted(T,T);a.holding(T,T);
+ EXPECT_FALSE(a.continue_from_hold(g.lease_id,g.epoch,"place",1,true,true,T,T));
+ EXPECT_EQ(a.phase(),ResourcePhase::QUARANTINED);EXPECT_FALSE(a.grant(T,T));
+}
+TEST(ResourceAuthority, NormalCompletionCommitFailuresCannotGrantNewOwner) {
+ for(const auto *failed_event:{"result_success_release_pending","resource_handoff_committed"}) {
+  std::vector<nlohmann::json> saved;
+  ResourceAuthority a("boot",joints(),[&](const auto &r){
+    if(r.at("event")==failed_event)throw std::runtime_error("disk");
+    saved.push_back(r);
+  });
+  ASSERT_TRUE(a.acquire("task","r",T,T).accepted);const auto g=*a.grant(T,T);a.submitted(T,T);a.holding(T,T);
+  EXPECT_FALSE(a.complete(g.lease_id,g.epoch,true,true,true,T,T));
+  EXPECT_EQ(a.phase(),ResourcePhase::QUARANTINED);
+  EXPECT_FALSE(a.acquire("other","r",T,T).accepted);
+  ResourceAuthority restarted("next_boot",joints(),[](const auto &){},saved.back());
+  EXPECT_EQ(restarted.phase(),ResourcePhase::QUARANTINED);
+ }
+}
 }

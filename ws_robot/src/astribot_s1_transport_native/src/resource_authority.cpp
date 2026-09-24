@@ -28,7 +28,8 @@ nlohmann::json ResourceAuthority::snapshot(const std::string &event)const {
  return {{"schema","astribot.resource/1"},{"event",event},{"phase",int(phase_)},{"reason",reason_},
   {"epoch",epoch_},{"owner",lease_.owner_id},{"lease_id",lease_.lease_id},{"request",request_},
   {"joints",joints_},{"requests",requests_},{"side_effects",side_effects_},
-  {"issued_at",lease_.issued_at},{"valid_until",lease_.valid_until},{"renewal_sequence",renewal_}};
+  {"issued_at",lease_.issued_at},{"valid_until",lease_.valid_until},{"renewal_sequence",renewal_},
+  {"operation_sequence",operation_sequence_},{"operation_context",operation_context_}};
 }
 bool ResourceAuthority::persist(const std::string &event) {
  if(storage_failed_)return false;
@@ -51,6 +52,7 @@ Acquisition ResourceAuthority::acquire(const std::string &task,const std::string
  if(phase_!=ResourcePhase::IDLE||storage_failed_)return {false,false,"RESOURCES_BUSY_OR_QUARANTINED"};
  if(requests_.size()>=128||number_==UINT64_MAX)return {false,false,"RESOURCE_HISTORY_EXHAUSTED"};
  requests_.emplace(task,request);request_=request;renewal_=0;side_effects_=false;
+ operation_sequence_=0;operation_context_.clear();
  lease_={task,epoch_+"_"+std::to_string(++number_),epoch_,joints_,now,now+LEASE,steady,now};
  phase_=ResourcePhase::RESERVED;reason_="RESERVED";
  if(!persist("reserved"))return {false,false,reason_};
@@ -76,6 +78,27 @@ void ResourceAuthority::submitted(int64_t now,int64_t steady) {
 void ResourceAuthority::holding(int64_t now,int64_t steady) {
  if(!grant(now,steady)||phase_!=ResourcePhase::EXECUTING)throw std::logic_error("RESOURCE_NOT_EXECUTING");
  phase_=ResourcePhase::HOLDING;reason_="HOLDING";if(!persist("hold_confirmed"))throw std::runtime_error(reason_);
+}
+bool ResourceAuthority::continue_from_hold(const std::string &lease,const std::string &epoch,
+ const std::string &context,uint64_t sequence,bool terminal,bool safe,int64_t now,int64_t steady) {
+ if(!grant(now,steady)||phase_!=ResourcePhase::HOLDING||lease!=lease_.lease_id||epoch!=epoch_||
+    !terminal||!safe||!name(context)||context==operation_context_||
+    operation_sequence_>=128||sequence!=operation_sequence_+1)return false;
+ // Preserve owner, lease, renewal sequence, expiry and existing side effects.
+ // A failed durable transition quarantines before any new submission.
+ operation_context_=context;operation_sequence_=sequence;
+ phase_=ResourcePhase::RESERVED;reason_="OPERATION_RESERVED";
+ return persist("operation_continuation_committed");
+}
+bool ResourceAuthority::complete(const std::string &lease,const std::string &epoch,
+ bool terminal,bool safe,bool final_state_confirmed,int64_t now,int64_t steady) {
+ if(!grant(now,steady)||phase_!=ResourcePhase::HOLDING||lease!=lease_.lease_id||epoch!=epoch_||
+    !terminal||!safe||!final_state_confirmed)return false;
+ // Normal completion does not synthesize a cancellation. The unresolved
+ // durable record remains authoritative until the handoff write succeeds.
+ if(!persist("result_success_release_pending"))return false;
+ phase_=ResourcePhase::IDLE;reason_="RELEASED";side_effects_=false;
+ return persist("resource_handoff_committed");
 }
 void ResourceAuthority::stop(const std::string &reason,int64_t now,int64_t steady) {
  if(!clocks(now,steady)||phase_==ResourcePhase::IDLE||phase_==ResourcePhase::QUARANTINED)return;
