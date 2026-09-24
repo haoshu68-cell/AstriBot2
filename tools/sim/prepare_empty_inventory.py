@@ -26,8 +26,14 @@ def read_model_parameters(client, request, spin, timeout=10., *, clock=time.mono
     if tools_directory not in sys.path:
         sys.path.insert(0, tools_directory)
     from run_waypoint_route import read_service
-    deadline = clock() + timeout
-    require(timeout > 0 and client.wait_for_service(timeout_sec=min(5., timeout)), 'SERVICE_UNAVAILABLE:' + client.srv_name)
+    started = clock()
+    deadline = started + timeout
+    discovery_deadline = started + min(5., timeout)
+    require(timeout > 0, 'SERVICE_UNAVAILABLE:' + client.srv_name)
+    while not client.service_is_ready():
+        require(clock() < discovery_deadline, 'SERVICE_UNAVAILABLE:' + client.srv_name)
+        spin()
+    require(clock() <= discovery_deadline, 'SERVICE_UNAVAILABLE:' + client.srv_name)
     remaining = deadline-clock()
     require(remaining > 0, 'SERVICE_TIMEOUT:' + client.srv_name)
     return read_service(client, request, spin, remaining, clock=clock, events=events)
