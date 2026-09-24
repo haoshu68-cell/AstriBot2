@@ -1,0 +1,43 @@
+{
+  "status": "PASS_OFFLINE_ARTIFACT_CHECKS",
+  "unique_source_files_checked": 21,
+  "capture_stamp_ns": 26500000000,
+  "geometry_result": "NO_PIXEL_RAY_HIT",
+  "region_points_at_stride_1_and_2": [
+    0,
+    0
+  ],
+  "actual_view_readiness": "NOT_READY",
+  "minimum_2048_region_points_met": false,
+  "coverage_acceptance": "UNKNOWN_THRESHOLD",
+  "motion_acceptance": "NOT_EVALUATED",
+  "independent_analysis": "camera_current_code independently reproduced the same counts and optical-Z range without target truth.",
+  "commands": [
+    {
+      "command": "python3 tools/vision/prepare_box_roi_snapshot.py --capture /home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot --truth /home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/world_poses.log --context /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/context.json --output /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/prepared",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 tools/vision/score_box_roi.py --sample /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/prepared/sample.json --output /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/roi_score",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/reproduce_region_counts.py",
+      "exit_code": 0
+    }
+  ],
+  "artifact_sha256": {
+    "README.md": "7d2a094cf45f6fd8aee4bb63058540b3d4405de3dc78a4229c57fe429de866c8",
+    "context.json": "061f64c6d6471b9e09883bb4cc455dd0bb4d9be5f44ea59639d7a7ea5e763bb5",
+    "context_audit.json": "6f65882af62b1fcb2e672ece9c24bad67d6454c49367f5c5913071d1319feab6",
+    "prepared/assembly.json": "72836e0086d353d50ceedca16f1483c572b20690e7e6016da7fa8138447e9fea",
+    "prepared/sample.json": "61bf9bb2fdd2ef1f155b66fc26421ff8745141ceb6563f36154a7d0166c489fc",
+    "prepared/truth_at_capture.pbtxt": "e706f00a641467b7c8e706c80816f10aa8f4b267b8c9b8f52ab2aaa377569fc8",
+    "region_counts.json": "ba91fed0d3c5e921cfc7b66412116eccb65541241631574d35de2cec0f81fbac",
+    "reproduce_region_counts.py": "7805e0462908ca285cdb5cea3bdb7166ee832d65814a6975ad52f1d01046b45f",
+    "roi_score/pixel_maps.npz": "0b2e515c91c1d229d22b6caf52d9f8e2f52a0b955feb9046d15e10cb5e12bee5",
+    "roi_score/report.json": "1a15d12a811f714f78366ccae89d6f08aab181397aa66602f465f597e5b5d8f5",
+    "roi_score/sample.json": "61bf9bb2fdd2ef1f155b66fc26421ff8745141ceb6563f36154a7d0166c489fc"
+  },
+  "source_hash_checks": 30
+}

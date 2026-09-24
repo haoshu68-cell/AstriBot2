@@ -1,0 +1,81 @@
+{
+  "schema": "astribot.m5.snapshot_context_audit/1",
+  "session_id": "m1_first_stage_20260924:first_scene03",
+  "snapshot_stamp_ns": 26500000000,
+  "capture_exit_code": 0,
+  "capture_exit_evidence": "Owned run() raises on nonzero return; used_run_first_stage.py lines 40 and 102-103 plus result.json captured; owner separately reported exit 0. No dedicated exit-code file was provided.",
+  "phase": "PRE_ACTION_STATIC_SNAPSHOT",
+  "phase_evidence": "used_run_first_stage.py captures at lines 102-103 before calling first_stage at line 128; actual task initial stop 30.2-30.9 s follows image 26.5 s.",
+  "related_later_task_id": "m1_task_2f21dcb7780946c182face1bf71ba1f8",
+  "geometry_clock_epoch_before": 0,
+  "geometry_clock_epoch_before_stamp": {
+    "sec": 16,
+    "nanosec": 90000000
+  },
+  "geometry_clock_epoch_after": 0,
+  "geometry_clock_epoch_after_stamp_ns": 30818000000,
+  "clock_scope": "Session-qualified geometry clock epoch 0 bracketed by owner records; recorded Pose_V segment 20.163-33.990 s is strictly increasing; no claim about unrecorded earlier segments. Camera source_epoch is retained separately.",
+  "world_frame_evidence": "world_poses_identity.json records /world/default/pose/info and matching partition",
+  "model_base_binding": "Captured robot_state_publisher URDF root is astribot_torso_base; captured converted robot_reference SDF model astribot_s1 and root link have no offset pose, so model_from_base is identity.",
+  "geometry_scope": "Captured box visual/collision both 0.06,0.06,0.12 m with zero local offset. Exact target pose will only be used for evaluation; not region construction or inference.",
+  "motion_acceptance": "NOT_EVALUATED",
+  "action_outcome": "RuntimeError(\"HOLD_TERMINATED:astribot_s1_transport_native.action.PlanToHold_GetResult_Response(status=6, result=astribot_s1_transport_native.action.PlanToHold_Result(resources_released=True, reason='MTC_PLAN_FAILED:MTC_START_OUTSIDE_PLANNING_MARGIN:astribot_arm_left_joint_4', lease_id='79ff571c-c515-4262-b446-eb6bfc3b4ea5_1'))\")",
+  "source_sha256": {
+    "stack/session.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/stack/session.json",
+      "sha256": "72f8bd8a7ed5b3c1db53dfb88282b5d8130fc7c8264026df8c0fdf2cf41fc8e6"
+    },
+    "owner.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/owner.json",
+      "sha256": "c29aeb57560b76adee1bccaa35bca3d88c2a6096349c7b3d5059828d6c338f16"
+    },
+    "result.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/result.json",
+      "sha256": "d79f45bedab3d8d1e27d78c8d459f3451b909a3f59118a76a5d161ad7cec0e31"
+    },
+    "head_snapshot_identity.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot_identity.json",
+      "sha256": "5e94611fbc34e3d1603b617b4c3c252372222091fb90e749ba4ce29e99e39d04"
+    },
+    "head_snapshot.log": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot.log",
+      "sha256": "52301e6768f45e25d7fa9998db0be5c5fabfdfff61e419c5587bc9795a5a51ca"
+    },
+    "world_poses_identity.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/world_poses_identity.json",
+      "sha256": "85f5639524f5f3b5bb5b53a96c20e43849edb731a816111200d96b8010826747"
+    },
+    "fixtures/result.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/result.json",
+      "sha256": "ff02a4040d6232478f827c30fc79eb417f1f897524b4e664e41cc343d417b5df"
+    },
+    "fixtures/robot_state_publisher.urdf": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/robot_state_publisher.urdf",
+      "sha256": "4e80d1b02085c16e505853e4f4d19a80820a422d0362fe8f8a340c8e4f66768c"
+    },
+    "fixtures/robot_reference.sdf": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/robot_reference.sdf",
+      "sha256": "7f95bef5be69d50b070a802acab07ab0077c1294d47b05f3e42dbea348ddad18"
+    },
+    "fixtures/transport_box_01.sdf": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/transport_box_01.sdf",
+      "sha256": "adb73a869c23409d866a37d4365c86d01f3cfb030f1f3d4461ae62d5f4c6657b"
+    },
+    "first_stage/result.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/first_stage/result.json",
+      "sha256": "40de15dbb6185320f2d28748e3fc5bce83fcbe1e38758d007063f9c64c8f9293"
+    },
+    "used_run_first_stage.py": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/used_run_first_stage.py",
+      "sha256": "5bc820d968de50ed54caf36799aef5c8ffc146536ca191f009b6078c73abe946"
+    },
+    "pick_station_region.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/pick_station_region.json",
+      "sha256": "43dbcafdff1fbe51c13b22df75b7699a36ffb76032df5195c391fed46f046f2f"
+    },
+    "fixtures/scene_readback.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/scene_readback.json",
+      "sha256": "9471c39b629c475113d6dfa40359d2ee6c8b45e81ebe61a54ccfc40725a0d60c"
+    }
+  }
+}

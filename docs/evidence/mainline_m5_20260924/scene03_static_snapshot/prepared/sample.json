@@ -1,0 +1,215 @@
+{
+  "session_id": "m1_first_stage_20260924:first_scene03",
+  "task_id": "M5_first_scene03_static_snapshot",
+  "phase": "PRE_ACTION_STATIC_SNAPSHOT",
+  "clock_epoch": "m1_first_stage_20260924:first_scene03:geometry_clock_epoch_0",
+  "object_id": "transport_box_01",
+  "schema": "astribot.m5.box_roi/1",
+  "evaluation_only": true,
+  "camera_id": "head_rgbd",
+  "source_epoch": "gazebo_camera:76254716009368:4000341944:g3",
+  "calibration_revision": 2026092101,
+  "camera": {
+    "width": 640,
+    "height": 360,
+    "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+    "K": [
+      374.53749988523185,
+      0.0,
+      320.0,
+      0.0,
+      374.5374998852318,
+      180.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "D": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "depth_convention": "optical_z_m",
+    "stamps_ns": {
+      "rgb": 26500000000,
+      "depth": 26500000000,
+      "info": 26500000000
+    }
+  },
+  "world_from_camera": {
+    "matrix": [
+      [
+        2.350455315364182e-05,
+        -1.6665912827711657e-07,
+        0.9999999997237543,
+        0.10733067522697425
+      ],
+      [
+        -0.9999999997237612,
+        1.189568601112585e-07,
+        2.3504553173467228e-05,
+        -2.651912541938366e-06
+      ],
+      [
+        -1.1896077735371862e-07,
+        -0.9999999999999792,
+        -1.6665633225279573e-07,
+        1.7068738513345403
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "frame_id": "world/default",
+    "child_frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+    "capture_stamp_ns": 26500000000,
+    "clock_epoch": "m1_first_stage_20260924:first_scene03:geometry_clock_epoch_0",
+    "calibration_revision": 2026092101
+  },
+  "box_truth": {
+    "matrix": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.1
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.7
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        1.095
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "frame_id": "world/default",
+    "object_id": "transport_box_01",
+    "capture_stamp_ns": 26500000000,
+    "clock_epoch": "m1_first_stage_20260924:first_scene03:geometry_clock_epoch_0",
+    "size_m": [
+      0.06,
+      0.06,
+      0.12
+    ],
+    "source": "gazebo_model_pose"
+  },
+  "depth_policy": {
+    "min_m": 0.08,
+    "max_m": 5.0,
+    "source": "astribot_s1_transport/rgbd.py project_component validity predicate; not a coverage threshold"
+  },
+  "surface_tolerance_m": null,
+  "surface_tolerance_source": null,
+  "context_provenance": {
+    "session_id": "m1_first_stage_20260924:first_scene03",
+    "session_json": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/stack/session.json",
+    "task_id": "M5_first_scene03_static_snapshot",
+    "phase": "PRE_ACTION_STATIC_SNAPSHOT",
+    "phase_evidence": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/context_audit.json",
+    "clock_epoch": "m1_first_stage_20260924:first_scene03:geometry_clock_epoch_0",
+    "clock_epoch_evidence": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/context_audit.json",
+    "world_frame": "world/default",
+    "robot_model": "astribot_s1",
+    "base_frame": "astribot_torso_base",
+    "model_from_base": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "model_binding_evidence": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/robot_reference.sdf",
+    "object_model": "transport_box_01",
+    "object_id": "transport_box_01",
+    "size_m": [
+      0.06,
+      0.06,
+      0.12
+    ],
+    "object_geometry_evidence": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/transport_box_01.sdf",
+    "snapshot_exit_code": 0,
+    "related_later_task_id": "m1_task_2f21dcb7780946c182face1bf71ba1f8",
+    "context_audit": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/context_audit.json"
+  },
+  "files": {
+    "rgb": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot/rgb.png",
+    "depth": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot/depth.npy"
+  },
+  "source_sha256": {
+    "camera_info": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot/camera_info.json",
+      "sha256": "628a33ef5f6f3523ffe2ae33322e9d9312479ae073ae2ad9733eb8308592ae31"
+    },
+    "truth_stream": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/world_poses.log",
+      "sha256": "11c3162fa870fce3498ee951265fdecce949a2cd9509077973664597b8544fdf"
+    },
+    "operator_context": {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/context.json",
+      "sha256": "061f64c6d6471b9e09883bb4cc455dd0bb4d9be5f44ea59639d7a7ea5e763bb5"
+    },
+    "rgb": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot/rgb.png",
+      "sha256": "352b33c3c468a967e1a04b044492d95adf429b53fe1e9a92af6b4f20ffd51b1f"
+    },
+    "depth": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/head_snapshot/depth.npy",
+      "sha256": "390ef74b99f212cf6143b300bb1906503ad5cbc3fa9a7a6a1f0b5acb19897274"
+    },
+    "model_binding_evidence": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/robot_reference.sdf",
+      "sha256": "7f95bef5be69d50b070a802acab07ab0077c1294d47b05f3e42dbea348ddad18"
+    },
+    "object_geometry_evidence": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/transport_box_01.sdf",
+      "sha256": "adb73a869c23409d866a37d4365c86d01f3cfb030f1f3d4461ae62d5f4c6657b"
+    },
+    "clock_epoch_evidence": {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/context_audit.json",
+      "sha256": "6f65882af62b1fcb2e672ece9c24bad67d6454c49367f5c5913071d1319feab6"
+    },
+    "phase_evidence": {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene03_static_snapshot/context_audit.json",
+      "sha256": "6f65882af62b1fcb2e672ece9c24bad67d6454c49367f5c5913071d1319feab6"
+    },
+    "session_json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/stack/session.json",
+      "sha256": "72f8bd8a7ed5b3c1db53dfb88282b5d8130fc7c8264026df8c0fdf2cf41fc8e6"
+    }
+  }
+}
