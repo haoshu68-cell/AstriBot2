@@ -1,0 +1,11 @@
+{
+  "pid": 3200385,
+  "start_ticks": "8285452",
+  "exe": "/usr/bin/bash",
+  "cmdline": [
+    "bash",
+    "-c",
+    "set -e\nset +u\nsource /home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/tools/ros_overlay_env.sh\nastribot_prepare_overlay_environment\nsource /opt/ros/humble/setup.bash\nsource /home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/install/setup.bash\nsource /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/overlay.bash\nexport ROS_DOMAIN_ID=91\nexport ROS_LOCALHOST_ONLY=0\nexport RMW_IMPLEMENTATION=rmw_fastrtps_cpp\nexport FASTRTPS_DEFAULT_PROFILES_FILE=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/stack/nav_udp.xml\nexport IGN_IP=127.0.0.1\nexport GZ_IP=127.0.0.1\nexport IGN_PARTITION=astribot_execution_response91_20260924\nexport GZ_PARTITION=astribot_execution_response91_20260924\nexport IGN_DISCOVERY_MSG_PORT=18182\nexport IGN_DISCOVERY_SRV_PORT=18183\nexport ASTRIBOT_SIM_INSTANCE=execution_response91_20260924\nexport DISPLAY=:1\nexport XAUTHORITY=/run/user/1001/gdm/Xauthority\nexec python3 /home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/sim_pose_capture.py --camera head_rgbd --seconds 6 --truth-stream /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/world_poses.log --output /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/head_snapshot"
+  ],
+  "boot_id": "2063685d-c834-4d96-ad01-6ea8bd8cd80e"
+}

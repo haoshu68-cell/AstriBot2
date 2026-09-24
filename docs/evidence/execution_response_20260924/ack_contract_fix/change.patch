@@ -1,0 +1,11 @@
+--- verify_first_stage.before.py
++++ verify_first_stage.py
+@@ -294,7 +294,7 @@
+         envelopes.append(value); receive('envelope', value)
+     def ack(msg):
+         acks.append(dict(wall=time.monotonic(), stamp=stamp(msg.header.stamp), session=msg.coordinator_session_id,
+-                         epoch=msg.envelope_epoch, hash=msg.installed_geometry_hash,mode=msg.mode, consumer=msg.consumer_id,
++                         epoch=msg.envelope_epoch, hash=msg.installed_geometry_hash, consumer=msg.consumer_id,
+                          applied=msg.applied, reason=msg.reason))
+     node.create_subscription(AttachmentState, '/payload/attachment_state', ledger, 10)
+     node.create_subscription(RobotGeometryState, '/navigation/geometry_state', geometry, 10)

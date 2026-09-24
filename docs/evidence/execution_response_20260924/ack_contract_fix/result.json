@@ -1,0 +1,45 @@
+{
+  "evidence_layer": "offline_actual_installed_message_no_ros_init",
+  "msg_path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_msgs/share/astribot_navigation_msgs/msg/EnvelopeApplyStatus.msg",
+  "msg_sha256": "5ee3ef52e9c0b0bcc2cfc2417efce2af3cb3f1f4971ed5c8f75fd3cf56346c86",
+  "generated_path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_msgs/local/lib/python3.10/dist-packages/astribot_navigation_msgs/msg/_envelope_apply_status.py",
+  "generated_sha256": "c80b7f83bcfc0c78dcdd1062a26115f7bb7b207927a56584a2cfe76a59f24ada",
+  "fields": {
+    "header": "std_msgs/Header",
+    "coordinator_session_id": "string",
+    "consumer_id": "string",
+    "envelope_epoch": "uint64",
+    "installed_geometry_hash": "string",
+    "applied": "boolean",
+    "reason": "string"
+  },
+  "red_green": [
+    {
+      "source": "before.py",
+      "passed": false,
+      "error": "'EnvelopeApplyStatus' object has no attribute 'mode'"
+    },
+    {
+      "source": "after.py",
+      "passed": true,
+      "row": {
+        "wall": 82412.035329846,
+        "stamp": 12.0,
+        "session": "session",
+        "epoch": 7,
+        "hash": "geometry",
+        "consumer": "controller",
+        "applied": true,
+        "reason": "APPLIED"
+      }
+    }
+  ],
+  "unchanged_contract_checks": [
+    "six consumers accepted",
+    "wrong epoch rejected",
+    "wrong hash rejected",
+    "wrong session rejected",
+    "missing consumer rejected"
+  ],
+  "passed": true
+}

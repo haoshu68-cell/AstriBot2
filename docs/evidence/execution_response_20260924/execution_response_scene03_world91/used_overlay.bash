@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+source /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_overlay.bash
+source /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/share/astribot_s1_manipulation/local_setup.bash
+source /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/share/astribot_s1_transport_mtc/local_setup.bash
+source /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/share/astribot_s1_transport_native/local_setup.bash
+export LD_LIBRARY_PATH=/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install/astribot_s1_transport_native/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/lib:"${LD_LIBRARY_PATH:-}"

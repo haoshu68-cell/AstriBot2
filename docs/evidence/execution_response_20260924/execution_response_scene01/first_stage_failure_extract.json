@@ -1,0 +1,54 @@
+{
+  "kind": "derived_complete_selected_fields",
+  "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene01/first_stage/result.json",
+  "source_sha256": "a776eeefdf52f72fcffce73f069542b5ba826902db2e8e112876b50835e3f6b5",
+  "json_pointers": [
+    "/passed",
+    "/error",
+    "/started_wall",
+    "/finished_wall",
+    "/cleanup_complete",
+    "/cleanup_errors",
+    "/resource_disposition",
+    "/cleanup_stop",
+    "/events",
+    "/owned_hold_identity",
+    "/hold_handle_unresolved"
+  ],
+  "data": {
+    "passed": false,
+    "error": "ValueError('STALE_LEDGER_CAPTURE')",
+    "started_wall": 1790225414.496152,
+    "finished_wall": 1790225418.2592156,
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "resource_disposition": "RELEASE_CONFIRMED",
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 31,
+      "span_s": 0.6000000000000014,
+      "start_ros_s": 43.86,
+      "end_ros_s": 44.46,
+      "drift_m": 0.0,
+      "rotation_rad": 0.0,
+      "speed_mps": 0.0,
+      "angular_speed_radps": 0.0,
+      "command_max": 0.0,
+      "fresh": true
+    },
+    "events": [
+      {
+        "service": "/robot_envelope_coordinator/get_parameters",
+        "attempt": 1,
+        "result": "response"
+      },
+      {
+        "service": "/transport_mtc_planner/get_parameters",
+        "attempt": 1,
+        "result": "response"
+      }
+    ],
+    "owned_hold_identity": null,
+    "hold_handle_unresolved": false
+  }
+}

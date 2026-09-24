@@ -1,0 +1,82 @@
+{
+  "scope": "AST ordering plus substituted single-thread clock/callback regression; not live ROS validation",
+  "measured_blocking_gap_s": 0.4594897640054114,
+  "unchanged_freshness_s": 0.3,
+  "checks": [
+    {
+      "source": "before.py",
+      "events": [
+        [
+          "entry_ready_spin",
+          541
+        ],
+        [
+          "final_summary",
+          542
+        ],
+        [
+          "fresh_full_scene",
+          570
+        ],
+        [
+          "observer_precheck",
+          575
+        ],
+        [
+          "goal_data",
+          603
+        ],
+        [
+          "final_summary",
+          605
+        ],
+        [
+          "action",
+          606
+        ]
+      ],
+      "outcome": "STALE_LEDGER_CAPTURE",
+      "would_send_action": false,
+      "source_receipt_age_s": 0.4594897640054114,
+      "scene_after_observer": false
+    },
+    {
+      "source": "after.py",
+      "events": [
+        [
+          "observer_precheck",
+          541
+        ],
+        [
+          "entry_ready_spin",
+          569
+        ],
+        [
+          "final_summary",
+          570
+        ],
+        [
+          "fresh_full_scene",
+          598
+        ],
+        [
+          "goal_data",
+          603
+        ],
+        [
+          "final_summary",
+          605
+        ],
+        [
+          "action",
+          606
+        ]
+      ],
+      "outcome": "READY_FOR_ACTION",
+      "would_send_action": true,
+      "source_receipt_age_s": 0.0,
+      "scene_after_observer": true
+    }
+  ],
+  "passed": true
+}

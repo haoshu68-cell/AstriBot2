@@ -1,0 +1,20 @@
+--- run_scene02.py
++++ run_scene03.py
+@@ -19,7 +19,7 @@
+ b=E/options.case;b.mkdir(exist_ok=False)
+ for name in ('run_first_stage.py','prepare_scene.py','verify_first_stage.py','overlay.bash','observer_topics.json','head_raw_qos.yaml','transport_skills_candidate.launch.py','record_transport_demo.py'):
+  (b/('used_'+name)).write_bytes((E/name).read_bytes())
+-isolation=SimulationIsolation('execution_response_20260924',90)
++isolation=SimulationIsolation('execution_response91_20260924',91)
+ env=os.environ.copy();env.update(ASTRIBOT_SIM_INITIAL_JOINT_PROFILE='transport_ready',ASTRIBOT_SCAN_TIMING_DIAGNOSTICS='1',ASTRIBOT_POLICY_NATIVE_TF='1',DISPLAY=':1',ASTRIBOT_OVERLAY_SETUP=str(OVERLAY),EGL_PLATFORM='surfaceless',LIBGL_ALWAYS_SOFTWARE='0',__GLX_VENDOR_LIBRARY_NAME='nvidia',__EGL_VENDOR_LIBRARY_FILENAMES='/usr/share/glvnd/egl_vendor.d/10_nvidia.json')
+ launch=moveit=hold=runner=bridge=recorder=observer=truth=raw=None;prefix='';files=[];handles={};report=dict(passed=False,started_wall=time.time(),initial_joint_profile='transport_ready',zero_start_motion_validated=False)
+ def interrupted(sig,frame):raise KeyboardInterrupt('owned fixed batch interrupted')
+@@ -40,7 +40,7 @@
+  if runner.returncode:raise RuntimeError(name+' exit '+str(runner.returncode))
+  runner=None
+ try:
+- command=['bash',str(ROOT/'tools/launch_sim_stack.sh'),'--mode','baseline','--instance',isolation.instance,'--ros-domain-id','90','--navigation-geometry-mode','fixed_v2','--navigation-policy','p4','--payload-source-id','gazebo_kinematic_v1','--corridor-file',str(R/'N4_empty_corridors.json'),'--social-policy','off','--nav-transport','udp','--camera-preset',str(ROOT/DEFAULT_RELATIVE_PRESET),'--headless','--no-rviz','--exclusive-performance','--ready-timeout','180','--log-dir',str(b/'stack')]
++ command=['bash',str(ROOT/'tools/launch_sim_stack.sh'),'--mode','baseline','--instance',isolation.instance,'--ros-domain-id','91','--navigation-geometry-mode','fixed_v2','--navigation-policy','p4','--payload-source-id','gazebo_kinematic_v1','--corridor-file',str(R/'N4_empty_corridors.json'),'--social-policy','off','--nav-transport','udp','--camera-preset',str(ROOT/DEFAULT_RELATIVE_PRESET),'--headless','--no-rviz','--exclusive-performance','--ready-timeout','180','--log-dir',str(b/'stack')]
+  launch=spawn('launcher',command)
+  deadline=time.monotonic()+200
+  while launch.poll() is None and time.monotonic()<deadline:

@@ -1,0 +1,7 @@
+std_msgs/Header header
+string coordinator_session_id
+string consumer_id
+uint64 envelope_epoch
+string installed_geometry_hash
+bool applied
+string reason

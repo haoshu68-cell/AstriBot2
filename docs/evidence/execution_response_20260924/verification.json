@@ -1,0 +1,555 @@
+{
+  "kind": "derived_independent_offline_audit",
+  "checked_at": "2026-09-24T05:12:04.627145+00:00",
+  "source_result_sha256": "fe455982f0c126cdad7ec763eb9c7e285c7696abc05f9422d621e0326e8e4e29",
+  "parent_terminal": {
+    "status": 5,
+    "result": {
+      "resources_released": true,
+      "reason": "TASK_CANCELED",
+      "lease_id": "17129c5c-9572-4f2b-846d-093ae6a791f4_1"
+    }
+  },
+  "journal_last": {
+    "epoch": "17129c5c-9572-4f2b-846d-093ae6a791f4",
+    "event": "resource_handoff_committed",
+    "issued_at": 73063000000,
+    "joints": [
+      "astribot_arm_left_joint_1",
+      "astribot_arm_left_joint_2",
+      "astribot_arm_left_joint_3",
+      "astribot_arm_left_joint_4",
+      "astribot_arm_left_joint_5",
+      "astribot_arm_left_joint_6",
+      "astribot_arm_left_joint_7",
+      "astribot_arm_right_joint_1",
+      "astribot_arm_right_joint_2",
+      "astribot_arm_right_joint_3",
+      "astribot_arm_right_joint_4",
+      "astribot_arm_right_joint_5",
+      "astribot_arm_right_joint_6",
+      "astribot_arm_right_joint_7",
+      "astribot_gripper_left_joint_L1",
+      "astribot_gripper_right_joint_L1",
+      "astribot_head_joint_1",
+      "astribot_head_joint_2",
+      "astribot_torso_joint_1",
+      "astribot_torso_joint_2",
+      "astribot_torso_joint_3",
+      "astribot_torso_joint_4"
+    ],
+    "lease_id": "17129c5c-9572-4f2b-846d-093ae6a791f4_1",
+    "owner": "m1_task_2ca293cca7034b5aac5de07abdec9aae",
+    "phase": 0,
+    "reason": "RELEASED",
+    "renewal_sequence": 150,
+    "request": "m1_request_33e2176077fc4ed79d66a487343f4a20",
+    "requests": [
+      [
+        "m1_task_2ca293cca7034b5aac5de07abdec9aae",
+        "m1_request_33e2176077fc4ed79d66a487343f4a20"
+      ]
+    ],
+    "schema": "astribot.resource/1",
+    "side_effects": false,
+    "valid_until": 75063000000
+  },
+  "pre_cancel_six_consumers": {
+    "envelope": {
+      "wall": 82906.939191541,
+      "ros_s": 71.50500000000001,
+      "stamp": 71.504,
+      "until": 71.68196518,
+      "session": "a7bd2d14-98bb-481f-90b8-0e9a0f033481",
+      "epoch": 82832289353709,
+      "request": "mass_fixed_d76559df4d2e45258d933c33127324c5",
+      "hash": "9615f819027cc6c29e630b5d4b7949e8dade3e3acfab54f02911715696ae1cd1",
+      "mode": 1,
+      "mass": 0.0,
+      "allowed": true,
+      "reason": "READY_FIXED",
+      "hold_id": "17129c5c-9572-4f2b-846d-093ae6a791f4_1_hold"
+    },
+    "acks": {
+      "controller": {
+        "wall": 82906.898715318,
+        "stamp": 71.464,
+        "session": "a7bd2d14-98bb-481f-90b8-0e9a0f033481",
+        "epoch": 82832289353709,
+        "hash": "9615f819027cc6c29e630b5d4b7949e8dade3e3acfab54f02911715696ae1cd1",
+        "consumer": "controller",
+        "applied": true,
+        "reason": "ACTUAL_COSTMAP_FOOTPRINT_APPLIED"
+      },
+      "global_costmap": {
+        "wall": 82906.911815903,
+        "stamp": 71.477,
+        "session": "a7bd2d14-98bb-481f-90b8-0e9a0f033481",
+        "epoch": 82832289353709,
+        "hash": "9615f819027cc6c29e630b5d4b7949e8dade3e3acfab54f02911715696ae1cd1",
+        "consumer": "global_costmap",
+        "applied": true,
+        "reason": "ACTUAL_COSTMAP_FOOTPRINT_APPLIED"
+      },
+      "local_costmap": {
+        "wall": 82906.899716524,
+        "stamp": 71.464,
+        "session": "a7bd2d14-98bb-481f-90b8-0e9a0f033481",
+        "epoch": 82832289353709,
+        "hash": "9615f819027cc6c29e630b5d4b7949e8dade3e3acfab54f02911715696ae1cd1",
+        "consumer": "local_costmap",
+        "applied": true,
+        "reason": "ACTUAL_COSTMAP_FOOTPRINT_APPLIED"
+      },
+      "planner": {
+        "wall": 82906.911284195,
+        "stamp": 71.477,
+        "session": "a7bd2d14-98bb-481f-90b8-0e9a0f033481",
+        "epoch": 82832289353709,
+        "hash": "9615f819027cc6c29e630b5d4b7949e8dade3e3acfab54f02911715696ae1cd1",
+        "consumer": "planner",
+        "applied": true,
+        "reason": "ACTUAL_COSTMAP_FOOTPRINT_APPLIED"
+      },
+      "policy": {
+        "wall": 82906.93815785,
+        "stamp": 71.503,
+        "session": "a7bd2d14-98bb-481f-90b8-0e9a0f033481",
+        "epoch": 82832289353709,
+        "hash": "9615f819027cc6c29e630b5d4b7949e8dade3e3acfab54f02911715696ae1cd1",
+        "consumer": "policy",
+        "applied": true,
+        "reason": "POLYGON_APPLIED"
+      },
+      "protection": {
+        "wall": 82906.934171943,
+        "stamp": 71.5,
+        "session": "a7bd2d14-98bb-481f-90b8-0e9a0f033481",
+        "epoch": 82832289353709,
+        "hash": "9615f819027cc6c29e630b5d4b7949e8dade3e3acfab54f02911715696ae1cd1",
+        "consumer": "protection",
+        "applied": true,
+        "reason": "POLYGON_APPLIED"
+      }
+    }
+  },
+  "first_cancel_feedback": {
+    "wall": 82908.737106754,
+    "ros_s": 73.229,
+    "goal_id": "4e03a46a016548ef8566ace20b868d28",
+    "feedback": {
+      "phase": "4",
+      "reason": "TASK_CANCELED",
+      "lease_id": "17129c5c-9572-4f2b-846d-093ae6a791f4_1",
+      "resource_epoch": "17129c5c-9572-4f2b-846d-093ae6a791f4",
+      "hold_id": "17129c5c-9572-4f2b-846d-093ae6a791f4_1_hold",
+      "hold_confirmed": false,
+      "context_id": "m1_context_d3cf0828ac654d79b04e07f29bbeb0fc",
+      "stage_id": "PREGRASP"
+    }
+  },
+  "ack_total": 424,
+  "ack_total_is_not_valid_hold_count": true,
+  "stop_recomputations": [
+    {
+      "recorded": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.6999999999999957,
+        "start_ros_s": 42.92,
+        "end_ros_s": 43.62,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recomputed": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.6999999999999957,
+        "start_ros_s": 42.92,
+        "end_ros_s": 43.62,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recompute_time_basis": "last sample receipt; historical callback-now not separately serialized"
+    },
+    {
+      "recorded": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 43.64,
+        "end_ros_s": 44.34,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recomputed": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 43.64,
+        "end_ros_s": 44.34,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recompute_time_basis": "last sample receipt; historical callback-now not separately serialized"
+    },
+    {
+      "recorded": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 72.48,
+        "end_ros_s": 73.18,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recomputed": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 72.48,
+        "end_ros_s": 73.18,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recompute_time_basis": "last sample receipt; historical callback-now not separately serialized"
+    },
+    {
+      "recorded": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 73.78,
+        "end_ros_s": 74.48,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recomputed": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 73.78,
+        "end_ros_s": 74.48,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recompute_time_basis": "last sample receipt; historical callback-now not separately serialized"
+    },
+    {
+      "recorded": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 74.5,
+        "end_ros_s": 75.2,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recomputed": {
+        "passed": true,
+        "samples": 36,
+        "span_s": 0.7000000000000028,
+        "start_ros_s": 74.5,
+        "end_ros_s": 75.2,
+        "drift_m": 0.0,
+        "rotation_rad": 0.0,
+        "speed_mps": 0.0,
+        "angular_speed_radps": 0.0,
+        "command_max": 0.0,
+        "fresh": true
+      },
+      "recompute_time_basis": "last sample receipt; historical callback-now not separately serialized"
+    }
+  ],
+  "identity_checks": [
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/recorder_identity.json",
+      "pid": 3199151,
+      "recorded_start_ticks": "8285141",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/head_raw_bag_identity.json",
+      "pid": 3203915,
+      "recorded_start_ticks": "8286636",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/capture_owner_identity.json",
+      "pid": 3194659,
+      "recorded_start_ticks": "8283757",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/first_stage_identity.json",
+      "pid": 3205684,
+      "recorded_start_ticks": "8287199",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/head_snapshot_identity.json",
+      "pid": 3200385,
+      "recorded_start_ticks": "8285452",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/world_poses_identity.json",
+      "pid": 3200384,
+      "recorded_start_ticks": "8285447",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/prepare_scene_identity.json",
+      "pid": 3195519,
+      "recorded_start_ticks": "8284002",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/trajectory_executor_identity.json",
+      "pid": 3195518,
+      "recorded_start_ticks": "8283995",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/m5_observer_identity.json",
+      "pid": 3199120,
+      "recorded_start_ticks": "8285131",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/transport_skills_identity.json",
+      "pid": 3195489,
+      "recorded_start_ticks": "8283989",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/launcher_identity.json",
+      "pid": 3191607,
+      "recorded_start_ticks": "8282174",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/overview_bridge_identity.json",
+      "pid": 3199121,
+      "recorded_start_ticks": "8285136",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/owner.json",
+      "pid": 3191607,
+      "recorded_start_ticks": "8282174",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/executor_owner.json",
+      "pid": 3195518,
+      "recorded_start_ticks": "8283995",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/observer_owner.json",
+      "pid": 3199120,
+      "recorded_start_ticks": "8285131",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "manipulation_runtime_manifest",
+      "pid": 3195518,
+      "recorded_start_ticks": "8283995",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "manipulation_runtime_manifest",
+      "pid": 3195489,
+      "recorded_start_ticks": "8283989",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "manipulation_runtime_manifest",
+      "pid": 3195489,
+      "recorded_start_ticks": "8283989",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "manipulation_runtime_manifest",
+      "pid": 3196865,
+      "recorded_start_ticks": "8284308",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "manipulation_runtime_manifest",
+      "pid": 3196867,
+      "recorded_start_ticks": "8284308",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "manipulation_runtime_manifest",
+      "pid": 3196869,
+      "recorded_start_ticks": "8284308",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "manipulation_runtime_manifest",
+      "pid": 3196863,
+      "recorded_start_ticks": "8284308",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "head_raw_owners",
+      "pid": 3203915,
+      "recorded_start_ticks": "8286636",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "head_raw_owners",
+      "pid": 3203915,
+      "recorded_start_ticks": "8286636",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    },
+    {
+      "source": "head_raw_owners",
+      "pid": 3204092,
+      "recorded_start_ticks": "8286688",
+      "current_start_ticks": null,
+      "same_process_alive": false
+    }
+  ],
+  "stack_pid_checks": [
+    {
+      "pid": 3191607,
+      "pid_exists": false
+    },
+    {
+      "pid": 3191794,
+      "pid_exists": false
+    },
+    {
+      "pid": 3192812,
+      "pid_exists": false
+    }
+  ],
+  "session_stopped": true,
+  "source_freeze_checks": [
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/transport_skills_candidate.launch.py",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_transport_skills_candidate.launch.py",
+      "matches_preparation": true
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/prepare_scene.py",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_prepare_scene.py",
+      "matches_preparation": true
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/overlay.bash",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_overlay.bash",
+      "matches_preparation": true
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/run_first_stage.py",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_run_first_stage.py",
+      "matches_preparation": true
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/observer_topics.json",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_observer_topics.json",
+      "matches_preparation": true
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/verify_first_stage.py",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_verify_first_stage.py",
+      "matches_preparation": true
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/head_raw_qos.yaml",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_head_raw_qos.yaml",
+      "matches_preparation": true
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/record_transport_demo.py",
+      "frozen": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/used_record_transport_demo.py",
+      "matches_preparation": true
+    }
+  ],
+  "recorded_offline_redgreen": {
+    "observer_precheck_order_fix/offline_order_check.json": {
+      "recorded_passed": true,
+      "evidence_layer": "AST ordering plus substituted single-thread clock/callback regression; not live ROS validation",
+      "rerun": false
+    },
+    "ack_contract_fix/result.json": {
+      "recorded_passed": true,
+      "evidence_layer": "offline_actual_installed_message_no_ros_init",
+      "rerun": false
+    }
+  },
+  "typed_hold_scope": "held_joints is JointState, not ArmHoldStatus; no raw typed Hold separately serialized. Corroborated indirectly by coordinator READY_FIXED envelope bound to own hold_id and six ACK plus native hold_confirmed journal, not independent typed observation.",
+  "passed": true,
+  "post_archive_summary_correction": {
+    "record": "summary_correction/correction_manifest.json",
+    "errata": "summary_correction/ERRATA.md",
+    "prior_audit_result_unchanged": true,
+    "typed_hold_gate_limit": "Receipt age <0.3 s, hold_confirmed and matching hold_id only; typed source stamp/valid_until and typed lease/epoch were not independently checked. Cross-binding through Action feedback/executor status does not prove those unchecked typed fields.",
+    "historical_copy_manifest_retained": true
+  }
+}

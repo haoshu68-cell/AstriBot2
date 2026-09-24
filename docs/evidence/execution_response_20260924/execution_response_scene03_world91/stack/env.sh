@@ -1,0 +1,13 @@
+source /opt/ros/humble/setup.bash
+source /home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/install/setup.bash
+export ROS_DOMAIN_ID=91
+export GZ_IP=127.0.0.1
+export ROS_LOCALHOST_ONLY=0
+export IGN_IP=127.0.0.1
+export IGN_PARTITION=astribot_execution_response91_20260924
+export GZ_PARTITION=astribot_execution_response91_20260924
+export IGN_DISCOVERY_MSG_PORT=18182
+export IGN_DISCOVERY_SRV_PORT=18183
+export ASTRIBOT_SIM_INSTANCE=execution_response91_20260924
+export FASTRTPS_DEFAULT_PROFILES_FILE=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene03_world91/stack/nav_udp.xml
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp

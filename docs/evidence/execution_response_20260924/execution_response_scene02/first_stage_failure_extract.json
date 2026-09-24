@@ -1,0 +1,136 @@
+{
+  "kind": "derived_complete_selected_fields",
+  "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/execution_response_scene02/first_stage/result.json",
+  "source_sha256": "75ad591a37b165c773a06a55ee137ce0717c9426210a684cccdaca3aded37224",
+  "json_pointers": [
+    "/passed",
+    "/error",
+    "/started_wall",
+    "/finished_wall",
+    "/cleanup_complete",
+    "/cleanup_errors",
+    "/resource_disposition",
+    "/events",
+    "/owned_hold_identity",
+    "/hold_handle_unresolved"
+  ],
+  "data": {
+    "passed": false,
+    "error": "AttributeError(\"'EnvelopeApplyStatus' object has no attribute 'mode'\")",
+    "started_wall": 1790225673.0480797,
+    "finished_wall": 1790225715.1079903,
+    "cleanup_complete": false,
+    "cleanup_errors": [
+      "stop:AttributeError(\"'EnvelopeApplyStatus' object has no attribute 'mode'\")"
+    ],
+    "resource_disposition": "STOP_UNPROVEN_HOLD_NOT_CANCELLED_OWNING_SIMULATION_TEARDOWN_REQUIRED",
+    "events": [
+      {
+        "service": "/robot_envelope_coordinator/get_parameters",
+        "attempt": 1,
+        "result": "response"
+      },
+      {
+        "service": "/transport_mtc_planner/get_parameters",
+        "attempt": 1,
+        "result": "response"
+      },
+      {
+        "kind": "parent_submission",
+        "wall": 82260.881526054,
+        "ros_s": 42.868,
+        "goal": {
+          "task_id": "m1_task_c5a3bda3e01f4c5fbd29309a9cd032a7",
+          "request_id": "m1_request_b74e064d1eca4804b26193c111424480",
+          "context_id": "m1_context_a115642e1aac4045a6e183d0d6b283b6",
+          "operation": "PICK",
+          "object_id": "transport_box_01",
+          "pre_target": {
+            "header": {
+              "stamp": {
+                "sec": 42,
+                "nanosec": 868000000
+              },
+              "frame_id": "astribot_torso_base"
+            },
+            "pose": {
+              "position": {
+                "x": 0.1000445289153885,
+                "y": 0.6999855360451883,
+                "z": 1.0957761735716667
+              },
+              "orientation": {
+                "x": 0.5,
+                "y": 0.5,
+                "z": 0.5,
+                "w": 0.5
+              }
+            }
+          },
+          "target": {
+            "header": {
+              "stamp": {
+                "sec": 42,
+                "nanosec": 868000000
+              },
+              "frame_id": "astribot_torso_base"
+            },
+            "pose": {
+              "position": {
+                "x": 0.1000445289153885,
+                "y": 0.6999855360451883,
+                "z": 1.0657761735716667
+              },
+              "orientation": {
+                "x": 0.5,
+                "y": 0.5,
+                "z": 0.5,
+                "w": 0.5
+              }
+            }
+          },
+          "exit_targets": [
+            {
+              "header": {
+                "stamp": {
+                  "sec": 42,
+                  "nanosec": 868000000
+                },
+                "frame_id": "astribot_torso_base"
+              },
+              "pose": {
+                "position": {
+                  "x": 0.1000445289153885,
+                  "y": 0.6999855360451883,
+                  "z": 1.0957761735716667
+                },
+                "orientation": {
+                  "x": 0.5,
+                  "y": 0.5,
+                  "z": 0.5,
+                  "w": 0.5
+                }
+              }
+            }
+          ],
+          "touch_links": [
+            "astribot_arm_left_link_7",
+            "astribot_gripper_left_base",
+            "astribot_gripper_left_Link_L11",
+            "astribot_gripper_left_Link_L2",
+            "astribot_gripper_left_Link_R11",
+            "astribot_gripper_left_Link_R2"
+          ],
+          "grasp_width_m": 0.06
+        },
+        "goal_uuid": "b05110d71a634437917052ac984e7873"
+      }
+    ],
+    "owned_hold_identity": [
+      "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1",
+      "f9191e67-043b-4a02-a2ad-cd5e56e18a4c",
+      "f9191e67-043b-4a02-a2ad-cd5e56e18a4c_1_hold"
+    ],
+    "hold_handle_unresolved": true
+  }
+}
