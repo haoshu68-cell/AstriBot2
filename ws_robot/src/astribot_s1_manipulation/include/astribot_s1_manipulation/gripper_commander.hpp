@@ -93,6 +93,13 @@ public:
     const GripperConfig & config,
     std::string & detail);
 
+  /// 只配置相同的夹爪几何，不创建动作客户端或实测订阅；执行入口明确拒绝。
+  /// 独立入口保留原 configure 符号、配置结构与类成员布局。
+  PlanErrorCode configureForPlanning(
+    const moveit::core::RobotModelConstPtr & model,
+    const GripperConfig & config,
+    std::string & detail);
+
   bool isConfigured() const noexcept {return configured_;}
 
   /// SRDF 里读到的张开角 / 闭合角（rad）。未 configure 时返回 NaN。
@@ -128,6 +135,11 @@ public:
   bool measuredAngle(double & angle_rad) const;
 
 private:
+  PlanErrorCode configureImpl(
+    const moveit::core::RobotModelConstPtr & model,
+    const GripperConfig & config,
+    std::string & detail, bool planning_only);
+
   /// 采样 [open, closed] 建一张 角度→张口 的表，供 jawWidthAtAngle 插值、
   /// 供 graspAngleForWidth 反查。configure 时建一次。
   PlanErrorCode buildJawTable(std::string & detail);

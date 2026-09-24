@@ -1,0 +1,34 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from GripperPlanningOnly
+Warning: Link 'livox_mid360_left' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+Warning: Link 'livox_mid360_right' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+Warning: Link 'camera_link' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+[INFO] [1790219199.244275649] [moveit_robot_model.robot_model]: Loading robot model 'astribot_s1'...
+[WARN] [1790219199.250806352] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790219199.256408346] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790219199.260210253] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790219199.262276034] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[ RUN      ] GripperPlanningOnly.PlanningDoesNotCreateControllerEndpoints
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/test_gripper_planning_only.cpp:51: Failure
+Value of: hasControllerClient()
+  Actual: true
+Expected: false
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/test_gripper_planning_only.cpp:52: Failure
+Value of: hasJointSubscription()
+  Actual: true
+Expected: false
+[  FAILED  ] GripperPlanningOnly.PlanningDoesNotCreateControllerEndpoints (3 ms)
+[----------] 1 test from GripperPlanningOnly (3 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (535 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] GripperPlanningOnly.PlanningDoesNotCreateControllerEndpoints
+
+ 1 FAILED TEST

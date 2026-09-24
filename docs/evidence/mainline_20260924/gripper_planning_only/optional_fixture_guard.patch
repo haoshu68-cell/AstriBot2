@@ -1,0 +1,47 @@
+--- a/ws_robot/src/astribot_s1_manipulation/test_gripper_planning_only.cpp
++++ b/ws_robot/src/astribot_s1_manipulation/test_gripper_planning_only.cpp
+@@ -2,6 +2,7 @@
+ #include <gtest/gtest.h>
+ #include <urdf_parser/urdf_parser.h>
+ #include <srdfdom/model.h>
++#include <cstdlib>
+ #include <fstream>
+ #include <sstream>
+ #include <thread>
+@@ -9,13 +10,17 @@
+ using namespace astribot_s1_manipulation;
+ class GripperPlanningOnly : public ::testing::Test {
+ protected:
+-  static inline moveit::core::RobotModelPtr model;
+-  static inline rclcpp::Node::SharedPtr node;
+-  static void SetUpTestSuite() {
+-    ASSERT_NE(std::getenv("ASTRIBOT_GRIPPER_TEST_URDF"),nullptr);
+-    ASSERT_NE(std::getenv("ASTRIBOT_GRIPPER_TEST_SRDF"),nullptr);
+-    ASSERT_STREQ(std::getenv("ROS_DOMAIN_ID"),"181");
+-    std::ifstream u(std::getenv("ASTRIBOT_GRIPPER_TEST_URDF")),s(std::getenv("ASTRIBOT_GRIPPER_TEST_SRDF"));
++  moveit::core::RobotModelPtr model;
++  rclcpp::Node::SharedPtr node;
++  void SetUp() override {
++    const char* urdf_path=std::getenv("ASTRIBOT_GRIPPER_TEST_URDF");
++    const char* srdf_path=std::getenv("ASTRIBOT_GRIPPER_TEST_SRDF");
++    const char* domain=std::getenv("ROS_DOMAIN_ID");
++    if(!urdf_path || !*urdf_path || !srdf_path || !*srdf_path || !domain || !*domain)
++      GTEST_SKIP()<<"Optional integration test requires ASTRIBOT_GRIPPER_TEST_URDF, "
++                   "ASTRIBOT_GRIPPER_TEST_SRDF and an isolated ROS_DOMAIN_ID=181";
++    ASSERT_STREQ(domain,"181");
++    std::ifstream u(urdf_path),s(srdf_path);
+     std::stringstream ut,st;ut<<u.rdbuf();st<<s.rdbuf();
+     auto urdf=urdf::parseURDF(ut.str());ASSERT_TRUE(urdf);
+     auto srdf=std::make_shared<srdf::Model>();ASSERT_TRUE(srdf->initString(*urdf,st.str()));
+@@ -26,7 +31,10 @@
+     for(const auto& name:node->get_node_names())
+       ASSERT_EQ(name,node->get_fully_qualified_name())<<"Domain 181 has another node; do not use this graph";
+   }
+-  static void TearDownTestSuite(){node.reset();model.reset();rclcpp::shutdown();}
++  void TearDown() override {
++    if(node){node.reset();rclcpp::shutdown();}
++    model.reset();
++  }
+   GripperConfig config() const {
+     GripperConfig c;c.group_name="gripper_left";
+     c.action_name="/gripper_left_controller/follow_joint_trajectory";

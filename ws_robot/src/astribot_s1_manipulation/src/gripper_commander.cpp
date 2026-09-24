@@ -83,8 +83,30 @@ PlanErrorCode GripperCommander::configure(
   const GripperConfig & config,
   std::string & detail)
 {
+  return configureImpl(model, config, detail, false);
+}
+
+PlanErrorCode GripperCommander::configureForPlanning(
+  const moveit::core::RobotModelConstPtr & model,
+  const GripperConfig & config,
+  std::string & detail)
+{
+  return configureImpl(model, config, detail, true);
+}
+
+PlanErrorCode GripperCommander::configureImpl(
+  const moveit::core::RobotModelConstPtr & model,
+  const GripperConfig & config,
+  std::string & detail, bool planning_only)
+{
   detail.clear();
   configured_ = false;
+  action_client_.reset();
+  joint_sub_.reset();
+  {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    have_measured_ = false;
+  }
 
   if (node_ == nullptr) {
     detail = "节点指针为空";
@@ -166,11 +188,13 @@ PlanErrorCode GripperCommander::configure(
     return table_code;
   }
 
-  action_client_ = rclcpp_action::create_client<FollowJointTrajectory>(
-    node_, config_.action_name);
-  joint_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
-    config_.joint_states_topic, rclcpp::SensorDataQoS(),
-    [this](const sensor_msgs::msg::JointState::ConstSharedPtr msg) {onJointStates(msg);});
+  if (!planning_only) {
+    action_client_ = rclcpp_action::create_client<FollowJointTrajectory>(
+      node_, config_.action_name);
+    joint_sub_ = node_->create_subscription<sensor_msgs::msg::JointState>(
+      config_.joint_states_topic, rclcpp::SensorDataQoS(),
+      [this](const sensor_msgs::msg::JointState::ConstSharedPtr msg) {onJointStates(msg);});
+  }
 
   configured_ = true;
   return PlanErrorCode::kSuccess;
@@ -366,6 +390,10 @@ PlanErrorCode GripperCommander::graspAngleForWidth(
 PlanErrorCode GripperCommander::sendTrajectory(double angle_rad, std::string & detail)
 {
   detail.clear();
+  if (!action_client_) {
+    detail = "GRIPPER_PLANNING_ONLY: execution is disabled";
+    return PlanErrorCode::kInvalidInput;
+  }
   const auto wait_budget = std::chrono::duration<double>(config_.server_wait_sec);
   if (!action_client_->wait_for_action_server(
       std::chrono::duration_cast<std::chrono::nanoseconds>(wait_budget)))
@@ -422,6 +450,12 @@ GripperOutcome GripperCommander::moveTo(double angle_rad)
   if (!configured_) {
     outcome.code = PlanErrorCode::kNotConfigured;
     outcome.detail = "GripperCommander 未 configure";
+    return outcome;
+  }
+
+  if (!action_client_) {
+    outcome.code = PlanErrorCode::kInvalidInput;
+    outcome.detail = "GRIPPER_PLANNING_ONLY: execution is disabled";
     return outcome;
   }
 
@@ -525,4 +559,3 @@ GripperOutcome GripperCommander::closeToWidth(double width_m)
 }
 
 }  // namespace astribot_s1_manipulation
-

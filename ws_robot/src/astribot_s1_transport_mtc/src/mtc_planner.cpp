@@ -203,7 +203,7 @@ class Planner {
         gc.tcp_link="astribot_arm_left_tcp_link";gc.left_pad_link="astribot_gripper_left_Link_L11";
         gc.right_pad_link="astribot_gripper_left_Link_R11";
         std::string error;
-        if(gripper.configure(task.getRobotModel(),gc,error)!=PlanErrorCode::kSuccess)throw std::runtime_error(error);
+        if(gripper.configureForPlanning(task.getRobotModel(),gc,error)!=PlanErrorCode::kSuccess)throw std::runtime_error(error);
         double grasp_angle;
         if(gripper.graspAngleForWidth(goal->grasp_width_m,grasp_angle,error)!=PlanErrorCode::kSuccess)throw std::runtime_error(error);
         auto sequence=std::make_unique<mtc::SerialContainer>(goal->operation+"_SEQUENCE");

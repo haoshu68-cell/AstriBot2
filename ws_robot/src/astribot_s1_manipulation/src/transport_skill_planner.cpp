@@ -39,7 +39,7 @@ int main(int argc, char ** argv)
     gc.tcp_link = "astribot_arm_left_tcp_link";
     gc.left_pad_link = "astribot_gripper_left_Link_L11";
     gc.right_pad_link = "astribot_gripper_left_Link_R11";
-    if (gripper.configure(planner.getRobotModel(), gc, error) != PlanErrorCode::kSuccess) {
+    if (gripper.configureForPlanning(planner.getRobotModel(), gc, error) != PlanErrorCode::kSuccess) {
       throw std::runtime_error(error);
     }
     // A separate mutually exclusive callback group serializes planner access while
