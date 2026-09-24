@@ -1,0 +1,338 @@
+{
+  "schema": "astribot.validated_version_cleanup_plan/1",
+  "checked_at": "2026-09-24T05:30:21.044700+00:00",
+  "scope": [
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/clock_cleanup",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924"
+  ],
+  "read_only_except_this_plan": true,
+  "archive_created": false,
+  "deleted": false,
+  "missing_requested_directory": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/clock_cleanup",
+  "clock_cleanup_actual_paths": [
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_build",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_install",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_evidence",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/clock_cleanup_20260924"
+  ],
+  "entries": [
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/build",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "旧首段构建树；当前 install 无指向此树的符号链接；保留整个构建证据于压缩包。",
+      "logical_bytes": 32048986,
+      "allocated_file_bytes": 33804288,
+      "regular_files": 679,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__mainline_20260924__scene_binding_first_stage__build.tar.gz",
+      "archive_member_prefix": "runs/mainline_20260924/scene_binding_first_stage/build",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_build",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "clock cleanup 对比构建，已由 capture 候选接替。",
+      "logical_bytes": 29065989,
+      "allocated_file_bytes": 30781440,
+      "regular_files": 638,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__mainline_20260924__scene_binding_first_stage__timing_build.tar.gz",
+      "archive_member_prefix": "runs/mainline_20260924/scene_binding_first_stage/timing_build",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_install",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "clock cleanup 对比安装，当前 M2/M3 已审 overlay 未引用。",
+      "logical_bytes": 7464305,
+      "allocated_file_bytes": 7884800,
+      "regular_files": 163,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__mainline_20260924__scene_binding_first_stage__timing_install.tar.gz",
+      "archive_member_prefix": "runs/mainline_20260924/scene_binding_first_stage/timing_install",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/install",
+      "decision": "KEEP",
+      "reason": "M3 runtime_overlay 直接引用；M2 capture_overlay 也先 source 旧 overlay。",
+      "logical_bytes": 7456991,
+      "allocated_file_bytes": 7876608,
+      "regular_files": 163,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_build",
+      "decision": "KEEP",
+      "reason": "当前 M2 capture 候选构建。",
+      "logical_bytes": 32195703,
+      "allocated_file_bytes": 33951744,
+      "regular_files": 679,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_install",
+      "decision": "KEEP",
+      "reason": "M2 当前 execution_response overlay 显式使用。",
+      "logical_bytes": 7494337,
+      "allocated_file_bytes": 7917568,
+      "regular_files": 163,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/source",
+      "decision": "KEEP",
+      "reason": "capture_build 的 CMAKE_HOME_DIRECTORY 指向本源副本，仍是候选构建依赖。",
+      "logical_bytes": 178536,
+      "allocated_file_bytes": 249856,
+      "regular_files": 32,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_evidence/source",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "只读验证源副本，完整映射压缩留档；不删同级 raw/journal/CDR。",
+      "logical_bytes": 178536,
+      "allocated_file_bytes": 249856,
+      "regular_files": 32,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__mainline_20260924__scene_binding_first_stage__capture_evidence__source.tar.gz",
+      "archive_member_prefix": "runs/mainline_20260924/scene_binding_first_stage/capture_evidence/source",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_evidence/source",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "clock cleanup 的 RED/GREEN 源对比副本，完整压缩留档；不删同级 raw/journal/CDR。",
+      "logical_bytes": 73113,
+      "allocated_file_bytes": 77824,
+      "regular_files": 3,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__mainline_20260924__scene_binding_first_stage__timing_evidence__source.tar.gz",
+      "archive_member_prefix": "runs/mainline_20260924/scene_binding_first_stage/timing_evidence/source",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/before",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "已验证补丁的旧源对比；docs/evidence/trajectory_time_scaling_20260924/before 已有逐字节副本。",
+      "logical_bytes": 61508,
+      "allocated_file_bytes": 77824,
+      "regular_files": 7,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__mainline_20260924__trajectory_time_scaling__before.tar.gz",
+      "archive_member_prefix": "runs/mainline_20260924/trajectory_time_scaling/before",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build",
+      "decision": "KEEP",
+      "reason": "当前 M2 time_scaling 候选构建，result.json 的编译依赖证据仍引用。",
+      "logical_bytes": 13012146,
+      "allocated_file_bytes": 13766656,
+      "regular_files": 256,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install",
+      "decision": "KEEP",
+      "reason": "M2 overlay 显式选用 manipulation/MTC 安装。",
+      "logical_bytes": 6643210,
+      "allocated_file_bytes": 6852608,
+      "regular_files": 77,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/build",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "旧首段构建，对比版本已被 next/full 候选替代；无符号链接依赖。",
+      "logical_bytes": 27949935,
+      "allocated_file_bytes": 29655040,
+      "regular_files": 635,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__m1_transport_20260924__build.tar.gz",
+      "archive_member_prefix": "runs/m1_transport_20260924/build",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/install",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "旧首段安装；所审当前 M2/M3 overlay 链未引用，文档旧命令作为历史保留并映射到归档。",
+      "logical_bytes": 6828325,
+      "allocated_file_bytes": 7249920,
+      "regular_files": 159,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__m1_transport_20260924__install.tar.gz",
+      "archive_member_prefix": "runs/m1_transport_20260924/install",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/next_build",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "next_install 为独立普通文件，无到构建树的符号链接；旧构建可完整归档。",
+      "logical_bytes": 29600039,
+      "allocated_file_bytes": 31285248,
+      "regular_files": 620,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__m1_transport_20260924__next_build.tar.gz",
+      "archive_member_prefix": "runs/m1_transport_20260924/next_build",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/next_install",
+      "decision": "KEEP",
+      "reason": "READY→M1_scene_prepare overlay 显式 source，当前 M2/M3 overlay 的间接依赖。",
+      "logical_bytes": 6900523,
+      "allocated_file_bytes": 7319552,
+      "regular_files": 160,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build",
+      "decision": "KEEP",
+      "reason": "M1 当前完整链工作候选；不是废弃对比。",
+      "logical_bytes": 49898887,
+      "allocated_file_bytes": 51929088,
+      "regular_files": 771,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_install",
+      "decision": "KEEP",
+      "reason": "M1 当前完整链安装；不是已被替代的旧版本。",
+      "logical_bytes": 15629236,
+      "allocated_file_bytes": 16105472,
+      "regular_files": 188,
+      "symlinks": []
+    },
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/payload_fix",
+      "decision": "ARCHIVE_THEN_DELETE",
+      "reason": "早期 payload 两个对比测试二进制，full_build/full_install 已有后续候选；整个目录压缩留档。",
+      "logical_bytes": 3621688,
+      "allocated_file_bytes": 3624960,
+      "regular_files": 2,
+      "symlinks": [],
+      "proposed_archive": "/home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924/runs__m1_transport_20260924__payload_fix.tar.gz",
+      "archive_member_prefix": "runs/m1_transport_20260924/payload_fix",
+      "archive_status": "NOT_CREATED_NOT_VERIFIED_DELETE_NOT_AUTHORIZED_BY_THIS_FILE"
+    }
+  ],
+  "runtime_overlay_identity": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m3_source_model_probe_20260924/runtime_overlay.bash",
+      "sha256": "7f60851dd23f8df5745fd1a23b63fa7952de809c7e2cd6f862703302f6ee8616"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/overlay.bash",
+      "sha256": "3117f958cdf238d5494aab41e94b4fba9b5b6264a39d3e347767212750d75963"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/capture_overlay.bash",
+      "sha256": "72d7d7c1b88b79b268176386a01b829eb0b51c11a4b942d6bf4e9062f73b82bf"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/overlay.bash",
+      "sha256": "b9662b2940610683cf490aebab78703a72419ee1797f51cedbc9ad1fb63c2ad4"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/overlay.bash",
+      "sha256": "edd1fea0a357e6b9fa5993e9a5664bb5fa0e4bea744a68b88306d020d418753e"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/overlay.bash",
+      "sha256": "8e6bd73952878774c09547ac30d92a0be0f43d5edaae57556a1f239a617ce653"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/overlay.bash",
+      "sha256": "4594c3fa55d24bb85148082e4ec985c4c08b46519f1a2fb25ec2f4b39b78ddb0"
+    }
+  ],
+  "dependency_chain": [
+    "M2 execution_response overlay -> scene_binding capture_overlay -> scene_binding overlay -> READY_profile overlay -> M1_scene_prepare overlay -> m1 next_install",
+    "M3 runtime_overlay -> scene_binding overlay -> READY_profile -> M1_scene_prepare -> m1 next_install; M3 directly resolves native from scene_binding/install",
+    "M2 execution_response overlay -> trajectory_time_scaling/install and scene_binding/capture_install",
+    "M1 current candidate -> m1/full_build and full_install"
+  ],
+  "live_process_observation": "Read-only /proc cmdline/maps scan found no process with these bounded candidate paths at scan time. This is not deletion permission or a guarantee no process starts later. Root must recheck before deletion.",
+  "existing_evidence_directories": [
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/scene_binding_first_stage_20260924",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/clock_cleanup_20260924",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/trajectory_capture_20260924",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/trajectory_time_scaling_20260924",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260924",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/execution_response_20260924"
+  ],
+  "existing_compressed_archives_in_scanned_run_roots": [],
+  "verified_existing_source_copies": [
+    {
+      "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/before",
+      "existing_copy": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/trajectory_time_scaling_20260924/before",
+      "file_checks": [
+        {
+          "relative": "CMakeLists.txt",
+          "identical": true,
+          "sha256": "9ae6f005ff7928e57435b92f6d03aeb57811fe9bd5ba8f458c3d6b50d5e6a036"
+        },
+        {
+          "relative": "external_trajectory_validator.hpp",
+          "identical": true,
+          "sha256": "0676ef0268f97ccdd56c703936060cca35b16f1fdb7f5b08ecc69091c27e19d7"
+        },
+        {
+          "relative": "mtc_planner.cpp",
+          "identical": true,
+          "sha256": "6797ccf1f649aedfad5b157ff8d044018cbd90ab04f43681704bfe1e3ae082d3"
+        },
+        {
+          "relative": "package.xml",
+          "identical": true,
+          "sha256": "914af26378deb101a913bb7bf87d4d71096ce5d99e998919b5a7de3da72a52d0"
+        },
+        {
+          "relative": "payload_transition.cpp",
+          "identical": true,
+          "sha256": "c2c78aaf29f7bb6fda58b8c5bb40e6349debc81392525b1414ea65c38dc9339c"
+        },
+        {
+          "relative": "payload_transition.hpp",
+          "identical": true,
+          "sha256": "38cc995ecc5aae6937b0cc6bd04ae3b9e7b411ed63a9e61a2f1bbb3ff0aac39a"
+        },
+        {
+          "relative": "payload_transition_test.cpp",
+          "identical": true,
+          "sha256": "1fc82c195c3534f4d5c2c872869fa0724ec9dc36201efba1223da19f2d54286d"
+        }
+      ],
+      "all_identical": true
+    }
+  ],
+  "all_scanned_symlinks": [
+    {
+      "path": "runs/mainline_20260924/scene_binding_first_stage/capture_evidence/capture_error_cdr/916fca1c-a0fb-4826-8574-31ad8adf708e_1/torso_controller_goal.cdr.tmp",
+      "target": "/dev/full"
+    }
+  ],
+  "evidence_keep_rule": "KEEP all logs, journals, raw CDR, protocol/full_protocol/full_six_stage/ros_logs, result/manifest/patch/config/overlay and sealed_test_results outside selected implementation directories. Within selected build directories archive all files including test XML/Testing before deleting the build tree; record original path -> archive member path + per-file SHA/type/link-target.",
+  "execution_prerequisites": [
+    "Confirm no live process or newly selected M1/M2/M3 dependency uses each candidate immediately before action.",
+    "Create compressed archives outside repository, preserve full repository-relative member prefix, permissions and symlinks; never dereference /dev/full.",
+    "Write exact original-path to archive/member mapping and per-file SHA-256 (symlink text separately); record archive SHA-256 and bytes.",
+    "Verify archive can list/extract in an isolated temporary directory and all recorded file hashes/types/link targets match; original failure journal/log/raw files remain available via mapping.",
+    "Only after verified archive and fresh dependency check remove the exact listed ARCHIVE_THEN_DELETE directory; no wildcard parent deletion and no source worktree cleanup."
+  ],
+  "approx_reclaimable_allocated_file_bytes": 144691200,
+  "priority_first_batch": [
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/before",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_build",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/scene_binding_first_stage/timing_install"
+  ],
+  "existing_reference_manifest_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/clock_cleanup_20260924/manifest.json": "17be215bf4507c6a12ac1a6d1e2fdf8f67401e62a063d29856c52c735dfc835b",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/trajectory_time_scaling_20260924/result.json": "acc548c30218f7c361119ccd1bf8aab60bc32c1a0a44f17954e56489a9abe8c3",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/scene_binding_first_stage_20260924/archive_manifest.json": "4a9b7bf8e9942db9306282182a8884fa71aa5fb68eac4f548acc366effd16bbf"
+  }
+}

@@ -9,10 +9,10 @@
 | 工作包 | 执行任务 | 本轮交付边界 | 修改范围 | 当前状态 |
 |---|---|---|---|---|
 | M0 取消撤销/集成 | 总调度 | 核实兼容取消超时是否阻断运动许可撤销；修复已证问题；接口协调、复核、最终集成 | 旧 transport Python 兼容路径及其测试；本调度记录 | 限定修复110/110与Git完成；集成继续 |
-| M1 C++ 执行器 | 盘点可迁移至 C++ 的 Python 实现 `01a0beb7-23e6-7112-8221-7f2a198b659f` | 先完成受权的 MTC 轨迹执行→终态→实测停稳→保持，再继续正常抓放编排 | `astribot_s1_transport_native`；独立证据/构建目录 | 首段真实6 child已执行后保护停止；完整Action组件/首段回归通过，12:28按时限暂停未验六阶段部分 |
-| M2 账本/质量/包络；M4 通道 | 完善path_tracking到位精度 `01a09962-8e15-71e0-b9a6-a92798318698` | 先核对并验证 A4 新节点实际有载准入/失效撤销；M1 就绪后实际非 home 接线；之后 M4 | 导航固定包络/载荷接线和通道；不改 native 执行器 | 静止质量/附件转换、READY初始化已过；实际首段跟随保护待修；M4真实全身几何离线6场通过 |
-| M3 感知到规划 | 制定FoundationPose整合方案 `01a0ccca-7607-7bc0-b7d9-12dc8c8e6eda` | 复用现有 GraspNet/CAD 6D，提供实际版本与物体身份绑定的候选调用接线；先离线、后集成 | `astribot_s1_manipulation_perception`，必要感知接口；不改 native 执行器、共享启动或 GPU 基线 | 72 项离线/隔离协议通过，epoch0补丁7项通过；11:52起一次source/model probe准备中，实际未验 |
-| M5 覆盖和负载验证准备 | 排查图像积压与传输方式 `01a0c70b-a5f6-77e0-82b7-3e740774ed0d` | 准备当前六相机真实话题的运动/覆盖采集和判据；只补必要验证脚本 | 独立 `tools/vision` 验证脚本和证据；本轮不改运行时 | READY单帧真实2466点成立；运动期源龄未采集，正接入observer/guard/有界原始帧与视频时序 |
+| M1 C++ 执行器 | 盘点可迁移至 C++ 的 Python 实现 `01a0beb7-23e6-7112-8221-7f2a198b659f` | 先完成受权的 MTC 轨迹执行→终态→实测停稳→保持，再继续正常抓放编排 | `astribot_s1_transport_native`；独立证据/构建目录 | 真实首段执行与Hold已确证；完整Action从12:44恢复，协议225触发geometry失效后释放，TF修复待测 |
+| M2 账本/质量/包络；M4 通道 | 完善path_tracking到位精度 `01a09962-8e15-71e0-b9a6-a92798318698` | 先核对并验证 A4 新节点实际有载准入/失效撤销；M1 就绪后实际非 home 接线；之后 M4 | 导航固定包络/载荷接线和通道；不改 native 执行器 | 首段跟随限定通过；scene02六ACK工具异常与释放未验，world91首段六ACK、正常取消/停稳/资源释放已通过；M4全身几何离线6场通过 |
+| M3 感知到规划 | 制定FoundationPose整合方案 `01a0ccca-7607-7bc0-b7d9-12dc8c8e6eda` | 复用现有 GraspNet/CAD 6D，提供实际版本与物体身份绑定的候选调用接线；先离线、后集成 | `astribot_s1_manipulation_perception`，必要感知接口；不改 native 执行器、共享启动或 GPU 基线 | 72项与epoch0补丁7项通过；一次probe实际未验，六ACK/导航允许位契约矛盾已定位，C++静止入口修正中 |
+| M5 覆盖和负载验证准备 | 排查图像积压与传输方式 `01a0c70b-a5f6-77e0-82b7-3e740774ed0d` | 准备当前六相机真实话题的运动/覆盖采集和判据；只补必要验证脚本 | 独立 `tools/vision` 验证脚本和证据；本轮不改运行时 | READY单帧2466点；真实首段已留383帧及41话题观测，动作视频存在1.23s接收gap，完整连续流程仍未验 |
 | M6 多负载回归 | 总调度安排后续 | 待 M1/M2 正常有载链成立后展开最小矩阵 | 尚不分派运行 | 依赖等待 |
 
 共享接口/构建入口改动先报告具体路径和所需字段，由总调度分配单一写入者。所有任务保留别人的未提交修改，不 checkout/reset/clean 当前共享树，不改共享 install，不自行创建对照开发分支。独立构建与测试目录按本任务命名；主线证据保存源/参数/安装哈希。
@@ -89,10 +89,37 @@
 - 12:28–12:33：M2实采17个运动期JTC样本表明首点连续，实际位置控制近似 v=9.50×error，无速度前馈，左一轴误差达0.05133 rad；原始guard reason缺失，仍不声称唯一原因。批准下一场单因素规划阶段时间伸长2.5倍候选（默认1），原路径和所有门槛不变；MTC单写者先验证时间/导数及缓存一致性。跟随问题原起点12:15、截止13:15。
 - 12:33：时钟缺陷独立RED/GREEN通过：域220旧binary在34个递增clock样本下误报；域221新candidate在36个递增样本下正常收尾、6 cancel ACK及终态、资源释放、无CLOCK_RESET，现有8/8CTest通过。下一实际场仍待轨迹取证、时间伸长和observer预检完成后由总调度放行。
 
+- 12:43 左右：用户要求全部暂停；根任务通知四个执行窗口及子任务。四窗口回报无自有运行进程，下一场未启动；所有代码/证据/未提交修改和原计时保留，MTC收尾代理被中断。
+- 12:44：用户明确要求全部继续。重新分派原四窗口并核对暂停检查点。M1从已保存fullAction恢复六阶段协议，不重做已过组件，保留原始起点与前次超时暂停；M2继续12:15起跟随问题与下一独占场准备；M3封住离线probe，实际仍等Hold/六ACK；M5完成sidecar封板和runner复核。此次恢复不自动重放任何旧动作。
+- 12:45–12:47：时间伸长候选源码/产物/封存XML再次独立核对一致，先前根任务6/6CTest通过；精确8文件修改及证据提交 `f31f4be2`。真实Gazebo跟随尚未验证。M2已离线解析新native→新MTC→新manipulation及6产物hash；尚待录像和runner最终确认，未授权起场。
+
+- 12:49–12:50：M5录像source/test冻结，root独立4项编码解码测试通过；M2新增实际视频解码与sidecar/summary/索引核验。observer四项接线和独立版本审查完成，root逐项核对最终11来源/6产物hash一致，明确放行 `execution_response_scene01`（domain90，session execution_response_20260924）。只验证READY首段→Hold→六ACK，其他窗口停止重构建/ROS/GPU；7话题3秒静止bag先结束flush再发Action，41话题观察器覆盖动作前后20秒。录像/guard证据提交 `4180589a`，实际结果待定。
+- 12:50：M3一次性入口和操作单已准备完成；真实source/双模型仍 `BLOCKED_PREREQUISITE` / `NOT_RUN`，缺本场真实Hold与六ACK、新登记、原始同刻输入；不转写成模型失败。原11:52→12:52保留，不自动续录或延长capture期限。
+
+- 12:52 左右：execution_response_scene01在Action前因验证器 `STALE_LEDGER_CAPTURE` 退出，0ARM/0parent动作；同步observer日志/拓扑预检约0.45949 s未spin，超过原0.3 s账本接收时限。实际新candidate/参数[2.5,.1,.1,.1]读回及7话题raw flush成立，不能因此判定轨迹候选失败。307帧真实解码=sidecar=summary；observer130按INCOMPLETE，资源明确释放、自有进程全部退出。批准仅将同步预检移到现有动态ready采样之前，原门槛和输入源戳不改，待必要顺序验证再放行。
+
+- 12:53：同步observer检查只整体移到原ENTRY ready spin之前；原序离线替身复现STALE、新序收新帧通过，full Scene/TF/目标仍在新动态采样之后。root核精确diff与hash后放行scene02。
+- 12:56 左右：scene02真实首段执行完成，6 child全部success，FIRST_STAGE_HOLD_CONFIRMED@79.029 s；guard active样本最大误差0.0320496 rad，未调原0.05门槛。真实指令426点/7.619381332 s，与前场717点不是同一路径A/B。随后工装访问EnvelopeApplyStatus不存在的mode字段中断，六ACK及取消收尾未验；domain90 journal最终租约过期隔离，原样保留，17唯一PID退出不等同资源释放。
+- 12:57–12:59：ACK工装仅删除不存在字段，使用实际冻结msg/generated类RED→GREEN，六消费者及epoch/hash/session/缺消费者拒绝规则不变。拟在全新domain91世界验证正常ACK/释放，禁止重置domain90旧事务。M1完整协议225首次运行18JTC后未进物理命令，确认单线程Buffer错误使用timeout overload；独立审查确认零timeout也会触发dedicated-thread检查，lookup亦需无timeout TimePoint重载。225安全终态/RELEASED，冻结失败；229预留修复回归，未放松任何TTL。
+- 12:56–12:59：M3额外静态核对发现现有六ACK强制navigation_allowed=true，与一次性probe要求false矛盾。已将实际状态修正为BLOCKED_CONTRACT/NOT_RUN，旧离线检查不升级为可运行。批准设计最小只读验证入口契约修正：区分几何允许位和实际底盘静止，用真实typedHold/当前版本与新鲜运动证据；不修改导航core、不伪造ACK，不延长感知期限。待精确方案与必要验证。
+
+- 13:03–13:05：root核对domain91两处隔离修改、冻结11文件与6产物后明确放行scene03_world91；仅首段→Hold→六ACK→取消/停稳/释放，domain90原quarantine保留。M1/M3无构建/协议，M5只读分析。scene02独立CDR/JTC复核确认346条期望样本与实际下发样条相符、最大采样误差0.0320496133 rad；样条采样峰加速度1.419789318 rad/s²，不混用waypoint导数0.654258555。
+- 13:05：M3静止入口设计引用现有measured_stop与native固定基准阈值，获准4文件私有probe实施；明确导航状态事件流不能自行证明空闲，M2必须提供实际冷启动/图与入口排他证据。当前只写代码，不启动ROS/构建。
+
+- 13:06–13:07：scene03_world91通过限定首段闭环，实际738点/11.658845208 s、最大采样误差0.0322653 rad；取消前六consumer同版本ACK齐全，parent canceled/resources_released、独立停稳、journal RELEASED成立，所有自有进程退出。515视频帧实际解码一致；observer130仍INCOMPLETE。typed Hold在工装回调中参与门控但原msg未完整落盘，summary旧typed_hold键实为held JointState，独立原始typed证据缺口另记。
+- 13:07：释放计算窗口给M1单线程必要构建与四场合成协议。scene01/02原失败、原视频帧及实际轨迹消费分析提交 `ccd2b2d8`；CSV标准CRLF用cr-at-eol检查通过，未改原数值或哈希。
+- 13:09左右：M1 TF必要回归4项通过，229正常PICK与226PLACE均30JTC/1物理命令、真实ledger转换、剩余重验/读回、最终Hold及取消释放通过。只属合成协议，不含Gazebo物理；按序继续227延迟账本与228意外revision。
+
+- 13:15–13:22：完整执行器独立审查发现已收到新raw却可回退旧配对/旧ledger推进的P1，暂停真实full场。231旧candidate在发布late r3后确认payload并发6个后续JTC，随后geometry失效隔离；旧ELF缺接收诊断，只称发布时序复现，不冒称直接观察已消费。最小修复在最新raw回调及全部后续屏障锁存revision/UNKNOWN/不完整/内容冲突，保留未决资源；源码独立复核通过，GREEN与兼容实测待验。
+- 13:28：M3静止入口19个纯C++用例通过，SG7/实际模型未验；独立审查用真实scene03发现正常envelope可同stamp从WAITING转READY，通用冲突规则误拒绝，继续做必要限定修正，不以既有19PASS宣布入口完成。
+- 用户追加范围约束：**先完成主线，不扩大化；已通过内容的对比与旧版本先留档校验，再从活动目录删除。** root统一清理，先列本轮所有者与实际依赖。仍用于主线运行或本次修复验证的版本待替代者通过后清理；历史原始失败、未决journal不得当作废弃实现擦除。停止额外方案研究/重复矩阵，只保留阻断正常流程的必要修复和取证。
+
+- 13:32：按用户新要求完成首批退役：time_scaling/before、scene_binding/timing_build和timing_install共808普通文件逐项SHA/权限/内容归档校验后删除；原始大小36591802 bytes，归档位于 /home/yjh/WorkSpace/astribot_validation/validated_version_archives_20260924。当前M2/M3依赖安装、原journal/log/CDR保留；完整映射见 [清理结果](evidence/mainline_20260924/validated_version_cleanup_result.json)。
+
 ## 当前关闭与下一放行
 
-- 正式关闭的限定边界：M0取消异常收尾；MTC payload transition离线重验；planning-only控制权；静止质量/权威附件/EMPTY/六ACK；READY实际初始化；实际规划场景绑定。各自证据不等于完整搬运抓放。
-- 原 zero→READY 原生准备缺口按10:35→11:35暂停；完整六阶段Action按11:28→12:28暂停并可恢复。不得以READY初始条件替代准备，也不得以首段协议替代六阶段PICK/PLACE。
-- 下一实际首段依赖：新时钟candidate、规划阶段严格2.5倍时间伸长、实际发出trajectory完整记录、guard原始reason、40话题元数据observer与视频源时间关联。由M2唯一操作者运行，其他窗口停止重构建/GPU竞争。
-- M3真实source/双模型、M4实际通道、M5运动覆盖、M6多负载仍待验；READY单帧2466真实点和全身60顶点6离线通道场景仅关闭对应可行性边界。模型结果期限与慢MTC冲突仍为后续明确接口设计项。
-- 当前场次已退出；未验完整抓取/附着/运输/放置，未提供完整动作录屏。任何后续成功都需要实测状态与资源交接、来源身份及失败/UNKNOWN边界一起归档。
+- 正式关闭的限定边界：M0取消异常收尾；MTC payload transition离线重验；planning-only控制权；静止质量/权威附件/EMPTY/六ACK；READY实际初始化；实际规划场景绑定；scene02首段真实执行与到位Hold。各自证据不等于完整搬运抓放。
+- 原 zero→READY 原生准备缺口按10:35→11:35暂停；完整六阶段Action在12:28留档后由用户12:44明确恢复，当前修复并验证协议层，尚未启用真实完整PICK/PLACE。不得以READY初始条件替代准备，也不得以首段协议替代完整动作。
+- world91已完成并退出；M1占用有限编译/合成协议窗口，M2只准备完整PICK的真实payload参数与冷启动次序，M3只做4文件代码。下一真实场须完整协议和源码审查就绪后由root放行。world91成功不算domain90旧隔离事务恢复。
+- M3真实source/双模型、M4实际通道、M5多相机覆盖、M6多负载仍待验；M3在修正静止入口的接口矛盾。READY单帧2466真实点和全身60顶点6离线通道场景仅关闭对应可行性边界。模型结果5秒期限与慢MTC冲突另行设计，不延长旧结果。
+- scene02留下真实首段录像，但动作窗口39个接收帧最大gap1.2336秒，固定10fps回放也不是现实时间；未提供完整抓取/附着/运输/放置录屏。完整交付仍需实测状态、资源交接、来源身份及失败/UNKNOWN边界一起归档。
