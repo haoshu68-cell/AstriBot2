@@ -2,6 +2,18 @@
 #include "astribot_s1_transport_native/resource_authority.hpp"
 #include "astribot_s1_transport_native/resource_journal.hpp"
 #include "astribot_s1_transport_native/child_actions.hpp"
+#ifdef PLAN_TO_HOLD_EXECUTOR
+#include "astribot_s1_transport_native/mtc_plan.hpp"
+#include "astribot_s1_transport_native/scene_binding.hpp"
+#include <astribot_s1_transport_native/action/plan_to_hold.hpp>
+#include <astribot_transport_msgs/action/plan_manipulation.hpp>
+#include <astribot_transport_msgs/srv/set_execution_guard.hpp>
+#include <astribot_transport_msgs/msg/execution_guard_status.hpp>
+#include <astribot_navigation_msgs/msg/navigation_envelope_v2.hpp>
+#include <astribot_navigation_msgs/srv/set_robot_envelope.hpp>
+#include <moveit_msgs/srv/get_planning_scene.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#endif
 #include <astribot_s1_transport_native/action/hold_resources.hpp>
 #include <astribot_s1_transport_native/srv/renew_hold.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -21,7 +33,20 @@ namespace {
 constexpr int64_t MS=1000000;
 int64_t wall(){return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();}
 int64_t ns(const builtin_interfaces::msg::Time &t){return int64_t(t.sec)*1000000000+t.nanosec;}
+#ifdef PLAN_TO_HOLD_EXECUTOR
+using Action=astribot_s1_transport_native::action::PlanToHold;
+constexpr const char *NODE_NAME="task_trajectory_executor",*ACTION_NAME="/transport/plan_to_hold";
+using Planner=astribot_transport_msgs::action::PlanManipulation;
+using PlannerHandle=rclcpp_action::ClientGoalHandle<Planner>;
+using SceneQuery=moveit_msgs::srv::GetPlanningScene;
+using GuardService=astribot_transport_msgs::srv::SetExecutionGuard;
+using GuardState=astribot_transport_msgs::msg::ExecutionGuardStatus;
+using Envelope=astribot_navigation_msgs::msg::NavigationEnvelopeV2;
+using Revoke=astribot_navigation_msgs::srv::SetRobotEnvelope;
+#else
 using Action=astribot_s1_transport_native::action::HoldResources;
+constexpr const char *NODE_NAME="task_hold_executor",*ACTION_NAME="/transport/hold_resources";
+#endif
 using Parent=rclcpp_action::ServerGoalHandle<Action>;
 using Trajectory=control_msgs::action::FollowJointTrajectory;
 using Child=rclcpp_action::ClientGoalHandle<Trajectory>;
@@ -42,7 +67,7 @@ std::string boot_epoch(){std::ifstream input("/proc/sys/kernel/random/uuid");std
 // execution-end epoch gate and a separately accepted hardware ownership bridge.
 class HoldExecutor:public rclcpp::Node {
 public:
- HoldExecutor():Node("task_hold_executor"),groups_(resources()) {
+ HoldExecutor():Node(NODE_NAME),groups_(resources()) {
   if(!get_parameter("use_sim_time").as_bool()||!declare_parameter("simulation_commissioning",false))throw std::runtime_error("SIMULATION_COMMISSIONING_REQUIRED");
   const char *domain_env=std::getenv("ROS_DOMAIN_ID");std::string domain=domain_env?domain_env:"0";
   domain=canonical_domain(domain);
@@ -66,10 +91,22 @@ public:
    response->accepted=authority_->renew(request->lease_id,request->resource_epoch,request->sequence,now().nanoseconds(),wall());
    response->reason=response->accepted?"RENEWED":authority_->reason();
   });
-  server_=rclcpp_action::create_server<Action>(this,"/transport/hold_resources",
+#ifdef PLAN_TO_HOLD_EXECUTOR
+  planner_=rclcpp_action::create_client<Planner>(this,"/transport/plan_manipulation");
+  scenes_=create_client<SceneQuery>("/get_planning_scene");
+  guard_client_=create_client<GuardService>("/transport/execution_guard/set");
+  revoke_client_=create_client<Revoke>("/navigation/set_robot_envelope");
+  odom_sub_=create_subscription<nav_msgs::msg::Odometry>("/odom",rclcpp::SensorDataQoS(),[this](nav_msgs::msg::Odometry::SharedPtr m){odom_=*m;odom_received_=wall();});
+  envelope_sub_=create_subscription<Envelope>("/navigation/envelope_v2",10,[this](Envelope::SharedPtr m){envelope_=*m;envelope_received_=wall();if(parent_&&!hold_confirmed_&&!manipulation_ready(now().nanoseconds(),wall()))stopping(reason_);});
+  guard_sub_=create_subscription<GuardState>("/transport/execution_guard/status",10,[this](GuardState::SharedPtr m){guard_state_=*m;guard_received_=wall();});
+#endif
+  server_=rclcpp_action::create_server<Action>(this,ACTION_NAME,
    [this](const auto &,const auto goal){
     const auto ros=now().nanoseconds(),steady=wall();
     if(parent_||!geometry_fresh(ros,steady)||!claims_fresh(ros,steady)||!exclusive_graph())return rclcpp_action::GoalResponse::REJECT;
+#ifdef PLAN_TO_HOLD_EXECUTOR
+    if(goal->context_id.empty()||goal->object_id.empty()||(goal->operation!="PICK"&&goal->operation!="PLACE")||!manipulation_ready(ros,steady)||!planner_->action_server_is_ready()||!scenes_->service_is_ready()||!guard_client_->service_is_ready()||!revoke_client_->service_is_ready())return rclcpp_action::GoalResponse::REJECT;
+#endif
     for(const auto &[name,client]:clients_)if(!client->action_server_is_ready()){reason_="CONTROLLER_ACTION_UNAVAILABLE";return rclcpp_action::GoalResponse::REJECT;}
     auto acquired=authority_->acquire(goal->task_id,goal->request_id,ros,steady);reason_=acquired.reason;
     return acquired.accepted?rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE:rclcpp_action::GoalResponse::REJECT;
@@ -79,6 +116,131 @@ public:
   timer_=create_wall_timer(std::chrono::milliseconds(50),[this]{tick();});
  }
 private:
+#ifdef PLAN_TO_HOLD_EXECUTOR
+ bool manipulation_ready(int64_t ros,int64_t steady) {
+  if(!odom_||ns(odom_->header.stamp)<=0||ros<ns(odom_->header.stamp)||ros-ns(odom_->header.stamp)>300*MS||steady-odom_received_>300*MS){reason_="MTC_BASE_STATE_STALE";return false;}
+  const auto &v=odom_->twist.twist;const auto &p=odom_->pose.pose.position;const auto &q=odom_->pose.pose.orientation;
+  if(!std::isfinite(v.linear.x+v.linear.y+v.angular.z+p.x+p.y+p.z+q.x+q.y+q.z+q.w)||std::abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001||odom_->header.frame_id.empty()||std::hypot(v.linear.x,v.linear.y)>=.02||std::abs(v.angular.z)>=.03){reason_="ARM_REQUIRES_STOPPED_BASE";return false;}
+  if(!envelope_||envelope_->coordinator_session_id.empty()||envelope_->mode!=Envelope::HOLD||envelope_->navigation_allowed||ns(envelope_->header.stamp)>ros||ros>=ns(envelope_->valid_until)||steady-envelope_received_>=ns(envelope_->valid_until)-ns(envelope_->header.stamp)){reason_="MTC_REQUIRES_FRESH_FIXED_HOLD";return false;}
+  return true;
+ }
+ void revoke_navigation() {
+  auto request=std::make_shared<Revoke::Request>();request->envelope.transport_ready=false;
+  const auto lease=authority_->lease_id();
+  try{revoke_client_->async_send_request(request,[this,lease](rclcpp::Client<Revoke>::SharedFuture f){
+   if(!parent_||lease!=authority_->lease_id())return;
+   try {auto result=f.get();if(!result->accepted){stopping("NAVIGATION_REVOCATION_REJECTED:"+result->reason);return;}
+    revoke_ack_=true;authority_->record("navigation_revoked",{{"epoch",result->epoch}});
+   }catch(const std::exception&e){stopping(std::string("NAVIGATION_REVOCATION_ERROR:")+e.what());}
+  });}catch(const std::exception&e){reason_=std::string("NAVIGATION_REVOCATION_UNCONFIRMED:")+e.what();authority_->record("navigation_revocation_unconfirmed",{{"error",e.what()}});}
+ }
+ void query_scene(bool recheck) {
+  auto request=std::make_shared<SceneQuery::Request>();request->components.components=1023;
+  scene_pending_=true;scene_sent_=wall();const auto lease=authority_->lease_id();
+  auto pending=scenes_->async_send_request(request,[this,lease,recheck](rclcpp::Client<SceneQuery>::SharedFuture f){
+   if(!parent_||lease!=authority_->lease_id())return;
+   scene_pending_=false;
+   if(stop_at_)return;
+   try {
+    auto scene=f.get()->scene;
+    if(!geometry_fresh(now().nanoseconds(),wall())||!manipulation_ready(now().nanoseconds(),wall()))throw std::runtime_error(reason_);
+    auto signature=bind_scene(scene);
+    if(recheck){
+     if(signature!=scene_binding_)throw std::runtime_error("MTC_SCENE_CHANGED");
+     std::set<std::string> attached;for(const auto&o:scene.robot_state.attached_collision_objects)attached.insert(o.object.id);
+     const auto&stage=plan_->check(parent_->get_goal()->operation=="PICK"?"PREGRASP":"PREPLACE","ARM",wall(),geometry_->joints,attached);
+     trajectory_=stage.trajectory.joint_trajectory;stage_id_=stage.stage_id;
+     if(!stage.trajectory.multi_dof_joint_trajectory.points.empty()||trajectory_.points.empty()||trajectory_.joint_names!=groups_.at("arm_left_controller"))throw std::runtime_error("MTC_UNSUPPORTED_ARM_TRAJECTORY");
+     int64_t previous=-1;
+     for(const auto&point:trajectory_.points){
+      const auto duration=int64_t(point.time_from_start.sec)*1000000000+point.time_from_start.nanosec;
+      if(duration<0||duration<=previous||duration>120000000000LL||point.positions.size()!=trajectory_.joint_names.size()||(!point.velocities.empty()&&point.velocities.size()!=point.positions.size())||(!point.accelerations.empty()&&point.accelerations.size()!=point.positions.size())||!point.effort.empty())throw std::runtime_error("MTC_TRAJECTORY_FIELDS_INVALID");
+      for(const auto*values:{&point.positions,&point.velocities,&point.accelerations})for(double value:*values)if(!std::isfinite(value))throw std::runtime_error("MTC_TRAJECTORY_NONFINITE");
+      previous=duration;
+     }
+     for(size_t i=0;i<trajectory_.joint_names.size();++i)endpoint_[trajectory_.joint_names[i]]=trajectory_.points.back().positions[i];
+     scene_verified_=true;scene_verified_at_=wall();
+     if(!guard_ack_)arm_guard();
+     else {scene_final_verified_=true;advance_plan(now().nanoseconds(),wall());}
+    }else {
+     scene_binding_=std::move(signature);scene.robot_state.joint_state=geometry_->joints;reference_geometry_=*geometry_;
+     const auto&input=*parent_->get_goal();Planner::Goal goal;
+     goal.operation=input.operation;goal.object_id=input.object_id;goal.context_id=input.context_id;goal.scene=scene;
+     goal.pre_target=input.pre_target;goal.target=input.target;goal.exit_targets=input.exit_targets;goal.touch_links=input.touch_links;goal.grasp_width_m=input.grasp_width_m;goal.timeout_s=45.;
+     authority_->submitted(now().nanoseconds(),wall());children_->submitted("mtc");
+     if(!authority_->record("planner_submission",{{"context",goal.context_id},{"geometry_sequence",geometry_->sequence}}))throw std::runtime_error(authority_->reason());
+     rclcpp_action::Client<Planner>::SendGoalOptions options;
+     options.goal_response_callback=[this,lease](PlannerHandle::SharedPtr h){if(!parent_||lease!=authority_->lease_id())return;try{children_->response("mtc",h?canonical_goal_id(h->get_goal_id()):"");planner_handle_=h;if(!h)stopping("MTC_PLAN_REJECTED");}catch(const std::exception&e){stopping(e.what());}};
+     options.result_callback=[this,lease](const PlannerHandle::WrappedResult &result){
+      if(!parent_||lease!=authority_->lease_id())return;
+      try {
+       const bool terminal=result.result&&(result.code==rclcpp_action::ResultCode::SUCCEEDED||result.code==rclcpp_action::ResultCode::ABORTED||result.code==rclcpp_action::ResultCode::CANCELED);
+       const bool okay=result.code==rclcpp_action::ResultCode::SUCCEEDED&&result.result&&result.result->success;
+       children_->result("mtc",canonical_goal_id(result.goal_id),okay,terminal);
+       if(!authority_->record("planner_terminal",{{"context",parent_->get_goal()->context_id},{"success",okay}}))throw std::runtime_error(authority_->reason());
+       if(stop_at_)return;
+       if(!okay)throw std::runtime_error("MTC_PLAN_FAILED:"+(result.result?result.result->reason:std::string("UNKNOWN_RESULT")));
+       consume_plan(*result.result);
+      }catch(const std::exception&e){stopping(e.what());}
+     };
+     planner_->async_send_goal(goal,options);reason_="PLANNING_COMPLETE_OPERATION";
+    }
+   }catch(const std::exception&e){stopping(e.what());}
+  });scene_request_=pending.request_id;
+ }
+ // The owning caller may later supply M3's already-validated complete result at
+ // this internal boundary. There is no ROS endpoint accepting arbitrary paths.
+ void consume_plan(const Planner::Result &result) {
+  const auto &goal=*parent_->get_goal();
+  plan_=std::make_unique<MtcPlan>(goal.operation,result.stages,goal.context_id,result.context_id,wall(),all_joints_);
+  query_scene(true);
+ }
+ void arm_guard() {
+  auto request=std::make_shared<GuardService::Request>();request->enable=true;request->context_id=parent_->get_goal()->context_id;
+  request->joint_names=trajectory_.joint_names;request->base_reference.header=reference_base_.header;request->base_reference.pose=reference_base_.pose.pose;
+  guard_pending_=true;guard_requested_=true;const auto lease=authority_->lease_id();
+  guard_client_->async_send_request(request,[this,lease](rclcpp::Client<GuardService>::SharedFuture f){
+   if(!parent_||lease!=authority_->lease_id())return;
+   guard_pending_=false;
+   try{auto r=f.get();if(!r->accepted){guard_requested_=false;stopping("EXECUTION_GUARD_REJECTED:"+r->reason);}else guard_ack_=true;}catch(const std::exception&e){stopping(e.what());}
+  });reason_="WAITING_FOR_EXECUTION_GUARD";
+ }
+ void advance_plan(int64_t ros,int64_t steady) {
+  if(hold_confirmed_)return; // M2 may now grant navigation with this same hold.
+  if(!manipulation_ready(ros,steady)){stopping(reason_);return;}
+  if(geometry_->source_id!=reference_geometry_.source_id||geometry_->clock_epoch!=reference_geometry_.clock_epoch||geometry_->model_revision!=reference_geometry_.model_revision||geometry_->attachment_revision!=reference_geometry_.attachment_revision||envelope_->coordinator_session_id!=reference_envelope_.coordinator_session_id){stopping("MTC_CONTEXT_CHANGED");return;}
+  const auto&a=odom_->pose.pose;const auto&b=reference_base_.pose.pose;
+  const double dot=std::abs(a.orientation.x*b.orientation.x+a.orientation.y*b.orientation.y+a.orientation.z*b.orientation.z+a.orientation.w*b.orientation.w);
+  if(odom_->header.frame_id!=reference_base_.header.frame_id||std::hypot(std::hypot(a.position.x-b.position.x,a.position.y-b.position.y),a.position.z-b.position.z)>.02||2*std::acos(std::min(1.,dot))>.02){stopping("MTC_BASE_MOVED");return;}
+  if(scene_pending_&&steady-scene_sent_>3000*MS){scenes_->remove_pending_request(scene_request_);scene_pending_=false;stopping("MTC_SCENE_TIMEOUT");return;}
+  if(scene_verified_&&!motion_sent_){
+   if(steady-scene_verified_at_>2000*MS){stopping("EXECUTION_GUARD_TIMEOUT");return;}
+   if(!guard_ack_||!revoke_ack_)return;
+   if(!guard_state_||guard_state_->context_id!=parent_->get_goal()->context_id||!guard_state_->active)return;
+   if(!guard_state_->healthy){if(guard_state_->reason!="WAITING_FOR_EXECUTION_EVIDENCE")stopping(guard_state_->reason);return;}
+   if(steady-guard_received_>300*MS||ros<ns(guard_state_->stamp)||ros-ns(guard_state_->stamp)>300*MS)return;
+   if(!scene_final_verified_){if(!scene_pending_)query_scene(true);return;}
+   std::set<std::string> attached(geometry_->attachment_ids.begin(),geometry_->attachment_ids.end());
+   plan_->check(parent_->get_goal()->operation=="PICK"?"PREGRASP":"PREPLACE","ARM",steady,geometry_->joints,attached);
+   motion_sent_=true;send_children();reason_="EXECUTING_FIRST_MTC_STAGE";
+  }
+  if(motion_sent_&&!guard_disarm_requested_){
+   if(!guard_state_||guard_state_->context_id!=parent_->get_goal()->context_id||!guard_state_->active||!guard_state_->healthy||steady-guard_received_>300*MS||ros<ns(guard_state_->stamp)||ros-ns(guard_state_->stamp)>300*MS){stopping("EXECUTION_GUARD_UNHEALTHY");return;}
+  }
+ }
+ bool finish_guard() {
+  if(!guard_requested_&&!guard_pending_)return true;
+  if(guard_disarmed_)return true;
+  if(guard_pending_||guard_disarm_requested_)return false;
+  guard_disarm_requested_=true;auto request=std::make_shared<GuardService::Request>();request->context_id=parent_->get_goal()->context_id;request->enable=false;
+  const auto lease=authority_->lease_id();
+  guard_client_->async_send_request(request,[this,lease](rclcpp::Client<GuardService>::SharedFuture f){
+   if(!parent_||lease!=authority_->lease_id())return;
+   try{auto response=f.get();guard_disarmed_=response->accepted;if(!response->accepted)stopping("EXECUTION_GUARD_DISARM_REJECTED:"+response->reason);}
+   catch(const std::exception&e){stopping(std::string("EXECUTION_GUARD_DISARM_UNCONFIRMED:")+e.what());}
+  });return false;
+ }
+#endif
  bool geometry_fresh(int64_t ros,int64_t steady) {
   if(!geometry_||!geometry_->complete||!geometry_->attachment_state_confirmed){reason_="GEOMETRY_UNCONFIRMED";return false;}
   const auto &g=*geometry_;const auto at=ns(g.header.stamp),until=ns(g.valid_until);
@@ -137,17 +299,35 @@ private:
   return true;
  }
  void start(std::shared_ptr<Parent> handle) {
-  parent_=handle;children_=std::make_unique<ChildActions>(names_);handles_.clear();cancel_sent_.clear();hold_started_=false;hold_confirmed_=false;terminal_barrier_=false;stop_at_=0;settling_.clear();
+  parent_=handle;auto child_names=names_;
+#ifdef PLAN_TO_HOLD_EXECUTOR
+  child_names.push_back("mtc");planner_handle_.reset();planner_cancel_sent_=false;plan_.reset();scene_pending_=false;guard_pending_=false;guard_ack_=false;guard_requested_=false;guard_disarm_requested_=false;guard_disarmed_=false;motion_sent_=false;scene_verified_=false;scene_final_verified_=false;stage_id_.clear();endpoint_.clear();
+  reference_geometry_=*geometry_;reference_base_=*odom_;reference_envelope_=*envelope_;
+#endif
+  children_=std::make_unique<ChildActions>(child_names);handles_.clear();cancel_sent_.clear();hold_started_=false;hold_confirmed_=false;terminal_barrier_=false;stop_at_=0;settling_.clear();
   started_=wall();hold_id_=authority_->lease_id()+"_hold";
+#ifdef PLAN_TO_HOLD_EXECUTOR
+  revoke_ack_=false;revoke_navigation();query_scene(false);
+#else
+  send_children();
+#endif
+ }
+ void send_children() {
   try {
    if(!geometry_fresh(now().nanoseconds(),wall())||!claims_fresh(now().nanoseconds(),wall())||!exclusive_graph()){stopping(reason_);return;}
    std::map<std::string,double> positions;for(size_t i=0;i<geometry_->joints.name.size();++i)positions[geometry_->joints.name[i]]=geometry_->joints.position[i];
+#ifndef PLAN_TO_HOLD_EXECUTOR
    authority_->submitted(now().nanoseconds(),wall());
+#endif
    for(const auto &[name,joints]:groups_) {
     children_->submitted(name);if(!authority_->record("child_submission",{{"controller",name}}))throw std::runtime_error(authority_->reason());
     Trajectory::Goal goal;goal.trajectory.joint_names=joints;
     trajectory_msgs::msg::JointTrajectoryPoint point;for(const auto &joint:joints)point.positions.push_back(positions.at(joint));
     point.velocities.assign(joints.size(),0.);point.time_from_start.sec=1;goal.trajectory.points.push_back(point);goal.goal_time_tolerance.sec=1;
+#ifdef PLAN_TO_HOLD_EXECUTOR
+    if(name=="arm_left_controller")goal.trajectory=trajectory_;
+    else goal.trajectory.points.front().time_from_start=trajectory_.points.back().time_from_start;
+#endif
     auto options=rclcpp_action::Client<Trajectory>::SendGoalOptions();
     const auto lease=authority_->lease_id();
     options.goal_response_callback=[this,name,lease](Child::SharedPtr child){
@@ -172,13 +352,20 @@ private:
   }catch(const std::exception &e){stopping(e.what());}
  }
  void cancel_children() {
+#ifdef PLAN_TO_HOLD_EXECUTOR
+  if(planner_handle_&&!planner_cancel_sent_&&planner_handle_->get_status()<4){planner_cancel_sent_=true;planner_->async_cancel_goal(planner_handle_);}
+#endif
   for(const auto &[name,handle]:handles_)if(handle&&!cancel_sent_.count(name)&&handle->get_status()<4) {
    cancel_sent_.insert(name);try{clients_.at(name)->async_cancel_goal(handle);}catch(const std::exception &e){authority_->record("cancel_unconfirmed",{{"controller",name},{"error",e.what()}});}
   }
  }
  void stopping(const std::string &reason) {
   if(!parent_)return;
-  if(!stop_at_){stop_at_=wall();stop_ros_=now().nanoseconds();reason_=reason;authority_->stop(reason,stop_ros_,stop_at_);hold_.cancel();settling_.clear();}
+  if(!stop_at_){stop_at_=wall();stop_ros_=now().nanoseconds();reason_=reason;authority_->stop(reason,stop_ros_,stop_at_);hold_.cancel();settling_.clear();
+#ifdef PLAN_TO_HOLD_EXECUTOR
+   revoke_navigation();
+#endif
+  }
   // Humble invokes result callbacks while holding the goal-handle mutex.
   // Inspecting/canceling any goal here can deadlock. The wall timer dispatches
   // cancellation after this callback returns; revocation above is immediate.
@@ -215,6 +402,9 @@ private:
    if(parent_) {
     auto grant=authority_->grant(ros,steady);
     if(!stop_at_&&(!grant||!geometry_fresh(ros,steady)||!claims_fresh(ros,steady)||!exclusive_graph()))stopping(grant?reason_:authority_->reason());
+#ifdef PLAN_TO_HOLD_EXECUTOR
+    if(!stop_at_)advance_plan(ros,steady);
+#endif
     if(!stop_at_&&children_->all_successful()&&!hold_started_) {
      completed_at_=ros;HoldCompletion completion{grant->owner_id,grant->lease_id,grant->epoch,children_->proof(),ros,true,true};
      hold_.begin(hold_id_,*grant,completion,ros,steady);hold_started_=true;
@@ -222,15 +412,32 @@ private:
     }
     if(!stop_at_&&hold_started_) {
      hold_.resource(*grant,ros,steady);auto state=hold_.status(ros,steady);
+#ifdef PLAN_TO_HOLD_EXECUTOR
+     if(state.hold_confirmed&&!hold_confirmed_) {
+      std::map<std::string,double> positions;for(size_t i=0;i<geometry_->joints.name.size();++i)positions[geometry_->joints.name[i]]=geometry_->joints.position[i];
+      for(const auto &[name,target]:endpoint_)if(std::abs(positions.at(name)-target)>.02)stopping("MTC_ENDPOINT_NOT_REACHED");
+     }
+     const bool completion_ready=!stop_at_&&state.hold_confirmed&&finish_guard();
+     if(completion_ready&&!hold_confirmed_){authority_->holding(ros,steady);hold_confirmed_=true;plan_->acknowledge();reason_="FIRST_STAGE_HOLD_CONFIRMED";}
+#else
      if(state.hold_confirmed&&!hold_confirmed_){authority_->holding(ros,steady);hold_confirmed_=true;reason_="HOLD_CONFIRMED";}
+#endif
      if(hold_confirmed_&&!state.hold_confirmed)stopping(hold_.reason());
      if(!state.hold_confirmed&&hold_.reason().rfind("WAITING_",0)!=0)stopping(hold_.reason());
     }
+#ifdef PLAN_TO_HOLD_EXECUTOR
+    if(!stop_at_&&!hold_confirmed_&&steady-started_>120000*MS)stopping("PLAN_TO_HOLD_TIMEOUT");
+#else
     if(!stop_at_&&!hold_confirmed_&&steady-started_>15000*MS)stopping("HOLD_COMPLETION_TIMEOUT");
+#endif
     if(stop_at_) {
      cancel_children();
      if(children_->all_terminal()&&!terminal_barrier_){terminal_barrier_=true;stop_ros_=ros;settling_.clear();}
-     if(authority_->release(children_->all_terminal(),!children_->sent()||measured_safe(ros,steady),ros,steady)) {
+     bool ready=children_->all_terminal()&&(!children_->sent()||measured_safe(ros,steady));
+#ifdef PLAN_TO_HOLD_EXECUTOR
+     ready=ready&&finish_guard();
+#endif
+     if(authority_->release(ready,ready,ros,steady)) {
       auto result=std::make_shared<Action::Result>();result->resources_released=true;result->reason=reason_;result->lease_id=authority_->lease_id();
       if(parent_->is_active()){if(parent_->is_canceling())parent_->canceled(result);else parent_->abort(result);}parent_.reset();
      } else if(steady-stop_at_>10000*MS&&parent_->is_active()) {
@@ -242,9 +449,17 @@ private:
     }
    }
   }catch(const std::exception &e){stopping(e.what());}
-  auto state=hold_.status(ros,steady);if(stop_at_)state.hold_confirmed=false;hold_pub_->publish(state);
+  auto state=hold_.status(ros,steady);if(stop_at_)state.hold_confirmed=false;
+#ifdef PLAN_TO_HOLD_EXECUTOR
+  if(!hold_confirmed_)state.hold_confirmed=false;
+#endif
+  hold_pub_->publish(state);
   const auto phase=std::to_string(int(authority_->phase()));
-  if(parent_&&parent_->is_active()) {auto feedback=std::make_shared<Action::Feedback>();feedback->phase=phase;feedback->reason=reason_;feedback->lease_id=authority_->lease_id();feedback->resource_epoch=authority_->epoch();feedback->hold_id=hold_id_;feedback->hold_confirmed=state.hold_confirmed;parent_->publish_feedback(feedback);}
+  if(parent_&&parent_->is_active()) {auto feedback=std::make_shared<Action::Feedback>();feedback->phase=phase;feedback->reason=reason_;feedback->lease_id=authority_->lease_id();feedback->resource_epoch=authority_->epoch();feedback->hold_id=hold_id_;feedback->hold_confirmed=state.hold_confirmed;
+#ifdef PLAN_TO_HOLD_EXECUTOR
+   feedback->context_id=parent_->get_goal()->context_id;feedback->stage_id=stage_id_;
+#endif
+   parent_->publish_feedback(feedback);}
   std_msgs::msg::String message;message.data=nlohmann::json({{"phase",phase},{"reason",reason_},{"authority_reason",authority_->reason()},{"hold_reason",hold_.reason()},{"lease_id",authority_->lease_id()},{"epoch",authority_->epoch()},{"hold_id",hold_id_},{"hold_confirmed",state.hold_confirmed}}).dump();state_pub_->publish(message);
  }
  std::map<std::string,std::vector<std::string>> groups_;std::set<std::string> all_joints_,cancel_sent_;std::vector<std::string> names_;
@@ -260,6 +475,17 @@ private:
  int64_t geometry_deadline_=0,claims_ros_=-1,claims_wall_=-1,query_sent_wall_=0,query_id_=0,started_=0,completed_at_=0,stop_at_=0,stop_ros_=0;
  bool query_pending_=false,hold_started_=false,hold_confirmed_=false,terminal_barrier_=false;
  std::string reason_="WAITING_FOR_TASK",hold_id_;
+#ifdef PLAN_TO_HOLD_EXECUTOR
+ rclcpp_action::Client<Planner>::SharedPtr planner_;PlannerHandle::SharedPtr planner_handle_;
+ rclcpp::Client<SceneQuery>::SharedPtr scenes_;rclcpp::Client<GuardService>::SharedPtr guard_client_;rclcpp::Client<Revoke>::SharedPtr revoke_client_;
+ rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;rclcpp::Subscription<Envelope>::SharedPtr envelope_sub_;rclcpp::Subscription<GuardState>::SharedPtr guard_sub_;
+ std::optional<nav_msgs::msg::Odometry> odom_;std::optional<Envelope> envelope_;std::optional<GuardState> guard_state_;
+ nav_msgs::msg::Odometry reference_base_;Geometry reference_geometry_;Envelope reference_envelope_;
+ SceneBinding scene_binding_;std::unique_ptr<MtcPlan> plan_;trajectory_msgs::msg::JointTrajectory trajectory_;
+ std::map<std::string,double> endpoint_;std::string stage_id_;
+ int64_t odom_received_=0,envelope_received_=0,guard_received_=0,scene_sent_=0,scene_request_=0,scene_verified_at_=0;
+ bool planner_cancel_sent_=false,scene_pending_=false,guard_pending_=false,guard_ack_=false,motion_sent_=false,scene_verified_=false,scene_final_verified_=false,revoke_ack_=false,guard_requested_=false,guard_disarm_requested_=false,guard_disarmed_=false;
+#endif
 };
 }
 int main(int argc,char **argv){rclcpp::init(argc,argv);try{rclcpp::spin(std::make_shared<astribot::transport::HoldExecutor>());}catch(const std::exception &e){std::fprintf(stderr,"hold_executor: %s\n",e.what());rclcpp::shutdown();return 1;}rclcpp::shutdown();return 0;}
