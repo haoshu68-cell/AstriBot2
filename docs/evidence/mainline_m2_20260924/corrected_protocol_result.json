@@ -1,0 +1,275 @@
+{
+  "status": "stationary_corrected_protocol_passed",
+  "started": "2026-09-24T09:53:00+08:00",
+  "finished": "2026-09-24T10:19:22.702211",
+  "session": "m2_mass_20260924b",
+  "domain": 90,
+  "raw_evidence": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90",
+  "query_environment": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/query_env.sh",
+  "binary_sha256": "7848ef4eef5bf46512e6296e53db9b4416df8f076f49335a3c128f756be68794",
+  "identity_parameters": [
+    "simulation",
+    "m2_mass_20260924b",
+    "gazebo_kinematic_v1"
+  ],
+  "tests": {
+    "empty_freeze": {
+      "passed": true,
+      "cleanup_complete": true,
+      "scenarios": [
+        {
+          "mass_kg": 0.0,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500766
+        },
+        {
+          "mass_kg": 0.0,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500767
+        }
+      ]
+    },
+    "loaded": {
+      "passed": true,
+      "cleanup_complete": true,
+      "scenarios": [
+        {
+          "mass_kg": 0.25,
+          "accepted": false,
+          "reason": "PAYLOAD_MASS_UNDERREPORTED",
+          "epoch": 0
+        },
+        {
+          "mass_kg": 0.5,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500768
+        },
+        {
+          "mass_kg": 0.625,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500769
+        }
+      ]
+    },
+    "transitions": {
+      "passed": true,
+      "cleanup_complete": true,
+      "scenarios": [
+        {
+          "mass_kg": 0.5,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500770
+        },
+        {
+          "mass_kg": 1.25,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500771
+        },
+        {
+          "mass_kg": 0.75,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500772
+        },
+        {
+          "mass_kg": 0.0,
+          "accepted": true,
+          "reason": "WAITING_FOR:controller,global_costmap,local_costmap,planner,policy,protection",
+          "epoch": 72757788500773
+        }
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "before_mass": 0.5,
+      "after_mass": 1.25,
+      "before_ids": [
+        "inventory_probe_d4718f830207_box"
+      ],
+      "after_ids": [
+        "inventory_probe_d4718f830207_box",
+        "inventory_probe_d4718f830207_cylinder"
+      ],
+      "before_attachment_revision": "25187825df32e3088b9be935be429f4e16c6c2f151668f1acd06fa820348b4eb",
+      "after_attachment_revision": "812aec7e9f223f0a0dc90044b9a0b5f7d16e34e1c734f707939cea94015ab53f",
+      "revoked": {
+        "wall": 72885.004262877,
+        "ros_s": 125.049,
+        "stamp": 125.049,
+        "until": 125.049,
+        "session": "78d4710c-7927-418b-b7e8-4ac3be47436e",
+        "epoch": 72757788500770,
+        "request": "mass_fixed_c7e2b9d776124ee4a7888560b5635d22",
+        "hash": "65574c75fdb546dd625d86abac526a25163efd87c56fb625ba4ff2c9142d4ace",
+        "mass": 0.5,
+        "allowed": false,
+        "reason": "PAYLOAD_MASS_EVIDENCE_UNAVAILABLE",
+        "hold_id": "9b6761b3-e5dd-462a-ac7e-5a67bfe7522b_6_hold"
+      },
+      "new_epoch": 72757788500771
+    },
+    {
+      "before_mass": 1.25,
+      "after_mass": 0.75,
+      "before_ids": [
+        "inventory_probe_d4718f830207_box",
+        "inventory_probe_d4718f830207_cylinder"
+      ],
+      "after_ids": [
+        "inventory_probe_d4718f830207_cylinder"
+      ],
+      "before_attachment_revision": "812aec7e9f223f0a0dc90044b9a0b5f7d16e34e1c734f707939cea94015ab53f",
+      "after_attachment_revision": "1e01d17db40f0f79f88fd07d557e334b10ad214857542cfa20a6280225ecd01e",
+      "revoked": {
+        "wall": 72894.462918983,
+        "ros_s": 134.149,
+        "stamp": 134.148,
+        "until": 134.148,
+        "session": "78d4710c-7927-418b-b7e8-4ac3be47436e",
+        "epoch": 72757788500771,
+        "request": "mass_fixed_dc6b8099895d47b3bf0c806051675d7f",
+        "hash": "3690e5af70a39d9ad09145b99301d436cedc4300eac98ff057416f334419c4a5",
+        "mass": 1.25,
+        "allowed": false,
+        "reason": "PAYLOAD_MASS_EVIDENCE_UNAVAILABLE",
+        "hold_id": "9b6761b3-e5dd-462a-ac7e-5a67bfe7522b_7_hold"
+      },
+      "new_epoch": 72757788500772
+    },
+    {
+      "before_mass": 0.75,
+      "after_mass": 0.0,
+      "before_ids": [
+        "inventory_probe_d4718f830207_cylinder"
+      ],
+      "after_ids": [],
+      "before_attachment_revision": "1e01d17db40f0f79f88fd07d557e334b10ad214857542cfa20a6280225ecd01e",
+      "after_attachment_revision": "3fb4eb262f23ffcf4aa90aabf3ba949b290983db75d3f3fe8f0170d760dea96a",
+      "revoked": {
+        "wall": 72903.913896952,
+        "ros_s": 143.098,
+        "stamp": 143.098,
+        "until": 143.098,
+        "session": "78d4710c-7927-418b-b7e8-4ac3be47436e",
+        "epoch": 72757788500772,
+        "request": "mass_fixed_9ea8763ddb7c47938e973cb2c5bce777",
+        "hash": "7118502ffe672e5f406d30aa9a3f8f33a402e3b751f9ae289cdac020ec268393",
+        "mass": 0.75,
+        "allowed": false,
+        "reason": "PAYLOAD_MASS_EVIDENCE_UNAVAILABLE",
+        "hold_id": "9b6761b3-e5dd-462a-ac7e-5a67bfe7522b_8_hold"
+      },
+      "new_epoch": 72757788500773
+    }
+  ],
+  "final_stop": {
+    "passed": true,
+    "samples": 36,
+    "span_s": 0.6999999999999886,
+    "start_ros_s": 153.44,
+    "end_ros_s": 154.14,
+    "drift_m": 0.0,
+    "rotation_rad": 0.0,
+    "speed_mps": 0.0,
+    "angular_speed_radps": 0.0,
+    "command_max": 0.0,
+    "fresh": true
+  },
+  "final_scene_empty": true,
+  "hold_resource_release": "RELEASE_CONFIRMED",
+  "owner_cleanup": {
+    "passed": true,
+    "started_wall": 1790216164.3409903,
+    "initial_fixture_prepare": "stop observation expired while loading; no admission established",
+    "fixture_directory": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/fixtures_observed",
+    "empty_freeze_passed": true,
+    "cleanup_complete": true,
+    "finished_wall": 1790216362.7022111
+  },
+  "owned_process_exit": [
+    {
+      "manifest": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/capture_owner_identity.json",
+      "pid": 2813559,
+      "same_process_alive": false
+    },
+    {
+      "manifest": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/hold_executor_identity.json",
+      "pid": 2813865,
+      "same_process_alive": false
+    },
+    {
+      "manifest": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/empty_freeze_identity.json",
+      "pid": 2816680,
+      "same_process_alive": false
+    },
+    {
+      "manifest": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/prepare_existing_identity.json",
+      "pid": 2815112,
+      "same_process_alive": false
+    },
+    {
+      "manifest": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/move_group_identity.json",
+      "pid": 2813864,
+      "same_process_alive": false
+    },
+    {
+      "manifest": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/launcher_identity.json",
+      "pid": 2810724,
+      "same_process_alive": false
+    },
+    {
+      "manifest": "/home/yjh/WorkSpace/astribot_validation/M2_20260924_0953/corrected_world90/prepare_fixtures_identity.json",
+      "pid": 2813904,
+      "same_process_alive": false
+    },
+    {
+      "role": "Gazebo and JTC",
+      "pid": 2810806,
+      "same_process_alive": false
+    }
+  ],
+  "scope": "stationary kinematic-load protocol; no navigation or non-home motion acceptance; not recovery of domain89",
+  "freeze": {
+    "revoked_with_clock_frozen": true,
+    "revocation_delay_s": 0.40842151299875695,
+    "remaining_source_lease_s": 0.20597250700000203,
+    "watchdog_period_s": 0.05,
+    "nominal_deadline_wall": 72781.457101406,
+    "scheduling_excess_s": 0.15244900599875494,
+    "renew_attempts_during_freeze": 2,
+    "reason": "PAYLOAD_MASS_EVIDENCE_UNAVAILABLE",
+    "isolated_payload_expiry_proven": false,
+    "attribution": "Whole-chain revoke observed; geometry and hold can expire before the payload consumer.",
+    "frozen_verified_wall": 72781.653840961,
+    "revocation": {
+      "wall": 72781.609550412,
+      "ros_s": 24.64,
+      "stamp": 24.64,
+      "until": 24.64,
+      "session": "78d4710c-7927-418b-b7e8-4ac3be47436e",
+      "epoch": 72757788500766,
+      "request": "mass_fixed_aece142aa2344f60b4bd5325208546dd",
+      "hash": "c4950a4f4ba4ebc076da5e9af058bd892ea7f3fcb641b56671045e426d1b7932",
+      "mass": 0.0,
+      "allowed": false,
+      "reason": "PAYLOAD_MASS_EVIDENCE_UNAVAILABLE",
+      "hold_id": "9b6761b3-e5dd-462a-ac7e-5a67bfe7522b_1_hold"
+    },
+    "renew_enabled": true
+  },
+  "successful_six_ack_admissions": 8,
+  "journal90_terminal": {
+    "phase": 0,
+    "event": "resource_handoff_committed",
+    "reason": "RELEASED",
+    "lease_id": "9b6761b3-e5dd-462a-ac7e-5a67bfe7522b_9",
+    "epoch": "9b6761b3-e5dd-462a-ac7e-5a67bfe7522b"
+  }
+}

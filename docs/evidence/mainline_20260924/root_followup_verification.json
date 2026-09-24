@@ -1,0 +1,22 @@
+{
+  "verified_at": "2026-09-24T10:29:18.177144+08:00",
+  "source": "root command results in current coordination turn",
+  "m2": {
+    "command": "python3 -m unittest discover -s tools/sim -p 'test_fixed_mass*.py' -v",
+    "tests": 26,
+    "exit_code": 0,
+    "scope": "offline verification tool tests; simulation evidence reviewed separately"
+  },
+  "m5": {
+    "command": "python3 -m unittest discover -s tools/vision -p 'test_score_box_roi.py' -v",
+    "tests": 18,
+    "exit_code": 0,
+    "scope": "synthetic ROI verification; actual coverage not accepted"
+  },
+  "m3": {
+    "command": "runs/m3_perception_planning_20260924/build/astribot_s1_manipulation_perception/pick_planning_test",
+    "tests": 10,
+    "exit_code": 0,
+    "scope": "pure C++ contract checks; no ROS or GPU inference"
+  }
+}

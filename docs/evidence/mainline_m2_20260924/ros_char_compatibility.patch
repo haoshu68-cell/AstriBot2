@@ -1,0 +1,19 @@
+--- a/tools/sim/verify_fixed_mass.py
++++ b/tools/sim/verify_fixed_mass.py
+@@ -91 +91,2 @@
+-        if not v['link_name'] or not o['id'] or not o['header']['frame_id'] or o['operation']!=0:raise ValueError('INVALID_SCENE_OBJECT')
++        # Humble message_to_ordereddict serializes the ROS char as one character.
++        if not v['link_name'] or not o['id'] or not o['header']['frame_id'] or o['operation'] not in (0,'\x00'):raise ValueError('INVALID_SCENE_OBJECT')
+--- a/tools/sim/test_fixed_mass.py
++++ b/tools/sim/test_fixed_mass.py
+@@ -69,0 +70,10 @@
++
++    def test_scene_operation_ros_char_serialization(self):
++        obj,s=self.scene()
++        obj['object']['operation']='\x00'
++        s['robot_state']['attached_collision_objects'][0]['object']['operation']='\x00'
++        self.assertTrue(full_scene_matches([obj],s))
++        for operation in (1,'\x01','0',''):
++            s['robot_state']['attached_collision_objects'][0]['object']['operation']=operation
++            with self.subTest(operation=operation):
++                self.assertFalse(full_scene_matches([obj],s))
