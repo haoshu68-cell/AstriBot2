@@ -1,0 +1,118 @@
+--- before/omni_effort_drive_node.cpp
++++ after/omni_effort_drive_node.cpp
+@@ -56,7 +56,7 @@
+     declare_parameter("friction_deadband_rad_s", 0.05);
+     declare_parameter("wheel_effort_limit_nm", 15.0);
+     declare_parameter("wheel_velocity_limit_rad_s", 40.0);
+-    declare_parameter("idle_position_hold", false);
++    declare_parameter("idle_position_hold", true);
+     declare_parameter("idle_position_kp", 3.0);
+     declare_parameter("cmd_vel_timeout_sec", 0.5);
+     declare_parameter("joint_state_timeout_sec", 0.3);
+@@ -220,7 +220,7 @@
+     const double tau_max = safe_double("wheel_effort_limit_nm", 15.0);
+     const double warn_ratio = safe_double("warn_effort_ratio", 0.9);
+ 
+-    const bool idle = safe_bool("idle_position_hold", false) &&
++    const bool idle = safe_bool("idle_position_hold", true) &&
+                       std::max({std::abs(vx), std::abs(vy), std::abs(wz)}) <= 1e-9 &&
+                       !feedback_stale && wheel_positions_valid_ &&
+                       std::all_of(wheel_position_.begin(), wheel_position_.end(),
+--- before/hold_executor.cpp
++++ after/hold_executor.cpp
+@@ -13,6 +13,7 @@
+ #include <astribot_s1_payload_state/consumer.hpp>
+ #include <astribot_transport_msgs/srv/revalidate_payload_transition.hpp>
+ #include "astribot_s1_transport_native/trajectory_digest.hpp"
++#include "astribot_s1_transport_mtc/base_motion_limits.hpp"
+ #include <moveit_msgs/srv/apply_planning_scene.hpp>
+ #include <tf2_ros/buffer.h>
+ #include <tf2_ros/transform_listener.h>
+@@ -97,6 +98,11 @@
+ public:
+  HoldExecutor():Node(NODE_NAME),groups_(resources()) {
+   if(!get_parameter("use_sim_time").as_bool()||!declare_parameter("simulation_commissioning",false))throw std::runtime_error("SIMULATION_COMMISSIONING_REQUIRED");
++#ifdef PLAN_TO_HOLD_EXECUTOR
++  rcl_interfaces::msg::ParameterDescriptor motion_profile;motion_profile.read_only=true;
++  base_motion_limits_=astribot_s1_transport_mtc::baseMotionLimits(
++    declare_parameter("simulation_relaxed_base_motion",false,motion_profile),get_parameter("use_sim_time").as_bool());
++#endif
+   const char *domain_env=std::getenv("ROS_DOMAIN_ID");std::string domain=domain_env?domain_env:"0";
+   domain=canonical_domain(domain);
+   const std::string lock="/tmp/astribot_transport_domain_"+domain+".lock";
+@@ -796,7 +802,7 @@
+  bool manipulation_ready(int64_t ros,int64_t steady) {
+   if(!odom_||ns(odom_->header.stamp)<=0||ros<ns(odom_->header.stamp)||ros-ns(odom_->header.stamp)>300*MS||steady-odom_received_>300*MS){reason_="MTC_BASE_STATE_STALE";return false;}
+   const auto &v=odom_->twist.twist;const auto &p=odom_->pose.pose.position;const auto &q=odom_->pose.pose.orientation;
+-  if(!std::isfinite(v.linear.x+v.linear.y+v.angular.z+p.x+p.y+p.z+q.x+q.y+q.z+q.w)||std::abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001||odom_->header.frame_id.empty()||std::hypot(v.linear.x,v.linear.y)>=.02||std::abs(v.angular.z)>=.03){reason_="ARM_REQUIRES_STOPPED_BASE";return false;}
++  if(!std::isfinite(v.linear.x+v.linear.y+v.angular.z+p.x+p.y+p.z+q.x+q.y+q.z+q.w)||std::abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001||odom_->header.frame_id.empty()||std::hypot(v.linear.x,v.linear.y)>=base_motion_limits_.linear_speed_m_s||std::abs(v.angular.z)>=base_motion_limits_.angular_speed_rad_s){reason_="ARM_REQUIRES_STOPPED_BASE";return false;}
+   // A revoked fixed envelope is a latched denial, not a positive lease. The
+   // coordinator has no V2 output at cold start, and retains FIXED_POSTURE with
+   // valid_until==now after revocation. Only this task's service ACK establishes
+@@ -940,7 +946,7 @@
+        (payload_phase_==PayloadPhase::NONE&&geometry_->attachment_revision!=reference_geometry_.attachment_revision)))){stopping("MTC_CONTEXT_CHANGED");return;}
+   const auto&a=odom_->pose.pose;const auto&b=reference_base_.pose.pose;
+   const double dot=std::abs(a.orientation.x*b.orientation.x+a.orientation.y*b.orientation.y+a.orientation.z*b.orientation.z+a.orientation.w*b.orientation.w);
+-  if(odom_->header.frame_id!=reference_base_.header.frame_id||std::hypot(std::hypot(a.position.x-b.position.x,a.position.y-b.position.y),a.position.z-b.position.z)>.02||2*std::acos(std::min(1.,dot))>.02){stopping("MTC_BASE_MOVED");return;}
++  if(odom_->header.frame_id!=reference_base_.header.frame_id||std::hypot(std::hypot(a.position.x-b.position.x,a.position.y-b.position.y),a.position.z-b.position.z)>base_motion_limits_.translation_m||2*std::acos(std::min(1.,dot))>base_motion_limits_.rotation_rad){stopping("MTC_BASE_MOVED");return;}
+   if(payload_phase_!=PayloadPhase::NONE)return;
+   if(!revocation_verified_) {
+    if(!navigation_revoked(ros,steady))return;
+@@ -1349,6 +1355,7 @@
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;rclcpp::Subscription<Envelope>::SharedPtr envelope_sub_;rclcpp::Subscription<GuardState>::SharedPtr guard_sub_;
+  std::optional<nav_msgs::msg::Odometry> odom_;std::optional<Envelope> envelope_;std::optional<GuardState> guard_state_;
+  nav_msgs::msg::Odometry reference_base_;Geometry reference_geometry_;Envelope reference_envelope_;
++ astribot_s1_transport_mtc::BaseMotionLimits base_motion_limits_;
+  SceneBinding scene_binding_;std::unique_ptr<MtcPlan> plan_;trajectory_msgs::msg::JointTrajectory trajectory_;
+  SceneBinding revalidation_binding_;
+  std::map<std::string,double> endpoint_;std::string stage_id_,stage_kind_,active_controller_;
+--- before/run_full_transfer.py
++++ after/run_full_transfer.py
+@@ -26,6 +26,7 @@
+ parser.add_argument('--mtc-scene-library-sha256',required=True)
+ parser.add_argument('--overlay',type=Path,required=True)
+ parser.add_argument('--show-gui',action='store_true',help='Open the current owned Gazebo and RViz views')
++parser.add_argument('--relax-base-motion',action='store_true',help='User-authorized simulation angular-motion limits')
+ parser.add_argument('--session',required=True)
+ parser.add_argument('--domain',type=int,required=True)
+ 
+@@ -102,12 +103,12 @@
+  run('capture_owner' ,['python3',W/'tools/sim/capture_supervisor_owner.py','--pid',launch.pid,'--session',isolation.instance,'--source','gazebo_kinematic_v1','--output',b/'owner.json'],10)
+  from ament_index_python.packages import get_package_share_directory,get_package_prefix
+  desc=Path(get_package_share_directory('astribot_s1_description'));config=desc/'config';camera=config/'simulation_navigation_full'
+- moveit=child('transport_skills',['ros2','launch',str(E/'transport_skills_candidate.launch.py'),'allow_trajectory_execution:=false','use_camera:=true','use_wrist_cameras:=true','use_stereo_cameras:=true','use_lidar:=true','camera_profile:='+str(camera/'camera_head_rgbd.yaml'),'torso_camera_profile:='+str(camera/'camera_torso_rgbd.yaml'),'camera_calibration_dir:='+str(camera),'camera_mounts_profile:='+str(config/'camera_mounts_reference_sim.yaml')])
++ moveit=child('transport_skills',['ros2','launch',str(E/'transport_skills_candidate.launch.py'),'allow_trajectory_execution:=false','use_camera:=true','use_wrist_cameras:=true','use_stereo_cameras:=true','use_lidar:=true','simulation_relaxed_base_motion:='+str(options.relax_base_motion).lower(),'camera_profile:='+str(camera/'camera_head_rgbd.yaml'),'torso_camera_profile:='+str(camera/'camera_torso_rgbd.yaml'),'camera_calibration_dir:='+str(camera),'camera_mounts_profile:='+str(config/'camera_mounts_reference_sim.yaml')])
+  executor=options.executor.resolve()
+  executor_sha=options.executor_sha256
+  if hashlib.sha256(executor.read_bytes()).hexdigest()!=executor_sha:raise RuntimeError('EXECUTOR_HASH_CHANGED')
+  run('read_full_executor_parameters',['python3',E/'read_full_executor_parameters.py','--owner',b/'owner.json','--session',isolation.instance,'--source','gazebo_kinematic_v1','--scenario',E/'scenario.json','--output',b/'executor_registration'],50)
+- hold=child('trajectory_executor',[str(executor),'--ros-args','--params-file',str(b/'executor_registration/executor.yaml')])
++ hold=child('trajectory_executor',[str(executor),'--ros-args','--params-file',str(b/'executor_registration/executor.yaml'),'-p','simulation_relaxed_base_motion:='+str(options.relax_base_motion).lower()])
+  worlds=[]
+  for pid in descendants(launch.pid):
+   try:
+@@ -240,7 +241,7 @@
+  if candidate_libraries.get(str(expected_native/'lib/libpayload_scene.so'))!=options.payload_scene_sha256:raise RuntimeError('PAYLOAD_SCENE_RUNTIME_IDENTITY_MISMATCH')
+  if candidate_libraries.get(str(expected_native/'lib/libfixed_station_navigation.so'))!=options.navigation_helper_sha256:raise RuntimeError('NATIVE_NAVIGATION_HELPER_RUNTIME_IDENTITY_MISMATCH')
+  save(b/'cold_start.json',dict(owner=read_json(b/'owner.json'),session=isolation.instance,captured_wall=time.time(),no_preceding_goal_writers=True,fresh_executor=current_executor,processes=identities,probe_output=str((b/'full_transfer').resolve())))
+- run('full_transfer',['python3',E/'verify_full_transfer.py','--owner',b/'owner.json','--session',isolation.instance,'--source','gazebo_kinematic_v1','--cold-start-receipt',b/'cold_start.json','--expected-binary-sha256',options.fixed_envelope_sha256,'--expected-executor-sha256',executor_sha,'--scenario',E/'scenario.json','--goal-json',b/'transfer_goal.json','--action-endpoint','/transport/fixed_station_transfer','--output',b/'full_transfer'],600)
++ run('full_transfer',['python3',E/'verify_full_transfer.py','--owner',b/'owner.json','--session',isolation.instance,'--source','gazebo_kinematic_v1','--cold-start-receipt',b/'cold_start.json','--expected-binary-sha256',options.fixed_envelope_sha256,'--expected-executor-sha256',executor_sha,'--scenario',E/'scenario.json','--goal-json',b/'transfer_goal.json','--action-endpoint','/transport/fixed_station_transfer','--output',b/'full_transfer']+(['--relax-base-motion'] if options.relax_base_motion else []),600)
+  report['passed']=read_json(b/'full_transfer/result.json').get('passed',False)
+  save(b/'stage_finished.json',dict(owner=read_json(b/'owner.json'),prefix=prefix,report=report))
+ 
+--- before/transport_skills_candidate.launch.py
++++ after/transport_skills_candidate.launch.py
+@@ -47,6 +47,7 @@
+              'robot_description_kinematics': kinematics,
+              'robot_description_planning': limits}
+     return LaunchDescription([
++        DeclareLaunchArgument('simulation_relaxed_base_motion', default_value='false', choices=['true', 'false']),
+         DeclareLaunchArgument('use_lidar', default_value='true', choices=['true', 'false']),
+         *[DeclareLaunchArgument(name, default_value=str(camera_defaults[name]).lower(), choices=['true', 'false'])
+           for name in camera_switches],
+@@ -71,4 +72,4 @@
+                  'max_acceleration_scaling': ParameterValue(LaunchConfiguration('mtc_acceleration_scaling'),value_type=float),
+                  'joint_limit_margin_rad': ParameterValue(LaunchConfiguration('mtc_joint_limit_margin_rad'),value_type=float)}]),
+         Node(package='astribot_s1_transport_mtc', executable='execution_guard', output='screen',
+-             parameters=[{'use_sim_time': True}])])
++             parameters=[{'use_sim_time': True, 'simulation_relaxed_base_motion': ParameterValue(LaunchConfiguration('simulation_relaxed_base_motion'), value_type=bool)}])])

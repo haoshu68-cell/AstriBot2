@@ -1,5 +1,7 @@
 # 项目实现约定
 
+用户 2026-09-25 固定仿真底盘 `idle_position_hold=true`，默认配置、私有覆盖层和启动后读回均须一致；未经用户明确要求不得改回 false。`idle_position_kp` 保持现有 3.0，不随此开关自行调整。
+
 本项目功能实现优先使用 **C++**，只有脚本和启动文件类优先使用 **Python**。这一约定包括 ROS 节点、算法、任务/协议服务、设备适配、UI 和持久化，不因“薄适配”或文件名为脚本而改变职责分类。
 
 具体分类、既有 Python 兼容保留及渐进迁移边界，以 [.agents/skills/robot-runtime-cpp/SKILL.md](.agents/skills/robot-runtime-cpp/SKILL.md) 为统一依据。语言偏好不要求在无关任务中重写既有实现。

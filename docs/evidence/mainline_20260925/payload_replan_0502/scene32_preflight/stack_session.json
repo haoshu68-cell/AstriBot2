@@ -1,0 +1,262 @@
+{
+  "supervisor_pid": 3328409,
+  "started": 1790284896.7719028,
+  "state": "stopped",
+  "camera_baseline": {
+    "path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/src/astribot_s1_description/config/simulation_navigation_full/launch_preset.yaml",
+    "baseline_id": "joint_navigation_full_v1",
+    "sha256": "8942e6b0952a982ad3edb3b9fb8aa293f0c528a06ea6a720f3e145056cdd625f",
+    "explicit_overrides": {}
+  },
+  "isolation": {
+    "ROS_DOMAIN_ID": "59",
+    "ROS_LOCALHOST_ONLY": "1",
+    "IGN_PARTITION": "astribot_fixed_transfer_20260925_station32",
+    "GZ_PARTITION": "astribot_fixed_transfer_20260925_station32",
+    "IGN_DISCOVERY_MSG_PORT": "18118",
+    "IGN_DISCOVERY_SRV_PORT": "18119",
+    "IGN_IP": "127.0.0.1",
+    "GZ_IP": "127.0.0.1",
+    "ASTRIBOT_SIM_INSTANCE": "fixed_transfer_20260925_station32"
+  },
+  "locks": [
+    "/tmp/astribot_sim_domain59.lock",
+    "/tmp/astribot_sim_partition_astribot_fixed_transfer_20260925_station32.lock"
+  ],
+  "performance_lease": {
+    "path": "/tmp/astribot_sim_performance.lock",
+    "exclusive": true
+  },
+  "children": [
+    {
+      "name": "simulation",
+      "pid": 3328919,
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "astribot_logging.launch_entry",
+        "launch",
+        "astribot_s1_navigation",
+        "nav2_full_bringup.launch.py",
+        "env:=sim",
+        "launch_gazebo:=true",
+        "launch_navigation:=false",
+        "control_loopback_udp:=true",
+        "launch_slam:=true",
+        "navigation_geometry_mode:=fixed_v2",
+        "mode:=mapping",
+        "exploration:=false",
+        "scan_source:=slice_scan",
+        "headless:=true",
+        "use_rviz:=false",
+        "use_lidar:=true",
+        "use_camera:=true",
+        "use_camera_postprocess:=false",
+        "use_camera_pointcloud:=true",
+        "enable_depth_obstacles:=true",
+        "obstacle_layer_plugin:=nav2_costmap_2d::ObstacleLayer",
+        "use_wrist_cameras:=true",
+        "use_stereo_cameras:=true",
+        "camera_profile:=/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/src/astribot_s1_description/config/simulation_navigation_full/camera_head_rgbd.yaml",
+        "torso_camera_profile:=/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/src/astribot_s1_description/config/simulation_navigation_full/camera_torso_rgbd.yaml",
+        "camera_calibration_dir:=/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/src/astribot_s1_description/config/simulation_navigation_full",
+        "camera_mounts_profile:=/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/src/astribot_s1_description/config/camera_mounts_reference_sim.yaml",
+        "ros_domain_id:=59",
+        "spawn_x:=0.0",
+        "spawn_y:=0.0",
+        "spawn_yaw:=0.0",
+        "save_path:=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/slam_sessions/",
+        "slam_backend:=static_map",
+        "map_yaml_path:=/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/maps/warehouse_baseline.yaml"
+      ],
+      "output_log": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/session.log"
+    },
+    {
+      "name": "navigation_1",
+      "pid": 3330833,
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "astribot_logging.launch_entry",
+        "launch",
+        "astribot_s1_navigation",
+        "navigation.launch.py",
+        "use_sim_time:=true",
+        "controller_plugin:=mppi",
+        "max_linear_speed:=0.35",
+        "navigation_policy_stage:=p4",
+        "navigation_geometry_mode:=fixed_v2",
+        "scan_topic:=/scan_from_cloud",
+        "enable_depth_obstacles:=true",
+        "obstacle_layer_plugin:=nav2_costmap_2d::ObstacleLayer",
+        "enable_payload_ledger:=true",
+        "payload_environment:=simulation",
+        "payload_session_id:=fixed_transfer_20260925_station32",
+        "payload_source_id:=gazebo_kinematic_v1",
+        "payload_journal_path:=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/payload_ledger.jsonl",
+        "simulation_static_map_yaml:=/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/maps/warehouse_baseline.yaml",
+        "arrival_precision_profile:=simulation_precision",
+        "corridor_file:=/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/N4_empty_corridors.json",
+        "map_manager_params_file:=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/map_manager.yaml",
+        "operator_runtime_params_file:=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/mapping_runtime.yaml",
+        "enable_voxel_adapter:=true",
+        "voxel_adapter_params_file:=/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/voxel_session_adapter.yaml"
+      ],
+      "output_log": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/session.log"
+    }
+  ],
+  "logging_backend": "spdlog",
+  "log_layout": "unified",
+  "unified_log": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/session.log",
+  "log_files": {
+    "simulation": {
+      "output": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/session.log",
+      "source": "simulation"
+    },
+    "navigation_1": {
+      "output": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/session.log",
+      "source": "navigation_1"
+    }
+  },
+  "control_transport": {
+    "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp",
+    "ROS_LOCALHOST_ONLY": "0",
+    "FASTRTPS_DEFAULT_PROFILES_FILE": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/nav_udp.xml"
+  },
+  "pre_navigation": {
+    "ready": true,
+    "phase": "data",
+    "sample_seconds": 3.506867553005577,
+    "counts": {
+      "clock": 2239,
+      "odom": 112,
+      "scan": 10
+    },
+    "policy_stamp_ns": null,
+    "execution_nodes": {},
+    "bt_clock_nodes": {},
+    "task_endpoint_owners": {},
+    "tf_age": 0.0019999999999997797,
+    "scan_topics": {},
+    "clock_range": [
+      0.004,
+      2.242
+    ],
+    "lifecycle": {}
+  },
+  "navigation_measurements": {
+    "ready": true,
+    "phase": "navigation",
+    "sample_seconds": 3.768226506996143,
+    "counts": {
+      "clock": 3077,
+      "odom": 156,
+      "scan": 30,
+      "costmap_scan": 26,
+      "policy": 25
+    },
+    "policy_stamp_ns": 5800000000,
+    "execution_nodes": {
+      "cmd_vel_body_to_world_node": true,
+      "arm_speed_limiter_node": true,
+      "arm_chassis_speed_coupling_node": true
+    },
+    "bt_clock_nodes": {
+      "bt_navigator_navigate_to_pose_rclcpp_node": true,
+      "bt_navigator_navigate_through_poses_rclcpp_node": true
+    },
+    "task_endpoint_owners": {
+      "/torso_controller/follow_joint_trajectory/_action/send_goal": [
+        "/torso_controller"
+      ],
+      "/head_controller/follow_joint_trajectory/_action/send_goal": [
+        "/head_controller"
+      ],
+      "/arm_left_controller/follow_joint_trajectory/_action/send_goal": [
+        "/arm_left_controller"
+      ],
+      "/arm_right_controller/follow_joint_trajectory/_action/send_goal": [
+        "/arm_right_controller"
+      ],
+      "/gripper_left_controller/follow_joint_trajectory/_action/send_goal": [
+        "/gripper_left_controller"
+      ],
+      "/gripper_right_controller/follow_joint_trajectory/_action/send_goal": [
+        "/gripper_right_controller"
+      ],
+      "/exploration/navigate_through_poses/_action/send_goal": [
+        "/navigation_task_arbiter"
+      ],
+      "/exploration/navigate_to_pose/_action/send_goal": [
+        "/navigation_task_arbiter"
+      ],
+      "/navigate_through_poses/_action/send_goal": [
+        "/navigation_task_arbiter"
+      ],
+      "/navigate_to_pose/_action/send_goal": [
+        "/navigation_task_arbiter"
+      ],
+      "/route/navigate_through_poses/_action/send_goal": [
+        "/navigation_task_arbiter"
+      ],
+      "/route/navigate_to_pose/_action/send_goal": [
+        "/navigation_task_arbiter"
+      ],
+      "/follow_path/_action/send_goal": [
+        "/controller_server"
+      ],
+      "/smooth_path/_action/send_goal": [
+        "/smoother_server"
+      ],
+      "/compute_path_through_poses/_action/send_goal": [
+        "/planner_server"
+      ],
+      "/compute_path_to_pose/_action/send_goal": [
+        "/planner_server"
+      ],
+      "/wait/_action/send_goal": [
+        "/behavior_server"
+      ],
+      "/navigation_executor/navigate_through_poses/_action/send_goal": [
+        "/navigation_executor/bt_navigator"
+      ],
+      "/navigation_executor/navigate_to_pose/_action/send_goal": [
+        "/navigation_executor/bt_navigator"
+      ],
+      "/follow_waypoints/_action/send_goal": [
+        "/waypoint_follower"
+      ]
+    },
+    "tf_age": 0.004999999999999893,
+    "scan_topics": {
+      "global_costmap": "/navigation_policy/costmap_scan",
+      "local_costmap": "/navigation_policy/costmap_scan"
+    },
+    "clock_range": [
+      2.721,
+      5.822
+    ],
+    "lifecycle": {
+      "behavior_server": "active",
+      "velocity_smoother": "active",
+      "smoother_server": "active",
+      "bt_navigator": "active",
+      "waypoint_follower": "active",
+      "controller_server": "active",
+      "planner_server": "active"
+    }
+  },
+  "lifecycle": {
+    "behavior_server": "active",
+    "velocity_smoother": "active",
+    "smoother_server": "active",
+    "bt_navigator": "active",
+    "waypoint_follower": "active",
+    "controller_server": "active",
+    "planner_server": "active"
+  },
+  "ready_at": 1790284909.4528792,
+  "remaining_owned_pids": [],
+  "log_capture_errors": [],
+  "ended": 1790284940.5971272
+}

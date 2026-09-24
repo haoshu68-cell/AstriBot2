@@ -1,0 +1,135 @@
+{
+  "passed": false,
+  "task_id": "fixed_transfer_8a9b688920a14b90b289fd91f3225f3f",
+  "context_id": "7b697ff8396a426e860926158937638c",
+  "goal_uuid": "e836f380dde44baaa6dc9eb01ed84c60",
+  "error": "RuntimeError('RENEW_REJECTED:MTC_SCENE_CHANGED_DURING_REVALIDATION')",
+  "parent_terminal": {
+    "status": 5,
+    "result": {
+      "success": false,
+      "resources_released": true,
+      "reason": "MTC_SCENE_CHANGED_DURING_REVALIDATION",
+      "cleanup_reason": "",
+      "lease_id": "c8b4fe4f-7a43-471a-8929-6abdadb7c91c_1",
+      "navigation_goal_uuid": "",
+      "final_attachment_revision": "90e7f3d0fde731115c79c160760582713a0f1ed3f7e5e0faaeef0757db564ef5"
+    }
+  },
+  "resource_disposition": "RELEASE_CONFIRMED",
+  "cleanup_complete": true,
+  "cleanup_errors": [],
+  "cleanup_stop": {
+    "passed": true,
+    "samples": 36,
+    "span_s": 0.7000000000000028,
+    "start_ros_s": 88.64,
+    "end_ros_s": 89.34,
+    "drift_m": 0.0,
+    "rotation_rad": 0.0,
+    "speed_mps": 0.0,
+    "angular_speed_radps": 0.0,
+    "command_max": 0.0,
+    "command_observed": true,
+    "fresh": true
+  },
+  "base_motion_conditions": {
+    "relaxed": true,
+    "acceptance_scope": "relaxed_simulation_not_original_precision_acceptance",
+    "original_limits": {
+      "rotation_rad": 0.02,
+      "angular_speed_radps": 0.03
+    },
+    "active_limits": {
+      "rotation_rad": 0.05,
+      "angular_speed_radps": 0.1
+    },
+    "non_navigation_linear_speed_limit_mps": 0.02,
+    "nonzero_command_threshold": 1e-06,
+    "final_stop_thresholds_unchanged": true,
+    "readback": {
+      "task_trajectory_executor": [
+        {
+          "type": 1,
+          "bool_value": true,
+          "integer_value": 0,
+          "double_value": 0.0,
+          "string_value": "",
+          "byte_array_value": [],
+          "bool_array_value": [],
+          "integer_array_value": [],
+          "double_array_value": [],
+          "string_array_value": []
+        }
+      ],
+      "manipulation_execution_guard": [
+        {
+          "type": 1,
+          "bool_value": true,
+          "integer_value": 0,
+          "double_value": 0.0,
+          "string_value": "",
+          "byte_array_value": [],
+          "bool_array_value": [],
+          "integer_array_value": [],
+          "double_array_value": [],
+          "string_array_value": []
+        }
+      ]
+    }
+  },
+  "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene38_world53",
+  "outer_result_path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene38_world53/result.json",
+  "stack_state": "stopped",
+  "remaining_owned_pids": [],
+  "journal_events": [
+    {
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:3db64d37d6e65582cc25c6f95d6b608d;arm_right_controller:37fa5db5e69a7913a79b5a7366161b9c;gripper_left_controller:9efa9e102546bb426445549796d68bf0;gripper_right_controller:230f4ced9bcb8a0206a155b070e87df3;head_controller:d90c38b5860e8c9ca3981a3876bef9b8;mtc:11e16539b331ac24eb3d755651931770;torso_controller:4b5bbff8c91ad0ef66ffe8e359e1a69c;",
+        "context": "7b697ff8396a426e860926158937638c_op_1_PICK",
+        "index": 0,
+        "stage_id": "PREGRASP"
+      },
+      "reason": "EXECUTING",
+      "issued_at": 77652000000
+    },
+    {
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:6f81e83939496713ad53736425a91d7c;arm_right_controller:2143b6976c08ba4ba84f3bdc64c34e46;gripper_left_controller:5519f6d8fc18e49cfcdaacf784ac8164;gripper_right_controller:5cd2a14bd24514f1fdbade8b9eb17658;head_controller:972e7bd74674b3166772d4edef03cecd;torso_controller:089cb2e1a69b7c5a68e1356961410974;",
+        "context": "7b697ff8396a426e860926158937638c_op_1_PICK",
+        "index": 1,
+        "stage_id": "GRASP_APPROACH"
+      },
+      "reason": "EXECUTING",
+      "issued_at": 80834000000
+    },
+    {
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:de1efde8a8182cffa97a208c535a7ea1;arm_right_controller:13ad4f1419b470a685b2decd9bb696ba;gripper_left_controller:e37f8758706ebd47a046d707c8db4316;gripper_right_controller:2433fbaa3567bd2eaffcd809a1d610fc;head_controller:f1e2d8cbfa012a4236e1d4f36711cd30;torso_controller:fce4421b70e273bc77533e8fdafe9595;",
+        "context": "7b697ff8396a426e860926158937638c_op_1_PICK",
+        "index": 2,
+        "stage_id": "GRASP_CONFIRM"
+      },
+      "reason": "EXECUTING",
+      "issued_at": 85350000000
+    }
+  ],
+  "stage_clarification": {
+    "confirmed": [
+      "PREGRASP",
+      "GRASP_APPROACH",
+      "GRASP_CONFIRM"
+    ],
+    "failed_before": "ATTACH_CONFIRM",
+    "failure_boundary": "ordinary scene occupancy revalidation independent readback differed from saved binding",
+    "payload_command_accepted_max": 0,
+    "payload_command_applied_max": 0,
+    "actual_attachment_observed": false,
+    "actual_payload_replan_reached": false,
+    "root_cause": "Unconfirmed: the two compared scenes/signatures were not archived; live octomap changes are a candidate only.",
+    "source_result_sha256": "ce081dfe2bcc0e9c5001ca872e19b4c540ac4ff95bdd9dcbd055d0af3d082e7a"
+  }
+}

@@ -1,0 +1,41 @@
+Consolidate compiler generated dependencies of target fixed_station_navigation
+[  4%] Built target astribot_s1_transport_native__cpp
+[  8%] Built target fixed_station_navigation
+Consolidate compiler generated dependencies of target arm_hold_core
+Consolidate compiler generated dependencies of target trajectory_scene_binding
+[ 30%] Built target arm_hold_core
+[ 34%] Building CXX object CMakeFiles/trajectory_scene_binding.dir/src/scene_binding.cpp.o
+Consolidate compiler generated dependencies of target astribot_s1_transport_native__rosidl_typesupport_cpp
+[ 60%] Built target astribot_s1_transport_native__rosidl_typesupport_cpp
+Consolidate compiler generated dependencies of target payload_client
+[ 65%] Built target payload_client
+Consolidate compiler generated dependencies of target payload_frames
+[ 69%] Built target payload_frames
+[ 73%] Linking CXX static library libtrajectory_scene_binding.a
+[ 73%] Built target trajectory_scene_binding
+Consolidate compiler generated dependencies of target fixed_station_scene
+Consolidate compiler generated dependencies of target payload_scene
+[ 78%] Building CXX object CMakeFiles/fixed_station_scene.dir/src/fixed_station_scene.cpp.o
+[ 82%] Building CXX object CMakeFiles/payload_scene.dir/src/payload_scene.cpp.o
+[ 86%] Linking CXX shared library libpayload_scene.so
+[ 86%] Built target payload_scene
+[ 91%] Linking CXX shared library libfixed_station_scene.so
+[ 91%] Built target fixed_station_scene
+Consolidate compiler generated dependencies of target trajectory_executor
+[ 95%] Building CXX object CMakeFiles/trajectory_executor.dir/src/hold_executor.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp: In member function ‘void astribot::transport::HoldExecutor::validate_transfer_goal(const Goal&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:298:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  298 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |   ^~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:298:62: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  298 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |                                                              ^~~
+[100%] Linking CXX executable trajectory_executor
+[100%] Built target trajectory_executor
+[  7%] Built target astribot_s1_transport_native__cpp
+[ 42%] Built target arm_hold_core
+[ 85%] Built target astribot_s1_transport_native__rosidl_typesupport_cpp
+Consolidate compiler generated dependencies of target hold_executor
+[ 92%] Building CXX object CMakeFiles/hold_executor.dir/src/hold_executor.cpp.o
+[100%] Linking CXX executable hold_executor
+[100%] Built target hold_executor

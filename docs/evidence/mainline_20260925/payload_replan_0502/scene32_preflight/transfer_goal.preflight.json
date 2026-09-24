@@ -1,0 +1,256 @@
+{
+  "passed": false,
+  "owner": {
+    "pid": 3328409,
+    "start_ticks": "4036314",
+    "boot_id": "764ae21c-acf1-4fa2-b09a-b01dd31ba952",
+    "exe": "/usr/bin/python3.10",
+    "cmdline": [
+      "python3",
+      "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/tools/sim_stack_supervisor.py",
+      "--mode",
+      "baseline",
+      "--instance",
+      "fixed_transfer_20260925_station32",
+      "--ros-domain-id",
+      "59",
+      "--navigation-geometry-mode",
+      "fixed_v2",
+      "--navigation-policy",
+      "p4",
+      "--payload-source-id",
+      "gazebo_kinematic_v1",
+      "--corridor-file",
+      "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/N4_empty_corridors.json",
+      "--social-policy",
+      "off",
+      "--nav-transport",
+      "udp",
+      "--camera-preset",
+      "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/source_repo/ws_robot/src/astribot_s1_description/config/simulation_navigation_full/launch_preset.yaml",
+      "--headless",
+      "--no-rviz",
+      "--exclusive-performance",
+      "--ready-timeout",
+      "180",
+      "--log-dir",
+      "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack"
+    ],
+    "captured_wall": 1790284912.8724837,
+    "executable_sha256": "a2f33a6e006989270f4340528eb61f8f97366e00a5d1b602ac8672ea44fc56ae",
+    "query_environment": {
+      "ROS_DOMAIN_ID": "59",
+      "IGN_PARTITION": "astribot_fixed_transfer_20260925_station32",
+      "GZ_PARTITION": "astribot_fixed_transfer_20260925_station32",
+      "ASTRIBOT_SIM_INSTANCE": "fixed_transfer_20260925_station32",
+      "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp",
+      "ROS_LOCALHOST_ONLY": "0",
+      "FASTRTPS_DEFAULT_PROFILES_FILE": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/stack/nav_udp.xml",
+      "IGN_IP": "127.0.0.1",
+      "GZ_IP": "127.0.0.1"
+    }
+  },
+  "fixture": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene32_world59/fixtures",
+  "events": [
+    {
+      "service": "/navigation_executor/bt_navigator/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "service": "/navigation_task_arbiter/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "service": "/controller_server/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "service": "/global_costmap/global_costmap/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "service": "/local_costmap/local_costmap/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "service": "/task_trajectory_executor/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    }
+  ],
+  "scope": "read-only frame/parameter check and static goal registration; not live motion acceptance",
+  "parameters": {
+    "/navigation_executor/bt_navigator": {
+      "navigation_geometry_mode": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "fixed_v2",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "robot_base_frame": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "astribot_torso_base",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    },
+    "/navigation_task_arbiter": {
+      "navigation_geometry_mode": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "fixed_v2",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "robot_base_frame": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "astribot_torso_base",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    },
+    "/controller_server": {
+      "navigation_geometry_mode": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "fixed_v2",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "precise_goal_checker.xy_goal_tolerance": {
+        "type": 3,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.002,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "precise_goal_checker.yaw_goal_tolerance": {
+        "type": 3,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0017453292519943296,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    },
+    "/global_costmap/global_costmap": {
+      "robot_base_frame": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "astribot_torso_base",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    },
+    "/local_costmap/local_costmap": {
+      "robot_base_frame": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "astribot_torso_base",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    },
+    "/task_trajectory_executor": {
+      "payload_base_frame": {
+        "type": 4,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "astribot_torso_base",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "fixed_station_position_tolerance_m": {
+        "type": 3,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.002,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "fixed_station_yaw_tolerance_rad": {
+        "type": 3,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0017453292519943296,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    }
+  },
+  "navigation_writers": {
+    "/cmd_vel": [],
+    "/navigation_policy/constraint_state": [
+      {
+        "node": "navigation_constraint",
+        "namespace": "/",
+        "type": "std_msgs/msg/String"
+      }
+    ]
+  },
+  "error": "RuntimeError('NAVIGATION_OUTPUT_WRITER_MISMATCH')"
+}

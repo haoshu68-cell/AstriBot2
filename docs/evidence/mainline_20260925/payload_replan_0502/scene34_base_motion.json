@@ -1,0 +1,157 @@
+{
+  "scene": "scene34/domain57",
+  "scope": "Offline cause-of-trigger audit; no controller change or new runtime",
+  "threshold": {
+    "translation_m": 0.02,
+    "rotation_rad": 0.02
+  },
+  "odom_reference_evidence": {
+    "note": "Original native reference not directly serialized; adjacent samples around scene capture57.555 are identical",
+    "first_record": {
+      "t": 56.12,
+      "wall": 40741.142815485,
+      "x": -6.807665540116799e-06,
+      "y": 9.022692264912348e-06,
+      "yaw": 5.436001145426663e-05,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0,
+      "frame": "odom",
+      "command_observed": false,
+      "cmd_vx": NaN,
+      "cmd_vy": NaN,
+      "cmd_wz": NaN,
+      "cmd_wall": -Infinity
+    }
+  },
+  "first_recorded_odom_rotation_exceedance": {
+    "t": 109.98,
+    "wall": 40805.723556397,
+    "x": -0.006266764675941571,
+    "y": -0.012354674878676206,
+    "yaw": 0.02049496320141588,
+    "vx": -0.006618675139893146,
+    "vy": -0.008055577172601847,
+    "wz": 0.024597152150818147,
+    "frame": "odom",
+    "command_observed": true,
+    "cmd_vx": 0.0,
+    "cmd_vy": 0.0,
+    "cmd_wz": 0.0,
+    "cmd_wall": 40796.961039617
+  },
+  "relative_yaw_rad": 0.020440603189961614,
+  "relative_xy_m": 0.013858141267780814,
+  "independent_world_pose": {
+    "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene34_world57/world_poses.log",
+    "reference_stamp_s": 57.555,
+    "reference_line": 3086868,
+    "first_confirmed_exceedance_stamp_s": 109.965,
+    "line": 11924305,
+    "relative_rotation_rad": 0.02007175664,
+    "translation_m": 0.0137049,
+    "conclusion": "Actual simulator model rotation corroborates odometry; not an odometry-only anomaly"
+  },
+  "observed_commands": [
+    {
+      "wall": 40785.630840594,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0
+    },
+    {
+      "wall": 40796.961039617,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0
+    }
+  ],
+  "startup_parameter_readback": {
+    "idle_position_hold": {
+      "type": 1,
+      "bool_value": false,
+      "integer_value": 0,
+      "double_value": 0.0,
+      "string_value": "",
+      "byte_array_value": [],
+      "bool_array_value": [],
+      "integer_array_value": [],
+      "double_array_value": [],
+      "string_array_value": []
+    },
+    "idle_position_kp": {
+      "type": 3,
+      "bool_value": false,
+      "integer_value": 0,
+      "double_value": 3.0,
+      "string_value": "",
+      "byte_array_value": [],
+      "bool_array_value": [],
+      "integer_array_value": [],
+      "double_array_value": [],
+      "string_array_value": []
+    },
+    "pid_kp": {
+      "type": 3,
+      "bool_value": false,
+      "integer_value": 0,
+      "double_value": 0.4,
+      "string_value": "",
+      "byte_array_value": [],
+      "bool_array_value": [],
+      "integer_array_value": [],
+      "double_array_value": [],
+      "string_array_value": []
+    },
+    "pid_ki": {
+      "type": 3,
+      "bool_value": false,
+      "integer_value": 0,
+      "double_value": 0.1,
+      "string_value": "",
+      "byte_array_value": [],
+      "bool_array_value": [],
+      "integer_array_value": [],
+      "double_array_value": [],
+      "string_array_value": []
+    },
+    "pid_kd": {
+      "type": 3,
+      "bool_value": false,
+      "integer_value": 0,
+      "double_value": 0.0,
+      "string_value": "",
+      "byte_array_value": [],
+      "bool_array_value": [],
+      "integer_array_value": [],
+      "double_array_value": [],
+      "string_array_value": []
+    },
+    "wheel_effort_limit_nm": {
+      "type": 3,
+      "bool_value": false,
+      "integer_value": 0,
+      "double_value": 15.0,
+      "string_value": "",
+      "byte_array_value": [],
+      "bool_array_value": [],
+      "integer_array_value": [],
+      "double_array_value": [],
+      "string_array_value": []
+    }
+  },
+  "trigger": "MTC_BASE_MOVED during TRANSPORT_POSTURE after actual-payload replan and LIFT success",
+  "dynamics_root_cause": "NOT_PROVEN; zero wheel speed command with idle_position_hold=false is a confirmed configuration, not proof of sole cause",
+  "outcome": {
+    "status": 5,
+    "result": {
+      "success": false,
+      "resources_released": true,
+      "reason": "MTC_BASE_MOVED",
+      "cleanup_reason": "",
+      "lease_id": "291eaa5a-aa5e-4cff-b9cd-3b626006dccb_1",
+      "navigation_goal_uuid": "",
+      "final_attachment_revision": "906e507ad7a5c53e43b7c3e0ab837afc6a1426539b90e90d409e5fd3b7584c1a"
+    }
+  }
+}

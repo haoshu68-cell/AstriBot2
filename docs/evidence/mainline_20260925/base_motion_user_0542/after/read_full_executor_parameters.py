@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Read actual model XML before the executor; no actions, fixtures or idle publishers."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+import xml.etree.ElementTree as ET
+import yaml
+
+REPO = Path('/home/yjh/WorkSpace/astribot_sdk_ros2')
+sys.path.insert(0, str(REPO / 'tools/sim'))
+from prepare_empty_inventory import verify_owner, read_model_parameters
+
+
+def parameters(models, sdf, scenario, session, source):
+    def geometry(xml):
+        return [ET.canonicalize(ET.tostring(e, encoding='unicode'), strip_text=True)
+                for e in ET.fromstring(xml) if e.tag in ('link', 'joint')]
+    if geometry(models['robot_state_publisher']) != geometry(models['move_group']):
+        raise RuntimeError('FULL_KINEMATIC_COLLISION_MODEL_MISMATCH')
+    root = ET.fromstring(models['robot_state_publisher'])
+    children = {j.find('child').get('link') for j in root.findall('joint')}
+    if {link.get('name') for link in root.findall('link')} - children != {'astribot_torso_base'}:
+        raise RuntimeError('GAZEBO_MODEL_ROOT_UNSUPPORTED')
+    model = ET.fromstring(sdf).find('model')
+    base = model.find("link[@name='astribot_torso_base']")
+    if model.get('name') != 'astribot_s1' or base is None:
+        raise RuntimeError('ROOT_MODEL_BINDING_MISMATCH')
+    if any(e is not None and any(float(v) != 0 for v in e.text.split())
+           for e in (model.find('pose'), base.find('pose'))):
+        raise RuntimeError('MODEL_ROOT_OFFSET_UNSUPPORTED')
+    return dict(use_sim_time=True, simulation_commissioning=True,
+                payload_model=scenario['object_id'], payload_object_id=scenario['object_id'],
+                payload_world=scenario['world'], payload_robot_model='astribot_s1',
+                payload_session_id=session, payload_source_id=source,
+                payload_base_frame=scenario['base_frame'], payload_tcp_frame=scenario['tcp'],
+                payload_size_xyz=scenario['size_xyz'],
+                payload_model_from_root=[0., 0., 0., 0., 0., 0., 1.],
+                placement_tolerance_m=scenario['placement_tolerance_m'],
+                robot_description=models['robot_state_publisher'])
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ('owner', 'scenario', 'output'):
+        parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--session', required=True)
+    parser.add_argument('--source', required=True)
+    args = parser.parse_args()
+    owner = json.loads(args.owner.read_text())
+    verify_owner(owner, args.session, args.source)
+    for key, value in owner['query_environment'].items():
+        if os.environ.get(key) != value:
+            raise RuntimeError('OWNER_ENVIRONMENT_MISMATCH:' + key)
+    scenario = json.loads(args.scenario.read_text())
+    args.output.mkdir(parents=True, exist_ok=False)
+    import rclpy
+    from rcl_interfaces.srv import GetParameters
+    rclpy.init()
+    node = rclpy.create_node('read_full_executor_parameters')
+    report = dict(passed=False, owner=owner, session=args.session, source=args.source,
+                  scope='read-only startup registration; fixture not yet created', events=[])
+    try:
+        chassis_names = ['use_sim_time', 'idle_position_hold', 'idle_position_kp',
+                         'pid_kp', 'pid_ki', 'pid_kd', 'wheel_effort_limit_nm',
+                         'cmd_vel_timeout_sec', 'joint_state_timeout_sec',
+                         'cmd_vel_topic', 'effort_command_topic']
+        chassis_client = node.create_client(GetParameters, '/omni_effort_drive_node/get_parameters')
+        chassis_response = read_model_parameters(chassis_client, GetParameters.Request(names=chassis_names),
+            lambda: rclpy.spin_once(node, timeout_sec=.01), events=report['events'])
+        from rosidl_runtime_py.convert import message_to_ordereddict
+        if len(chassis_response.values) != len(chassis_names):
+            raise RuntimeError('CHASSIS_PARAMETER_RESPONSE_SIZE_MISMATCH')
+        report['chassis_parameters'] = {
+            name: message_to_ordereddict(value) for name, value in zip(chassis_names, chassis_response.values)}
+        idle_hold = report['chassis_parameters']['idle_position_hold']
+        if idle_hold['type'] != 1 or idle_hold['bool_value'] is not True:
+            raise RuntimeError('CHASSIS_IDLE_POSITION_HOLD_REQUIRED')
+        filter_names = ['use_sim_time', 'cloud_pose_frame', 'max_cloud_age_sec',
+                        'tf_timeout_sec', 'tf_total_budget_sec',
+                        'qos_overrides./tf.subscription.reliability',
+                        'qos_overrides./tf_static.subscription.reliability']
+        filter_client = node.create_client(GetParameters, '/pointcloud_slice_scan_node/get_parameters')
+        filter_response = read_model_parameters(filter_client, GetParameters.Request(names=filter_names),
+            lambda: rclpy.spin_once(node, timeout_sec=.01), events=report['events'])
+        if len(filter_response.values) != len(filter_names):
+            raise RuntimeError('FILTER_PARAMETER_RESPONSE_SIZE_MISMATCH')
+        report['filter_parameters'] = {
+            name: message_to_ordereddict(value) for name, value in zip(filter_names, filter_response.values)}
+        if (filter_response.values[-2].string_value != 'best_effort' or
+                filter_response.values[-1].string_value != 'reliable'):
+            raise RuntimeError('FILTER_TF_QOS_TRIAL_NOT_APPLIED')
+        graph_deadline = time.monotonic() + 5.
+        while time.monotonic() < graph_deadline:
+            dynamic = [endpoint for endpoint in node.get_subscriptions_info_by_topic('/tf')
+                       if endpoint.node_name == 'pointcloud_slice_scan_node' and endpoint.node_namespace == '/']
+            static = [endpoint for endpoint in node.get_subscriptions_info_by_topic('/tf_static')
+                      if endpoint.node_name == 'pointcloud_slice_scan_node' and endpoint.node_namespace == '/']
+            if len(dynamic) == 1 and len(static) == 1:
+                if (int(dynamic[0].qos_profile.reliability) != 2 or
+                        int(static[0].qos_profile.reliability) != 1 or
+                        int(static[0].qos_profile.durability) != 1):
+                    raise RuntimeError('FILTER_ACTUAL_TF_QOS_MISMATCH')
+                break
+            rclpy.spin_once(node, timeout_sec=.02)
+        else:
+            raise RuntimeError('FILTER_TF_GRAPH_NOT_DISCOVERED')
+        report['tf_endpoints'] = []
+        for topic in ('/tf', '/tf_static'):
+            for endpoint_kind, endpoints in (
+                    ('publisher', node.get_publishers_info_by_topic(topic)),
+                    ('subscription', node.get_subscriptions_info_by_topic(topic))):
+                for endpoint in endpoints:
+                    report['tf_endpoints'].append(dict(topic=topic, kind=endpoint_kind,
+                        node_name=endpoint.node_name, node_namespace=endpoint.node_namespace,
+                        gid=list(endpoint.endpoint_gid), reliability=int(endpoint.qos_profile.reliability),
+                        durability=int(endpoint.qos_profile.durability), depth=endpoint.qos_profile.depth))
+        models = {}
+        for target in ('robot_state_publisher', 'move_group'):
+            client = node.create_client(GetParameters, '/' + target + '/get_parameters')
+            response = read_model_parameters(client, GetParameters.Request(names=['robot_description', 'use_sim_time']),
+                lambda: rclpy.spin_once(node, timeout_sec=.01), events=report['events'])
+            if (len(response.values) != 2 or response.values[0].type != 4 or
+                    not response.values[0].string_value or response.values[1].type != 1 or
+                    not response.values[1].bool_value):
+                raise RuntimeError('ACTUAL_SIMULATION_MODEL_REQUIRED:' + target)
+            models[target] = response.values[0].string_value
+            (args.output / (target + '.urdf')).write_text(models[target])
+        converted = subprocess.run(['ign', 'sdf', '-p', str(args.output / 'robot_state_publisher.urdf')],
+                                   capture_output=True, text=True, timeout=15, check=True)
+        (args.output / 'robot_reference.sdf').write_text(converted.stdout)
+        values = parameters(models, converted.stdout, scenario, args.session, args.source)
+        (args.output / 'executor.yaml').write_text(yaml.safe_dump({'/**': {'ros__parameters': values}}))
+        report.update(passed=True, xml_sha256={k: hashlib.sha256(v.encode()).hexdigest() for k, v in models.items()},
+                      scenario_path=str(args.scenario), scenario_sha256=hashlib.sha256(args.scenario.read_bytes()).hexdigest(),
+                      registered_parameters={k: v for k, v in values.items() if k != 'robot_description'})
+    except BaseException as error:
+        report['error'] = repr(error)
+        raise
+    finally:
+        (args.output / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

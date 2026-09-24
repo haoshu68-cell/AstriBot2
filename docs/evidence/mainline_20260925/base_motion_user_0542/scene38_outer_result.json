@@ -1,0 +1,552 @@
+{
+  "passed": false,
+  "started_wall": 1790286822.0722134,
+  "initial_joint_profile": "transport_ready",
+  "zero_start_motion_validated": false,
+  "show_gui": true,
+  "fixture_directory": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene38_world53/fixtures",
+  "head_snapshot": "captured; ROI and coverage not evaluated",
+  "head_raw": {
+    "returncode": 124,
+    "started_steady": 42353.863140825,
+    "ended_steady": 42360.056101834,
+    "requested_process_window_s": 3,
+    "topics": [
+      "/camera/raw/head_rgbd/image",
+      "/camera/raw/head_rgbd/depth_image",
+      "/camera/raw/head_rgbd/camera_info",
+      "/perception/camera_health/head_rgbd",
+      "/tf",
+      "/tf_static",
+      "/clock"
+    ],
+    "not_activated": [
+      "/manipulation/single_box/head_rgbd/points",
+      "/perception/projection_health/single_box/head_rgbd"
+    ],
+    "scope": "stationary baseline head evidence; not M3 complete input; timeout 124 is not a bag pass",
+    "metadata": {
+      "rosbag2_bagfile_information": {
+        "version": 5,
+        "storage_identifier": "sqlite3",
+        "duration": {
+          "nanoseconds": 2371805180
+        },
+        "starting_time": {
+          "nanoseconds_since_epoch": 1790286889056768200
+        },
+        "message_count": 2524,
+        "topics_with_message_count": [
+          {
+            "topic_metadata": {
+              "name": "/tf_static",
+              "type": "tf2_msgs/msg/TFMessage",
+              "serialization_format": "cdr",
+              "offered_qos_profiles": "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+            },
+            "message_count": 10
+          },
+          {
+            "topic_metadata": {
+              "name": "/tf",
+              "type": "tf2_msgs/msg/TFMessage",
+              "serialization_format": "cdr",
+              "offered_qos_profiles": "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+            },
+            "message_count": 303
+          },
+          {
+            "topic_metadata": {
+              "name": "/perception/camera_health/head_rgbd",
+              "type": "astribot_perception_msgs/msg/CameraHealth",
+              "serialization_format": "cdr",
+              "offered_qos_profiles": "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+            },
+            "message_count": 57
+          },
+          {
+            "topic_metadata": {
+              "name": "/clock",
+              "type": "rosgraph_msgs/msg/Clock",
+              "serialization_format": "cdr",
+              "offered_qos_profiles": "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+            },
+            "message_count": 2035
+          },
+          {
+            "topic_metadata": {
+              "name": "/camera/raw/head_rgbd/depth_image",
+              "type": "sensor_msgs/msg/Image",
+              "serialization_format": "cdr",
+              "offered_qos_profiles": "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+            },
+            "message_count": 39
+          },
+          {
+            "topic_metadata": {
+              "name": "/camera/raw/head_rgbd/image",
+              "type": "sensor_msgs/msg/Image",
+              "serialization_format": "cdr",
+              "offered_qos_profiles": "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+            },
+            "message_count": 39
+          },
+          {
+            "topic_metadata": {
+              "name": "/camera/raw/head_rgbd/camera_info",
+              "type": "sensor_msgs/msg/CameraInfo",
+              "serialization_format": "cdr",
+              "offered_qos_profiles": "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+            },
+            "message_count": 41
+          }
+        ],
+        "compression_format": "",
+        "compression_mode": "",
+        "relative_file_paths": [
+          "head_raw_bag_0.db3"
+        ],
+        "files": [
+          {
+            "path": "head_raw_bag_0.db3",
+            "starting_time": {
+              "nanoseconds_since_epoch": 1790286889056768200
+            },
+            "duration": {
+              "nanoseconds": 2371805180
+            },
+            "message_count": 2524
+          }
+        ]
+      }
+    },
+    "missing_topics": []
+  },
+  "error": "RuntimeError('full_transfer exit 1')",
+  "observer_returncode": 130,
+  "observer_capture": {
+    "manifest": {
+      "schema": "astribot.m5.observer/1",
+      "topics": [
+        {
+          "topic": "/camera/raw/head_rgbd/image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "head_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/head_rgbd/camera_info",
+          "kind": "info",
+          "type": "sensor_msgs/msg/CameraInfo",
+          "camera": "head_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/head_rgbd/depth_image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "head_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/camera_health/head_rgbd",
+          "kind": "raw_health",
+          "type": "astribot_perception_msgs/msg/CameraHealth",
+          "camera": "head_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/projection_health/head_rgbd",
+          "kind": "projection_health",
+          "type": "astribot_perception_msgs/msg/ProjectionHealth",
+          "camera": "head_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/head_rgbd/points_raw",
+          "kind": "cloud",
+          "type": "sensor_msgs/msg/PointCloud2",
+          "camera": "head_rgbd",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/head_rgbd/points",
+          "kind": "cloud",
+          "type": "sensor_msgs/msg/PointCloud2",
+          "camera": "head_rgbd",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/torso_rgbd/image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "torso_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/torso_rgbd/camera_info",
+          "kind": "info",
+          "type": "sensor_msgs/msg/CameraInfo",
+          "camera": "torso_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/torso_rgbd/depth_image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "torso_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/camera_health/torso_rgbd",
+          "kind": "raw_health",
+          "type": "astribot_perception_msgs/msg/CameraHealth",
+          "camera": "torso_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/projection_health/torso_rgbd",
+          "kind": "projection_health",
+          "type": "astribot_perception_msgs/msg/ProjectionHealth",
+          "camera": "torso_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/torso_rgbd/points_raw",
+          "kind": "cloud",
+          "type": "sensor_msgs/msg/PointCloud2",
+          "camera": "torso_rgbd",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/torso_rgbd/points",
+          "kind": "cloud",
+          "type": "sensor_msgs/msg/PointCloud2",
+          "camera": "torso_rgbd",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/left_wrist_rgbd/image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "left_wrist_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/left_wrist_rgbd/camera_info",
+          "kind": "info",
+          "type": "sensor_msgs/msg/CameraInfo",
+          "camera": "left_wrist_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/left_wrist_rgbd/depth_image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "left_wrist_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/camera_health/left_wrist_rgbd",
+          "kind": "raw_health",
+          "type": "astribot_perception_msgs/msg/CameraHealth",
+          "camera": "left_wrist_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/projection_health/left_wrist_rgbd",
+          "kind": "projection_health",
+          "type": "astribot_perception_msgs/msg/ProjectionHealth",
+          "camera": "left_wrist_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/manipulation/camera/left_wrist_rgbd/points",
+          "kind": "cloud",
+          "type": "sensor_msgs/msg/PointCloud2",
+          "camera": "left_wrist_rgbd",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/right_wrist_rgbd/image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "right_wrist_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/right_wrist_rgbd/camera_info",
+          "kind": "info",
+          "type": "sensor_msgs/msg/CameraInfo",
+          "camera": "right_wrist_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/right_wrist_rgbd/depth_image",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "right_wrist_rgbd",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/camera_health/right_wrist_rgbd",
+          "kind": "raw_health",
+          "type": "astribot_perception_msgs/msg/CameraHealth",
+          "camera": "right_wrist_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/perception/projection_health/right_wrist_rgbd",
+          "kind": "projection_health",
+          "type": "astribot_perception_msgs/msg/ProjectionHealth",
+          "camera": "right_wrist_rgbd",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/manipulation/camera/right_wrist_rgbd/points",
+          "kind": "cloud",
+          "type": "sensor_msgs/msg/PointCloud2",
+          "camera": "right_wrist_rgbd",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": 0.25
+        },
+        {
+          "topic": "/camera/raw/head_stereo_left/image_raw",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "head_stereo_left",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/camera/raw/head_stereo_left/camera_info",
+          "kind": "info",
+          "type": "sensor_msgs/msg/CameraInfo",
+          "camera": "head_stereo_left",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/camera/raw/head_stereo_right/image_raw",
+          "kind": "image",
+          "type": "sensor_msgs/msg/Image",
+          "camera": "head_stereo_right",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/camera/raw/head_stereo_right/camera_info",
+          "kind": "info",
+          "type": "sensor_msgs/msg/CameraInfo",
+          "camera": "head_stereo_right",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/clock",
+          "kind": "clock",
+          "type": "rosgraph_msgs/msg/Clock",
+          "qos": "sensor",
+          "required": true,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/tf",
+          "kind": "tf",
+          "type": "tf2_msgs/msg/TFMessage",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/tf_static",
+          "kind": "tf_static",
+          "type": "tf2_msgs/msg/TFMessage",
+          "qos": "latched",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/joint_states",
+          "kind": "joints",
+          "type": "sensor_msgs/msg/JointState",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/odom",
+          "kind": "odom",
+          "type": "nav_msgs/msg/Odometry",
+          "qos": "sensor",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/cmd_vel",
+          "kind": "twist",
+          "type": "geometry_msgs/msg/Twist",
+          "qos": "reliable",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/navigation_policy/arm_speed_limit",
+          "kind": "context",
+          "type": "nav2_msgs/msg/SpeedLimit",
+          "qos": "reliable",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/navigation_policy/constraint",
+          "kind": "constraint",
+          "type": "astribot_navigation_msgs/msg/MotionConstraint",
+          "qos": "reliable",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/navigation_policy/constraint_state",
+          "kind": "context",
+          "type": "std_msgs/msg/String",
+          "qos": "reliable",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/transport/execution_guard/status",
+          "kind": "status",
+          "type": "astribot_transport_msgs/msg/ExecutionGuardStatus",
+          "qos": "reliable",
+          "required": true,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/wheel_effort_controller/commands",
+          "kind": "context",
+          "type": "std_msgs/msg/Float64MultiArray",
+          "qos": "reliable",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/navigation/attachment_filter_applied",
+          "kind": "context",
+          "type": "std_msgs/msg/String",
+          "qos": "reliable",
+          "required": false,
+          "gap_budget_sec": null
+        },
+        {
+          "topic": "/transport/hold_executor/status",
+          "type": "std_msgs/msg/String",
+          "kind": "status",
+          "required": false,
+          "gap_budget_sec": null,
+          "qos": "reliable"
+        }
+      ],
+      "source_sha256": {
+        "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/observer_topics_transfer.json": "0db151de4e5980c88af703672898acdc169ac91a8afc888bce0e23fbd269db83",
+        "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene38_world53/stack/session.json": "017c74d9d1fa90f8214d6defc7e2217616df9fe25762228d5f75e2b704e9d66a",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observer.py": "ebd13508c21d76d136af22376eac1f4f7f1a906121e5f0cabcc28f11ac11d2a1",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_description/config/simulation_navigation_full/launch_preset.yaml": "8942e6b0952a982ad3edb3b9fb8aa293f0c528a06ea6a720f3e145056cdd625f"
+      },
+      "requested_duration_sec": 600.0,
+      "warmup_sec": 2.0,
+      "session_json": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene38_world53/stack/session.json",
+      "session_log": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene38_world53/stack/session.log",
+      "completed": false,
+      "interrupted": true,
+      "writer_dropped": 0,
+      "writer_queue_peak": 16,
+      "observer_scope": "ROS callback metadata; no internal DDS queue, ROI or causal control latency",
+      "phase_source": {
+        "topic": "/transport/hold_executor/status",
+        "type": "std_msgs/msg/String",
+        "owner_events_path": null
+      },
+      "clock_semantics": "ros_now_ns is latest observed /clock; zero means not received",
+      "environment": {
+        "ROS_DOMAIN_ID": "53",
+        "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp",
+        "FASTRTPS_DEFAULT_PROFILES_FILE": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene38_world53/stack/nav_udp.xml",
+        "ROS_LOCALHOST_ONLY": "0",
+        "IGN_PARTITION": "astribot_fixed_transfer_20260925_station38",
+        "GZ_PARTITION": "astribot_fixed_transfer_20260925_station38",
+        "ASTRIBOT_SIM_INSTANCE": "fixed_transfer_20260925_station38"
+      },
+      "started_monotonic_ns": 42343642865021,
+      "started_wall_ns": 1790286875252639272,
+      "ended_monotonic_ns": 42441060592827,
+      "ended_wall_ns": 1790286972670364041
+    },
+    "scope": "bounded action observation; an owned early interrupt is not a complete 600-second sampling pass"
+  },
+  "recorder_returncode": -2,
+  "video_decode": {
+    "decoded_frames": 445,
+    "sidecar_rows": 445,
+    "metadata_frames": 445,
+    "passed": true
+  },
+  "cleanup_complete": true,
+  "finished_wall": 1790286975.6654754
+}
