@@ -1,0 +1,108 @@
+{
+  "schema": "astribot.m5.snapshot_context_audit/1",
+  "session_id": "ready_first_stage_20260924:ready_scene01",
+  "snapshot_stamp_ns": 28300000000,
+  "capture_exit_code": 0,
+  "capture_exit_evidence": "Owned run() raises on nonzero return; used_run_first_stage.py lines 40 and 102-103 plus result.json captured; owner reported normal exit. No dedicated exit-code file was provided.",
+  "phase": "PRE_ACTION_READY_STATIC_SNAPSHOT",
+  "phase_evidence": "Capture before first_stage runner; image28.3s precedes initial_stop32.58-33.28s and parent submission34.006s. READY is spawn profile, not zero-to-READY motion.",
+  "related_later_task_id": "m1_task_cc06a8777c51476f87d989d3c3a378ac",
+  "geometry_clock_epoch_before": 0,
+  "geometry_clock_epoch_before_stamp": {
+    "sec": 17,
+    "nanosec": 810000000
+  },
+  "geometry_clock_epoch_after": 0,
+  "geometry_clock_epoch_after_stamp_ns": 33227000000,
+  "clock_scope": "Session-qualified geometry clock epoch0 bracketed by owner records; independent recorded Pose_V21.721-45.087s strictly increasing. Not an assertion about unrecorded intervals. Camera source_epoch remains separate.",
+  "world_frame_evidence": "world_poses_identity.json records /world/default/pose/info and matching partition",
+  "model_base_binding": "Captured URDF root and converted SDF model first link astribot_torso_base have no model/root offset, hence identity model_from_base.",
+  "geometry_scope": "Captured box visual/collision dimensions match; independent target pose for evaluation only, never region/segmentation/inference.",
+  "initial_joint_profile": {
+    "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/install/astribot_s1_description/share/astribot_s1_description/config/sim_initial_transport_ready.yaml",
+    "sha256": "fe77a322cea387cd5a434649ede0d3e350c625f66693263068583e476a421578"
+  },
+  "zero_start_motion_validated": false,
+  "motion_acceptance": "NOT_EVALUATED",
+  "action_terminal": {
+    "status": 6,
+    "result": {
+      "resources_released": true,
+      "reason": "MTC_SCENE_CHANGED",
+      "lease_id": "22a43b81-9f82-4225-837c-988a75fccc59_1"
+    }
+  },
+  "action_wrapper_error": "KeyboardInterrupt('stationary mass validation interrupted')",
+  "scene_wrapper_error": "KeyboardInterrupt('owned fixed batch interrupted')",
+  "cleanup_scope": "Owner reports own-process cleanup complete; MoveGroup unload exit-11 is separately reported, not clean shutdown acceptance.",
+  "source_sha256": {
+    "stack/session.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/stack/session.json",
+      "sha256": "c28432ac77bb5fadbca8d0bd57fe41fe8eb2369ba837a1a38cf71703e11243f9"
+    },
+    "owner.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/owner.json",
+      "sha256": "09d56d65be57076c2b07d7831ad0229f507971ad773f1285245f46394aa16127"
+    },
+    "result.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/result.json",
+      "sha256": "4b465df16184ed7b0ea91682290685c13bd784d6d8c238ddbc21ae792daecb22"
+    },
+    "head_snapshot_identity.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/head_snapshot_identity.json",
+      "sha256": "ae4443d1fcb7bd86d2063b9fb98b93096ae7d8d6ab305db58df8c5d55778491b"
+    },
+    "head_snapshot.log": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/head_snapshot.log",
+      "sha256": "69288685282933955a5d29abfa6e063044ddb1c7d5c07845686c660b7c00f008"
+    },
+    "world_poses_identity.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/world_poses_identity.json",
+      "sha256": "db02a5d703866d4a954851840217b509aa0d93aa52ffc749ff3e1c575c871cc5"
+    },
+    "fixtures/result.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/fixtures/result.json",
+      "sha256": "5c7b597edfdb1149c5fe309fc47144ebc93b3c6dc5c66a775d1e070c16b48143"
+    },
+    "fixtures/robot_state_publisher.urdf": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/fixtures/robot_state_publisher.urdf",
+      "sha256": "dd446d845424fd2519b0eb000e911cb9bbe542822e9d1488575d1ab762300d2a"
+    },
+    "fixtures/robot_reference.sdf": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/fixtures/robot_reference.sdf",
+      "sha256": "4baff16b5feee975f069c0e35673fec13980fbd1d3f8e5d0f83a121eb08abe67"
+    },
+    "fixtures/transport_box_01.sdf": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/fixtures/transport_box_01.sdf",
+      "sha256": "5c185f45dcc074525d3787dd99e12ae802c41b38f043c89408c93abb09a0a550"
+    },
+    "first_stage/result.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/first_stage/result.json",
+      "sha256": "126e22792aa5137c815b39dc12733ab002e914ee10dfccb02e359f2508dd6461"
+    },
+    "used_run_first_stage.py": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/used_run_first_stage.py",
+      "sha256": "52c57fc3b0db77467af81c49b41c265f02d5f4678fee18b5090ae9c51dcb2e83"
+    },
+    "pick_station_region.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/pick_station_region.json",
+      "sha256": "029e32a2760cc78226ba5b72b7f99439d5c237313fe60d9d1e104594c2501203"
+    },
+    "fixtures/scene_readback.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/fixtures/scene_readback.json",
+      "sha256": "83e40641ebf997ff5c8a6e74ddf51d00ff9cdab373a4fa911b2dc45a385dce52"
+    },
+    "first_stage.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/first_stage.json",
+      "sha256": "27f4befa8af74d9452beae5bcb45cbe285a5a1d83a20defd0a0f6908703c5a1d"
+    },
+    "first_stage.mp4": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/first_stage.mp4",
+      "sha256": "e351ec4686df7000968f455269fe0edaf6f82410c5aaa2cb2f73fefcb6ddcb05"
+    },
+    "post_cleanup_identity_audit.json": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/post_cleanup_identity_audit.json",
+      "sha256": "74b69cbdcf8e9ef15ba8b4283895ea539b6713c06b4202a7e15fbcbfaac28ba1"
+    }
+  }
+}

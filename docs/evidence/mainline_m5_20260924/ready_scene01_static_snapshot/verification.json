@@ -1,0 +1,45 @@
+{
+  "status": "PASS_OFFLINE_ARTIFACT_CHECKS",
+  "source_hash_checks": 42,
+  "unique_source_files_checked": 27,
+  "capture_stamp_ns": 28300000000,
+  "offline_point_gate": "PASS",
+  "selected_measured_points": 2466,
+  "selected_valid_fraction": 1.0,
+  "live_request_admission": "NOT_EVALUATED",
+  "coverage_acceptance": "UNKNOWN_THRESHOLD",
+  "zero_start_motion_validated": false,
+  "motion_acceptance": "NOT_EVALUATED",
+  "independent_analysis": "camera_current_code independently mirrored current C++ component filtering and obtained identical N2466/area2466/stride2subset618 without GT.",
+  "commands": [
+    {
+      "command": "python3 tools/vision/prepare_box_roi_snapshot.py --capture /home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/head_snapshot --truth /home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/world_poses.log --context /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/ready_scene01_static_snapshot/context.json --output /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/ready_scene01_static_snapshot/prepared",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 tools/vision/score_box_roi.py --sample /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/ready_scene01_static_snapshot/prepared/sample.json --output /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/ready_scene01_static_snapshot/roi_score",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/ready_scene01_static_snapshot/reproduce_region_counts.py",
+      "exit_code": 0
+    }
+  ],
+  "artifact_sha256": {
+    "README.md": "583a7b3d4bc0753d04dedc5410028a9e475a4b3f2882ddf72423617c92572d1f",
+    "context.json": "bda8c02dc83b515a5ca9fa1566e082a15c52d0d4e4d4395b39e5032c4a2298e1",
+    "context_audit.json": "0988b03f94581c0d92af9fe7f7c4c1447986a3d9b86b9a99d50545312653278c",
+    "prepared/assembly.json": "cb2a3cbb08c840c8ec4926641c5e9df4df0d93ca5f10284b4748fe387ddec44c",
+    "prepared/sample.json": "ea5f82dbbf7f46850e565ce13c2e99456fa19b6391125f498c9b74a4b6f8390a",
+    "prepared/truth_at_capture.pbtxt": "867532531b81191f010ec45aab88005c93e7828857c47d76d873d7ee5026cb22",
+    "region_counts.json": "f671b302407478cba133f3f10872ed0216a90243333a24a091d17ddad11959df",
+    "reproduce_region_counts.py": "7a4eac07564cb59c992989e627c420afbcdac5dbd0dfb74f530e7f7ffd10b2a7",
+    "request_point_gate.json": "a2512778cde0554c6719bae8cbc1b60b68f14c35b235701d7b986cb058002875",
+    "roi_comparison.json": "f4a82c02c42bf43aa42a8862cef82c8fdca1db7758b2a9a7d73f9bc90b6e1c60",
+    "roi_score/pixel_maps.npz": "1f219e24283911bc101c7c6575610b1612ab3a0986dcfc66a673b33287c54677",
+    "roi_score/report.json": "54f24069270ac50da1353dfd8edb72fe136ffb1cb571becb3f530f46b03289ce",
+    "roi_score/sample.json": "ea5f82dbbf7f46850e565ce13c2e99456fa19b6391125f498c9b74a4b6f8390a",
+    "selected_measured_pixels.npz": "489096202c2a5e431118c322562b23ffd1d0b842701cb7f5cda0247dfbb8bd0b",
+    "video_scope.json": "f7f748226d1dce706e7a15f0d9f25d829f4b7f376d551c7b156fd1335fda3617"
+  }
+}

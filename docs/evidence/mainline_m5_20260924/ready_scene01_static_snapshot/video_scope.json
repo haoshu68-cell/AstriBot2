@@ -1,0 +1,92 @@
+{
+  "schema": "astribot.m5.ready_scene01_video_scope/1",
+  "video_path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/first_stage.mp4",
+  "video_sha256": "e351ec4686df7000968f455269fe0edaf6f82410c5aaa2cb2f73fefcb6ddcb05",
+  "metadata_path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/ready_scene01/first_stage.json",
+  "metadata_sha256": "27f4befa8af74d9452beae5bcb45cbe285a5a1d83a20defd0a0f6908703c5a1d",
+  "frames": 216,
+  "encoding_fps": 10.0,
+  "playback_duration_s": 21.6,
+  "recorded_wall_duration_s": 35.69583168000099,
+  "timing_scope": "10 fps received frames; not a wall-time performance measurement",
+  "video_first_last_decode": "PASS",
+  "segments": [
+    {
+      "start_frame_inclusive": 0,
+      "end_frame_exclusive": 96,
+      "playback_seconds": [
+        0.0,
+        9.6
+      ],
+      "stage": "WAITING_FOR_TASK",
+      "recorded_stage_wall_time": 1790221403.4391968,
+      "motion_classification": "NO_EXECUTED_ARM_TRAJECTORY_EVIDENCE"
+    },
+    {
+      "start_frame_inclusive": 96,
+      "end_frame_exclusive": 97,
+      "playback_seconds": [
+        9.6,
+        9.7
+      ],
+      "stage": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+      "recorded_stage_wall_time": 1790221417.8901832,
+      "motion_classification": "NO_EXECUTED_ARM_TRAJECTORY_EVIDENCE"
+    },
+    {
+      "start_frame_inclusive": 97,
+      "end_frame_exclusive": 206,
+      "playback_seconds": [
+        9.7,
+        20.6
+      ],
+      "stage": "PLANNING_COMPLETE_OPERATION",
+      "recorded_stage_wall_time": 1790221417.9406512,
+      "motion_classification": "NO_EXECUTED_ARM_TRAJECTORY_EVIDENCE"
+    },
+    {
+      "start_frame_inclusive": 206,
+      "end_frame_exclusive": 216,
+      "playback_seconds": [
+        20.6,
+        21.6
+      ],
+      "stage": "MTC_SCENE_CHANGED",
+      "recorded_stage_wall_time": 1790221436.3897254,
+      "motion_classification": "NO_EXECUTED_ARM_TRAJECTORY_EVIDENCE"
+    }
+  ],
+  "sample_stamp_s": 28.3,
+  "snapshot_phase": "PRE_ACTION_READY_STATIC_SNAPSHOT",
+  "parent_submission_ros_s": [
+    34.006
+  ],
+  "recorded_child_submissions": [],
+  "parent_terminal": {
+    "status": 6,
+    "result": {
+      "resources_released": true,
+      "reason": "MTC_SCENE_CHANGED",
+      "lease_id": "22a43b81-9f82-4225-837c-988a75fccc59_1"
+    }
+  },
+  "jtc_sample_count": 1028,
+  "jtc_sample_ros_range_s": [
+    31.57,
+    53.23
+  ],
+  "jtc_observed_joint_names": [
+    "astribot_arm_left_joint_1",
+    "astribot_arm_left_joint_2",
+    "astribot_arm_left_joint_3",
+    "astribot_arm_left_joint_4",
+    "astribot_arm_left_joint_5",
+    "astribot_arm_left_joint_6",
+    "astribot_arm_left_joint_7"
+  ],
+  "jtc_max_observed_joint_range_rad": 2.3029543583110347e-17,
+  "jtc_max_observed_speed_rad_s": 5.432589972834257e-14,
+  "scope": "No executed arm action segment; owner reports planner success followed by MTC_SCENE_CHANGED without child submission, consistent with static left-arm JTC feedback. Resource authority EXECUTING text is not motion evidence. Other unrecorded intervals/joints are not independently certified.",
+  "zero_start_motion_validated": false,
+  "recording_shutdown": "Recorder log ends with KeyboardInterrupt; completed video first/last frames decode. This does not certify clean shutdown of all nodes."
+}
