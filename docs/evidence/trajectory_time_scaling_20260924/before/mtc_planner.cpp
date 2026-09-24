@@ -73,7 +73,6 @@ class Planner {
   octomap_msgs::msg::OctomapWithPose cached_octomap_metadata_;
   std::chrono::steady_clock::time_point cached_at_;
   double velocity_scaling_{.1}, acceleration_scaling_{.1};
-  double trajectory_time_scaling_{1.};
   double joint_margin_{.1};
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameters_callback_;
 
@@ -129,8 +128,9 @@ class Planner {
         if(!stage.trajectory) continue; // Attachment transitions have no motion.
         auto scene=planning_scene::PlanningScene::clone(stage.scene);
         scene->processOctomapMsg(map);
+        robot_trajectory::RobotTrajectory trajectory(*stage.trajectory,true);
         std::string reason;
-        if(!validateExternalTrajectoryGeometry(scene,*stage.trajectory,reason))
+        if(!validateExternalTrajectory(scene,trajectory,reason,velocity_scaling_,acceleration_scaling_))
           throw std::runtime_error("MTC_REVALIDATION:"+stage.id+":"+reason);
         if(std::chrono::steady_clock::now()>=deadline)
           throw std::runtime_error("MTC_REVALIDATION_BUDGET_EXHAUSTED");
@@ -317,7 +317,7 @@ class Planner {
             if(sub->trajectory() && sub->trajectory()->getWayPointCount()) {
               robot_trajectory::RobotTrajectory trajectory(*sub->trajectory(),true);
               if(!validateExternalTrajectory(sub->start()->scene(),trajectory,error,
-                  velocity_scaling_,acceleration_scaling_,trajectory_time_scaling_)) {
+                  velocity_scaling_,acceleration_scaling_)) {
                 valid=false;result->reason=name+":"+error;feedback->diagnostic=result->reason;
                 feedback->stage_path=name;handle->publish_feedback(feedback);break;
               }
@@ -374,10 +374,6 @@ public:
       if(!node_->has_parameter(name))node_->declare_parameter(name,.1);
     velocity_scaling_=node_->get_parameter("max_velocity_scaling").as_double();
     acceleration_scaling_=node_->get_parameter("max_acceleration_scaling").as_double();
-    if(!node_->has_parameter("trajectory_time_scaling"))node_->declare_parameter("trajectory_time_scaling",1.);
-    trajectory_time_scaling_=node_->get_parameter("trajectory_time_scaling").as_double();
-    if(!std::isfinite(trajectory_time_scaling_) || trajectory_time_scaling_<1.)
-      throw std::runtime_error("INVALID_EXTERNAL_TIME_SCALING");
     if(!node_->has_parameter("joint_limit_margin_rad"))node_->declare_parameter("joint_limit_margin_rad",.1);
     joint_margin_=node_->get_parameter("joint_limit_margin_rad").as_double();
     (void)astribot_s1_transport_mtc::planningInterval(-1.,1.,joint_margin_);
@@ -388,7 +384,7 @@ public:
       rcl_interfaces::msg::SetParametersResult result;result.successful=true;
       for(const auto& value:values)
         if(value.get_name()=="joint_limit_margin_rad" || value.get_name()=="max_velocity_scaling" ||
-           value.get_name()=="max_acceleration_scaling" || value.get_name()=="trajectory_time_scaling") {
+           value.get_name()=="max_acceleration_scaling") {
           result.successful=false;result.reason="PLANNING_PARAMETERS_REQUIRE_RESTART";break;
         }
       return result;

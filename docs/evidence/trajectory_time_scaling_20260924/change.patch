@@ -1,0 +1,328 @@
+--- a/ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp
++++ b/ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp
+@@ -1,28 +1,20 @@
+ #pragma once
+ #include <cmath>
++#include <limits>
+ #include <moveit/robot_trajectory/robot_trajectory.h>
+ #include "collision_validator.hpp"
+ #include "singularity_monitor.hpp"
+ #include "trajectory_time_optimizer.hpp"
+ 
+ namespace astribot_s1_manipulation {
+-// Validate external planner output using the repository's existing safety rules.
+-// Check the final timed path, including bounded interpolation between waypoints.
+-inline bool validateExternalTrajectory(
++// Read-only geometry revalidation of the bound path. The existing position
++// interpolation checks do not prove the controller spline's swept volume.
++inline bool validateExternalTrajectoryGeometry(
+   const planning_scene::PlanningSceneConstPtr& scene,
+-  robot_trajectory::RobotTrajectory& trajectory, std::string& error,
+-  double velocity_scaling=0.3, double acceleration_scaling=0.3)
++  const robot_trajectory::RobotTrajectory& trajectory, std::string& error)
+ {
+   const auto* group = trajectory.getGroup();
+   if (!group || trajectory.getWayPointCount() == 0) {error="EMPTY_EXTERNAL_TRAJECTORY"; return false;}
+-  TrajectoryTimeOptimizer timing;
+-  TimeOptimizerParams params; params.enable_optimization=false;
+-  params.baseline_velocity_scaling=velocity_scaling;
+-  params.baseline_acceleration_scaling=acceleration_scaling;
+-  OptimizationResult metrics;
+-  if (!timing.configure(params,error) || timing.optimize(trajectory,metrics) != PlanErrorCode::kSuccess) {
+-    error="EXTERNAL_TIME_PARAMETERIZATION:"+error; return false;
+-  }
+   std::vector<moveit::core::RobotState> states;
+   for (size_t i=0; i<trajectory.getWayPointCount(); ++i) {
+     const auto& state=trajectory.getWayPoint(i);
+@@ -55,4 +47,43 @@
+   }
+   return true;
+ }
++
++// Parameterize once before validation, serialization and cache binding. Uniform
++// time scaling preserves the position curve, including JTC derivative splines.
++inline bool validateExternalTrajectory(
++  const planning_scene::PlanningSceneConstPtr& scene,
++  robot_trajectory::RobotTrajectory& trajectory, std::string& error,
++  double velocity_scaling=0.3, double acceleration_scaling=0.3,
++  double time_scaling=1.)
++{
++  if(!std::isfinite(time_scaling) || time_scaling<1.) {error="INVALID_EXTERNAL_TIME_SCALING";return false;}
++  if(!trajectory.getGroup() || trajectory.getWayPointCount()==0) {error="EMPTY_EXTERNAL_TRAJECTORY";return false;}
++  TrajectoryTimeOptimizer timing;
++  TimeOptimizerParams params;params.enable_optimization=false;
++  params.baseline_velocity_scaling=velocity_scaling;
++  params.baseline_acceleration_scaling=acceleration_scaling;
++  OptimizationResult metrics;
++  if(!timing.configure(params,error) || timing.optimize(trajectory,metrics)!=PlanErrorCode::kSuccess) {
++    error="EXTERNAL_TIME_PARAMETERIZATION:"+error;return false;
++  }
++  if(time_scaling!=1.) {
++    double duration=0.;
++    for(size_t i=0;i<trajectory.getWayPointCount();++i) {
++      duration+=trajectory.getWayPointDurationFromPrevious(i)*time_scaling;
++      if(!std::isfinite(duration) || duration>std::numeric_limits<int32_t>::max()) {
++        error="EXTERNAL_TIME_SCALING_DURATION_OVERFLOW";return false;
++      }
++    }
++    for(size_t i=0;i<trajectory.getWayPointCount();++i) {
++      trajectory.setWayPointDurationFromPrevious(i,trajectory.getWayPointDurationFromPrevious(i)*time_scaling);
++      auto& state=*trajectory.getWayPointPtr(i);
++      for(size_t joint=0;joint<state.getVariableCount();++joint) {
++        if(state.hasVelocities())state.getVariableVelocities()[joint]/=time_scaling;
++        if(state.hasAccelerations())state.getVariableAccelerations()[joint]=
++          state.getVariableAccelerations()[joint]/time_scaling/time_scaling;
++      }
++    }
++  }
++  return validateExternalTrajectoryGeometry(scene,trajectory,error);
+ }
++}
+--- a/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp
++++ b/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp
+@@ -73,6 +73,7 @@
+   octomap_msgs::msg::OctomapWithPose cached_octomap_metadata_;
+   std::chrono::steady_clock::time_point cached_at_;
+   double velocity_scaling_{.1}, acceleration_scaling_{.1};
++  double trajectory_time_scaling_{1.};
+   double joint_margin_{.1};
+   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameters_callback_;
+ 
+@@ -128,9 +129,8 @@
+         if(!stage.trajectory) continue; // Attachment transitions have no motion.
+         auto scene=planning_scene::PlanningScene::clone(stage.scene);
+         scene->processOctomapMsg(map);
+-        robot_trajectory::RobotTrajectory trajectory(*stage.trajectory,true);
+         std::string reason;
+-        if(!validateExternalTrajectory(scene,trajectory,reason,velocity_scaling_,acceleration_scaling_))
++        if(!validateExternalTrajectoryGeometry(scene,*stage.trajectory,reason))
+           throw std::runtime_error("MTC_REVALIDATION:"+stage.id+":"+reason);
+         if(std::chrono::steady_clock::now()>=deadline)
+           throw std::runtime_error("MTC_REVALIDATION_BUDGET_EXHAUSTED");
+@@ -317,7 +317,7 @@
+             if(sub->trajectory() && sub->trajectory()->getWayPointCount()) {
+               robot_trajectory::RobotTrajectory trajectory(*sub->trajectory(),true);
+               if(!validateExternalTrajectory(sub->start()->scene(),trajectory,error,
+-                  velocity_scaling_,acceleration_scaling_)) {
++                  velocity_scaling_,acceleration_scaling_,trajectory_time_scaling_)) {
+                 valid=false;result->reason=name+":"+error;feedback->diagnostic=result->reason;
+                 feedback->stage_path=name;handle->publish_feedback(feedback);break;
+               }
+@@ -374,6 +374,10 @@
+       if(!node_->has_parameter(name))node_->declare_parameter(name,.1);
+     velocity_scaling_=node_->get_parameter("max_velocity_scaling").as_double();
+     acceleration_scaling_=node_->get_parameter("max_acceleration_scaling").as_double();
++    if(!node_->has_parameter("trajectory_time_scaling"))node_->declare_parameter("trajectory_time_scaling",1.);
++    trajectory_time_scaling_=node_->get_parameter("trajectory_time_scaling").as_double();
++    if(!std::isfinite(trajectory_time_scaling_) || trajectory_time_scaling_<1.)
++      throw std::runtime_error("INVALID_EXTERNAL_TIME_SCALING");
+     if(!node_->has_parameter("joint_limit_margin_rad"))node_->declare_parameter("joint_limit_margin_rad",.1);
+     joint_margin_=node_->get_parameter("joint_limit_margin_rad").as_double();
+     (void)astribot_s1_transport_mtc::planningInterval(-1.,1.,joint_margin_);
+@@ -384,7 +388,7 @@
+       rcl_interfaces::msg::SetParametersResult result;result.successful=true;
+       for(const auto& value:values)
+         if(value.get_name()=="joint_limit_margin_rad" || value.get_name()=="max_velocity_scaling" ||
+-           value.get_name()=="max_acceleration_scaling") {
++           value.get_name()=="max_acceleration_scaling" || value.get_name()=="trajectory_time_scaling") {
+           result.successful=false;result.reason="PLANNING_PARAMETERS_REQUIRE_RESTART";break;
+         }
+       return result;
+--- a/ws_robot/src/astribot_s1_transport_mtc/src/payload_transition.cpp
++++ b/ws_robot/src/astribot_s1_transport_mtc/src/payload_transition.cpp
+@@ -72,7 +72,7 @@
+   const std::string& cached_context, const PayloadTransitionBinding& binding,
+   const std::vector<CachedStage>& stages,
+   std::chrono::steady_clock::time_point cached_at,
+-  double velocity_scaling, double acceleration_scaling) {
++  double /*velocity_scaling*/, double /*acceleration_scaling*/) {
+   if(request.context_id.empty() || request.scene.is_diff || request.scene.robot_state.is_diff)
+     throw std::runtime_error("MTC_PAYLOAD_FULL_SCENE_REQUIRED");
+   if(request.context_id!=cached_context || stages.empty())throw std::runtime_error("MTC_PAYLOAD_CONTEXT_UNKNOWN");
+@@ -153,10 +153,10 @@
+           actual->getTouchLinks(),actual->getAttachedLinkName(),actual->getDetachPosture(),actual->getSubframes());
+         state.update();
+       }
+-      // The validator retimes its argument. Check a deep copy so the path and
+-      // timing already returned to the owner remain byte-for-byte unchanged.
+-      robot_trajectory::RobotTrajectory checked(*trajectory,true);std::string reason;
+-      if(!astribot_s1_manipulation::validateExternalTrajectory(scene,checked,reason,velocity_scaling,acceleration_scaling))
++      // Geometry revalidation must use the owner's original timed path. The
++      // legacy scaling arguments remain ABI-compatible but do not retime it.
++      std::string reason;
++      if(!astribot_s1_manipulation::validateExternalTrajectoryGeometry(scene,*trajectory,reason))
+         throw std::runtime_error("MTC_PAYLOAD_REVALIDATION:"+stage.id+":"+reason);
+       updated[index].trajectory=std::move(trajectory);
+     }
+--- a/ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/payload_transition.hpp
++++ b/ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/payload_transition.hpp
+@@ -23,6 +23,8 @@
+ 
+ // Builds a separate candidate cache. Throws on any rejected scene/path; the
+ // caller commits the returned stages and transaction only after full success.
++// Scaling arguments are retained for compatibility; revalidation is geometry
++// only and never changes the already-bound trajectory times or derivatives.
+ std::vector<CachedStage> revalidatePayloadTransition(
+   const astribot_transport_msgs::srv::RevalidatePayloadTransition::Request& request,
+   const std::string& cached_context, const PayloadTransitionBinding& binding,
+--- a/ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp
++++ b/ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp
+@@ -227,3 +227,22 @@
+   request.scene.robot_state.attached_collision_objects.push_back(other);
+   expectRejected("ATTACHED_LINK_UNKNOWN");
+ }
++
++TEST_F(PayloadTransition, RevalidationPreservesScaledOwnerAndCacheMessages) {
++  std::vector<moveit_msgs::msg::RobotTrajectory> owner;
++  for(size_t i=4;i<stages.size();++i) {
++    std::string error;
++    ASSERT_TRUE(astribot_s1_manipulation::validateExternalTrajectory(
++      stages[i].scene,*stages[i].trajectory,error,.1,.1,2.5))<<error;
++    moveit_msgs::msg::RobotTrajectory message;stages[i].trajectory->getRobotTrajectoryMsg(message);
++    owner.push_back(message);
++  }
++  const auto confirmed=validate();
++  binding.transaction_id=request.transaction_id;binding.confirmed_scene=request.scene;
++  stages=confirmed;const auto repeated=validate();
++  for(size_t i=4;i<stages.size();++i) {
++    moveit_msgs::msg::RobotTrajectory first,second;
++    confirmed[i].trajectory->getRobotTrajectoryMsg(first);repeated[i].trajectory->getRobotTrajectoryMsg(second);
++    EXPECT_EQ(owner[i-4],first);EXPECT_EQ(owner[i-4],second);
++  }
++}
+--- a/ws_robot/src/astribot_s1_transport_mtc/CMakeLists.txt
++++ b/ws_robot/src/astribot_s1_transport_mtc/CMakeLists.txt
+@@ -46,6 +46,10 @@
+ ament_export_dependencies(moveit_msgs)
+ if(BUILD_TESTING)
+   find_package(ament_cmake_gtest REQUIRED)
++  find_package(joint_trajectory_controller REQUIRED)
++  ament_add_gtest(trajectory_time_scaling_test test/trajectory_time_scaling_test.cpp)
++  ament_target_dependencies(trajectory_time_scaling_test astribot_s1_manipulation joint_trajectory_controller)
++  astribot_target_eigen(trajectory_time_scaling_test)
+   ament_add_gtest(canonical_scene_test test/canonical_scene_test.cpp)
+   target_link_libraries(canonical_scene_test transport_scene_signature)
+   ament_add_gtest(payload_transition_test test/payload_transition_test.cpp src/payload_transition.cpp)
+--- a/ws_robot/src/astribot_s1_transport_mtc/package.xml
++++ b/ws_robot/src/astribot_s1_transport_mtc/package.xml
+@@ -13,4 +13,5 @@
+ <depend>moveit_msgs</depend>
+ <depend>tf2_ros</depend><depend>tf2_geometry_msgs</depend>
+ <test_depend>ament_cmake_gtest</test_depend>
++<test_depend>joint_trajectory_controller</test_depend>
+ <export><build_type>ament_cmake</build_type></export></package>
+--- /dev/null
++++ b/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp
+@@ -0,0 +1,112 @@
++#include <gtest/gtest.h>
++#include <astribot_s1_manipulation/external_trajectory_validator.hpp>
++#include <joint_trajectory_controller/trajectory.hpp>
++#include <urdf_parser/urdf_parser.h>
++#include <srdfdom/model.h>
++#include <limits>
++
++namespace manipulation=astribot_s1_manipulation;
++
++class TrajectoryTimeScaling : public ::testing::Test {
++protected:
++  moveit::core::RobotModelPtr model;
++  planning_scene::PlanningScenePtr scene;
++  void SetUp() override {
++    const auto urdf=urdf::parseURDF(R"(<robot name="time_scaling_test">
++      <link name="base"/><link name="tip"><collision><geometry><box size="0.02 0.02 0.02"/>
++      </geometry></collision></link><joint name="slide" type="prismatic"><parent link="base"/>
++      <child link="tip"/><axis xyz="1 0 0"/><limit lower="-1" upper="1" effort="10" velocity="1"/>
++      </joint></robot>)");
++    ASSERT_TRUE(urdf);auto srdf=std::make_shared<srdf::Model>();
++    ASSERT_TRUE(srdf->initString(*urdf,R"(<robot name="time_scaling_test"><group name="slide_group">
++      <joint name="slide"/></group></robot>)"));
++    model=std::make_shared<moveit::core::RobotModel>(urdf,srdf);
++    scene=std::make_shared<planning_scene::PlanningScene>(model);
++  }
++  robot_trajectory::RobotTrajectory path() const {
++    robot_trajectory::RobotTrajectory result(model,"slide_group");
++    moveit::core::RobotState state(model);state.setToDefaultValues();
++    for(double position:{0.,.15,-.05,.35}) {
++      state.setVariablePosition("slide",position);state.update();result.addSuffixWayPoint(state,0.);
++    }
++    return result;
++  }
++  static moveit_msgs::msg::RobotTrajectory message(const robot_trajectory::RobotTrajectory& path) {
++    moveit_msgs::msg::RobotTrajectory result;path.getRobotTrajectoryMsg(result);return result;
++  }
++};
++
++TEST_F(TrajectoryTimeScaling, DefaultAndExplicitOnePreserveExistingParameterization) {
++  auto baseline=path(),defaulted=path(),explicit_one=path();
++  manipulation::TrajectoryTimeOptimizer optimizer;manipulation::TimeOptimizerParams params;
++  params.enable_optimization=false;params.baseline_velocity_scaling=.1;params.baseline_acceleration_scaling=.1;
++  std::string error;manipulation::OptimizationResult metrics;
++  ASSERT_TRUE(optimizer.configure(params,error));
++  ASSERT_EQ(optimizer.optimize(baseline,metrics),manipulation::PlanErrorCode::kSuccess);
++  ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,defaulted,error,.1,.1))<<error;
++  ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,explicit_one,error,.1,.1,1.))<<error;
++  EXPECT_EQ(message(baseline),message(defaulted));EXPECT_EQ(message(baseline),message(explicit_one));
++}
++
++TEST_F(TrajectoryTimeScaling, ScalesTimeAndDerivativesWithoutChangingPositions) {
++  auto baseline=path(),scaled=path();std::string error;
++  ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,baseline,error,.1,.1))<<error;
++  ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,scaled,error,.1,.1,2.5))<<error;
++  for(size_t i=0;i<baseline.getWayPointCount();++i) {
++    const auto& a=baseline.getWayPoint(i);const auto& b=scaled.getWayPoint(i);
++    EXPECT_DOUBLE_EQ(b.getVariablePosition("slide"),a.getVariablePosition("slide"));
++    EXPECT_DOUBLE_EQ(scaled.getWayPointDurationFromPrevious(i),baseline.getWayPointDurationFromPrevious(i)*2.5);
++    ASSERT_TRUE(a.hasVelocities());ASSERT_TRUE(a.hasAccelerations());
++    EXPECT_DOUBLE_EQ(b.getVariableVelocity("slide"),a.getVariableVelocity("slide")/2.5);
++    EXPECT_DOUBLE_EQ(b.getVariableAcceleration("slide"),a.getVariableAcceleration("slide")/6.25);
++  }
++}
++
++TEST_F(TrajectoryTimeScaling, RejectsInvalidFactorsBeforeMutatingTrajectory) {
++  for(double factor:{0.,.999,-1.,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}) {
++    auto value=path();const auto before=message(value);std::string error;
++    EXPECT_FALSE(manipulation::validateExternalTrajectory(scene,value,error,.1,.1,factor));
++    EXPECT_EQ(error,"INVALID_EXTERNAL_TIME_SCALING");EXPECT_EQ(message(value),before);
++  }
++}
++
++TEST_F(TrajectoryTimeScaling, RejectsScaledDurationThatCannotBeRepresented) {
++  auto value=path();std::string error;
++  EXPECT_FALSE(manipulation::validateExternalTrajectory(
++    scene,value,error,.1,.1,std::numeric_limits<double>::max()));
++  EXPECT_EQ(error,"EXTERNAL_TIME_SCALING_DURATION_OVERFLOW");
++}
++
++TEST_F(TrajectoryTimeScaling, GeometryRevalidationNeverRetimesOrRescalesTheBoundMessage) {
++  auto scaled=path();std::string error;
++  ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,scaled,error,.1,.1,2.5))<<error;
++  const auto cached=message(scaled);
++  EXPECT_TRUE(manipulation::validateExternalTrajectoryGeometry(scene,scaled,error))<<error;
++  EXPECT_TRUE(manipulation::validateExternalTrajectoryGeometry(scene,scaled,error))<<error;
++  EXPECT_EQ(message(scaled),cached);
++}
++
++TEST_F(TrajectoryTimeScaling, InstalledJtcQuinticSplineHasTheSamePositionCurveAtScaledTime) {
++  auto baseline=path(),scaled=path();std::string error;
++  ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,baseline,error,.1,.1))<<error;
++  ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,scaled,error,.1,.1,2.5))<<error;
++  const auto original=message(baseline).joint_trajectory,slower=message(scaled).joint_trajectory;
++  joint_trajectory_controller::Trajectory sampler;
++  for(size_t i=1;i<original.points.size();++i) {
++    const auto& a=original.points[i-1];const auto& b=original.points[i];
++    const auto& slow_a=slower.points[i-1];const auto& slow_b=slower.points[i];
++    const int64_t ta=rclcpp::Duration(a.time_from_start).nanoseconds(),tb=rclcpp::Duration(b.time_from_start).nanoseconds();
++    const int64_t sa=rclcpp::Duration(slow_a.time_from_start).nanoseconds(),sb=rclcpp::Duration(slow_b.time_from_start).nanoseconds();
++    for(double fraction:{.125,.25,.5,.75,.875}) {
++      trajectory_msgs::msg::JointTrajectoryPoint fast,slow;
++      sampler.interpolate_between_points(rclcpp::Time(ta),a,rclcpp::Time(tb),b,
++        rclcpp::Time(ta+int64_t((tb-ta)*fraction)),fast);
++      sampler.interpolate_between_points(rclcpp::Time(sa),slow_a,rclcpp::Time(sb),slow_b,
++        rclcpp::Time(sa+int64_t((sb-sa)*fraction)),slow);
++      ASSERT_EQ(fast.positions.size(),1u);ASSERT_EQ(slow.positions.size(),1u);
++      EXPECT_NEAR(slow.positions[0],fast.positions[0],1e-9);
++      EXPECT_NEAR(slow.velocities[0],fast.velocities[0]/2.5,1e-9);
++      EXPECT_NEAR(slow.accelerations[0],fast.accelerations[0]/6.25,1e-9);
++    }
++  }
++}

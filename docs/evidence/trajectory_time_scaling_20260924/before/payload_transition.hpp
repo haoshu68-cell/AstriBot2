@@ -23,8 +23,6 @@ struct PayloadTransitionBinding {
 
 // Builds a separate candidate cache. Throws on any rejected scene/path; the
 // caller commits the returned stages and transaction only after full success.
-// Scaling arguments are retained for compatibility; revalidation is geometry
-// only and never changes the already-bound trajectory times or derivatives.
 std::vector<CachedStage> revalidatePayloadTransition(
   const astribot_transport_msgs::srv::RevalidatePayloadTransition::Request& request,
   const std::string& cached_context, const PayloadTransitionBinding& binding,

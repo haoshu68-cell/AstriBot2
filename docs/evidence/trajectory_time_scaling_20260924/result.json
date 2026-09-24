@@ -1,0 +1,97 @@
+{
+  "scope": "Offline candidate only; no ROS/Gazebo started; no controller, guard threshold, native or timeout changes.",
+  "parameter": {
+    "name": "trajectory_time_scaling",
+    "default": 1.0,
+    "candidate": 2.5,
+    "valid": "finite >= 1; scaled duration must fit ROS message",
+    "requires_restart": true
+  },
+  "semantics": "Initial IPTP -> dt*s, v/s, a/s^2 with q unchanged -> existing geometry checks -> serialize and cache the same trajectory.",
+  "revalidation": "Both occupancy and payload revalidation call the const geometry checker; no IPTP, no time scaling, no change to owner/cache t/v/a.",
+  "payload_abi": "Existing two double arguments retained for compatibility; no longer used to retime revalidation.",
+  "dependency_overlay": {
+    "baseline": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/gripper_planning_only/install/astribot_s1_manipulation",
+    "new_prefix": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation",
+    "reused_files_equal": 47,
+    "different_reused_files": [],
+    "symlinks": 0,
+    "only_replaced_file": "include/astribot_s1_manipulation/external_trajectory_validator.hpp",
+    "description": "Copied verified installed package bytes with symlinks dereferenced; NOT a rebuilt manipulation package."
+  },
+  "header_used_by_compiler": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp",
+  "header_dependency_evidence": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/CMakeFiles/mtc_planner.dir/src/mtc_planner.cpp.o.d",
+  "compile_commands": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/compile_commands.json",
+  "tests": {
+    "ctest": "6/6 passed",
+    "gtest": [
+      {
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/sealed_test_results/canonical_scene_test.gtest.xml",
+        "tests": 5,
+        "failures": 0,
+        "source_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/canonical_scene_test.gtest.xml",
+        "sha256": "a7477b8f1b266395416c3a5c0cabc605205b9ccaf303b0cfba693eddff171c34"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/sealed_test_results/payload_transition_test.gtest.xml",
+        "tests": 16,
+        "failures": 0,
+        "source_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/payload_transition_test.gtest.xml",
+        "sha256": "5a1500706f3aca8c0f7cb3aecbd0f9c1c50c4dabc7a0082f72d4946140c36f00"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/sealed_test_results/trajectory_time_scaling_test.gtest.xml",
+        "tests": 6,
+        "failures": 0,
+        "source_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/trajectory_time_scaling_test.gtest.xml",
+        "sha256": "6399657c9b28746ea424c994dbc6f5d13ce73e5aff45f9b286e5f0994e775d7c"
+      }
+    ],
+    "jtc_version": "2.53.3",
+    "jtc_check": "Linked installed JTC interpolate_between_points; quintic samples at five fractions in each of three segments.",
+    "xml_snapshot_note": "XML copied after root independently reran the same candidate CTest at approximately 12:40; hashes refer to these sealed copies, not mutable build-tree XML."
+  },
+  "artifacts_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib/astribot_s1_transport_mtc/mtc_planner": "9a9aeed9769f4fdaa33d5db374b6338c8030d1ccc9070e40e0e8cae78ebfce1f",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_transport_mtc/lib/libtransport_scene_signature.so": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp": "7d0e101f3e5ae4c0f45dc4e56e87e80cbd4e880aff95f33e59abdff4c83f9de3",
+    "/opt/ros/humble/lib/libjoint_trajectory_controller.so": "9a91a169b16da2debedc4db6ebd2feabc6ab693e1a1bb525b0bd1128c1c1688f",
+    "/opt/ros/humble/include/joint_trajectory_controller/joint_trajectory_controller/trajectory.hpp": "7094f6508485eec73fd6aca11905914162fbcf23c953988fba2bf7fd88909fea"
+  },
+  "source_sha256": {
+    "ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp": "7d0e101f3e5ae4c0f45dc4e56e87e80cbd4e880aff95f33e59abdff4c83f9de3",
+    "ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp": "2f6efed361e6042cd8a4f7934c6a9021cc926aac4e624c855c715c8adaa111b8",
+    "ws_robot/src/astribot_s1_transport_mtc/src/payload_transition.cpp": "f687c4628304ed64423aaab6d6cd8d3cb0aac183e737a8dc411e051328b97f1b",
+    "ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/payload_transition.hpp": "25183f1ec9d711168be17615cda9d4f43e644d8b8ff4a69b68183120547c9112",
+    "ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp": "63d4ca858acd1385b0f7f948054b8931507870b83d1e776b0d291bb5d0d9565e",
+    "ws_robot/src/astribot_s1_transport_mtc/CMakeLists.txt": "18286ff312d26aba468f5685d0b9737dfdbf0754b48a3b9154b69a4d9286b4ba",
+    "ws_robot/src/astribot_s1_transport_mtc/package.xml": "ae619c47042153509e5db10a038395ea487857e0545958412ba698cc3eba530d",
+    "ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp": "14b23569db5e2650c65d9b3af945acd7f8b3ee931cbda78e3c58a8cceb0485da"
+  },
+  "baseline_libraries_sha256": {
+    "lib/libastribot_cancellable_execution.so": "17290c2430451a9debdc753b047a382b42195746f6f645e08e6daa41f7126e6a",
+    "lib/libastribot_s1_manipulation_ompl_extension.so": "d5f3361aedd18741c521b316315c8232312b2b9c27293c4687530bb0bb8fbd59",
+    "lib/libastribot_s1_manipulation_gripper.so": "7a596e435bb0fc1e37c5d89e54b17830262d59961ef9dfa3f739a2929fbb35a3",
+    "lib/libastribot_s1_manipulation_core.so": "326330a70c777004cab30f353260a8e756351c243050de9a41bfe00d39ec6fc4"
+  },
+  "diff": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/change.patch",
+  "initial_red": "build_red.log records missing new API compilation failures, not a runtime regression result.",
+  "build_warnings": "Existing cached_payload_={} explicit-constructor warnings and serial LTO warning; no new source warnings.",
+  "limitations": [
+    "Original guard reason was not recorded, so position lag is a candidate cause, not uniquely established.",
+    "Discrete linear position geometry checks do not prove the JTC spline swept volume.",
+    "No closed-loop acceptance; real stage completion, child terminals, measured hold and consumer ACKs remain required."
+  ],
+  "original_problem_clock": {
+    "start": "2026-09-24T12:15:00+08:00",
+    "pause_if_unresolved": "2026-09-24T13:15:00+08:00",
+    "reset": false
+  },
+  "evidence_sha256": {
+    "change.patch": "dc041eeaa3ff1371e848092775c5c291b8036a20dfc5ccad746b850fef8e9ac0",
+    "ctest_final.log": "cb08274ffc59eb03d993b4b3b6b5f0e19d60d946bd2abf377546149e7d254cdf",
+    "mtc_planner_ldd.log": "d0583724574cc22e32218229341144f08d59b9b630d892eedd0e34067a2d8343",
+    "test_ldd.log": "2e383ad6096c5494c657cb92f8542150094931356d1fe2b6f64b555dc00183f3",
+    "trajectory_time_scaling_2p5.yaml": "72ea645edec6ad1e4505aee1f3294a3b0fc1db8dee3e98f19a07cdb5ee2106aa"
+  }
+}

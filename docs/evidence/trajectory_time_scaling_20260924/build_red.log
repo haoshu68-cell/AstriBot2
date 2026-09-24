@@ -1,0 +1,79 @@
+[ 16%] Building CXX object gtest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o
+[ 33%] Linking CXX static library libgtest_main.a
+[ 33%] Built target gtest_main
+[ 50%] Building CXX object gtest/CMakeFiles/gtest.dir/src/gtest-all.cc.o
+[ 66%] Linking CXX static library libgtest.a
+[ 66%] Built target gtest
+[ 83%] Building CXX object CMakeFiles/trajectory_time_scaling_test.dir/test/trajectory_time_scaling_test.cpp.o
+In file included from /opt/ros/humble/src/gtest_vendor/include/gtest/gtest.h:62,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp: In member function ‘virtual void TrajectoryTimeScaling_DefaultAndExplicitOnePreserveExistingParameterization_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:47:55: error: too many arguments to function ‘bool astribot_s1_manipulation::validateExternalTrajectory(const PlanningSceneConstPtr&, robot_trajectory::RobotTrajectory&, std::string&, double, double)’
+   47 |   ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,explicit_one,error,.1,.1,1.))<<error;
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/gripper_planning_only/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp:11:13: note: declared here
+   11 | inline bool validateExternalTrajectory(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /opt/ros/humble/src/gtest_vendor/include/gtest/gtest.h:62,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp: In member function ‘virtual void TrajectoryTimeScaling_ScalesTimeAndDerivativesWithoutChangingPositions_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:54:55: error: too many arguments to function ‘bool astribot_s1_manipulation::validateExternalTrajectory(const PlanningSceneConstPtr&, robot_trajectory::RobotTrajectory&, std::string&, double, double)’
+   54 |   ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,scaled,error,.1,.1,2.5))<<error;
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/gripper_planning_only/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp:11:13: note: declared here
+   11 | inline bool validateExternalTrajectory(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /opt/ros/humble/src/gtest_vendor/include/gtest/gtest.h:62,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp: In member function ‘virtual void TrajectoryTimeScaling_RejectsInvalidFactorsBeforeMutatingTrajectory_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:68:58: error: too many arguments to function ‘bool astribot_s1_manipulation::validateExternalTrajectory(const PlanningSceneConstPtr&, robot_trajectory::RobotTrajectory&, std::string&, double, double)’
+   68 |     EXPECT_FALSE(manipulation::validateExternalTrajectory(scene,value,error,.1,.1,factor));
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/gripper_planning_only/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp:11:13: note: declared here
+   11 | inline bool validateExternalTrajectory(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /opt/ros/humble/src/gtest_vendor/include/gtest/gtest.h:62,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp: In member function ‘virtual void TrajectoryTimeScaling_RejectsScaledDurationThatCannotBeRepresented_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:75:56: error: too many arguments to function ‘bool astribot_s1_manipulation::validateExternalTrajectory(const PlanningSceneConstPtr&, robot_trajectory::RobotTrajectory&, std::string&, double, double)’
+   75 |   EXPECT_FALSE(manipulation::validateExternalTrajectory(
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+   76 |     scene,value,error,.1,.1,std::numeric_limits<double>::max()));
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/gripper_planning_only/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp:11:13: note: declared here
+   11 | inline bool validateExternalTrajectory(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /opt/ros/humble/src/gtest_vendor/include/gtest/gtest.h:62,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp: In member function ‘virtual void TrajectoryTimeScaling_GeometryRevalidationNeverRetimesOrRescalesTheBoundMessage_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:82:55: error: too many arguments to function ‘bool astribot_s1_manipulation::validateExternalTrajectory(const PlanningSceneConstPtr&, robot_trajectory::RobotTrajectory&, std::string&, double, double)’
+   82 |   ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,scaled,error,.1,.1,2.5))<<error;
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/gripper_planning_only/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp:11:13: note: declared here
+   11 | inline bool validateExternalTrajectory(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /opt/ros/humble/src/gtest_vendor/include/gtest/gtest.h:62,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:84:29: error: ‘validateExternalTrajectoryGeometry’ is not a member of ‘manipulation’; did you mean ‘validateExternalTrajectory’?
+   84 |   EXPECT_TRUE(manipulation::validateExternalTrajectoryGeometry(scene,scaled,error))<<error;
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:85:29: error: ‘validateExternalTrajectoryGeometry’ is not a member of ‘manipulation’; did you mean ‘validateExternalTrajectory’?
+   85 |   EXPECT_TRUE(manipulation::validateExternalTrajectoryGeometry(scene,scaled,error))<<error;
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp: In member function ‘virtual void TrajectoryTimeScaling_InstalledJtcQuinticSplineHasTheSamePositionCurveAtScaledTime_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:92:55: error: too many arguments to function ‘bool astribot_s1_manipulation::validateExternalTrajectory(const PlanningSceneConstPtr&, robot_trajectory::RobotTrajectory&, std::string&, double, double)’
+   92 |   ASSERT_TRUE(manipulation::validateExternalTrajectory(scene,scaled,error,.1,.1,2.5))<<error;
+      |               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/test/trajectory_time_scaling_test.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/gripper_planning_only/install/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp:11:13: note: declared here
+   11 | inline bool validateExternalTrajectory(
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~
+gmake[3]: *** [CMakeFiles/trajectory_time_scaling_test.dir/build.make:76：CMakeFiles/trajectory_time_scaling_test.dir/test/trajectory_time_scaling_test.cpp.o] 错误 1
+gmake[2]: *** [CMakeFiles/Makefile2:270：CMakeFiles/trajectory_time_scaling_test.dir/all] 错误 2
+gmake[1]: *** [CMakeFiles/Makefile2:277：CMakeFiles/trajectory_time_scaling_test.dir/rule] 错误 2
+gmake: *** [Makefile:244：trajectory_time_scaling_test] 错误 2

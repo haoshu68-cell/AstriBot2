@@ -227,22 +227,3 @@ TEST_F(PayloadTransition, RejectsUnchangedUnknownAttachmentLink) {
   request.scene.robot_state.attached_collision_objects.push_back(other);
   expectRejected("ATTACHED_LINK_UNKNOWN");
 }
-
-TEST_F(PayloadTransition, RevalidationPreservesScaledOwnerAndCacheMessages) {
-  std::vector<moveit_msgs::msg::RobotTrajectory> owner;
-  for(size_t i=4;i<stages.size();++i) {
-    std::string error;
-    ASSERT_TRUE(astribot_s1_manipulation::validateExternalTrajectory(
-      stages[i].scene,*stages[i].trajectory,error,.1,.1,2.5))<<error;
-    moveit_msgs::msg::RobotTrajectory message;stages[i].trajectory->getRobotTrajectoryMsg(message);
-    owner.push_back(message);
-  }
-  const auto confirmed=validate();
-  binding.transaction_id=request.transaction_id;binding.confirmed_scene=request.scene;
-  stages=confirmed;const auto repeated=validate();
-  for(size_t i=4;i<stages.size();++i) {
-    moveit_msgs::msg::RobotTrajectory first,second;
-    confirmed[i].trajectory->getRobotTrajectoryMsg(first);repeated[i].trajectory->getRobotTrajectoryMsg(second);
-    EXPECT_EQ(owner[i-4],first);EXPECT_EQ(owner[i-4],second);
-  }
-}

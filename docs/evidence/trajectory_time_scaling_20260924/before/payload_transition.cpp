@@ -72,7 +72,7 @@ std::vector<CachedStage> revalidatePayloadTransition(
   const std::string& cached_context, const PayloadTransitionBinding& binding,
   const std::vector<CachedStage>& stages,
   std::chrono::steady_clock::time_point cached_at,
-  double /*velocity_scaling*/, double /*acceleration_scaling*/) {
+  double velocity_scaling, double acceleration_scaling) {
   if(request.context_id.empty() || request.scene.is_diff || request.scene.robot_state.is_diff)
     throw std::runtime_error("MTC_PAYLOAD_FULL_SCENE_REQUIRED");
   if(request.context_id!=cached_context || stages.empty())throw std::runtime_error("MTC_PAYLOAD_CONTEXT_UNKNOWN");
@@ -153,10 +153,10 @@ std::vector<CachedStage> revalidatePayloadTransition(
           actual->getTouchLinks(),actual->getAttachedLinkName(),actual->getDetachPosture(),actual->getSubframes());
         state.update();
       }
-      // Geometry revalidation must use the owner's original timed path. The
-      // legacy scaling arguments remain ABI-compatible but do not retime it.
-      std::string reason;
-      if(!astribot_s1_manipulation::validateExternalTrajectoryGeometry(scene,*trajectory,reason))
+      // The validator retimes its argument. Check a deep copy so the path and
+      // timing already returned to the owner remain byte-for-byte unchanged.
+      robot_trajectory::RobotTrajectory checked(*trajectory,true);std::string reason;
+      if(!astribot_s1_manipulation::validateExternalTrajectory(scene,checked,reason,velocity_scaling,acceleration_scaling))
         throw std::runtime_error("MTC_PAYLOAD_REVALIDATION:"+stage.id+":"+reason);
       updated[index].trajectory=std::move(trajectory);
     }
