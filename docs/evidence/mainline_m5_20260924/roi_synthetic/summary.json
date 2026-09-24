@@ -1,0 +1,160 @@
+{
+  "scope": "Synthetic numerical evidence only, no Gazebo or actual image capture",
+  "cases": {
+    "front": {
+      "geometry_status": "PROJECTED",
+      "roi": {
+        "pixels": 36,
+        "valid_depth_pixels": 36,
+        "invalid_depth_pixels": 0,
+        "valid_depth_fraction": 1.0,
+        "expected_in_depth_range_pixels": 36
+      },
+      "surface_comparison": {
+        "status": "MEASURED_WITH_EXPLICIT_TOLERANCE",
+        "residual_m": {
+          "samples": 36,
+          "percentile_method": "linear",
+          "min": 0.0,
+          "max": 0.0,
+          "p05": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "absolute_p95": 0.0
+        },
+        "sign_convention": "observed optical Z minus expected first box surface Z",
+        "interpretation": "Closer depth is occlusion evidence conditional on correct pose/time/calibration; matching depth alone does not prove object identity",
+        "tolerance_m": 0.005,
+        "tolerance_source": "Synthetic 5mm comparison sensitivity only; not a project acceptance threshold",
+        "consistent_pixels": 36,
+        "consistent_fraction_of_roi": 1.0,
+        "closer_pixels": 0,
+        "closer_fraction_of_roi": 0.0,
+        "farther_pixels": 0,
+        "farther_fraction_of_roi": 0.0,
+        "unknown_pixels": 0,
+        "unknown_fraction_of_roi": 0.0
+      },
+      "coverage_acceptance": "UNKNOWN_THRESHOLD"
+    },
+    "half_occluded": {
+      "geometry_status": "PROJECTED",
+      "roi": {
+        "pixels": 36,
+        "valid_depth_pixels": 36,
+        "invalid_depth_pixels": 0,
+        "valid_depth_fraction": 1.0,
+        "expected_in_depth_range_pixels": 36
+      },
+      "surface_comparison": {
+        "status": "MEASURED_WITH_EXPLICIT_TOLERANCE",
+        "residual_m": {
+          "samples": 36,
+          "percentile_method": "linear",
+          "min": -0.30000001192092896,
+          "max": 0.0,
+          "p05": -0.30000001192092896,
+          "p50": -0.15000000596046448,
+          "p95": 0.0,
+          "absolute_p95": 0.30000001192092896
+        },
+        "sign_convention": "observed optical Z minus expected first box surface Z",
+        "interpretation": "Closer depth is occlusion evidence conditional on correct pose/time/calibration; matching depth alone does not prove object identity",
+        "tolerance_m": 0.005,
+        "tolerance_source": "Synthetic 5mm comparison sensitivity only; not a project acceptance threshold",
+        "consistent_pixels": 18,
+        "consistent_fraction_of_roi": 0.5,
+        "closer_pixels": 18,
+        "closer_fraction_of_roi": 0.5,
+        "farther_pixels": 0,
+        "farther_fraction_of_roi": 0.0,
+        "unknown_pixels": 0,
+        "unknown_fraction_of_roi": 0.0
+      },
+      "coverage_acceptance": "UNKNOWN_THRESHOLD"
+    },
+    "one_third_invalid": {
+      "geometry_status": "PROJECTED",
+      "roi": {
+        "pixels": 36,
+        "valid_depth_pixels": 24,
+        "invalid_depth_pixels": 12,
+        "valid_depth_fraction": 0.6666666666666666,
+        "expected_in_depth_range_pixels": 36
+      },
+      "surface_comparison": {
+        "status": "MEASURED_WITH_EXPLICIT_TOLERANCE",
+        "residual_m": {
+          "samples": 24,
+          "percentile_method": "linear",
+          "min": 0.0,
+          "max": 0.0,
+          "p05": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "absolute_p95": 0.0
+        },
+        "sign_convention": "observed optical Z minus expected first box surface Z",
+        "interpretation": "Closer depth is occlusion evidence conditional on correct pose/time/calibration; matching depth alone does not prove object identity",
+        "tolerance_m": 0.005,
+        "tolerance_source": "Synthetic 5mm comparison sensitivity only; not a project acceptance threshold",
+        "consistent_pixels": 24,
+        "consistent_fraction_of_roi": 0.6666666666666666,
+        "closer_pixels": 0,
+        "closer_fraction_of_roi": 0.0,
+        "farther_pixels": 0,
+        "farther_fraction_of_roi": 0.0,
+        "unknown_pixels": 12,
+        "unknown_fraction_of_roi": 0.3333333333333333
+      },
+      "coverage_acceptance": "UNKNOWN_THRESHOLD"
+    },
+    "unknown_tolerance": {
+      "geometry_status": "PROJECTED",
+      "roi": {
+        "pixels": 36,
+        "valid_depth_pixels": 36,
+        "invalid_depth_pixels": 0,
+        "valid_depth_fraction": 1.0,
+        "expected_in_depth_range_pixels": 36
+      },
+      "surface_comparison": {
+        "status": "UNKNOWN_TOLERANCE",
+        "residual_m": {
+          "samples": 36,
+          "percentile_method": "linear",
+          "min": 0.0,
+          "max": 0.0,
+          "p05": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "absolute_p95": 0.0
+        },
+        "sign_convention": "observed optical Z minus expected first box surface Z",
+        "interpretation": "Closer depth is occlusion evidence conditional on correct pose/time/calibration; matching depth alone does not prove object identity"
+      },
+      "coverage_acceptance": "UNKNOWN_THRESHOLD"
+    },
+    "manual_only": {
+      "geometry_status": "NO_BOX_TRUTH",
+      "roi": {
+        "pixels": 36,
+        "valid_depth_pixels": 36,
+        "invalid_depth_pixels": 0,
+        "valid_depth_fraction": 1.0,
+        "annotation": {
+          "source": "synthetic_fixture",
+          "annotation_id": "independent_rect_fixture",
+          "object_id": "synthetic_box_06_06_12",
+          "capture_stamp_ns": 1000000000,
+          "clock_epoch": "synthetic_clock",
+          "frame_id": "synthetic_optical"
+        }
+      },
+      "surface_comparison": {
+        "status": "NO_BOX_TRUTH"
+      },
+      "coverage_acceptance": "UNKNOWN_THRESHOLD"
+    }
+  }
+}

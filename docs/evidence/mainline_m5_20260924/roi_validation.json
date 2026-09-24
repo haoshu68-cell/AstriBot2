@@ -1,0 +1,29 @@
+{
+  "scope": "Offline synthetic verification only; no actual ROI/motion coverage acceptance",
+  "recorded_at": "2026-09-24T10:22:39.957939+08:00",
+  "command": "python3 -m unittest discover -s tools/vision -p 'test_score_box_roi.py' -v",
+  "tests": 18,
+  "passed": 18,
+  "exit_code": 0,
+  "red_before_implementation": {
+    "tests": 15,
+    "outcome": "FAILED",
+    "errors": 23,
+    "log": "roi_red_test.log"
+  },
+  "cli_synthetic_cases": 5,
+  "synthetic_summary": "roi_synthetic/summary.json",
+  "ast_files": 2,
+  "independent_review": "No blocking geometry or evidence defects identified; separate face-intersection and rigid-coordinate consistency review",
+  "runtime_operations": false,
+  "actual_snapshot_scored": false,
+  "coverage_acceptance": "UNKNOWN_THRESHOLD",
+  "unknown_budgets": [
+    "depth residual tolerance for actual scene",
+    "per-role ROI visible coverage",
+    "full-box 3D surface coverage"
+  ],
+  "next_input": "Same-capture RGB/depth/CameraInfo + numeric calibration revision + TF into actual pose reference + independent actual box pose/size; or independent visible manual annotation for 2D only",
+  "static03_review": "STATIC03_REVIEW.md",
+  "static03_sampling_status": "FAIL; preserved under nonexclusive build load"
+}

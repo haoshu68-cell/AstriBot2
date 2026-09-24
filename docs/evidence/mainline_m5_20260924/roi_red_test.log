@@ -1,0 +1,248 @@
+test_behind_surface_is_distinct_from_occluder (test_score_box_roi.BoxRoiTest) ... ERROR
+test_box_behind_camera_has_no_projected_roi (test_score_box_roi.BoxRoiTest) ... ERROR
+test_front_face_depth_is_axial_z_not_euclidean_range (test_score_box_roi.BoxRoiTest) ... ERROR
+test_independent_visible_mask_can_score_2d_without_box_truth (test_score_box_roi.BoxRoiTest) ... ERROR
+test_invalid_and_out_of_range_depth_remain_unknown (test_score_box_roi.BoxRoiTest) ... ERROR
+test_missing_depth_stays_in_denominator (test_score_box_roi.BoxRoiTest) ... ERROR
+test_missing_or_misbound_annotation_cannot_supply_roi (test_score_box_roi.BoxRoiTest) ... ERROR
+test_mixed_time_epoch_frame_or_identity_fails (test_score_box_roi.BoxRoiTest) ... test_non_rigid_truth_is_rejected (test_score_box_roi.BoxRoiTest) ... ERROR
+test_occluder_valid_depth_is_not_target_surface_support (test_score_box_roi.BoxRoiTest) ... ERROR
+test_outside_fov_is_not_zero_error_or_full_coverage (test_score_box_roi.BoxRoiTest) ... ERROR
+test_rotated_box_uses_object_axes_and_first_visible_face (test_score_box_roi.BoxRoiTest) ... ERROR
+test_unknown_tolerance_still_reports_depth_and_residuals (test_score_box_roi.BoxRoiTest) ... ERROR
+test_world_transform_direction_is_not_inverted (test_score_box_roi.BoxRoiTest) ... ERROR
+test_wrong_depth_shape_distortion_and_units_are_rejected (test_score_box_roi.BoxRoiTest) ... 
+======================================================================
+ERROR: test_behind_surface_is_distinct_from_occluder (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 62, in test_behind_surface_is_distinct_from_occluder
+    report, _ = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_box_behind_camera_has_no_projected_roi (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 85, in test_box_behind_camera_has_no_projected_roi
+    report, _ = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_front_face_depth_is_axial_z_not_euclidean_range (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 38, in test_front_face_depth_is_axial_z_not_euclidean_range
+    report, maps = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_independent_visible_mask_can_score_2d_without_box_truth (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 146, in test_independent_visible_mask_can_score_2d_without_box_truth
+    report, _ = score_sample(self.sample, self.depth, mask)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_invalid_and_out_of_range_depth_remain_unknown (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 133, in test_invalid_and_out_of_range_depth_remain_unknown
+    report, _ = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_missing_depth_stays_in_denominator (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 48, in test_missing_depth_stays_in_denominator
+    report, _ = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_missing_or_misbound_annotation_cannot_supply_roi (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 155, in test_missing_or_misbound_annotation_cannot_supply_roi
+    score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_mixed_time_epoch_frame_or_identity_fails (test_score_box_roi.BoxRoiTest) (section='box_truth', key='capture_stamp_ns')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 115, in test_mixed_time_epoch_frame_or_identity_fails
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_mixed_time_epoch_frame_or_identity_fails (test_score_box_roi.BoxRoiTest) (section='box_truth', key='clock_epoch')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 115, in test_mixed_time_epoch_frame_or_identity_fails
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_mixed_time_epoch_frame_or_identity_fails (test_score_box_roi.BoxRoiTest) (section='box_truth', key='frame_id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 115, in test_mixed_time_epoch_frame_or_identity_fails
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_mixed_time_epoch_frame_or_identity_fails (test_score_box_roi.BoxRoiTest) (section='box_truth', key='object_id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 115, in test_mixed_time_epoch_frame_or_identity_fails
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_mixed_time_epoch_frame_or_identity_fails (test_score_box_roi.BoxRoiTest) (section='world_from_camera', key='child_frame_id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 115, in test_mixed_time_epoch_frame_or_identity_fails
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_mixed_time_epoch_frame_or_identity_fails (test_score_box_roi.BoxRoiTest) (section='world_from_camera', key='calibration_revision')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 115, in test_mixed_time_epoch_frame_or_identity_fails
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_non_rigid_truth_is_rejected (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 128, in test_non_rigid_truth_is_rejected
+    score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_occluder_valid_depth_is_not_target_surface_support (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 55, in test_occluder_valid_depth_is_not_target_surface_support
+    report, _ = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_outside_fov_is_not_zero_error_or_full_coverage (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 77, in test_outside_fov_is_not_zero_error_or_full_coverage
+    report, _ = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_rotated_box_uses_object_axes_and_first_visible_face (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 94, in test_rotated_box_uses_object_axes_and_first_visible_face
+    _, maps = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_unknown_tolerance_still_reports_depth_and_residuals (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 70, in test_unknown_tolerance_still_reports_depth_and_residuals
+    report, _ = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_world_transform_direction_is_not_inverted (test_score_box_roi.BoxRoiTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 101, in test_world_transform_direction_is_not_inverted
+    _, maps = score_sample(self.sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_wrong_depth_shape_distortion_and_units_are_rejected (test_score_box_roi.BoxRoiTest) (changes={'D': [0.1]})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 123, in test_wrong_depth_shape_distortion_and_units_are_rejected
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_wrong_depth_shape_distortion_and_units_are_rejected (test_score_box_roi.BoxRoiTest) (changes={'depth_convention': 'range_m'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 123, in test_wrong_depth_shape_distortion_and_units_are_rejected
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_wrong_depth_shape_distortion_and_units_are_rejected (test_score_box_roi.BoxRoiTest) (changes={'width': 20})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 123, in test_wrong_depth_shape_distortion_and_units_are_rejected
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+======================================================================
+ERROR: test_wrong_depth_shape_distortion_and_units_are_rejected (test_score_box_roi.BoxRoiTest) (changes={'stamps_ns': {'rgb': 99, 'depth': 100, 'info': 100}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_score_box_roi.py", line 123, in test_wrong_depth_shape_distortion_and_units_are_rejected
+    score_sample(sample, self.depth)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/score_box_roi.py", line 6, in score_sample
+    raise NotImplementedError('ROI scorer is not implemented')
+NotImplementedError: ROI scorer is not implemented
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.002s
+
+FAILED (errors=23)

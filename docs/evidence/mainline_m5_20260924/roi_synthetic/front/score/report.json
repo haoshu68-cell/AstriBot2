@@ -1,0 +1,123 @@
+{
+  "session_id": "SYNTHETIC_ONLY",
+  "task_id": "box_roi_formula",
+  "phase": "synthetic_static",
+  "object_id": "synthetic_box_06_06_12",
+  "camera_id": "synthetic_pinhole",
+  "source_epoch": "synthetic_source",
+  "clock_epoch": "synthetic_clock",
+  "schema": "astribot.m5.box_roi.score/1",
+  "evaluation_only": true,
+  "capture_stamp_ns": 1000000000,
+  "calibration_revision": 1,
+  "depth_policy": {
+    "min_m": 0.08,
+    "max_m": 5.0,
+    "source": "astribot_s1_transport/rgbd.py project_component depth predicate; no coverage acceptance implied"
+  },
+  "coverage_acceptance": "UNKNOWN_THRESHOLD",
+  "temporal_coverage": "SINGLE_SNAPSHOT_ONLY",
+  "full_box_surface_coverage": "NOT_MEASURED",
+  "geometry_status": "PROJECTED",
+  "surface_comparison": {
+    "status": "MEASURED_WITH_EXPLICIT_TOLERANCE",
+    "residual_m": {
+      "samples": 36,
+      "percentile_method": "linear",
+      "min": 0.0,
+      "max": 0.0,
+      "p05": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "absolute_p95": 0.0
+    },
+    "sign_convention": "observed optical Z minus expected first box surface Z",
+    "interpretation": "Closer depth is occlusion evidence conditional on correct pose/time/calibration; matching depth alone does not prove object identity",
+    "tolerance_m": 0.005,
+    "tolerance_source": "Synthetic 5mm comparison sensitivity only; not a project acceptance threshold",
+    "consistent_pixels": 36,
+    "consistent_fraction_of_roi": 1.0,
+    "closer_pixels": 0,
+    "closer_fraction_of_roi": 0.0,
+    "farther_pixels": 0,
+    "farther_fraction_of_roi": 0.0,
+    "unknown_pixels": 0,
+    "unknown_fraction_of_roi": 0.0
+  },
+  "projected_roi": {
+    "pixels": 36,
+    "valid_depth_pixels": 36,
+    "invalid_depth_pixels": 0,
+    "valid_depth_fraction": 1.0,
+    "expected_in_depth_range_pixels": 36
+  },
+  "faces": {
+    "x-": {
+      "pixels": 0,
+      "valid_depth_pixels": 0,
+      "invalid_depth_pixels": 0,
+      "valid_depth_fraction": null,
+      "consistent_pixels": 0,
+      "closer_pixels": 0,
+      "farther_pixels": 0,
+      "unknown_pixels": 0
+    },
+    "x+": {
+      "pixels": 0,
+      "valid_depth_pixels": 0,
+      "invalid_depth_pixels": 0,
+      "valid_depth_fraction": null,
+      "consistent_pixels": 0,
+      "closer_pixels": 0,
+      "farther_pixels": 0,
+      "unknown_pixels": 0
+    },
+    "y-": {
+      "pixels": 0,
+      "valid_depth_pixels": 0,
+      "invalid_depth_pixels": 0,
+      "valid_depth_fraction": null,
+      "consistent_pixels": 0,
+      "closer_pixels": 0,
+      "farther_pixels": 0,
+      "unknown_pixels": 0
+    },
+    "y+": {
+      "pixels": 0,
+      "valid_depth_pixels": 0,
+      "invalid_depth_pixels": 0,
+      "valid_depth_fraction": null,
+      "consistent_pixels": 0,
+      "closer_pixels": 0,
+      "farther_pixels": 0,
+      "unknown_pixels": 0
+    },
+    "z-": {
+      "pixels": 36,
+      "valid_depth_pixels": 36,
+      "invalid_depth_pixels": 0,
+      "valid_depth_fraction": 1.0,
+      "consistent_pixels": 36,
+      "closer_pixels": 0,
+      "farther_pixels": 0,
+      "unknown_pixels": 0
+    },
+    "z+": {
+      "pixels": 0,
+      "valid_depth_pixels": 0,
+      "invalid_depth_pixels": 0,
+      "valid_depth_fraction": null,
+      "consistent_pixels": 0,
+      "closer_pixels": 0,
+      "farther_pixels": 0,
+      "unknown_pixels": 0
+    }
+  },
+  "face_scope": "First-hit box faces sampled by in-image pixel rays, not full 3D surface area coverage",
+  "input_sha256": {
+    "rgb": "97afd24e849459b15a4e3a6d7f340b6a2f513f328bafdd6414a8adca0d95bc99",
+    "depth": "e66e6412b335655c1f4ba45f435bfe876e2731f1fbafb7e8a7f7a850dc174a23"
+  },
+  "sample_sha256": "85b1302633208a916b3b488b9645e899b71a5706e452240936020b1e07dbda43",
+  "scorer_sha256": "becd435f2cce323468f9791ebf7af102c51578e39139daa09bba35f333dc9b60"
+}

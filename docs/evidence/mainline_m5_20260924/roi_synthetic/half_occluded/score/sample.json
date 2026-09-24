@@ -1,0 +1,117 @@
+{
+  "schema": "astribot.m5.box_roi/1",
+  "evaluation_only": true,
+  "session_id": "SYNTHETIC_ONLY",
+  "task_id": "box_roi_formula",
+  "phase": "synthetic_static",
+  "object_id": "synthetic_box_06_06_12",
+  "camera_id": "synthetic_pinhole",
+  "source_epoch": "synthetic_source",
+  "clock_epoch": "synthetic_clock",
+  "calibration_revision": 1,
+  "camera": {
+    "width": 20,
+    "height": 20,
+    "frame_id": "synthetic_optical",
+    "K": [
+      100,
+      0,
+      9.5,
+      0,
+      100,
+      9.5,
+      0,
+      0,
+      1
+    ],
+    "D": [],
+    "depth_convention": "optical_z_m",
+    "stamps_ns": {
+      "rgb": 1000000000,
+      "depth": 1000000000,
+      "info": 1000000000
+    }
+  },
+  "world_from_camera": {
+    "matrix": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "frame_id": "synthetic_world",
+    "child_frame_id": "synthetic_optical",
+    "capture_stamp_ns": 1000000000,
+    "clock_epoch": "synthetic_clock",
+    "calibration_revision": 1
+  },
+  "box_truth": {
+    "matrix": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        1.06
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "frame_id": "synthetic_world",
+    "object_id": "synthetic_box_06_06_12",
+    "capture_stamp_ns": 1000000000,
+    "clock_epoch": "synthetic_clock",
+    "size_m": [
+      0.06,
+      0.06,
+      0.12
+    ],
+    "source": "synthetic_independent_fixture"
+  },
+  "depth_policy": {
+    "min_m": 0.08,
+    "max_m": 5.0,
+    "source": "astribot_s1_transport/rgbd.py project_component depth predicate; no coverage acceptance implied"
+  },
+  "surface_tolerance_m": 0.005,
+  "surface_tolerance_source": "Synthetic 5mm comparison sensitivity only; not a project acceptance threshold",
+  "files": {
+    "rgb": "rgb.npy",
+    "depth": "depth.npy"
+  }
+}
