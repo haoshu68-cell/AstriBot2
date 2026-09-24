@@ -1,0 +1,49 @@
+{
+  "schema": "astribot.m3.probe_cli_checks/1",
+  "scope": "actual binary config failures before rclcpp::init; no ROS/GPU",
+  "binary_sha256": "44680b9a82cb6110e5ff5ca6d3a5794491703bf6683f424de87eebce720c7cb9",
+  "checks": [
+    {
+      "case": "no_config",
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "Expected OWNER_CONFIG.json; see --help\n",
+      "expected_error": "Expected OWNER_CONFIG.json",
+      "pass": true
+    },
+    {
+      "case": "multiple_instances",
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "OWNER_SINGLE_INSTANCE_ASSERTION_REQUIRED\n",
+      "expected_error": "OWNER_SINGLE_INSTANCE_ASSERTION_REQUIRED",
+      "pass": true
+    },
+    {
+      "case": "zero_registration",
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "OWNER_REGISTRATION_SEQUENCE_REQUIRED\n",
+      "expected_error": "OWNER_REGISTRATION_SEQUENCE_REQUIRED",
+      "pass": true
+    },
+    {
+      "case": "missing_recording",
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "OWNER_INPUT_RECORDING_DIRECTORY_REQUIRED\n",
+      "expected_error": "OWNER_INPUT_RECORDING_DIRECTORY_REQUIRED",
+      "pass": true
+    },
+    {
+      "case": "existing_output",
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "OUTPUT_MUST_BE_NEW_DIRECTORY\n",
+      "expected_error": "OUTPUT_MUST_BE_NEW_DIRECTORY",
+      "pass": true
+    }
+  ],
+  "passed": 5,
+  "failed": 0
+}

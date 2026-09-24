@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.16)
+project(m3_source_probe LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(ament_cmake REQUIRED)
+find_package(astribot_s1_manipulation_perception REQUIRED)
+find_package(astribot_s1_transport_native REQUIRED)
+find_package(astribot_navigation_msgs REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(urdf REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(OpenSSL REQUIRED)
+get_filename_component(REPOSITORY "${CMAKE_CURRENT_SOURCE_DIR}/../../.." ABSOLUTE)
+add_executable(m3_source_probe probe.cpp)
+target_compile_options(m3_source_probe PRIVATE -Wall -Wextra -Wpedantic)
+# Reuse the existing owned-Goal helper; record this exact private header hash.
+target_include_directories(m3_source_probe PRIVATE
+  "${REPOSITORY}/ws_robot/src/astribot_s1_manipulation_perception/src")
+target_link_libraries(m3_source_probe
+  astribot_s1_manipulation_perception::single_box_request_source
+  astribot_s1_transport_native::trajectory_scene_binding
+  nlohmann_json::nlohmann_json OpenSSL::Crypto)
+ament_target_dependencies(m3_source_probe rclcpp rclcpp_action
+  astribot_navigation_msgs moveit_msgs tf2_ros tf2_geometry_msgs urdf)

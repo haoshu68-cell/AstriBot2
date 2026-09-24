@@ -1,0 +1,134 @@
+{
+  "checks": 8,
+  "failed": 0,
+  "passed": 8,
+  "report": {
+    "abort": {
+      "accepted": true,
+      "cancel_sent": false,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152143598,
+      "goal_uuid": "0000000000000000000000000000002a",
+      "result_observed_ros_ns": 10000000000,
+      "result_observed_steady_ns": 80637152146372,
+      "sent": true,
+      "state": "RESULT_TERMINAL",
+      "status": 2,
+      "terminal_confirmed": true,
+      "terminal_observed_ros_ns": 10000000000,
+      "terminal_observed_steady_ns": 80637152146372
+    },
+    "cancel_exception": {
+      "accepted": true,
+      "cancel_error": "synthetic_cancel_error",
+      "cancel_sent": false,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152199147,
+      "goal_uuid": "0000000000000000000000000000002a",
+      "sent": true,
+      "state": "PENDING_TERMINAL",
+      "terminal_confirmed": false
+    },
+    "cancel_peer": {
+      "accepted": true,
+      "cancel_sent": true,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152208710,
+      "goal_uuid": "0000000000000000000000000000002a",
+      "sent": true,
+      "state": "PENDING_TERMINAL",
+      "terminal_confirmed": false
+    },
+    "exception": {
+      "accepted": true,
+      "cancel_sent": true,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152155177,
+      "goal_uuid": "0000000000000000000000000000002a",
+      "observe_error": "synthetic_result_error",
+      "result_observed_ros_ns": 10000000000,
+      "result_observed_steady_ns": 80637152157894,
+      "sent": true,
+      "state": "OBSERVATION_ERROR",
+      "terminal_confirmed": false
+    },
+    "not_run": {
+      "cancel_sent": false,
+      "sent": false,
+      "state": "NOT_RUN",
+      "terminal_confirmed": true
+    },
+    "peer": {
+      "accepted": true,
+      "cancel_sent": true,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152188818,
+      "goal_uuid": "0000000000000000000000000000002a",
+      "sent": true,
+      "state": "PENDING_TERMINAL",
+      "terminal_confirmed": false
+    },
+    "pending": {
+      "cancel_sent": false,
+      "sent": true,
+      "state": "SENT_ACCEPTANCE_PENDING",
+      "terminal_confirmed": false
+    },
+    "race": {
+      "accepted": true,
+      "cancel_sent": false,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152073552,
+      "goal_uuid": "0000000000000000000000000000002a",
+      "result_observed_ros_ns": 10000000000,
+      "result_observed_steady_ns": 80637152105315,
+      "sent": true,
+      "state": "RESULT_TERMINAL",
+      "status": 1,
+      "terminal_confirmed": true,
+      "terminal_observed_ros_ns": 10000000000,
+      "terminal_observed_steady_ns": 80637152105315
+    },
+    "reject": {
+      "accepted": false,
+      "cancel_sent": false,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152128929,
+      "sent": true,
+      "state": "REJECTED",
+      "terminal_confirmed": true
+    },
+    "unknown": {
+      "accepted": true,
+      "cancel_sent": false,
+      "goal_response_observed_ros_ns": 10000000000,
+      "goal_response_observed_steady_ns": 80637152134438,
+      "goal_uuid": "0000000000000000000000000000002a",
+      "result_observed_ros_ns": 10000000000,
+      "result_observed_steady_ns": 80637152138245,
+      "sent": true,
+      "state": "RESULT_UNKNOWN",
+      "status": 0,
+      "terminal_confirmed": false
+    }
+  },
+  "scope": "exact extracted probe lambdas; synthetic interfaces; no ROS/GPU",
+  "source_sha256": "46bb78d7ba8f2876f0b1dee583a261aa96d1568f7385bc48614ca26fb9949c34",
+  "harness_sha256": "d09e17606dd0265036a0edc306811136c2bab4c290ab17aa6556cca5d8ff8e8c",
+  "binary_sha256": "b388603fc66f292fe326604008012b7b2605981071fd662dbe17c57c0a42bc33",
+  "compile_command": [
+    "g++",
+    "-std=c++17",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-O0",
+    "-g",
+    "-fsanitize=undefined",
+    "-fno-sanitize-recover=all",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m3_source_model_probe_20260924/observation_harness/probe_observation.cpp",
+    "-o",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m3_source_model_probe_20260924/observation_harness/probe_observation"
+  ],
+  "stderr": ""
+}
