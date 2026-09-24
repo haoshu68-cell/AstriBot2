@@ -1,0 +1,39 @@
+Running main() from ./googletest/src/gtest_main.cc
+[==========] Running 8 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 8 tests from PayloadCommand
+[ RUN      ] PayloadCommand.ContinuesActualPluginCounterAndRequiresAppliedInventory
+unknown file: Failure
+C++ exception with description "PAYLOAD_EXECUTION_IDENTITY_INVALID" thrown in the test body.
+[  FAILED  ] PayloadCommand.ContinuesActualPluginCounterAndRequiresAppliedInventory (0 ms)
+[ RUN      ] PayloadCommand.FrozenClockCannotExtendRemainingSourceLease
+ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:33: Failure
+Expected: command.applied(value,2000000000,1300000000,2100000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+[  FAILED  ] PayloadCommand.FrozenClockCannotExtendRemainingSourceLease (0 ms)
+[ RUN      ] PayloadCommand.DuplicateCaptureCannotRenewItsOriginalDeadline
+ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:40: Failure
+Expected: command.applied(value,2300000000,1100000000,2300000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+[  FAILED  ] PayloadCommand.DuplicateCaptureCannotRenewItsOriginalDeadline (0 ms)
+[ RUN      ] PayloadCommand.SourceAndPluginIdentityAreBoundAcrossThePhysicalCommand
+[       OK ] PayloadCommand.SourceAndPluginIdentityAreBoundAcrossThePhysicalCommand (0 ms)
+[ RUN      ] PayloadCommand.CannotOverridePendingForeignOrExhaustedCommands
+[       OK ] PayloadCommand.CannotOverridePendingForeignOrExhaustedCommands (0 ms)
+[ RUN      ] PayloadCommand.FreshSourceAndReceiptAndNewRevisionAreRequired
+[       OK ] PayloadCommand.FreshSourceAndReceiptAndNewRevisionAreRequired (0 ms)
+[ RUN      ] PayloadCommand.DetachDoesNotClaimTheWholeInventoryIsEmpty
+[       OK ] PayloadCommand.DetachDoesNotClaimTheWholeInventoryIsEmpty (0 ms)
+[ RUN      ] PayloadCommand.RejectsMalformedExternalCounterAndDuplicateIdentity
+[       OK ] PayloadCommand.RejectsMalformedExternalCounterAndDuplicateIdentity (0 ms)
+[----------] 8 tests from PayloadCommand (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 8 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 5 tests.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] PayloadCommand.ContinuesActualPluginCounterAndRequiresAppliedInventory
+[  FAILED  ] PayloadCommand.FrozenClockCannotExtendRemainingSourceLease
+[  FAILED  ] PayloadCommand.DuplicateCaptureCannotRenewItsOriginalDeadline
+
+ 3 FAILED TESTS

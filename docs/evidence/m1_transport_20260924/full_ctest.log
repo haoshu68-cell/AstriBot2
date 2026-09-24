@@ -1,0 +1,42 @@
+Internal ctest changing into directory: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build
+Test project /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build
+    Start 1: payload_command_test
+1/7 Test #1: payload_command_test .............***Failed    0.04 sec
+-- run_test.py: invoking following command in '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build':
+ - /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/payload_command_test --gtest_output=xml:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/payload_command_test.gtest.xml
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/payload_command_test: symbol lookup error: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/payload_command_test: undefined symbol: _ZN8astribot9transport14PayloadCommandC1ENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEbRKN8nlohmann10basic_jsonISt3mapSt6vectorS7_blmdSaNS8_14adl_serializerESB_IhSaIhEEEENS1_7ReceiptEll
+-- run_test.py: return code 127
+-- run_test.py: generate result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/payload_command_test.gtest.xml' with failed test
+-- run_test.py: verify result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/payload_command_test.gtest.xml'
+
+    Start 2: mtc_plan_test
+2/7 Test #2: mtc_plan_test ....................***Failed    0.05 sec
+-- run_test.py: invoking following command in '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build':
+ - /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/mtc_plan_test --gtest_output=xml:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/mtc_plan_test.gtest.xml
+/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/mtc_plan_test: symbol lookup error: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/mtc_plan_test: undefined symbol: _ZN8astribot9transport7MtcPlan11acknowledgeEv
+-- run_test.py: return code 127
+-- run_test.py: generate result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/mtc_plan_test.gtest.xml' with failed test
+-- run_test.py: verify result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/test_results/astribot_s1_transport_native/mtc_plan_test.gtest.xml'
+
+    Start 3: scene_binding_test
+3/7 Test #3: scene_binding_test ...............   Passed    0.05 sec
+    Start 4: resource_authority_test
+4/7 Test #4: resource_authority_test ..........   Passed    0.05 sec
+    Start 5: child_actions_test
+5/7 Test #5: child_actions_test ...............   Passed    0.05 sec
+    Start 6: resource_journal_test
+6/7 Test #6: resource_journal_test ............   Passed    0.06 sec
+    Start 7: arm_hold_test
+7/7 Test #7: arm_hold_test ....................   Passed    0.04 sec
+
+71% tests passed, 2 tests failed out of 7
+
+Label Time Summary:
+gtest    =   0.34 sec*proc (7 tests)
+
+Total Test time (real) =   0.35 sec
+
+The following tests FAILED:
+	  1 - payload_command_test (Failed)
+	  2 - mtc_plan_test (Failed)
+Errors while running CTest

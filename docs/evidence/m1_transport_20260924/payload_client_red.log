@@ -1,0 +1,28 @@
+Running main() from ./googletest/src/gtest_main.cc
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from PayloadClientTest
+[ RUN      ] PayloadClientTest.SendsActualCounterOnceAndRequiresInventoryAndPhysicalState
+owned_partition=m1_payload_test_3001471_76617758916971 pid=3001471
+[       OK ] PayloadClientTest.SendsActualCounterOnceAndRequiresInventoryAndPhysicalState (12 ms)
+[ RUN      ] PayloadClientTest.PropagatesPhysicalErrorDuringIncompleteInventory
+owned_partition=m1_payload_test_3001471_76617764401684 pid=3001471
+[       OK ] PayloadClientTest.PropagatesPhysicalErrorDuringIncompleteInventory (5 ms)
+[ RUN      ] PayloadClientTest.NoReadbackTimesOutAndKeepsUnresolvedCommand
+owned_partition=m1_payload_test_3001471_76617769761603 pid=3001471
+[       OK ] PayloadClientTest.NoReadbackTimesOutAndKeepsUnresolvedCommand (0 ms)
+[ RUN      ] PayloadClientTest.RepeatedPhysicalCaptureCannotRefreshItsReceiptBeforeFirstPoll
+owned_partition=m1_payload_test_3001471_76617769955787 pid=3001471
+ws_robot/src/astribot_s1_transport_native/test/payload_client_test.cpp:94: Failure
+Failed
+old physical capture remained usable
+[  FAILED  ] PayloadClientTest.RepeatedPhysicalCaptureCannotRefreshItsReceiptBeforeFirstPoll (452 ms)
+[----------] 4 tests from PayloadClientTest (470 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (470 ms total)
+[  PASSED  ] 3 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] PayloadClientTest.RepeatedPhysicalCaptureCannotRefreshItsReceiptBeforeFirstPoll
+
+ 1 FAILED TEST
