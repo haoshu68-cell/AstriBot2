@@ -13,6 +13,7 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 #include "astribot_s1_transport_mtc/joint_margin.hpp"
 #include "astribot_s1_transport_mtc/canonical_octomap.hpp"
+#include "astribot_s1_transport_mtc/payload_transition.hpp"
 
 namespace mtc=moveit::task_constructor;
 using Action=astribot_transport_msgs::action::PlanManipulation;
@@ -61,12 +62,11 @@ class Planner {
   std::mutex mutex_;
   mtc::Task* active_{nullptr};
   using Revalidate=astribot_transport_msgs::srv::RevalidateManipulation;
-  struct CachedStage {
-    std::string id;
-    planning_scene::PlanningSceneConstPtr scene;
-    robot_trajectory::RobotTrajectoryPtr trajectory;
-  };
+  using RevalidatePayload=astribot_transport_msgs::srv::RevalidatePayloadTransition;
+  using CachedStage=astribot_s1_transport_mtc::CachedStage;
   rclcpp::Service<Revalidate>::SharedPtr revalidate_service_;
+  rclcpp::Service<RevalidatePayload>::SharedPtr payload_revalidate_service_;
+  astribot_s1_transport_mtc::PayloadTransitionBinding cached_payload_;
   std::vector<CachedStage> cached_stages_;
   std::string cached_context_;
   octomap_msgs::msg::OctomapWithPose cached_octomap_metadata_;
@@ -141,7 +141,7 @@ class Planner {
   void run(const std::shared_ptr<Handle>& handle) {
     auto result=std::make_shared<Action::Result>();
     const auto goal=handle->get_goal();result->context_id=goal->context_id;
-    {std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();}
+    {std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};}
     try {
       if((goal->operation!="PICK" && goal->operation!="PLACE") || goal->object_id.empty() ||
          goal->context_id.empty() || goal->exit_targets.empty() || goal->exit_targets.size()>3 ||
@@ -346,6 +346,8 @@ class Planner {
             result->stages=std::move(segments);result->success=true;result->reason="MTC_SEQUENCE_VALIDATED";
             {std::lock_guard<std::mutex> guard(mutex_);cached_stages_=std::move(cached_candidate);
              cached_context_=goal->context_id;cached_at_=std::chrono::steady_clock::now();
+             cached_payload_.object_id=goal->object_id;cached_payload_.operation=goal->operation;
+             cached_payload_.input_scene=goal->scene;
              cached_octomap_metadata_=goal->scene.world.octomap;cached_octomap_metadata_.octomap.data.clear();}
             break;
           }
@@ -355,7 +357,7 @@ class Planner {
       }
     } catch(const std::exception& e) {result->success=false;result->stages.clear();result->reason=e.what();}
     if(handle->is_canceling() || !result->success) {
-      std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();
+      std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};
     }
     if(handle->is_canceling()){result->success=false;result->stages.clear();result->reason="PLANNING_CANCELED";handle->canceled(result);}
     else if(result->success)handle->succeed(result);
@@ -387,6 +389,24 @@ public:
     revalidate_service_=node_->create_service<Revalidate>("/transport/revalidate_manipulation",
       [this](const std::shared_ptr<Revalidate::Request> request,std::shared_ptr<Revalidate::Response> response) {
         revalidate(*request,*response);
+      });
+    payload_revalidate_service_=node_->create_service<RevalidatePayload>("/transport/revalidate_payload_transition",
+      [this](const std::shared_ptr<RevalidatePayload::Request> request,std::shared_ptr<RevalidatePayload::Response> response) {
+        response->context_id=request->context_id;response->transaction_id=request->transaction_id;
+        bool free=false;
+        if(!busy_.compare_exchange_strong(free,true)){response->reason="MTC_REVALIDATION_BUSY";return;}
+        struct Release {std::atomic<bool>& busy;~Release(){busy=false;}} release{busy_};
+        try {
+          std::lock_guard<std::mutex> guard(mutex_);
+          auto stages=astribot_s1_transport_mtc::revalidatePayloadTransition(*request,cached_context_,
+            cached_payload_,cached_stages_,cached_at_,velocity_scaling_,acceleration_scaling_);
+          // Prepare the binding before committing either half. An exception
+          // leaves the original cache and its original expiry intact.
+          auto binding=cached_payload_;binding.transaction_id=request->transaction_id;
+          binding.confirmed_scene=request->scene;
+          cached_stages_.swap(stages);std::swap(cached_payload_,binding);
+          response->success=true;response->reason="MTC_PAYLOAD_REMAINING_SEQUENCE_REVALIDATED";
+        } catch(const std::exception& error){response->success=false;response->reason=error.what();}
       });
     server_=rclcpp_action::create_server<Action>(node_,"/transport/plan_manipulation",
       [this](const rclcpp_action::GoalUUID&,std::shared_ptr<const Action::Goal>) {

@@ -1,0 +1,26 @@
+{
+  "problem_started_at": "2026-09-24T10:35:00+08:00",
+  "completed_at": "2026-09-24T10:52:25+08:00",
+  "evidence_level": "offline C++ build and synthetic robot/scene tests; no ROS executor, Gazebo or GPU",
+  "new_tests": 11,
+  "new_tests_passed": 11,
+  "ctest_programs": 4,
+  "ctest_programs_passed": 4,
+  "red": {
+    "expected_failure_exit": 1,
+    "actual_exit": 1,
+    "scope": "offline differential copy: previous octomap-only body handling; no ROS node"
+  },
+  "overlay": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_transition/overlay.bash",
+  "source_sha256": {
+    "ws_robot/src/astribot_s1_transport_mtc/CMakeLists.txt": "ee68e64681f8958a35e0766ce4a89caa154e85fabb30b87cea5e2a04f19b343b",
+    "ws_robot/src/astribot_s1_transport_mtc/package.xml": "78a3abf3fc3cbfe8ee485dfa918a7ad630413e7c01467fba33a6ec047856d2b8",
+    "ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp": "fde6ffef08b582b3d578727a7533e52470e4bd0ac2f139b6a54cf78d63bee816",
+    "ws_robot/src/astribot_s1_transport_mtc/src/payload_transition.cpp": "25e086d0fdfc611c340f2ac5115ff08ff06b2b77b7a40d9d3b4a5c1dd41d0848",
+    "ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/payload_transition.hpp": "38cc995ecc5aae6937b0cc6bd04ae3b9e7b411ed63a9e61a2f1bbb3ff0aac39a",
+    "ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp": "97aa8e85a0f39f7e32880987d8a8e69b748fe7ee4ec609ec80d5522854985953",
+    "ws_robot/src/astribot_transport_msgs/CMakeLists.txt": "e99ceab834fcb66cc1fdd2323a2d1122db14bf4cefb00506e4624acee475f456",
+    "ws_robot/src/astribot_transport_msgs/srv/RevalidatePayloadTransition.srv": "0d5b50b9ac0bd00d798c46234a3501758a1c067c072ec83951d0f3c7542473f0"
+  },
+  "executable_sha256": "3698b068c3fda3df471b3dbd1ea0f80180fab8346bd284a921ee5ffce751777c"
+}

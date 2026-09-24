@@ -1,0 +1,13 @@
+# Read-only revalidation of the already-issued remaining path after physical
+# ATTACH_CONFIRM / DETACH_CONFIRM. This does not authorize execution or mutate
+# the global scene. The owner must independently confirm its transaction and
+# full scene readback before acknowledging the transition.
+string context_id
+string transaction_id
+uint32 start_index
+moveit_msgs/PlanningScene scene
+---
+bool success
+string reason
+string context_id
+string transaction_id
