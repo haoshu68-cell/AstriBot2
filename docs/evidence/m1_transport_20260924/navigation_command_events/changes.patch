@@ -1,0 +1,188 @@
+--- a/ws_robot/src/astribot_s1_transport_native/src/fixed_station_navigation.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/fixed_station_navigation.cpp
+@@ -53,7 +53,7 @@
+ } // namespace
+ 
+ struct FixedStationNavigation::Impl {
+-  struct Sample {int64_t source;Time at;int64_t command_at;double x,y,angle,v,w,command;};
++  struct Sample {int64_t source;Time at;int64_t command_at;double x,y,angle,v,w;std::optional<double> command;};
+   rclcpp::Node& node;
+   Status result;
+   Request request;
+@@ -73,7 +73,7 @@
+   std::optional<std::pair<Command,Time>> command;
+   std::deque<Sample> samples;
+   std::optional<Time> previous;
+-  int64_t phase_started=0,stop_after=0,cancel_started=0;
++  int64_t phase_started=0,stop_after=0,cancel_started=0,nav_started=0;
+   bool nav_sent=false,cancel_sent=false,stopping=false;
+   std::string odom_child;
+ 
+@@ -142,7 +142,9 @@
+     if(!active())return;
+     const auto at=now();if(!clock(at))return;
+     if(!std::isfinite(v.linear.x)||!std::isfinite(v.linear.y)||!std::isfinite(v.angular.z)){fail("NAVIGATION_COMMAND_INVALID");return;}
+-    if(!stopping&&nav_sent&&command&&at.steady-command->second.steady>=300*MS){fail("NAVIGATION_COMMAND_STALE");return;}
++    if(!stopping&&nav_sent&&command&&command_max(command->first)>1e-6&&at.steady-command->second.steady>=300*MS)
++      fail("NAVIGATION_COMMAND_STALE");
++    // Preserve a real late zero for cleanup even when its preceding nonzero expired.
+     command=std::make_pair(v,at);
+   }
+   void receive(const Odom& v) {
+@@ -159,10 +161,10 @@
+       return;
+     }
+     odom_child=v.child_frame_id;odom=Received<Odom>{v,at,source+300*MS};
+-    if(!command)return;
+     const auto& p=v.pose.pose;
+-    samples.push_back({source,at,command->second.steady,p.position.x,p.position.y,yaw(p.orientation),
+-      std::hypot(velocity.linear.x,velocity.linear.y),std::abs(velocity.angular.z),command_max(command->first)});
++    samples.push_back({source,at,command?command->second.steady:0,p.position.x,p.position.y,yaw(p.orientation),
++      std::hypot(velocity.linear.x,velocity.linear.y),std::abs(velocity.angular.z),
++      command?std::optional<double>(command_max(command->first)):std::optional<double>{}});
+     while(!samples.empty()&&samples.front().source<source-700*MS-10)samples.pop_front();
+   }
+   bool stopped(Time at)const {
+@@ -170,12 +172,18 @@
+     // receipt-steady span. A burst of queued source samples cannot prove a stop.
+     if(samples.size()<12||samples.front().source<=stop_after||samples.back().source-samples.front().source<600*MS||
+       samples.back().at.steady-samples.front().at.steady<600*MS||
+-      !odom||!fresh(*odom,at)||!command||at.steady-command->second.steady>=300*MS||command_max(command->first)>1e-6)return false;
++      !odom||!fresh(*odom,at))return false;
++    if(command&&command_max(command->first)>1e-6)return false;
++    // Before dispatch, the owning parent's exclusive Hold plus measured odometry
++    // can establish a cold stop without inventing a command. After dispatch,
++    // terminal and an actual zero received after dispatch are both required.
++    if(nav_sent&&(!result.nav_terminal||!command||command->second.steady<nav_started))return false;
+     const auto& first=samples.front();double angle=0,mean=0;int64_t last=first.source;double last_angle=first.angle;
+     for(auto it=samples.begin();it!=samples.end();++it) {
+       const auto& s=*it;
+       if(it!=samples.begin()&&(s.source<=last||s.source-last>120*MS))return false;
+-      if(s.at.steady<s.command_at||s.at.steady-s.command_at>=300*MS||s.v>.01||s.w>.02||s.command>1e-6||std::hypot(s.x-first.x,s.y-first.y)>.005)return false;
++      if(nav_sent&&(!s.command||s.command_at<nav_started))return false;
++      if((s.command&&(s.at.steady<s.command_at||*s.command>1e-6))||s.v>.01||s.w>.02||std::hypot(s.x-first.x,s.y-first.y)>.005)return false;
+       if(it!=samples.begin())angle+=std::remainder(s.angle-last_angle,2*std::acos(-1.));
+       if(std::abs(angle)>.01)return false;
+       mean+=double(s.source-first.source)*1e-9;last=s.source;last_angle=s.angle;
+@@ -267,11 +275,17 @@
+         result.envelope_session=envelope->value.coordinator_session_id;result.geometry_hash=envelope->value.installed_geometry_hash;
+         Nav::Goal goal;goal.pose=request.navigation_target;goal.pose.header.stamp=node.now();
+         result.phase=Phase::NAVIGATING;result.reason="NAVIGATING";phase_started=at.steady;
+-        nav_sent=true;result.nav_terminal=false;goal_future=nav->async_send_goal(goal);return;
++        nav_sent=true;nav_started=at.steady;result.nav_terminal=false;goal_future=nav->async_send_goal(goal);return;
+       }
+       if(result.phase==Phase::NAVIGATING||result.phase==Phase::SETTLING) {
+         if(!ready(at)){fail("NAVIGATION_ENVELOPE_OR_ACK_LOST");return;}
+-        if(!odom||!fresh(*odom,at)||!command||at.steady-command->second.steady>=300*MS){fail("NAVIGATION_MOTION_OBSERVATION_STALE");return;}
++        if(!odom||!fresh(*odom,at)){fail("NAVIGATION_MOTION_OBSERVATION_STALE");return;}
++        if(command&&command_max(command->first)>1e-6&&at.steady-command->second.steady>=300*MS){fail("NAVIGATION_COMMAND_STALE");return;}
++        const auto& velocity=odom->value.twist.twist;
++        const bool moving=std::hypot(velocity.linear.x,velocity.linear.y)>.01||std::abs(velocity.angular.z)>.02;
++        if(moving&&(!command||command->second.steady<nav_started||at.steady-command->second.steady>=300*MS)){
++          fail("NAVIGATION_MOTION_WITHOUT_FRESH_COMMAND");return;
++        }
+         if(result.phase==Phase::NAVIGATING) {
+           if(!handle&&at.steady-phase_started>=5000*MS)fail("NAVIGATION_ACCEPTANCE_TIMEOUT");
+           else if(at.steady-phase_started>=180000*MS)fail("NAVIGATION_RESULT_TIMEOUT");
+--- a/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp
+@@ -38,7 +38,8 @@
+   std::shared_ptr<ServerHandle> goal;
+   Envelope envelope;
+   bool fixed_received=false,omit_controller=false,legacy_protection=false,finish_cancel=true;
+-  int goals=0,cancels=0;
++  bool publish_command=true,publish_odom=true;
++  int goals=0,cancels=0,commands=0;
+   double x=0,speed=0;
+   void SetUp()override {
+     // Run only in an operator-assigned isolated domain, never the ambient stack.
+@@ -106,9 +107,9 @@
+         a.installed_geometry_hash="shape";a.consumer_id=consumer;a.applied=true;ack_pub->publish(a);
+       }
+     }
+-    geometry_msgs::msg::Twist command;command.linear.x=speed;command_pub->publish(command);
++    if(publish_command){geometry_msgs::msg::Twist command;command.linear.x=speed;command_pub->publish(command);++commands;}
+     nav_msgs::msg::Odometry o;o.header.stamp=at;o.header.frame_id="odom";o.child_frame_id="base";
+-    o.pose.pose.position.x=x;o.pose.pose.orientation.w=1.;o.twist.twist.linear.x=speed;odom_pub->publish(o);
++    o.pose.pose.position.x=x;o.pose.pose.orientation.w=1.;o.twist.twist.linear.x=speed;if(publish_odom)odom_pub->publish(o);
+     // Drain the five ACKs sharing one subscription within a bounded cycle.
+     executor->spin_all(std::chrono::milliseconds(5));helper->tick();
+     if(goal&&goal->is_canceling()&&finish_cancel)goal->canceled(std::make_shared<Nav::Result>());
+@@ -120,9 +121,13 @@
+   }
+ };
+ TEST_F(FixedStationNavigationTest, SameLeaseLegUsesCurrentMapTransformAndPostTerminalStop) {
++  publish_command=false;commands=0;
+   helper->start(request());ASSERT_TRUE(wait([&]{return bool(goal);},3.))<<helper->status().reason;ASSERT_EQ(goals,1);
++  EXPECT_EQ(commands,0);
+   EXPECT_EQ(goal->get_goal()->pose.header.frame_id,"map");EXPECT_DOUBLE_EQ(goal->get_goal()->pose.pose.position.x,1.);
+-  transform(.2);x=.8;goal->succeed(std::make_shared<Nav::Result>());
++  publish_command=true;speed=.04;step();
++  transform(.2);x=.8;speed=0;step();publish_command=false;
++  goal->succeed(std::make_shared<Nav::Result>());
+   ASSERT_TRUE(wait([&]{return helper->status().phase==Phase::SETTLING;},1.));
+   EXPECT_FALSE(helper->status().measured_stopped);EXPECT_FALSE(helper->status().cleanup_complete);
+   const auto settling=Clock::now();
+@@ -133,7 +138,7 @@
+   EXPECT_LT(helper->status().position_error_m,1e-10);EXPECT_EQ(cancels,0);
+ }
+ TEST_F(FixedStationNavigationTest, LegacyProtectionCannotReplaceControllerAndCancellationStillRequiresStop) {
+-  omit_controller=true;legacy_protection=true;helper->start(request());
++  publish_command=false;omit_controller=true;legacy_protection=true;helper->start(request());
+   EXPECT_FALSE(wait([&]{return goals!=0;},1.5));EXPECT_EQ(goals,0);
+   helper->cancel("TASK_CANCELED");EXPECT_FALSE(helper->status().cleanup_complete);
+   ASSERT_TRUE(wait([&]{return helper->status().cleanup_complete;},2.));
+@@ -141,13 +146,51 @@
+ }
+ TEST_F(FixedStationNavigationTest, CancelTargetsOnlyOwnedGoalAndTerminalDoesNotProveStopped) {
+   helper->start(request());ASSERT_TRUE(wait([&]{return bool(goal);},3.))<<helper->status().reason;
+-  speed=.04;helper->cancel("TASK_CANCELED");
++  speed=.04;step();helper->cancel("TASK_CANCELED");
+   ASSERT_TRUE(wait([&]{return helper->status().nav_terminal;},1.));
+   EXPECT_FALSE(wait([&]{return helper->status().cleanup_complete;},.8));
+   EXPECT_EQ(cancels,1);EXPECT_FALSE(helper->status().measured_stopped);
+-  const auto stopped_since=Clock::now();speed=0;
++  const auto stopped_since=Clock::now();speed=0;step();publish_command=false;
+   ASSERT_TRUE(wait([&]{return helper->status().cleanup_complete;},2.));
+   EXPECT_GE(std::chrono::duration<double>(Clock::now()-stopped_since).count(),.6);
+   EXPECT_EQ(helper->status().phase,Phase::FAILED);EXPECT_EQ(helper->status().reason,"TASK_CANCELED");
+ }
++TEST_F(FixedStationNavigationTest, NonzeroSilenceCannotBeMistakenForFinalZero) {
++  publish_command=false;helper->start(request());
++  ASSERT_TRUE(wait([&]{return bool(goal);},3.))<<helper->status().reason;
++  publish_command=true;speed=.04;step();publish_command=false;speed=0;
++  ASSERT_TRUE(wait([&]{return helper->status().phase==Phase::CANCELING;},1.));
++  EXPECT_EQ(helper->status().reason,"NAVIGATION_COMMAND_STALE");
++  EXPECT_FALSE(wait([&]{return helper->status().cleanup_complete;},.8));
++  EXPECT_TRUE(helper->status().nav_terminal);EXPECT_EQ(cancels,1);
++  // A real late zero permits cleanup; silence and fresh stationary odometry did not.
++  publish_command=true;step();publish_command=false;
++  ASSERT_TRUE(wait([&]{return helper->status().cleanup_complete;},2.));
++  EXPECT_EQ(helper->status().phase,Phase::FAILED);
++  EXPECT_EQ(helper->status().reason,"NAVIGATION_COMMAND_STALE");
++}
++TEST_F(FixedStationNavigationTest, SuccessfulTerminalWithoutObservedZeroDoesNotProveStop) {
++  publish_command=false;helper->start(request());
++  ASSERT_TRUE(wait([&]{return bool(goal);},3.))<<helper->status().reason;
++  x=1.;goal->succeed(std::make_shared<Nav::Result>());
++  ASSERT_TRUE(wait([&]{return helper->status().phase==Phase::SETTLING;},1.));
++  EXPECT_FALSE(wait([&]{return helper->status().cleanup_complete;},.8));
++  EXPECT_TRUE(helper->status().nav_terminal);EXPECT_FALSE(helper->status().measured_stopped);
++  EXPECT_EQ(helper->status().phase,Phase::SETTLING);
++  publish_command=true;step();publish_command=false;
++  ASSERT_TRUE(wait([&]{return helper->status().phase==Phase::SUCCEEDED;},2.))<<helper->status().reason;
++}
++TEST_F(FixedStationNavigationTest, FinalZeroDoesNotReplaceFreshOdometry) {
++  helper->start(request());ASSERT_TRUE(wait([&]{return bool(goal);},3.))<<helper->status().reason;
++  x=1.;step();publish_command=false;goal->succeed(std::make_shared<Nav::Result>());
++  ASSERT_TRUE(wait([&]{return helper->status().phase==Phase::SETTLING;},1.));
++  publish_odom=false;
++  ASSERT_TRUE(wait([&]{return helper->status().phase==Phase::CANCELING;},1.));
++  EXPECT_EQ(helper->status().reason,"NAVIGATION_MOTION_OBSERVATION_STALE");
++  EXPECT_FALSE(wait([&]{return helper->status().cleanup_complete;},.8));
++  publish_odom=true;
++  ASSERT_TRUE(wait([&]{return helper->status().cleanup_complete;},2.));
++  EXPECT_EQ(helper->status().phase,Phase::FAILED);
++  EXPECT_EQ(helper->status().reason,"NAVIGATION_MOTION_OBSERVATION_STALE");
++}
+ } // namespace
