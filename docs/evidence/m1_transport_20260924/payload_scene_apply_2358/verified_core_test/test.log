@@ -1,0 +1,29 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from PayloadScene
+[ RUN      ] PayloadScene.CopiesActualConservativeBodyAndRejectsUnrelatedSceneChanges
+[       OK ] PayloadScene.CopiesActualConservativeBodyAndRejectsUnrelatedSceneChanges (0 ms)
+[ RUN      ] PayloadScene.DetachPreservesPhysicalGeometryAtMeasuredPoseAndFullInventory
+[       OK ] PayloadScene.DetachPreservesPhysicalGeometryAtMeasuredPoseAndFullInventory (0 ms)
+[ RUN      ] PayloadScene.RealMoveItAttachAndDetachPreserveGeometryAndUnrelatedObjects
+[INFO] [1790266113.115867502] [moveit_robot_model.robot_model]: Loading robot model 'payload_scene_fixture'...
+[INFO] [1790266113.115881134] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[WARN] [1790266113.115907216] [moveit_robot_model.robot_model]: No geometry is associated to any robot links
+[INFO] [1790266113.116072508] [moveit_robot_model.robot_model]: Loading robot model 'payload_scene_fixture'...
+[INFO] [1790266113.116074950] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[WARN] [1790266113.116081459] [moveit_robot_model.robot_model]: No geometry is associated to any robot links
+[ERROR] [1790266113.116090801] [moveit_robot_state.conversions]: Found empty JointState message
+[WARN] [1790266113.116113725] [moveit_planning_scene.planning_scene]: Tried to remove world object 'box', but it does not exist in this scene.
+[       OK ] PayloadScene.RealMoveItAttachAndDetachPreserveGeometryAndUnrelatedObjects (1 ms)
+[ RUN      ] PayloadScene.ChecksTargetFramesBeforeRemovingAuthorizedObjectFromComparison
+[       OK ] PayloadScene.ChecksTargetFramesBeforeRemovingAuthorizedObjectFromComparison (0 ms)
+[ RUN      ] PayloadScene.WaitsForDelayedLedgerButRejectsUnexpectedRevisionOrEpoch
+[       OK ] PayloadScene.WaitsForDelayedLedgerButRejectsUnexpectedRevisionOrEpoch (0 ms)
+[ RUN      ] PayloadScene.KnownUnpairedRawInvalidatesFreshOldLedgerBeforeRemainingMotion
+[       OK ] PayloadScene.KnownUnpairedRawInvalidatesFreshOldLedgerBeforeRemainingMotion (0 ms)
+[----------] 6 tests from PayloadScene (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 6 tests.

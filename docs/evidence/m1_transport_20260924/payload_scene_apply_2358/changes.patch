@@ -1,0 +1,100 @@
+--- before/ws_robot/src/astribot_s1_transport_native/src/payload_scene.cpp
++++ after/ws_robot/src/astribot_s1_transport_native/src/payload_scene.cpp
+@@ -46,8 +46,9 @@
+   auto body=std::find_if(physical.objects.begin(),physical.objects.end(),[&](const auto&o){return o.object.id==id;});
+   require(body!=physical.objects.end()&&body->link_name=="astribot_arm_left_tcp_link","PAYLOAD_TARGET_ATTACHMENT_MISSING");
+   require(std::count_if(before.world.collision_objects.begin(),before.world.collision_objects.end(),[&](const auto&o){return o.id==id;})==1,"PAYLOAD_WORLD_OBJECT_MISSING");
++  // MoveIt attaches first and removes the same world ID automatically. A
++  // second world REMOVE reports failure after the attachment already applied.
+   diff.robot_state.attached_collision_objects={*body};
+-  moveit_msgs::msg::CollisionObject removed;removed.id=id;removed.operation=removed.REMOVE;diff.world.collision_objects={removed};
+  }else {
+   require(std::none_of(physical.objects.begin(),physical.objects.end(),[&](const auto&o){return o.object.id==id;}),"PAYLOAD_DETACH_NOT_OBSERVED");
+   const auto &objects=before.robot_state.attached_collision_objects;
+--- before/ws_robot/src/astribot_s1_transport_native/test/payload_scene_test.cpp
++++ after/ws_robot/src/astribot_s1_transport_native/test/payload_scene_test.cpp
+@@ -1,5 +1,8 @@
+ #include <gtest/gtest.h>
+ #include "astribot_s1_transport_native/payload_scene.hpp"
++#include <moveit/planning_scene/planning_scene.h>
++#include <urdf_parser/urdf_parser.h>
++#include <algorithm>
+ using namespace astribot::transport;
+ namespace {
+ const std::set<std::string> known_links={"astribot_arm_left_tcp_link","astribot_arm_right_tcp_link"};
+@@ -34,6 +37,63 @@
+  EXPECT_NO_THROW(validate_payload_scene(before,after,observed,"box",false,pose,"astribot_torso_base",known_links));
+  after.world.collision_objects[0].primitives[0].dimensions[0]=.06;
+  EXPECT_THROW(validate_payload_scene(before,after,observed,"box",false,pose,"astribot_torso_base",known_links),std::runtime_error);
++}
++
++TEST(PayloadScene, RealMoveItAttachAndDetachPreserveGeometryAndUnrelatedObjects) {
++ const auto urdf_model=urdf::parseURDF(R"(<robot name="payload_scene_fixture">
++  <link name="astribot_torso_base"/>
++  <link name="astribot_arm_left_tcp_link"/>
++  <link name="astribot_arm_right_tcp_link"/>
++  <joint name="left" type="fixed"><parent link="astribot_torso_base"/><child link="astribot_arm_left_tcp_link"/></joint>
++  <joint name="right" type="fixed"><parent link="astribot_torso_base"/><child link="astribot_arm_right_tcp_link"/></joint>
++ </robot>)");
++ ASSERT_TRUE(urdf_model);auto srdf_model=std::make_shared<srdf::Model>();
++ ASSERT_TRUE(srdf_model->initString(*urdf_model,"<robot name=\"payload_scene_fixture\"/>"));
++ planning_scene::PlanningScene scene(urdf_model,srdf_model);
++ const std::set<std::string> model_links={"astribot_torso_base","astribot_arm_left_tcp_link","astribot_arm_right_tcp_link"};
++ auto observed=physical();observed.objects[0].object.pose.position.y=-.1;
++ auto world=observed.objects[0].object;world.header.frame_id="astribot_torso_base";
++ world.primitives[0].dimensions={.06,.06,.12};ASSERT_TRUE(scene.processCollisionObjectMsg(world));
++ auto obstacle=world;obstacle.id="obstacle";obstacle.pose.position.x=2.;
++ ASSERT_TRUE(scene.processCollisionObjectMsg(obstacle));
++ auto other=physical().objects.front();other.object.id="other";
++ other.link_name=other.object.header.frame_id="astribot_arm_right_tcp_link";other.touch_links={other.link_name};
++ ASSERT_TRUE(scene.processAttachedCollisionObjectMsg(other));observed.objects.push_back(other);
++ moveit_msgs::msg::PlanningScene before;scene.getPlanningSceneMsg(before);
++ geometry_msgs::msg::Pose pose;pose.orientation.w=1.;
++ const auto diff=payload_scene_diff(before,observed,"box",true,pose,"astribot_torso_base",model_links);
++
++ // Reproduce the old non-atomic failure in the actual installed MoveIt core.
++ planning_scene::PlanningScene old_scene(urdf_model,srdf_model);ASSERT_TRUE(old_scene.setPlanningSceneMsg(before));
++ auto redundant=diff;moveit_msgs::msg::CollisionObject removed;removed.id="box";removed.operation=removed.REMOVE;
++ redundant.world.collision_objects={removed};
++ EXPECT_FALSE(old_scene.setPlanningSceneDiffMsg(redundant));
++ EXPECT_TRUE(old_scene.getCurrentState().hasAttachedBody("box"));EXPECT_FALSE(old_scene.getWorld()->hasObject("box"));
++
++ ASSERT_TRUE(scene.setPlanningSceneDiffMsg(diff));
++ moveit_msgs::msg::PlanningScene attached;scene.getPlanningSceneMsg(attached);
++ EXPECT_NO_THROW(validate_payload_scene(before,attached,observed,"box",true,pose,"astribot_torso_base",model_links));
++ EXPECT_FALSE(scene.getWorld()->hasObject("box"));EXPECT_TRUE(scene.getWorld()->hasObject("obstacle"));
++ EXPECT_TRUE(scene.getCurrentState().hasAttachedBody("other"));
++ const auto body=std::find_if(attached.robot_state.attached_collision_objects.begin(),attached.robot_state.attached_collision_objects.end(),
++  [](const auto &value){return value.object.id=="box";});
++ ASSERT_NE(body,attached.robot_state.attached_collision_objects.end());
++ ASSERT_EQ(body->object.primitives.size(),1u);EXPECT_EQ(body->object.primitives[0].dimensions,observed.objects[0].object.primitives[0].dimensions);
++
++ auto detached=observed;detached.objects.erase(detached.objects.begin());
++ pose.position.x=.2;pose.position.y=-.3;pose.position.z=.97;
++ const auto detach_diff=payload_scene_diff(attached,detached,"box",false,pose,"astribot_torso_base",model_links);
++ ASSERT_TRUE(scene.setPlanningSceneDiffMsg(detach_diff));
++ moveit_msgs::msg::PlanningScene placed;scene.getPlanningSceneMsg(placed);
++ EXPECT_NO_THROW(validate_payload_scene(attached,placed,detached,"box",false,pose,"astribot_torso_base",model_links));
++ EXPECT_FALSE(scene.getCurrentState().hasAttachedBody("box"));EXPECT_TRUE(scene.getCurrentState().hasAttachedBody("other"));
++ ASSERT_TRUE(scene.getWorld()->hasObject("box"));
++ EXPECT_NEAR(scene.getWorld()->getObject("box")->pose_.translation().x(),.2,1e-12);
++ EXPECT_NEAR(scene.getWorld()->getObject("box")->pose_.translation().y(),-.3,1e-12);
++ EXPECT_NEAR(scene.getWorld()->getObject("box")->pose_.translation().z(),.97,1e-12);
++ obstacle.pose.position.x+=.1;ASSERT_TRUE(scene.processCollisionObjectMsg(obstacle));
++ scene.getPlanningSceneMsg(placed);
++ EXPECT_THROW(validate_payload_scene(attached,placed,detached,"box",false,pose,"astribot_torso_base",model_links),std::runtime_error);
+ }
+ 
+ TEST(PayloadScene, ChecksTargetFramesBeforeRemovingAuthorizedObjectFromComparison) {
+--- before/ws_robot/src/astribot_s1_transport_native/CMakeLists.txt
++++ after/ws_robot/src/astribot_s1_transport_native/CMakeLists.txt
+@@ -97,7 +97,8 @@
+   target_link_libraries(payload_frames_test payload_frames)
+   ament_target_dependencies(payload_frames_test tf2_ros rclcpp)
+   ament_add_gtest(payload_scene_test test/payload_scene_test.cpp)
+-  target_link_libraries(payload_scene_test payload_scene)
++  find_package(moveit_core REQUIRED)
++  target_link_libraries(payload_scene_test payload_scene moveit_core::moveit_planning_scene)
+   ament_add_gtest(mtc_plan_test test/mtc_plan_test.cpp)
+   target_link_libraries(mtc_plan_test arm_hold_core)
+   ament_add_gtest(scene_binding_test test/scene_binding_test.cpp)

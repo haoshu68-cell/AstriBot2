@@ -1,0 +1,1337 @@
+{
+  "scope": "Read-only owner closure and video metadata review; no M5 decoding or visual inspection",
+  "case_result": {
+    "passed": false,
+    "error": "RuntimeError('full_transfer exit 1')",
+    "finished_wall": 1790265490.3261724,
+    "cleanup_complete": true,
+    "video_decode": {
+      "decoded_frames": 479,
+      "sidecar_rows": 479,
+      "metadata_frames": 479,
+      "passed": true
+    }
+  },
+  "stack": {
+    "state": "stopped",
+    "isolation": {
+      "ROS_DOMAIN_ID": "70",
+      "ROS_LOCALHOST_ONLY": "1",
+      "IGN_PARTITION": "astribot_fixed_transfer_20260924_station21",
+      "GZ_PARTITION": "astribot_fixed_transfer_20260924_station21",
+      "IGN_DISCOVERY_MSG_PORT": "18140",
+      "IGN_DISCOVERY_SRV_PORT": "18141",
+      "IGN_IP": "127.0.0.1",
+      "GZ_IP": "127.0.0.1",
+      "ASTRIBOT_SIM_INSTANCE": "fixed_transfer_20260924_station21"
+    },
+    "started": 1790265348.1581337,
+    "ended": 1790265489.9611423,
+    "remaining_owned_pids": [],
+    "log_capture_errors": []
+  },
+  "video_metadata": {
+    "frames": 479,
+    "encoding_fps": 10,
+    "wall_duration_s": 94.20462088299973,
+    "timing": "10 fps received frames; not a wall-time performance measurement",
+    "clock_semantics": "observed_clock is latest received /clock and its receive times; null before first clock",
+    "stage_frames": [
+      {
+        "frame": 1,
+        "stage": "WAITING_FOR_TASK",
+        "wall_time": 1790265394.8534913,
+        "raw_status": {
+          "authority_reason": "IDLE",
+          "cleanup_reason": "",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "",
+          "phase": "0",
+          "reason": "WAITING_FOR_TASK"
+        },
+        "status_receive_seq": 1
+      },
+      {
+        "frame": 182,
+        "stage": "RESERVED",
+        "wall_time": 1790265418.1951504,
+        "raw_status": {
+          "authority_reason": "RESERVED",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "1",
+          "reason": "RESERVED",
+          "stage_id": "",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 466
+      },
+      {
+        "frame": 182,
+        "stage": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+        "wall_time": 1790265418.2431543,
+        "raw_status": {
+          "authority_reason": "RESERVED",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "1",
+          "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+          "stage_id": "",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 467
+      },
+      {
+        "frame": 183,
+        "stage": "PLANNING_COMPLETE_OPERATION",
+        "wall_time": 1790265418.3442886,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "PLANNING_COMPLETE_OPERATION",
+          "stage_id": "",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 469
+      },
+      {
+        "frame": 279,
+        "stage": "WAITING_FOR_EXECUTION_GUARD",
+        "wall_time": 1790265441.2934713,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 928
+      },
+      {
+        "frame": 280,
+        "stage": "EXECUTING_MTC_STAGE:PREGRASP",
+        "wall_time": 1790265441.3475456,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 929
+      },
+      {
+        "frame": 317,
+        "stage": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+        "wall_time": 1790265449.6092954,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1092
+      },
+      {
+        "frame": 322,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790265451.2930126,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1126
+      },
+      {
+        "frame": 322,
+        "stage": "WAITING_FOR_EXECUTION_GUARD",
+        "wall_time": 1790265451.4101455,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1128
+      },
+      {
+        "frame": 323,
+        "stage": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+        "wall_time": 1790265451.4928973,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1130
+      },
+      {
+        "frame": 333,
+        "stage": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+        "wall_time": 1790265453.261124,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1165
+      },
+      {
+        "frame": 343,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790265455.2433476,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1205
+      },
+      {
+        "frame": 344,
+        "stage": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+        "wall_time": 1790265455.3687108,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1207
+      },
+      {
+        "frame": 362,
+        "stage": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+        "wall_time": 1790265458.8595753,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1277
+      },
+      {
+        "frame": 372,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790265461.1431353,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1323
+      },
+      {
+        "frame": 372,
+        "stage": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+        "wall_time": 1790265461.2490726,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1325
+      },
+      {
+        "frame": 373,
+        "stage": "WAITING_FOR_PHYSICAL_APPLICATION",
+        "wall_time": 1790265461.4109151,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PHYSICAL_APPLICATION",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1328
+      },
+      {
+        "frame": 375,
+        "stage": "WAITING_FOR_PAYLOAD_SCENE_READBACK",
+        "wall_time": 1790265461.7564337,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PAYLOAD_SCENE_READBACK",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1335
+      },
+      {
+        "frame": 375,
+        "stage": "PAYLOAD_SCENE_APPLY_REJECTED",
+        "wall_time": 1790265461.7943618,
+        "raw_status": {
+          "authority_reason": "PAYLOAD_SCENE_APPLY_REJECTED",
+          "cleanup_reason": "GEOMETRY_UNCONFIRMED",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "4",
+          "reason": "PAYLOAD_SCENE_APPLY_REJECTED",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1336
+      }
+    ],
+    "last_status": {
+      "stage": "PAYLOAD_SCENE_APPLY_REJECTED",
+      "object_state": "phase=5 | hold_confirmed=False"
+    }
+  },
+  "sidecar": {
+    "rows": 479,
+    "contiguous_indices": true,
+    "first_frame": {
+      "frame_index": 0,
+      "overview": {
+        "receive_monotonic_ns": 20863234340416,
+        "receive_wall_ns": 1790265394844112173,
+        "observed_clock": {
+          "source_ns": 36045000000,
+          "receive_monotonic_ns": 20863230056973,
+          "receive_wall_ns": 1790265394839828417
+        },
+        "source_ns": 36043000000,
+        "frame_id": "normal_grasp_observer/camera_link/overview",
+        "topic": "/transport/overview"
+      },
+      "head": null,
+      "status": {
+        "receive_seq": 0,
+        "raw_status": null,
+        "receive_monotonic_ns": null,
+        "receive_wall_ns": null,
+        "observed_clock": null
+      },
+      "encode_started_monotonic_ns": 20863237850073,
+      "encode_finished_monotonic_ns": 20863243253019
+    },
+    "last_frame": {
+      "frame_index": 478,
+      "overview": {
+        "receive_monotonic_ns": 20956321752740,
+        "receive_wall_ns": 1790265487931524193,
+        "observed_clock": {
+          "source_ns": 115033000000,
+          "receive_monotonic_ns": 20956320436752,
+          "receive_wall_ns": 1790265487930207836
+        },
+        "source_ns": 115000000000,
+        "frame_id": "normal_grasp_observer/camera_link/overview",
+        "topic": "/transport/overview"
+      },
+      "head": {
+        "receive_monotonic_ns": 20956309529006,
+        "receive_wall_ns": 1790265487919300201,
+        "observed_clock": {
+          "source_ns": 115022000000,
+          "receive_monotonic_ns": 20956307761796,
+          "receive_wall_ns": 1790265487917533213
+        },
+        "source_ns": 115000000000,
+        "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+        "topic": "/camera/raw/head_rgbd/image"
+      },
+      "status": {
+        "receive_monotonic_ns": 20956284059584,
+        "receive_wall_ns": 1790265487893830777,
+        "observed_clock": {
+          "source_ns": 115008000000,
+          "receive_monotonic_ns": 20956283741817,
+          "receive_wall_ns": 1790265487893513167
+        },
+        "receive_seq": 1858,
+        "raw_status": {
+          "authority_reason": "RESOURCE_RECOVERY_REQUIRED:PAYLOAD_SCENE_APPLY_REJECTED",
+          "cleanup_reason": "GEOMETRY_UNCONFIRMED",
+          "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+          "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+          "hold_confirmed": false,
+          "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "5",
+          "reason": "PAYLOAD_SCENE_APPLY_REJECTED",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+          "task_phase": "PICK"
+        }
+      },
+      "encode_started_monotonic_ns": 20956325339966,
+      "encode_finished_monotonic_ns": 20956328453758
+    },
+    "first_frame_by_reason": {
+      "WAITING_FOR_TASK": {
+        "frame_index": 1,
+        "overview": {
+          "receive_monotonic_ns": 20863269387286,
+          "receive_wall_ns": 1790265394879158878,
+          "observed_clock": {
+            "source_ns": 36050000000,
+            "receive_monotonic_ns": 20863262414284,
+            "receive_wall_ns": 1790265394872185835
+          },
+          "source_ns": 36048000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": null,
+        "status": {
+          "receive_monotonic_ns": 20863243719520,
+          "receive_wall_ns": 1790265394853491182,
+          "observed_clock": {
+            "source_ns": 36045000000,
+            "receive_monotonic_ns": 20863230056973,
+            "receive_wall_ns": 1790265394839828417
+          },
+          "receive_seq": 1,
+          "raw_status": {
+            "authority_reason": "IDLE",
+            "cleanup_reason": "",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "",
+            "phase": "0",
+            "reason": "WAITING_FOR_TASK"
+          }
+        },
+        "encode_started_monotonic_ns": 20863272676908,
+        "encode_finished_monotonic_ns": 20863276512796
+      },
+      "WAITING_FOR_NAVIGATION_REVOCATION_READBACK": {
+        "frame_index": 182,
+        "overview": {
+          "receive_monotonic_ns": 20886666082953,
+          "receive_wall_ns": 1790265418275854641,
+          "observed_clock": {
+            "source_ns": 56651000000,
+            "receive_monotonic_ns": 20886663860950,
+            "receive_wall_ns": 1790265418273632215
+          },
+          "source_ns": 56600000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20886647415414,
+          "receive_wall_ns": 1790265418257186639,
+          "observed_clock": {
+            "source_ns": 56633000000,
+            "receive_monotonic_ns": 20886646265993,
+            "receive_wall_ns": 1790265418256037263
+          },
+          "source_ns": 56600000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20886633382954,
+          "receive_wall_ns": 1790265418243154103,
+          "observed_clock": {
+            "source_ns": 56621000000,
+            "receive_monotonic_ns": 20886632654623,
+            "receive_wall_ns": 1790265418242425969
+          },
+          "receive_seq": 467,
+          "raw_status": {
+            "authority_reason": "RESERVED",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "1",
+            "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+            "stage_id": "",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20886672228224,
+        "encode_finished_monotonic_ns": 20886676458606
+      },
+      "PLANNING_COMPLETE_OPERATION": {
+        "frame_index": 183,
+        "overview": {
+          "receive_monotonic_ns": 20886774072068,
+          "receive_wall_ns": 1790265418383843096,
+          "observed_clock": {
+            "source_ns": 56746000000,
+            "receive_monotonic_ns": 20886773261362,
+            "receive_wall_ns": 1790265418383032445
+          },
+          "source_ns": 56700000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20886759641027,
+          "receive_wall_ns": 1790265418369412722,
+          "observed_clock": {
+            "source_ns": 56729000000,
+            "receive_monotonic_ns": 20886755541411,
+            "receive_wall_ns": 1790265418365312559
+          },
+          "source_ns": 56700000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20886734516973,
+          "receive_wall_ns": 1790265418344288616,
+          "observed_clock": {
+            "source_ns": 56711000000,
+            "receive_monotonic_ns": 20886733321758,
+            "receive_wall_ns": 1790265418343092866
+          },
+          "receive_seq": 469,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "PLANNING_COMPLETE_OPERATION",
+            "stage_id": "",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20886777923374,
+        "encode_finished_monotonic_ns": 20886780585824
+      },
+      "WAITING_FOR_EXECUTION_GUARD": {
+        "frame_index": 279,
+        "overview": {
+          "receive_monotonic_ns": 20909723152170,
+          "receive_wall_ns": 1790265441332923992,
+          "observed_clock": {
+            "source_ns": 77848000000,
+            "receive_monotonic_ns": 20909720236146,
+            "receive_wall_ns": 1790265441330007381
+          },
+          "source_ns": 77800000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20909706197111,
+          "receive_wall_ns": 1790265441315968776,
+          "observed_clock": {
+            "source_ns": 77833000000,
+            "receive_monotonic_ns": 20909704919600,
+            "receive_wall_ns": 1790265441314690985
+          },
+          "source_ns": 77800000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20909683700298,
+          "receive_wall_ns": 1790265441293471324,
+          "observed_clock": {
+            "source_ns": 77816000000,
+            "receive_monotonic_ns": 20909683292230,
+            "receive_wall_ns": 1790265441293063638
+          },
+          "receive_seq": 928,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "WAITING_FOR_EXECUTION_GUARD",
+            "stage_id": "PREGRASP",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20909729127029,
+        "encode_finished_monotonic_ns": 20909733685445
+      },
+      "EXECUTING_MTC_STAGE:PREGRASP": {
+        "frame_index": 280,
+        "overview": {
+          "receive_monotonic_ns": 20909820656885,
+          "receive_wall_ns": 1790265441430428294,
+          "observed_clock": {
+            "source_ns": 77940000000,
+            "receive_monotonic_ns": 20909818953266,
+            "receive_wall_ns": 1790265441428724552
+          },
+          "source_ns": 77900000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20909804218960,
+          "receive_wall_ns": 1790265441413990383,
+          "observed_clock": {
+            "source_ns": 77923000000,
+            "receive_monotonic_ns": 20909803115259,
+            "receive_wall_ns": 1790265441412886805
+          },
+          "source_ns": 77900000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20909783774519,
+          "receive_wall_ns": 1790265441393545781,
+          "observed_clock": {
+            "source_ns": 77906000000,
+            "receive_monotonic_ns": 20909782695062,
+            "receive_wall_ns": 1790265441392466428
+          },
+          "receive_seq": 930,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_0",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+            "stage_id": "PREGRASP",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20909826429624,
+        "encode_finished_monotonic_ns": 20909829877529
+      },
+      "CHECKING_NEXT_STAGE:GRASP_APPROACH": {
+        "frame_index": 317,
+        "overview": {
+          "receive_monotonic_ns": 20918028357742,
+          "receive_wall_ns": 1790265449638129079,
+          "observed_clock": {
+            "source_ns": 85542000000,
+            "receive_monotonic_ns": 20918026710204,
+            "receive_wall_ns": 1790265449636481471
+          },
+          "source_ns": 85500000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20918008607312,
+          "receive_wall_ns": 1790265449618379126,
+          "observed_clock": {
+            "source_ns": 85523000000,
+            "receive_monotonic_ns": 20918007203457,
+            "receive_wall_ns": 1790265449616974953
+          },
+          "source_ns": 85500000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20917999523893,
+          "receive_wall_ns": 1790265449609295258,
+          "observed_clock": {
+            "source_ns": 85517000000,
+            "receive_monotonic_ns": 20917998129322,
+            "receive_wall_ns": 1790265449607900691
+          },
+          "receive_seq": 1092,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_1",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+            "stage_id": "PREGRASP",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20918033913088,
+        "encode_finished_monotonic_ns": 20918037534646
+      },
+      "EXECUTING_MTC_STAGE:GRASP_APPROACH": {
+        "frame_index": 323,
+        "overview": {
+          "receive_monotonic_ns": 20920068819235,
+          "receive_wall_ns": 1790265451678590655,
+          "observed_clock": {
+            "source_ns": 87448000000,
+            "receive_monotonic_ns": 20920066562412,
+            "receive_wall_ns": 1790265451676333499
+          },
+          "source_ns": 87400000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20920052344631,
+          "receive_wall_ns": 1790265451662116235,
+          "observed_clock": {
+            "source_ns": 87433000000,
+            "receive_monotonic_ns": 20920048748151,
+            "receive_wall_ns": 1790265451658519338
+          },
+          "source_ns": 87400000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20920033843215,
+          "receive_wall_ns": 1790265451643614373,
+          "observed_clock": {
+            "source_ns": 87417000000,
+            "receive_monotonic_ns": 20920032947340,
+            "receive_wall_ns": 1790265451642718744
+          },
+          "receive_seq": 1133,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_1",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+            "stage_id": "GRASP_APPROACH",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20920074611185,
+        "encode_finished_monotonic_ns": 20920078193361
+      },
+      "CHECKING_NEXT_STAGE:GRASP_CONFIRM": {
+        "frame_index": 333,
+        "overview": {
+          "receive_monotonic_ns": 20921663925862,
+          "receive_wall_ns": 1790265453273696892,
+          "observed_clock": {
+            "source_ns": 88941000000,
+            "receive_monotonic_ns": 20921662827416,
+            "receive_wall_ns": 1790265453272598752
+          },
+          "source_ns": 88900000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20921649948852,
+          "receive_wall_ns": 1790265453259720753,
+          "observed_clock": {
+            "source_ns": 88927000000,
+            "receive_monotonic_ns": 20921648460483,
+            "receive_wall_ns": 1790265453258232147
+          },
+          "source_ns": 88900000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20921651352723,
+          "receive_wall_ns": 1790265453261123916,
+          "observed_clock": {
+            "source_ns": 88927000000,
+            "receive_monotonic_ns": 20921648460483,
+            "receive_wall_ns": 1790265453258232147
+          },
+          "receive_seq": 1165,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_2",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+            "stage_id": "GRASP_APPROACH",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20921667595026,
+        "encode_finished_monotonic_ns": 20921670034979
+      },
+      "REVALIDATING_SAME_REMAINING_PLAN": {
+        "frame_index": 343,
+        "overview": {
+          "receive_monotonic_ns": 20923687881100,
+          "receive_wall_ns": 1790265455297652330,
+          "observed_clock": {
+            "source_ns": 90842000000,
+            "receive_monotonic_ns": 20923686250154,
+            "receive_wall_ns": 1790265455296021260
+          },
+          "source_ns": 90800000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20923674401644,
+          "receive_wall_ns": 1790265455284173266,
+          "observed_clock": {
+            "source_ns": 90828000000,
+            "receive_monotonic_ns": 20923672980283,
+            "receive_wall_ns": 1790265455282751842
+          },
+          "source_ns": 90800000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20923682936391,
+          "receive_wall_ns": 1790265455292707398,
+          "observed_clock": {
+            "source_ns": 90839000000,
+            "receive_monotonic_ns": 20923682674128,
+            "receive_wall_ns": 1790265455292445230
+          },
+          "receive_seq": 1206,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_2",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+            "stage_id": "GRASP_APPROACH",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20923692588943,
+        "encode_finished_monotonic_ns": 20923696256647
+      },
+      "EXECUTING_MTC_STAGE:GRASP_CONFIRM": {
+        "frame_index": 344,
+        "overview": {
+          "receive_monotonic_ns": 20923905370361,
+          "receive_wall_ns": 1790265455515141696,
+          "observed_clock": {
+            "source_ns": 91042000000,
+            "receive_monotonic_ns": 20923903579946,
+            "receive_wall_ns": 1790265455513351215
+          },
+          "source_ns": 91000000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20923889998919,
+          "receive_wall_ns": 1790265455499770407,
+          "observed_clock": {
+            "source_ns": 91027000000,
+            "receive_monotonic_ns": 20923888572928,
+            "receive_wall_ns": 1790265455498347046
+          },
+          "source_ns": 91000000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20923883563343,
+          "receive_wall_ns": 1790265455493334344,
+          "observed_clock": {
+            "source_ns": 91024000000,
+            "receive_monotonic_ns": 20923883449990,
+            "receive_wall_ns": 1790265455493221124
+          },
+          "receive_seq": 1210,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_2",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+            "stage_id": "GRASP_CONFIRM",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20923910982156,
+        "encode_finished_monotonic_ns": 20923914351335
+      },
+      "CHECKING_NEXT_STAGE:ATTACH_CONFIRM": {
+        "frame_index": 362,
+        "overview": {
+          "receive_monotonic_ns": 20927497630403,
+          "receive_wall_ns": 1790265459107401557,
+          "observed_clock": {
+            "source_ns": 94044000000,
+            "receive_monotonic_ns": 20927496766186,
+            "receive_wall_ns": 1790265459106537336
+          },
+          "source_ns": 94000000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20927479970917,
+          "receive_wall_ns": 1790265459089742555,
+          "observed_clock": {
+            "source_ns": 94028000000,
+            "receive_monotonic_ns": 20927477624614,
+            "receive_wall_ns": 1790265459087395772
+          },
+          "source_ns": 94000000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20927483342933,
+          "receive_wall_ns": 1790265459093113997,
+          "observed_clock": {
+            "source_ns": 94032000000,
+            "receive_monotonic_ns": 20927482324474,
+            "receive_wall_ns": 1790265459092095686
+          },
+          "receive_seq": 1282,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+            "stage_id": "GRASP_CONFIRM",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20927501171402,
+        "encode_finished_monotonic_ns": 20927503781943
+      },
+      "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME": {
+        "frame_index": 372,
+        "overview": {
+          "receive_monotonic_ns": 20929771063530,
+          "receive_wall_ns": 1790265461380834725,
+          "observed_clock": {
+            "source_ns": 95726000000,
+            "receive_monotonic_ns": 20929769011072,
+            "receive_wall_ns": 1790265461378782558
+          },
+          "source_ns": 95700000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20929755297644,
+          "receive_wall_ns": 1790265461365069345,
+          "observed_clock": {
+            "source_ns": 95716000000,
+            "receive_monotonic_ns": 20929751049212,
+            "receive_wall_ns": 1790265461360820378
+          },
+          "source_ns": 95700000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20929734478025,
+          "receive_wall_ns": 1790265461344249528,
+          "observed_clock": {
+            "source_ns": 95704000000,
+            "receive_monotonic_ns": 20929731735432,
+            "receive_wall_ns": 1790265461341506550
+          },
+          "receive_seq": 1327,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+            "stage_id": "ATTACH_CONFIRM",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20929774802333,
+        "encode_finished_monotonic_ns": 20929779046395
+      },
+      "WAITING_FOR_PHYSICAL_APPLICATION": {
+        "frame_index": 373,
+        "overview": {
+          "receive_monotonic_ns": 20930016221345,
+          "receive_wall_ns": 1790265461625992477,
+          "observed_clock": {
+            "source_ns": 95836000000,
+            "receive_monotonic_ns": 20930014287825,
+            "receive_wall_ns": 1790265461624058978
+          },
+          "source_ns": 95800000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20930000340435,
+          "receive_wall_ns": 1790265461610111974,
+          "observed_clock": {
+            "source_ns": 95821000000,
+            "receive_monotonic_ns": 20929996342003,
+            "receive_wall_ns": 1790265461606113171
+          },
+          "source_ns": 95800000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20929985409774,
+          "receive_wall_ns": 1790265461595180868,
+          "observed_clock": {
+            "source_ns": 95815000000,
+            "receive_monotonic_ns": 20929984558291,
+            "receive_wall_ns": 1790265461594329719
+          },
+          "receive_seq": 1332,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "WAITING_FOR_PHYSICAL_APPLICATION",
+            "stage_id": "ATTACH_CONFIRM",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20930019765806,
+        "encode_finished_monotonic_ns": 20930022523821
+      },
+      "PAYLOAD_SCENE_APPLY_REJECTED": {
+        "frame_index": 375,
+        "overview": {
+          "receive_monotonic_ns": 20930420314998,
+          "receive_wall_ns": 1790265462030086393,
+          "observed_clock": {
+            "source_ns": 96134000000,
+            "receive_monotonic_ns": 20930418201761,
+            "receive_wall_ns": 1790265462027972832
+          },
+          "source_ns": 96100000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 20930406176649,
+          "receive_wall_ns": 1790265462015948336,
+          "observed_clock": {
+            "source_ns": 96121000000,
+            "receive_monotonic_ns": 20930402497749,
+            "receive_wall_ns": 1790265462012269075
+          },
+          "source_ns": 96100000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 20930383671083,
+          "receive_wall_ns": 1790265461993442748,
+          "observed_clock": {
+            "source_ns": 96106000000,
+            "receive_monotonic_ns": 20930381027574,
+            "receive_wall_ns": 1790265461990798779
+          },
+          "receive_seq": 1340,
+          "raw_status": {
+            "authority_reason": "PAYLOAD_SCENE_APPLY_REJECTED",
+            "cleanup_reason": "GEOMETRY_UNCONFIRMED",
+            "context_id": "83ed539bd3fc4a08b01233c3255e4fc9_op_1_PICK",
+            "epoch": "10651d51-16f1-46ab-a183-528e495279d6",
+            "hold_confirmed": false,
+            "hold_id": "10651d51-16f1-46ab-a183-528e495279d6_1_hold_1_3",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "10651d51-16f1-46ab-a183-528e495279d6_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "4",
+            "reason": "PAYLOAD_SCENE_APPLY_REJECTED",
+            "stage_id": "ATTACH_CONFIRM",
+            "task_id": "fixed_transfer_968fc02996ed42c9bd50d2c950e3d21e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 20930423969110,
+        "encode_finished_monotonic_ns": 20930426476500
+      }
+    }
+  },
+  "limits": [
+    "Video decode result is reused from the owner; M5 only checked JSON and frame indices.",
+    "Video captions are received status observations, not authoritative completion or physical timing.",
+    "Outer process cleanup and business resource release are separate.",
+    "No complete transfer, contact-force or hardware acceptance claim."
+  ]
+}

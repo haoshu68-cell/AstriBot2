@@ -1,0 +1,84 @@
+#include <gtest/gtest.h>
+#include "astribot_s1_transport_native/payload_scene.hpp"
+using namespace astribot::transport;
+namespace {
+const std::set<std::string> known_links={"astribot_arm_left_tcp_link","astribot_arm_right_tcp_link"};
+astribot::payload::Observation physical() {
+ astribot::payload::Observation o;o.full_inventory=true;o.status=o.ATTACHED;
+ moveit_msgs::msg::AttachedCollisionObject body;body.link_name="astribot_arm_left_tcp_link";body.touch_links={body.link_name};body.weight=.2;
+ body.object.id="box";body.object.header.frame_id=body.link_name;body.object.pose.orientation.w=1.;
+ shape_msgs::msg::SolidPrimitive box;box.type=box.BOX;box.dimensions={.071,.071,.131};body.object.primitives={box};
+ geometry_msgs::msg::Pose p;p.orientation.w=1.;body.object.primitive_poses={p};o.objects={body};return o;
+}
+}
+TEST(PayloadScene, CopiesActualConservativeBodyAndRejectsUnrelatedSceneChanges) {
+ moveit_msgs::msg::PlanningScene before;before.world.octomap.header.frame_id="astribot_torso_base";auto raw=physical().objects.front().object;raw.header.frame_id="astribot_torso_base";raw.primitives[0].dimensions={.06,.06,.12};
+ before.world.collision_objects={raw};auto observed=physical();geometry_msgs::msg::Pose pose;pose.orientation.w=1.;
+ const auto diff=payload_scene_diff(before,observed,"box",true,pose,"astribot_torso_base",known_links);
+ ASSERT_EQ(diff.robot_state.attached_collision_objects.size(),1u);
+ EXPECT_DOUBLE_EQ(diff.robot_state.attached_collision_objects[0].object.primitives[0].dimensions[0],.071);
+ auto after=before;after.world.collision_objects.clear();after.robot_state.attached_collision_objects=observed.objects;
+ after.robot_state.attached_collision_objects[0].weight=0.;
+ EXPECT_NO_THROW(validate_payload_scene(before,after,observed,"box",true,pose,"astribot_torso_base",known_links));
+ after.allowed_collision_matrix.default_entry_names={"obstacle"};after.allowed_collision_matrix.default_entry_values={true};
+ EXPECT_THROW(validate_payload_scene(before,after,observed,"box",true,pose,"astribot_torso_base",known_links),std::runtime_error);
+}
+TEST(PayloadScene, DetachPreservesPhysicalGeometryAtMeasuredPoseAndFullInventory) {
+ moveit_msgs::msg::PlanningScene before;before.world.octomap.header.frame_id="astribot_torso_base";before.robot_state.attached_collision_objects=physical().objects;
+ auto observed=physical();auto other=observed.objects.front();other.object.id="other";observed.objects={other};before.robot_state.attached_collision_objects.push_back(other);
+ geometry_msgs::msg::Pose pose;pose.orientation.w=1.;pose.position.z=.97;
+ auto diff=payload_scene_diff(before,observed,"box",false,pose,"astribot_torso_base",known_links);
+ ASSERT_EQ(diff.world.collision_objects.size(),1u);EXPECT_EQ(diff.world.collision_objects[0].header.frame_id,"astribot_torso_base");
+ EXPECT_DOUBLE_EQ(diff.world.collision_objects[0].pose.position.z,.97);
+ auto after=before;after.robot_state.attached_collision_objects=observed.objects;after.world.collision_objects=diff.world.collision_objects;
+ EXPECT_NO_THROW(validate_payload_scene(before,after,observed,"box",false,pose,"astribot_torso_base",known_links));
+ after.world.collision_objects[0].primitives[0].dimensions[0]=.06;
+ EXPECT_THROW(validate_payload_scene(before,after,observed,"box",false,pose,"astribot_torso_base",known_links),std::runtime_error);
+}
+
+TEST(PayloadScene, ChecksTargetFramesBeforeRemovingAuthorizedObjectFromComparison) {
+ moveit_msgs::msg::PlanningScene before;before.world.octomap.header.frame_id="astribot_torso_base";auto observed=physical();
+ auto raw=observed.objects.front().object;raw.header.frame_id="map";
+ before.world.collision_objects={raw};geometry_msgs::msg::Pose pose;pose.orientation.w=1.;
+ EXPECT_THROW(payload_scene_diff(before,observed,"box",true,pose,"astribot_torso_base",known_links),std::runtime_error);
+ before.world.collision_objects[0].header.frame_id="astribot_torso_base";
+ auto after=before;after.world.collision_objects.clear();after.robot_state.attached_collision_objects=observed.objects;
+ EXPECT_THROW(validate_payload_scene(before,after,observed,"box",true,pose,"astribot_torso_base",{}),std::runtime_error);
+ after.robot_state.attached_collision_objects[0].object.header.frame_id="map";
+ EXPECT_THROW(validate_payload_scene(before,after,observed,"box",true,pose,"astribot_torso_base",known_links),std::runtime_error);
+}
+
+TEST(PayloadScene, WaitsForDelayedLedgerButRejectsUnexpectedRevisionOrEpoch) {
+ auto expected=physical();expected.source_epoch="source";expected.clock_epoch=3;expected.revision=12;
+ astribot::payload::State state;state.ledger_epoch="ledger";state.observation=expected;
+ state.observation.revision=11;
+ EXPECT_FALSE(payload_revision_ready(state,expected,"ledger"));
+ state.observation.revision=12;
+ EXPECT_TRUE(payload_revision_ready(state,expected,"ledger"));
+ state.observation.revision=13;
+ EXPECT_THROW(payload_revision_ready(state,expected,"ledger"),std::runtime_error);
+ state.observation=expected;state.observation.clock_epoch=4;
+ EXPECT_THROW(payload_revision_ready(state,expected,"ledger"),std::runtime_error);
+ state.observation=expected;state.observation.source_epoch="restarted";
+ EXPECT_THROW(payload_revision_ready(state,expected,"ledger"),std::runtime_error);
+ state.observation=expected;
+ EXPECT_THROW(payload_revision_ready(state,expected,"restarted_ledger"),std::runtime_error);
+}
+
+TEST(PayloadScene, KnownUnpairedRawInvalidatesFreshOldLedgerBeforeRemainingMotion) {
+ auto bound=physical();bound.source_epoch="source";bound.clock_epoch=1;bound.revision=2;bound.sequence=10;
+ astribot::payload::State ledger;ledger.ledger_epoch="ledger";ledger.observation=bound;ledger.confirmed=true;
+ // Previous criterion still authorizes this ledger revision, independent of
+ // whether any diagnostic exists for the newly received raw observation.
+ ASSERT_TRUE(payload_revision_ready(ledger,bound,"ledger"));
+ auto latest=bound;latest.sequence=11;latest.revision=3;
+ EXPECT_THROW(require_payload_observation_bound(bound,latest),std::runtime_error);
+ latest=bound;latest.sequence=11;latest.status=latest.UNKNOWN;latest.full_inventory=false;latest.objects.clear();
+ EXPECT_THROW(require_payload_observation_bound(bound,latest),std::runtime_error);
+ latest=bound;latest.sequence=11;latest.objects[0].object.primitives[0].dimensions[0]+=.001;
+ EXPECT_THROW(require_payload_observation_bound(bound,latest),std::runtime_error);
+ latest=bound;latest.sequence=11;
+ EXPECT_NO_THROW(require_payload_observation_bound(bound,latest));
+ ledger.observation.revision=1;
+ EXPECT_FALSE(payload_revision_ready(ledger,bound,"ledger")); // legitimate lag still waits
+}
