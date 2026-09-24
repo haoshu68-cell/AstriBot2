@@ -1,0 +1,28 @@
+--- external_trajectory_validator.after.hpp
++++ external_trajectory_validator.precision.hpp
+@@ -1,6 +1,7 @@
+ #pragma once
+ #include <cmath>
+ #include <limits>
++#include <sstream>
+ #include <moveit/robot_state/conversions.h>
+ #include <moveit/robot_trajectory/robot_trajectory.h>
+ #include <moveit_msgs/msg/robot_state.hpp>
+@@ -48,11 +49,14 @@
+     moveit::core::robotStateToRobotStateMsg(states.front(),first,true);
+     moveit::core::robotStateToRobotStateMsg(states[first_bad_index],bad,true);
+     moveit::core::robotStateToRobotStateMsg(states.back(),last,true);
++    std::ostringstream snapshots;snapshots.precision(std::numeric_limits<double>::max_digits10);
++    snapshots<<"first=";moveit_msgs::msg::to_flow_style_yaml(first,snapshots);
++    snapshots<<"\nbad=";moveit_msgs::msg::to_flow_style_yaml(bad,snapshots);
++    snapshots<<"\nlast=";moveit_msgs::msg::to_flow_style_yaml(last,snapshots);
+     RCLCPP_ERROR(rclcpp::get_logger("astribot_s1_manipulation.external_trajectory"),
+-      "EXTERNAL_COLLISION_SNAPSHOT frame=%s group=%s first_bad_index=%zu checked_states=%zu trajectory_waypoints=%zu reason=%s\nfirst=%s\nbad=%s\nlast=%s",
++      "EXTERNAL_COLLISION_SNAPSHOT frame=%s group=%s first_bad_index=%zu checked_states=%zu trajectory_waypoints=%zu reason=%s\n%s",
+       scene->getPlanningFrame().c_str(),group->getName().c_str(),first_bad_index,states.size(),trajectory.getWayPointCount(),
+-      report.reason.c_str(),moveit_msgs::msg::to_yaml(first,true).c_str(),
+-      moveit_msgs::msg::to_yaml(bad,true).c_str(),moveit_msgs::msg::to_yaml(last,true).c_str());
++      report.reason.c_str(),snapshots.str().c_str());
+     return false;
+   }
+   if(group->getName()=="arm_left" || group->getName()=="arm_right") {

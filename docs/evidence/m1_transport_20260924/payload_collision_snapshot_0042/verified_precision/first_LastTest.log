@@ -1,0 +1,190 @@
+Start testing: Sep 25 00:44 CST
+----------------------------------------------------------
+1/6 Testing: trajectory_time_scaling_test
+1/6 Test: trajectory_time_scaling_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/trajectory_time_scaling_test.gtest.xml" "--package-name" "astribot_s1_transport_mtc" "--output-file" "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/ament_cmake_gtest/trajectory_time_scaling_test.txt" "--command" "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/trajectory_time_scaling_test" "--gtest_output=xml:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/trajectory_time_scaling_test.gtest.xml"
+Directory: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build
+"trajectory_time_scaling_test" start time: Sep 25 00:44 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build':
+ - /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/trajectory_time_scaling_test --gtest_output=xml:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/trajectory_time_scaling_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from TrajectoryTimeScaling
+[ RUN      ] TrajectoryTimeScaling.DefaultAndExplicitOnePreserveExistingParameterization
+[INFO] [1790268279.980412362] [moveit_robot_model.robot_model]: Loading robot model 'time_scaling_test'...
+[INFO] [1790268279.980423424] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268279.980561627] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.980566184] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790268279.980572171] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.980574997] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790268279.980656871] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.980658772] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] TrajectoryTimeScaling.DefaultAndExplicitOnePreserveExistingParameterization (0 ms)
+[ RUN      ] TrajectoryTimeScaling.ScalesTimeAndDerivativesWithoutChangingPositions
+[INFO] [1790268279.980755483] [moveit_robot_model.robot_model]: Loading robot model 'time_scaling_test'...
+[INFO] [1790268279.980757241] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268279.980778572] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.980780585] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790268279.980825870] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.980827348] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] TrajectoryTimeScaling.ScalesTimeAndDerivativesWithoutChangingPositions (0 ms)
+[ RUN      ] TrajectoryTimeScaling.RejectsInvalidFactorsBeforeMutatingTrajectory
+[INFO] [1790268279.980895445] [moveit_robot_model.robot_model]: Loading robot model 'time_scaling_test'...
+[INFO] [1790268279.980896903] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] TrajectoryTimeScaling.RejectsInvalidFactorsBeforeMutatingTrajectory (0 ms)
+[ RUN      ] TrajectoryTimeScaling.RejectsScaledDurationThatCannotBeRepresented
+[INFO] [1790268279.980936215] [moveit_robot_model.robot_model]: Loading robot model 'time_scaling_test'...
+[INFO] [1790268279.980937537] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268279.980949934] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.980952861] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] TrajectoryTimeScaling.RejectsScaledDurationThatCannotBeRepresented (0 ms)
+[ RUN      ] TrajectoryTimeScaling.GeometryRevalidationNeverRetimesOrRescalesTheBoundMessage
+[INFO] [1790268279.980972568] [moveit_robot_model.robot_model]: Loading robot model 'time_scaling_test'...
+[INFO] [1790268279.980974559] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268279.980987623] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.980990175] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] TrajectoryTimeScaling.GeometryRevalidationNeverRetimesOrRescalesTheBoundMessage (1 ms)
+[ RUN      ] TrajectoryTimeScaling.InstalledJtcQuinticSplineHasTheSamePositionCurveAtScaledTime
+[INFO] [1790268279.981125752] [moveit_robot_model.robot_model]: Loading robot model 'time_scaling_test'...
+[INFO] [1790268279.981127003] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268279.981139888] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.981142555] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790268279.981192158] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=7.500s waypoints=4 max_vel=0.000rad/s (-) max_acc=0.133rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268279.981193629] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] TrajectoryTimeScaling.InstalledJtcQuinticSplineHasTheSamePositionCurveAtScaledTime (0 ms)
+[----------] 6 tests from TrajectoryTimeScaling (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 6 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/trajectory_time_scaling_test.gtest.xml'
+-- run_test.py: verify result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/trajectory_time_scaling_test.gtest.xml'
+<end of output>
+Test time =   0.08 sec
+----------------------------------------------------------
+Test Passed.
+"trajectory_time_scaling_test" end time: Sep 25 00:44 CST
+"trajectory_time_scaling_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/6 Testing: payload_transition_test
+3/6 Test: payload_transition_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/payload_transition_test.gtest.xml" "--package-name" "astribot_s1_transport_mtc" "--output-file" "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/ament_cmake_gtest/payload_transition_test.txt" "--command" "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/payload_transition_test" "--gtest_output=xml:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/payload_transition_test.gtest.xml"
+Directory: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build
+"payload_transition_test" start time: Sep 25 00:44 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build':
+ - /home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/payload_transition_test --gtest_output=xml:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/payload_transition_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 16 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 16 tests from PayloadTransition
+[ RUN      ] PayloadTransition.AttachReplacesEveryWaypointAndKeepsPathAndStagePolicy
+[INFO] [1790268280.058195153] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.058205413] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.AttachReplacesEveryWaypointAndKeepsPathAndStagePolicy (0 ms)
+[ RUN      ] PayloadTransition.InflatedPayloadRejectsPreviouslyClearPathWithoutMutatingCache
+[INFO] [1790268280.058746764] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.058750756] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268280.058885472] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268280.058891096] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[ERROR] [1790268280.060249788] [astribot_s1_manipulation.external_trajectory]: EXTERNAL_COLLISION_SNAPSHOT frame=astribot_torso_base group=slide_group first_bad_index=0 checked_states=17 trajectory_waypoints=2 reason=environment collision: payload<->wall
+first={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, name: ["slide"], position: [0.00000], velocity: [], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [{link_name: "tcp", object: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "tcp"}, pose: {position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}, id: "payload", type: {key: "", db: ""}, primitives: [{type: 1, dimensions: [0.500000, 0.500000, 0.500000], polygon: {points: []}}], primitive_poses: [{position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}], meshes: [], mesh_poses: [], planes: [], plane_poses: [], subframe_names: [], subframe_poses: [], operation: 0x00}, touch_links: ["tcp"], detach_posture: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: ""}, joint_names: [], points: []}, weight: 0.00000}], is_diff: false}
+bad={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, name: ["slide"], position: [0.00000], velocity: [], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [{link_name: "tcp", object: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "tcp"}, pose: {position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}, id: "payload", type: {key: "", db: ""}, primitives: [{type: 1, dimensions: [0.500000, 0.500000, 0.500000], polygon: {points: []}}], primitive_poses: [{position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}], meshes: [], mesh_poses: [], planes: [], plane_poses: [], subframe_names: [], subframe_poses: [], operation: 0x00}, touch_links: ["tcp"], detach_posture: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: ""}, joint_names: [], points: []}, weight: 0.00000}], is_diff: false}
+last={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, name: ["slide"], position: [0.400000], velocity: [], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [{link_name: "tcp", object: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "tcp"}, pose: {position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}, id: "payload", type: {key: "", db: ""}, primitives: [{type: 1, dimensions: [0.500000, 0.500000, 0.500000], polygon: {points: []}}], primitive_poses: [{position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}], meshes: [], mesh_poses: [], planes: [], plane_poses: [], subframe_names: [], subframe_poses: [], operation: 0x00}, touch_links: ["tcp"], detach_posture: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: ""}, joint_names: [], points: []}, weight: 0.00000}], is_diff: false}
+[       OK ] PayloadTransition.InflatedPayloadRejectsPreviouslyClearPathWithoutMutatingCache (2 ms)
+[ RUN      ] PayloadTransition.DetachRemovesStaleTrajectoryBodyAndUsesActualWorldPose
+[INFO] [1790268280.060348331] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.060350693] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[ERROR] [1790268280.060448564] [moveit_robot_state.robot_state]: Attached body 'payload' not found
+[ERROR] [1790268280.060507465] [moveit_robot_state.robot_state]: Attached body 'payload' not found
+[       OK ] PayloadTransition.DetachRemovesStaleTrajectoryBodyAndUsesActualWorldPose (0 ms)
+[ RUN      ] PayloadTransition.RejectsStaticWorldAndOtherAttachmentChanges
+[INFO] [1790268280.060583065] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.060584749] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsStaticWorldAndOtherAttachmentChanges (0 ms)
+[ RUN      ] PayloadTransition.RejectsContextIndexExpiryAndWrongTransition
+[INFO] [1790268280.060675241] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.060677063] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsContextIndexExpiryAndWrongTransition (0 ms)
+[ RUN      ] PayloadTransition.RejectsUnboundOrEmptyTargetBody
+[INFO] [1790268280.060745333] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.060746808] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsUnboundOrEmptyTargetBody (0 ms)
+[ RUN      ] PayloadTransition.RejectsAcmOctomapOriginAndMetadataChanges
+[INFO] [1790268280.060824517] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.060826076] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsAcmOctomapOriginAndMetadataChanges (0 ms)
+[ RUN      ] PayloadTransition.RejectsMissingDuplicateAndAmbiguousTarget
+[INFO] [1790268280.060890822] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.060892286] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsMissingDuplicateAndAmbiguousTarget (0 ms)
+[ RUN      ] PayloadTransition.RejectsMalformedShapeAndWrongLink
+[INFO] [1790268280.060957013] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.060958089] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsMalformedShapeAndWrongLink (1 ms)
+[ RUN      ] PayloadTransition.RepeatRequiresSameTransactionAndActualScene
+[INFO] [1790268280.061035365] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.061037632] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RepeatRequiresSameTransactionAndActualScene (0 ms)
+[ RUN      ] PayloadTransition.LaterOccupancyCheckCannotRecoverOldSmallBody
+[INFO] [1790268280.061474978] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.061477767] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268280.061713592] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268280.061717230] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790268280.061813772] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268280.061815898] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[ERROR] [1790268280.061902877] [astribot_s1_manipulation.external_trajectory]: EXTERNAL_COLLISION_SNAPSHOT frame=astribot_torso_base group=slide_group first_bad_index=7 checked_states=17 trajectory_waypoints=2 reason=environment collision: <octomap><->payload
+first={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, name: ["slide"], position: [0.00000], velocity: [0.00000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [{link_name: "tcp", object: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "tcp"}, pose: {position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}, id: "payload", type: {key: "", db: ""}, primitives: [{type: 1, dimensions: [0.0800000, 0.0800000, 0.0800000], polygon: {points: []}}], primitive_poses: [{position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}], meshes: [], mesh_poses: [], planes: [], plane_poses: [], subframe_names: [], subframe_poses: [], operation: 0x00}, touch_links: ["tcp"], detach_posture: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: ""}, joint_names: [], points: []}, weight: 0.00000}], is_diff: false}
+bad={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, name: ["slide"], position: [0.175000], velocity: [0.00000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [{link_name: "tcp", object: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "tcp"}, pose: {position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}, id: "payload", type: {key: "", db: ""}, primitives: [{type: 1, dimensions: [0.0800000, 0.0800000, 0.0800000], polygon: {points: []}}], primitive_poses: [{position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}], meshes: [], mesh_poses: [], planes: [], plane_poses: [], subframe_names: [], subframe_poses: [], operation: 0x00}, touch_links: ["tcp"], detach_posture: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: ""}, joint_names: [], points: []}, weight: 0.00000}], is_diff: false}
+last={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, name: ["slide"], position: [0.400000], velocity: [0.00000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "astribot_torso_base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [{link_name: "tcp", object: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "tcp"}, pose: {position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}, id: "payload", type: {key: "", db: ""}, primitives: [{type: 1, dimensions: [0.0800000, 0.0800000, 0.0800000], polygon: {points: []}}], primitive_poses: [{position: {x: 0.00000, y: 0.00000, z: 0.00000}, orientation: {x: 0.00000, y: 0.00000, z: 0.00000, w: 1.00000}}], meshes: [], mesh_poses: [], planes: [], plane_poses: [], subframe_names: [], subframe_poses: [], operation: 0x00}, touch_links: ["tcp"], detach_posture: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: ""}, joint_names: [], points: []}, weight: 0.00000}], is_diff: false}
+[       OK ] PayloadTransition.LaterOccupancyCheckCannotRecoverOldSmallBody (0 ms)
+[ RUN      ] PayloadTransition.UnreferencedTransformDriftAllowsAttachAndConfirmedReadback
+[INFO] [1790268280.061959693] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.061961345] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.UnreferencedTransformDriftAllowsAttachAndConfirmedReadback (1 ms)
+[ RUN      ] PayloadTransition.RejectsUnchangedExternalFrameOnWorldGeometry
+[INFO] [1790268280.062373054] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.062375111] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsUnchangedExternalFrameOnWorldGeometry (0 ms)
+[ RUN      ] PayloadTransition.RejectsExternalFrameBeforeOmittingAuthorizedPayload
+[INFO] [1790268280.062455252] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.062457237] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsExternalFrameBeforeOmittingAuthorizedPayload (0 ms)
+[ RUN      ] PayloadTransition.RejectsUnchangedUnknownAttachmentLink
+[INFO] [1790268280.062520148] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.062521736] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] PayloadTransition.RejectsUnchangedUnknownAttachmentLink (0 ms)
+[ RUN      ] PayloadTransition.RevalidationPreservesScaledOwnerAndCacheMessages
+[INFO] [1790268280.062579290] [moveit_robot_model.robot_model]: Loading robot model 'transition_test'...
+[INFO] [1790268280.062580802] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790268280.062613253] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268280.062615833] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[INFO] [1790268280.062679763] [astribot_s1_manipulation.time_optimizer]: baseline (IPTP, scaling 0.10/0.10): duration=4.000s waypoints=2 max_vel=0.000rad/s (-) max_acc=0.050rad/s^2 (slide) peak_vel_util=0.0% source=trajectory
+[INFO] [1790268280.062681441] [astribot_s1_manipulation.time_optimizer]: optimization disabled by configuration; baseline adopted
+[       OK ] PayloadTransition.RevalidationPreservesScaledOwnerAndCacheMessages (1 ms)
+[----------] 16 tests from PayloadTransition (5 ms total)
+
+[----------] Global test environment tear-down
+[==========] 16 tests from 1 test suite ran. (5 ms total)
+[  PASSED  ] 16 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/payload_transition_test.gtest.xml'
+-- run_test.py: verify result file '/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/mtc_build/test_results/astribot_s1_transport_mtc/payload_transition_test.gtest.xml'
+<end of output>
+Test time =   0.08 sec
+----------------------------------------------------------
+Test Passed.
+"payload_transition_test" end time: Sep 25 00:44 CST
+"payload_transition_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 25 00:44 CST
+
+gtest =   0.16 sec*proc
+

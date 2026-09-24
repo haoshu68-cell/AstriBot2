@@ -1,0 +1,36 @@
+Consolidate compiler generated dependencies of target transport_scene_signature
+[ 50%] Built target transport_scene_signature
+Consolidate compiler generated dependencies of target mtc_planner
+[ 66%] Building CXX object CMakeFiles/mtc_planner.dir/src/payload_transition.cpp.o
+[ 83%] Building CXX object CMakeFiles/mtc_planner.dir/src/mtc_planner.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp: In member function ‘void Planner::run(const std::shared_ptr<rclcpp_action::ServerGoalHandle<astribot_transport_msgs::action::PlanManipulation> >&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  145 |     {std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};}
+      |                                                                                                                ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  366 |       std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};
+      |                                                                                                                 ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: note: in C++11 and above a default constructor can be explicit
+[100%] Linking CXX executable mtc_planner
+[100%] Built target mtc_planner
+Consolidate compiler generated dependencies of target gtest_main
+[ 30%] Built target transport_scene_signature
+[ 50%] Built target gtest_main
+Consolidate compiler generated dependencies of target gtest
+[ 70%] Built target gtest
+Consolidate compiler generated dependencies of target payload_transition_test
+[ 80%] Building CXX object CMakeFiles/payload_transition_test.dir/test/payload_transition_test.cpp.o
+[ 90%] Building CXX object CMakeFiles/payload_transition_test.dir/src/payload_transition.cpp.o
+[100%] Linking CXX executable payload_transition_test
+[100%] Built target payload_transition_test
+[ 33%] Built target gtest
+[ 66%] Built target gtest_main
+Consolidate compiler generated dependencies of target trajectory_time_scaling_test
+[ 83%] Building CXX object CMakeFiles/trajectory_time_scaling_test.dir/test/trajectory_time_scaling_test.cpp.o
+[100%] Linking CXX executable trajectory_time_scaling_test
+[100%] Built target trajectory_time_scaling_test
