@@ -173,8 +173,8 @@ class CorridorAdapter:
             centering_clear=False
             if rotation_clear and n.last_robot is not None and before_entry:
                 along,lateral=candidate.coordinates(n.last_robot.x,n.last_robot.y)
-                if abs(lateral)<=n.profile.narrow_centering_max_offset_m:
-                    target=self.policy.centering_target or candidate.point(along,self.policy.target_offset(candidate) if self.fixed else 0.)
+                target=self.policy.centering_target or candidate.point(along,self.policy.target_offset(candidate) if self.fixed else 0.)
+                if abs(candidate.coordinates(*target)[1]-lateral)<=n.profile.narrow_centering_max_offset_m:
                     centering_clear=self.rotation_clear(candidate,to_map,target)
             self.invalid_since=None;self.last_error = ''
         except Exception as error:

@@ -1,0 +1,39 @@
+test_asymmetric_entry_failed_sweep_still_rejects (test_fixed_corridor.AdapterEntryTests) ... FAIL
+test_asymmetric_entry_moves_105mm_left_and_right (test_fixed_corridor.AdapterEntryTests) ... test_asymmetric_entry_over_300mm_is_rejected (test_fixed_corridor.AdapterEntryTests) ... ok
+test_legacy_center_uses_zero_target_and_same_limit (test_fixed_corridor.AdapterEntryTests) ... ok
+test_retained_target_controls_requested_displacement (test_fixed_corridor.AdapterEntryTests) ... ok
+
+======================================================================
+FAIL: test_asymmetric_entry_failed_sweep_still_rejects (test_fixed_corridor.AdapterEntryTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/test/test_fixed_corridor.py", line 163, in test_asymmetric_entry_failed_sweep_still_rejects
+    self.assertEqual(rotation.call_count,2)
+AssertionError: 1 != 2
+
+======================================================================
+FAIL: test_asymmetric_entry_moves_105mm_left_and_right (test_fixed_corridor.AdapterEntryTests) (mirror=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/test/test_fixed_corridor.py", line 148, in test_asymmetric_entry_moves_105mm_left_and_right
+    self.assertEqual(result.state,'CENTER')
+AssertionError: 'WAIT' != 'CENTER'
+- WAIT
++ CENTER
+
+
+======================================================================
+FAIL: test_asymmetric_entry_moves_105mm_left_and_right (test_fixed_corridor.AdapterEntryTests) (mirror=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/test/test_fixed_corridor.py", line 148, in test_asymmetric_entry_moves_105mm_left_and_right
+    self.assertEqual(result.state,'CENTER')
+AssertionError: 'WAIT' != 'CENTER'
+- WAIT
++ CENTER
+
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.020s
+
+FAILED (failures=3)

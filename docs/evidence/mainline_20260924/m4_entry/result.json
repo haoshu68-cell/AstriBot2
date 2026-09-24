@@ -1,0 +1,31 @@
+{
+  "issue_started": "2026-09-24T10:57:00+08:00",
+  "scope": "Independent M4 entry adapter issue; M1 original 10:35 clock unchanged",
+  "recorded_at": "2026-09-24T11:01:19.937733+08:00",
+  "passed": true,
+  "red": {
+    "methods": 5,
+    "failures": 3,
+    "log": "/home/yjh/WorkSpace/astribot_validation/M4_entry_adapter_20260924_1057/red.log",
+    "meaning": "Actual advance rejects both legal mirror corrections and skips their centering sweep"
+  },
+  "green": {
+    "methods": 21,
+    "existing": 16,
+    "new": 5,
+    "log": "/home/yjh/WorkSpace/astribot_validation/M4_entry_adapter_20260924_1057/green.log"
+  },
+  "coverage": [
+    "Left/right asymmetric legal 0.105 m displacement",
+    "Left/right displacement above 0.3 m refused",
+    "Failed target sweep still refused",
+    "Retained actual target beyond 0.3 m refused",
+    "Legacy zero-target legal +/-0.1 and illegal +/-0.4 preserved"
+  ],
+  "boundary": "Offline actual advance AST body + real corridor policies; TF, ROS message/publisher and sweep boundary are fakes. No ROS node, motion, installed artifact change, full M4 simulation claim or full matrix rerun.",
+  "sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/corridor_adapter.py": "59bad46df08054926e5c4ec3545c04370d01a1185b26ed9838340df5219ed9d8",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/test/test_fixed_corridor.py": "49e29e2c7e36e87d827c099c4cb819d543081bc0ce219a8ed655336e277534e3",
+    "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/narrow_arms_20260923_1902/install_v2/astribot_s1_robot_geometry/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/_geometry_native.cpython-310-x86_64-linux-gnu.so": "f3a85e4f781fef7fe56fd7462f4e8c850e752cb6a71b3800e7222b1c43b61f27"
+  }
+}
