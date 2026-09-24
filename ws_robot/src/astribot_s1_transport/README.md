@@ -158,12 +158,18 @@ PYTHONPATH=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transp
 
 新仓库/MTC 验证记录见 `docs/MTC_NAVIGATION_SIMULATION_20260919.md`。旧 `docs/TRANSPORT_SIMULATION_20260919.md` 仅为已退役空场景证据。
 
-固定非 home 姿态的集成验证使用同一导航仓库，将栈和任务的
-`navigation_geometry_mode` 同时设为 `fixed_v2`，导航策略使用 P4/P5。
-该模式要求实测关节几何、保持控制权、附着过滤版本和六方消费者确认；
-操作前先撤销导航，导航期间机械臂保持固定，不能通过 VLA 直接绕过。
-默认仍为 `legacy`。施工、复现入口与每次成功/失败记录见
-`docs/NONHOME_NAVIGATION_IMPLEMENTATION_20260919.md`；带载重复运行和完整通道矩阵尚未验收通过。
+当前完整抓取、搬运、放置演示使用 `navigation_geometry_mode=legacy`，
+最新运行及录像见 `docs/NORMAL_GRASP_VIDEO_20260923.md`。
+旧 Python 任务入口设置 `fixed_v2` 会明确拒绝并返回
+`CPP_TASK_HOLD_EXECUTOR_REQUIRED`，不能按历史说明直接切换启动。
+
+`fixed_v2` 的实测关节几何、保持控制权、附着过滤版本和六方消费者确认
+已有各自验证；C++ 当前姿态保持执行器见 `astribot_s1_transport_native`。
+完整非 home 抓放执行链正在按 `docs/MAINLINE_DISPATCH_20260924.md` 接通，
+不能用保持当前姿态或普通空载导航的成功替代完整带载抓放验收。
+操作前撤销导航、导航期间机械臂保持固定、VLA 不绕过准入的边界不变。
+历史实施及运行记录保留在 `docs/NONHOME_NAVIGATION_IMPLEMENTATION_20260919.md`；
+带载重复运行和实际臂展通道矩阵仍按独立证据验收。
 
 SLAM 默认 Release 构建已修正，示例使用导航环境默认的 1 倍仿真步进。旧的 0.05 倍联调记录不能用于实时性能验收；墙钟超时仍保留调试余量（机械臂 240 秒、每段导航 1200 秒），不代表真机参数。后续只在这一导航环境中验证，不修改传感器时间戳或时效门槛。
 
