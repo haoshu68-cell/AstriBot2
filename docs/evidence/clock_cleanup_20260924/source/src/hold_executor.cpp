@@ -18,6 +18,7 @@
 #include <astribot_s1_transport_native/action/hold_resources.hpp>
 #include <astribot_s1_transport_native/srv/renew_hold.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp/serialization.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <control_msgs/action/follow_joint_trajectory.hpp>
 #include <controller_manager_msgs/srv/list_controllers.hpp>
@@ -94,6 +95,7 @@ public:
    response->reason=response->accepted?"RENEWED":authority_->reason();
   });
 #ifdef PLAN_TO_HOLD_EXECUTOR
+  scene_evidence_directory_=declare_parameter<std::string>("scene_evidence_directory","");
   planner_=rclcpp_action::create_client<Planner>(this,"/transport/plan_manipulation");
   scenes_=create_client<SceneQuery>("/get_planning_scene");
   guard_client_=create_client<GuardService>("/transport/execution_guard/set");
@@ -120,6 +122,33 @@ public:
  }
 private:
 #ifdef PLAN_TO_HOLD_EXECUTOR
+ // Validation-only capture in this frozen source snapshot. At most two bounded
+ // raw CDR files per lease; overwrite uses one additional bounded temporary
+ // file. Journal paths identify first/last captures, not a retained history.
+ // Offline manifests compute SHA256 after exit.
+ void capture_scene(const moveit_msgs::msg::PlanningScene &scene,bool recheck) {
+  if(scene_evidence_directory_.empty())return;
+  rclcpp::Serialization<moveit_msgs::msg::PlanningScene> codec;
+  rclcpp::SerializedMessage encoded;codec.serialize_message(&scene,&encoded);
+  const auto &bytes=encoded.get_rcl_serialized_message();
+  if(bytes.buffer_length>16u*1024u*1024u)throw std::runtime_error("SCENE_EVIDENCE_SIZE_LIMIT");
+  const auto directory=std::filesystem::path(scene_evidence_directory_)/authority_->lease_id();
+  std::filesystem::create_directories(directory);
+  const auto path=directory/(recheck?"last_recheck_scene.cdr":"initial_scene.cdr");
+  const auto temporary=path.string()+".tmp";
+  {
+   std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
+   output.write(reinterpret_cast<const char*>(bytes.buffer),bytes.buffer_length);
+   output.flush();
+   output.close();
+   if(!output)throw std::runtime_error("SCENE_EVIDENCE_WRITE_FAILED");
+  }
+  std::filesystem::rename(temporary,path);
+  if(!authority_->record("scene_evidence",{{"context",parent_->get_goal()->context_id},
+      {"role",recheck?"recheck":"initial"},{"path",path.string()},
+      {"bytes",bytes.buffer_length},{"ros_ns",now().nanoseconds()},{"steady_ns",wall()}}))
+   throw std::runtime_error(authority_->reason());
+ }
  bool manipulation_ready(int64_t ros,int64_t steady) {
   if(!odom_||ns(odom_->header.stamp)<=0||ros<ns(odom_->header.stamp)||ros-ns(odom_->header.stamp)>300*MS||steady-odom_received_>300*MS){reason_="MTC_BASE_STATE_STALE";return false;}
   const auto &v=odom_->twist.twist;const auto &p=odom_->pose.pose.position;const auto &q=odom_->pose.pose.orientation;
@@ -158,6 +187,7 @@ private:
    if(stop_at_)return;
    try {
     auto scene=f.get()->scene;
+    capture_scene(scene,recheck);
     if(!geometry_fresh(now().nanoseconds(),wall())||!manipulation_ready(now().nanoseconds(),wall()))throw std::runtime_error(reason_);
     auto signature=bind_scene(scene);
     if(recheck){
@@ -544,6 +574,7 @@ private:
  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;rclcpp::Subscription<Envelope>::SharedPtr envelope_sub_;rclcpp::Subscription<GuardState>::SharedPtr guard_sub_;
  std::optional<nav_msgs::msg::Odometry> odom_;std::optional<Envelope> envelope_;std::optional<GuardState> guard_state_;
  nav_msgs::msg::Odometry reference_base_;Geometry reference_geometry_;Envelope reference_envelope_;
+ std::string scene_evidence_directory_;
  SceneBinding scene_binding_;std::unique_ptr<MtcPlan> plan_;trajectory_msgs::msg::JointTrajectory trajectory_;
  SceneBinding revalidation_binding_;
  std::map<std::string,double> endpoint_;std::string stage_id_;

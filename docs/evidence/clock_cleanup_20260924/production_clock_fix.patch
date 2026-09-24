@@ -1,0 +1,21 @@
+--- a/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -455,7 +455,7 @@
+   });query_id_=result.request_id;
+  }
+  void tick() {
+-  const auto ros=now().nanoseconds(),steady=wall();
++  auto ros=now().nanoseconds(),steady=wall();
+   try {
+    query_controllers();
+    if(parent_) {
+@@ -490,6 +490,9 @@
+     if(!stop_at_&&!hold_confirmed_&&steady-started_>15000*MS)stopping("HOLD_COMPLETION_TIMEOUT");
+ #endif
+     if(stop_at_) {
++     // stopping() can advance the authority clock within this tick. Cleanup
++     // must not submit the earlier tick sample as a clock rollback.
++     ros=now().nanoseconds();steady=wall();
+      cancel_children();
+      if(children_->all_terminal()&&!terminal_barrier_){terminal_barrier_=true;stop_ros_=ros;settling_.clear();}
+      bool ready=children_->all_terminal()&&(!children_->sent()||measured_safe(ros,steady));

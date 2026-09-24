@@ -1,0 +1,44 @@
+{
+  "hypothesis": "tick cached ros/steady -> stopping takes later ros/steady -> release resubmits cached pair; strict authority clocks correctly rejects stale steady even without ROS rollback",
+  "actual_case": "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01",
+  "actual_binary_sha256": "58bfce7f7c993a48731fdfa664160a8d801d5e793c6fcecac9dad51f1e151858",
+  "actual_journal_order": {
+    "20": "stop_requested:EXECUTION_GUARD_UNHEALTHY",
+    "21": "quarantined:RESOURCE_CLOCK_RESET"
+  },
+  "observed_monotonic_sources": {
+    "world_pose_stamps": {
+      "count": 1095,
+      "range_seconds": [
+        21.893,
+        40.162
+      ],
+      "regressions": 0
+    },
+    "odom": {
+      "count": 365,
+      "range_seconds": [
+        32.18,
+        39.46
+      ],
+      "regressions": 0
+    },
+    "probe_clock_feedback": {
+      "count": 116,
+      "range_seconds": [
+        33.781,
+        39.412
+      ],
+      "regressions": 0
+    },
+    "JTC_header_stamps": {
+      "count": 347,
+      "range_seconds": [
+        32.18,
+        39.45
+      ],
+      "regressions": 0
+    }
+  },
+  "limits": "No complete /clock stream or exact authority call arguments recorded in the actual scene; independent monotonic protocol RED reproduces the deterministic stale-pair defect. Guard failure itself is outside this fix."
+}
