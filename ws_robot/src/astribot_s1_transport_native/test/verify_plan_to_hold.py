@@ -30,14 +30,14 @@ from astribot_navigation_msgs.msg import RobotGeometryState, ArmHoldStatus, Navi
 from astribot_navigation_msgs.srv import SetRobotEnvelope
 from astribot_transport_msgs.action import PlanManipulation
 from astribot_transport_msgs.msg import ManipulationStage, ExecutionGuardStatus
-from astribot_transport_msgs.srv import SetExecutionGuard
+from astribot_transport_msgs.srv import SetExecutionGuard, RevalidateManipulation
 from astribot_s1_transport_native.action import PlanToHold
 from astribot_s1_transport_native.srv import RenewHold
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--mode',choices=['normal','wrong_context','start_changed','scene_changed','pending_cancel','unknown_result','no_endpoint'],required=True)
+    p.add_argument('--mode',choices=['normal','wrong_context','start_changed','scene_changed','pending_cancel','unknown_result','no_endpoint','occupancy_changed','revalidate_rejected','revalidate_wrong_context','revalidate_scene_race','cold_start','expired_fixed','warm_ack_race','coordinator_changed','revoke_unacked','navigation_positive','revoke_rejected'],required=True)
     p.add_argument('--domain',type=int,required=True);p.add_argument('--executable',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     args=p.parse_args();assert os.environ.get('ROS_DOMAIN_ID')==str(args.domain)
     journal=Path.home()/'.local/state/astribot/transport'/f'domain_{args.domain}.jsonl'
@@ -105,13 +105,36 @@ def main():
     def scene(req,res):
         nonlocal scene_calls
         scene_calls+=1;res.scene.robot_state.joint_state.name=list(positions);res.scene.robot_state.joint_state.position=list(positions.values())
+        if args.mode=='navigation_positive':
+            e=NavigationEnvelopeV2();e.header.stamp=stamp();e.valid_until=stamp(.3);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE;e.navigation_allowed=True;envelopes.publish(e);stop.wait(.1)
+        if args.mode=='coordinator_changed':
+            e=NavigationEnvelopeV2();e.header.stamp=stamp();e.valid_until=stamp();e.coordinator_session_id='restarted';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE;envelopes.publish(e);stop.wait(.1)
         if args.mode=='scene_changed' and scene_calls>1:res.scene.allowed_collision_matrix.default_entry_names=['obstacle'];res.scene.allowed_collision_matrix.default_entry_values=[True]
+        if args.mode in ('occupancy_changed','revalidate_rejected','revalidate_wrong_context','revalidate_scene_race'):
+            octomap=res.scene.world.octomap;octomap.header.frame_id='astribot_torso_base';octomap.origin.orientation.w=1.
+            octomap.octomap.binary=True;octomap.octomap.id='OcTree';octomap.octomap.resolution=.05
+            # Real OcTree binary child encoding: occupied=2, free=1. Geometry
+            # changes after planning; only native remaining-path validation may
+            # authorize the same already-planned trajectory/context.
+            octomap.octomap.data=[2 if scene_calls==1 else 1,0]
+            if args.mode=='revalidate_scene_race' and any(e['event']=='revalidate' for e in events):octomap.octomap.data=[2,0]
+        return res
+    def revalidate(req,res):
+        assert req.context_id=='context' and req.start_index==0 and not req.scene.is_diff
+        assert list(req.scene.world.octomap.octomap.data)==[1,0]
+        assert len([e for e in events if e['event']=='send' and e['controller']=='mtc'])==1, 'must not silently replan'
+        event('revalidate',context=req.context_id,start_index=req.start_index)
+        res.success=args.mode!='revalidate_rejected';res.reason='fixture remaining trajectory validation'
+        res.context_id='different_context' if args.mode=='revalidate_wrong_context' else req.context_id
         return res
     def set_guard(req,res):guard.update(active=req.enable,context=req.context_id);res.accepted=True;event('guard',active=req.enable);return res
     def revoke(req,res):
         nonlocal envelope_epoch,navigation
-        assert not req.envelope.transport_ready;navigation=False;envelope_epoch+=1;res.accepted=True;res.epoch=envelope_epoch;event('navigation_revoked');return res
+        assert not req.envelope.transport_ready
+        if args.mode=='revoke_unacked':stop.wait(3.4)
+        navigation=False;res.accepted=args.mode!='revoke_rejected';res.epoch=envelope_epoch;event('navigation_revoked' if res.accepted else 'navigation_revoke_rejected');return res
     entities.extend([fixture.create_service(ListControllers,'/controller_manager/list_controllers',controllers,callback_group=group),fixture.create_service(GetPlanningScene,'/get_planning_scene',scene,callback_group=group),fixture.create_service(SetExecutionGuard,'/transport/execution_guard/set',set_guard,callback_group=group),fixture.create_service(SetRobotEnvelope,'/navigation/set_robot_envelope',revoke,callback_group=group)])
+    entities.append(fixture.create_service(RevalidateManipulation,'/transport/revalidate_manipulation',revalidate,callback_group=group))
     clock=fixture.create_publisher(Clock,'/clock',10);geometry=fixture.create_publisher(RobotGeometryState,'/navigation/geometry_state',10)
     odom=fixture.create_publisher(Odometry,'/odom',qos_profile_sensor_data);envelopes=fixture.create_publisher(NavigationEnvelopeV2,'/navigation/envelope_v2',10)
     guard_pub=fixture.create_publisher(ExecutionGuardStatus,'/transport/execution_guard/status',10)
@@ -121,7 +144,17 @@ def main():
         g=RobotGeometryState();g.header.stamp=at;g.header.frame_id='astribot_torso_base';g.valid_until=stamp(.3);g.source_id='m1_fixture';g.sequence=sequence;g.model_revision='model';g.attachment_revision='empty'
         g.complete=g.attachment_state_confirmed=True;g.joints.name=list(positions);g.joints.position=list(positions.values());g.joint_position_error_bounds=[.004]*22;g.joint_source_stamps=[at]*22;geometry.publish(g)
         o=Odometry();o.header.stamp=at;o.header.frame_id='odom';o.child_frame_id='astribot_torso_base';o.pose.pose.orientation.w=1.;odom.publish(o)
-        e=NavigationEnvelopeV2();e.header.stamp=at;e.valid_until=stamp(.3);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE if navigation else e.HOLD;e.navigation_allowed=navigation;envelopes.publish(e)
+        e=NavigationEnvelopeV2();e.header.stamp=at;e.valid_until=stamp(.3);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE if navigation else e.HOLD;e.navigation_allowed=navigation
+        if args.mode=='expired_fixed' and not navigation:e.mode=e.FIXED_POSTURE;e.valid_until=at
+        publish_envelope=True
+        if args.mode=='warm_ack_race':
+            revoked=[v['wall'] for v in events if v['event']=='navigation_revoked']
+            if not revoked:e.mode=e.FIXED_POSTURE;e.navigation_allowed=True
+            elif time.monotonic()-revoked[0]<.3:publish_envelope=False
+            elif not navigation:e.mode=e.FIXED_POSTURE;e.valid_until=at
+        if args.mode=='coordinator_changed' and any(v['event']=='navigation_revoked' for v in events):e.coordinator_session_id='restarted'
+        if args.mode=='navigation_positive' and any(v['event']=='navigation_revoked' for v in events):e.mode=e.FIXED_POSTURE;e.navigation_allowed=True
+        if publish_envelope and (args.mode not in ('cold_start','revoke_rejected','revoke_unacked') or navigation):envelopes.publish(e)
         guard_pub.publish(ExecutionGuardStatus(stamp=at,joint_stamp=at,base_stamp=at,context_id=guard['context'],active=guard['active'],healthy=guard['active'],reason='EXECUTION_WITHIN_BOUNDS'))
     entities.append(fixture.create_timer(.04,publish,callback_group=group))
     entities.append(client.create_subscription(String,'/transport/hold_executor/status',lambda m:statuses.append(json.loads(m.data)),10))
@@ -146,11 +179,13 @@ def main():
         goal.pre_target.header.frame_id=goal.target.header.frame_id='astribot_torso_base';goal.pre_target.pose.orientation.w=goal.target.pose.orientation.w=1.;goal.exit_targets=[goal.pre_target]
         sent=action.send_goal_async(goal);wait(sent.done,4,'accept');handle=sent.result();assert handle.accepted
         terminal=handle.get_result_async()
-        if args.mode=='normal':
+        if args.mode in ('normal','occupancy_changed','cold_start','expired_fixed','warm_ack_race'):
             wait(lambda:any(h for _,h in holds),8,'no first-stage HOLD')
+            if args.mode=='occupancy_changed':assert len([e for e in events if e['event']=='revalidate'])==1
             assert len([e for e in events if e['event']=='send' and e['controller']!='mtc'])==6
+            assert next(i for i,e in enumerate(events) if e['event']=='navigation_revoked')<next(i for i,e in enumerate(events) if e['event']=='send')
             assert not terminal.done();assert not guard['active'];assert all(positions[j]==.1 for j in groups['arm_left_controller'])
-            navigation=True;until=time.monotonic()+.3;wait(lambda:time.monotonic()>=until,1,'hold handoff');assert statuses[-1]['hold_confirmed']
+            navigation=True;envelope_epoch+=1;until=time.monotonic()+.3;wait(lambda:time.monotonic()>=until,1,'hold handoff');assert statuses[-1]['hold_confirmed']
             cancel_future=handle.cancel_goal_async();wait(cancel_future.done,3,'cancel');assert cancel_future.result().goals_canceling
         elif args.mode=='pending_cancel':
             wait(lambda:any(e['event']=='send' and e['controller']=='mtc' for e in events),3,'planner not requested')
@@ -159,8 +194,23 @@ def main():
         wait(terminal.done,15,'terminal');result_value=terminal.result();outcome=dict(status=result_value.status,reason=result_value.result.reason,resources_released=result_value.result.resources_released)
         if args.mode=='unknown_result':assert not outcome['resources_released'] and 'RESOURCE_RECOVERY_REQUIRED' in outcome['reason']
         else:assert outcome['resources_released']
-        if args.mode!='normal':assert not any(h for _,h in holds)
-        if args.mode in ('wrong_context','start_changed','scene_changed','pending_cancel'):
+        if args.mode not in ('normal','occupancy_changed','cold_start','expired_fixed','warm_ack_race'):assert not any(h for _,h in holds)
+        if args.mode in ('wrong_context','start_changed','scene_changed','pending_cancel','revalidate_rejected','revalidate_wrong_context','revalidate_scene_race'):
+            assert not any(e['event']=='send' and e['controller']!='mtc' for e in events)
+        if args.mode.startswith('revalidate_'):
+            assert len([e for e in events if e['event']=='revalidate'])==1
+            assert 'REVALIDATION' in outcome['reason']
+        if args.mode=='revoke_rejected':
+            assert not any(e['event']=='send' for e in events)
+            assert 'NAVIGATION_REVOCATION_REJECTED' in outcome['reason']
+        if args.mode=='revoke_unacked':
+            assert not any(e['event']=='send' for e in events)
+            assert 'NAVIGATION_REVOCATION_TIMEOUT' in outcome['reason']
+        if args.mode=='navigation_positive':
+            assert 'MTC_NAVIGATION_NOT_REVOKED' in outcome['reason'] or 'NAVIGATION_REVOCATION_READBACK_TIMEOUT' in outcome['reason']
+            assert not any(e['event']=='send' and e['controller']!='mtc' for e in events)
+        if args.mode=='coordinator_changed':
+            assert 'MTC_COORDINATOR_CHANGED' in outcome['reason']
             assert not any(e['event']=='send' and e['controller']!='mtc' for e in events)
         if args.mode=='pending_cancel':
             assert any(e['event']=='cancel_ack' and e['controller']=='mtc' for e in events)

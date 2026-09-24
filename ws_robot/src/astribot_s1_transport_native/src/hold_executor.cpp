@@ -8,6 +8,7 @@
 #include <astribot_s1_transport_native/action/plan_to_hold.hpp>
 #include <astribot_transport_msgs/action/plan_manipulation.hpp>
 #include <astribot_transport_msgs/srv/set_execution_guard.hpp>
+#include <astribot_transport_msgs/srv/revalidate_manipulation.hpp>
 #include <astribot_transport_msgs/msg/execution_guard_status.hpp>
 #include <astribot_navigation_msgs/msg/navigation_envelope_v2.hpp>
 #include <astribot_navigation_msgs/srv/set_robot_envelope.hpp>
@@ -43,6 +44,7 @@ using GuardService=astribot_transport_msgs::srv::SetExecutionGuard;
 using GuardState=astribot_transport_msgs::msg::ExecutionGuardStatus;
 using Envelope=astribot_navigation_msgs::msg::NavigationEnvelopeV2;
 using Revoke=astribot_navigation_msgs::srv::SetRobotEnvelope;
+using Revalidate=astribot_transport_msgs::srv::RevalidateManipulation;
 #else
 using Action=astribot_s1_transport_native::action::HoldResources;
 constexpr const char *NODE_NAME="task_hold_executor",*ACTION_NAME="/transport/hold_resources";
@@ -96,8 +98,9 @@ public:
   scenes_=create_client<SceneQuery>("/get_planning_scene");
   guard_client_=create_client<GuardService>("/transport/execution_guard/set");
   revoke_client_=create_client<Revoke>("/navigation/set_robot_envelope");
+  revalidate_client_=create_client<Revalidate>("/transport/revalidate_manipulation");
   odom_sub_=create_subscription<nav_msgs::msg::Odometry>("/odom",rclcpp::SensorDataQoS(),[this](nav_msgs::msg::Odometry::SharedPtr m){odom_=*m;odom_received_=wall();});
-  envelope_sub_=create_subscription<Envelope>("/navigation/envelope_v2",10,[this](Envelope::SharedPtr m){envelope_=*m;envelope_received_=wall();if(parent_&&!hold_confirmed_&&!manipulation_ready(now().nanoseconds(),wall()))stopping(reason_);});
+  envelope_sub_=create_subscription<Envelope>("/navigation/envelope_v2",10,[this](Envelope::SharedPtr m){envelope_=*m;envelope_received_=wall();++envelope_sequence_;if(parent_&&!hold_confirmed_&&!manipulation_ready(now().nanoseconds(),wall()))stopping(reason_);});
   guard_sub_=create_subscription<GuardState>("/transport/execution_guard/status",10,[this](GuardState::SharedPtr m){guard_state_=*m;guard_received_=wall();});
 #endif
   server_=rclcpp_action::create_server<Action>(this,ACTION_NAME,
@@ -121,18 +124,30 @@ private:
   if(!odom_||ns(odom_->header.stamp)<=0||ros<ns(odom_->header.stamp)||ros-ns(odom_->header.stamp)>300*MS||steady-odom_received_>300*MS){reason_="MTC_BASE_STATE_STALE";return false;}
   const auto &v=odom_->twist.twist;const auto &p=odom_->pose.pose.position;const auto &q=odom_->pose.pose.orientation;
   if(!std::isfinite(v.linear.x+v.linear.y+v.angular.z+p.x+p.y+p.z+q.x+q.y+q.z+q.w)||std::abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001||odom_->header.frame_id.empty()||std::hypot(v.linear.x,v.linear.y)>=.02||std::abs(v.angular.z)>=.03){reason_="ARM_REQUIRES_STOPPED_BASE";return false;}
-  if(!envelope_||envelope_->coordinator_session_id.empty()||envelope_->mode!=Envelope::HOLD||envelope_->navigation_allowed||ns(envelope_->header.stamp)>ros||ros>=ns(envelope_->valid_until)||steady-envelope_received_>=ns(envelope_->valid_until)-ns(envelope_->header.stamp)){reason_="MTC_REQUIRES_FRESH_FIXED_HOLD";return false;}
+  // A revoked fixed envelope is a latched denial, not a positive lease. The
+  // coordinator has no V2 output at cold start, and retains FIXED_POSTURE with
+  // valid_until==now after revocation. Only this task's service ACK establishes
+  // the barrier; absence of a message alone never authorizes an arm command.
+  if(parent_&&revocation_verified_&&envelope_) {
+   if(envelope_->navigation_allowed||(envelope_->mode!=Envelope::HOLD&&envelope_->mode!=Envelope::FIXED_POSTURE)){reason_="MTC_NAVIGATION_NOT_REVOKED";return false;}
+   if(envelope_->epoch!=revoke_epoch_||(!reference_envelope_.coordinator_session_id.empty()&&envelope_->coordinator_session_id!=reference_envelope_.coordinator_session_id)){reason_="MTC_COORDINATOR_CHANGED";return false;}
+   if(reference_envelope_.coordinator_session_id.empty())reference_envelope_=*envelope_;
+  }
   return true;
  }
  void revoke_navigation() {
   auto request=std::make_shared<Revoke::Request>();request->envelope.transport_ready=false;
-  const auto lease=authority_->lease_id();
-  try{revoke_client_->async_send_request(request,[this,lease](rclcpp::Client<Revoke>::SharedFuture f){
-   if(!parent_||lease!=authority_->lease_id())return;
+  const auto lease=authority_->lease_id();const auto generation=++revoke_generation_;
+  revoke_pending_=true;revoke_sent_=wall();revoke_ros_=now().nanoseconds();revoke_envelope_sequence_=envelope_sequence_;
+  try{auto pending=revoke_client_->async_send_request(request,[this,lease,generation](rclcpp::Client<Revoke>::SharedFuture f){
+   if(!parent_||lease!=authority_->lease_id()||generation!=revoke_generation_)return;
+   revoke_pending_=false;
    try {auto result=f.get();if(!result->accepted){stopping("NAVIGATION_REVOCATION_REJECTED:"+result->reason);return;}
-    revoke_ack_=true;authority_->record("navigation_revoked",{{"epoch",result->epoch}});
+    revoke_ack_=true;revoke_epoch_=result->epoch;revoke_ack_at_=wall();revoke_wait_negative_=bool(envelope_);
+    if(!authority_->record("navigation_revoked",{{"epoch",result->epoch}}))throw std::runtime_error(authority_->reason());
+    if(!stop_at_)reason_="WAITING_FOR_NAVIGATION_REVOCATION_READBACK";
    }catch(const std::exception&e){stopping(std::string("NAVIGATION_REVOCATION_ERROR:")+e.what());}
-  });}catch(const std::exception&e){reason_=std::string("NAVIGATION_REVOCATION_UNCONFIRMED:")+e.what();authority_->record("navigation_revocation_unconfirmed",{{"error",e.what()}});}
+  });revoke_request_=pending.request_id;}catch(const std::exception&e){revoke_pending_=false;stopping(std::string("NAVIGATION_REVOCATION_UNCONFIRMED:")+e.what());}
  }
  void query_scene(bool recheck) {
   auto request=std::make_shared<SceneQuery::Request>();request->components.components=1023;
@@ -146,7 +161,19 @@ private:
     if(!geometry_fresh(now().nanoseconds(),wall())||!manipulation_ready(now().nanoseconds(),wall()))throw std::runtime_error(reason_);
     auto signature=bind_scene(scene);
     if(recheck){
-     if(signature!=scene_binding_)throw std::runtime_error("MTC_SCENE_CHANGED");
+     if(revalidation_readback_){
+      if(signature!=revalidation_binding_)throw std::runtime_error("MTC_SCENE_CHANGED_DURING_REVALIDATION");
+      scene_binding_=std::move(signature);revalidation_readback_=false;scene_stabilizing_=false;
+      if(!authority_->record("remaining_plan_revalidated",{{"context",parent_->get_goal()->context_id},{"start_index",plan_->index()}}))throw std::runtime_error(authority_->reason());
+     }else if(signature!=scene_binding_){
+      // The existing MTC service only replaces occupancy in its cached stage
+      // scenes. It does NOT authorize changed world/ACM/attached-body geometry.
+      if(signature.first!=scene_binding_.first)throw std::runtime_error("MTC_SCENE_CHANGED");
+      if(!scene_stabilizing_){scene_stabilizing_=true;scene_stability_started_=scene_stable_since_=wall();revalidation_binding_=signature;}
+      else if(signature!=revalidation_binding_){revalidation_binding_=signature;scene_stable_since_=wall();}
+      if(wall()-scene_stable_since_<1000*MS){scene_retry_at_=wall()+100*MS;return;}
+      revalidate_scene(scene);return;
+     }else {scene_stabilizing_=false;scene_retry_at_=0;}
      std::set<std::string> attached;for(const auto&o:scene.robot_state.attached_collision_objects)attached.insert(o.object.id);
      const auto&stage=plan_->check(parent_->get_goal()->operation=="PICK"?"PREGRASP":"PREPLACE","ARM",wall(),geometry_->joints,attached);
      trajectory_=stage.trajectory.joint_trajectory;stage_id_=stage.stage_id;
@@ -188,6 +215,21 @@ private:
    }catch(const std::exception&e){stopping(e.what());}
   });scene_request_=pending.request_id;
  }
+ void revalidate_scene(const moveit_msgs::msg::PlanningScene &scene) {
+  if(!revalidate_client_->service_is_ready())throw std::runtime_error("MTC_REVALIDATION_UNAVAILABLE");
+  auto request=std::make_shared<Revalidate::Request>();request->context_id=parent_->get_goal()->context_id;request->start_index=plan_->index();request->scene=scene;
+  const auto lease=authority_->lease_id();revalidation_pending_=true;revalidation_sent_=wall();scene_retry_at_=0;
+  auto pending=revalidate_client_->async_send_request(request,[this,lease](rclcpp::Client<Revalidate>::SharedFuture f){
+   if(!parent_||lease!=authority_->lease_id())return;
+   revalidation_pending_=false;if(stop_at_)return;
+   try{
+    auto result=f.get();
+    if(!result->success||result->context_id!=parent_->get_goal()->context_id)throw std::runtime_error("MTC_REVALIDATION_REJECTED:"+result->reason);
+    revalidation_readback_=true;query_scene(true);
+   }catch(const std::exception&e){stopping(e.what());}
+  });revalidation_request_=pending.request_id;
+  reason_="REVALIDATING_SAME_REMAINING_PLAN";
+ }
  // The owning caller may later supply M3's already-validated complete result at
  // this internal boundary. There is no ROS endpoint accepting arbitrary paths.
  void consume_plan(const Planner::Result &result) {
@@ -208,11 +250,27 @@ private:
  void advance_plan(int64_t ros,int64_t steady) {
   if(hold_confirmed_)return; // M2 may now grant navigation with this same hold.
   if(!manipulation_ready(ros,steady)){stopping(reason_);return;}
-  if(geometry_->source_id!=reference_geometry_.source_id||geometry_->clock_epoch!=reference_geometry_.clock_epoch||geometry_->model_revision!=reference_geometry_.model_revision||geometry_->attachment_revision!=reference_geometry_.attachment_revision||envelope_->coordinator_session_id!=reference_envelope_.coordinator_session_id){stopping("MTC_CONTEXT_CHANGED");return;}
+  if(geometry_->source_id!=reference_geometry_.source_id||geometry_->clock_epoch!=reference_geometry_.clock_epoch||geometry_->model_revision!=reference_geometry_.model_revision||geometry_->attachment_revision!=reference_geometry_.attachment_revision){stopping("MTC_CONTEXT_CHANGED");return;}
   const auto&a=odom_->pose.pose;const auto&b=reference_base_.pose.pose;
   const double dot=std::abs(a.orientation.x*b.orientation.x+a.orientation.y*b.orientation.y+a.orientation.z*b.orientation.z+a.orientation.w*b.orientation.w);
   if(odom_->header.frame_id!=reference_base_.header.frame_id||std::hypot(std::hypot(a.position.x-b.position.x,a.position.y-b.position.y),a.position.z-b.position.z)>.02||2*std::acos(std::min(1.,dot))>.02){stopping("MTC_BASE_MOVED");return;}
+  if(revoke_pending_&&steady-revoke_sent_>3000*MS){revoke_client_->remove_pending_request(revoke_request_);revoke_pending_=false;stopping("NAVIGATION_REVOCATION_TIMEOUT");return;}
+  if(!revoke_ack_)return;
+  if(!revocation_verified_) {
+   if(!revoke_wait_negative_)revocation_verified_=true;
+   else if(envelope_&&envelope_sequence_>revoke_envelope_sequence_&&ns(envelope_->header.stamp)>=revoke_ros_&&ros>=ns(envelope_->header.stamp)&&ros-ns(envelope_->header.stamp)<=300*MS&&steady-envelope_received_<=300*MS) {
+    if(envelope_->epoch!=revoke_epoch_||(!reference_envelope_.coordinator_session_id.empty()&&envelope_->coordinator_session_id!=reference_envelope_.coordinator_session_id)){stopping("MTC_COORDINATOR_CHANGED");return;}
+    if(envelope_->mode!=Envelope::HOLD&&envelope_->mode!=Envelope::FIXED_POSTURE){stopping("MTC_NAVIGATION_NOT_REVOKED");return;}
+    if(!envelope_->navigation_allowed){reference_envelope_=*envelope_;revocation_verified_=true;}
+   }
+   if(!revocation_verified_){if(steady-revoke_ack_at_>3000*MS)stopping("NAVIGATION_REVOCATION_READBACK_TIMEOUT");return;}
+   query_scene(false);
+  }
   if(scene_pending_&&steady-scene_sent_>3000*MS){scenes_->remove_pending_request(scene_request_);scene_pending_=false;stopping("MTC_SCENE_TIMEOUT");return;}
+  if(revalidation_pending_&&steady-revalidation_sent_>10000*MS){revalidate_client_->remove_pending_request(revalidation_request_);revalidation_pending_=false;stopping("MTC_REVALIDATION_TIMEOUT");return;}
+  if(scene_stabilizing_&&!revalidation_pending_&&!revalidation_readback_&&steady-scene_stability_started_>15000*MS){stopping("MTC_SCENE_NOT_STABLE");return;}
+  if(scene_retry_at_&&!scene_pending_&&!revalidation_pending_&&steady>=scene_retry_at_){scene_retry_at_=0;query_scene(true);}
+  if(scene_stabilizing_||revalidation_pending_||revalidation_readback_)return;
   if(scene_verified_&&!motion_sent_){
    if(steady-scene_verified_at_>2000*MS){stopping("EXECUTION_GUARD_TIMEOUT");return;}
    if(!guard_ack_||!revoke_ack_)return;
@@ -302,12 +360,13 @@ private:
   parent_=handle;auto child_names=names_;
 #ifdef PLAN_TO_HOLD_EXECUTOR
   child_names.push_back("mtc");planner_handle_.reset();planner_cancel_sent_=false;plan_.reset();scene_pending_=false;guard_pending_=false;guard_ack_=false;guard_requested_=false;guard_disarm_requested_=false;guard_disarmed_=false;motion_sent_=false;scene_verified_=false;scene_final_verified_=false;stage_id_.clear();endpoint_.clear();
-  reference_geometry_=*geometry_;reference_base_=*odom_;reference_envelope_=*envelope_;
+  reference_geometry_=*geometry_;reference_base_=*odom_;reference_envelope_=envelope_.value_or(Envelope());
+  scene_stabilizing_=false;scene_retry_at_=0;revalidation_pending_=false;revalidation_readback_=false;
 #endif
   children_=std::make_unique<ChildActions>(child_names);handles_.clear();cancel_sent_.clear();hold_started_=false;hold_confirmed_=false;terminal_barrier_=false;stop_at_=0;settling_.clear();
   started_=wall();hold_id_=authority_->lease_id()+"_hold";
 #ifdef PLAN_TO_HOLD_EXECUTOR
-  revoke_ack_=false;revoke_navigation();query_scene(false);
+  revoke_ack_=false;revoke_pending_=false;revocation_verified_=false;revoke_navigation();
 #else
   send_children();
 #endif
@@ -478,13 +537,20 @@ private:
 #ifdef PLAN_TO_HOLD_EXECUTOR
  rclcpp_action::Client<Planner>::SharedPtr planner_;PlannerHandle::SharedPtr planner_handle_;
  rclcpp::Client<SceneQuery>::SharedPtr scenes_;rclcpp::Client<GuardService>::SharedPtr guard_client_;rclcpp::Client<Revoke>::SharedPtr revoke_client_;
+ rclcpp::Client<Revalidate>::SharedPtr revalidate_client_;
  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;rclcpp::Subscription<Envelope>::SharedPtr envelope_sub_;rclcpp::Subscription<GuardState>::SharedPtr guard_sub_;
  std::optional<nav_msgs::msg::Odometry> odom_;std::optional<Envelope> envelope_;std::optional<GuardState> guard_state_;
  nav_msgs::msg::Odometry reference_base_;Geometry reference_geometry_;Envelope reference_envelope_;
  SceneBinding scene_binding_;std::unique_ptr<MtcPlan> plan_;trajectory_msgs::msg::JointTrajectory trajectory_;
+ SceneBinding revalidation_binding_;
  std::map<std::string,double> endpoint_;std::string stage_id_;
  int64_t odom_received_=0,envelope_received_=0,guard_received_=0,scene_sent_=0,scene_request_=0,scene_verified_at_=0;
  bool planner_cancel_sent_=false,scene_pending_=false,guard_pending_=false,guard_ack_=false,motion_sent_=false,scene_verified_=false,scene_final_verified_=false,revoke_ack_=false,guard_requested_=false,guard_disarm_requested_=false,guard_disarmed_=false;
+ bool scene_stabilizing_=false,revalidation_pending_=false,revalidation_readback_=false;
+ int64_t scene_stability_started_=0,scene_stable_since_=0,scene_retry_at_=0,revalidation_sent_=0,revalidation_request_=0;
+ bool revoke_pending_=false,revocation_verified_=false,revoke_wait_negative_=false;
+ uint64_t revoke_epoch_=0,revoke_generation_=0,envelope_sequence_=0,revoke_envelope_sequence_=0;
+ int64_t revoke_sent_=0,revoke_request_=0,revoke_ack_at_=0,revoke_ros_=0;
 #endif
 };
 }
