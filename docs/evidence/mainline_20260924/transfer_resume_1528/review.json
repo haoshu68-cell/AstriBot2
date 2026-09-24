@@ -1,0 +1,21 @@
+{
+  "scope": "Read-only normal combined parent flow review before actual simulation",
+  "findings": [
+    {
+      "id": "PLACE_CONTEXT_SYNTAX",
+      "evidence": "continue_place generated :op:2:PLACE; ResourceAuthority::name rejects colon",
+      "state": "fixed_in_M1_candidate_pending_unified_build",
+      "repair": "_op_1_PICK / _op_2_PLACE / _NAV plus parent input boundary of allowed characters and <=117 chars"
+    }
+  ],
+  "checked": [
+    "same lease and renewal state retained across operations",
+    "navigation terminal and measured stop before PLACE",
+    "navigation revoked before fresh station snapshot/scene readback",
+    "final authoritative EMPTY plus independent full scene plus physical placement/Hold/children terminal before RA.complete and parent success"
+  ],
+  "limits": [
+    "source audit only",
+    "no full Gazebo acceptance"
+  ]
+}

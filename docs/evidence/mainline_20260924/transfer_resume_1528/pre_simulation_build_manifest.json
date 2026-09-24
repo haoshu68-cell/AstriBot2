@@ -1,0 +1,95 @@
+{
+  "files": [
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/build.log",
+      "sha256": "bc5b46036aeb6bc4a334c89844ce6a21839cd211265052e8ca2b217e5e115786"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/build_humble_fixed.log",
+      "sha256": "dcc4664e1493edcb119ca9dac0ba21a2c132ab58c96857586e206b2ade966489"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/configure.log",
+      "sha256": "65cda734f0adbec45451e9a69907ad7bab160301d6644177e914bf7f0e4ab53f"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/final_native_ldd.log",
+      "sha256": "0e86ef5d35cb950d185dca3cf6fab852e78a699bb6b92286d2dd60f24386c897"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/install.log",
+      "sha256": "6369b7cf27ee8f1a79a2b352fd0e92447cc6158fc591688a59e410c6b9371e5a"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/mtc_build.log",
+      "sha256": "55eda7503000f0556ef94e7bf81687eabca6eff0dccff6353aacf4c394820a7c"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/mtc_configure.log",
+      "sha256": "7dfb87fd271ef39b8ea2d0ae34525f3fa4d192a310936176fc9a92e53b529273"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/mtc_install.log",
+      "sha256": "384f7ac4752fd68467c0d740dc47ca3211d7564915d55995a438b154a6f2b272"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/mtc_matched_build.log",
+      "sha256": "99250d0a8b31a36f495b59c3881a7d3efb559d6ac5069ca58367db7777432feb"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/mtc_matched_configure.log",
+      "sha256": "2696fc3814b944beb3091c25cfa5bfbe719687747cf3ba39b863c0856b0e6e65"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/mtc_time_scaling_test.log",
+      "sha256": "90dde95f6c7e35556ffde9037880ced7ad6a02c9c8631f47523edc466b0e74ff"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/mtc_time_scaling_test.xml",
+      "sha256": "593edf28b299879a530a2b2a51c047b941f4b836a63572d4d0639ba5ff9cc3d5"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/native_ldd.log",
+      "sha256": "ba7be1eeb633df6ffcf3997e3f00bb8b5d7e0b70b0f1561814420bbaac7a8f97"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/native_resource_bound.log",
+      "sha256": "e0d0ad8b366f29ae52f687f90cd17b028aef8fa45e734320c485ab6dfe763040"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/native_resource_bound.xml",
+      "sha256": "6d28331e0687022f8c3a0abc3adc283cdf123f96ab102668c8f3de7d499f24f9"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/native_tests.log",
+      "sha256": "a698b8e0803778b1df07ac99242e24db11671e57384049098e2fad9ff9951c9a"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/native_tests.xml",
+      "sha256": "d6df543888a10dbb0d86cb373d5f58267250eb8f08b733590b2367b461204880"
+    },
+    {
+      "path": "runs/mainline_20260924/transfer_resume_1528/logs/resource_authority_old_library_failure.xml",
+      "sha256": "d66276eee578f215ee6441545832ab793971e84689b459cf6529d98f4f8999fe"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/action/FixedStationTransfer.action",
+      "sha256": "6b2f5506287838a96ad7e99e2802d7805a2ae3c523c6241a79ec9dc60e46a18c"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp",
+      "sha256": "e259b34f4ef08643b4c4119309417668b0e2a8e2751246afecb7f64a466a3fe4"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp",
+      "sha256": "369581f5a5ad29db702ede2a21e6e33ded824ef2ed86a8053818901b9d7771d2"
+    }
+  ],
+  "archive_sha256": "484e1d4f5e9f35dd8b6015d8592308bde9dcadedb373768d6471a84ff689c101",
+  "evidence": "build/offline only; actual scene dispatched to M2, not yet accepted",
+  "failure_chain": [
+    "native first build failed: Humble Time.to_msg; fixed direct message conversion",
+    "RA first test loaded old libarm_hold_core; corrected candidate LD path without product change",
+    "MTC initial compile selected old manipulation header; selected matched existing time-scaling header, no motion parameter changes"
+  ]
+}
