@@ -1,0 +1,1559 @@
+{
+  "mode": "late_invalid",
+  "late_kind": "revision",
+  "expect_unsafe": false,
+  "operation": "PICK",
+  "domain": 232,
+  "events": [
+    {
+      "event": "isolated_domain_checked",
+      "wall": 84254.411184536,
+      "domain": 232
+    },
+    {
+      "event": "owned_processes",
+      "wall": 84254.451688718,
+      "partition": "m1_full_232_5a736b7c-7b7b-4a71-90ca-4c0f1c8d037f",
+      "boot_id": "2063685d-c834-4d96-ad01-6ea8bd8cd80e",
+      "processes": [
+        {
+          "pid": 3245360,
+          "start_ticks": "8425445",
+          "argv": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_install/lib/astribot_s1_transport_native/trajectory_executor",
+            "--ros-args",
+            "-p",
+            "use_sim_time:=true",
+            "-p",
+            "simulation_commissioning:=true",
+            "-p",
+            "payload_model:=fixture",
+            "-p",
+            "payload_object_id:=box",
+            "-p",
+            "payload_world:=fixture_world",
+            "-p",
+            "payload_robot_model:=fixture_robot",
+            "-p",
+            "payload_session_id:=fixture_session",
+            "-p",
+            "payload_source_id:=fixture_source",
+            "-p",
+            "payload_size_xyz:=[0.06, 0.06, 0.12]",
+            "-p",
+            "payload_model_from_root:=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]",
+            "-p",
+            "robot_description:=<robot name=\"fixture\"><link name=\"astribot_torso_base\"/><link name=\"wrist\"/><link name=\"astribot_arm_left_tcp_link\"/><joint name=\"fixture_arm\" type=\"continuous\"><parent link=\"astribot_torso_base\"/><child link=\"wrist\"/><origin xyz=\".1 0 1\"/><axis xyz=\"0 0 1\"/></joint><joint name=\"fixture_tcp\" type=\"fixed\"><parent link=\"wrist\"/><child link=\"astribot_arm_left_tcp_link\"/></joint></robot>"
+          ]
+        },
+        {
+          "pid": 3245358,
+          "start_ticks": "8425445",
+          "argv": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/full_physical_fixture"
+          ]
+        },
+        {
+          "pid": 3245359,
+          "start_ticks": "8425445",
+          "argv": [
+            "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_payload_state/lib/astribot_s1_payload_state/payload_state",
+            "--ros-args",
+            "-p",
+            "use_sim_time:=true",
+            "-p",
+            "session_id:=fixture_session",
+            "-p",
+            "source_id:=fixture_source",
+            "-p",
+            "journal_path:=/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_six_stage/late_revision_green_232.ledger.jsonl",
+            "-r",
+            "/payload/attachment_observation:=/fixture/ledger_observation"
+          ]
+        }
+      ]
+    },
+    {
+      "event": "artifact_identity",
+      "wall": 84254.472346839,
+      "hashes": {
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_six_stage/verify_full_manipulation_frozen.py": "1409cb09cb341e866d016b680a4073ab036d7806fd73f7027e348e657c267cf7",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_install/lib/astribot_s1_transport_native/trajectory_executor": "8fb2d6d475c8fd7bcfc5752677881e59e50a977316da94824595aef18fe4b42d",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_build/full_physical_fixture": "ce52f6cf58b950b951d77a079bed4fe4291c11f0b6015c0976e76ff3f369e48a",
+        "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_payload_state/lib/astribot_s1_payload_state/payload_state": "7260d5691bf0aba985a22ee0e0bb16ed988d90f2a674608babf32aa3860715db"
+      },
+      "environment": {
+        "ROS_DOMAIN_ID": "232",
+        "ROS_LOCALHOST_ONLY": "1",
+        "IGN_PARTITION": "m1_full_232_5a736b7c-7b7b-4a71-90ca-4c0f1c8d037f",
+        "LD_LIBRARY_PATH": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_install/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_transition/install/astribot_transport_msgs/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_install/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_transition/install/astribot_s1_transport_mtc/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_transition/install/astribot_transport_msgs/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922/gz_control_fix/install/gz_ros2_control/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260921/moveit_sensor_plugin/install/moveit_ros_perception/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_operator_station/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/livox_ros_driver2/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_gazebo_bringup/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_manipulation/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_transport_msgs/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_trajectory_bridge_native/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_exploration/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_slam_msgs/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_sensor_sync/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_transport_native/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_path_tracking/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_perception_components/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_payload_state/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_perception_msgs/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_payload_msgs/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_zones/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_operator_msgs/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_object_pose_core/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_msgs/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_bridge_msgs/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_autonomy_core/lib:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/social_dependencies/install/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_install/moveit_task_constructor_core/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_install/moveit_task_constructor_msgs/lib:/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_humble/opt/ros/humble/lib:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib:/usr/lib/x86_64-linux-gnu/eagleaudit",
+        "AMENT_PREFIX_PATH": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m1_transport_20260924/full_install:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_transition/install/astribot_s1_transport_mtc:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_transition/install/astribot_transport_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/narrow_arms_20260923_1902/install_v2/astribot_s1_robot_geometry:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922/gz_control_fix/install/gz_ros2_control:/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260921/moveit_sensor_plugin/install/moveit_ros_perception:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_sim_validation:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_transport:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_navigation:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_operator_station:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_operator_backend:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_map_manager:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_perception:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/livox_ros_driver2:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_gazebo_bringup:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/aws_robomaker_small_warehouse_world:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_transport_mtc:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_moveit_config:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_manipulation:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_transport_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_trajectory_bridge:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_trajectory_bridge_native:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_slam:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_mapping:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_exploration:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_slam_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_sensor_sync:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_transport_native:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_navigation_policy:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_task_arbiter_native:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_social_navigation:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_path_tracking:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_navigation_policy_native:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_robot_geometry:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_perception_native:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_perception_components:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_payload_state:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_manipulation_perception:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_dynamics_coupling:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_description:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_chassis_effort_drive:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_chassis_effort_drive_native:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_route_executor:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_perception_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_payload_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_zones:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_operator_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_object_pose_core:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_logging:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_eigen_vendor:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_bridge_msgs:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_autonomy_core:/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/social_dependencies/install:/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_install/moveit_task_constructor_core:/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_install/moveit_task_constructor_msgs:/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_humble/opt/ros/humble:/opt/ros/humble"
+      }
+    },
+    {
+      "event": "scene_read",
+      "wall": 84254.49165221,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "ledger",
+      "wall": 84254.492120493,
+      "confirmed": false,
+      "revision": 1,
+      "reason": "WAITING_FOR_SCENE_RECONCILIATION"
+    },
+    {
+      "event": "ledger",
+      "wall": 84254.52951617,
+      "confirmed": true,
+      "revision": 1,
+      "reason": "ATTACHMENT_CONFIRMED"
+    },
+    {
+      "event": "controllers_read",
+      "wall": 84254.562749587
+    },
+    {
+      "event": "scene_read",
+      "wall": 84254.666165315,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84254.699744927,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84254.81044996,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84254.910299409,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.019378937,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "controllers_read",
+      "wall": 84255.062749469
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.16621241,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.229731298,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.339766808,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.439582757,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "admission_snapshot",
+      "wall": 84255.497552355,
+      "action_status_subscribers": {
+        "arm_left_controller": 1,
+        "gripper_left_controller": 1,
+        "arm_right_controller": 1,
+        "gripper_right_controller": 1,
+        "head_controller": 1,
+        "torso_controller": 1,
+        "mtc": 1
+      },
+      "nodes": [
+        "m1_synthetic_controller_fixture",
+        "m1_protocol_client",
+        "m1_full_physical_fixture",
+        "payload_state",
+        "task_trajectory_executor"
+      ],
+      "observation_subscribers": 1,
+      "diagnostic_subscribers": 1,
+      "geometry_subscribers": 1,
+      "clock_subscribers": 2,
+      "last_status": {
+        "authority_reason": "IDLE",
+        "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+        "hold_confirmed": false,
+        "hold_id": "",
+        "hold_reason": "NO_HOLD",
+        "lease_id": "",
+        "phase": "0",
+        "reason": "WAITING_FOR_TASK"
+      },
+      "ledger_confirmed": true
+    },
+    {
+      "event": "admission_result",
+      "wall": 84255.507747182,
+      "accepted": false
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.549809973,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "controllers_read",
+      "wall": 84255.612655468
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.659487902,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "scene_read",
+      "wall": 84255.759664825,
+      "components": 4,
+      "attached": []
+    },
+    {
+      "event": "owned_process_exit",
+      "wall": 84255.959958198,
+      "processes": [
+        {
+          "pid": 3245360,
+          "returncode": 0
+        },
+        {
+          "pid": 3245358,
+          "returncode": 0
+        },
+        {
+          "pid": 3245359,
+          "returncode": 0
+        }
+      ]
+    }
+  ],
+  "statuses": [
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "WAITING_FOR_TASK"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "CONTROLLER_CLAIMS_EXPIRED"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "CONTROLLER_CLAIMS_EXPIRED"
+    },
+    {
+      "authority_reason": "IDLE",
+      "epoch": "89ff521a-b919-4b97-a6c8-934cf134ad46",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "CONTROLLER_CLAIMS_EXPIRED"
+    }
+  ],
+  "holds": [
+    [
+      84254.663897139,
+      false
+    ],
+    [
+      84254.666428054,
+      false
+    ],
+    [
+      84254.667079714,
+      false
+    ],
+    [
+      84254.712631007,
+      false
+    ],
+    [
+      84254.762928384,
+      false
+    ],
+    [
+      84254.812780023,
+      false
+    ],
+    [
+      84254.862823909,
+      false
+    ],
+    [
+      84254.912581351,
+      false
+    ],
+    [
+      84254.96287069,
+      false
+    ],
+    [
+      84255.012566193,
+      false
+    ],
+    [
+      84255.163835498,
+      false
+    ],
+    [
+      84255.166412459,
+      false
+    ],
+    [
+      84255.166970373,
+      false
+    ],
+    [
+      84255.212928369,
+      false
+    ],
+    [
+      84255.262593681,
+      false
+    ],
+    [
+      84255.312619967,
+      false
+    ],
+    [
+      84255.362692554,
+      false
+    ],
+    [
+      84255.412582103,
+      false
+    ],
+    [
+      84255.46286438,
+      false
+    ],
+    [
+      84255.512611759,
+      false
+    ],
+    [
+      84255.562927485,
+      false
+    ],
+    [
+      84255.612930699,
+      false
+    ]
+  ],
+  "geometry_samples": [
+    {
+      "wall": 84254.488960208,
+      "capture_ns": 102086843196,
+      "confirmed": false,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.528882518,
+      "capture_ns": 102126849883,
+      "confirmed": false,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.66473185,
+      "capture_ns": 102262711940,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.689251008,
+      "capture_ns": 102287170276,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.728789631,
+      "capture_ns": 102326818368,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.76900965,
+      "capture_ns": 102366993771,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.809114466,
+      "capture_ns": 102406930257,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.848909559,
+      "capture_ns": 102446868415,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.889126994,
+      "capture_ns": 102487039003,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.928776272,
+      "capture_ns": 102526807735,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84254.968835302,
+      "capture_ns": 102566835131,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.008896152,
+      "capture_ns": 102606819644,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.04883756,
+      "capture_ns": 102646811353,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.164437422,
+      "capture_ns": 102762279072,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.168780513,
+      "capture_ns": 102766824565,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.208818699,
+      "capture_ns": 102806818027,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.248873858,
+      "capture_ns": 102846853519,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.289145167,
+      "capture_ns": 102886981135,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.328796937,
+      "capture_ns": 102926838326,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.369082535,
+      "capture_ns": 102966945552,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.40881068,
+      "capture_ns": 103006834402,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.448861125,
+      "capture_ns": 103046854614,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.48893138,
+      "capture_ns": 103086922539,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.528916343,
+      "capture_ns": 103126849285,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.569064955,
+      "capture_ns": 103166897552,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.608845482,
+      "capture_ns": 103206859239,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.648877853,
+      "capture_ns": 103246866711,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.688931269,
+      "capture_ns": 103286922122,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.728846014,
+      "capture_ns": 103326822959,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.768869935,
+      "capture_ns": 103366866250,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.808915449,
+      "capture_ns": 103406895196,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.848861559,
+      "capture_ns": 103446856768,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.889006364,
+      "capture_ns": 103487000517,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    },
+    {
+      "wall": 84255.928852649,
+      "capture_ns": 103526851980,
+      "confirmed": true,
+      "positions": {
+        "astribot_arm_left_joint_1": 0.0,
+        "astribot_arm_left_joint_2": 0.0,
+        "astribot_arm_left_joint_3": 0.0,
+        "astribot_arm_left_joint_4": 0.0,
+        "astribot_arm_left_joint_5": 0.0,
+        "astribot_arm_left_joint_6": 0.0,
+        "astribot_arm_left_joint_7": 0.0,
+        "astribot_gripper_left_joint_L1": 0.0,
+        "astribot_arm_right_joint_1": 0.0,
+        "astribot_arm_right_joint_2": 0.0,
+        "astribot_arm_right_joint_3": 0.0,
+        "astribot_arm_right_joint_4": 0.0,
+        "astribot_arm_right_joint_5": 0.0,
+        "astribot_arm_right_joint_6": 0.0,
+        "astribot_arm_right_joint_7": 0.0,
+        "astribot_gripper_right_joint_L1": 0.0,
+        "astribot_head_joint_1": 0.0,
+        "astribot_head_joint_2": 0.0,
+        "astribot_torso_joint_1": 0.0,
+        "astribot_torso_joint_2": 0.0,
+        "astribot_torso_joint_3": 0.0,
+        "astribot_torso_joint_4": 0.0
+      }
+    }
+  ],
+  "outcome": {},
+  "journal": "/home/yjh/.local/state/astribot/transport/domain_232.jsonl",
+  "evidence": "synthetic six-stage controllers and Ignition endpoint; real C++ ledger; no Gazebo, real MTC planning or hardware acceptance"
+}

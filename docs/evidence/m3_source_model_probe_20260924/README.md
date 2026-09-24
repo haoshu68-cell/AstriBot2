@@ -1,5 +1,7 @@
 # M3 source 与双模型一次性入口：离线检查点
 
+> 历史版本留档：本文记录 `4eac3656` 初版及其当时路径，不是当前运行入口。初版 `probe_build` 已在逐文件归档校验后删除，映射见 [清理结果](../mainline_20260924/validated_version_cleanup_result.json)。当前静止入口修订为 `497c4e90`，20 项 C++ 检查通过，见 [修订证据](stationary_gate_revision/README.md)；实际 source/双模型仍未验。后续接线以 [当前操作清单](LIVE_OPERATION_CHECKLIST.md) 为准，包含必填 `hold_owner_id`；不得执行本文的旧二进制路径。
+
 2026-09-24，问题起点11:52，原检查点12:52不变。本次仅完成入口实现、隔离构建及下列离线核验。没有启动ROS节点、Gazebo、GPU或模型，不能作为真实source/双模型闭环验收。前面的clock0修正另有7项合成ROS协议证据，本次不重复计入。
 
 ## 已核验

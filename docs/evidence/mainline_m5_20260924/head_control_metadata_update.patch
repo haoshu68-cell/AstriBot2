@@ -1,0 +1,58 @@
+--- a/docs/evidence/mainline_m5_20260924/head_metadata_topics.json
++++ b/docs/evidence/mainline_m5_20260924/head_metadata_topics.json
+@@ -1,5 +1,5 @@
+ {
+-  "scope": "Optional bounded head-only metadata observer. Full image/cloud payloads require the separate 3-second raw bag. Do not run concurrently with another /m5_passive_observer.",
++  "scope": "Bounded 20-second M3 stationary metadata observer: nine head-input topics plus five control-state topics. Full image/cloud payloads require the separate 3-second raw bag. Do not run concurrently with another /m5_passive_observer. Event-only navigation status requires full-window event review, not a periodic freshness budget.",
+   "topics": [
+     {"topic":"/camera/raw/head_rgbd/image","type":"sensor_msgs/msg/Image","kind":"image","camera":"head_rgbd","qos":"sensor","required":true,"gap_budget_sec":0.25},
+     {"topic":"/camera/raw/head_rgbd/depth_image","type":"sensor_msgs/msg/Image","kind":"image","camera":"head_rgbd","qos":"sensor","required":true,"gap_budget_sec":0.25},
+@@ -9,6 +9,11 @@
+     {"topic":"/perception/projection_health/single_box/head_rgbd","type":"astribot_perception_msgs/msg/ProjectionHealth","kind":"projection_health","camera":"head_rgbd","qos":"latched","required":true,"gap_budget_sec":null},
+     {"topic":"/tf","type":"tf2_msgs/msg/TFMessage","kind":"tf","qos":"sensor","required":true,"gap_budget_sec":null},
+     {"topic":"/tf_static","type":"tf2_msgs/msg/TFMessage","kind":"tf_static","qos":"latched","required":true,"gap_budget_sec":null},
+-    {"topic":"/clock","type":"rosgraph_msgs/msg/Clock","kind":"clock","qos":"sensor","required":true,"gap_budget_sec":0.25}
++    {"topic":"/clock","type":"rosgraph_msgs/msg/Clock","kind":"clock","qos":"sensor","required":true,"gap_budget_sec":0.25},
++    {"topic":"/navigation/arm_hold","type":"astribot_navigation_msgs/msg/ArmHoldStatus","kind":"status","qos":"reliable","required":true,"gap_budget_sec":null},
++    {"topic":"/navigation/envelope_applied","type":"astribot_navigation_msgs/msg/EnvelopeApplyStatus","kind":"status","qos":"reliable","required":true,"gap_budget_sec":null},
++    {"topic":"/odom","type":"nav_msgs/msg/Odometry","kind":"odom","qos":"sensor","required":true,"gap_budget_sec":null},
++    {"topic":"/cmd_vel","type":"geometry_msgs/msg/Twist","kind":"twist","qos":"sensor","required":true,"gap_budget_sec":null},
++    {"topic":"/navigation/execution_status","type":"astribot_navigation_msgs/msg/NavigationExecutionStatus","kind":"status","qos":"latched","required":true,"gap_budget_sec":null}
+   ]
+ }
+--- a/docs/evidence/mainline_m5_20260924/CAPTURE_HANDOFF.md
++++ b/docs/evidence/mainline_m5_20260924/CAPTURE_HANDOFF.md
+@@ -97,7 +97,23 @@
+ 
+ 640×360、20 Hz、RGB8 + float32 depth + 16 字节点云的纯 payload 约 106 MB/s，3 秒约 318 MB，加数据库/其他消息开销；以实际录制值为准。额外订阅/磁盘写入会增加负载，因此该短 bag 不用于宣称无观测干扰的长期性能结果。不传 `--use-sim-time`：保留 bag 记录时间和源 header 的区别，并单独记录 `/clock`；bag 记录时间不是 steady 接收时间。
+ 
+-需要外部 steady 元数据时可单独使用现有 observer 和 `head_metadata_topics.json`，20 秒自然结束。它与 41-topic observer 使用相同节点名，**不得两者并行启动**；由 M2 选择本场配置。20 秒只是元数据，不延长原始 bag。应先建立 metadata 订阅，待准备就绪后在该窗口内启动 3 秒 raw bag：
++未来 M3 静止 source/模型场的外部 steady 元数据使用现有 observer 和 `head_metadata_topics.json`，20 秒自然结束。该清单现为 **14 条**：上列 9 条头部输入，加以下 5 条控制状态。图像/点云仍仅记元数据，其余消息由现有采集器完整保留字段；不新增采集器分支。
++
++| 新增控制话题 | 类型 | 现有 kind / QoS |
++|---|---|---|
++| `/navigation/arm_hold` | astribot_navigation_msgs/msg/ArmHoldStatus | status / reliable、volatile、depth 10 |
++| `/navigation/envelope_applied` | astribot_navigation_msgs/msg/EnvelopeApplyStatus | status / reliable、volatile、depth 10 |
++| `/odom` | nav_msgs/msg/Odometry | odom / sensor：best_effort、volatile、depth 5 |
++| `/cmd_vel` | geometry_msgs/msg/Twist | twist / sensor：best_effort、volatile、depth 5 |
++| `/navigation/execution_status` | astribot_navigation_msgs/msg/NavigationExecutionStatus | status / latched：reliable、transient_local、depth 4 |
++
++这 5 条均为本次静止模型场所需记录，`required=true`，不擅自设置周期 gap 预算。ArmHold/ACK 有 header，字段原样保存；NavigationExecutionStatus 没有 header，其原时间在 `data.stamp`，顶层 `source_ns=null` 正常。Twist 无源 stamp，不能伪造；接收 steady/wall 和最近 `/clock` 由外部 observer 记录，与 source 内部接收时间区分。ACK 的 session/consumer/envelope_epoch/installed_geometry_hash/applied/reason 全部保留，不能加不存在的 mode 字段。
++
++NavigationExecutionStatus 是事件流，不能要求每个周期刷新；latched depth 4 只保留有限历史，不能宣称拿到全部既往事件；没有任务时也可能根本没有事件。若只在前 2 秒接收历史事件，通用分析器热身后可能标 MISSING，必须同时检查 `samples_full_window` 与原事件，不能把该标签等同全场无数据，也不能仅凭缓存存在宣称当前准入成立。准入、有效期及参考身份以 M3 工装/源契约核验为准；元数据不是安全门控的替代品。
++
++**执行顺序尚待 M2/M3 实现，当前不能直接倒序启动**：两个模型 server 参数依赖 probe 先写的 `registration.json`，所以“server ready 再启动现有 probe”还不是可执行流程。总调度正协调“登记→server ready→bag 发现→单次新 capture”的验证门控；本轮不实现登记阶段拆分，也不声称模型已经预热。最终 runner 应在真正模型加载/冷启动完成后，再让 3 秒 head raw 窗口覆盖那一次实际输入 capture T；metadata 应先完成 14 条订阅发现。raw 不必覆盖整个推理输出等待，发现或实际新 capture 耗尽窗口则明确缺证，不自动延长或循环重录。**3 秒 raw 采集预算与原输入 5 秒有效期是不同边界**；不延长原 source TTL、不重盖 stamp、不把旧 capture 重新变为有效。entry/final 快照与全窗口元数据互相补充，不能据此宣称整个窗口一定没有丢失或失效。
++
++它与 41-topic observer 使用相同节点名，**不得两者并行启动**；由 M2 选择本场配置。20 秒只是元数据，不延长原始 bag；若实际模型操作超出 20 秒，明确该窗口覆盖不足，不推成完整模型窗口证明。命令保持：
+ 
+ ```bash
+ python3 -B /home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observer.py \
+@@ -106,7 +122,7 @@
+   --seconds 20 --warmup-sec 2
+ ```
+ 
+-若本场已运行 41-topic observer，可复用其现有 raw/TF/clock 元数据；它没有 M3 专用 cloud/ProjectionHealth 两订阅，必须明确这两个外部 steady 观测缺失，不伪称完整 9-topic 元数据。独立 observer 回调时间也不等于 bag recorder 或 source 内部消费时间。
++若本场已运行 41-topic observer，可复用其现有 raw/TF/clock、odom/cmd_vel 元数据；它没有 M3 专用 cloud/ProjectionHealth 及上述 3 个 typed 控制状态订阅，不能冒充完整 14-topic 模型场元数据。独立 observer 回调时间也不等于 bag recorder 或 source 内部消费时间。九头部 raw 3 秒命令与 QoS 不变；新增控制状态只进入 20 秒元数据清单。此前 `head_capture_config_verification.json` 对应旧九话题配置哈希，保留作历史验证，不冒充本次新版验证。
+ 
+ **同刻离线核验**：保留 bag 与配置/session/参数/身份/日志/退出码的 SHA256，关联实际 capture T 和 task/context/epoch。RGB、depth、CameraInfo、专用 cloud 需按精确 header stamp/frame 配对，不取最近帧、不重盖时间戳；检查尺寸、布局、无效深度与 NaN 原样保留。health 的 header 是发布/心跳时刻，不能强制冒充采集 T；原样核对 `capture_stamp`、source_epoch、processing_epoch、epoch_first_capture_stamp、valid_until 与 M3 消费契约。TF 必须覆盖 T，若插值应明确记录。只为选中的一个 T 导出原始输入和必要 TF/health/clock 上下文用于复核，不把离线文件重新冒充在线有效输入。raw 文件/图像、ROS 源 stamp、外部接收 steady、source 内部接收 steady 是不同证据层。
+ 

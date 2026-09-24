@@ -1,6 +1,6 @@
 # M3真实source与双模型：最小操作单（尚未执行）
 
-**静止入口修订中**：原 `probe_build` 是冻结旧二进制，其禁止导航与六 ACK 就绪合同互斥，不能用于下一真实场。四文件增量及待构建命令见 [stationary_gate_revision/README.md](stationary_gate_revision/README.md)。新版本构建、离线检查及本次取消接线验证通过后，由总调度指定实际二进制；目前仍不可启动。下段 98 项 hash 是修订之前的历史核对，不是当前工作树声明。
+**静止入口离线修订已通过，真实场未验**：`497c4e90` 的四文件修订已构建，20 项 C++ 检查通过，见 [stationary_gate_revision/README.md](stationary_gate_revision/README.md)。当前候选为 `runs/m3_source_model_probe_20260924/stationary_gate_build/m3_source_probe`，SHA256 `2626ed5e2b66d00b62d8183c9d30ab566266b76c0b5cc45530a10243bdb424fc`；SG7 真实负向及 source/双模型尚未验证，仍不放行实际场。原 `probe_build` 的导航禁止条件与六 ACK 合同互斥，已留档校验后删除。下段 98 项 hash 保留为修订前的历史核对，不是当前工作树声明。采集窗口及服务启动顺序仍有下文记录的缺口。
 
 2026-09-24恢复后只读核对：4eac3656两文件源码、原证据、二进制、private header、链接/加载依赖共98项hash全部匹配。现有worker及模型文件存在，两个worker的ldd均无缺库。没有启动ROS/GPU/模型、重新编译或重跑原72项测试；冻结源码及manifest不变。原问题11:52起点、12:52检查点保留；无实际前置则真实验证保持NOT_RUN。
 

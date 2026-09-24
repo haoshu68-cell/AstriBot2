@@ -1,0 +1,91 @@
+{
+  "schema": "astribot.m5.head_control_metadata_update/1",
+  "verified_at_utc": "2026-09-24T05:25:26.768567+00:00",
+  "scope": "Only head_metadata_topics.json and CAPTURE_HANDOFF.md updated; exact patch and this offline verification are derived artifacts. Frozen scene evidence, 41-topic config, raw QoS and runtime/recorder/probe code unchanged.",
+  "topics_before": 9,
+  "topics_after": 14,
+  "original_nine_specs_byte_values_unchanged": true,
+  "before_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_metadata_topics.json": "ced7ea40d3eacaa58e75f18377aeeb0edb2d0eaded307ed3ca06147f8e4a6c54",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/CAPTURE_HANDOFF.md": "bbca841ccaa341a3b44b726a4353ba60b8cd11be8dfaf78a74ac46baca838c73"
+  },
+  "after_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_metadata_topics.json": "ba942c5e112bfc9b713a04c55031236eaf549b5a25dac1c5646ad9e6e690555f",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/CAPTURE_HANDOFF.md": "db6a3a8f09b605382c10eee130f6ae97adf752420dcc428c83523a9979dac35f",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_raw_qos.yaml": "675bec8238906e561eff8cc3061160c400ffbfae3bd32d60577264659aab21f1",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_control_metadata_update.patch": "17e88f267952feae079f14186b4af671f8f498fcab51c3e30a9b2a61b05aaec6"
+  },
+  "source_contract_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_msgs/msg/ArmHoldStatus.msg": "b5a7c478f3524f9ca11cacc54ae1238f5ab6b87daf87c470b5bee675b4f5190b",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_msgs/msg/EnvelopeApplyStatus.msg": "5ee3ef52e9c0b0bcc2cfc2417efce2af3cb3f1f4971ed5c8f75fd3cf56346c86",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_msgs/msg/NavigationExecutionStatus.msg": "d5b1bf2f05601b1e5a392d069e09a28efed5e6c9adb835631b89d21cb52c6e14",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp": "18c0e47a6c74089d20523a0858b20dfbb2789f6d72c40fcd063bbf67aa1bf7ff",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/final_protection_node.cpp": "d43b66c2a9582afcd7b094754009a359a7a4f7bb7c7748693851c87a2d66934d",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_observer_node.cpp": "bdcd244c580aa0e4d53c7a9e22d7274420ec94e5f4bf6333931fc5be0aeaf8df",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp": "8d3b4b4526160d6c3f9f6bc8c0d26db0647891a27505d1bdc5462495d9d73eac",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observer.py": "ebd13508c21d76d136af22376eac1f4f7f1a906121e5f0cabcc28f11ac11d2a1"
+  },
+  "checks": [
+    {
+      "check": "observer_check_config",
+      "command": [
+        "/usr/bin/python3",
+        "-B",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observer.py",
+        "--topic-config",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_metadata_topics.json",
+        "--check-config"
+      ],
+      "returncode": 0,
+      "stdout": "{\"topics\": 14, \"ros_initialized\": false}\n",
+      "stderr": ""
+    },
+    {
+      "check": "document_bash_block_1",
+      "returncode": 0
+    },
+    {
+      "check": "document_bash_block_2",
+      "returncode": 0
+    },
+    {
+      "check": "document_bash_block_3",
+      "returncode": 0
+    },
+    {
+      "check": "document_bash_block_4",
+      "returncode": 0
+    },
+    {
+      "check": "document_bash_block_5",
+      "returncode": 0
+    },
+    {
+      "check": "exact_patch_apply_reverse_byte_roundtrip",
+      "result": "PASS"
+    },
+    {
+      "check": "diff_check",
+      "result": "PASS"
+    }
+  ],
+  "ros_initialized": false,
+  "ros_graph_queried": false,
+  "gpu_used": false,
+  "builds_run": false,
+  "qos_limits": [
+    "odom and cmd_vel request sensor best_effort matching M3 probe; compatible with baseline reliable/volatile publishers but not a lossless-evidence guarantee.",
+    "NavigationExecutionStatus is event-only reliable/transient_local; observer depth4 does not retain all publisher depth10 history. It may only occur during warmup or not occur with no navigation task.",
+    "NavigationExecutionStatus has data.stamp but no header, so generic source_ns is null; cmd_vel Twist has no source time.",
+    "Generic analyzer post-warmup MISSING must be checked against samples_full_window and raw event semantics; no automatic stationary admission conclusion."
+  ],
+  "runner_dependency": "PENDING_M2_M3: current model servers need registration.json written by probe. Registration then server readiness then bag discovery then single fresh capture is a target gate, not an executable sequence delivered here.",
+  "timing_boundaries": {
+    "raw_bag_process_budget_sec": 3,
+    "metadata_duration_sec": 20,
+    "source_input_ttl_sec": 5,
+    "ttl_changed": false,
+    "capture_stamp_rewritten": false
+  },
+  "historical_verification": "head_capture_config_verification.json remains tied to its old nine-topic hashes; it is not proof for this new config."
+}

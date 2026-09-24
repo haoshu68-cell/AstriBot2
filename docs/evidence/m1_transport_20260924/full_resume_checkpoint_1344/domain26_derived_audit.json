@@ -1,0 +1,41 @@
+{
+  "scope": "Offline derived barrier and settling checks only; original driver exit 1 remains unchanged",
+  "original_driver_pass": false,
+  "derived_checks_pass": true,
+  "native_initial_stop": "PAYLOAD_RAW_REVISION_CHANGED",
+  "final_action": {
+    "status": 6,
+    "reason": "RESOURCE_RECOVERY_REQUIRED:GEOMETRY_UNCONFIRMED",
+    "resources_released": false
+  },
+  "all_jtc": 18,
+  "after_injection_jtc": 0,
+  "payload_confirmations": 0,
+  "hold": false,
+  "quarantine_phase": 5,
+  "settling": [
+    {
+      "stage": "PREGRASP",
+      "samples": 17,
+      "steady_span_s": 0.639493501992547,
+      "source_span_ns": 639744160
+    },
+    {
+      "stage": "GRASP_APPROACH",
+      "samples": 15,
+      "steady_span_s": 0.5598733799997717,
+      "source_span_ns": 559965009
+    },
+    {
+      "stage": "GRASP_CONFIRM",
+      "samples": 16,
+      "steady_span_s": 0.600092238993966,
+      "source_span_ns": 600069461
+    }
+  ],
+  "first_cause_return_gap": "cleanup geometry_fresh overwrites reason_, so final Action reason omits initial raw failure",
+  "inputs": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260924/full_resume_checkpoint_1344/late_revision_green_26.json": "78c5e6608544506076a00dbee1c7ad5870723da8666ede769dbca408e8575965",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260924/full_resume_checkpoint_1344/domain_26.jsonl": "b85493227e1fd8b79bff9fcf23c84e5c754bde867c0732a4871d0fda4829ae8d"
+  }
+}

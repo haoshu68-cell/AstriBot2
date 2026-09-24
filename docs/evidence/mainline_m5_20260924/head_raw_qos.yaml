@@ -1,0 +1,46 @@
+# Used only by the bounded nine-topic head rosbag recipe in CAPTURE_HANDOFF.md.
+/camera/raw/head_rgbd/image:
+  history: keep_last
+  depth: 10
+  reliability: best_effort
+  durability: volatile
+/camera/raw/head_rgbd/depth_image:
+  history: keep_last
+  depth: 10
+  reliability: best_effort
+  durability: volatile
+/camera/raw/head_rgbd/camera_info:
+  history: keep_last
+  depth: 10
+  reliability: best_effort
+  durability: volatile
+/manipulation/single_box/head_rgbd/points:
+  history: keep_last
+  depth: 10
+  reliability: best_effort
+  durability: volatile
+/perception/camera_health/head_rgbd:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: transient_local
+/perception/projection_health/single_box/head_rgbd:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: transient_local
+/tf:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile
+/tf_static:
+  history: keep_last
+  depth: 100
+  reliability: reliable
+  durability: transient_local
+/clock:
+  history: keep_last
+  depth: 100
+  reliability: best_effort
+  durability: volatile

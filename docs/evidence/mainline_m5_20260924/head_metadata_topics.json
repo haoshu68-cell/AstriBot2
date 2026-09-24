@@ -1,0 +1,19 @@
+{
+  "scope": "Bounded 20-second M3 stationary metadata observer: nine head-input topics plus five control-state topics. Full image/cloud payloads require the separate 3-second raw bag. Do not run concurrently with another /m5_passive_observer. Event-only navigation status requires full-window event review, not a periodic freshness budget.",
+  "topics": [
+    {"topic":"/camera/raw/head_rgbd/image","type":"sensor_msgs/msg/Image","kind":"image","camera":"head_rgbd","qos":"sensor","required":true,"gap_budget_sec":0.25},
+    {"topic":"/camera/raw/head_rgbd/depth_image","type":"sensor_msgs/msg/Image","kind":"image","camera":"head_rgbd","qos":"sensor","required":true,"gap_budget_sec":0.25},
+    {"topic":"/camera/raw/head_rgbd/camera_info","type":"sensor_msgs/msg/CameraInfo","kind":"info","camera":"head_rgbd","qos":"sensor","required":true,"gap_budget_sec":0.25},
+    {"topic":"/manipulation/single_box/head_rgbd/points","type":"sensor_msgs/msg/PointCloud2","kind":"cloud","camera":"head_rgbd","qos":"sensor","required":true,"gap_budget_sec":0.25},
+    {"topic":"/perception/camera_health/head_rgbd","type":"astribot_perception_msgs/msg/CameraHealth","kind":"raw_health","camera":"head_rgbd","qos":"latched","required":true,"gap_budget_sec":null},
+    {"topic":"/perception/projection_health/single_box/head_rgbd","type":"astribot_perception_msgs/msg/ProjectionHealth","kind":"projection_health","camera":"head_rgbd","qos":"latched","required":true,"gap_budget_sec":null},
+    {"topic":"/tf","type":"tf2_msgs/msg/TFMessage","kind":"tf","qos":"sensor","required":true,"gap_budget_sec":null},
+    {"topic":"/tf_static","type":"tf2_msgs/msg/TFMessage","kind":"tf_static","qos":"latched","required":true,"gap_budget_sec":null},
+    {"topic":"/clock","type":"rosgraph_msgs/msg/Clock","kind":"clock","qos":"sensor","required":true,"gap_budget_sec":0.25},
+    {"topic":"/navigation/arm_hold","type":"astribot_navigation_msgs/msg/ArmHoldStatus","kind":"status","qos":"reliable","required":true,"gap_budget_sec":null},
+    {"topic":"/navigation/envelope_applied","type":"astribot_navigation_msgs/msg/EnvelopeApplyStatus","kind":"status","qos":"reliable","required":true,"gap_budget_sec":null},
+    {"topic":"/odom","type":"nav_msgs/msg/Odometry","kind":"odom","qos":"sensor","required":true,"gap_budget_sec":null},
+    {"topic":"/cmd_vel","type":"geometry_msgs/msg/Twist","kind":"twist","qos":"sensor","required":true,"gap_budget_sec":null},
+    {"topic":"/navigation/execution_status","type":"astribot_navigation_msgs/msg/NavigationExecutionStatus","kind":"status","qos":"latched","required":true,"gap_budget_sec":null}
+  ]
+}
