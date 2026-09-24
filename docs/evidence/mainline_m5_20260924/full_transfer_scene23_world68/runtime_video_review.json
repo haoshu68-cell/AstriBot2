@@ -1,0 +1,763 @@
+{
+  "scope": "Closed scene23 only; metadata/hash review, no video decoding or collision root-cause analysis",
+  "case_result": {
+    "passed": false,
+    "error": "RuntimeError('full_transfer exit 1')",
+    "finished_wall": 1790267200.7629447,
+    "cleanup_complete": true,
+    "video_decode": {
+      "decoded_frames": 614,
+      "sidecar_rows": 614,
+      "metadata_frames": 614,
+      "passed": true
+    }
+  },
+  "stack": {
+    "state": "stopped",
+    "isolation": {
+      "ROS_DOMAIN_ID": "68",
+      "ROS_LOCALHOST_ONLY": "1",
+      "IGN_PARTITION": "astribot_fixed_transfer_20260924_station23",
+      "GZ_PARTITION": "astribot_fixed_transfer_20260924_station23",
+      "IGN_DISCOVERY_MSG_PORT": "18136",
+      "IGN_DISCOVERY_SRV_PORT": "18137",
+      "IGN_IP": "127.0.0.1",
+      "GZ_IP": "127.0.0.1",
+      "ASTRIBOT_SIM_INSTANCE": "fixed_transfer_20260924_station23"
+    },
+    "remaining_owned_pids": [],
+    "log_capture_errors": [],
+    "ended": 1790267200.325212
+  },
+  "video": {
+    "frames": 614,
+    "encoding_fps": 10,
+    "wall_duration_s": 107.39383050999822,
+    "last_status": {
+      "stage": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+      "object_state": "phase=5 | hold_confirmed=False"
+    },
+    "stage_frames": [
+      {
+        "frame": 0,
+        "stage": "WAITING_FOR_TASK",
+        "wall_time": 1790267090.7510593,
+        "raw_status": {
+          "authority_reason": "IDLE",
+          "cleanup_reason": "",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "",
+          "phase": "0",
+          "reason": "WAITING_FOR_TASK"
+        },
+        "status_receive_seq": 1
+      },
+      {
+        "frame": 235,
+        "stage": "RESERVED",
+        "wall_time": 1790267115.7062452,
+        "raw_status": {
+          "authority_reason": "RESERVED",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "1",
+          "reason": "RESERVED",
+          "stage_id": "",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 498
+      },
+      {
+        "frame": 236,
+        "stage": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+        "wall_time": 1790267115.7524362,
+        "raw_status": {
+          "authority_reason": "RESERVED",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "1",
+          "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+          "stage_id": "",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 499
+      },
+      {
+        "frame": 236,
+        "stage": "PLANNING_COMPLETE_OPERATION",
+        "wall_time": 1790267115.852338,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "PLANNING_COMPLETE_OPERATION",
+          "stage_id": "",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 501
+      },
+      {
+        "frame": 355,
+        "stage": "WAITING_FOR_EXECUTION_GUARD",
+        "wall_time": 1790267141.2524467,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1009
+      },
+      {
+        "frame": 356,
+        "stage": "EXECUTING_MTC_STAGE:PREGRASP",
+        "wall_time": 1790267141.3524938,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1011
+      },
+      {
+        "frame": 422,
+        "stage": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+        "wall_time": 1790267155.0055432,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1283
+      },
+      {
+        "frame": 436,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790267157.3023038,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "PREGRASP",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1329
+      },
+      {
+        "frame": 436,
+        "stage": "WAITING_FOR_EXECUTION_GUARD",
+        "wall_time": 1790267157.5023882,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1332
+      },
+      {
+        "frame": 436,
+        "stage": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+        "wall_time": 1790267157.6021996,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1334
+      },
+      {
+        "frame": 454,
+        "stage": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+        "wall_time": 1790267160.0634,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1383
+      },
+      {
+        "frame": 465,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790267162.5030217,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "GRASP_APPROACH",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1432
+      },
+      {
+        "frame": 467,
+        "stage": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+        "wall_time": 1790267162.6622767,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_2",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1435
+      },
+      {
+        "frame": 477,
+        "stage": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+        "wall_time": 1790267166.2186131,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1506
+      },
+      {
+        "frame": 485,
+        "stage": "REVALIDATING_SAME_REMAINING_PLAN",
+        "wall_time": 1790267168.6526906,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "stage_id": "GRASP_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1555
+      },
+      {
+        "frame": 486,
+        "stage": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+        "wall_time": 1790267168.8078222,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1558
+      },
+      {
+        "frame": 486,
+        "stage": "WAITING_FOR_PHYSICAL_APPLICATION",
+        "wall_time": 1790267168.907729,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PHYSICAL_APPLICATION",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1560
+      },
+      {
+        "frame": 487,
+        "stage": "WAITING_FOR_PAYLOAD_SCENE_READBACK",
+        "wall_time": 1790267169.215809,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "WAITING_FOR_PAYLOAD_SCENE_READBACK",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1566
+      },
+      {
+        "frame": 488,
+        "stage": "GEOMETRY_UNCONFIRMED",
+        "wall_time": 1790267169.403813,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "GEOMETRY_UNCONFIRMED",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1570
+      },
+      {
+        "frame": 488,
+        "stage": "REVALIDATING_ACTUAL_PAYLOAD_REMAINING_PATH",
+        "wall_time": 1790267169.5618808,
+        "raw_status": {
+          "authority_reason": "EXECUTING",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "2",
+          "reason": "REVALIDATING_ACTUAL_PAYLOAD_REMAINING_PATH",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1573
+      },
+      {
+        "frame": 488,
+        "stage": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+        "wall_time": 1790267169.6536891,
+        "raw_status": {
+          "authority_reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "4",
+          "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        },
+        "status_receive_seq": 1575
+      }
+    ],
+    "timing": "10 fps received frames; not a wall-time performance measurement",
+    "clock_semantics": "observed_clock is latest received /clock and its receive times; null before first clock"
+  },
+  "sidecar": {
+    "rows": 614,
+    "contiguous_indices": true,
+    "first_frame": {
+      "frame_index": 0,
+      "overview": {
+        "receive_monotonic_ns": 22559247018864,
+        "receive_wall_ns": 1790267090856790704,
+        "observed_clock": {
+          "source_ns": 37610000000,
+          "receive_monotonic_ns": 22559242198710,
+          "receive_wall_ns": 1790267090851970772
+        },
+        "source_ns": 37608000000,
+        "frame_id": "normal_grasp_observer/camera_link/overview",
+        "topic": "/transport/overview"
+      },
+      "head": null,
+      "status": {
+        "receive_monotonic_ns": 22559241122806,
+        "receive_wall_ns": 1790267090850894281,
+        "observed_clock": {
+          "source_ns": 37609000000,
+          "receive_monotonic_ns": 22559235209195,
+          "receive_wall_ns": 1790267090844980975
+        },
+        "receive_seq": 3,
+        "raw_status": {
+          "authority_reason": "IDLE",
+          "cleanup_reason": "",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "",
+          "hold_reason": "NO_HOLD",
+          "lease_id": "",
+          "phase": "0",
+          "reason": "WAITING_FOR_TASK"
+        }
+      },
+      "encode_started_monotonic_ns": 22559250831650,
+      "encode_finished_monotonic_ns": 22559255587194
+    },
+    "last_frame": {
+      "frame_index": 613,
+      "overview": {
+        "receive_monotonic_ns": 22666177483948,
+        "receive_wall_ns": 1790267197787255407,
+        "observed_clock": {
+          "source_ns": 127836000000,
+          "receive_monotonic_ns": 22666176138764,
+          "receive_wall_ns": 1790267197785910043
+        },
+        "source_ns": 127800000000,
+        "frame_id": "normal_grasp_observer/camera_link/overview",
+        "topic": "/transport/overview"
+      },
+      "head": {
+        "receive_monotonic_ns": 22666163424882,
+        "receive_wall_ns": 1790267197773196119,
+        "observed_clock": {
+          "source_ns": 127824000000,
+          "receive_monotonic_ns": 22666162126758,
+          "receive_wall_ns": 1790267197771897984
+        },
+        "source_ns": 127800000000,
+        "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+        "topic": "/camera/raw/head_rgbd/image"
+      },
+      "status": {
+        "receive_monotonic_ns": 22666144181519,
+        "receive_wall_ns": 1790267197753952521,
+        "observed_clock": {
+          "source_ns": 127812000000,
+          "receive_monotonic_ns": 22666143418681,
+          "receive_wall_ns": 1790267197753190161
+        },
+        "receive_seq": 2137,
+        "raw_status": {
+          "authority_reason": "RESOURCE_RECOVERY_REQUIRED:PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+          "cleanup_reason": "",
+          "context_id": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "hold_confirmed": false,
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_reason": "HOLD_CANCELED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "navigation_goal_uuid": "",
+          "object_id": "transport_box_01",
+          "phase": "5",
+          "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+          "task_phase": "PICK"
+        }
+      },
+      "encode_started_monotonic_ns": 22666181249080,
+      "encode_finished_monotonic_ns": 22666183966889
+    }
+  },
+  "runtime": {
+    "scope": "Recorded runtime identities/library hashes cross-checked against current files; no live process inspection after shutdown",
+    "case": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68",
+    "processes": [
+      {
+        "identity": {
+          "pid": 1186925,
+          "start_ticks": "2253469",
+          "boot_id": "764ae21c-acf1-4fa2-b09a-b01dd31ba952",
+          "exe": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_receipt_order_0013/native_install/lib/astribot_s1_transport_native/trajectory_executor",
+          "cmdline": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_receipt_order_0013/native_install/lib/astribot_s1_transport_native/trajectory_executor",
+            "--ros-args",
+            "--params-file",
+            "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/executor_registration/executor.yaml"
+          ]
+        },
+        "executable_sha256": "466699591b98eb3ed2a5a37a62a96fd90a30fa12e7aaff415f95c218fc197fcb",
+        "checked_libraries": [
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_receipt_order_0013/native_install/lib/astribot_s1_transport_native/trajectory_executor",
+            "recorded_sha256": "466699591b98eb3ed2a5a37a62a96fd90a30fa12e7aaff415f95c218fc197fcb",
+            "current_file_sha256": "466699591b98eb3ed2a5a37a62a96fd90a30fa12e7aaff415f95c218fc197fcb",
+            "match": true
+          },
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_receipt_order_0013/native_install/lib/libpayload_client.so",
+            "recorded_sha256": "e4f2fbee6ce87305abd857abc14e68b9306e9d8fed4f5cef5695df6424e4d29c",
+            "current_file_sha256": "e4f2fbee6ce87305abd857abc14e68b9306e9d8fed4f5cef5695df6424e4d29c",
+            "match": true
+          },
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/payload_receipt_order_0013/native_install/lib/libpayload_scene.so",
+            "recorded_sha256": "7b1f554d91108b89bcc499d9e2241ee99d8ee437fda9cfe79d13ad0b8ad98717",
+            "current_file_sha256": "7b1f554d91108b89bcc499d9e2241ee99d8ee437fda9cfe79d13ad0b8ad98717",
+            "match": true
+          },
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/mtc_install/lib/libtransport_scene_signature.so",
+            "recorded_sha256": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2",
+            "current_file_sha256": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2",
+            "match": true
+          }
+        ]
+      },
+      {
+        "identity": {
+          "pid": 1186363,
+          "start_ticks": "2253322",
+          "boot_id": "764ae21c-acf1-4fa2-b09a-b01dd31ba952",
+          "exe": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/mtc_install/lib/astribot_s1_transport_mtc/mtc_planner",
+          "cmdline": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/mtc_install/lib/astribot_s1_transport_mtc/mtc_planner",
+            "--ros-args",
+            "--log-level",
+            "info",
+            "--disable-external-lib-logs",
+            "--ros-args",
+            "--params-file",
+            "/tmp/launch_params_2g0bux73",
+            "--params-file",
+            "/tmp/launch_params_v44dipnd"
+          ]
+        },
+        "executable_sha256": "cfe4b67ec5fe42def9c456b02eeb69ef50dab6adce1ba4f89cc48b3c07acd6e6",
+        "checked_libraries": [
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/mtc_install/lib/astribot_s1_transport_mtc/mtc_planner",
+            "recorded_sha256": "cfe4b67ec5fe42def9c456b02eeb69ef50dab6adce1ba4f89cc48b3c07acd6e6",
+            "current_file_sha256": "cfe4b67ec5fe42def9c456b02eeb69ef50dab6adce1ba4f89cc48b3c07acd6e6",
+            "match": true
+          },
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/mtc_install/lib/libtransport_scene_signature.so",
+            "recorded_sha256": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2",
+            "current_file_sha256": "b09745947a9af5daf3eb2d8dfa02910feddce8f1dd1ed39807f5de4184e262c2",
+            "match": true
+          },
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/lib/libastribot_s1_manipulation_core.so",
+            "recorded_sha256": "326330a70c777004cab30f353260a8e756351c243050de9a41bfe00d39ec6fc4",
+            "current_file_sha256": "326330a70c777004cab30f353260a8e756351c243050de9a41bfe00d39ec6fc4",
+            "match": true
+          },
+          {
+            "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/trajectory_time_scaling/install/astribot_s1_manipulation/lib/libastribot_s1_manipulation_gripper.so",
+            "recorded_sha256": "7a596e435bb0fc1e37c5d89e54b17830262d59961ef9dfa3f739a2929fbb35a3",
+            "current_file_sha256": "7a596e435bb0fc1e37c5d89e54b17830262d59961ef9dfa3f739a2929fbb35a3",
+            "match": true
+          }
+        ]
+      }
+    ]
+  },
+  "source_files": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/result.json",
+      "bytes": 21401,
+      "sha256": "1a2d95702b3f954b9de07d3f61e24059ec1fca1dd433e02bc396c5a04a56854c"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/stack/session.json",
+      "bytes": 10653,
+      "sha256": "304f3acd20a60134c9c02a68600aab0e75f69fb81620cd10c266f88cb55be5d4"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/manipulation_runtime_manifest.json",
+      "bytes": 11988,
+      "sha256": "6cca223e198b76514b6175cbabd02bbef97e45f08222645150340d116b5b0a6f"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/used_run_full_transfer.py",
+      "bytes": 22993,
+      "sha256": "50abe7d79e2012a7fb2ddc12cc28d012d075ba88b3088a921503020b6b868484"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/used_verify_full_transfer.py",
+      "bytes": 49820,
+      "sha256": "2c0c04601d690bfe4c7810f197d508de0682594587da137953ce9bbc43d67eb2"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/full_transfer.json",
+      "bytes": 2152100,
+      "sha256": "82736c026ce46f83bed8108f46a07f5ee31d233d40f9c36d4143c9c074917ebe"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/full_transfer.frames.jsonl",
+      "bytes": 888533,
+      "sha256": "20b574e38562306415cba38c71f3123ee127edb1f0aa24b3a155eb8fa859999f"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/full_transfer.mp4",
+      "bytes": 5432083,
+      "sha256": "4baca9beed851349ffec3647b5c6c5db3e91d3221ce0d79583ee39a18326fc35"
+    }
+  ],
+  "limits": [
+    "Runtime library identities come from owner saved /proc maps capture, not a live process check after shutdown.",
+    "Owner full decoding reused; no M5 decoding or visual inspection.",
+    "TRANSPORT_POSTURE path rejection does not establish that this stage physically executed.",
+    "No complete transfer or hardware acceptance."
+  ]
+}

@@ -1,0 +1,1283 @@
+{
+  "schema": "astribot.m5.scene23_action_excerpt/1",
+  "scope": "Offline read-only result extraction only; no video, observer, source code, other cases, ROS or GPU; no collision root-cause analysis.",
+  "source": {
+    "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene23_world68/full_transfer/result.json",
+    "bytes": 169618377,
+    "sha256": "4a3cc18b046af923c261fccdcfd52443ee655f583dc28cc5d4063084420d7cfe"
+  },
+  "identity": {
+    "task_id": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+    "context_id": "0d00520145224c8586e57b9ec2d92153",
+    "parent_request": "29a278dbed034b529ad8237a66e126ad",
+    "goal_uuid": "c40f5d453ab94120a9cb6bae930ce437",
+    "action_endpoint": "/transport/fixed_station_transfer",
+    "lease_epoch": [
+      "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+      "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a"
+    ],
+    "identity_parameters": [
+      "simulation",
+      "fixed_transfer_20260924_station23",
+      "gazebo_kinematic_v1"
+    ]
+  },
+  "outcome": {
+    "passed": false,
+    "error": "RuntimeError('RENEW_REJECTED:PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01')",
+    "parent_terminal": {
+      "status": 6,
+      "result": {
+        "success": false,
+        "resources_released": false,
+        "reason": "RESOURCE_RECOVERY_REQUIRED:PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+        "cleanup_reason": "",
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "8a39a79276f18631cc7b8e392cd6fe1725a9d4e321b68deb6414f78daa444672"
+      }
+    },
+    "resource_disposition": "UNRESOLVED",
+    "cleanup_complete": false,
+    "cleanup_errors": [
+      "parent_release:RuntimeError('RESOURCE_RELEASE_UNCONFIRMED')"
+    ],
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 36,
+      "span_s": 0.7000000000000028,
+      "start_ros_s": 114.82,
+      "end_ros_s": 115.52,
+      "drift_m": 0.0,
+      "rotation_rad": 0.0,
+      "speed_mps": 0.0,
+      "angular_speed_radps": 0.0,
+      "command_max": 0.0,
+      "command_observed": true,
+      "fresh": true
+    },
+    "admission_uncertain": false
+  },
+  "events": [
+    {
+      "source_index": 3,
+      "kind": "parent_submission",
+      "wall": 22584.047736816,
+      "ros_s": 58.410000000000004,
+      "goal_uuid": "c40f5d453ab94120a9cb6bae930ce437",
+      "remaining_steady_s": 536.6946344980024
+    },
+    {
+      "source_index": 4,
+      "kind": "cancel_requested",
+      "wall": 22638.412847332,
+      "ros_s": 107.539,
+      "goal_uuid": "c40f5d453ab94120a9cb6bae930ce437",
+      "identity": [
+        "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a"
+      ]
+    },
+    {
+      "source_index": 5,
+      "kind": "cancel_response",
+      "wall": 22638.413534991,
+      "ros_s": 107.539,
+      "response": {
+        "return_code": 0,
+        "goals_canceling": [
+          {
+            "goal_id": {
+              "uuid": [
+                196,
+                15,
+                93,
+                69,
+                58,
+                185,
+                65,
+                32,
+                169,
+                203,
+                107,
+                174,
+                147,
+                12,
+                228,
+                55
+              ]
+            },
+            "stamp": {
+              "sec": 58,
+              "nanosec": 514000000
+            }
+          }
+        ]
+      }
+    },
+    {
+      "source_index": 6,
+      "kind": "parent_terminal",
+      "wall": 22648.062667827,
+      "ros_s": 114.801,
+      "status": 6,
+      "result": {
+        "success": false,
+        "resources_released": false,
+        "reason": "RESOURCE_RECOVERY_REQUIRED:PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+        "cleanup_reason": "",
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "8a39a79276f18631cc7b8e392cd6fe1725a9d4e321b68deb6414f78daa444672"
+      }
+    }
+  ],
+  "feedback": {
+    "records": 1279,
+    "phase_counts": {
+      "PICK": 1279
+    },
+    "contexts": [
+      "0d00520145224c8586e57b9ec2d92153"
+    ],
+    "goal_ids": [
+      "c40f5d453ab94120a9cb6bae930ce437"
+    ],
+    "transitions": [
+      {
+        "source_index": 0,
+        "wall": 22584.096695523,
+        "ros_s": 58.531000000000006,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "RESERVED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1,
+        "wall": 22584.142578799,
+        "ros_s": 58.573,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 3,
+        "wall": 22584.243025104,
+        "ros_s": 58.661,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "PLANNING_COMPLETE_OPERATION",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 511,
+        "wall": 22609.64334131,
+        "ros_s": 81.89,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 513,
+        "wall": 22609.742655927,
+        "ros_s": 81.983,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 786,
+        "wall": 22623.396217634,
+        "ros_s": 94.641,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 832,
+        "wall": 22625.692617352,
+        "ros_s": 96.807,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 836,
+        "wall": 22625.893057952,
+        "ros_s": 96.988,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 838,
+        "wall": 22625.992417059,
+        "ros_s": 97.07600000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 887,
+        "wall": 22628.446560539,
+        "ros_s": 99.357,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_2",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 936,
+        "wall": 22630.893560973,
+        "ros_s": 101.63000000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_2",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 939,
+        "wall": 22631.052790557,
+        "ros_s": 101.775,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_2",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1010,
+        "wall": 22634.609194513,
+        "ros_s": 104.78500000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1059,
+        "wall": 22637.043231363,
+        "ros_s": 106.57000000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1062,
+        "wall": 22637.198321562,
+        "ros_s": 106.697,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1064,
+        "wall": 22637.29789018,
+        "ros_s": 106.77000000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_PHYSICAL_APPLICATION",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1070,
+        "wall": 22637.606545039,
+        "ros_s": 106.926,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_PAYLOAD_SCENE_READBACK",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1074,
+        "wall": 22637.79406559,
+        "ros_s": 107.06200000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "GEOMETRY_UNCONFIRMED",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1077,
+        "wall": 22637.952432951,
+        "ros_s": 107.186,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_ACTUAL_PAYLOAD_REMAINING_PATH",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      },
+      {
+        "source_index": 1079,
+        "wall": 22638.044129361,
+        "ros_s": 107.25800000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    ],
+    "first_error_text_candidate": {
+      "source_index": 1079,
+      "wall": 22638.044129361,
+      "ros_s": 107.25800000000001,
+      "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+      "feedback": {
+        "phase": "PICK",
+        "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "context_id": "0d00520145224c8586e57b9ec2d92153",
+        "object_id": "transport_box_01",
+        "stage_id": "ATTACH_CONFIRM",
+        "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+        "hold_confirmed": false,
+        "navigation_goal_uuid": ""
+      }
+    },
+    "error_text_candidates": [
+      {
+        "source_index": 1079,
+        "wall": 22638.044129361,
+        "ros_s": 107.25800000000001,
+        "goal_id": "c40f5d453ab94120a9cb6bae930ce437",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+          "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+          "resource_epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+          "context_id": "0d00520145224c8586e57b9ec2d92153",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    ]
+  },
+  "journal": {
+    "records": 72,
+    "event_counts": {
+      "reserved": 1,
+      "navigation_revoked": 2,
+      "before_child_submission": 1,
+      "station_scene_submission": 1,
+      "station_scene_confirmed": 1,
+      "planner_submission": 1,
+      "planner_terminal": 1,
+      "child_submission": 18,
+      "child_response": 18,
+      "child_terminal": 18,
+      "stage_confirmed": 3,
+      "remaining_plan_revalidated": 3,
+      "physical_submission": 1,
+      "physical_applied_scene_submission": 1,
+      "stop_requested": 1,
+      "quarantined": 1
+    },
+    "child_terminal_code_success_counts": [
+      {
+        "code": 4,
+        "success": true,
+        "count": 18
+      }
+    ],
+    "selected_records": [
+      {
+        "source_index": 0,
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "reserved",
+        "issued_at": 58494000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 1,
+        "reason": "RESERVED",
+        "renewal_sequence": 0,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": false,
+        "valid_until": 60494000000
+      },
+      {
+        "source_index": 1,
+        "details": {
+          "epoch": 22520783938671
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "navigation_revoked",
+        "issued_at": 58494000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 1,
+        "reason": "RESERVED",
+        "renewal_sequence": 0,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": false,
+        "valid_until": 60494000000
+      },
+      {
+        "source_index": 2,
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "before_child_submission",
+        "issued_at": 58534000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 60534000000
+      },
+      {
+        "source_index": 3,
+        "details": {
+          "capture": 58553000000,
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "operation": 1,
+          "station_ids": [
+            "transport_box_01_pick_station",
+            "transport_box_01_place_station"
+          ]
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "station_scene_submission",
+        "issued_at": 58534000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 60534000000
+      },
+      {
+        "source_index": 4,
+        "details": {
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "operation": 1
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "station_scene_confirmed",
+        "issued_at": 58534000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 60534000000
+      },
+      {
+        "source_index": 5,
+        "details": {
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "geometry_sequence": 1152
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "planner_submission",
+        "issued_at": 58534000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 60534000000
+      },
+      {
+        "source_index": 6,
+        "details": {
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "success": true
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "planner_terminal",
+        "issued_at": 81856000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 128,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 83856000000
+      },
+      {
+        "source_index": 25,
+        "details": {
+          "children": "arm_left_controller:e41495f3944a0747ef7827953ca0b40b;arm_right_controller:26621466e42db06dab44fa22c79f1747;gripper_left_controller:f635d4fff64241665f1994b4a65e43b8;gripper_right_controller:8993c9f4ef4e33de8f01fdac4e6971ac;head_controller:9b3c5ba20b77900062d0f49d2d5ecbed;mtc:6801af8723aa2aa045bb7b900b6cab02;torso_controller:d11ca01564805a63fbda566120cdafcf;",
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "index": 0,
+          "stage_id": "PREGRASP"
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "stage_confirmed",
+        "issued_at": 94485000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 196,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 96485000000
+      },
+      {
+        "source_index": 26,
+        "details": {
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "start_index": 1
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "remaining_plan_revalidated",
+        "issued_at": 96935000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 209,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 98935000000
+      },
+      {
+        "source_index": 45,
+        "details": {
+          "children": "arm_left_controller:ed8d180252f0f49b7c89540fd4f5587e;arm_right_controller:9fcf69762a308eefe2591a04b37c976c;gripper_left_controller:44c76625c8113faf2acdc0875d359a7c;gripper_right_controller:3b2de7f20bb5394ccaad51ca01a11359;head_controller:125d5c919b331fdc7efb8df02b4c9681;torso_controller:11edf5b9cf6dad2320976606ecf8648d;",
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "index": 1,
+          "stage_id": "GRASP_APPROACH"
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "stage_confirmed",
+        "issued_at": 99351000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 222,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 101351000000
+      },
+      {
+        "source_index": 46,
+        "details": {
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "start_index": 2
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "remaining_plan_revalidated",
+        "issued_at": 101586000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 234,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 103586000000
+      },
+      {
+        "source_index": 65,
+        "details": {
+          "children": "arm_left_controller:ee5adb30550c2a3b09ec65171341c66c;arm_right_controller:71e446f7bb3ff2aa58267a2d3feebf10;gripper_left_controller:c46e2412fa5069b362164fddfc0232e0;gripper_right_controller:1570a82c658d763501f5c1b457ef44c0;head_controller:3d47e8c8d1fc10a8f6ea2e9b44c316c8;torso_controller:485f732c7aeb45fe3829343a2d340a68;",
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "index": 2,
+          "stage_id": "GRASP_CONFIRM"
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "stage_confirmed",
+        "issued_at": 104663000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 252,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 106663000000
+      },
+      {
+        "source_index": 66,
+        "details": {
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "start_index": 3
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "remaining_plan_revalidated",
+        "issued_at": 106591000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 265,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 108591000000
+      },
+      {
+        "source_index": 67,
+        "details": {
+          "capture": 106745000000,
+          "clock_epoch": 0,
+          "context": "0d00520145224c8586e57b9ec2d92153_op_1_PICK",
+          "execution": [
+            {
+              "accepted": 0,
+              "applied": 0,
+              "attached": false,
+              "clock_epoch": 0,
+              "entity": 334,
+              "epoch": "a2331a7242a58b7531d5b4afb39256f74b137e01f17c7f4a82c5ef895b9ceff2",
+              "parent": 187
+            }
+          ],
+          "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+          "stage": "ATTACH_CONFIRM",
+          "transaction": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1:payload:1:3"
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "physical_submission",
+        "issued_at": 106751000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 266,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 108751000000
+      },
+      {
+        "source_index": 68,
+        "details": {
+          "command_id": 1,
+          "source_revision": 2,
+          "source_sequence": 1609,
+          "transaction": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1:payload:1:3"
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "physical_applied_scene_submission",
+        "issued_at": 106827000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 267,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 108827000000
+      },
+      {
+        "source_index": 69,
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "stop_requested",
+        "issued_at": 107121000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 4,
+        "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+        "renewal_sequence": 269,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 109121000000
+      },
+      {
+        "source_index": 70,
+        "details": {
+          "epoch": 22520783938671
+        },
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "navigation_revoked",
+        "issued_at": 107121000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 4,
+        "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+        "renewal_sequence": 269,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 109121000000
+      },
+      {
+        "source_index": 71,
+        "epoch": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a",
+        "event": "quarantined",
+        "issued_at": 107121000000,
+        "lease_id": "5a6ddc56-b9a1-4ac8-91b1-0dd4a76a084a_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_ad3f3a09e197439b81079e3dad831100",
+        "phase": 5,
+        "reason": "RESOURCE_RECOVERY_REQUIRED:PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01",
+        "renewal_sequence": 269,
+        "request": "29a278dbed034b529ad8237a66e126ad",
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 109121000000
+      }
+    ],
+    "any_released_reason": false,
+    "any_resource_handoff_committed": false,
+    "time_warning": "issued_at and valid_until are lease values, not exact individual event timestamps; only explicit details timestamps may be treated as event/capture times according to their field meaning."
+  },
+  "physical": {
+    "execution_transitions": [
+      {
+        "source_index": 3,
+        "receive_steady_s": 22581.700356491,
+        "callback_ros_s": 56.331,
+        "source_stamp_ns": 56281000000,
+        "reason": "EMPTY_INVENTORY_OBSERVED",
+        "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+        "clock_epoch": 0,
+        "execution": [
+          {
+            "accepted": 0,
+            "applied": 0,
+            "attached": false,
+            "clock_epoch": 0,
+            "entity": 334,
+            "epoch": "a2331a7242a58b7531d5b4afb39256f74b137e01f17c7f4a82c5ef895b9ceff2",
+            "parent": 187
+          }
+        ]
+      },
+      {
+        "source_index": 3995,
+        "receive_steady_s": 22637.41398418,
+        "callback_ros_s": 106.783,
+        "source_stamp_ns": 106781000000,
+        "reason": "INVENTORY_CHANGED_RECONCILIATION_REQUIRED",
+        "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+        "clock_epoch": 0,
+        "execution": [
+          {
+            "accepted": 1,
+            "applied": 1,
+            "attached": true,
+            "clock_epoch": 0,
+            "entity": 334,
+            "epoch": "a2331a7242a58b7531d5b4afb39256f74b137e01f17c7f4a82c5ef895b9ceff2",
+            "parent": 187
+          }
+        ]
+      }
+    ],
+    "first_positive_fields": {
+      "accepted": {
+        "source_index": 3995,
+        "receive_steady_s": 22637.41398418,
+        "callback_ros_s": 106.783,
+        "source_stamp_ns": 106781000000,
+        "reason": "INVENTORY_CHANGED_RECONCILIATION_REQUIRED",
+        "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+        "clock_epoch": 0,
+        "execution": [
+          {
+            "accepted": 1,
+            "applied": 1,
+            "attached": true,
+            "clock_epoch": 0,
+            "entity": 334,
+            "epoch": "a2331a7242a58b7531d5b4afb39256f74b137e01f17c7f4a82c5ef895b9ceff2",
+            "parent": 187
+          }
+        ]
+      },
+      "applied": {
+        "source_index": 3995,
+        "receive_steady_s": 22637.41398418,
+        "callback_ros_s": 106.783,
+        "source_stamp_ns": 106781000000,
+        "reason": "INVENTORY_CHANGED_RECONCILIATION_REQUIRED",
+        "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+        "clock_epoch": 0,
+        "execution": [
+          {
+            "accepted": 1,
+            "applied": 1,
+            "attached": true,
+            "clock_epoch": 0,
+            "entity": 334,
+            "epoch": "a2331a7242a58b7531d5b4afb39256f74b137e01f17c7f4a82c5ef895b9ceff2",
+            "parent": 187
+          }
+        ]
+      },
+      "attached": {
+        "source_index": 3995,
+        "receive_steady_s": 22637.41398418,
+        "callback_ros_s": 106.783,
+        "source_stamp_ns": 106781000000,
+        "reason": "INVENTORY_CHANGED_RECONCILIATION_REQUIRED",
+        "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+        "clock_epoch": 0,
+        "execution": [
+          {
+            "accepted": 1,
+            "applied": 1,
+            "attached": true,
+            "clock_epoch": 0,
+            "entity": 334,
+            "epoch": "a2331a7242a58b7531d5b4afb39256f74b137e01f17c7f4a82c5ef895b9ceff2",
+            "parent": 187
+          }
+        ]
+      }
+    },
+    "last_diagnostic": {
+      "source_index": 4688,
+      "receive_steady_s": 22649.00119575,
+      "callback_ros_s": 115.48200000000001,
+      "source_stamp_ns": 115431000000,
+      "reason": "ATTACHED_INVENTORY_OBSERVED",
+      "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+      "clock_epoch": 0,
+      "execution": [
+        {
+          "accepted": 1,
+          "applied": 1,
+          "attached": true,
+          "clock_epoch": 0,
+          "entity": 334,
+          "epoch": "a2331a7242a58b7531d5b4afb39256f74b137e01f17c7f4a82c5ef895b9ceff2",
+          "parent": 187
+        }
+      ]
+    },
+    "last_ledger": {
+      "source_index": 4686,
+      "receive_steady_s": 22648.999746995,
+      "callback_ros_s": 115.48200000000001,
+      "message": {
+        "observation": {
+          "environment": "simulation",
+          "session_id": "fixed_transfer_20260924_station23",
+          "source_id": "gazebo_kinematic_v1",
+          "source_epoch": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28",
+          "clock_epoch": 0,
+          "sequence": 1781,
+          "revision": 2,
+          "observed_at": {
+            "sec": 115,
+            "nanosec": 431000000
+          },
+          "valid_until": {
+            "sec": 115,
+            "nanosec": 731000000
+          },
+          "full_inventory": true,
+          "status": 2,
+          "transaction_id": "27b8c041eaf6f6d61e88a2fa8598072667a2398b364b366d4e913c74542ba28:2",
+          "objects": [
+            {
+              "link_name": "astribot_arm_left_tcp_link",
+              "object": {
+                "header": {
+                  "stamp": {
+                    "sec": 0,
+                    "nanosec": 0
+                  },
+                  "frame_id": "astribot_arm_left_tcp_link"
+                },
+                "pose": {
+                  "position": {
+                    "x": 0.0059981779762737775,
+                    "y": -0.10000087755163248,
+                    "z": 0.00014105919664457456
+                  },
+                  "orientation": {
+                    "x": -0.500405510868127,
+                    "y": -0.49959415904745286,
+                    "z": -0.4995941635652247,
+                    "w": 0.5004055082331138
+                  }
+                },
+                "id": "transport_box_01",
+                "type": {
+                  "key": "",
+                  "db": ""
+                },
+                "primitives": [
+                  {
+                    "type": 1,
+                    "dimensions": [
+                      0.07146969384566991,
+                      0.07146969384566991,
+                      0.1314696938456699
+                    ],
+                    "polygon": {
+                      "points": []
+                    }
+                  }
+                ],
+                "primitive_poses": [
+                  {
+                    "position": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    },
+                    "orientation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    }
+                  }
+                ],
+                "meshes": [],
+                "mesh_poses": [],
+                "planes": [],
+                "plane_poses": [],
+                "subframe_names": [],
+                "subframe_poses": [],
+                "operation": "\u0000"
+              },
+              "touch_links": [
+                "astribot_arm_left_tcp_link"
+              ],
+              "detach_posture": {
+                "header": {
+                  "stamp": {
+                    "sec": 0,
+                    "nanosec": 0
+                  },
+                  "frame_id": ""
+                },
+                "joint_names": [],
+                "points": []
+              },
+              "weight": 0.2
+            }
+          ]
+        },
+        "ledger_epoch": "1a6784e3dede27653aecae438fc231d66a0970723e77958e32643f58433e9355",
+        "ledger_revision": 2,
+        "attachment_revision": "8a39a79276f18631cc7b8e392cd6fe1725a9d4e321b68deb6414f78daa444672",
+        "geometry_digest": "cb31eb19f94aaa16ae62aeb3ee91da153993df600873189c005c498f2738f150",
+        "published_at": {
+          "sec": 115,
+          "nanosec": 481000000
+        },
+        "valid_until": {
+          "sec": 115,
+          "nanosec": 730954611
+        },
+        "confirmed": true,
+        "reason": "ATTACHMENT_CONFIRMED"
+      }
+    },
+    "payload_record_counts": {
+      "ledger": 2323,
+      "source": 1183,
+      "diagnostic": 1183
+    },
+    "inventory_object_count_distribution": {
+      "ledger": {
+        "0": 1978,
+        "1": 345
+      },
+      "source": {
+        "0": 1010,
+        "1": 173
+      }
+    }
+  },
+  "top_level_scene_evidence_fields": {
+    "initial_full_scene": {
+      "type": "dict",
+      "keys": [
+        "name",
+        "robot_state",
+        "robot_model_name",
+        "fixed_frame_transforms",
+        "allowed_collision_matrix",
+        "link_padding",
+        "link_scale",
+        "object_colors",
+        "world",
+        "is_diff"
+      ],
+      "attached_objects": [],
+      "world_object_ids": [
+        "transport_box_01",
+        "transport_box_01_pick_station",
+        "transport_box_01_place_station"
+      ]
+    }
+  },
+  "renew_rejections": [
+    {
+      "source_index": 539,
+      "wall": 22638.112091015,
+      "ros_s": 107.311,
+      "kind": "response",
+      "accepted": false,
+      "reason": "PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:self collision: astribot_gripper_left_Link_L11<->transport_box_01"
+    }
+  ],
+  "navigation_and_authority_counts": {
+    "navigation_execution_records": 0,
+    "nav_status_records": 0,
+    "navigation_goal_uuids": 0,
+    "envelopes": 0,
+    "acks": 0
+  },
+  "submission_counts": {
+    "python_parent_goals_sent": 1,
+    "python_navigation_goals_sent": 0,
+    "python_controller_goals_sent": 0,
+    "python_fixed_requests_sent": 0
+  },
+  "limits": [
+    "Journal transaction/stage confirmation is runtime-reported evidence; it is not a separately saved independent full PlanningScene readback unless such a snapshot is explicitly present.",
+    "Physical attachment is distinct from full PICK, transport posture completion, NAV/PLACE, business resource release and process cleanup.",
+    "Owner process cleanup is outside this extraction."
+  ]
+}
