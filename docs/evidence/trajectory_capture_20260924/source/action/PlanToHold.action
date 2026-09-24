@@ -1,0 +1,26 @@
+# Simulation commissioning. Plan a complete MTC operation, execute ONLY its
+# first PREGRASP/PREPLACE arm stage, then retain the task lease in ArmHold.
+# HOLD feedback is not completion of PICK/PLACE. Cancellation starts release.
+string task_id
+string request_id
+string context_id
+string operation
+string object_id
+geometry_msgs/PoseStamped pre_target
+geometry_msgs/PoseStamped target
+geometry_msgs/PoseStamped[] exit_targets
+string[] touch_links
+float64 grasp_width_m
+---
+bool resources_released
+string reason
+string lease_id
+---
+string phase
+string reason
+string lease_id
+string resource_epoch
+string hold_id
+bool hold_confirmed
+string context_id
+string stage_id

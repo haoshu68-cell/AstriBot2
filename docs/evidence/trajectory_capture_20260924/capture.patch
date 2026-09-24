@@ -1,0 +1,91 @@
+diff --git a/runs/mainline_20260924/scene_binding_first_stage/timing_evidence/source/src/hold_executor.cpp b/runs/mainline_20260924/scene_binding_first_stage/source/astribot_s1_transport_native/src/hold_executor.cpp
+index 31583f7c..61a37a64 100644
+--- a/runs/mainline_20260924/scene_binding_first_stage/timing_evidence/source/src/hold_executor.cpp
++++ b/runs/mainline_20260924/scene_binding_first_stage/source/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -149,6 +149,44 @@ private:
+       {"bytes",bytes.buffer_length},{"ros_ns",now().nanoseconds()},{"steady_ns",wall()}}))
+    throw std::runtime_error(authority_->reason());
+  }
++ // Capture the exact stage and all six controller Goals before the first
++ // dispatch. The seven files together are bounded to 16 MiB per lease.
++ void capture_trajectories(const std::map<std::string,Trajectory::Goal> &goals) {
++  if(scene_evidence_directory_.empty())return;
++  std::vector<std::pair<std::string,rclcpp::SerializedMessage>> encoded;
++  encoded.emplace_back("stage_trajectory",rclcpp::SerializedMessage());
++  rclcpp::Serialization<trajectory_msgs::msg::JointTrajectory> stage_codec;
++  stage_codec.serialize_message(&trajectory_,&encoded.back().second);
++  rclcpp::Serialization<Trajectory::Goal> goal_codec;
++  size_t total=encoded.front().second.size();
++  if(total>16u*1024u*1024u)throw std::runtime_error("TRAJECTORY_EVIDENCE_SIZE_LIMIT");
++  for(const auto &[name,goal]:goals) {
++   encoded.emplace_back(name+"_goal",rclcpp::SerializedMessage());
++   goal_codec.serialize_message(&goal,&encoded.back().second);
++   total+=encoded.back().second.size();
++   if(total>16u*1024u*1024u)throw std::runtime_error("TRAJECTORY_EVIDENCE_SIZE_LIMIT");
++  }
++  const auto directory=std::filesystem::path(scene_evidence_directory_)/authority_->lease_id();
++  std::filesystem::create_directories(directory);
++  auto files=nlohmann::json::array();
++  for(const auto &[name,message]:encoded) {
++   const auto &bytes=message.get_rcl_serialized_message();
++   const auto path=directory/(name+".cdr");const auto temporary=path.string()+".tmp";
++   {
++    std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
++    output.write(reinterpret_cast<const char*>(bytes.buffer),bytes.buffer_length);
++    output.flush();output.close();
++    if(!output)throw std::runtime_error("TRAJECTORY_EVIDENCE_WRITE_FAILED");
++   }
++   std::filesystem::rename(temporary,path);
++   files.push_back({{"role",name=="stage_trajectory"?"stage":"controller_goal"},
++     {"controller",name=="stage_trajectory"?"":name.substr(0,name.size()-5)},
++     {"path",path.string()},{"bytes",bytes.buffer_length}});
++  }
++  if(!authority_->record("trajectory_evidence",{{"context",parent_->get_goal()->context_id},
++      {"stage",stage_id_},{"files",files},{"ros_ns",now().nanoseconds()},{"steady_ns",wall()}}))
++   throw std::runtime_error(authority_->reason());
++ }
+  bool manipulation_ready(int64_t ros,int64_t steady) {
+   if(!odom_||ns(odom_->header.stamp)<=0||ros<ns(odom_->header.stamp)||ros-ns(odom_->header.stamp)>300*MS||steady-odom_received_>300*MS){reason_="MTC_BASE_STATE_STALE";return false;}
+   const auto &v=odom_->twist.twist;const auto &p=odom_->pose.pose.position;const auto &q=odom_->pose.pose.orientation;
+@@ -310,7 +348,7 @@ private:
+    if(!scene_final_verified_){if(!scene_pending_)query_scene(true);return;}
+    std::set<std::string> attached(geometry_->attachment_ids.begin(),geometry_->attachment_ids.end());
+    plan_->check(parent_->get_goal()->operation=="PICK"?"PREGRASP":"PREPLACE","ARM",steady,geometry_->joints,attached);
+-   motion_sent_=true;send_children();reason_="EXECUTING_FIRST_MTC_STAGE";
++   motion_sent_=true;reason_="EXECUTING_FIRST_MTC_STAGE";send_children();
+   }
+   if(motion_sent_&&!guard_disarm_requested_){
+    if(!guard_state_||guard_state_->context_id!=parent_->get_goal()->context_id||!guard_state_->active||!guard_state_->healthy||steady-guard_received_>300*MS||ros<ns(guard_state_->stamp)||ros-ns(guard_state_->stamp)>300*MS){stopping("EXECUTION_GUARD_UNHEALTHY");return;}
+@@ -408,15 +446,30 @@ private:
+ #ifndef PLAN_TO_HOLD_EXECUTOR
+    authority_->submitted(now().nanoseconds(),wall());
+ #endif
++   std::map<std::string,Trajectory::Goal> goals;
+    for(const auto &[name,joints]:groups_) {
+-    children_->submitted(name);if(!authority_->record("child_submission",{{"controller",name}}))throw std::runtime_error(authority_->reason());
+-    Trajectory::Goal goal;goal.trajectory.joint_names=joints;
++    auto &goal=goals[name];goal.trajectory.joint_names=joints;
+     trajectory_msgs::msg::JointTrajectoryPoint point;for(const auto &joint:joints)point.positions.push_back(positions.at(joint));
+     point.velocities.assign(joints.size(),0.);point.time_from_start.sec=1;goal.trajectory.points.push_back(point);goal.goal_time_tolerance.sec=1;
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+     if(name=="arm_left_controller")goal.trajectory=trajectory_;
+     else goal.trajectory.points.front().time_from_start=trajectory_.points.back().time_from_start;
+ #endif
++   }
++#ifdef PLAN_TO_HOLD_EXECUTOR
++   capture_trajectories(goals);
++   // File I/O may consume the existing evidence/lease budget. Recheck at the
++   // dispatch boundary without extending any timestamp or validity period.
++   const auto ros=now().nanoseconds(),steady=wall();
++   if(!authority_->grant(ros,steady))throw std::runtime_error(authority_->reason());
++   if(!geometry_fresh(ros,steady)||!claims_fresh(ros,steady)||!exclusive_graph()||!manipulation_ready(ros,steady))throw std::runtime_error(reason_);
++   if(steady-scene_verified_at_>2000*MS)throw std::runtime_error("EXECUTION_GUARD_TIMEOUT");
++   if(!guard_state_||guard_state_->context_id!=parent_->get_goal()->context_id||!guard_state_->active||!guard_state_->healthy||steady-guard_received_>300*MS||ros<ns(guard_state_->stamp)||ros-ns(guard_state_->stamp)>300*MS)throw std::runtime_error("EXECUTION_GUARD_UNHEALTHY");
++   std::set<std::string> attached(geometry_->attachment_ids.begin(),geometry_->attachment_ids.end());
++   plan_->check(parent_->get_goal()->operation=="PICK"?"PREGRASP":"PREPLACE","ARM",steady,geometry_->joints,attached);
++#endif
++   for(const auto &[name,goal]:goals) {
++    children_->submitted(name);if(!authority_->record("child_submission",{{"controller",name}}))throw std::runtime_error(authority_->reason());
+     auto options=rclcpp_action::Client<Trajectory>::SendGoalOptions();
+     const auto lease=authority_->lease_id();
+     options.goal_response_callback=[this,name,lease](Child::SharedPtr child){
