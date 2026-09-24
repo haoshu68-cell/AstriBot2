@@ -12,6 +12,7 @@
 #include <nlohmann/json.hpp>
 #include <openssl/evp.h>
 #include "pending_action.hpp"
+#include "stationary_gate.hpp"
 #include <algorithm>
 #include <csignal>
 #include <filesystem>
@@ -60,13 +61,45 @@ template<class T>std::string save_message(const fs::path& path,const T& message)
 }
 struct Receipt {int64_t ros{};Steady::time_point steady;};
 struct LiveState {
+  LiveState(const std::string& owner,const std::string& hold,const std::string& coordinator)
+    :stationary(owner,hold,coordinator){}
   std::mutex mutex;
   Geometry::ConstSharedPtr geometry;Envelope::ConstSharedPtr envelope;Camera::ConstSharedPtr camera;
   Receipt geometry_at,envelope_at;
+  m3_probe::StationaryGate stationary;
 };
 bool fresh(int64_t sample,int64_t until,const Receipt& receipt,int64_t now,int64_t max_age) {
   return sample>0&&sample<=receipt.ros&&receipt.ros<=now&&now-sample<=max_age&&now<until&&
     Steady::now()<receipt.steady+std::chrono::nanoseconds(std::min(until,sample+max_age)-receipt.ros);
+}
+Json save_stationary(const fs::path& output,const std::string& phase,const m3_probe::StationaryGate& gate) {
+  const auto& m=gate.metrics();
+  Json result={{"armed",gate.armed()},{"armed_ros_ns",gate.armed_ros()},{"first_fault",gate.fault()},
+    {"stop",{{"passed",m.passed},{"reason",m.reason},{"samples",m.samples},{"span_ns",m.span},
+      {"drift_m",m.drift},{"rotation_rad",m.rotation},{"speed_mps",m.speed},
+      {"angular_speed_radps",m.angular_speed},{"command_max",m.command},{"fitted_speed_mps",m.fitted_speed}}},
+    {"navigation_events",Json::array()},{"acks",Json::object()}};
+  auto save=[&](const std::string& name,const auto& value,m3_probe::Time receipt) {
+    const auto file="stationary_"+phase+"_"+name+".cdr";
+    return Json{{"file",file},{"sha256",save_message(output/file,value)},
+      {"received_ros_ns",receipt.ros},{"received_steady_ns",receipt.steady}};
+  };
+  if(gate.hold())result["hold"]=save("hold",gate.hold()->value,gate.hold()->at);
+  if(gate.odom())result["odom"]=save("odom",gate.odom()->value,gate.odom()->at);
+  if(gate.command())result["command"]=save("command",gate.command()->value,gate.command()->at);
+  if(gate.geometry())result["geometry"]=save("geometry",gate.geometry()->value,gate.geometry()->at);
+  if(gate.envelope()) {
+    result["envelope"]=save("envelope",gate.envelope()->value,gate.envelope()->at);
+    result["envelope"]["effective_valid_until_ros_ns"]=gate.envelope_deadline();
+  }
+  for(const auto& item:gate.acks())result["acks"][item.first]=save("ack_"+item.first,item.second.value,item.second.at);
+  if(gate.reference())result["reference_cdr_sha256"]=save_message(output/("stationary_"+phase+"_reference.cdr"),*gate.reference());
+  for(const auto& item:gate.navigation()) {
+    const auto& v=item.second;
+    result["navigation_events"].push_back({{"task_id",v.task_id},{"source",v.source},{"sequence",v.sequence},
+      {"stamp_ns",ns(v.stamp)},{"state",v.state},{"reason",v.reason},{"action_status",v.action_status}});
+  }
+  return result;
 }
 
 int main(int argc,char** argv) {
@@ -84,12 +117,15 @@ int main(int argc,char** argv) {
     require(!config.at("session_id").get<std::string>().empty()&&
       !config.at("owner_evidence").get<std::string>().empty(),"OWNER_IDENTITY_REQUIRED");
     require(config.at("registration_sequence").get<uint64_t>()>0,"OWNER_REGISTRATION_SEQUENCE_REQUIRED");
+    for(const auto* key:{"hold_owner_id","hold_id","coordinator_session_id"})
+      require(!config.at(key).get<std::string>().empty(),"OWNER_HOLD_IDENTITY_REQUIRED");
     require(fs::is_directory(config.at("input_recording").get<std::string>()),"OWNER_INPUT_RECORDING_DIRECTORY_REQUIRED");
     report={{"schema","astribot.m3.source_models_probe/1"},{"owner_config",config},
       {"owner_config_sha256",file_digest(args[1])},{"owner_evidence_sha256",file_digest(config.at("owner_evidence").get<std::string>())},
       {"scope","validation-owned static snapshot; not M1 production integration"},
       {"source_live_request","NOT_RUN"},{"pose",{{"state","NOT_RUN"}}},{"grasp",{{"state","NOT_RUN"}}},
       {"raw_input_evidence","EXTERNAL_RECORDING_PENDING_VERIFICATION"},
+      {"navigation_idle_authority","M2 cold-start and exclusive command-chain evidence required externally; not verified by this probe; status silence is not proof"},
       {"both_within_original_deadline",nullptr},{"source_and_models_validated",false},
       {"planner","NOT_RUN"},{"execution","NOT_RUN"}};
   }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 2;}
@@ -102,7 +138,8 @@ int main(int argc,char** argv) {
   pp::detail::Pending<pp::Pose> pose;pp::detail::Pending<pp::Grasps> grasps;
   // Callbacks and source outlive inference cleanup and are destroyed only after
   // the executor has stopped. Source destruction requires that owner boundary.
-  auto live=std::make_shared<LiveState>();
+  auto live=std::make_shared<LiveState>(config.at("hold_owner_id").get<std::string>(),
+    config.at("hold_id").get<std::string>(),config.at("coordinator_session_id").get<std::string>());
   std::vector<rclcpp::SubscriptionBase::SharedPtr> subscriptions;
   std::unique_ptr<tf2_ros::Buffer> tf;
   std::unique_ptr<tf2_ros::TransformListener> listener;
@@ -139,6 +176,17 @@ int main(int argc,char** argv) {
     const auto start=Steady::now();
     auto tick=[&] {
       {std::lock_guard<std::mutex> lock(spin_mutex);if(spin_error)std::rethrow_exception(spin_error);}
+      {
+        std::lock_guard<std::mutex> lock(live->mutex);
+        require(live->stationary.fault().empty(),live->stationary.fault());
+        if(live->stationary.armed()) {
+          const auto now=node->now().nanoseconds();
+          const auto why=live->stationary.check(*live->envelope,*live->geometry,{now,steady_ns()});
+          require(why.empty(),why);
+          require(fresh(ns(live->geometry->header.stamp),ns(live->geometry->valid_until),live->geometry_at,now,300000000LL),"OWNER_GEOMETRY_CHANGED_OR_STALE");
+          require(fresh(ns(live->envelope->header.stamp),ns(live->envelope->valid_until),live->envelope_at,now,300000000LL),"OWNER_HOLD_CHANGED_OR_STALE");
+        }
+      }
       require(!interrupted,"CANCELED");require(rclcpp::ok(),"ROS_CONTEXT_STOPPED");
       require(Steady::now()-start<60s,"PROBE_TOTAL_WALL_TIMEOUT");std::this_thread::sleep_for(2ms);
     };
@@ -146,15 +194,27 @@ int main(int argc,char** argv) {
       std::lock_guard<std::mutex> lock(live->mutex);
       if(!live->geometry||value->header.stamp!=live->geometry->header.stamp)
         live->geometry_at={node->now().nanoseconds(),Steady::now()};
+      live->stationary.receive(*value,{node->now().nanoseconds(),steady_ns()});
       live->geometry=value;
     }));
     subscriptions.push_back(node->create_subscription<Envelope>("/navigation/envelope_v2",10,[live,node](Envelope::ConstSharedPtr value){
       std::lock_guard<std::mutex> lock(live->mutex);
       if(!live->envelope||value->header.stamp!=live->envelope->header.stamp)
         live->envelope_at={node->now().nanoseconds(),Steady::now()};
+      live->stationary.receive(*value,{node->now().nanoseconds(),steady_ns()});
       live->envelope=value;
     }));
     subscriptions.push_back(node->create_subscription<Camera>("/perception/camera_health/head_rgbd",10,[live](Camera::ConstSharedPtr value){std::lock_guard<std::mutex> lock(live->mutex);live->camera=value;}));
+    subscriptions.push_back(node->create_subscription<m3_probe::Hold>("/navigation/arm_hold",10,[live,node](m3_probe::Hold::ConstSharedPtr value){
+      std::lock_guard<std::mutex> lock(live->mutex);live->stationary.receive(*value,{node->now().nanoseconds(),steady_ns()});}));
+    subscriptions.push_back(node->create_subscription<m3_probe::Ack>("/navigation/envelope_applied",20,[live,node](m3_probe::Ack::ConstSharedPtr value){
+      std::lock_guard<std::mutex> lock(live->mutex);live->stationary.receive(*value,{node->now().nanoseconds(),steady_ns()});}));
+    subscriptions.push_back(node->create_subscription<m3_probe::Odom>("/odom",rclcpp::SensorDataQoS(),[live,node](m3_probe::Odom::ConstSharedPtr value){
+      std::lock_guard<std::mutex> lock(live->mutex);live->stationary.receive(*value,{node->now().nanoseconds(),steady_ns()});}));
+    subscriptions.push_back(node->create_subscription<m3_probe::Command>("/cmd_vel",rclcpp::SensorDataQoS(),[live,node](m3_probe::Command::ConstSharedPtr value){
+      std::lock_guard<std::mutex> lock(live->mutex);live->stationary.receive(*value,{node->now().nanoseconds(),steady_ns()});}));
+    subscriptions.push_back(node->create_subscription<m3_probe::Navigation>("/navigation/execution_status",rclcpp::QoS(10).reliable().transient_local(),[live,node](m3_probe::Navigation::ConstSharedPtr value){
+      std::lock_guard<std::mutex> lock(live->mutex);live->stationary.receive(*value,{node->now().nanoseconds(),steady_ns()});}));
     tf=std::make_unique<tf2_ros::Buffer>(node->get_clock());listener=std::make_unique<tf2_ros::TransformListener>(*tf,node,false);
     source=std::make_unique<pp::SingleBoxRequestSource>(node,*tf);
     auto robot_params=std::make_shared<rclcpp::AsyncParametersClient>(node,"/robot_state_publisher");
@@ -173,7 +233,24 @@ int main(int argc,char** argv) {
     context.pose_model_revision=file_digest(registry.at("path").get<std::string>())+":"+file_digest(registry.at("visibility_model").get<std::string>());
     report["configured_worker_sha256"]["pose"]=file_digest(config.at("pose_worker").get<std::string>());
     report["configured_worker_sha256"]["grasp"]=file_digest(config.at("grasp_worker").get<std::string>());
-    while(true) {bool ready;{std::lock_guard<std::mutex> lock(live->mutex);ready=bool(live->geometry&&live->envelope&&live->camera);}if(ready)break;tick();}
+    while(true) {
+      bool ready=false;
+      {
+        std::lock_guard<std::mutex> lock(live->mutex);
+        const auto now=node->now().nanoseconds();
+        if(live->geometry&&live->envelope&&live->camera&&
+          fresh(ns(live->geometry->header.stamp),ns(live->geometry->valid_until),live->geometry_at,now,300000000LL)&&
+          fresh(ns(live->envelope->header.stamp),ns(live->envelope->valid_until),live->envelope_at,now,300000000LL)) {
+          const auto why=live->stationary.arm(*live->envelope,*live->geometry,{now,steady_ns()});
+          report["stationary_wait_reason"]=why;ready=why.empty();
+        }
+      }
+      if(ready)break;
+      tick();
+    }
+    report["stationary_wait_reason"]="";
+    const auto entry_gate=[&]{std::lock_guard<std::mutex> lock(live->mutex);return live->stationary;}();
+    report["stationary_entry"]=save_stationary(output,"entry",entry_gate);
     auto scene_request=std::make_shared<SceneQuery::Request>();scene_request->components.components=
       moveit_msgs::msg::PlanningSceneComponents::SCENE_SETTINGS|moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE|
       moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS|moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_NAMES|
@@ -231,14 +308,16 @@ int main(int argc,char** argv) {
       if(!query&&Steady::now()>=next_query){query_sent=Steady::now();query.emplace(scenes->async_send_request(scene_request));}
       {
         std::lock_guard<std::mutex> lock(live->mutex);
+        const auto now=node->now().nanoseconds();
         const auto& geometry=live->geometry;const auto& envelope=live->envelope;const auto& camera=live->camera;
         require(geometry->complete&&geometry->attachment_state_confirmed&&geometry->attachment_ids.empty()&&
           geometry->source_id==geometry_source&&geometry->model_revision==geometry_model&&geometry->attachment_revision==attachments&&
           geometry->clock_epoch==context.clock_epoch&&fresh(ns(geometry->header.stamp),ns(geometry->valid_until),live->geometry_at,now,300000000LL),"OWNER_GEOMETRY_CHANGED_OR_STALE");
         require(envelope->epoch==context.envelope_epoch&&envelope->clock_epoch==context.clock_epoch&&
-          envelope->coordinator_session_id==coordinator&&envelope->hold_id==hold_id&&!envelope->navigation_allowed&&
-          (envelope->mode==Envelope::HOLD||envelope->mode==Envelope::FIXED_POSTURE)&&
+          envelope->coordinator_session_id==coordinator&&envelope->hold_id==hold_id&&envelope->navigation_allowed&&
+          envelope->mode==Envelope::FIXED_POSTURE&&envelope->limits.transport_ready&&
           fresh(ns(envelope->header.stamp),ns(envelope->valid_until),live->envelope_at,now,300000000LL),"OWNER_HOLD_CHANGED_OR_STALE");
+        const auto stopped=live->stationary.check(*envelope,*geometry,{now,steady_ns()});require(stopped.empty(),stopped);
         require(camera->camera_id=="head_rgbd"&&camera->calibration_revision==context.calibration_revision,"OWNER_CALIBRATION_CHANGED");
       }
       return source->bind_context(context);
@@ -249,6 +328,7 @@ int main(int argc,char** argv) {
       {"scene_signature",context.scene_signature},{"identity_revision",context.identity_revision},{"clock_epoch",context.clock_epoch},
       {"calibration_revision",context.calibration_revision},{"planning_scene_revision",context.scene_revision},{"envelope_epoch",context.envelope_epoch},
       {"coordinator_session_id",coordinator},{"hold_id",hold_id},{"issued_ros_ns",registered_ros},{"valid_until_ros_ns",ns(fixture.valid_until)},
+      {"hold_owner_id",config.at("hold_owner_id")},{"stationary_gate","typed_hold_six_ack_measured_stop"},
       {"pose_model_revision",context.pose_model_revision},{"grasp_model_revision",context.grasp_model_revision},
       {"region_revision",fixture.region_revision},{"region_min",{fixture.region_min_m.x,fixture.region_min_m.y,fixture.region_min_m.z}},
       {"region_max",{fixture.region_max_m.x,fixture.region_max_m.y,fixture.region_max_m.z}},
@@ -338,9 +418,22 @@ int main(int argc,char** argv) {
       report[name]["terminal_observed_ros_ns"].get<int64_t>()>=ns(captured->object_cloud.header.stamp)&&report[name]["terminal_observed_ros_ns"].get<int64_t>()<ns(captured->valid_until);
     report["both_within_original_deadline"]=in_time;
   }
-  executor.cancel();spin.join();source.reset();listener.reset();tf.reset();subscriptions.clear();rclcpp::shutdown();
+  executor.cancel();spin.join();
+  if(exit_code==0) {
+    const auto now=node->now().nanoseconds();
+    const auto why=live->stationary.check(*live->envelope,*live->geometry,{now,steady_ns()});
+    if(!why.empty()){report["reason"]=why;exit_code=1;}
+    else if(!fresh(ns(live->geometry->header.stamp),ns(live->geometry->valid_until),live->geometry_at,now,300000000LL)) {
+      report["reason"]="OWNER_GEOMETRY_CHANGED_OR_STALE";exit_code=1;
+    } else if(!fresh(ns(live->envelope->header.stamp),ns(live->envelope->valid_until),live->envelope_at,now,300000000LL)) {
+      report["reason"]="OWNER_HOLD_CHANGED_OR_STALE";exit_code=1;
+    }
+  }
+  source.reset();listener.reset();tf.reset();subscriptions.clear();rclcpp::shutdown();
+  if(exit_code!=0)report["source_and_models_validated"]=false;
   report["exit_code"]=exit_code;report["finished_steady_ns"]=steady_ns();
   try{
+    report["stationary_final"]=save_stationary(output,"final",live->stationary);
     if(captured){
       report["request_cloud_sha256"]=save_message(output/"request_cloud.cdr",captured->object_cloud);
       report["request_camera_info_sha256"]=save_message(output/"request_camera_info.cdr",captured->capture_camera_info);
