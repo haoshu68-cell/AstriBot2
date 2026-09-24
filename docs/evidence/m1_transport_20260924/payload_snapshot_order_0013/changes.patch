@@ -1,0 +1,135 @@
+--- before/ws_robot/src/astribot_s1_transport_native/src/payload_client.cpp
++++ after/ws_robot/src/astribot_s1_transport_native/src/payload_client.cpp
+@@ -24,10 +24,10 @@
+ };
+ PayloadClient::PayloadClient(std::string model,std::function<int64_t()> clock,
+  const ignition::transport::NodeOptions &options)
+- :model_(std::move(model)),inbox_(std::make_shared<Inbox>()),node_(options) {
++ :model_(std::move(model)),clock_(std::move(clock)),inbox_(std::make_shared<Inbox>()),node_(options) {
+  require(!model_.empty()&&model_.find('/')==std::string::npos,"PAYLOAD_MODEL_NAME_INVALID");
+  const std::weak_ptr<Inbox> weak=inbox_;
+- std::function<void(const ignition::msgs::StringMsg&)> callback=[weak,clock=std::move(clock)](const auto &message) {
++ std::function<void(const ignition::msgs::StringMsg&)> callback=[weak,clock=clock_](const auto &message) {
+   auto inbox=weak.lock();if(!inbox)return;
+   const Receipt received{clock(),wall()};std::lock_guard<std::mutex> lock(inbox->mutex);
+   try {
+@@ -78,11 +78,15 @@
+  require(node_.Request("/model/"+model_+"/kinematic_attachment/command",request,callback),"PAYLOAD_COMMAND_SEND_UNCONFIRMED");
+ }
+ std::optional<nlohmann::json> PayloadClient::observation(int64_t ros,int64_t steady) {
++ const auto call_ros=ros,call_steady=steady;
+  std::optional<nlohmann::json> state;Receipt received,future_received;int64_t future_stamp;
+  {std::lock_guard<std::mutex> lock(inbox_->mutex);
+   if(!inbox_->failure.empty())throw std::runtime_error(inbox_->failure);
+   state=inbox_->state;received=inbox_->received;
+   future_stamp=inbox_->future_stamp;future_received=inbox_->future_received;
++  // A callback may have arrived after the caller sampled its tick clocks.
++  // Evaluate this snapshot at a time sampled after its receipt, under the lock.
++  if(state){ros=clock_();steady=wall();}
+  }
+  if(!state)return {};
+  try {
+@@ -93,6 +97,7 @@
+    {std::lock_guard<std::mutex> lock(inbox_->mutex);report=!inbox_->stale_reported;inbox_->stale_reported=true;}
+    if(report) {
+     const nlohmann::json diagnostic={{"condition",condition},{"model",model_},{"at",at},
++     {"call_ros",call_ros},{"call_steady",call_steady},
+      {"poll_ros",ros},{"poll_steady",steady},{"received_ros",received.ros},{"received_steady",received.steady},
+      {"capture",capture_},{"deadline",deadline_},{"future_dropped_at",future_stamp},
+      {"future_dropped_received_ros",future_received.ros},{"future_dropped_received_steady",future_received.steady},
+@@ -102,6 +107,7 @@
+    }
+    throw std::runtime_error("PAYLOAD_STATE_STALE");
+   };
++  require_fresh(ros>=call_ros&&steady>=call_steady,"clock_regression");
+   require_fresh(ros>=received.ros&&received.ros>=at&&ros-at<300000000&&steady>=received.steady,"poll_and_source_lifetime");
+   const int64_t remaining=300000000-(received.ros-at);
+   require_fresh(steady-received.steady<remaining&&received.steady<=INT64_MAX-remaining,"receipt_remaining_lifetime");
+@@ -134,6 +140,8 @@
+   require(std::isfinite(position)&&std::isfinite(rotation)&&position>=0&&rotation>=0,"PAYLOAD_PHYSICAL_ERROR_INVALID");
+   require(position+radius_*rotation<=.006,"PAYLOAD_PHYSICAL_TRACKING_ERROR");
+   if(!complete)return false;
++  const auto completed=wall();
++  require(completed>=started_&&completed-started_<2000000000,"PAYLOAD_APPLICATION_TIMEOUT");
+   unresolved_=false;return true;
+  }catch(const nlohmann::json::exception &error){throw std::runtime_error(std::string("PAYLOAD_STATE_INVALID:")+error.what());}
+ }
+--- before/ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/payload_client.hpp
++++ after/ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/payload_client.hpp
+@@ -21,7 +21,8 @@
+    const nlohmann::json &inventory,Receipt receipt,int64_t ros,int64_t steady);
+  bool applied(const nlohmann::json &inventory,Receipt receipt,int64_t ros,int64_t steady);
+  // Fresh model-world observation for constructing a command and for the
+- // independent placement check; querying it never sends a command.
++ // independent placement check; querying it never sends a command. Check
++ // time is sampled with the inbox snapshot; arguments bound clock rollback.
+  std::optional<nlohmann::json> observation(int64_t ros,int64_t steady);
+  // Failure/timeout is not proof of a terminal physical command. The owning
+  // executor must quarantine unresolved transactions instead of releasing them.
+@@ -30,6 +31,7 @@
+ private:
+  struct Inbox;
+  std::string model_;
++ std::function<int64_t()> clock_;
+  std::shared_ptr<Inbox> inbox_;
+  ignition::transport::Node node_;
+  std::unique_ptr<PayloadCommand> command_;
+--- before/ws_robot/src/astribot_s1_transport_native/test/payload_client_test.cpp
++++ after/ws_robot/src/astribot_s1_transport_native/test/payload_client_test.cpp
+@@ -81,9 +81,23 @@
+ TEST_F(PayloadClientTest, NoReadbackTimesOutAndKeepsUnresolvedCommand) {
+  int64_t ros=1000000000;PayloadClient client("fixture",[&]{return ros;},options);
+  const auto at=steady();client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at);
+- EXPECT_THROW(client.applied(inventory(ros),{ros,at},ros,at+2000000000),std::runtime_error);
++ ros=1010000000;const auto call_steady=steady();
++ const auto complete=inventory(ros,true);
++ std::this_thread::sleep_for(std::chrono::seconds(2));
++ EXPECT_THROW(client.applied(inventory(ros),{ros,at},ros,steady()),std::runtime_error);
+  EXPECT_TRUE(client.unresolved());
+- EXPECT_THROW(client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at+2000000000),std::runtime_error);
++ // Fresh physical input cannot complete an expired application using an old
++ // caller clock that was sampled before waiting. All steady samples are real.
++ std::optional<nlohmann::json> value;const auto until=steady()+1000000000;
++ while(!value&&steady()<until) {
++  publish(ros);std::this_thread::sleep_for(std::chrono::milliseconds(5));
++  value=client.observation(ros,steady());
++ }
++ ASSERT_TRUE(value);
++ try {client.applied(complete,{ros,call_steady},ros,call_steady);ADD_FAILURE()<<"expired command completed";}
++ catch(const std::runtime_error &error){EXPECT_EQ(std::string(error.what()),"PAYLOAD_APPLICATION_TIMEOUT");}
++ EXPECT_TRUE(client.unresolved());
++ EXPECT_THROW(client.begin(true,request(),.08,inventory(ros),{ros,at},ros,steady()),std::runtime_error);
+ }
+ TEST_F(PayloadClientTest, DetachContinuesCounterAndDoesNotRequireGlobalEmpty) {
+  std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
+@@ -122,11 +136,29 @@
+  const auto diagnostic=nlohmann::json::parse(output.substr(start+prefix.size()));
+  EXPECT_EQ(diagnostic.at("condition"),"receipt_remaining_lifetime");
+  EXPECT_EQ(diagnostic.at("at"),1010000000);EXPECT_EQ(diagnostic.at("poll_ros"),1020000000);
+- EXPECT_EQ(diagnostic.at("poll_steady"),at);EXPECT_EQ(diagnostic.at("received_ros"),1020000000);
++ EXPECT_EQ(diagnostic.at("call_steady"),at);EXPECT_GE(diagnostic.at("poll_steady").get<int64_t>(),at);
++ EXPECT_EQ(diagnostic.at("received_ros"),1020000000);
+  EXPECT_GE(at-diagnostic.at("received_steady").get<int64_t>(),290000000);
+  EXPECT_EQ(diagnostic.at("capture"),0);EXPECT_EQ(diagnostic.at("deadline"),0);
+  EXPECT_EQ(diagnostic.at("future_dropped_at"),0);
+  EXPECT_EQ(diagnostic.at("poll_ros_before_receipt"),false);EXPECT_EQ(diagnostic.at("poll_steady_before_receipt"),false);
+  EXPECT_TRUE(client.unresolved());
+ }
++
++TEST_F(PayloadClientTest, ReceiptAfterCallerSampleIsFreshButClockRollbackStillFails) {
++ std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
++ // Every callback receipt necessarily follows this saved caller snapshot.
++ const auto call_ros=ros.load(),call_steady=steady();
++ std::optional<nlohmann::json> value;const auto until=steady()+1000000000;
++ while(!value&&steady()<until) {
++  publish(call_ros,"",false,0);std::this_thread::sleep_for(std::chrono::milliseconds(5));
++  value=client.observation(call_ros,call_steady);
++ }
++ ASSERT_TRUE(value);EXPECT_EQ(value->at("stamp_ns"),call_ros);EXPECT_EQ(commands,0u);
++ // Actual rollback remains an error; it is never clamped to the old receipt.
++ ros=call_ros-1000000;
++ EXPECT_THROW(client.observation(call_ros,steady()),std::runtime_error);
++ EXPECT_THROW(client.observation(ros.load(),steady()),std::runtime_error);
++ EXPECT_EQ(commands,0u);
+ }
++}

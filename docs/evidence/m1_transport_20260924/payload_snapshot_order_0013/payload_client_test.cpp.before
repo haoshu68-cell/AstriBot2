@@ -1,0 +1,132 @@
+#include <gtest/gtest.h>
+#include "astribot_s1_transport_native/payload_client.hpp"
+#include <ignition/msgs/boolean.pb.h>
+#include <ignition/msgs/stringmsg.pb.h>
+#include <atomic>
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <iostream>
+#include <unistd.h>
+using namespace astribot::transport;
+namespace {
+int64_t steady() {return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();}
+nlohmann::json inventory(int64_t stamp,bool attached=false) {
+ return {{"stamp_ns",stamp},{"source_epoch","inventory"},{"clock_epoch",1},
+  {"revision",attached?2:1},{"sequence",attached?2:1},
+  {"reason",attached?"ATTACHED_INVENTORY_OBSERVED":"EMPTY_INVENTORY_OBSERVED"},
+  {"models",{{41,"fixture"}}},
+  {"execution",{{{"entity",41},{"epoch","plugin"},{"clock_epoch",1},
+   {"accepted",attached?8:7},{"applied",attached?8:7},{"attached",attached},{"parent",27}}}}};
+}
+class PayloadClientTest:public testing::Test {
+protected:
+ ignition::transport::NodeOptions options;
+ std::unique_ptr<ignition::transport::Node> producer;
+ ignition::transport::Node::Publisher publisher;
+ std::atomic<unsigned> commands{0};
+ ignition::msgs::Pose received;
+ std::mutex mutex;
+ void SetUp() override {
+  const auto partition="m1_payload_test_"+std::to_string(getpid())+"_"+std::to_string(steady());
+  ASSERT_TRUE(options.SetPartition(partition));std::cout<<"owned_partition="<<partition<<" pid="<<getpid()<<std::endl;
+  producer=std::make_unique<ignition::transport::Node>(options);
+  std::function<bool(const ignition::msgs::Pose&,ignition::msgs::Boolean&)> service=[this](const auto &request,auto &reply) {
+   {std::lock_guard<std::mutex> lock(mutex);received=request;}
+   ++commands;reply.set_data(true);return true;
+  };
+  ASSERT_TRUE(producer->Advertise("/model/fixture/kinematic_attachment/command",service));
+  publisher=producer->Advertise<ignition::msgs::StringMsg>("/model/fixture/kinematic_attachment/state");
+  ASSERT_TRUE(publisher);
+ }
+ ignition::msgs::Pose request() {
+  ignition::msgs::Pose pose;pose.set_name("astribot_s1::astribot_arm_left_link_7");
+  pose.mutable_orientation()->set_w(1);return pose;
+ }
+ void publish(int64_t stamp,const std::string &error="",bool attached=true,unsigned command=8) {
+  nlohmann::json value={{"stamp_ns",stamp},{"command_id",command},{"attached",attached},{"error",error},
+   {"position_error_m",0.},{"rotation_error_rad",0.},{"actual_world_xyzw",{1.,2.,3.,0.,0.,0.,1.}},
+   {"expected_world_xyzw",{1.,2.,3.,0.,0.,0.,1.}},{"physics_dt_ns",1000000}};
+  ignition::msgs::StringMsg message;message.set_data(value.dump());publisher.Publish(message);
+ }
+};
+// Real transport, private partition: queue ACK alone must never mean applied.
+TEST_F(PayloadClientTest, SendsActualCounterOnceAndRequiresInventoryAndPhysicalState) {
+ std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
+ auto at=steady();client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at);
+ const auto until=steady()+1000000000;
+ while(!commands&&steady()<until)std::this_thread::sleep_for(std::chrono::milliseconds(5));
+ ASSERT_EQ(commands,1u);{std::lock_guard<std::mutex> lock(mutex);EXPECT_EQ(received.id(),8u);EXPECT_EQ(received.name(),request().name());}
+ EXPECT_FALSE(client.applied(inventory(ros),{ros,at},ros,steady()));
+ ros=1010000000;bool applied=false;
+ const auto deadline=steady()+1000000000;
+ while(!applied&&steady()<deadline) {
+  publish(ros);std::this_thread::sleep_for(std::chrono::milliseconds(5));at=steady();
+  applied=client.applied(inventory(ros,true),{ros,at},ros,at);
+ }
+ EXPECT_TRUE(applied);EXPECT_FALSE(client.unresolved());EXPECT_EQ(commands,1u);
+}
+TEST_F(PayloadClientTest, PropagatesPhysicalErrorDuringIncompleteInventory) {
+ std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
+ auto at=steady();client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at);
+ ros=1010000000;auto pending=inventory(ros);pending["reason"]="PAYLOAD_TRANSITION_OR_ERROR";pending["execution"]=nlohmann::json::array();
+ bool failed=false;const auto deadline=steady()+1000000000;
+ while(!failed&&steady()<deadline) {
+  publish(ros,"PARENT_NOT_FOUND");std::this_thread::sleep_for(std::chrono::milliseconds(5));at=steady();
+  try {EXPECT_FALSE(client.applied(pending,{ros,at},ros,at));}
+  catch(const std::runtime_error &error){failed=true;EXPECT_NE(std::string(error.what()).find("PARENT_NOT_FOUND"),std::string::npos);}
+ }
+ EXPECT_TRUE(failed);EXPECT_TRUE(client.unresolved());
+}
+TEST_F(PayloadClientTest, NoReadbackTimesOutAndKeepsUnresolvedCommand) {
+ int64_t ros=1000000000;PayloadClient client("fixture",[&]{return ros;},options);
+ const auto at=steady();client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at);
+ EXPECT_THROW(client.applied(inventory(ros),{ros,at},ros,at+2000000000),std::runtime_error);
+ EXPECT_TRUE(client.unresolved());
+ EXPECT_THROW(client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at+2000000000),std::runtime_error);
+}
+TEST_F(PayloadClientTest, DetachContinuesCounterAndDoesNotRequireGlobalEmpty) {
+ std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
+ auto pose=request();pose.clear_name();pose.mutable_position()->set_x(1.);
+ auto at=steady();client.begin(false,pose,.08,inventory(ros,true),{ros,at},ros,at);
+ ros=1010000000;auto detached=inventory(ros,true);
+ detached["revision"]=3;detached["sequence"]=3;detached["execution"][0]["accepted"]=9;
+ detached["execution"][0]["applied"]=9;detached["execution"][0]["attached"]=false;
+ detached["models"].push_back({42,"other_payload"});
+ auto other=detached["execution"][0];other["entity"]=42;other["attached"]=true;
+ detached["execution"].push_back(other);
+ bool applied=false;const auto deadline=steady()+1000000000;
+ while(!applied&&steady()<deadline) {
+  publish(ros,"",false,9);std::this_thread::sleep_for(std::chrono::milliseconds(5));at=steady();
+  applied=client.applied(detached,{ros,at},ros,at);
+ }
+ EXPECT_TRUE(applied);EXPECT_FALSE(client.unresolved());EXPECT_EQ(commands,1u);
+ {std::lock_guard<std::mutex> lock(mutex);EXPECT_EQ(received.id(),9u);EXPECT_TRUE(received.name().empty());EXPECT_DOUBLE_EQ(received.position().x(),1.);}
+}
+TEST_F(PayloadClientTest, RepeatedPhysicalCaptureCannotRefreshItsReceiptBeforeFirstPoll) {
+ std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
+ auto at=steady();client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at);
+ ros=1020000000;
+ const auto deadline=steady()+450000000;
+ while(steady()<deadline){publish(1010000000);std::this_thread::sleep_for(std::chrono::milliseconds(5));}
+ at=steady();
+ testing::internal::CaptureStderr();
+ for(int attempt=0;attempt<2;++attempt) {
+  try {client.applied(inventory(ros,true),{ros,at},ros,at);ADD_FAILURE()<<"old physical capture remained usable";}
+  catch(const std::runtime_error &error){EXPECT_EQ(std::string(error.what()),"PAYLOAD_STATE_STALE");}
+ }
+ const auto output=testing::internal::GetCapturedStderr();
+ const std::string prefix="PAYLOAD_STATE_STALE_DIAGNOSTIC ";
+ const auto start=output.find(prefix);ASSERT_NE(start,std::string::npos);
+ EXPECT_EQ(output.find(prefix,start+prefix.size()),std::string::npos);
+ const auto diagnostic=nlohmann::json::parse(output.substr(start+prefix.size()));
+ EXPECT_EQ(diagnostic.at("condition"),"receipt_remaining_lifetime");
+ EXPECT_EQ(diagnostic.at("at"),1010000000);EXPECT_EQ(diagnostic.at("poll_ros"),1020000000);
+ EXPECT_EQ(diagnostic.at("poll_steady"),at);EXPECT_EQ(diagnostic.at("received_ros"),1020000000);
+ EXPECT_GE(at-diagnostic.at("received_steady").get<int64_t>(),290000000);
+ EXPECT_EQ(diagnostic.at("capture"),0);EXPECT_EQ(diagnostic.at("deadline"),0);
+ EXPECT_EQ(diagnostic.at("future_dropped_at"),0);
+ EXPECT_EQ(diagnostic.at("poll_ros_before_receipt"),false);EXPECT_EQ(diagnostic.at("poll_steady_before_receipt"),false);
+ EXPECT_TRUE(client.unresolved());
+}
+}

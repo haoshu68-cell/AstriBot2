@@ -1,0 +1,32 @@
+Consolidate compiler generated dependencies of target fixed_station_navigation
+[  4%] Built target astribot_s1_transport_native__cpp
+[  8%] Built target fixed_station_navigation
+Consolidate compiler generated dependencies of target arm_hold_core
+[ 29%] Built target arm_hold_core
+[ 37%] Built target trajectory_scene_binding
+[ 41%] Building CXX object CMakeFiles/payload_client.dir/src/payload_client.cpp.o
+[ 66%] Built target astribot_s1_transport_native__rosidl_typesupport_cpp
+[ 75%] Built target payload_frames
+[ 79%] Built target payload_scene
+[ 87%] Built target fixed_station_scene
+[ 91%] Linking CXX shared library libpayload_client.so
+[ 91%] Built target payload_client
+[ 95%] Building CXX object CMakeFiles/trajectory_executor.dir/src/hold_executor.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp: In member function ‘void astribot::transport::HoldExecutor::validate_transfer_goal(const Goal&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:291:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  291 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |   ^~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:291:62: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  291 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |                                                              ^~~
+[100%] Linking CXX executable trajectory_executor
+[100%] Built target trajectory_executor
+[ 16%] Built target gtest_main
+[ 58%] Built target arm_hold_core
+Consolidate compiler generated dependencies of target payload_client
+[ 75%] Built target gtest
+[ 91%] Built target payload_client
+Consolidate compiler generated dependencies of target payload_client_test
+[100%] Building CXX object CMakeFiles/payload_client_test.dir/test/payload_client_test.cpp.o
+[100%] Linking CXX executable payload_client_test
+[100%] Built target payload_client_test

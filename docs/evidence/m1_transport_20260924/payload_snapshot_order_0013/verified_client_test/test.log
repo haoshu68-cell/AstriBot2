@@ -1,0 +1,28 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from PayloadClientTest
+[ RUN      ] PayloadClientTest.SendsActualCounterOnceAndRequiresInventoryAndPhysicalState
+owned_partition=m1_payload_test_1152636_22277048870363 pid=1152636
+[       OK ] PayloadClientTest.SendsActualCounterOnceAndRequiresInventoryAndPhysicalState (11 ms)
+[ RUN      ] PayloadClientTest.PropagatesPhysicalErrorDuringIncompleteInventory
+owned_partition=m1_payload_test_1152636_22277054313381 pid=1152636
+[       OK ] PayloadClientTest.PropagatesPhysicalErrorDuringIncompleteInventory (5 ms)
+[ RUN      ] PayloadClientTest.NoReadbackTimesOutAndKeepsUnresolvedCommand
+owned_partition=m1_payload_test_1152636_22277059645340 pid=1152636
+[       OK ] PayloadClientTest.NoReadbackTimesOutAndKeepsUnresolvedCommand (2005 ms)
+[ RUN      ] PayloadClientTest.DetachContinuesCounterAndDoesNotRequireGlobalEmpty
+owned_partition=m1_payload_test_1152636_22279065156342 pid=1152636
+[       OK ] PayloadClientTest.DetachContinuesCounterAndDoesNotRequireGlobalEmpty (6 ms)
+[ RUN      ] PayloadClientTest.RepeatedPhysicalCaptureCannotRefreshItsReceiptBeforeFirstPoll
+owned_partition=m1_payload_test_1152636_22279070400014 pid=1152636
+[       OK ] PayloadClientTest.RepeatedPhysicalCaptureCannotRefreshItsReceiptBeforeFirstPoll (451 ms)
+[ RUN      ] PayloadClientTest.ReceiptAfterCallerSampleIsFreshButClockRollbackStillFails
+owned_partition=m1_payload_test_1152636_22279521865827 pid=1152636
+PAYLOAD_STATE_STALE_DIAGNOSTIC {"at":1000000000,"call_ros":1000000000,"call_steady":22279527011282,"capture":1000000000,"condition":"clock_regression","deadline":22279821984259,"future_dropped_at":0,"future_dropped_received_ros":0,"future_dropped_received_steady":0,"model":"fixture","poll_ros":999000000,"poll_ros_before_receipt":true,"poll_steady":22279527012095,"poll_steady_before_receipt":false,"receipt_before_capture":false,"received_ros":1000000000,"received_steady":22279521984259}
+[       OK ] PayloadClientTest.ReceiptAfterCallerSampleIsFreshButClockRollbackStillFails (5 ms)
+[----------] 6 tests from PayloadClientTest (2483 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (2483 ms total)
+[  PASSED  ] 6 tests.
