@@ -1,0 +1,28 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from FixedStationNavigationTest
+[ RUN      ] FixedStationNavigationTest.SameLeaseLegUsesCurrentMapTransformAndPostTerminalStop
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp:122: Failure
+Value of: wait([&]{return bool(goal);},3.)
+  Actual: false
+Expected: true
+[  FAILED  ] FixedStationNavigationTest.SameLeaseLegUsesCurrentMapTransformAndPostTerminalStop (3047 ms)
+[ RUN      ] FixedStationNavigationTest.LegacyProtectionCannotReplaceControllerAndCancellationStillRequiresStop
+[       OK ] FixedStationNavigationTest.LegacyProtectionCannotReplaceControllerAndCancellationStillRequiresStop (2157 ms)
+[ RUN      ] FixedStationNavigationTest.CancelTargetsOnlyOwnedGoalAndTerminalDoesNotProveStopped
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp:142: Failure
+Value of: wait([&]{return bool(goal);},3.)
+  Actual: false
+Expected: true
+[  FAILED  ] FixedStationNavigationTest.CancelTargetsOnlyOwnedGoalAndTerminalDoesNotProveStopped (3058 ms)
+[----------] 3 tests from FixedStationNavigationTest (8262 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (8262 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 2 tests, listed below:
+[  FAILED  ] FixedStationNavigationTest.SameLeaseLegUsesCurrentMapTransformAndPostTerminalStop
+[  FAILED  ] FixedStationNavigationTest.CancelTargetsOnlyOwnedGoalAndTerminalDoesNotProveStopped
+
+ 2 FAILED TESTS

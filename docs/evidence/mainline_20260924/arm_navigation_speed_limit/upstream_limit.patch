@@ -1,0 +1,959 @@
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp
+@@ -1,207 +1,157 @@
+ #include "astribot_s1_dynamics_coupling/core.hpp"
+-
+-#include <geometry_msgs/msg/twist.hpp>
++#include <chrono>
++#include <memory>
+ #include <rclcpp/rclcpp.hpp>
+ #include <sensor_msgs/msg/joint_state.hpp>
+-#include <tf2/exceptions.h>
++#include <nav2_msgs/msg/speed_limit.hpp>
+ #include <tf2_ros/buffer.h>
+ #include <tf2_ros/transform_listener.h>
+-
+-#include <memory>
+-#include <utility>
+ 
+ namespace astribot_s1_dynamics_coupling {
+ class ArmChassisSpeedCouplingNode final : public rclcpp::Node {
+  public:
+   ArmChassisSpeedCouplingNode() : Node("arm_chassis_speed_coupling_node") {
+-    declare_parameter("input_topic", "/cmd_vel_pre_arm_coupling");
+-    declare_parameter("output_topic", "/cmd_vel");
+-    declare_parameter("joint_states_topic", "/joint_states");
+-    declare_parameter("extension_metric", "horizontal_reach");
+-    declare_parameter("chassis_base_frame", "astribot_torso_base");
+-    declare_parameter("reach_tf_timeout_sec", 0.5);
+-    const double timeout = number("reach_tf_timeout_sec");
+-    if (!std::isfinite(timeout) || timeout <= 0.0) {
+-      throw std::invalid_argument("reach_tf_timeout_sec must be finite and positive");
++    rcl_interfaces::msg::ParameterDescriptor immutable; immutable.read_only=true;
++    const auto output=declare_parameter("output_topic", std::string("/navigation_policy/arm_speed_limit"),immutable);
++    const auto input=declare_parameter("joint_states_topic", std::string("/joint_states"),immutable);
++    base_=declare_parameter("chassis_base_frame", std::string("astribot_torso_base"),immutable);
++    metric_=declare_parameter("extension_metric", std::string("horizontal_reach"),immutable);
++    links_=declare_parameter("monitored_links", std::vector<std::string>{
++      "astribot_arm_left_tcp_link", "astribot_arm_right_tcp_link",
++      "astribot_gripper_left_Link_L11", "astribot_gripper_right_Link_R11"},immutable);
++    folded_=declare_parameter("reach_folded_m",.42,immutable);
++    full_=declare_parameter("reach_full_m",.8865,immutable);
++    reach_timeout_=declare_parameter("reach_tf_timeout_sec",.5,immutable);
++    reach_period_=declare_parameter("reach_update_period_sec",.05,immutable);
++    reference_=declare_parameter("folded_reference_rad",std::vector<double>(14,0.),immutable);
++    deviation_full_=declare_parameter("extension_full_rad",1.2,immutable);
++    velocity_full_=declare_parameter("velocity_full_rad_s",2.,immutable);
++    minimum_=declare_parameter("min_speed_scale",.15,immutable);
++    alpha_=declare_parameter("scale_smoothing_alpha",.25,immutable);
++    timeout_=declare_parameter("joint_state_timeout_sec",.5,immutable);
++    if(metric_!="horizontal_reach" && metric_!="joint_deviation")throw std::invalid_argument("invalid extension_metric");
++    if(base_.empty() || links_.empty() || reference_.size()!=14 ||
++      !std::all_of(reference_.begin(),reference_.end(),[](double v){return std::isfinite(v);}) ||
++      !std::isfinite(folded_) || !std::isfinite(full_) ||
++      !std::isfinite(reach_timeout_) || reach_timeout_<=0. || reach_timeout_>.5 ||
++      !std::isfinite(reach_period_) || reach_period_<=0. || reach_period_>.05 ||
++      !std::isfinite(deviation_full_) || deviation_full_<=0. ||
++      !std::isfinite(velocity_full_) || velocity_full_<=0. ||
++      !std::isfinite(minimum_) || minimum_<0. || minimum_>1. ||
++      !std::isfinite(alpha_) || alpha_<=0. || alpha_>1. ||
++      !std::isfinite(timeout_) || timeout_<=0. || timeout_>.5)
++      throw std::invalid_argument("invalid arm navigation limit parameters");
++    validate_reach_thresholds(folded_,full_);
++    for(const auto *side:{"left","right"})for(int i=1;i<=7;++i)
++      joints_.push_back(std::string("astribot_arm_")+side+"_joint_"+std::to_string(i));
++    if(metric_=="horizontal_reach") {
++      tf_=std::make_unique<tf2_ros::Buffer>(get_clock());
++      listener_=std::make_unique<tf2_ros::TransformListener>(*tf_,this,false);
+     }
+-    declare_parameter("monitored_links", std::vector<std::string>{
+-      "astribot_arm_left_tcp_link", "astribot_arm_right_tcp_link",
+-      "astribot_gripper_left_Link_L11", "astribot_gripper_right_Link_R11"});
+-    declare_parameter("reach_folded_m", 0.42);
+-    declare_parameter("reach_full_m", 0.8865);
+-    declare_parameter("reach_update_period_sec", 0.05);
+-    declare_parameter("folded_reference_rad", std::vector<double>(14, 0.0));
+-    declare_parameter("extension_full_rad", 1.2);
+-    declare_parameter("velocity_full_rad_s", 2.0);
+-    declare_parameter("min_speed_scale", 0.15);
+-    declare_parameter("scale_smoothing_alpha", 0.25);
+-    declare_parameter("joint_state_timeout_sec", 0.5);
+-    declare_parameter("degraded_scale", 0.3);
+-    declare_parameter("log_throttle_sec", 2.0);
+-    for (const auto * side : {"left", "right"}) {
+-      for (int i = 1; i <= 7; ++i) {
+-        joints_.push_back(std::string("astribot_arm_") + side + "_joint_" + std::to_string(i));
+-      }
++    publisher_=create_publisher<nav2_msgs::msg::SpeedLimit>(output,10);
++    joint_sub_=create_subscription<sensor_msgs::msg::JointState>(input,10,
++      [this](sensor_msgs::msg::JointState::ConstSharedPtr msg){joint(*msg);});
++    timer_=create_wall_timer(std::chrono::milliseconds(50),[this]{publish();});
++    RCLCPP_INFO(get_logger(),"Upstream arm speed percentage: %s -> %s; 0 means HOLD on this dedicated constraint topic",input.c_str(),output.c_str());
++  }
++ private:
++  using Steady=std::chrono::steady_clock;
++  static double steady_seconds() {
++    return std::chrono::duration<double>(Steady::now().time_since_epoch()).count();
++  }
++  bool observe_clock(int64_t now_ns) {
++    const bool rollback=last_now_ns_>=0 && now_ns<last_now_ns_;
++    last_now_ns_=now_ns;
++    if(rollback) {
++      invalidate("CLOCK_ROLLBACK");source_ns_=0;stamp_={};reach_at_=-1.;reach_.reset();
+     }
+-    publisher_ = create_publisher<geometry_msgs::msg::Twist>(string("output_topic"), 10);
+-    command_sub_ = create_subscription<geometry_msgs::msg::Twist>(string("input_topic"), 10,
+-      [this](geometry_msgs::msg::Twist::ConstSharedPtr msg) {command(*msg);});
+-    joint_sub_ = create_subscription<sensor_msgs::msg::JointState>(string("joint_states_topic"), 10,
+-      [this](sensor_msgs::msg::JointState::ConstSharedPtr msg) {joint(*msg);});
+-    metric_ = string("extension_metric");
+-    if (metric_ != "horizontal_reach" && metric_ != "joint_deviation") {
+-      RCLCPP_ERROR(get_logger(), "Invalid extension_metric; falling back to joint_deviation");
+-      metric_ = "joint_deviation";
++    return !rollback;
++  }
++  void invalidate(const char *reason) {
++    valid_=false;scale_=0.;
++    RCLCPP_WARN_THROTTLE(get_logger(),warning_clock_,2000,"Arm navigation HOLD: %s",reason);
++  }
++  std::optional<double> reach(int64_t now_ns) {
++    const double now=static_cast<double>(now_ns)*1e-9;
++    if(reach_at_>=0. && now>=reach_at_ && now-reach_at_<reach_period_)return reach_;
++    reach_at_=now;reach_.reset();
++    for(const auto &link:links_) {
++      try {
++        const auto transform=tf_->lookupTransform(base_,link,tf2::TimePointZero);
++        const auto source=rclcpp::Time(transform.header.stamp).nanoseconds();
++        const auto &p=transform.transform.translation;
++        if(!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z) ||
++          (source!=0 && (source>now_ns || now_ns-source>reach_timeout_*1e9))) {
++          reach_.reset();return reach_;
++        }
++        const double value=horizontal_reach(p.x,p.y);
++        reach_=reach_?std::max(*reach_,value):value;
++      } catch(const tf2::TransformException &) {reach_.reset();return reach_;}
+     }
+-    if (metric_ == "horizontal_reach") {
+-      try {
+-        validate_reach_thresholds(number("reach_folded_m"), number("reach_full_m"));
+-      } catch (const std::invalid_argument & error) {
+-        RCLCPP_ERROR(get_logger(), "%s; falling back to joint_deviation", error.what());
+-        metric_ = "joint_deviation";
+-      }
++    return reach_;
++  }
++  void joint(const sensor_msgs::msg::JointState &msg) {
++    const auto now_ns=now().nanoseconds();const auto wall=steady_seconds();
++    if(!observe_clock(now_ns)){publish();return;}
++    if(msg.header.stamp.sec<0 || msg.header.stamp.nanosec>=1000000000u) {
++      invalidate("INVALID_SOURCE_STAMP");publish();return;
+     }
+-    if (metric_ == "horizontal_reach") {
+-      // Humble's frozen Python Buffer() has no ROS-clock jump callback. Use an
+-      // independent system clock so simulated-clock jumps do not erase its TF.
+-      tf_buffer_ = std::make_unique<tf2_ros::Buffer>(std::make_shared<rclcpp::Clock>(RCL_SYSTEM_TIME));
+-      tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_, this, false);
+-    } else {
+-      RCLCPP_WARN(get_logger(), "joint_deviation is the legacy diagnostic metric, not physical reach");
++    const int64_t source=static_cast<int64_t>(msg.header.stamp.sec)*1000000000LL+msg.header.stamp.nanosec;
++    if(!complete_joint_sample(msg.name,msg.position,msg.velocity,joints_) ||
++      !joint_sample_fresh(source,now_ns,0.,timeout_)) {
++      invalidate("INVALID_OR_STALE_JOINT_SAMPLE");publish();return;
+     }
+-    RCLCPP_INFO(get_logger(), "Arm/chassis coupling: %s -> %s, metric=%s, minimum=%.3f",
+-      string("input_topic").c_str(), string("output_topic").c_str(), metric_.c_str(), number("min_speed_scale"));
+-  }
+-
+- private:
+-  double number(const std::string & name) const {return get_parameter(name).as_double();}
+-  std::string string(const std::string & name) const {return get_parameter(name).as_string();}
+-
+-  std::optional<double> max_horizontal_reach() {
+-    const auto base = string("chassis_base_frame");
+-    const auto links = get_parameter("monitored_links").as_string_array();
+-    std::optional<double> best;
+-    std::string best_link;
+-    bool failed = false;
+-    for (const auto & link : links) {
+-      try {
+-        const auto tf = tf_buffer_->lookupTransform(base, link, tf2::TimePointZero);
+-        const rclcpp::Time stamp(tf.header.stamp, get_clock()->get_clock_type());
+-        const auto & t = tf.transform.translation;
+-        const double age = (now() - stamp).seconds();
+-        if (!std::isfinite(t.x) || !std::isfinite(t.y) || !std::isfinite(t.z) ||
+-          (stamp.nanoseconds() != 0 && !(age >= 0.0 && age <= number("reach_tf_timeout_sec")))) {
+-          failed = true;
+-          continue;
+-        }
+-        const double reach = horizontal_reach(t.x, t.y);
+-        if (!best || reach > *best) {best = reach; best_link = link;}
+-      } catch (const tf2::TransformException &) {failed = true;}
+-    }
+-    if (!best || failed) {
+-      if (!tf_warned_) RCLCPP_WARN(get_logger(), "Monitored TF missing, stale, future or invalid; full reach activity");
+-      tf_warned_ = true;
+-      last_reach_link_.clear();
+-      return std::nullopt;
+-    }
+-    tf_warned_ = false;
+-    last_reach_link_ = best_link;
+-    return best;
+-  }
+-
+-  double extension_activity(const JointMap & positions) {
+-    if (metric_ == "joint_deviation") {
+-      return joint_deviation_activity(positions, joints_,
+-        get_parameter("folded_reference_rad").as_double_array(), number("extension_full_rad"));
+-    }
+-    const auto stamp = now();
+-    const auto age = last_reach_time_ ? (stamp - *last_reach_time_).nanoseconds() : -1;
+-    if (!last_reach_time_ || !(age >= 0 && age < number("reach_update_period_sec") * 1e9)) {
+-      last_reach_ = max_horizontal_reach();
+-      last_reach_time_ = stamp;
+-    }
+-    if (!last_reach_) return 1.0;
+-    return reach_activity(*last_reach_, number("reach_folded_m"), number("reach_full_m"));
+-  }
+-
+-  void joint(const sensor_msgs::msg::JointState & msg) {
+-    try {
+-      const auto positions = zip_map(msg.name, msg.position);
+-      const auto velocities = msg.velocity.size() == msg.name.size() ? zip_map(msg.name, msg.velocity) : JointMap{};
+-      const double extension = extension_activity(positions);
+-      const double velocity = velocity_activity(velocities, joints_, number("velocity_full_rad_s"));
+-      const double activity = std::max(extension, velocity);
+-      const double raw = scale_from_activity(activity, number("min_speed_scale"));
+-      const double alpha = number("scale_smoothing_alpha");
+-      current_scale_ = alpha * raw + (1.0 - alpha) * current_scale_;
+-      last_joint_time_ = now();
+-      const auto stamp = now();
+-      if (!last_log_time_ || !((stamp - *last_log_time_).nanoseconds() < number("log_throttle_sec") * 1e9)) {
+-        last_log_time_ = stamp;
+-        if (activity > 0.05) {
+-          RCLCPP_INFO(get_logger(), "Arm activity=%.2f (extension=%.2f, velocity=%.2f), scale=%.2f",
+-            activity, extension, velocity, current_scale_);
+-        }
+-      }
+-    } catch (const std::exception & error) {
+-      RCLCPP_ERROR(get_logger(), "Joint calculation failed; retaining previous scale: %s", error.what());
+-    }
+-  }
+-
+-  double effective_scale() {
+-    if (!last_joint_time_) return number("degraded_scale");
+-    const double age = (now() - *last_joint_time_).seconds();
+-    if (age > number("joint_state_timeout_sec")) {
+-      RCLCPP_WARN_THROTTLE(get_logger(), warning_clock_, 2000, "Joint state stale (%.3fs), using degraded scale", age);
+-      return number("degraded_scale");
+-    }
+-    return current_scale_;
+-  }
+-
+-  void command(const geometry_msgs::msg::Twist & msg) {
+-    double scale = 1.0;
+-    try {scale = effective_scale();}
+-    catch (const std::exception & error) {
+-      RCLCPP_ERROR(get_logger(), "Scale calculation failed; forwarding unrestricted: %s", error.what());
++    // A repeated capture does not renew source or steady freshness.
++    if(source<=source_ns_) {
++      if(source<source_ns_)invalidate("JOINT_CAPTURE_OUT_OF_ORDER");
++      publish();return;
+     }
+     try {
+-      geometry_msgs::msg::Twist out;
+-      out.linear.x = msg.linear.x * scale;
+-      out.linear.y = msg.linear.y * scale;
+-      out.angular.z = msg.angular.z * scale;
+-      publisher_->publish(out);
+-    } catch (const std::exception & error) {
+-      RCLCPP_ERROR(get_logger(), "Scaled publish failed; forwarding original: %s", error.what());
+-      publisher_->publish(msg);
++      const auto positions=zip_map(msg.name,msg.position),velocities=zip_map(msg.name,msg.velocity);
++      bool missing_tf=false;double extension=0.;
++      if(metric_=="horizontal_reach") {
++        const auto value=reach(now_ns);missing_tf=!value;
++        extension=value?reach_activity(*value,folded_,full_):1.;
++      } else extension=joint_deviation_activity(positions,joints_,reference_,deviation_full_);
++      const double activity=std::max(extension,velocity_activity(velocities,joints_,velocity_full_));
++      const double raw=scale_from_activity(activity,minimum_);
++      // Missing reach TF keeps the old full-reach fallback, immediately at the
++      // conservative minimum instead of smoothing a previously larger cap.
++      scale_=missing_tf?minimum_:alpha_*raw+(1.-alpha_)*scale_;
++      if(missing_tf)RCLCPP_WARN_THROTTLE(get_logger(),warning_clock_,2000,"Arm reach TF unavailable; using full-reach minimum speed percentage");
++      source_ns_=source;stamp_=msg.header.stamp;received_wall_=wall;valid_=true;
++    } catch(const std::exception &error) {
++      invalidate(error.what());
+     }
++    publish();
+   }
+-
+-  std::vector<std::string> joints_;
+-  std::string metric_, last_reach_link_;
+-  double current_scale_{1.0};
+-  bool tf_warned_{false};
+-  std::optional<rclcpp::Time> last_joint_time_, last_reach_time_, last_log_time_;
+-  std::optional<double> last_reach_;
+-  // rclpy's per-call logger throttle defaults to SYSTEM_TIME, independently of
+-  // the ROS clock used by freshness, reach caching and activity-log throttling.
+-  rclcpp::Clock warning_clock_{RCL_SYSTEM_TIME};
+-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
+-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
+-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr command_sub_;
++  void publish() {
++    const auto now_ns=now().nanoseconds();observe_clock(now_ns);
++    if(valid_ && !joint_sample_fresh(source_ns_,now_ns,steady_seconds()-received_wall_,timeout_))
++      invalidate("JOINT_SAMPLE_EXPIRED");
++    nav2_msgs::msg::SpeedLimit message;
++    // Re-publication never gives old joint evidence a new capture time.
++    message.header.stamp=stamp_;message.header.frame_id=base_;
++    message.percentage=true;message.speed_limit=valid_?100.*scale_:0.;
++    publisher_->publish(message);
++  }
++  std::vector<std::string> joints_,links_;std::vector<double> reference_;
++  std::string base_,metric_;double folded_{},full_{},reach_timeout_{},reach_period_{};
++  double deviation_full_{},velocity_full_{},minimum_{},alpha_{},timeout_{};
++  double scale_{1.},received_wall_{},reach_at_{-1.};bool valid_{false};
++  int64_t source_ns_{0},last_now_ns_{-1};builtin_interfaces::msg::Time stamp_;
++  std::optional<double> reach_;
++  rclcpp::Clock warning_clock_{RCL_STEADY_TIME};
++  std::unique_ptr<tf2_ros::Buffer> tf_;
++  std::unique_ptr<tf2_ros::TransformListener> listener_;
++  rclcpp::Publisher<nav2_msgs::msg::SpeedLimit>::SharedPtr publisher_;
+   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_sub_;
++  rclcpp::TimerBase::SharedPtr timer_;
+ };
+ }  // namespace astribot_s1_dynamics_coupling
+-
+-int main(int argc, char ** argv) {
+-  rclcpp::init(argc, argv);
+-  try {
+-    rclcpp::spin(std::make_shared<astribot_s1_dynamics_coupling::ArmChassisSpeedCouplingNode>());
+-  } catch (const std::exception & error) {
+-    RCLCPP_FATAL(rclcpp::get_logger("arm_chassis_speed_coupling_node"), "%s", error.what());
+-    rclcpp::shutdown();
+-    return 1;
+-  }
+-  rclcpp::shutdown();
+-  return 0;
++int main(int argc,char **argv) {
++  rclcpp::init(argc,argv);int result=0;
++  try {rclcpp::spin(std::make_shared<astribot_s1_dynamics_coupling::ArmChassisSpeedCouplingNode>());}
++  catch(const std::exception &error){RCLCPP_FATAL(rclcpp::get_logger("arm_chassis_speed_coupling_node"),"%s",error.what());result=1;}
++  rclcpp::shutdown();return result;
+ }
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/include/astribot_s1_dynamics_coupling/core.hpp
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/include/astribot_s1_dynamics_coupling/core.hpp
+@@ -2,6 +2,8 @@
+ 
+ #include <algorithm>
+ #include <cmath>
++#include <cstdint>
++#include <unordered_set>
+ #include <optional>
+ #include <stdexcept>
+ #include <string>
+@@ -10,6 +12,23 @@
+ 
+ namespace astribot_s1_dynamics_coupling {
+ using JointMap = std::unordered_map<std::string, double>;
++
++// External JointState boundary: all fourteen monitored joints must be measured.
++inline bool complete_joint_sample(const std::vector<std::string> & names,
++    const std::vector<double> & positions,const std::vector<double> & velocities,
++    const std::vector<std::string> & required) {
++  if(names.size()!=positions.size() || names.size()!=velocities.size())return false;
++  std::unordered_set<std::string> seen;
++  for(std::size_t i=0;i<names.size();++i) {
++    if(!seen.insert(names[i]).second || !std::isfinite(positions[i]) ||
++      !std::isfinite(velocities[i]))return false;
++  }
++  return std::all_of(required.begin(),required.end(),[&seen](const auto &name){return seen.count(name)!=0;});
++}
++inline bool joint_sample_fresh(int64_t source,int64_t now,double wall_age,double timeout) {
++  return source>0 && now>=source && double(now-source)<=timeout*1e9 &&
++    wall_age>=0. && wall_age<=timeout;
++}
+ 
+ inline JointMap zip_map(const std::vector<std::string> & names,
+                        const std::vector<double> & values) {
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/CMakeLists.txt
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/CMakeLists.txt
+@@ -6,7 +6,7 @@
+ find_package(ament_cmake REQUIRED)
+ find_package(rclcpp REQUIRED)
+ find_package(sensor_msgs REQUIRED)
+-find_package(geometry_msgs REQUIRED)
++find_package(nav2_msgs REQUIRED)
+ find_package(tf2 REQUIRED)
+ find_package(tf2_ros REQUIRED)
+ 
+@@ -14,7 +14,7 @@
+ target_include_directories(arm_chassis_speed_coupling_node PRIVATE include)
+ target_compile_features(arm_chassis_speed_coupling_node PRIVATE cxx_std_17)
+ target_compile_options(arm_chassis_speed_coupling_node PRIVATE -Wall -Wextra -Wpedantic)
+-ament_target_dependencies(arm_chassis_speed_coupling_node rclcpp sensor_msgs geometry_msgs tf2 tf2_ros)
++ament_target_dependencies(arm_chassis_speed_coupling_node rclcpp sensor_msgs nav2_msgs tf2 tf2_ros)
+ install(TARGETS arm_chassis_speed_coupling_node RUNTIME DESTINATION lib/${PROJECT_NAME})
+ install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
+ install(FILES README_DYNAMICS_COUPLING.md DESTINATION share/${PROJECT_NAME})
+@@ -28,11 +28,20 @@
+   add_test(NAME dynamics_core_differential COMMAND ${CMAKE_COMMAND} -E env
+     "DYNAMICS_CORE_PROBE=$<TARGET_FILE:dynamics_core_probe>"
+     ${Python3_EXECUTABLE} -m pytest -q ${CMAKE_CURRENT_SOURCE_DIR}/test/test_core.py)
+-  add_test(NAME dynamics_ros_differential COMMAND ${CMAKE_COMMAND} -E env
++  add_executable(arm_navigation_limit_core_test test/arm_navigation_limit_core_test.cpp)
++  target_include_directories(arm_navigation_limit_core_test PRIVATE include)
++  target_compile_features(arm_navigation_limit_core_test PRIVATE cxx_std_17)
++  add_test(NAME arm_navigation_limit_core COMMAND arm_navigation_limit_core_test)
++  add_test(NAME arm_navigation_limit_boundary COMMAND ${Python3_EXECUTABLE} -m pytest -q
++    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_navigation_limit_boundary.py)
++  set_tests_properties(dynamics_core_differential arm_navigation_limit_boundary PROPERTIES TIMEOUT 30)
++  add_test(NAME arm_navigation_limit_ros COMMAND ${CMAKE_COMMAND} -E env
+     "DYNAMICS_CPP=$<TARGET_FILE:arm_chassis_speed_coupling_node>"
+-    "DYNAMICS_DOMAIN=140" "ROS_DOMAIN_ID=140" "ROS_LOCALHOST_ONLY=1"
+-    ${Python3_EXECUTABLE} -m pytest -q ${CMAKE_CURRENT_SOURCE_DIR}/test/test_ros.py)
+-  set_tests_properties(dynamics_core_differential PROPERTIES TIMEOUT 30)
+-  set_tests_properties(dynamics_ros_differential PROPERTIES TIMEOUT 150 RUN_SERIAL TRUE)
++    ${Python3_EXECUTABLE} -m pytest -q ${CMAKE_CURRENT_SOURCE_DIR}/test/test_navigation_limit_ros.py)
++  set_tests_properties(arm_navigation_limit_ros PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
++  # DYNAMICS_DOMAIN/ROS_DOMAIN_ID/ROS_LOCALHOST_ONLY are explicitly assigned by
++  # the session owner; this package never silently selects a shared ROS domain.
++  # Historical Twist A/B protocol remains archived/reference-only. It does not
++  # describe this upstream SpeedLimit interface and is no longer an active test.
+ endif()
+ ament_package()
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/package.xml
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/package.xml
+@@ -3,7 +3,7 @@
+ <package format="3">
+   <name>astribot_s1_dynamics_coupling</name>
+   <version>0.1.0</version>
+-  <description>根据机械臂展开幅度和关节速度约束底盘速度，作为导航速度链路中的独立限速模块。</description>
++  <description>根据机械臂展开幅度和关节速度约束底盘速度，向导航约束模块发布上游百分比限速，不发布底盘速度命令。</description>
+   <maintainer email="dev@astribot.local">astribot-dev</maintainer>
+   <license>Apache-2.0</license>
+ 
+@@ -11,7 +11,7 @@
+ 
+   <depend>rclcpp</depend>
+   <depend>sensor_msgs</depend>
+-  <depend>geometry_msgs</depend>
++  <depend>nav2_msgs</depend>
+   <depend>tf2</depend>
+   <depend>tf2_ros</depend>
+ 
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/launch/arm_chassis_coupling.launch.py
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/launch/arm_chassis_coupling.launch.py
+@@ -1,18 +1,5 @@
+ #!/usr/bin/env python3
+-# -*- coding: utf-8 -*-
+-"""
+-文件用途：独立、可复用的臂-底盘动力学耦合调速节点启动文件。设计成通用的
+-"input_topic → output_topic 桥接器"，不跟任何具体上游节点(Nav2的
+-cmd_vel_body_to_world_node、或者以后可能接入的其它cmd_vel来源)绑定死，
+-接入哪条链路只需要在上层launch文件里：
+-  1. 把要接管的上游节点的输出话题参数覆盖成跟这里 input_topic 一致的中间话题名
+-     （不修改上游节点的代码，只是launch层的参数覆盖）；
+-  2. include 本文件，output_topic 填真正的 /cmd_vel。
+-
+-respawn=True：节点进程崩溃时自动重启（见节点文件头部"静默失效"能力边界说明——
+-这是进程级兜底，重启期间会有短暂中断，不是零感知无缝失效转移）。
+-"""
+-
++"""Publish joint-derived navigation limits; this node never owns chassis commands."""
+ from launch import LaunchDescription
+ from launch.actions import DeclareLaunchArgument
+ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+@@ -22,40 +9,20 @@
+ 
+ def generate_launch_description():
+     pkg = FindPackageShare('astribot_s1_dynamics_coupling')
+-
+-    declare_args = [
+-        DeclareLaunchArgument(
+-            'input_topic', default_value='/cmd_vel_pre_arm_coupling',
+-            description='上游(Nav2/巡游, 经body→world转换后)真正想下发的world系Twist，'
+-                        '这个话题名要跟上游节点被覆盖后的输出话题参数一致'),
+-        DeclareLaunchArgument(
+-            'output_topic', default_value='/cmd_vel',
+-            description='缩放后最终发给 gz-sim VelocityControl 插件的话题'),
++    declarations = [
++        DeclareLaunchArgument('output_topic', default_value='/navigation_policy/arm_speed_limit',
++                              description='Dedicated upstream percentage constraint; zero means HOLD'),
+         DeclareLaunchArgument('joint_states_topic', default_value='/joint_states'),
+-        DeclareLaunchArgument(
+-            'params_file',
+-            default_value=PathJoinSubstitution(
+-                [pkg, 'config', 'arm_chassis_coupling_params.yaml']),
+-            description='本节点的YAML参数文件，可整体替换成自定义调参版本'),
++        DeclareLaunchArgument('params_file', default_value=PathJoinSubstitution(
++            [pkg, 'config', 'arm_chassis_coupling_params.yaml'])),
+         DeclareLaunchArgument('use_sim_time', default_value='true'),
+     ]
+-
+-    coupling_node = Node(
+-        package='astribot_s1_dynamics_coupling',
+-        executable='arm_chassis_speed_coupling_node',
+-        name='arm_chassis_speed_coupling_node',
+-        output='screen',
+-        respawn=True,
+-        respawn_delay=1.0,
+-        parameters=[
+-            LaunchConfiguration('params_file'),
+-            {
+-                'input_topic': LaunchConfiguration('input_topic'),
+-                'output_topic': LaunchConfiguration('output_topic'),
+-                'joint_states_topic': LaunchConfiguration('joint_states_topic'),
+-                'use_sim_time': LaunchConfiguration('use_sim_time'),
+-            },
+-        ],
+-    )
+-
+-    return LaunchDescription(declare_args + [coupling_node])
++    node = Node(
++        package='astribot_s1_dynamics_coupling', executable='arm_chassis_speed_coupling_node',
++        name='arm_chassis_speed_coupling_node', output='screen', respawn=True, respawn_delay=1.0,
++        parameters=[LaunchConfiguration('params_file'), {
++            'output_topic': LaunchConfiguration('output_topic'),
++            'joint_states_topic': LaunchConfiguration('joint_states_topic'),
++            'use_sim_time': LaunchConfiguration('use_sim_time'),
++        }])
++    return LaunchDescription(declarations + [node])
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/config/arm_chassis_coupling_params.yaml
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/config/arm_chassis_coupling_params.yaml
+@@ -1,7 +1,6 @@
+ arm_chassis_speed_coupling_node:
+   ros__parameters:
+-    input_topic: /cmd_vel_pre_arm_coupling
+-    output_topic: /cmd_vel
++    output_topic: /navigation_policy/arm_speed_limit
+     joint_states_topic: /joint_states
+ 
+     extension_metric: "horizontal_reach"   # horizontal_reach | joint_deviation
+@@ -24,5 +23,3 @@
+     min_speed_scale: 0.15
+     scale_smoothing_alpha: 0.25
+     joint_state_timeout_sec: 0.5
+-    degraded_scale: 0.3
+-    log_throttle_sec: 2.0
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/README_DYNAMICS_COUPLING.md
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/README_DYNAMICS_COUPLING.md
+@@ -1,229 +1,18 @@
+-# astribot_s1_dynamics_coupling —— 臂-底盘动力学耦合动态调速
++# 机械臂状态到导航上游限速
+ 
+-自 2026-09-21 起，本包使用 `ament_cmake` 构建纯 C++ 运行入口
+-`arm_chassis_speed_coupling_node`，同名 launch、topic、参数与 remap 保持兼容。
+-不安装 Python 节点、console 入口、pybind 或 Python 回退。迁移前 Python 仅冻结在
+-`test/reference` 供验证使用，不在生产安装范围。干净前缀重建后再激活；旧安装前缀
+-中的历史 Python 文件不会因为增量安装而自动删除。
++当前运行节点保留名称 `arm_chassis_speed_coupling_node`，职责已变更：只读取完整双臂关节状态与臂展 TF，向 `/navigation_policy/arm_speed_limit` 发布 `nav2_msgs/msg/SpeedLimit`。不订阅或发布 Twist，不拥有 `/cmd_vel`。
+ 
+-纯核心与隔离 ROS 对照、已知原实现边界和性能复现见仓库
+-`docs/evidence/pybind_removal_20260921/dynamics_coupling/`。这些证据不代表 Gazebo
+-闭环或真机验收。陈旧 joint/TF 检查、缓存和活动量日志使用 ROS 时钟；陈旧告警
+-限流沿用 Python logger 的 system clock。
++该专用接口 `percentage=true`，`speed_limit` 范围 0–100；**0 表示 HOLD**，由导航约束节点转为 MotionConstraint，不能接入原生 `/speed_limit`（该原生接口把 0 解释为取消限速）。header.frame_id 为 chassis_base_frame，header.stamp 为关节采集时刻。
+ 
+-独立、无侵入的中间控制层：根据双臂展开幅度 + 关节角速度实时计算 0~1.0 连续限速
+-系数，在"世界坐标系速度输出之后、gz-sim `VelocityControl` 插件接收之前"这个
+-位置对最终 `Twist` 做缩放，缓解机械臂运动诱发的重心偏移/姿态漂移/倾倒风险。
++保留臂展/关节速度计算活动度及平滑比例。完整 14 关节的 position 和 velocity 必须有限，采集时效及本机接收时效各不超过 500 ms；缺失、无效、乱序、过期和时钟回退明确置 0。50 ms 定时复发不改变采集时间，同采集时间重发不续期。TF 缺失沿用 full-reach 活动度，并立即输出 min_speed_scale；这只是已存在的启发式限速，不构成载荷稳定性的物理验证。
+ 
+-```
+-Nav2/自主巡游 → cmd_vel_body_to_world_node(既有，未修改) → cmd_vel_pre_arm_coupling
+-    → 【本包：arm_chassis_speed_coupling_node】 → 真正的 /cmd_vel → VelocityControl
+-```
++旧版末端 Twist 桥接包已逐文件哈希归档到 `docs/evidence/mainline_20260924/arm_navigation_speed_limit/before.tar.gz`。历史 `test_ros.py` 及 benchmark 是旧接口对照，已从当前 CMake 测试入口退休；纯算法差分仍保留。
+ 
+-## 1. 一键启用/关闭
++当前验证入口：
+ 
+-已经默认接入 `astribot_s1_navigation` 的 Nav2 启动链路，不需要额外命令：
++- `dynamics_core_differential`：保留算法差分。
++- `arm_navigation_limit_core`：完整关节和时效边界。
++- `arm_navigation_limit_boundary`：源码及启动接口边界。
++- `arm_navigation_limit_ros`：单进程有界协议验证。由会话所有者显式传入相同的 `DYNAMICS_DOMAIN`、`ROS_DOMAIN_ID`，并设置 `ROS_LOCALHOST_ONLY=1`；可用 `DYNAMICS_EVIDENCE` 指定证据目录。
+ 
+-```bash
+-# 默认就是打开的
+-ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
+-  env:=sim mode:=mapping launch_gazebo:=true controller_plugin:=mppi
+-
+-# 关掉（回到接入耦合节点之前完全一样的行为）
+-ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
+-  env:=sim mode:=mapping enable_arm_chassis_coupling:=false
+-```
+-
+-## 2. 无侵入接入方式
+-
+-**没有修改既有上游模块的逻辑**——速度坐标转换、既有的静态
+-`arm_speed_limiter_cpp`、`VelocityControl`/TF/SLAM/雷达滤波/Nav2 核心配置
+-全部原样保留。接入方式只是在 `navigation.launch.py` 里：
+-1. 把 `cmd_vel_body_to_world_node` 本来就有的 `output_topic` 参数（默认就是
+-   `/cmd_vel`）**覆盖**成中间话题 `cmd_vel_pre_arm_coupling`；
+-2. include 本包的 `arm_chassis_coupling.launch.py`，桥接
+-   `cmd_vel_pre_arm_coupling → /cmd_vel`，中间做动态缩放。
+-
+-`enable_arm_chassis_coupling:=false` 时这两步都不生效，行为跟接入之前完全一样。
+-
+-跟既有的**静态**臂限速节点（`astribot_trajectory_bridge_native/arm_speed_limiter_cpp`，走
+-Nav2 官方 `/speed_limit` 机制、二值判断"展开/未展开"）是两套完全独立、互不知道
+-对方存在的保护：一个作用于 `controller_server` 的速度上限（更早的阶段），
+-一个直接在最终 world 系速度上做连续缩放（最后的阶段）。两者同时生效，不冲突，
+-也不是谁替代谁。
+-
+-## 3. 动态限速系数怎么算的
+-
+-展开幅度、运动速率两个维度各自独立换算成 0~1.0 的"活跃度比例"，取两者**较严格**
+-（活跃度更高）的一个作为最终活跃度，不做加权平均——宁可保守，不要因为"平均下来还
+-凑合"而放过某一个维度的剧烈运动。
+-
+-- **展开维度**（C1 修正后）：查 TF 求 `monitored_links` 里各连杆相对
+-  `chassis_base_frame` 的**水平距离**，取最大值当"伸展量"，在
+-  `reach_folded_m ~ reach_full_m` 之间线性映射到 0~1.0。
+-- **运动速率维度**（C1 未改动）：任意关节角速度绝对值 / `velocity_full_rad_s`。
+-
+-```
+-scale_raw = 1.0 - activity * (1.0 - min_speed_scale)
+-scale = 低通平滑(scale_raw)   # scale_smoothing_alpha，避免关节噪声导致速度顿挫
+-```
+-
+-`/joint_states` 超过 `joint_state_timeout_sec`（默认0.5s）没更新，判定数据陈旧，
+-自动降级到固定的 `degraded_scale`（默认0.3），不是不限速也不是直接停机——
+-对应任务书"话题超时不中断导航任务"的要求。
+-
+-## 4. 关于"静默失效、保持原生全速运动"的能力边界（如实说明）
+-
+-**运行时逻辑层面**做到了：`arm_chassis_speed_coupling_node.py` 里每一步计算
+-（解析关节数据、算系数、发布）都包在 `try/except` 里，任何单次异常都 fall back
+-到 `scale=1.0`（原样转发，不限速），不会 fall back 到 0（那样反而更危险）。
+-
+-**但**如果本节点的**进程整体崩溃退出**，因为它是"中间话题→真正/cmd_vel"这条链路
+-唯一的桥接者，进程不在了，新指令确实没法再送到真正的 `/cmd_vel`——这是"无侵入
+-中间人"架构在拓扑上无法回避的限制（除非直接改上游节点的输出目标，那样就不是
+-"无侵入"了）。这里用 launch 里的 `respawn=True` 做进程级兜底（挂了自动重启，
+-有短暂中断，不是零感知无缝切换）。如实记录这个边界，不假装是完美的容错。
+-
+-## 5. 参数（`config/arm_chassis_coupling_params.yaml`）
+-
+-| 参数 | 默认值 | 说明 |
+-|---|---|---|
+-| `extension_metric` | `horizontal_reach` | 展开度量。`joint_deviation` 是已被证伪的旧度量，只用于 A/B 回归或临时回退 |
+-| `chassis_base_frame` | `astribot_torso_base` | 底盘回转轴所在 frame（本机没有 `base_link`） |
+-| `monitored_links` | 双臂 TCP + 夹爪指尖 | 实测最大伸展总落在这几个连杆上，换夹爪要改这里 |
+-| `reach_folded_m` | 0.42 | 低于此伸展量不限速。取值 = Nav2 `robot_radius`：还在足迹以内时规划器已算进去了 |
+-| `reach_full_m` | 0.8865 | 达到此伸展量活跃度封顶 1.0。取值 = 实测全工作空间最大水平伸展 |
+-| `reach_update_period_sec` | 0.05 | TF 查询节流（20Hz），机械臂运动远慢于此 |
+-| `velocity_full_rad_s` | 2.0 | 任意关节角速度达到这个值(rad/s)，速率维度活跃度封顶1.0（C1 未改动） |
+-| `min_speed_scale` | 0.15 | 活跃度满量程时的限速系数下限（不会降到0，避免完全卡死） |
+-| `scale_smoothing_alpha` | 0.25 | 限速系数一阶低通滤波系数 |
+-| `joint_state_timeout_sec` | 0.5 | `/joint_states` 陈旧判定超时 |
+-| `degraded_scale` | 0.3 | 数据陈旧时的固定安全限速 |
+-| `folded_reference_rad` / `extension_full_rad` | 全0 / 1.2 | **仅 `extension_metric=joint_deviation` 时生效**，保留只为回归对比 |
+-
+-## 6. 调试指令
+-
+-```bash
+-# 确认节点在跑、看实时限速日志
+-ros2 node list | grep arm_chassis_speed_coupling
+-ros2 topic echo /cmd_vel_pre_arm_coupling   # 缩放前(上游真实想要的速度)
+-ros2 topic echo /cmd_vel                    # 缩放后(实际发给VelocityControl的)
+-
+-# 手动给一个大幅展开的关节角，观察限速系数变化(日志里能看到"机械臂活跃度=...限速系数=...")
+-ros2 action send_goal /arm_left_controller/follow_joint_trajectory \
+-  control_msgs/action/FollowJointTrajectory \
+-  "{trajectory: {joint_names: [astribot_arm_left_joint_2], points: [{positions: [-1.2], time_from_start: {sec: 2}}]}}"
+-```
+-
+-## 7. 验证步骤
+-
+-1. `colcon build --symlink-install --packages-select astribot_s1_dynamics_coupling astribot_s1_navigation`
+-2. 正常拉起 Nav2 导航（见第1节），确认 `ros2 node list` 里有
+-   `arm_chassis_speed_coupling_node`，且导航目标点仍能正常送达（跟接入前行为一致）。
+-3. 导航过程中给手臂发一个大幅展开的轨迹，对比 `/cmd_vel_pre_arm_coupling` 和
+-   `/cmd_vel` 的幅值差异，确认展开时后者明显更小。
+-4. `enable_arm_chassis_coupling:=false` 重跑一遍，确认导航行为跟打开时（未展开
+-   机械臂的情况下）一致，证明"关掉即等同于没接入"。
+-5. （可选）手动 `kill` 掉节点进程，确认 `respawn=True` 生效、几秒内自动重启。
+-
+-## 8. C1 修正：为什么换掉"关节偏差"度量（实测取证 + 倾覆余量重算）
+-
+-所有数字都由**活的 URDF**（`/robot_state_publisher` 的 `robot_description`）采样得到，
+-不含任何硬编码的 DH 参数、连杆长度或质量常数。
+-
+-### 8.1 旧度量与物理量反相关
+-
+-| 姿态 | 关节偏差(旧度量) | 水平伸展 | 臂质心水平偏移 | 旧耦合系数 | 旧静态限速 | 旧合计 |
+-|---|---|---|---|---|---|---|
+-| 全0（原来的"收纳基准"） | 0.0000 | **0.4205 m** | 0.0117 m | 1.000 | 1.00 | **1.000** |
+-| `ready` | 1.0000 | 0.4790 m | 0.0226 m | 0.292 | 0.50 | **0.146** |
+-| 实测（左臂作业中） | 2.1104 | 0.4698 m | 0.0202 m | 0.150 | 0.50 | **0.075** |
+-| 候选收纳（肘部折回） | 2.4000 | **0.3532 m** | **0.0025 m** | 0.150 | 0.50 | **0.075** |
+-
+-- 真正最收拢的姿态（伸展 0.3532 m）拿到最狠的限速；而基准姿态"全0"其实是肘部完全
+-  伸直、伸展 0.4205 m 已经顶到足迹半径的姿态，却完全不限速。**换基准姿态改变不了
+-  这个反相关**，所以 C1 换的是度量本身，不是基准。
+-- 全工作空间随机采样 4000 次：**最大伸展 0.8865 m 时关节偏差 3.062，最小伸展
+-  0.1997 m 时关节偏差 3.079**——偏差几乎相同，伸展差 4.4 倍。旧度量基本不携带伸展信息。
+-
+-### 8.2 倾覆余量重算（换阈值前必须做的那一步）
+-
+-| 量 | 值 | 来源 |
+-|---|---|---|
+-| 支撑多边形 | 4 轮 xy = (±0.2163, ±0.2163) | URDF |
+-| 临界方向余量 | **边中点 0.2163 m**（不是轮心 0.306 m） | 取保守方向 |
+-| 整机质量 | 78.595 kg（双臂+夹爪 17.963 kg，占 22.9%） | URDF |
+-| 全0 姿态整机质心 | xy = (−0.0359, +0.0027)，z = **0.4321 m** | URDF |
+-| 最差静态余量 | 质心已偏后 0.036 m → **向后 0.180 m** | 计算 |
+-| 倾覆所需水平加速度 | `a_tip = g·d/h = 9.81 × 0.180 / 0.4321 = 4.09 m/s²` | 计算 |
+-| Nav2 指令加速度上限 | `max_accel: 2.5 m/s²`（= 倾覆阈值的 61%） | `nav2_params_rpp.yaml` |
+-
+-**倾覆风险是真实存在的（余量只有 39%），C1 没有否掉它。** 但可归因于**机械臂姿态**
+-的那一部分很小——整机质心偏移 = (17.963/78.595) × 臂质心偏移 = 0.2285 × 臂质心偏移：
+-
+-| 姿态 | 臂质心偏移 | 整机质心偏移 | 余量 0.180 → | a_tip | 相对变化 |
+-|---|---|---|---|---|---|
+-| 候选收纳 | 0.0025 | 0.0006 m | 0.179 m | 4.07 m/s² | −0.5% |
+-| 全0 | 0.0117 | 0.0027 m | 0.177 m | 4.03 m/s² | −1.5% |
+-| `ready` | 0.0226 | 0.0052 m | 0.175 m | 3.97 m/s² | −2.9% |
+-| 全工作空间最差 | 0.0868 | 0.0198 m | 0.160 m | 3.64 m/s² | **−11.0%** |
+-
+-即：**机械臂姿态最多让倾覆阈值降 11%（全工作空间极限），实际用到的姿态只降
+-1.5~2.9%，而修正前的方案为此把底盘速度砍到 1/7~1/13。** 这个不成比例是 C1 要修的
+-真正问题。修正后 `min_speed_scale` 仍是 0.15（限到多少没放松），只修正了"什么时候
+-该限速"。
+-
+-### 8.3 同一个坏基准在两个包里
+-
+-`astribot_trajectory_bridge_native/arm_speed_limiter_cpp`（走 Nav2 官方 `/speed_limit`、二值
+-判断）用的是同一套全0 基准 + 0.5 rad 阈值，任何作业姿态都判"展开"、恒定砍到 50%，
+-和本节点的系数**串联叠乘**：0.5 × 0.15 = 0.075，把 `desired_linear_vel: 0.5` 压到
+-约 0.037 m/s（实测导航平均 0.031 m/s，对得上）。所以 C1 两个包都改了，只改一边无效。
+-
+-### 8.4 修正后各姿态的系数
+-
+-静态限速节点的阈值取 **0.64**，来历是一条可解释的物理判据：
+-
+-```
+-0.42   costmap robot_radius —— 机械臂开始伸出规划足迹的位置
+-+0.2163 支撑多边形边中点到回转轴的距离 —— 底盘自己的倾覆力臂
+-=0.6363 → 取 0.64
+-```
+-
+-含义：机械臂**伸出足迹之外的那一段**长到跟底盘自己的倾覆力臂相当时，才动用这个
+-粗粒度二值保护。0.42~0.64 这一段由本包的耦合节点连续调速处理，不再叠第二刀。
+-
+-| 姿态 | 伸展 | 新活跃度 | 新耦合系数 | 新静态限速 | 新合计 | 相对修正前 |
+-|---|---|---|---|---|---|---|
+-| 候选收纳 | 0.353 | 0.000 | 1.00 | 1.00 | **1.00** | 0.075 → **13.3×** |
+-| 全0 | 0.4205 | 0.001 | 1.00 | 1.00 | **1.00** | 1.000 → 不变 |
+-| 实测作业 | 0.470 | 0.107 | 0.91 | 1.00 | **0.91** | 0.075 → **12.1×** |
+-| `ready` | 0.479 | 0.127 | 0.89 | 1.00 | **0.89** | 0.146 → **6.1×** |
+-| 工作空间极限 | 0.8865 | 1.000 | **0.15** | **0.50** | **0.075** | 保持最严 |
+-
+-> **这里跟最初的方案有一处偏离，如实记录。**
+-> 方案里静态节点的阈值原定 0.42（= `robot_radius`）。实际算下来发现：`ready`
+-> (0.479)、实测作业姿态(0.470)、甚至全 0 姿态(0.4205) 的伸展**全都超过 0.42**，
+-> 50% 那一刀等于常开，合计只能从 0.146 升到 0.44——那还是"限速与风险不成比例"这个
+-> 同一个问题，只是换了个判据。所以把静态节点的定位明确成**粗粒度 backstop**
+-> （耦合节点被 `enable_arm_chassis_coupling:=false` 关掉、或崩溃重启期间兜底），
+-> 阈值按上面的物理判据抬到 0.64。这是一次**额外的安全阈值放松**，依据是 §8.2 的
+-> 倾覆余量算术（机械臂姿态最多贡献 11% 阈值下降）。要退回更保守的行为，改
+-> `extended_reach_m` 一个值即可，不需要改代码。
+-
+-### 8.4.1 迟滞
+-
+-全 0 姿态伸展 0.4205 m 与 `robot_radius` 0.42 只差 **0.5 mm**（纯巧合）。这类"伸展
+-恰好压在阈值上"的情形会让二值判据在静置时来回翻转，每次翻转都发一条 `SpeedLimit`，
+-`velocity_smoother` 的上限就在 50%/100% 之间反复跳。静态限速节点因此带
+-`extended_reach_hysteresis_m: 0.03`：一旦判展开，要降到 0.61 以下才解除。触发阈值
+-不受迟滞影响（迟滞只放宽解除，不放宽触发，否则等于偷偷抬高了保护阈值）。
+-
+-### 8.5 限速不解决碰撞包络（C1b，尚未实现）
+-
+-实测机械臂水平伸展最大可达 **0.8865 m**，比 `robot_radius: 0.42` 多伸出 **0.47 m**。
+-**限速只降低速度，完全不缩小碰撞包络**——这部分是规划器彻底看不见的真实碰撞风险，
+-限速一点也没减少它。原来 `nav2_params_rpp.yaml` 里有一句注释声称这个风险"靠
+-`arm_speed_limiter_node` 的展开限速缓解"，那句是错的，已更正。正确机制是姿态相关的
+-动态足迹（`nav2_collision_monitor` 订阅机械臂 TF 实时改 footprint），**立项为 C1b，
+-本次未实现**，如实标为未解决。
++运行时与仿真验收状态以本轮报告为准；编写测试不等于测试通过。
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/test/arm_navigation_limit_core_test.cpp
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/test/arm_navigation_limit_core_test.cpp
+@@ -0,0 +1,24 @@
++#include "astribot_s1_dynamics_coupling/core.hpp"
++#include <cstdlib>
++#include <limits>
++#include <iostream>
++using namespace astribot_s1_dynamics_coupling;
++#define CHECK(c) do {if(!(c)){std::cerr<<"check failed at "<<__LINE__<<'\n';return EXIT_FAILURE;}}while(0)
++int main() {
++  std::vector<std::string> names;for(int i=0;i<14;++i)names.push_back("joint_"+std::to_string(i));
++  const auto required=names;std::vector<double> position(14,0.),velocity(14,0.);
++  CHECK(complete_joint_sample(names,position,velocity,required));
++  velocity.pop_back();CHECK(!complete_joint_sample(names,position,velocity,required));velocity.push_back(0.);
++  names.back()="other";CHECK(!complete_joint_sample(names,position,velocity,required));names=required;
++  names.back()=names.front();CHECK(!complete_joint_sample(names,position,velocity,required));names=required;
++  position[0]=std::numeric_limits<double>::quiet_NaN();CHECK(!complete_joint_sample(names,position,velocity,required));position[0]=0.;
++  velocity[0]=std::numeric_limits<double>::infinity();CHECK(!complete_joint_sample(names,position,velocity,required));
++  CHECK(joint_sample_fresh(1000000000,1500000000,.5,.5));
++  CHECK(!joint_sample_fresh(1000000000,1500000001,.5,.5));
++  CHECK(!joint_sample_fresh(1000000000,1100000000,.500001,.5));
++  CHECK(!joint_sample_fresh(1000000000,999999999,0.,.5));
++  CHECK(!joint_sample_fresh(0,1000000000,0.,.5));
++  CHECK(scale_from_activity(reach_activity(.8865,.42,.8865),.15)==.15);
++  CHECK(scale_from_activity(0.,.15)==1.);
++  std::cout<<"arm navigation limit joint/timing boundaries passed\n";
++}
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/test/test_navigation_limit_boundary.py
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/test/test_navigation_limit_boundary.py
+@@ -0,0 +1,31 @@
++"""Source interface boundary: the upstream producer cannot own Twist output."""
++from pathlib import Path
++import ast
++import xml.etree.ElementTree as ET
++import yaml
++
++PACKAGE = Path(__file__).resolve().parents[1]
++
++
++def test_no_chassis_command_interface_and_preserved_capture():
++    source = (PACKAGE / 'src/arm_chassis_speed_coupling_node.cpp').read_text()
++    assert 'geometry_msgs::msg::Twist' not in source
++    assert 'create_publisher<nav2_msgs::msg::SpeedLimit>' in source
++    assert 'message.header.stamp=stamp_' in source
++    assert 'stamp_=msg.header.stamp' in source
++    assert 'message.speed_limit=valid_?100.*scale_:0.' in source
++    assert 'std::chrono::milliseconds(50)' in source
++    assert 'degraded_scale' not in source
++
++
++def test_launch_and_config_only_dedicated_constraint():
++    source = (PACKAGE / 'launch/arm_chassis_coupling.launch.py').read_text()
++    ast.parse(source)
++    assert '/cmd_vel' not in source and 'input_topic' not in source
++    config = yaml.safe_load((PACKAGE / 'config/arm_chassis_coupling_params.yaml').read_text())
++    params = config['arm_chassis_speed_coupling_node']['ros__parameters']
++    assert params['output_topic'] == '/navigation_policy/arm_speed_limit'
++    assert params['joint_state_timeout_sec'] <= .5
++    assert 'input_topic' not in params and 'degraded_scale' not in params
++    dependencies = [item.text for item in ET.parse(PACKAGE / 'package.xml').findall('depend')]
++    assert 'nav2_msgs' in dependencies
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/test/test_navigation_limit_ros.py
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/test/test_navigation_limit_ros.py
+@@ -0,0 +1,113 @@
++"""Bounded dedicated-domain test for upstream arm percentages, never chassis motion."""
++import json
++import os
++from pathlib import Path
++import subprocess
++import signal
++import time
++
++import rclpy
++from rclpy.node import Node
++from nav2_msgs.msg import SpeedLimit
++from sensor_msgs.msg import JointState
++
++
++def test_arm_limit_capture_and_invalid_input(tmp_path):
++    binary = Path(os.environ['DYNAMICS_CPP']).resolve()
++    domain = int(os.environ['DYNAMICS_DOMAIN'])
++    assert domain == int(os.environ['ROS_DOMAIN_ID']) and domain > 0
++    assert os.environ.get('ROS_LOCALHOST_ONLY') == '1'
++    assert binary.is_file()
++    evidence = Path(os.environ.get('DYNAMICS_EVIDENCE', str(tmp_path)))
++    evidence.mkdir(parents=True, exist_ok=True)
++    log = (evidence / 'arm_navigation_limit.log').open('w')
++    command = [str(binary), '--ros-args', '-p', 'extension_metric:=joint_deviation',
++               '-p', 'use_sim_time:=false']
++    process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
++    record = {'command': command, 'pid': process.pid, 'domain': domain,
++              'start_ticks': Path(f'/proc/{process.pid}/stat').read_text().rsplit(')', 1)[1].split()[19],
++              'received': [], 'passed': False}
++    rclpy.init()
++    node = Node('arm_navigation_limit_fixture')
++    publisher = node.create_publisher(JointState, '/joint_states', 10)
++    received = []
++
++    def on_limit(msg):
++        sample = {'wall': time.monotonic(), 'stamp_ns': msg.header.stamp.sec * 10**9 + msg.header.stamp.nanosec,
++                  'percentage': msg.percentage, 'speed_limit': msg.speed_limit,
++                  'frame': msg.header.frame_id}
++        received.append(sample)
++        record['received'].append(sample)
++
++    subscription = node.create_subscription(SpeedLimit, '/navigation_policy/arm_speed_limit', on_limit, 10)
++
++    def pump(seconds):
++        deadline = time.monotonic() + seconds
++        while time.monotonic() < deadline:
++            assert process.poll() is None, 'producer exited before test completion'
++            rclpy.spin_once(node, timeout_sec=min(.01, max(0., deadline - time.monotonic())))
++
++    def await_condition(predicate, seconds=3.):
++        deadline = time.monotonic() + seconds
++        while not predicate() and time.monotonic() < deadline:
++            pump(.01)
++        assert predicate(), 'bounded condition did not complete'
++
++    def sample():
++        msg = JointState()
++        msg.header.stamp = node.get_clock().now().to_msg()
++        msg.name = [f'astribot_arm_{side}_joint_{index}' for side in ('left', 'right') for index in range(1, 8)]
++        msg.position = [0.] * 14
++        msg.velocity = [0.] * 14
++        return msg
++
++    try:
++        await_condition(lambda: publisher.get_subscription_count() == 1 and bool(received), 5.)
++        pubs = node.get_publisher_names_and_types_by_node('arm_chassis_speed_coupling_node', '/')
++        subs = node.get_subscriber_names_and_types_by_node('arm_chassis_speed_coupling_node', '/')
++        record['publisher_interfaces'] = pubs
++        record['subscriber_interfaces'] = subs
++        assert all('geometry_msgs/msg/Twist' not in types for _, types in pubs + subs)
++        assert any(name == '/navigation_policy/arm_speed_limit' and 'nav2_msgs/msg/SpeedLimit' in types for name, types in pubs)
++        assert received[-1]['speed_limit'] == 0.
++        msg = sample()
++        capture = msg.header.stamp.sec * 10**9 + msg.header.stamp.nanosec
++        publisher.publish(msg)
++        await_condition(lambda: any(v['stamp_ns'] == capture and v['speed_limit'] == 100. for v in received))
++        assert received[-1]['frame'] == 'astribot_torso_base' and received[-1]['percentage']
++        # Keep sending the exact same sample well beyond its source/steady lease.
++        end = time.monotonic() + .65
++        while time.monotonic() < end:
++            publisher.publish(msg)
++            pump(.03)
++        assert received[-1]['speed_limit'] == 0.
++        assert received[-1]['stamp_ns'] == capture
++        assert all(v['stamp_ns'] in (0, capture) for v in received)
++        for defect in ('missing_joint', 'missing_velocity'):
++            msg = sample()
++            if defect == 'missing_joint':
++                msg.name.pop(); msg.position.pop(); msg.velocity.pop()
++            else:
++                msg.velocity.pop()
++            before = len(received)
++            publisher.publish(msg)
++            await_condition(lambda: len(received) > before)
++            pump(.08)
++            assert received[-1]['speed_limit'] == 0., defect
++        msg = sample(); publisher.publish(msg)
++        capture = msg.header.stamp.sec * 10**9 + msg.header.stamp.nanosec
++        await_condition(lambda: any(v['stamp_ns'] == capture and 0. < v['speed_limit'] <= 100. for v in received))
++        record['passed'] = True
++    finally:
++        node.destroy_subscription(subscription)
++        node.destroy_node()
++        rclpy.shutdown()
++        process.send_signal(signal.SIGINT)
++        try:
++            process.wait(timeout=5.)
++        except subprocess.TimeoutExpired:
++            process.kill(); process.wait(timeout=5.)
++            record['forced_kill'] = True
++        record['exit_code'] = process.returncode
++        log.close()
++        (evidence / 'arm_navigation_limit_result.json').write_text(json.dumps(record, indent=2) + '\n')

@@ -1,0 +1,53 @@
+{
+  "frozen_at": "2026-09-24T14:46:26.085921+08:00",
+  "task_started_at": "2026-09-24T14:30:00+08:00",
+  "one_hour_checkpoint": "2026-09-24T15:30:00+08:00",
+  "scope": "M3 native navigation constraint node; build and ROS checks owned by root coordinator",
+  "implementation": "IMPLEMENTED_BUILT",
+  "build": "PASS_BY_ROOT",
+  "ros_protocol_tests": "PASS_BY_ROOT_4_OF_4",
+  "static_wiring_tests": "PASS_BY_ROOT_4_OF_4",
+  "simulation": "NOT_RUN",
+  "hardware": "NOT_RUN",
+  "sha256": {
+    "ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_constraint_node.cpp": "bb43977e8cc5069cc600328a541ea08856d23db757d4fc0552bc11c36bcc7cfd",
+    "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt": "acb24a40377bb8ce9ca1ca4985cbac3b2a74472a51dbd532ac2955821cc160f5",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/navigation_constraint_ros_test.cpp": "d3113b03ff53cb2f93ce5357a43a53e523cc7b021c3efcb023081b1411f384a2",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/test_navigation_constraint_wiring.py": "ae8b32600de3465b6a851a8199299ede5c29459de43645bba0dd324a084f3ffb"
+  },
+  "archive": "m3_final_protection_before_migration.tar.gz",
+  "core_geometry_and_publication_lease_changes": "none",
+  "requested_command_topic": "/cmd_vel_nav_body_raw",
+  "constraint_topic": "/navigation_policy/constraint",
+  "diagnostic_topic": "/navigation_policy/constraint_state",
+  "zone_ack_consumer": "navigation_constraint",
+  "envelope_ack_publisher": false,
+  "twist_publisher": false,
+  "runtime_test_cases": 4,
+  "static_test_cases": 4,
+  "root_build_first_attempt": "test compile failed: Humble Node has no direct graph by_node wrapper; fixed 3 calls using NodeGraphInterface; rebuild passed",
+  "evidence_updated_at": "2026-09-24T14:51:32.812534+08:00",
+  "ros_environment": {
+    "ROS_DOMAIN_ID": "36",
+    "ROS_LOCALHOST_ONLY": "1",
+    "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp"
+  },
+  "ros_elapsed_s": 8.468,
+  "ros_returncode": 0,
+  "still_alive": [],
+  "source_hashes_rechecked": true,
+  "evidence": {
+    "node_build": "runs/mainline_20260924/nav_boundary/logs/policy_build.log",
+    "test_rebuild": "runs/mainline_20260924/nav_boundary/logs/policy_build_humble_fix.log",
+    "ros_stdout": "runs/mainline_20260924/nav_boundary/protocol/constraint/stdout.log",
+    "ros_xml": "runs/mainline_20260924/nav_boundary/protocol/constraint/gtest.xml",
+    "ros_process_and_environment": "runs/mainline_20260924/nav_boundary/protocol/constraint/result.json",
+    "combined_static_wiring": "runs/mainline_20260924/nav_boundary/logs/wiring_tests.log"
+  },
+  "static_attribution": "Coordinator confirmed the 4 node wiring cases passed within combined 28-case static run; no additional M3 rerun",
+  "coverage_limit": "Three behavioral cases use legacy geometry; fixed_v2 case verifies publisher/subscriber boundary only. No whole-stack Gazebo or hardware acceptance.",
+  "binary_sha256": {
+    "runs/mainline_20260924/nav_boundary/build/astribot_s1_navigation_policy_native/navigation_constraint_cpp": "bd0d38907a4586dbf3f6135a2518c2535cbe4c2d1ab6784dcb7d3619ccdcc15d",
+    "runs/mainline_20260924/nav_boundary/build/astribot_s1_navigation_policy_native/navigation_constraint_ros_test": "bfbfc5399237c955d346368155a83601830a145c30e6cf13e350ae4e4f882e77"
+  }
+}

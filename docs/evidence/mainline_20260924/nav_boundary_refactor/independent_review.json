@@ -1,0 +1,30 @@
+{
+  "scope": "read-only arbiter/envelope/BT review; no new ROS evidence",
+  "findings": [],
+  "files": [
+    {
+      "path": "ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp",
+      "sha256": "92e66542df069959f90275598fc5154573ac6f2afe5f49baa512b623b3e321b3"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_path_tracking/include/astribot_s1_path_tracking/envelope_evidence.hpp",
+      "sha256": "f37aeb37e0b6a7b6de6c606e12e6493a2e75e5c30bc148e2fa3dd4f9123786ba"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_path_tracking/src/path_guard_bt.cpp",
+      "sha256": "46c7f572e26cbc3106e6bf2252a3fb5bbfb1ff4611455f8d7dfab51760293935"
+    }
+  ],
+  "checks": [
+    "six public action entries enforce admission",
+    "revocation latched for active goal",
+    "late backend accept canceled by owned UUID",
+    "backend terminal precedes ownership release",
+    "BT halts subtree on invalidated authority"
+  ],
+  "limits": [
+    "source audit only",
+    "no new final velocity gate",
+    "stop smoothing tail still requires full-stack observation"
+  ]
+}

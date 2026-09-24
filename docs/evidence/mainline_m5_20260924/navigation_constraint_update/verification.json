@@ -1,0 +1,48 @@
+{
+  "schema": "astribot.m5.navigation_constraint_update_verification/1",
+  "verified_at_utc": "2026-09-24T06:42:44.693802+00:00",
+  "scope": "Current M5 sampling config and handoff only; existing offline tests updated only for exact topic count. No ROS/Gazebo/GPU, builds or fault injection.",
+  "topic_count": {
+    "base": 39,
+    "with_native_phase": 40
+  },
+  "config_change_exact": true,
+  "recorder_unchanged": true,
+  "capture_analyzer_unchanged": true,
+  "historical_evidence_unchanged": true,
+  "old_fault_probe_unchanged_and_not_applicable_to_new_architecture": true,
+  "immutable_files_checked": 144,
+  "check_config": {
+    "topics": 40,
+    "ros_initialized": false
+  },
+  "existing_offline_tests": {
+    "passed": 26,
+    "log": "offline_tests.txt",
+    "new_tests_added": 0
+  },
+  "exact_patch_apply_reverse_byte_roundtrip": "PASS",
+  "diff_check": "PASS",
+  "source_contract": {
+    "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_constraint_node.cpp",
+    "sha256": "bb43977e8cc5069cc600328a541ea08856d23db757d4fc0552bc11c36bcc7cfd",
+    "evidence": "source only; not loaded binary or live graph",
+    "diagnostic_type": "std_msgs/msg/String",
+    "diagnostic_qos": "reliable/volatile/depth10",
+    "command_intent_topic": "/cmd_vel_nav_body_raw",
+    "constraint_not_twist_publisher": true
+  },
+  "updated_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/topics.json": "b0b3c449197bbcb2bce7011388544ff2e68e9f9efd6bf942f2b5b546616d64cd",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/README.md": "0571ddc2ae89d1771ae0b8ec4c67d5b2e3f9c6a385b9d6a3306f98d048686e9a",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/CAPTURE_HANDOFF.md": "205d01c72b0b47e16423dbd285ec9d7e3af7b7302f3d837f355b6eead1e73b04",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_capture_m5_observer.py": "bfd687376d6e0056d2d37795b08ad15e6b1a3d51898c09954f58d82edcb9c2a9"
+  },
+  "artifact_sha256": {
+    "migration.patch": "2020b3c5a6a4fb771af215db21da493891122bbbbfc0a9276b24f21ad594d2b2",
+    "before_snapshot.json": "667913e15d08f5a2740e423fb63bc3a8477c32c81155b26426aeb01cf5d5dcdc",
+    "record_transport_demo.frozen.py": "dc19af167a6c2e8583df95f43283470714d73901137f95f724532a9ee461e92f",
+    "offline_tests.txt": "5d3a4ad783792b9f1900bf2f0772bb3a2b2ea343e2fc267657d4b784db1a784f"
+  },
+  "pending": "M2 copies current topic config and updates private exact-count checks; actual graph/publisher/receipt and complete task capture await owner dispatch. Historical 41-topic captures remain unchanged."
+}

@@ -1,0 +1,24 @@
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/test/arm_navigation_limit_core_test.cpp
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/test/arm_navigation_limit_core_test.cpp
+@@ -18,7 +18,9 @@
+   CHECK(!joint_sample_fresh(1000000000,1100000000,.500001,.5));
+   CHECK(!joint_sample_fresh(1000000000,999999999,0.,.5));
+   CHECK(!joint_sample_fresh(0,1000000000,0.,.5));
+-  CHECK(scale_from_activity(reach_activity(.8865,.42,.8865),.15)==.15);
++  const double full_reach_scale=scale_from_activity(reach_activity(.8865,.42,.8865),.15);
++  // 1 - (1 - .15) rounds one ULP above the binary representation of .15.
++  CHECK(full_reach_scale>=.15 && full_reach_scale<=std::nextafter(.15,1.));
+   CHECK(scale_from_activity(0.,.15)==1.);
+   std::cout<<"arm navigation limit joint/timing boundaries passed\n";
+ }
+--- a/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp
++++ b/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp
+@@ -63,7 +63,7 @@
+     const bool rollback=last_now_ns_>=0 && now_ns<last_now_ns_;
+     last_now_ns_=now_ns;
+     if(rollback) {
+-      invalidate("CLOCK_ROLLBACK");source_ns_=0;stamp_={};reach_at_=-1.;reach_.reset();
++      invalidate("CLOCK_ROLLBACK");source_ns_=0;stamp_=builtin_interfaces::msg::Time();reach_at_=-1.;reach_.reset();
+     }
+     return !rollback;
+   }

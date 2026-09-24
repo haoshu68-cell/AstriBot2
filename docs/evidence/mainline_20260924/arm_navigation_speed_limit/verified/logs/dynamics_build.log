@@ -1,0 +1,14 @@
+[ 16%] Building CXX object CMakeFiles/arm_chassis_speed_coupling_node.dir/src/arm_chassis_speed_coupling_node.cpp.o
+[ 33%] Building CXX object CMakeFiles/dynamics_core_probe.dir/test/core_probe.cpp.o
+[ 50%] Linking CXX executable dynamics_core_probe
+[ 50%] Built target dynamics_core_probe
+[ 66%] Building CXX object CMakeFiles/arm_navigation_limit_core_test.dir/test/arm_navigation_limit_core_test.cpp.o
+[ 83%] Linking CXX executable arm_navigation_limit_core_test
+[ 83%] Built target arm_navigation_limit_core_test
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp: In member function ‘bool astribot_s1_dynamics_coupling::ArmChassisSpeedCouplingNode::observe_clock(int64_t)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp:66:57: warning: converting to ‘builtin_interfaces::msg::Time_<std::allocator<void> >’ from initializer list would use explicit constructor ‘builtin_interfaces::msg::Time_<ContainerAllocator>::Time_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+   66 |       invalidate("CLOCK_ROLLBACK");source_ns_=0;stamp_={};reach_at_=-1.;reach_.reset();
+      |                                                         ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp:66:57: note: in C++11 and above a default constructor can be explicit
+[100%] Linking CXX executable arm_chassis_speed_coupling_node
+[100%] Built target arm_chassis_speed_coupling_node

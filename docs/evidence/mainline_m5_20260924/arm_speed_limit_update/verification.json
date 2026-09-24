@@ -1,0 +1,53 @@
+{
+  "schema": "astribot.m5.arm_speed_limit_verification/1",
+  "verified_at_utc": "2026-09-24T07:12:05.788519+00:00",
+  "scope": "One current observation topic added; only existing test counts and current handoff documentation updated. No runtime changes, ROS/Gazebo/GPU, builds or fault tests.",
+  "topic": {
+    "topic": "/navigation_policy/arm_speed_limit",
+    "kind": "context",
+    "type": "nav2_msgs/msg/SpeedLimit",
+    "qos": "reliable",
+    "required": false,
+    "gap_budget_sec": null
+  },
+  "total_topics_with_phase": 41,
+  "base_topics": 40,
+  "dedicated_semantics": {
+    "percentage": true,
+    "zero_percent": "HOLD",
+    "generic_nav2_zero_no_limit_applies": false
+  },
+  "source_evidence": "Source contract read only, not installed runtime or actual subscription evidence. arm source and navigation consumer were being finalized concurrently; hashes identify exact read.",
+  "source_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/src/arm_chassis_speed_coupling_node.cpp": "6d45dbff2aab6a104a2264633b97337d14b97d1cf9f2dfc5110f656190ddbf03",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_constraint_node.cpp": "6a6b5ab76db66c5cd4bf3bade0af152027012f8ca031fb59eddb9be62245e535",
+    "/opt/ros/humble/share/nav2_msgs/msg/SpeedLimit.msg": "d5e16f9b93293d100135d2ce83e6a20b819e8243666aac84eae95f6bd1516e96"
+  },
+  "existing_offline_tests": {
+    "passed": 26,
+    "new_tests_added": 0,
+    "log": "offline_tests.txt"
+  },
+  "check_config": {
+    "topics": 41,
+    "ros_initialized": false
+  },
+  "exact_config_append_only": true,
+  "patch_apply_reverse_byte_roundtrip": "PASS",
+  "diff_check": "PASS",
+  "immutable_files_checked": 148,
+  "historical_raw_and_prior_migration_unchanged": true,
+  "recorder_capture_analyzer_unchanged": true,
+  "updated_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/topics.json": "522350a02b95ae97014c2793eda2cade7a1fbb123d64dd59887c9fc236e83e98",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/README.md": "2021932246d7f492eca61c30561e87096eccebc7730d0193c51abb0922a3427a",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/CAPTURE_HANDOFF.md": "ee01f6259185b1d169ec2d9d90e91024105cfe0be81b8718c4d6d410fe31ab8e",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_capture_m5_observer.py": "08e6bb146aef414c3e232a4f621a03178820c66906f8923fca6048e9b76cdf27"
+  },
+  "artifact_sha256": {
+    "before_snapshot.json": "2f6c5d996977f00b2e9d1aca1c33e16973ed9113fda3dd77721b26c3599836bb",
+    "offline_tests.txt": "3352d320f8e62ced187fa4dfd27782e32b734256702cef89ce4027b5d59e45c2",
+    "update.patch": "80ca40999e1368edbeb347f46a023da05e1ca1faa83379e2d82899597ae628c9"
+  },
+  "pending": "M2 current transfer copy/hash/count and runtime topology/receipt confirmation; no new scene started by M5."
+}

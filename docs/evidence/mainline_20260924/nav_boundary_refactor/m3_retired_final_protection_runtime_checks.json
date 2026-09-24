@@ -1,0 +1,62 @@
+{
+  "created_at": "2026-09-24T15:02:10.494555+08:00",
+  "scope": "Only retire 2 obsolete final_protection_cpp runtime comparison entrypoints after verified archive",
+  "archive": "docs/evidence/mainline_20260924/nav_boundary_refactor/m3_retired_final_protection_runtime_checks.tar.gz",
+  "archive_sha256": "98676d7fd5c8e494a742d975ca5db063365b9a55ce3c71104f98634b210c2edb",
+  "archive_members_verified": 4,
+  "archive_member_sha256": {
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/test_final_protection_protocol.py": "7db2814836055688fc8aff91ff7cd014c16487154553b6128cfff689e4ebb75d",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_final_protection.py": "90cb442e077f43c7388a23301b76c9ea30f3fdbaa3f86c07446ae2bf3869c0eb",
+    "tools/migration/python_reference/reference_bootstrap.py": "862a392ed1720f8e92d9d04a86ac0c16338249b0cb2bfa21766436b3823855f3",
+    "tools/migration/python_reference/astribot_s1_navigation_policy/protection_node.py": "77e8dfd3973a1558ce597faac33b31f38d25bc466b67b6edefefd50fbf45ecd7"
+  },
+  "deleted_entrypoints": [
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/test_final_protection_protocol.py",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_final_protection.py"
+  ],
+  "retained_shared_reference_snapshots": [
+    "tools/migration/python_reference/reference_bootstrap.py",
+    "tools/migration/python_reference/astribot_s1_navigation_policy/protection_node.py"
+  ],
+  "retained_reference_reason": "protection_node.py is still imported by policy/test/test_protection_clock.py; reference directory is validation-only, not installed and has no production console/launch/environment entry",
+  "dependency_audit": {
+    "search_terms": [
+      "test_final_protection_protocol",
+      "benchmark_final_protection"
+    ],
+    "search_roots": [
+      "ws_robot/src/astribot_s1_navigation_policy_native",
+      "ws_robot/src/astribot_s1_navigation_policy",
+      "ws_robot/src/astribot_s1_navigation",
+      "tools/migration",
+      "tools/vision"
+    ],
+    "matches_before": [
+      "benchmark_final_protection.py:25 imports Replay and POLICY from test_final_protection_protocol",
+      "benchmark_final_protection.py:191 lists test_final_protection_protocol.py as provenance input"
+    ],
+    "production_dependency_matches": [],
+    "scope_limit": "Exact-name audit of relevant runtime/build/test/tool trees; no broad repository cleanup",
+    "matches_after": []
+  },
+  "protected_sha256": {
+    "ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/final_protection_core.hpp": "254228ad87357d43f0fd1ca44da624c8b7f0fc2ccc2f798a388f3d33c2b4dc16",
+    "ws_robot/src/astribot_s1_navigation_policy_native/src/final_protection_core.cpp": "40c031801d30120ac74bf396c6c88817e44e844a8a1551e6481c532c006bb0ce",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/final_protection_probe.cpp": "2a08e9b1e87c27cf575951dca327f054b7fff8874eb75caab689cadc9544483d",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/test_final_protection_sweep_differential.py": "e9525465d9fa34be36985dbadaff2443617c0b8001ff1bbfe717c26f2273fe25",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/test_protection_native_differential.py": "293068411ebce501414c874e86dff8d716181b7c4744c6b984fe53dc7c533a52",
+    "ws_robot/src/astribot_s1_navigation_policy/test/test_protection_clock.py": "4a1fb6404dba0f028d6a5231b36d2692e9eff66f34a7c1ae52fe39f71dfd4725",
+    "tools/migration/python_reference/reference_bootstrap.py": "862a392ed1720f8e92d9d04a86ac0c16338249b0cb2bfa21766436b3823855f3",
+    "tools/migration/python_reference/astribot_s1_navigation_policy/protection_node.py": "77e8dfd3973a1558ce597faac33b31f38d25bc466b67b6edefefd50fbf45ecd7"
+  },
+  "frozen_navigation_source_sha256": {
+    "ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_constraint_node.cpp": "bb43977e8cc5069cc600328a541ea08856d23db757d4fc0552bc11c36bcc7cfd",
+    "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt": "acb24a40377bb8ce9ca1ca4985cbac3b2a74472a51dbd532ac2955821cc160f5",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/navigation_constraint_ros_test.cpp": "d3113b03ff53cb2f93ce5357a43a53e523cc7b021c3efcb023081b1411f384a2",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/test_navigation_constraint_wiring.py": "ae8b32600de3465b6a851a8199299ede5c29459de43645bba0dd324a084f3ffb"
+  },
+  "verification": "PASS: 4 archive members verified; exactly 2 entrypoints absent; retained shared/core/differential and 4 frozen navigation sources unchanged",
+  "runtime_tests": "NOT_RUN; artifact-only cleanup; existing navigation node validation remains unchanged",
+  "historical_archive": "m3_final_protection_before_migration.tar.gz",
+  "archive_limit": "Source snapshots and imports for provenance, not a self-contained ROS environment; shared dependencies and historical evidence retained"
+}
