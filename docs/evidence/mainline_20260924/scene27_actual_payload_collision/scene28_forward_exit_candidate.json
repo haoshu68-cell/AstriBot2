@@ -1,0 +1,325 @@
+{
+  "schema": "mainline.forward_exit_endpoint_candidate/1",
+  "created_at_utc": "2026-09-24T17:07:05.209197+00:00",
+  "scope": "One offline geometric endpoint candidate only. No ROS/Gazebo/build/product modification or additional scenario matrix.",
+  "input": {
+    "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/collision_snapshot_0044/scene27_clearance.json",
+    "sha256": "70f679eeb69c1a1ec827989f8943df396e0b62a59ba077edfc20efca6c875734",
+    "scene27_original_inputs": [
+      {
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene27_world64/transport_skills.log",
+        "sha256": "035131e86b8b1152ff4e70e99f5435597881891cc6bcafde16f1a1ca00976a22"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene27_world64/executor_registration/robot_state_publisher.urdf",
+        "sha256": "dd446d845424fd2519b0eb000e911cb9bbe542822e9d1488575d1ab762300d2a"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene27_world64/full_transfer/result.json",
+        "sha256": "782d934e8f390e85de49a38513deca85e3f39f247f9027a6199a6ad33a466a07"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene27_world64/fixtures/result.json",
+        "sha256": "489bbb8e0203b25865d0f3e7507b8615c1fd99f9574bca812c9899150fc2217d"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene27_world64/transfer_goal.json",
+        "sha256": "cf293ade8b490e0b3206916404db66133f84e1e8463a659f0926aa07263ddabc"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene27_world64/fixtures/transport_box_01.sdf",
+        "sha256": "5c185f45dcc074525d3787dd99e12ae802c41b38f043c89408c93abb09a0a550"
+      },
+      {
+        "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp",
+        "sha256": "4d1f16ce587f1daa23f06543adbfc4daa5191b049173dd3f37662bb5c09d35ee"
+      }
+    ],
+    "state": "states.first, scene27 transport_skills.log line 366, complete actual cached RobotState and authoritative conservative attachment"
+  },
+  "candidate": {
+    "distance_m": 0.12,
+    "direction": "Same saved robot base +X forward direction projected into gazebo_world XY and normalized, preserving the existing world height and TCP orientation.",
+    "saved_world_from_base_matrix": [
+      [
+        0.9999999985398739,
+        -5.403909493933906e-05,
+        1.6852918944532989e-07,
+        -7.329817116555626e-06
+      ],
+      [
+        5.403909495900314e-05,
+        0.9999999985398814,
+        -1.1667816980914756e-07,
+        9.058480582388711e-06
+      ],
+      [
+        -1.6852288401656162e-07,
+        1.1668727680365452e-07,
+        0.9999999999999789,
+        0.12922376160846064
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "unit_direction_world_xyz": [
+      0.9999999985398882,
+      5.403909495900391e-05,
+      0.0
+    ],
+    "delta_world_xyz_m": [
+      0.11999999982478658,
+      6.484691395080469e-06,
+      0.0
+    ],
+    "starting_tcp_world_xyz_m": [
+      0.09999997306600071,
+      0.6999999979297902,
+      1.224999993747553
+    ],
+    "endpoint_tcp_world_xyz_m": [
+      0.2199999728907873,
+      0.7000064826211853,
+      1.224999993747553
+    ],
+    "endpoint_tcp_world_quaternion_xyzw": [
+      0.49999998241070387,
+      0.5000000120977401,
+      0.5000000258914423,
+      0.49999997960011205
+    ],
+    "nominal_fixture_endpoint_hint_world_xyz_m": [
+      0.22,
+      0.7,
+      1.225
+    ],
+    "nominal_fixture_endpoint_hint_is_rounded": true
+  },
+  "station": {
+    "json_path": "full_transfer/result.json:initial_full_scene.world.collision_objects[id=transport_box_01_pick_station]",
+    "exactly_equal_to_fixture_final_scene_object": true,
+    "object": {
+      "header": {
+        "stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "frame_id": "astribot_torso_base"
+      },
+      "pose": {
+        "position": {
+          "x": 0.10004509111462097,
+          "y": 0.699985581498654,
+          "z": 0.38827617357202354
+        },
+        "orientation": {
+          "x": -5.834136167449705e-08,
+          "y": -8.42630183962317e-08,
+          "z": -2.7019547484448585e-05,
+          "w": 0.9999999996349668
+        }
+      },
+      "id": "transport_box_01_pick_station",
+      "type": {
+        "key": "",
+        "db": ""
+      },
+      "primitives": [
+        {
+          "type": 1,
+          "dimensions": [
+            0.1,
+            0.1,
+            1.035
+          ],
+          "polygon": {
+            "points": []
+          }
+        }
+      ],
+      "primitive_poses": [
+        {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "orientation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          }
+        }
+      ],
+      "meshes": [],
+      "mesh_poses": [],
+      "planes": [],
+      "plane_poses": [],
+      "subframe_names": [],
+      "subframe_poses": [],
+      "operation": "\u0000"
+    },
+    "base_from_world_matrix": [
+      [
+        0.999999998539874,
+        5.403909495900313e-05,
+        -1.6852288401656162e-07,
+        7.351104754750519e-06
+      ],
+      [
+        -5.403909493933906e-05,
+        0.9999999985398812,
+        1.1668727680365451e-07,
+        -9.073955434685716e-06
+      ],
+      [
+        1.6852918944532994e-07,
+        -1.1667816980914754e-07,
+        0.9999999999999791,
+        -0.12922376160616572
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "world_from_base_matrix": [
+      [
+        0.9999999985398739,
+        -5.403909493933906e-05,
+        1.6852918944532989e-07,
+        -7.329817116555626e-06
+      ],
+      [
+        5.403909495900314e-05,
+        0.9999999985398814,
+        -1.1667816980914756e-07,
+        9.058480582388711e-06
+      ],
+      [
+        -1.6852288401656162e-07,
+        1.1668727680365452e-07,
+        0.9999999999999789,
+        0.12922376160846064
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "station_top_world_z_m": 1.0349999999999997
+  },
+  "conservative_dimensions_m": [
+    0.07146969384566991,
+    0.07146969384566991,
+    0.1314696938456699
+  ],
+  "calculation": {
+    "formula": "Translate each of the eight first-state conservative corners by R_base_world * delta_world; transform to station coordinates; forward-side separation=min(corner_station.x)-station_half_x. Vertical clearance=min(corner_station.z)-station_half_z.",
+    "corners_station_xyz_m": [
+      [
+        0.08445396155611323,
+        -0.029788978923471654,
+        0.5417642682023677
+      ],
+      [
+        0.08445396039319156,
+        -0.029788979952356076,
+        0.6732339620480379
+      ],
+      [
+        0.08433758459853946,
+        0.041680620171510974,
+        0.5417642687606609
+      ],
+      [
+        0.08433758343561776,
+        0.04168061914262655,
+        0.6732339626063311
+      ],
+      [
+        0.15592356065109586,
+        -0.029672601965897716,
+        0.5417642688354664
+      ],
+      [
+        0.1559235594881742,
+        -0.02967260299478236,
+        0.6732339626811366
+      ],
+      [
+        0.1558071836935221,
+        0.0417969971290848,
+        0.5417642693937595
+      ],
+      [
+        0.1558071825306005,
+        0.04179699610020027,
+        0.6732339632394297
+      ]
+    ],
+    "corners_world_xyz_m": [
+      [
+        0.1844539615561132,
+        0.6702110210765285,
+        1.0592642682023676
+      ],
+      [
+        0.18445396039319154,
+        0.670211020047644,
+        1.1907339620480377
+      ],
+      [
+        0.18433758459853944,
+        0.741680620171511,
+        1.0592642687606608
+      ],
+      [
+        0.18433758343561774,
+        0.7416806191426266,
+        1.190733962606331
+      ],
+      [
+        0.2559235606510959,
+        0.6703273980341024,
+        1.0592642688354663
+      ],
+      [
+        0.2559235594881742,
+        0.6703273970052178,
+        1.1907339626811364
+      ],
+      [
+        0.25580718369352207,
+        0.741796997129085,
+        1.0592642693937595
+      ],
+      [
+        0.2558071825306005,
+        0.7417969961002004,
+        1.1907339632394296
+      ]
+    ],
+    "station_far_face_local_x_m": 0.05,
+    "minimum_payload_corner_station_x_m": 0.08433758343561776,
+    "forward_side_clearance_m": 0.034337583435617755,
+    "vertical_clearance_m": 0.02426426820236771,
+    "all_corners_beyond_station_forward_face": true
+  },
+  "decision": "GEOMETRIC_ENDPOINT_CLEAR: the full conservative payload envelope is beyond the station forward face, so this 120 mm forward endpoint is a geometrically valid next fixture candidate.",
+  "limits": [
+    "This is only an endpoint box-versus-station separation calculation. It does not establish IK existence, arm/head self-collision freedom, approach/lift safety or whole OMPL transport path clearance.",
+    "The existing single pick_exit target would make one combined lift-and-forward segment, not two independently verified vertical and horizontal motions.",
+    "The full unchanged collision and remaining-path validation must admit the next normal parent Action; no geometry shrinking or support collision exemption is implied.",
+    "The same scene27 robot transform and actual attachment state are used as requested. Exact values in a new simulation depend on that new scene observations."
+  ]
+}
