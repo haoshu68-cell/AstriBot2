@@ -1,0 +1,45 @@
+{
+  "recorded_at": "2026-09-24T10:44:49.710330+08:00",
+  "scope": "Offline only; no actual ROS/Gazebo snapshot collected by M5",
+  "tests": [
+    {
+      "command": "python3 -m unittest discover -s tools/vision -p 'test_prepare_box_roi_snapshot.py' -v",
+      "passed": 11,
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m unittest discover -s tools/vision -p 'test_snapshot_truth_filter.py' -v",
+      "passed": 1,
+      "subcases": [
+        "exact truth selection",
+        "unchanged default path",
+        "bounded rejection with no match"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "initial_red": {
+    "test_count": 8,
+    "errors": 12,
+    "log": "snapshot_red_test.log"
+  },
+  "ast_files_passed": 4,
+  "historical_parser_check": {
+    "source": "runs/grasp_pose_sim_20260921/action/live_pose_v2_scored_truth.pbtxt",
+    "complete_messages": 555,
+    "matches_to_nominal_50ms_grid": 11,
+    "exact_model_extraction_verified": true,
+    "actual_current_session": false
+  },
+  "runtime_validation": "NOT_RUN",
+  "coverage_acceptance": "UNKNOWN_THRESHOLD",
+  "scope_boundary": "No runtime/launch/model changes, no truth fed to inference, no new simulator; sim_pose_capture optional evaluation stamp filter only",
+  "delivery": "M2_CAPTURE_HANDOFF.md and real_snapshot_context.template.json sent to M2; awaiting actual same-stamp inputs",
+  "final_combined_check": {
+    "command": "PYTHONPATH=tools/vision python3 -m unittest test_prepare_box_roi_snapshot test_snapshot_truth_filter -v",
+    "passed": 12,
+    "exit_code": 0
+  },
+  "independent_review": "No blocking framing, transform, default-path or bounded-wait issue identified",
+  "dependency_note": "Uses tracked score_box_roi and installed NumPy/SciPy; does not depend on untracked sim_pose_truth helper"
+}
