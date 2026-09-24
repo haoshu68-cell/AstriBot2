@@ -71,6 +71,9 @@
        由调用方（launch.py）用 FindPackageShare + PathJoinSubstitution 拼出后传入，
        本文件内部不出现任何硬编码路径。 -->
   <xacro:arg name="controllers_config" default=""/>
+  <xacro:arg name="sim_initial_positions_file" default=""/>
+  <xacro:property name="sim_initial_positions_file" value="$(arg sim_initial_positions_file)"/>
+  <xacro:property name="sim_initial_positions" value="${xacro.load_yaml(sim_initial_positions_file)['initial_positions'] if sim_initial_positions_file else dict()}"/>
 
   <!-- 全向轮力矩闭环驱动改造新增：轮子effort硬件接口边界 + 几何半径统一从这里
        外部传入，禁止在 torso_wheel/ros2_control xacro 里写死。

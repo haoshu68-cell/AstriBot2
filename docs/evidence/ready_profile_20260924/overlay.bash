@@ -1,0 +1,3 @@
+source /home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/overlay.bash
+source /home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/install/astribot_s1_description/share/astribot_s1_description/local_setup.bash
+source /home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/install/astribot_s1_gazebo_bringup/share/astribot_s1_gazebo_bringup/local_setup.bash

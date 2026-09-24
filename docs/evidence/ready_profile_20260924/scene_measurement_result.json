@@ -1,0 +1,34 @@
+{
+  "passed": true,
+  "evidence": "offline replay of seven real scene03 left JTC feedback joints and full scene serialization; synthetic check time/receipt only, not a 22-joint live acceptance",
+  "cases": [
+    {
+      "name": "actual_joints_accept_zero_stamp_empty_velocity_scene",
+      "passed": true
+    },
+    {
+      "name": "missing_actual_velocity",
+      "passed": true,
+      "reason": "INITIAL_READY_JOINTS_INCOMPLETE"
+    },
+    {
+      "name": "stale_actual_stamp",
+      "passed": true,
+      "reason": "INITIAL_READY_JOINT_SOURCE_STALE"
+    }
+  ],
+  "scene_header": {
+    "stamp": {
+      "sec": 0,
+      "nanosec": 0
+    },
+    "frame_id": "astribot_torso_base"
+  },
+  "scene_velocity": [],
+  "inputs": {
+    "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/prepare_scene.py": "15e9199bad3300de4e00f1b252d7e9c71aa21e519032e20b182d2d32eb6e6f93",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/first_stage/result.json": "40de15dbb6185320f2d28748e3fc5bce83fcbe1e38758d007063f9c64c8f9293",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_prepare_20260924_1024/first_scene03/fixtures/scene_readback.json": "9471c39b629c475113d6dfa40359d2ee6c8b45e81ebe61a54ccfc40725a0d60c",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_description/config/sim_initial_transport_ready.yaml": "fe77a322cea387cd5a434649ede0d3e350c625f66693263068583e476a421578"
+  }
+}

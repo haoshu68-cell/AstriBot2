@@ -1,0 +1,292 @@
+{
+  "scope": "Offline AST validator and source-xacro equivalence; not simulator birth-pose or live Hold acceptance",
+  "cases": [
+    {
+      "name": "profile_exactly_22_position_commands",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "normal_ready_profile_accepted",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "default_source_unchanged",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "profile_changes_only_22_initial_values",
+      "passed": true,
+      "details": [
+        {
+          "joint": "astribot_torso_joint_1",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_torso_joint_2",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_torso_joint_3",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_torso_joint_4",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_head_joint_1",
+          "before": null,
+          "after": "1.45"
+        },
+        {
+          "joint": "astribot_head_joint_2",
+          "before": null,
+          "after": "0.65"
+        },
+        {
+          "joint": "astribot_arm_left_joint_1",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_left_joint_2",
+          "before": null,
+          "after": "-0.5"
+        },
+        {
+          "joint": "astribot_arm_left_joint_3",
+          "before": null,
+          "after": "-0.6"
+        },
+        {
+          "joint": "astribot_arm_left_joint_4",
+          "before": null,
+          "after": "1.0"
+        },
+        {
+          "joint": "astribot_arm_left_joint_5",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_left_joint_6",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_left_joint_7",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_right_joint_1",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_right_joint_2",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_right_joint_3",
+          "before": null,
+          "after": "0.6"
+        },
+        {
+          "joint": "astribot_arm_right_joint_4",
+          "before": null,
+          "after": "1.0"
+        },
+        {
+          "joint": "astribot_arm_right_joint_5",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_right_joint_6",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_arm_right_joint_7",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_gripper_left_joint_L1",
+          "before": null,
+          "after": "0.0"
+        },
+        {
+          "joint": "astribot_gripper_right_joint_L1",
+          "before": null,
+          "after": "0.0"
+        }
+      ]
+    },
+    {
+      "name": "unknown_joint_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Simulation initial positions must cover exactly the position-command joints"
+      }
+    },
+    {
+      "name": "missing_joint_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Simulation initial positions must cover exactly the position-command joints"
+      }
+    },
+    {
+      "name": "nan_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Non-finite or non-numeric simulation initial position: astribot_torso_joint_1"
+      }
+    },
+    {
+      "name": "positive_inf_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Non-finite or non-numeric simulation initial position: astribot_torso_joint_1"
+      }
+    },
+    {
+      "name": "negative_inf_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Non-finite or non-numeric simulation initial position: astribot_torso_joint_1"
+      }
+    },
+    {
+      "name": "bool_true_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Non-finite or non-numeric simulation initial position: astribot_torso_joint_1"
+      }
+    },
+    {
+      "name": "bool_false_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Non-finite or non-numeric simulation initial position: astribot_torso_joint_1"
+      }
+    },
+    {
+      "name": "below_hard_limit_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Simulation initial position outside URDF hard limits: astribot_torso_joint_1"
+      }
+    },
+    {
+      "name": "above_hard_limit_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Simulation initial position outside URDF hard limits: astribot_torso_joint_1"
+      }
+    },
+    {
+      "name": "at_lower_limit_accepted",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "at_upper_limit_accepted",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "state_initial_value_mismatch_rejected",
+      "passed": true,
+      "details": {
+        "rejection_type": "ValueError",
+        "reason": "Simulation initial position missing from expanded URDF: astribot_torso_joint_1"
+      }
+    }
+  ],
+  "passed": true,
+  "profile_argument": "sim_initial_positions_file",
+  "mappings": {
+    "robot_name": "astribot_s1",
+    "use_lidar": "true",
+    "use_camera": "true",
+    "use_wrist_cameras": "true",
+    "use_stereo_cameras": "true",
+    "camera_profile": "/tmp/ready_source_index_9f1ahsf7/share/astribot_s1_description/config/camera_head_rgbd.yaml",
+    "torso_camera_profile": "/tmp/ready_source_index_9f1ahsf7/share/astribot_s1_description/config/camera_torso_rgbd.yaml",
+    "camera_calibration_dir": "/tmp/ready_source_index_9f1ahsf7/share/astribot_s1_description/config",
+    "camera_mounts_profile": "",
+    "use_native_camera_distortion": "false",
+    "use_gripper": "true",
+    "livox_left_xyz": "0.17393 0.16893 0.082",
+    "livox_left_rpy": "0 0 -0.800058",
+    "livox_right_xyz": "-0.18120 -0.17733 0.166",
+    "livox_right_rpy": "0.001168 -0.009370 2.373036",
+    "controllers_config": "",
+    "sim_initial_positions_file": "",
+    "wheel_radius": "0.08",
+    "wheel_effort_limit": "15.0",
+    "wheel_velocity_limit": "40.0",
+    "wheel_joint_damping": "1.0",
+    "wheel_joint_friction": "0.1"
+  },
+  "position_joint_names": [
+    "astribot_arm_left_joint_1",
+    "astribot_arm_left_joint_2",
+    "astribot_arm_left_joint_3",
+    "astribot_arm_left_joint_4",
+    "astribot_arm_left_joint_5",
+    "astribot_arm_left_joint_6",
+    "astribot_arm_left_joint_7",
+    "astribot_arm_right_joint_1",
+    "astribot_arm_right_joint_2",
+    "astribot_arm_right_joint_3",
+    "astribot_arm_right_joint_4",
+    "astribot_arm_right_joint_5",
+    "astribot_arm_right_joint_6",
+    "astribot_arm_right_joint_7",
+    "astribot_gripper_left_joint_L1",
+    "astribot_gripper_right_joint_L1",
+    "astribot_head_joint_1",
+    "astribot_head_joint_2",
+    "astribot_torso_joint_1",
+    "astribot_torso_joint_2",
+    "astribot_torso_joint_3",
+    "astribot_torso_joint_4"
+  ],
+  "inputs": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py": "a74baf9b33e1929bdcfed6a759f97786ca9abc5f98c9d014600b89728fe5b0db",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_description/urdf/astribot_s1.xacro": "fcd55fab90976aea4d074a08860b882fb21801685983379c588ed1eacfd3d2e9",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_description/urdf/astribot_s1_ros2_control.xacro": "f836a6d8444a28dc6108e89fc08e454556b5169e6684b19a76e00d808b80962f",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_description/config/sim_initial_transport_ready.yaml": "fe77a322cea387cd5a434649ede0d3e350c625f66693263068583e476a421578",
+    "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/before_default.urdf": "08aedf34dc5a32f2f0015d9239e0b4eafd06c6f5555ecffcda3b9b4ac0c74801"
+  },
+  "issue_started": "2026-09-24T11:27:00+08:00",
+  "directory_timestamp_is_not_start_time": true,
+  "recorded_at": "2026-09-24T11:32:28.521194+08:00",
+  "verification_script_sha256": "eab44988183d70d36bf0c0feb6688d747eea02354d6f9827d0f370fb8b41a623",
+  "expanded_urdf_sha256": {
+    "before_default.urdf": "08aedf34dc5a32f2f0015d9239e0b4eafd06c6f5555ecffcda3b9b4ac0c74801",
+    "after_default.urdf": "88ffde8680d76e13f6a44aab08a987622413e2509e6d22310022a24bd3753952",
+    "after_ready.urdf": "583a81aaa08c71d111a98267498d534c4d026188f5a5ac34567c348e6286e9e4"
+  }
+}

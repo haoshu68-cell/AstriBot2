@@ -15,6 +15,9 @@ aws_robomaker_small_warehouse_world 的仓储场景，在其中生成 Astribot S
 """
 
 import os
+import math
+import xml.etree.ElementTree as ET
+import yaml
 
 from launch import LaunchDescription
 from launch.actions import (
@@ -31,6 +34,7 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     Command,
+    EnvironmentVariable,
     LaunchConfiguration,
     PathJoinSubstitution,
     PythonExpression,
@@ -39,6 +43,42 @@ from launch.substitutions import (
 from astribot_logging.launch import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
+
+
+def _validate_sim_initial_positions(description_xml, positions):
+    robot = ET.fromstring(description_xml)
+    controls = {joint.attrib['name']: joint for joint in
+                robot.findall('ros2_control/joint')
+                if joint.find("command_interface[@name='position']") is not None}
+    if not isinstance(positions, dict) or set(positions) != set(controls):
+        raise ValueError('Simulation initial positions must cover exactly the position-command joints')
+    joints = {joint.attrib['name']: joint for joint in robot.findall('joint')}
+    for name, value in positions.items():
+        if type(value) not in (int, float) or not math.isfinite(value):
+            raise ValueError('Non-finite or non-numeric simulation initial position: ' + name)
+        limit = joints[name].find('limit')
+        if limit is None or not float(limit.attrib['lower']) <= value <= float(limit.attrib['upper']):
+            raise ValueError('Simulation initial position outside URDF hard limits: ' + name)
+        initial = controls[name].find("state_interface[@name='position']/param[@name='initial_value']")
+        if initial is None or float(initial.text) != value:
+            raise ValueError('Simulation initial position missing from expanded URDF: ' + name)
+
+
+def _prepare_sim_description(context, command):
+    profile = LaunchConfiguration('sim_initial_joint_profile').perform(context)
+    if profile not in ('', 'transport_ready'):
+        raise ValueError('Unknown simulation initial joint profile: ' + profile)
+    path = ''
+    if profile:
+        path = PathJoinSubstitution([FindPackageShare('astribot_s1_description'),
+                'config', 'sim_initial_transport_ready.yaml']).perform(context)
+    SetLaunchConfiguration('sim_initial_positions_file', path).execute(context)
+    description = command.perform(context)
+    if profile:
+        with open(path, encoding='utf-8') as handle:
+            positions = yaml.safe_load(handle)['initial_positions']
+        _validate_sim_initial_positions(description, positions)
+    return [SetLaunchConfiguration('sim_robot_description', description)]
 
 
 def _prepare_social(context, base_world):
@@ -80,6 +120,10 @@ def _prepare_social(context, base_world):
 def generate_launch_description():
 
     declare_args = [
+        DeclareLaunchArgument('sim_initial_joint_profile',
+            default_value=EnvironmentVariable('ASTRIBOT_SIM_INITIAL_JOINT_PROFILE', default_value=''),
+            choices=['', 'transport_ready'],
+            description='Optional physical Gazebo initial posture; does not execute zero-to-READY motion'),
         DeclareLaunchArgument('navigation_geometry_mode', default_value='legacy'),
         DeclareLaunchArgument('social_scenario', default_value='', description='Optional HuNav scene in the same warehouse'),
         DeclareLaunchArgument(
@@ -256,8 +300,7 @@ def generate_launch_description():
         }.items(),
     )
 
-    robot_description_content = ParameterValue(
-        Command([
+    robot_description_command = Command([
             'xacro', ' ',
             xacro_file, ' ',
             'robot_name:=', robot_name, ' ',
@@ -265,14 +308,15 @@ def generate_launch_description():
             'use_camera:=', use_camera, ' ',
             'camera_profile:=', LaunchConfiguration('camera_profile'), ' ',
             'controllers_config:=', controllers_yaml, ' ',
+            'sim_initial_positions_file:="', LaunchConfiguration('sim_initial_positions_file'), '" ',
             'wheel_radius:=', wheel_radius, ' ',
             'wheel_effort_limit:=', wheel_effort_limit, ' ',
             'wheel_velocity_limit:=', wheel_velocity_limit, ' ',
             'wheel_joint_damping:=', wheel_joint_damping, ' ',
             'wheel_joint_friction:=', wheel_joint_friction,
-        ]),
-        value_type=str,
-    )
+        ])
+    robot_description_content = ParameterValue(
+        LaunchConfiguration('sim_robot_description'), value_type=str)
     robot_description = {'robot_description': robot_description_content}
 
     robot_state_publisher = Node(
@@ -434,6 +478,7 @@ def generate_launch_description():
         set_ros_domain_id,
         set_gz_resource_path,
         set_ign_resource_path,
+        OpaqueFunction(function=_prepare_sim_description, kwargs={'command': robot_description_command}),
         OpaqueFunction(function=_prepare_social, args=[default_world_file]),
         gz_sim,
         robot_state_publisher,
