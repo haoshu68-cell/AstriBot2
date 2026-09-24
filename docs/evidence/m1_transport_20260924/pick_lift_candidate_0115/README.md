@@ -11,3 +11,19 @@ The selection uses the confirmed scene27 observation: its original vertical 30 m
 Pure offline generation used scene27's frozen fixture and real installed ROS message classes without rclpy initialization or a ROS connection. All substantive Goal fields other than PICK exit compare equal to the previous candidate; randomly generated task/request/context IDs are excluded. The exit is `(0.1, 0.7, 1.2550000000000001)` in `gazebo_world`, with the original `(0.5, 0.5, 0.5, 0.5)` quaternion. Checks confirm original XY, 60 mm total lift, 30 mm PREGRASP, old candidate keys removed, and rejection of zero/negative/NaN/Inf lift inputs. Syntax parsing passed. `offline_goal_generation.json` preserves results and source hashes.
 
 Frozen script SHA-256: `52cbceb61f04a1719fc5129caf125738b411156d2ec63a511765ed9d09c516a3`; scenario SHA-256: `ad21630122ec833dc7ca17de21117aed7c57a58e4263ba1b96b29cca180dce3a`. Before/after copies, patch and manifest support the coordinator's Git record. Scene30/domain61 is pending at this snapshot. This is a scenario candidate, not an accepted general planner fix, full transfer, long-term stability or performance result.
+
+## Final actual result: failed and deferred
+
+Scene30 initially planned the complete PICK successfully, but the external validator canceled during PREGRASP after measured angular velocity exceeded its unchanged limit. The coordinator confirmed stop, resource release and process cleanup; actual attachment revalidation was never reached. Its cause remains unknown. It is neither labelled a false alarm nor a failure of vertical60 planning. The coordinator then ran the same frozen candidate in scene31/domain60, without a new parameter candidate or reset of the issue clock.
+
+Read-only verification of scene31's [original result](/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene31_world60/full_transfer/result.json), SHA-256 `1ef9c93bc2d706df9d9da8b23486bd716dabf0fc810e5e8b6d7d1e1db897b8f6`, confirms:
+
+- Journal indices 25, 45 and 65 confirm PREGRASP, GRASP_APPROACH and GRASP_CONFIRM.
+- Index 68 records physical command 1 applied, source revision 2 / sequence 1518, followed by actual-payload remaining-path revalidation.
+- The TRANSPORT_POSTURE candidate is rejected for `transport_box_01<->transport_box_01_pick_station` environment collision. No actual LIFT, navigation or PLACE follows; this is not a completed ATTACH_CONFIRM transaction or successful PICK.
+- Parent terminal status is 6, `success=false`, `resources_released=false`, with `RESOURCE_RECOVERY_REQUIRED:PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:environment collision: transport_box_01<->transport_box_01_pick_station`.
+- Journal index 71 is quarantined; business resource disposition is `UNRESOLVED` and business cleanup is false. Outer process cleanup is true. Process shutdown does not release the quarantined business resource.
+
+The final candidate has failed, so this issue is now **DEFERRED** under the agreed stopping rule. The original **00:26:36–01:26:36** window remains in the record; there is no new candidate, deadline reset, collision waiver or expanded API. Both fixture source hashes were checked unchanged, and all product/fixture code remains frozen. Earlier source snapshots and failed candidates remain intact.
+
+A future recovery must address the difference between the nominal planned payload and the actual conservative attached geometry in path generation. The existing revalidation service cannot return new trajectories; secretly replacing its cache would diverge from the executor-owned timed path. That interface/implementation work is outside this bounded run. This failed result does not undo the isolated diagnostic/contract tests, but those tests do not establish complete transfer or stability acceptance.

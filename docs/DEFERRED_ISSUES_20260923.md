@@ -2,6 +2,22 @@
 
 本清单不是验收通过记录。采用 [全窗口任务推进规则](TASK_EXECUTION_POLICY_20260923.md)，更新时保留原始失败与各次排查时间。共同清单由搬运仿真窗口维护，其他窗口回传自己的问题条目。
 
+## MTC-PAYLOAD-REMAINING-PATH-01：实际附着后的收臂路径碰台
+
+- 状态：`deferred_unresolved`，不是通过。最早计时2026-09-25 00:26:36，原检查点01:26:36；01:23最后指定候选失败后只做有界收尾，不通过改名或换窗口重计时。
+- 现象：scene27的TRANSPORT_POSTURE首坏index41/788，scene31提高PICK抬升到60mm后仍在index119/840碰取货台。两次都已实际抓取并应用物理附着，但都未执行LIFT/NAV/PLACE。
+- 确认事实：名义6×6×12cm物体规划与实际7.146969×7.146969×13.146969cm保守附件不同，并有实测TCP偏置。scene27完整URDF FK/角点检查显示下降18.207mm及倾斜增加竖向半高6.315mm耗尽首状态24.264mm净空；名义形体尚有6.590mm时，保守形体已重叠0.257mm。重验正确拒绝，不能缩小模型或关闭碰撞换通过。
+- 已尝试：修正同手两pad合法接触（C++几何测试通过且现场接触集确认）；精确记录首坏RobotState；向内120mm端点有净空但Cartesian自碰撞，前向120mm路径不完整；最后原XY/vertical60初始规划通过，实际剩余路径仍碰台。不再扩大候选搜索。scene31独立复算确认提高后首状态净空54.264mm，首坏状态箱中心下降56.100mm且旋转增加5.127mm竖向半高，15轴SAT仍有交叠；只看端点或最低角高度不足以判断整个有限台面的碰撞。
+- 剩余入口：先决定规划阶段如何使用可追溯的保守附件，或实际附着后如何显式返回并重新验证新timed轨迹。当前RevalidatePayloadTransition仅返回布尔结果/原因等，没有新轨迹字段，不能仅改缓存并让执行器继续旧路径。此为下一次有界修复的接口前置，不是本轮已实现功能。
+- 安全收尾：scene31业务UNRESOLVED、domain60 journal保留；36帧/0.7s底盘零速零漂移，外层会话stopped、无自有残留。旧quarantine不清除，不能把进程清理记为资源释放。后续NAV/PLACE实际验收被依赖阻塞，扩展矩阵不作为替代进度。
+- 证据：[scene31收尾](evidence/mainline_20260924/scene27_actual_payload_collision/scene31_final_checkpoint.json)、[原精确几何](evidence/mainline_20260924/scene27_actual_payload_collision/scene27_clearance.json)、[总调度记录](MAINLINE_DISPATCH_20260924.md)。最新失败录像见收尾JSON中的绝对video_path。
+
+## MAINLINE-INTERMITTENT-01：准备及非导航瞬态观测
+
+- 按用户要求`deferred_by_user`，不影响已保存的失败语义。scene25 INITIAL_READY_TF_STALE；scene26两条导航publisher图均为空（仅证明本探针未取得身份，不证明错误writer）；scene30 PREGRASP两帧实测角速度超0.03rad/s，峰值0.051326rad/s，7条观测cmd_vel均为零，未见命令越权证据，但不能记为误报。
+- scene30取消后实测停稳且父资源释放，scene31同阈值正常复跑越过该点；不据此宣称底因修复或长期稳定。当前不查DDS、性能或动力学专项，不改期限/速度门槛。
+- 证据：[观测审查](evidence/mainline_20260924/scene27_actual_payload_collision/scene30_motion_readonly_audit.json)及同目录scene26/scene30记录，均保留输入哈希与场景身份。
+
 ## SCAN-FRESHNESS-01：策略使用的扫描过期
 
 - 当前状态：`normal_return90_reproduction_fixed_and_verified`。已独立核对导航窗口 R6 的 `result.json`、`navigation/result.json` 和 `stack/session.json`：原 `return_90` 两段均通过，`cleanup_complete=true`，会话 stopped 且无自有残留进程。

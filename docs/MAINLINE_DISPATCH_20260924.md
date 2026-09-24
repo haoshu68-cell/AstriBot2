@@ -4,9 +4,97 @@
 
 总调度：`01a0c405-627f-7742-b500-e057726ed2e7`（设计机器人搬运仿真流程）。本轮开始 2026-09-24 09:50 +08。每个问题单独记录原始起点，排查 1 小时未解决则有界收尾并转独立项，不能换窗口重置。
 
+## 当前主线检查点（2026-09-25 01:25）
+
+- 用户要求偶现问题先留档，本轮未展开TF/DDS/底盘瞬态动力学专项，也未降低门槛。scene25 TF未就绪、scene26发布者图未确认、scene30两帧底盘角速度越限均有独立证据；scene30观测命令全零，但不能把真实速度越限称作误报。
+- 正常主线仍未完成。最终scene31/domain60确认PREGRASP、GRASP_APPROACH、GRASP_CONFIRM及实际物理附着；随后真实保守载荷的TRANSPORT_POSTURE路径仍碰取货台（首坏119/840）。未执行LIFT、有载NAV或PLACE。
+- 本问题原起点00:26:36、截止01:26:36不变，最后已选择候选验证结束，现只做有界留档收尾。指垫接触契约修复保留；向内120mm被自碰撞拒绝，前向120mm未取得完整Cartesian路径，最后vertical60虽通过初始完整规划，但没有解决实际附件收臂碰撞。不继续试参数，也不把任何候选记作通过。
+- 已确认根因边界：初始PICK规划使用名义世界物体；附着后的权威模型为更大保守尺寸并带实测TCP偏置。当前服务只验证并保留旧timed路径，无法返回重新规划的轨迹。提高终点净空不能保证后续OMPL全路径不重新贴近台面。恢复时应先明确一致几何的路径生成/显式新轨迹回传边界，不能暗换缓存或取消重验。
+- scene31父status6/resources_released=false、业务UNRESOLVED/domain60 journal隔离；底盘收尾36帧/0.7s零速零漂移，外层cleanup=true、stack stopped、remaining_owned_pids=[]。这些进程清理与停车证据不等于业务资源释放。录像545帧可解码，计数一致，属于失败现场，不能交付为成功搬运演示。
+- 最终验证fixture冻结：prepare_transfer_goal.py SHA52cbceb61f04a1719fc5129caf125738b411156d2ec63a511765ed9d09c516a3；scenario.json SHAad21630122ec833dc7ca17de21117aed7c57a58e4263ba1b96b29cca180dce3a。原代码/库及实际绑定未改。旧候选已归档，当前生效脚本只保留vertical60，无forward/inward分支；活动覆盖层仍有依赖，不能删掉共享底层。
+- 证据：[当前收尾](evidence/mainline_20260924/scene27_actual_payload_collision/scene31_final_checkpoint.json)、[原首坏点复算](evidence/mainline_20260924/scene27_actual_payload_collision/scene27_clearance.json)、[瞬态运动只读审查](evidence/mainline_20260924/scene27_actual_payload_collision/scene30_motion_readonly_audit.json)。Git先行归档8222c697/dbbfc3dd，最终收尾再单独提交；最终复算见[scene31全部角点/SAT](evidence/mainline_20260924/scene27_actual_payload_collision/scene31_clearance.json)：first净空54.264mm，首坏状态箱中心下降56.100mm、竖向半高增加5.127mm，确有台体交叠。
+- 后续有载导航与放置依赖此路径修复，当前限定范围内没有可独立验收的下游运动；其他协作任务冻结，不因此开启VLA、规划器、感知或多场景扩展矩阵。
+
+## 历史主线检查点（2026-09-25 00:36）
+
+- 唯一目标仍为同一普通单箱父Action：PICK → 有载NAV → PLACE → 权威EMPTY/独立Scene读回 → 终态、停稳、资源释放及录像。VLA、真机和所有扩展矩阵继续冻结。
+- 偶发TF本地滞后、future-drop及启动失败专项已按用户要求留档暂缓。反复阻断正常链的明确采样顺序竞态已最小修复，6项测试通过；scene23未复现并成功执行物理附着。旧原始起点23:30保留，修复不代表其他时效问题通过。
+- 重复world REMOVE修复6项真实MoveIt测试通过，scene23已进入附着后的剩余计划重验，说明旧apply拒绝点已越过；没有额外独立保存attach后完整Scene，证据层级不混用。
+- 当前直接阻断为scene23剩余TRANSPORT_POSTURE候选中L11指垫与箱体误作禁止接触，起点00:26:36。权威body此前只有TCP，未保留规划允许的两个指垫。经独立URDF/Commander/接触阶段审查，只将同手L11/R11加入实际附件touch集合，非pad和外部碰撞继续检查；包络、质量、位姿不变。
+- root构建并通过2项几何测试（含左右精确接触集/非pad和几何不变断言）；只覆盖新几何共享库。scene24/domain67已启动，实际Gazebo新库及旧依赖均在发Goal前核对。新库SHA `cec3b525c9354f1f1d797eabbae5149079d847c70b01c3379874b767474bc8ca`。结果待定。
+- scene23业务UNRESOLVED、domain68 journal隔离，外层进程清理完成，录屏614/614/614；旧quarantine未清除。主线仍未验收。M1冻结产品源码，M5仅整理实际证据；root唯一构建/仿真操作者。
+
+00:48 补充：scene24正确加载pad新库，实际权威接触集已为TCP+同手两pad；剩余TRANSPORT_POSTURE改报箱体与取货台碰撞，未执行LIFT或收臂。业务UNRESOLVED/domain67隔离，外层清理完成，474帧视频索引一致。实际附件理想lift终点保守箱底为1.059264275 m、相对台面净空+24.264 mm；现有记录缺缓存收臂路径，不能推断碰撞在首点或仅因高度不足。代码审查未找到错误使用阶段初态的证据。
+
+只增加失败状态诊断：原首坏检查索引（含插值）及first/bad/last完整RobotState，使用max_digits10保存。原返回reason/碰撞/插值/时间不改。root构建并通过payload_transition和trajectory_time_scaling两组现有CTest，6份YAML状态可解析；初版6位精度日志另存，不混用为准确复算。scene25/domain66正在同一正常场景运行，新MTC planner SHA `c6bf0df19f275baaaccdaf06abd8870e39aeb4d41f339a2070b682c286cc6fda`，guard/scene_signature不变。原00:26:36问题时钟继续，截止01:26:36；此诊断不是问题修复。
+
+00:56 补充：scene25在父Goal前遇到INITIAL_READY_TF_STALE，scene26在父Goal前未观测到两条导航输出publisher（两个列表均为空），均已清理，未发运动目标。scene26只读审查确认检查器一次取图、未记录错误writer或多writer；不能由空图判定生产节点不存在。两轮按用户最新要求保留证据暂缓，不展开DDS/TF专项或放宽准入。scene27/domain64继续同一正常场景和相同候选；root独占仿真，几何协作代理仅准备首坏状态离线复算，M1产品冻结。原碰撞排查起点及01:26:36截止不变。
+
+01:02 补充：scene27正常越过准备/三个抓取阶段和物理附着，实际剩余TRANSPORT_POSTURE首坏状态已保存：检查序号41/788，箱体与取货台碰撞。独立现场URDF FK及同frame台面复算显示：首状态净空+24.264268mm；首坏保守箱底−0.257164mm，名义箱底仍+6.590478mm。TCP下降20.3208mm、箱中心下降18.2068mm并倾斜约11.639°，尚未横向离台即耗尽净空。非错误stage起点，不能靠末点或单纯lift终点证明全路径安全。scene27父status6/resources_released=false、业务UNRESOLVED；收尾底盘实测停稳，外层cleanup完成，503帧录像计数一致；domain64隔离journal保留。
+
+本轮选择仅修普通场景既有pick_exit候选：原3cm抬升同时向同场机器人方向离台，待全部角点核算后取120mm候选；不改MTC/API、不放宽碰撞、不减少实际保守模型。实际附件后全剩余路径重验仍为放行条件，不能宣称通用预测/重规划功能已实现。M1独占验证fixture的prepare_transfer_goal.py/scenario.json；root独占运行器与仿真；几何代理只做离线核算。原碰撞01:26:36截止不变。
+
+01:04 补充：scene27完整角点复算冻结（SHA70f679ee…）：径向120mm离台候选终点横向净空27.003mm，竖向24.264mm；只证明终点，不保证段内与OMPL后续回扫。M1验证fixture只改变pick_exit的XY（world约[.083028,.581206,1.225]），其他Goal字段逐项不变，6种无效距离拒绝；未改变MTC或物理尺寸。root核对script SHA19dca6a3…及scenario deda660b…后启动scene28/domain63，录屏与原实际附着全路径重验仍开启。结果未定，不能提前计入主线通过。
+
+01:15 补充：scene28径向向内120mm离台在规划阶段被arm_left_link_2/head_link_2自碰撞拒绝；scene29前向120mm离台也未生成完整Cartesian路径（fraction0.788767，VALID_OR_DIFFERENT_IK_BRANCH），均未发JTC、业务释放及外层清理成立，录像分别323/311帧一致。不将端点净空当作可达性。本轮只再取一个已选择的最小候选：原XY、PICK exit总抬升60mm，PREGRASP仍30mm，其他目标不变；依据原vertical30的LIFT已通过而后续收臂下降/倾斜消耗约24.521mm净空。新终点静态净空约54.264mm，但新轨迹仍必须由原完整路径检查放行，不沿用旧路径安全结论。原01:26:36截止保留，最后候选失败则安全留档暂缓，不展开IK/参数矩阵。
+
+## 历史主线检查点（2026-09-25 00:10）
+
+- 按用户最新要求，TF 本地接收停滞、物理状态偶发 STALE 及 scene20 启动失败均留档暂缓；不展开专项矩阵。主线验收目标和原碰撞、时效、停稳及资源门槛不变。
+- scene21 实际通过三个抓取阶段并应用物理附着，但 MoveIt 场景服务因重复删除同 ID 世界物体返回失败。父任务 status=6、resources_released=false，domain70 日志隔离保留；外层进程清理成功不代表业务释放。该直接阻断起点为 9月24日23:58。
+- M1 最小修复仅删除附着 diff 中冗余 world REMOVE，独立审查无阻断；root 构建并使用实际 MoveIt 2.5.9 库通过全部 6 项 payload_scene 测试。测试包括旧操作部分生效仍失败、新附着成功、保守尺寸、实际放置、其他物体保留与无关变更拒绝。没有减小几何或放宽读回。
+- root 正运行唯一 scene22/domain69 正常链并录屏；使用新 payload_scene 库 SHA `7b1f554d91108b89bcc499d9e2241ee99d8ee437fda9cfe79d13ad0b8ad98717`，执行器及实际加载库均按哈希绑定。其他窗口只做有界代码/证据审查，禁止共享构建与仿真并发。
+- 主线仍未验收：需同一父 Action 完成 PICK → 有载 NAV → PLACE → 权威 EMPTY/独立 Scene 读回 → 终态、实测停稳、释放及可播放录像。scene22 结果待定；当前6项通过只证明场景变换语义。
+
+00:13 补充：scene22 再次在三段抓取确认后、物理提交前被 STALE 终止；资源明确释放、实测收尾与进程清理成立，录像解码580帧与索引/元数据一致，未越过场景应用修复点。新增诊断明确显示 `poll_steady=21786366339340`、`received_steady=21786367169203`，而 poll ROS/receipt ROS/source stamp 均为111.32 s；即回调在调用方取时后0.829863 ms到达，原检查误当回退。仅对这一反复阻断正常链且已有直接证据的采样顺序问题作有界最小修复；原问题仍从23:30计时，00:30未完成则暂缓，不展开TF/future-drop/性能专项。
+
+00:21 补充：M1 快照取时修复完成，root 统一重建含新版hpp布局的executor+payload_client_test；使用build库实际通过6/6（2.483s），含确定性回调顺序、真实回退、重复帧不续期、原2s期限实际跨界拒绝。新执行器SHA `466699591b98eb3ed2a5a37a62a96fd90a30fa12e7aaff415f95c218fc197fcb`，payload_client库SHA `e4f2fbee6ce87305abd857abc14e68b9306e9d8fed4f5cef5695df6424e4d29c`。新scene23/domain68待起；M5仅修验证器最后尺寸判据：detach保留权威附件保守几何，不能误与原物理箱体尺寸比较。该静态冲突已由scene21权威尺寸和真实MoveIt测试确认，仍没有完整PLACE实际通过证据。
+
+00:24 补充：M5 最终world尺寸判据按本父事务ATTACH/DETACH、同源raw与confirmed ledger绑定保守primitive后精确比较；原物理尺寸scenario未改，缺来源或错版无回退。根独立重跑7项离线正反例全过，仅合成完整事务+scene21真实尺寸，不冒充PLACE实际通过。验证器SHA `2c0c04601d690bfe4c7810f197d508de0682594587da137953ce9bbc43d67eb2`。scene23/domain68已由root唯一启动，所有候选冻结；两组C++修复与验证器证据分别留档Git `64718b6e`、`6fc9e417`、`f3cdf5f0`，实际父Action待验收。
+
+00:27 补充：scene23 实际执行GRASP_CONFIRM后发物理command1，source revision2/sequence1609已应用；MoveIt场景申请和独立读回越过旧失败点，随后剩余MTC TRANSPORT_POSTURE重验拒绝 `astribot_gripper_left_Link_L11<->transport_box_01` 碰撞。此轮未出现PAYLOAD_STATE_STALE，支持快照顺序修复在本普通场景越过旧阻断，不代表所有时效问题或长期稳定性通过。父status6/resources_released=false，domain68 journal隔离；外层cleanup=true、stack stopped/remaining[]，录屏614帧解码/索引/元数据一致。新直接碰撞阻断起点00:26:36；初查actual body touch_links仅TCP，而原planned body允许手部接触，正核对合法指垫与几何冲突边界，不降低碰撞门槛。主线仍无LIFT/NAV/PLACE通过。
+
+## 历史主线检查点（23:28）
+
+- 根任务已接管唯一仿真操作；M1 冻结执行器并交叉审核，M3 仅定位当前过滤确认阻断，M5 整理真实阶段与录像证据。所有扩展矩阵继续冻结。
+- scene12 的夹爪目标要求对 60 mm 刚体压入 4 mm，实测停在约 59.932 mm；仅仿真 MTC 路径取消这项预紧，保持夹爪 0.02 rad 到位门槛。scene13 已真实确认 GRASP_CONFIRM 并应用附着，之后因过渡失效几何的空 model 字段被错误比较而失败；资源 UNRESOLVED、journal quarantined，进程退出不等于业务释放。几何计算与前后源码证据已在 Git `0ea3e64d` 留档。
+- M1 修复载荷事务中暂时失效几何的字段解释，始终保留 source/raw/底盘停稳与位移、原期限及最终版本提交屏障。根任务构建并通过域 41/42 两项隔离协议：有效恢复后继续；完整 model 真改变仍拒绝并隔离。它们不是 Gazebo 全流程验收。新执行器 SHA `84b8c2d127607a14e3936672e6597f4ea6daf395e7f609717c778695a0999b99`。
+- scene14 在 MTC 规划期间遇到 `ATTACHMENT_FILTER_UNCONFIRMED`，未发送 JTC；父任务取消并确认资源释放。原问题始于约 23:17。主 slice 本地 TF 查询从 source 70.4 到 72.4 持续看到 latest 70.3；独立 M5 与生产端高频记录仍连续，ledger 全程同版本 confirmed。当前证据支持本地 TF 接收/缓存停滞，不证明具体 DDS 或线程根因。
+- scene15/domain76 于 23:28 启动同一正常场景，仅主 slice 动态 `/tf` 订阅改为 best_effort 作单因子验证；静态 TF、所有时效/碰撞/版本门槛及二进制不变。补实际 QoS/GID 读回及 ACK 被动记录。候选目录 `runs/mainline_20260924/filter_tf_qos_2332` 名称只是标识，不是实际开始时刻。
+- 主线仍未通过：还需同一父 Action 完成 PICK → 有载 NAV → PLACE → 权威 EMPTY/独立 Scene 读回 → 终态、实测停稳、释放和录像。旧候选仍为活动依赖，不因已归档而删除。
+
+23:31 补充：scene15 已确认 PREGRASP、GRASP_APPROACH、GRASP_CONFIRM，进入 ATTACH_CONFIRM；0 physical_submission 后因 `PAYLOAD_STATE_STALE` 失败并释放。413 个观测到的 GeometryState 全为 CURRENT；仅支持本轮未复现过滤失效，不证明 DDS 假设已修复。物理状态源在 94.201–95.681 s 连续 75 帧、最大 source gap 20 ms，但独立 echo 没有本机 executor receipt 时间。M1 独占 `payload_client.cpp` 加最小失效诊断，根任务负责构建与实际库映射核验；原 23:30 问题起点保留。M3 归档 TF 单因子证据，M5 等下一实际阶段进展。协议与 scene12/13 小归档已单独提交 `96d7c424`。
+
+用户于 23:38 明确偶发问题暂过、留存后续专项排查。现将 scene14 本地 TF 滞后与 scene15 物理读回 STALE 标为暂缓（未修复/未验收），停止扩大定位。下一场 scene16/domain75 继续正常单箱流程，仍使用已验证 native84b 安装及 scene15 的 TF 订阅候选；不加载未构建/未验证的物理状态诊断改动，不放宽任何运行门槛。
+
+23:44 主线必要性复核：scene16 与 scene18 在首个参数服务发现阶段重复撤销停稳窗口，均无 fixture 修改与父任务；已确认 `read_model_parameters` 直接阻塞 `wait_for_service`，未调用已有 `spin`。仅委派 M1 修正此只读工具等待与原小测试，保持发现/总超时与实际停稳标准。scene17 规划阶段的附件状态暂时无效已按用户指示留档，不追加专项排查。物理读回诊断归档提交 `e71f2d11`，未验证诊断仅存档，活动源码已精确恢复至该候选前状态，避免后续构建误采用。
+
+23:58 主线推进：准备发现修复通过 5/5 离线及 scene19 实际准备，已提交 `4d02b7c7`。scene19 再次在 ATTACH_CONFIRM 前触发物理读回 STALE，因此仅恢复已归档的最小失效诊断，5/5 物理客户端用例通过。scene20 启动时 VoxelSLAM -11，原流程收尾 remaining[]，按用户要求留档暂过。scene21 越过物理读回，command_id=1 的实际附着已应用，随后 `PAYLOAD_SCENE_APPLY_REJECTED`；父任务 status6/resources_released=false、隔离保留，仿真进程收尾不等于业务释放。M1 获得仅 payload_scene.cpp/其测试与必要测试依赖的单写权限，核对真实 MoveIt PlanningScene 附着/世界对象更新语义；根仍独占构建和仿真。此新直接阻断起点23:58，其他偶发专项仍暂缓。
+
+## 历史主线检查点（19:05）
+
+22:50 恢复补充：M2 在 19:15 因调用额度中断，scene10 已取消、资源释放、停稳并退出；中断期间没有继续仿真。用户再次明确继续后由根任务接管实际执行，保留原问题起点与已用排查时间，不以换窗口重置。scene10 确证记录器 GC 长尾 160–259 ms，但实际首因是 PREGRASP 中段真实底盘角速度 -0.07309 rad/s 超过原 0.03 门槛，并非本场里程计过期；根因待查。JTC/geometry 纯归档流已改为 CDR 暂存、完整安全收尾后还原原 JSON，实际消息 6/6 往返字段一致；不改 GC 策略或验收阈值。scene11/domain80 在相同正常场补实际控轮二进制/参数读回及轮力矩记录，其他场景继续冻结。19:05 的发现等待与工位绑定修复结论不变；完整主线仍未通过。
+
+- 唯一验收对象为当前导航仓库中的普通单箱、同一父 Action：PICK → 有载 NAV → PLACE → 权威 EMPTY 与独立 PlanningScene 读回 → 子任务终态、实测停稳、资源释放，并有可播放录像。主线尚未通过；VLA、真机、新规划器、窄通道和多负载扩展均不启动。
+- 用户要求的停车、限速、不可执行已前置到 Nav2/BT/路由及其控制器；当前五消费者确认，不再要求末级执行保护 ACK。旧六 ACK 记录仅为历史证据。
+- M2 为唯一仿真操作者，负责私有验证脚本与同案逐次运行；M1 的 C++ 执行器冻结待命，根任务统一审查/构建/集成；M5 只核对已接受并实际执行的场次录像。M3 与扩展任务保持冻结。每次失败先定位原始证据，不盲目重跑。
+- 事件式底盘命令兼容修复通过 6/6 隔离 ROS 协议；初次工位观测在绑定 world epoch 前被丢弃的问题已修复，相关 C++ 单元验证 4/4 + 4/4。证据已分别留档于 Git `9aad27ab`、`3706dede`，不作为完整搬运通过依据。
+- 当前安装绑定见 [station candidate](evidence/mainline_20260924/transfer_station_binding_1841/candidate_binding.json)。执行器 SHA256 `3fd0bfa945b9b597dd3b3e90abb0cce9be6cba7ee22efeba28d0cc7b53b19763`；运行时校验同时包含实际加载的 helper 共享库。
+- scene09/domain100 首次接受正式父任务，实际通过工位 Scene 确认与规划，进入机械臂动作并反馈 GRASP_CONFIRM。之后验证器因 ODOM_STALE 主动取消：父任务返回 canceled/resources_released=true，独立 cleanup_stop 通过，未进入 NAV/PLACE。不能把反馈 GRASP_CONFIRM 当成物体已成功附着。
+- scene09 对齐同一 steady 时间的独立记录显示，取消前 /odom、/clock、joint 持续更新，而 probe 多种回调同时停顿。已把问题收敛到验证器自身阻塞；正在加入轻量 callback/spin/GC 计时以区分具体路径，未改 300 ms 时效或物理门槛。问题起点为 scene09 本次停顿，初始发现等待问题自约 18:39 计时并已在 scene09 越过，历史失败保留。
+- 19:05 必要性复核：仅上述验证器阻塞直接妨碍本次正常流程。旧准备失败录像不再逐场分析；M5 只处理 scene09 实际动作与后续正式场次。旧候选安装尚被 overlay 引用，主线替代版本未验收前不删除活动依赖。
+
+以下时间点、表格与“当前关闭”章节保留原始历史，不代表本检查点的新验收结论。
+
+最新边界调整（14:30 起，15:30 检查点）：用户明确取消独立整机末级执行保护，停车/限速/不可执行均前置至 Nav2/BT/路由规划。完整父任务保存 14:30 未编译检查点，不继续按旧六 ACK 接线。当前分工：M1 五 ACK 协调器/导航 helper，M2 前置仲裁/BT，M3 C++ NavigationConstraint（无速度写入），根任务负责 Nav2 指令统一限速、启动接线与隔离构建，M5 仅更新本次诊断采集。平滑器与底盘输出不新增上肢状态门禁。详见 [边界决定](NAVIGATION_UPPER_BODY_BOUNDARY_20260924.md)。14:42 必要性复核：这些变化均为用户明确改动的直接依赖，未启动窄通道、模型、GPU或多负载新矩阵；旧主线问题计时/证据不重置。
+
 最新恢复（14:05）：用户已批准 READY→固定工位单箱正式 C++ 闭环优先，真实模型、零位准备及扩展矩阵后置。M1 首因修复指定五场隔离协议已全部通过并冻结；目前仅施工同租约组合父任务、导航 helper、工位 Scene 刷新，尚未启动新真实场。14:20 必要性复核确认这三项直接阻断当前主线，M5只等待实际素材做既有采证。新的限定契约和单写分工见 [固定工位主线契约](evidence/mainline_20260924/fixed_station_transfer_contract.md)。下文13:44暂停和旧状态作为历史保留，由本段及后续新证据覆盖。
 
 ## 分工及文件所有权
+
+15:10 检查点：原 14:10 起的连续父任务暂停，未完成整栈或组合执行器验证。导航 helper 三例已通过，原两项失败由测试端一次 spin 只接收一条 ACK 引起，改为有界排空后通过；生产 TTL、停止窗口均未放宽。父 runner 的首次 client 数量及反馈父/子 context 匹配仍需恢复时核对，不能以 helper 通过宣称父流程通过。
+
+14:30 起的导航边界任务继续至原 15:30 检查点：复核发现臂展耦合默认仍在末端缩放 Twist，将其改为上游百分比限速源并合入 NavigationConstraint。根负责启动装配，M3 负责约束消费，独立 agent 负责复用臂展算法的限速源；未启动新的 Gazebo 场景。
 
 | 工作包 | 执行任务 | 本轮交付边界 | 修改范围 | 当前状态 |
 |---|---|---|---|---|

@@ -16,7 +16,7 @@
     }
   ],
   "offline_goal_generation": "PASS; see offline_goal_generation.json",
-  "coordinator_scene": "scene30/domain61 pending",
+  "coordinator_scene": "scene31/domain60 failed actual-payload remaining-path revalidation; issue DEFERRED after the final candidate failed.",
   "geometric_counterfactual_only": {
     "old_first_vertical_clearance_mm": 24.2642682,
     "old_bad_vertical_clearance_mm": -0.257164,
@@ -26,5 +26,50 @@
     "new_path_guarantee": false
   },
   "on_failure_or_deadline": "Record and defer this issue; no additional candidate/IK investigation.",
-  "performance": "NOT_MEASURED"
+  "performance": "NOT_MEASURED",
+  "updated_at": "2026-09-25T01:25:34.212391+08:00",
+  "actual_result": {
+    "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene31_world60/full_transfer/result.json",
+    "sha256": "1ef9c93bc2d706df9d9da8b23486bd716dabf0fc810e5e8b6d7d1e1db897b8f6",
+    "evidence_check": "Read-only raw result verification; no ROS/build/parameter changes.",
+    "status": 6,
+    "success": false,
+    "resources_released": false,
+    "reason": "RESOURCE_RECOVERY_REQUIRED:PAYLOAD_REVALIDATION_REJECTED:MTC_PAYLOAD_REVALIDATION:TRANSPORT_POSTURE:EXTERNAL_COLLISION:environment collision: transport_box_01<->transport_box_01_pick_station",
+    "confirmed_stages": [
+      {
+        "journal_index": 25,
+        "stage": "PREGRASP"
+      },
+      {
+        "journal_index": 45,
+        "stage": "GRASP_APPROACH"
+      },
+      {
+        "journal_index": 65,
+        "stage": "GRASP_CONFIRM"
+      }
+    ],
+    "physical_applied_scene_submission": {
+      "journal_index": 68,
+      "command_id": 1,
+      "source_revision": 2,
+      "source_sequence": 1518
+    },
+    "quarantined_journal_index": 71,
+    "resource_disposition": "UNRESOLVED",
+    "business_cleanup_complete": false,
+    "outer_cleanup_complete": true,
+    "lift_navigation_place": "NOT_EXECUTED",
+    "business_acceptance": "FAIL_NOT_COMPLETE"
+  },
+  "prior_scene30": {
+    "source": "Coordinator status messages",
+    "initial_full_plan": "PASSED",
+    "actual_attachment_revalidation": "NOT_REACHED",
+    "result": "Canceled during PREGRASP after measured angular velocity exceeded the unchanged validator threshold; normal release and process cleanup confirmed by coordinator.",
+    "cause": "UNKNOWN; not classified as false positive or vertical-lift planning failure."
+  },
+  "freeze": "Both fixture files and all product changes remain frozen; no additional candidates or expanded interfaces.",
+  "resume_boundary": "Address nominal planned geometry versus actual attached conservative geometry in path generation; current revalidate service cannot return revised trajectories, so the executor-owned timed path must not be silently replaced."
 }

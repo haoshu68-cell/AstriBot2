@@ -1,0 +1,349 @@
+{
+  "schema": "astribot.scene30.motion_readonly_audit/1",
+  "recorded_at": "2026-09-25T01:22:36.292083+08:00",
+  "scope": "Offline review of saved scene30 samples only; no ROS, test, threshold, configuration, or runtime change. This one JSON is the only output of the audit.",
+  "case": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene30_world61",
+  "issue_timer": "Original collision investigation deadline remains 2026-09-25T01:26:36+08:00; this audit does not reset it.",
+  "inputs": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene30_world61/full_transfer/result.json",
+      "bytes": 95372567,
+      "sha256": "54c06fe463dd86b4397a37c1165a1cc2279a8791f53ff6ca65b04100fd3c1bfa"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene30_world61/used_verify_full_transfer.py",
+      "bytes": 49820,
+      "sha256": "2c0c04601d690bfe4c7810f197d508de0682594587da137953ce9bbc43d67eb2"
+    }
+  ],
+  "identity": {
+    "task_id": "fixed_transfer_5e1f2e92cb794277a3ae6a925cda243d",
+    "context_id": "de8bf93090ea48df9bf372c7c0ec897a",
+    "goal_uuid": "7fbfd921b1524f748dd38adaefaf709f",
+    "lease_epoch": [
+      "b8d53989-d54a-480c-8e89-9b564dbde45c_1",
+      "b8d53989-d54a-480c-8e89-9b564dbde45c"
+    ]
+  },
+  "criterion": {
+    "outside_phase": "NAVIGATE",
+    "pending_binding_exempts_motion_check": true,
+    "speed_mps_strict_gt": 0.02,
+    "abs_angular_speed_radps_strict_gt": 0.03,
+    "command_abs_strict_gt": 1e-06,
+    "error": "RuntimeError('UNEXPECTED_MOTION_OUTSIDE_NAVIGATION')",
+    "verifier_line": 291
+  },
+  "pregrasp_start_feedback": {
+    "source_index": 422,
+    "wall": 25761.410026298,
+    "ros_s": 76.85300000000001,
+    "goal_id": "7fbfd921b1524f748dd38adaefaf709f",
+    "feedback": {
+      "phase": "PICK",
+      "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+      "lease_id": "b8d53989-d54a-480c-8e89-9b564dbde45c_1",
+      "resource_epoch": "b8d53989-d54a-480c-8e89-9b564dbde45c",
+      "context_id": "de8bf93090ea48df9bf372c7c0ec897a",
+      "object_id": "transport_box_01",
+      "stage_id": "PREGRASP",
+      "hold_id": "b8d53989-d54a-480c-8e89-9b564dbde45c_1_hold_1_0",
+      "hold_confirmed": false,
+      "navigation_goal_uuid": ""
+    }
+  },
+  "trigger": {
+    "motion_source_index": 1597,
+    "sample": {
+      "t": 88.02,
+      "wall": 25773.555315891,
+      "x": 2.42002313590795e-05,
+      "y": -1.289405055318997e-05,
+      "yaw": -0.0005773698994630981,
+      "vx": 0.002667450548568039,
+      "vy": -0.001812440861757226,
+      "wz": -0.051325670938240364,
+      "frame": "odom",
+      "command_observed": true,
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 25773.555102442
+    },
+    "planar_speed_mps": 0.0032249394267835803,
+    "exceeded": "angular_speed",
+    "previous_sample": {
+      "t": 88.0,
+      "wall": 25773.528856863,
+      "x": -8.483197232994961e-06,
+      "y": 9.130791410878933e-06,
+      "yaw": 5.837318805845901e-05,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0,
+      "frame": "odom",
+      "command_observed": true,
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 25765.278431393
+    },
+    "observed_zero_command_to_odom_receipt_s": 0.00021344900233088993,
+    "odom_receipt_to_cancel_request_s": 5.399599831434898e-05
+  },
+  "commands": {
+    "source_array": "commands",
+    "count": 7,
+    "all_observed_commands_zero": true,
+    "records": [
+      {
+        "wall": 25742.910294966,
+        "vx": 0.0,
+        "vy": 0.0,
+        "wz": 0.0
+      },
+      {
+        "wall": 25746.817259906,
+        "vx": 0.0,
+        "vy": 0.0,
+        "wz": 0.0
+      },
+      {
+        "wall": 25747.934844305,
+        "vx": 0.0,
+        "vy": 0.0,
+        "wz": 0.0
+      },
+      {
+        "wall": 25755.371488223,
+        "vx": 0.0,
+        "vy": 0.0,
+        "wz": 0.0
+      },
+      {
+        "wall": 25760.012748529,
+        "vx": 0.0,
+        "vy": 0.0,
+        "wz": 0.0
+      },
+      {
+        "wall": 25765.278431393,
+        "vx": 0.0,
+        "vy": 0.0,
+        "wz": 0.0
+      },
+      {
+        "wall": 25773.555102442,
+        "vx": 0.0,
+        "vy": 0.0,
+        "wz": 0.0
+      }
+    ],
+    "boundary": "Observed command records only; absence before first command is not interpreted as a measured zero."
+  },
+  "pregrasp_to_cancel_metrics": {
+    "reference_sample": {
+      "t": 76.86,
+      "wall": 25761.418249457,
+      "x": -6.6614832915328025e-06,
+      "y": 9.142277864437829e-06,
+      "yaw": 5.432975710907252e-05,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0,
+      "frame": "odom",
+      "command_observed": true,
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 25760.012748529
+    },
+    "last_sample": {
+      "t": 88.02,
+      "wall": 25773.555315891,
+      "x": 2.42002313590795e-05,
+      "y": -1.289405055318997e-05,
+      "yaw": -0.0005773698994630981,
+      "vx": 0.002667450548568039,
+      "vy": -0.001812440861757226,
+      "wz": -0.051325670938240364,
+      "frame": "odom",
+      "command_observed": true,
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 25773.555102442
+    },
+    "net_displacement_m": 3.792156644055423e-05,
+    "max_displacement_m": 3.792156644055423e-05,
+    "net_yaw_rad": -0.0006316996565721705,
+    "sampled_polyline_length_m": 4.123367943295554e-05,
+    "threshold_exceedance_samples": 1
+  },
+  "through_cleanup_metrics": {
+    "max_displacement_from_pregrasp_m": 0.00016559608105174982,
+    "max_abs_yaw_change_from_pregrasp_rad": 0.0015451477285518967,
+    "max_planar_speed_mps": 0.0032249394267835803,
+    "max_abs_angular_speed_radps": 0.051325670938240364,
+    "post_cancel_exceedance_samples": [
+      {
+        "source_index": 1598,
+        "t": 88.04,
+        "wall": 25773.580163295,
+        "x": 8.100760614156136e-05,
+        "y": -4.101157916946445e-05,
+        "yaw": -0.0013024141929892006,
+        "vx": 0.00287824539417868,
+        "vy": -0.0012599030632530254,
+        "wz": -0.03096293476119172,
+        "frame": "odom",
+        "command_observed": true,
+        "cmd_vx": 0.0,
+        "cmd_vy": 0.0,
+        "cmd_wz": 0.0,
+        "cmd_wall": 25773.555102442
+      }
+    ],
+    "first_observed_zero_velocity_after_cancel": {
+      "t": 88.1,
+      "wall": 25773.65302956,
+      "x": 0.00014924782938637485,
+      "y": -4.666406836966105e-05,
+      "yaw": -0.001444486020603475,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0,
+      "frame": "odom",
+      "command_observed": true,
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 25773.555102442
+    },
+    "all_subsequent_velocity_samples_zero": true,
+    "last_sample": {
+      "t": 89.52,
+      "wall": 25775.194277259,
+      "x": 0.00014924782938637485,
+      "y": -4.666406836966105e-05,
+      "yaw": -0.001444486020603475,
+      "vx": 0.0,
+      "vy": 0.0,
+      "wz": 0.0,
+      "frame": "odom",
+      "command_observed": true,
+      "cmd_vx": 0.0,
+      "cmd_vy": 0.0,
+      "cmd_wz": 0.0,
+      "cmd_wall": 25773.555102442
+    },
+    "boundary": "Sampled odometry metrics, not continuous-motion extrema or contact/force measurements."
+  },
+  "cancellation": {
+    "events": [
+      {
+        "kind": "cancel_requested",
+        "wall": 25773.555369887,
+        "ros_s": 88.02000000000001,
+        "goal_uuid": "7fbfd921b1524f748dd38adaefaf709f",
+        "identity": [
+          "b8d53989-d54a-480c-8e89-9b564dbde45c_1",
+          "b8d53989-d54a-480c-8e89-9b564dbde45c"
+        ]
+      },
+      {
+        "kind": "cancel_response",
+        "wall": 25773.582472329,
+        "ros_s": 88.04100000000001,
+        "response": {
+          "return_code": 0,
+          "goals_canceling": [
+            {
+              "goal_id": {
+                "uuid": [
+                  127,
+                  191,
+                  217,
+                  33,
+                  177,
+                  82,
+                  79,
+                  116,
+                  141,
+                  211,
+                  138,
+                  218,
+                  239,
+                  175,
+                  112,
+                  159
+                ]
+              },
+              "stamp": {
+                "sec": 57,
+                "nanosec": 476000000
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "parent_terminal",
+        "wall": 25774.428856645,
+        "ros_s": 88.802,
+        "status": 5,
+        "result": {
+          "success": false,
+          "resources_released": true,
+          "reason": "TASK_CANCELED",
+          "cleanup_reason": "",
+          "lease_id": "b8d53989-d54a-480c-8e89-9b564dbde45c_1",
+          "navigation_goal_uuid": "",
+          "final_attachment_revision": "295cf0941c2d0274e2169789431d70c089da7dde6f66094b6b623cb6f4889471"
+        }
+      }
+    ],
+    "parent_terminal": {
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "TASK_CANCELED",
+        "cleanup_reason": "",
+        "lease_id": "b8d53989-d54a-480c-8e89-9b564dbde45c_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "295cf0941c2d0274e2169789431d70c089da7dde6f66094b6b623cb6f4889471"
+      }
+    },
+    "resource_disposition": "RELEASE_CONFIRMED",
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 36,
+      "span_s": 0.7000000000000028,
+      "start_ros_s": 88.82,
+      "end_ros_s": 89.52,
+      "drift_m": 0.0,
+      "rotation_rad": 0.0,
+      "speed_mps": 0.0,
+      "angular_speed_radps": 0.0,
+      "command_max": 0.0,
+      "command_observed": true,
+      "fresh": true
+    },
+    "cleanup_complete": true,
+    "cleanup_errors": []
+  },
+  "navigation": {
+    "goal_uuids": [],
+    "execution_records": 0,
+    "status_records": 0
+  },
+  "conclusion": {
+    "unauthorized_nonzero_command_evidence": false,
+    "odometry_threshold_exceedance_confirmed": true,
+    "cause": "UNDETERMINED; no contact or dynamic-cause investigation performed.",
+    "accepted_as_success": false,
+    "not_a_false_positive_claim": true,
+    "next_run_boundary": "The coordinator chose a normal rerun of the same candidate with original motion thresholds and immediate cancellation retained; scene30 remains a recorded failure."
+  }
+}

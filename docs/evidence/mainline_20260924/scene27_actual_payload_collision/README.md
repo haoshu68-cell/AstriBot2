@@ -9,3 +9,9 @@ The first inward 120 mm scene-only exit candidate had +27.003 mm endpoint side c
 The next candidate changes only the ordinary fixture exit to horizontal robot-forward 120 mm with the same 30 mm lift. Endpoint clearance is +34.338 mm; full MTC and actual attached-body path validation remain mandatory. This is not an implemented general conservative-payload predictor or replan protocol.
 
 Scene27 business state remains UNRESOLVED/quarantined despite measured chassis stop and successful outer process cleanup; old journals are retained. Scene25 TF preparation failure and scene26 empty publisher observation are deferred at the user's request, with no gate relaxation. The direct collision investigation retains its original 00:26:36 start and 01:26:36 cutoff on 2026-09-25 Asia/Shanghai.
+
+## Final checkpoint
+
+The final vertical60 candidate passed initial planning but scene31 still rejected actual TRANSPORT_POSTURE at119/840. Independent full-corner/15-axis SAT analysis in scene31_clearance.json confirms a real conservative-box/station overlap after the path descends and tilts; a higher lift endpoint alone is insufficient. Nominal geometry can have a corner below the table top while still not overlap horizontally, so minimum Z alone must not be used as a collision test.
+
+Scene31 confirmed PREGRASP, GRASP_APPROACH and GRASP_CONFIRM plus physical attachment; LIFT, loaded navigation and PLACE remain unexecuted. The video has545 decoded/index/metadata frames and is a failed-run recording. Business state is still quarantined/UNRESOLVED; measured chassis stop and outer process cleanup are separate. Final details and absolute paths are in scene31_final_checkpoint.json. All further candidate search stopped at the original one-hour checkpoint; no safety thresholds or geometry were reduced.

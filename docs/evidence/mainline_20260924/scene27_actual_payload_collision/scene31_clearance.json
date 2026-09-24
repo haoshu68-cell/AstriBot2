@@ -1,0 +1,1527 @@
+{
+  "schema": "mainline.scene31_first_collision_clearance/1",
+  "created_at_utc": "2026-09-24T17:25:22.205491+00:00",
+  "scope": "Bounded offline evidence closeout only; no new candidates, parameters, build or ROS.",
+  "inputs": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene31_world60/transport_skills.log",
+      "sha256": "1238df3167214310538d5ef5d6cf021ee10cc9c698dff43e75ea21647522f01e"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene31_world60/executor_registration/robot_state_publisher.urdf",
+      "sha256": "dd446d845424fd2519b0eb000e911cb9bbe542822e9d1488575d1ab762300d2a"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene31_world60/full_transfer/result.json",
+      "sha256": "1ef9c93bc2d706df9d9da8b23486bd716dabf0fc810e5e8b6d7d1e1db897b8f6"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene31_world60/fixtures/result.json",
+      "sha256": "b7efad6e1d9b8ed2c3aced0c440fee361d8d19fea550ad6d267ab489e5d588ec"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene31_world60/transfer_goal.json",
+      "sha256": "f3e402cf61908fb1577153b98d10063f210628e14f74d2affeb11e9fd3ed02c5"
+    }
+  ],
+  "diagnostic_header": "[mtc_planner-3] [ERROR] [1790270577.246137016] [astribot_s1_manipulation.external_trajectory]: EXTERNAL_COLLISION_SNAPSHOT frame=astribot_torso_base group=arm_left first_bad_index=119 checked_states=840 trajectory_waypoints=840 reason=environment collision: transport_box_01<->transport_box_01_pick_station",
+  "header_line_one_based": 443,
+  "station_source": "initial_full_scene.world.collision_objects[id=transport_box_01_pick_station] in saved full_transfer/result.json",
+  "station": {
+    "header": {
+      "stamp": {
+        "sec": 0,
+        "nanosec": 0
+      },
+      "frame_id": "astribot_torso_base"
+    },
+    "pose": {
+      "position": {
+        "x": 0.10004462623625887,
+        "y": 0.6999854686583035,
+        "z": 0.38827617357167876
+      },
+      "orientation": {
+        "x": -5.834133433830117e-08,
+        "y": -8.426207869147571e-08,
+        "z": -2.71648785462791e-05,
+        "w": 0.9999999996310294
+      }
+    },
+    "id": "transport_box_01_pick_station",
+    "type": {
+      "key": "",
+      "db": ""
+    },
+    "primitives": [
+      {
+        "type": 1,
+        "dimensions": [
+          0.1,
+          0.1,
+          1.035
+        ],
+        "polygon": {
+          "points": []
+        }
+      }
+    ],
+    "primitive_poses": [
+      {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      }
+    ],
+    "meshes": [],
+    "mesh_poses": [],
+    "planes": [],
+    "plane_poses": [],
+    "subframe_names": [],
+    "subframe_poses": [],
+    "operation": "\u0000"
+  },
+  "base_from_world_matrix": [
+    [
+      0.9999999985241244,
+      5.432975708234402e-05,
+      -1.6852098765024788e-07,
+      6.682763499899884e-06
+    ],
+    [
+      -5.432975706268018e-05,
+      0.9999999985241318,
+      1.1668724657181725e-07,
+      -9.157718532647693e-06
+    ],
+    [
+      1.68527326991294e-07,
+      -1.1667809069528242e-07,
+      0.9999999999999789,
+      -0.12922376160637947
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "method": {
+    "fk": "Pinocchio 4.0.0; complete RobotState joint-name mapping, continuous joints represented by cos/sin.",
+    "box_transform": "T_base_box=T_base_tcp*object.pose*primitive_pose; transform its eight corners into saved station frame.",
+    "clearance": "min(corner_station.z)-station_half_height; positive means above support plane.",
+    "obb_collision": "15-axis box separating-axis test, using station axes, box axes, pairwise cross-products; degenerate axes skipped.",
+    "nominal_comparison": "Same authoritative attachment transform with [0.06,0.06,0.12] dimensions, analysis only."
+  },
+  "states": {
+    "first": {
+      "log_line_one_based": 444,
+      "robot_state": {
+        "joint_state": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "name": [
+            "astribot_torso_joint_1",
+            "astribot_torso_joint_2",
+            "astribot_torso_joint_3",
+            "astribot_torso_joint_4",
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7",
+            "astribot_gripper_left_joint_L1",
+            "astribot_gripper_left_joint_L11",
+            "astribot_gripper_left_joint_L2",
+            "astribot_gripper_left_joint_R1",
+            "astribot_gripper_left_joint_R11",
+            "astribot_gripper_left_joint_R2",
+            "astribot_arm_right_joint_1",
+            "astribot_arm_right_joint_2",
+            "astribot_arm_right_joint_3",
+            "astribot_arm_right_joint_4",
+            "astribot_arm_right_joint_5",
+            "astribot_arm_right_joint_6",
+            "astribot_arm_right_joint_7",
+            "astribot_gripper_right_joint_L1",
+            "astribot_gripper_right_joint_L11",
+            "astribot_gripper_right_joint_L2",
+            "astribot_gripper_right_joint_R1",
+            "astribot_gripper_right_joint_R11",
+            "astribot_gripper_right_joint_R2",
+            "astribot_head_joint_1",
+            "astribot_head_joint_2",
+            "wheel_LF_Joint",
+            "wheel_LR_Joint",
+            "wheel_RF_Joint",
+            "wheel_RR_Joint"
+          ],
+          "position": [
+            1.0405539384763838e-12,
+            4.320260174187093e-12,
+            7.04954107908221e-12,
+            -8.419835464984612e-18,
+            -1.7564488691947848,
+            -1.1762640555216264,
+            1.9670561403450553,
+            0.8279112745370393,
+            -1.985549074811536,
+            -0.12327995050662102,
+            -1.1811517971685013,
+            0.426861068144595,
+            0.426861068144595,
+            -0.426861068144595,
+            0.426861068144595,
+            -0.426861068144595,
+            0.426861068144595,
+            -9.82942183312104e-12,
+            0.00011843963371532651,
+            0.5999999999814435,
+            0.9993165527473871,
+            -9.762665982165272e-13,
+            -1.6191102873460748e-11,
+            1.1238325388471097e-11,
+            0.0008993615307645307,
+            0.0008993615307645307,
+            -0.0008993615307645307,
+            0.0008993615307645307,
+            -0.0008993615307645307,
+            0.0008993615307645307,
+            1.4499999999999984,
+            0.6500000000079683,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "velocity": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            3.1045219420086844e-17,
+            -6.623233212301226e-19,
+            -2.7755335232081817e-17,
+            -6.582145752691039e-18,
+            -4.083333351419168e-18,
+            1.25962299569931e-19,
+            5.144905995432492e-18,
+            2.5847379792054426e-17,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effort": []
+        },
+        "multi_dof_joint_state": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "joint_names": [],
+          "transforms": [],
+          "twist": [],
+          "wrench": []
+        },
+        "attached_collision_objects": [
+          {
+            "link_name": "astribot_arm_left_tcp_link",
+            "object": {
+              "header": {
+                "stamp": {
+                  "sec": 0,
+                  "nanosec": 0
+                },
+                "frame_id": "astribot_arm_left_tcp_link"
+              },
+              "pose": {
+                "position": {
+                  "x": 0.005997577741976943,
+                  "y": -0.1000008784758708,
+                  "z": 0.00013315841734361166
+                },
+                "orientation": {
+                  "x": -0.5004068445318721,
+                  "y": -0.499592823467698,
+                  "z": -0.4995928279618912,
+                  "w": 0.5004068414143327
+                }
+              },
+              "id": "transport_box_01",
+              "type": {
+                "key": "",
+                "db": ""
+              },
+              "primitives": [
+                {
+                  "type": 1,
+                  "dimensions": [
+                    0.07146969384566991,
+                    0.07146969384566991,
+                    0.1314696938456699
+                  ],
+                  "polygon": {
+                    "points": []
+                  }
+                }
+              ],
+              "primitive_poses": [
+                {
+                  "position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                  },
+                  "orientation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                  }
+                }
+              ],
+              "meshes": [],
+              "mesh_poses": [],
+              "planes": [],
+              "plane_poses": [],
+              "subframe_names": [],
+              "subframe_poses": [],
+              "operation": 0
+            },
+            "touch_links": [
+              "astribot_arm_left_tcp_link",
+              "astribot_gripper_left_Link_L11",
+              "astribot_gripper_left_Link_R11"
+            ],
+            "detach_posture": {
+              "header": {
+                "stamp": {
+                  "sec": 0,
+                  "nanosec": 0
+                },
+                "frame_id": ""
+              },
+              "joint_names": [],
+              "points": []
+            },
+            "weight": 0.0
+          }
+        ],
+        "is_diff": false
+      },
+      "tcp_base_xyz_m": [
+        0.10004450068582701,
+        0.6999855487160537,
+        1.1257761622192732
+      ],
+      "tcp_world_xyz_m": [
+        0.09999999873412053,
+        0.6999999940008383,
+        1.2549999886476095
+      ],
+      "tcp_base_quaternion_xyzw": [
+        0.5000135033819859,
+        0.49998641039410185,
+        0.49998642779063307,
+        0.500013657695523
+      ],
+      "body_base_xyz_m": [
+        0.10017800207953251,
+        0.7059831055233435,
+        1.0257752829451274
+      ],
+      "body_base_rpy_degrees": [
+        -8.296562153335925e-06,
+        -9.74645973133005e-06,
+        0.09016704451861811
+      ],
+      "conservative": {
+        "dimensions_m": [
+          0.07146969384566991,
+          0.07146969384566991,
+          0.1314696938456699
+        ],
+        "center_station_m": [
+          0.00013315742894381977,
+          0.005997569720286644,
+          0.6374991100508065
+        ],
+        "projected_half_height_station_m": 0.0657348479813257,
+        "corners_station_m": [
+          [
+            -0.03554346422631921,
+            -0.029795409465389097,
+            0.5717642640599132
+          ],
+          [
+            -0.035543464465068744,
+            -0.029795405804339217,
+            0.7032339579055833
+          ],
+          [
+            -0.035659819806832235,
+            0.04167418966439948,
+            0.5717642620694808
+          ],
+          [
+            -0.03565982004558177,
+            0.04167419332544936,
+            0.7032339559151508
+          ],
+          [
+            0.03592613490346941,
+            -0.029679053884876072,
+            0.5717642641864622
+          ],
+          [
+            0.035926134664719875,
+            -0.029679050223826192,
+            0.7032339580321322
+          ],
+          [
+            0.035809779322956384,
+            0.041790545244912505,
+            0.5717642621960297
+          ],
+          [
+            0.03580977908420685,
+            0.041790548905962385,
+            0.7032339560416998
+          ]
+        ],
+        "corners_base_m": [
+          [
+            0.06449944693076048,
+            0.6701920570222627,
+            0.9600404351180063
+          ],
+          [
+            0.06449942453680718,
+            0.6701920760241621,
+            1.091510128963673
+          ],
+          [
+            0.06438697427637902,
+            0.7416616623681418,
+            0.9600404247690284
+          ],
+          [
+            0.06438695188242571,
+            0.7416616813700412,
+            1.0915101186146952
+          ],
+          [
+            0.1359690522766393,
+            0.6703045296766459,
+            0.9600404472755597
+          ],
+          [
+            0.135969029882686,
+            0.6703045486785453,
+            1.0915101411212265
+          ],
+          [
+            0.13585657962225783,
+            0.741774135022525,
+            0.9600404369265817
+          ],
+          [
+            0.13585655722830453,
+            0.7417741540244244,
+            1.0915101307722486
+          ]
+        ],
+        "support_normal_clearance_m": 0.05426426206948087,
+        "station_local_xy_aabb_overlap_m": [
+          0.08565982004558177,
+          0.0797954094653891
+        ],
+        "obb_sat_intersects": false,
+        "largest_separating_axis_gap_m": 0.054264262069480845
+      },
+      "nominal": {
+        "dimensions_m": [
+          0.06,
+          0.06,
+          0.12
+        ],
+        "center_station_m": [
+          0.00013315742894381977,
+          0.005997569720286644,
+          0.6374991100508065
+        ],
+        "projected_half_height_station_m": 0.06000000088862065,
+        "corners_station_m": [
+          [
+            -0.029817961479068716,
+            -0.024051233418004542,
+            0.5774991108331871
+          ],
+          [
+            -0.029817961696989238,
+            -0.024051230076352393,
+            0.6974991108331872
+          ],
+          [
+            -0.02991564392956105,
+            0.03594868706643335,
+            0.5774991091621858
+          ],
+          [
+            -0.02991564414748157,
+            0.0359486904080855,
+            0.6974991091621859
+          ],
+          [
+            0.03018195900536921,
+            -0.02395355096751221,
+            0.5774991109394271
+          ],
+          [
+            0.030181958787448688,
+            -0.02395354762586006,
+            0.6974991109394272
+          ],
+          [
+            0.030084276554876877,
+            0.03604636951692568,
+            0.5774991092684258
+          ],
+          [
+            0.030084276336956355,
+            0.03604637285857783,
+            0.697499109268426
+          ]
+        ],
+        "corners_base_m": [
+          [
+            0.0702252607828081,
+            0.6759359226651798,
+            0.9657752821859642
+          ],
+          [
+            0.07022524034255061,
+            0.6759359400093133,
+            1.0857752821859614
+          ],
+          [
+            0.07013083811356509,
+            0.7359358483681293,
+            0.9657752734978247
+          ],
+          [
+            0.0701308176733076,
+            0.7359358657122629,
+            1.0857752734978219
+          ],
+          [
+            0.13022518648575743,
+            0.6760303453344242,
+            0.965775292392433
+          ],
+          [
+            0.13022516604549994,
+            0.6760303626785578,
+            1.0857752923924302
+          ],
+          [
+            0.1301307638165144,
+            0.7360302710373737,
+            0.9657752837042934
+          ],
+          [
+            0.1301307433762569,
+            0.7360302883815073,
+            1.0857752837042907
+          ]
+        ],
+        "support_normal_clearance_m": 0.05999910916218587,
+        "station_local_xy_aabb_overlap_m": [
+          0.07991564414748158,
+          0.07405123341800454
+        ],
+        "obb_sat_intersects": false,
+        "largest_separating_axis_gap_m": 0.0599991091621859
+      }
+    },
+    "bad": {
+      "log_line_one_based": 445,
+      "robot_state": {
+        "joint_state": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "name": [
+            "astribot_torso_joint_1",
+            "astribot_torso_joint_2",
+            "astribot_torso_joint_3",
+            "astribot_torso_joint_4",
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7",
+            "astribot_gripper_left_joint_L1",
+            "astribot_gripper_left_joint_L11",
+            "astribot_gripper_left_joint_L2",
+            "astribot_gripper_left_joint_R1",
+            "astribot_gripper_left_joint_R11",
+            "astribot_gripper_left_joint_R2",
+            "astribot_arm_right_joint_1",
+            "astribot_arm_right_joint_2",
+            "astribot_arm_right_joint_3",
+            "astribot_arm_right_joint_4",
+            "astribot_arm_right_joint_5",
+            "astribot_arm_right_joint_6",
+            "astribot_arm_right_joint_7",
+            "astribot_gripper_right_joint_L1",
+            "astribot_gripper_right_joint_L11",
+            "astribot_gripper_right_joint_L2",
+            "astribot_gripper_right_joint_R1",
+            "astribot_gripper_right_joint_R11",
+            "astribot_gripper_right_joint_R2",
+            "astribot_head_joint_1",
+            "astribot_head_joint_2",
+            "wheel_LF_Joint",
+            "wheel_LR_Joint",
+            "wheel_RF_Joint",
+            "wheel_RR_Joint"
+          ],
+          "position": [
+            1.0405539384763838e-12,
+            4.320260174187093e-12,
+            7.04954107908221e-12,
+            -8.419835464984612e-18,
+            -1.5703063070226286,
+            -1.0295170381314238,
+            1.5560829663790083,
+            0.8510887360499649,
+            -1.69870497156335,
+            -0.10570255303928808,
+            -0.9873413811148438,
+            0.426861068144595,
+            0.426861068144595,
+            -0.426861068144595,
+            0.426861068144595,
+            -0.426861068144595,
+            0.426861068144595,
+            -9.82942183312104e-12,
+            0.00011843963371532651,
+            0.5999999999814435,
+            0.9993165527473871,
+            -9.762665982165272e-13,
+            -1.6191102873460748e-11,
+            1.1238325388471097e-11,
+            0.0008993615307645307,
+            0.0008993615307645307,
+            -0.0008993615307645307,
+            0.0008993615307645307,
+            -0.0008993615307645307,
+            0.0008993615307645307,
+            1.4499999999999984,
+            0.6500000000079683,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "velocity": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.05252044506083921,
+            0.04140492413312839,
+            -0.11595679006932365,
+            0.006539560752975976,
+            0.08093355861159361,
+            0.004959493020955575,
+            0.05468394326253292,
+            2.5847379792054426e-17,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effort": []
+        },
+        "multi_dof_joint_state": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "joint_names": [],
+          "transforms": [],
+          "twist": [],
+          "wrench": []
+        },
+        "attached_collision_objects": [
+          {
+            "link_name": "astribot_arm_left_tcp_link",
+            "object": {
+              "header": {
+                "stamp": {
+                  "sec": 0,
+                  "nanosec": 0
+                },
+                "frame_id": "astribot_arm_left_tcp_link"
+              },
+              "pose": {
+                "position": {
+                  "x": 0.005997577741976943,
+                  "y": -0.1000008784758708,
+                  "z": 0.00013315841734361166
+                },
+                "orientation": {
+                  "x": -0.5004068445318721,
+                  "y": -0.499592823467698,
+                  "z": -0.4995928279618912,
+                  "w": 0.5004068414143327
+                }
+              },
+              "id": "transport_box_01",
+              "type": {
+                "key": "",
+                "db": ""
+              },
+              "primitives": [
+                {
+                  "type": 1,
+                  "dimensions": [
+                    0.07146969384566991,
+                    0.07146969384566991,
+                    0.1314696938456699
+                  ],
+                  "polygon": {
+                    "points": []
+                  }
+                }
+              ],
+              "primitive_poses": [
+                {
+                  "position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                  },
+                  "orientation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                  }
+                }
+              ],
+              "meshes": [],
+              "mesh_poses": [],
+              "planes": [],
+              "plane_poses": [],
+              "subframe_names": [],
+              "subframe_poses": [],
+              "operation": 0
+            },
+            "touch_links": [
+              "astribot_arm_left_tcp_link",
+              "astribot_gripper_left_Link_L11",
+              "astribot_gripper_left_Link_R11"
+            ],
+            "detach_posture": {
+              "header": {
+                "stamp": {
+                  "sec": 0,
+                  "nanosec": 0
+                },
+                "frame_id": ""
+              },
+              "joint_names": [],
+              "points": []
+            },
+            "weight": 0.0
+          }
+        ],
+        "is_diff": false
+      },
+      "tcp_base_xyz_m": [
+        0.20071319406360588,
+        0.6624668961787158,
+        1.0686979028462278
+      ],
+      "tcp_world_xyz_m": [
+        0.20067072072335618,
+        0.6624868174843124,
+        1.1979217079318296
+      ],
+      "tcp_base_quaternion_xyzw": [
+        0.6223060831319065,
+        0.40845287455497864,
+        0.3930033772039565,
+        0.5398608465809354
+      ],
+      "body_base_xyz_m": [
+        0.19457757267617984,
+        0.676357490104162,
+        0.9696748251498161
+      ],
+      "body_base_rpy_degrees": [
+        2.78465243938056,
+        6.206880416028206,
+        -20.573685775394956
+      ],
+      "conservative": {
+        "dimensions_m": [
+          0.07146969384566991,
+          0.07146969384566991,
+          0.1314696938456699
+        ],
+        "center_station_m": [
+          0.09453432798429745,
+          -0.023622910403737984,
+          0.5813986328902558
+        ],
+        "projected_half_height_station_m": 0.07086185803942043,
+        "corners_station_m": [
+          [
+            0.043033234649813464,
+            -0.03900746274739935,
+            0.5182640021104424
+          ],
+          [
+            0.054081402025779234,
+            -0.04997579194956396,
+            0.6488086846985118
+          ],
+          [
+            0.06846670427648759,
+            0.02769441724773524,
+            0.5217158083416068
+          ],
+          [
+            0.07951487165245336,
+            0.016726088045570638,
+            0.6522604909296763
+          ],
+          [
+            0.10955378431614154,
+            -0.0639719088530466,
+            0.5105367748508354
+          ],
+          [
+            0.12060195169210731,
+            -0.07494023805521122,
+            0.6410814574389049
+          ],
+          [
+            0.13498725394281566,
+            0.002729971142087992,
+            0.5139885810819999
+          ],
+          [
+            0.14603542131878144,
+            -0.008238358060076618,
+            0.6445332636700692
+          ]
+        ],
+        "corners_base_m": [
+          [
+            0.1430756542182237,
+            0.6609757284580893,
+            0.9065401874857025
+          ],
+          [
+            0.1541232036717038,
+            0.6500068142607626,
+            1.0370848732154512
+          ],
+          [
+            0.1685127471225965,
+            0.7276762269633364,
+            0.9099919902204535
+          ],
+          [
+            0.17956029657607656,
+            0.7167073127660096,
+            1.0405366759502022
+          ],
+          [
+            0.20959484877628312,
+            0.6360076674423144,
+            0.8988129743494301
+          ],
+          [
+            0.22064239822976317,
+            0.6250387532449876,
+            1.0293576600791785
+          ],
+          [
+            0.2350319416806559,
+            0.7027081659475615,
+            0.9022647770841811
+          ],
+          [
+            0.24607949113413596,
+            0.6917392517502348,
+            1.0328094628139295
+          ]
+        ],
+        "support_normal_clearance_m": -0.006963225149164587,
+        "station_local_xy_aabb_overlap_m": [
+          0.006966765350186532,
+          0.07769441724773524
+        ],
+        "obb_sat_intersects": true,
+        "largest_separating_axis_gap_m": -4.4975888863207913e-05
+      },
+      "nominal": {
+        "dimensions_m": [
+          0.06,
+          0.06,
+          0.12
+        ],
+        "center_station_m": [
+          0.09453432798429745,
+          -0.023622910403737984,
+          0.5813986328902558
+        ],
+        "projected_half_height_station_m": 0.06427033687261827,
+        "corners_station_m": [
+          [
+            0.05089371059616757,
+            -0.036136831845503266,
+            0.5236154321816399
+          ],
+          [
+            0.060978012508912605,
+            -0.04614826083540278,
+            0.6427711208604135
+          ],
+          [
+            0.07224553254318299,
+            0.019860508906370526,
+            0.5265132810841004
+          ],
+          [
+            0.08232983445592801,
+            0.009849079916471014,
+            0.6456689697628741
+          ],
+          [
+            0.10673882151266689,
+            -0.05709490072394698,
+            0.5171282960176375
+          ],
+          [
+            0.11682312342541191,
+            -0.0671063297138465,
+            0.6362839846964112
+          ],
+          [
+            0.1280906434596823,
+            -0.0010975599720731907,
+            0.5200261449200981
+          ],
+          [
+            0.13817494537242733,
+            -0.011108988961972703,
+            0.6391818335988718
+          ]
+        ],
+        "corners_base_m": [
+          [
+            0.15093628521182803,
+            0.6638459329224438,
+            0.9118916185466651
+          ],
+          [
+            0.16102002311095048,
+            0.653833969973596,
+            1.0310473100930313
+          ],
+          [
+            0.17229114896090278,
+            0.7198421138905157,
+            0.9147894645138284
+          ],
+          [
+            0.18237488686002523,
+            0.7098301509416679,
+            1.0339451560601944
+          ],
+          [
+            0.20678025849233445,
+            0.6428848292666561,
+            0.9054044942394377
+          ],
+          [
+            0.2168639963914569,
+            0.6328728663178084,
+            1.0245601857858038
+          ],
+          [
+            0.2281351222414092,
+            0.698881010234728,
+            0.9083023402066008
+          ],
+          [
+            0.23821886014053165,
+            0.6888690472858803,
+            1.027458031752967
+          ]
+        ],
+        "support_normal_clearance_m": -0.00037170398236241464,
+        "station_local_xy_aabb_overlap_m": [
+          -0.0008937105961675657,
+          0.06986050890637052
+        ],
+        "obb_sat_intersects": false,
+        "largest_separating_axis_gap_m": 0.006177707448318047
+      }
+    },
+    "last": {
+      "log_line_one_based": 446,
+      "robot_state": {
+        "joint_state": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "name": [
+            "astribot_torso_joint_1",
+            "astribot_torso_joint_2",
+            "astribot_torso_joint_3",
+            "astribot_torso_joint_4",
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7",
+            "astribot_gripper_left_joint_L1",
+            "astribot_gripper_left_joint_L11",
+            "astribot_gripper_left_joint_L2",
+            "astribot_gripper_left_joint_R1",
+            "astribot_gripper_left_joint_R11",
+            "astribot_gripper_left_joint_R2",
+            "astribot_arm_right_joint_1",
+            "astribot_arm_right_joint_2",
+            "astribot_arm_right_joint_3",
+            "astribot_arm_right_joint_4",
+            "astribot_arm_right_joint_5",
+            "astribot_arm_right_joint_6",
+            "astribot_arm_right_joint_7",
+            "astribot_gripper_right_joint_L1",
+            "astribot_gripper_right_joint_L11",
+            "astribot_gripper_right_joint_L2",
+            "astribot_gripper_right_joint_R1",
+            "astribot_gripper_right_joint_R11",
+            "astribot_gripper_right_joint_R2",
+            "astribot_head_joint_1",
+            "astribot_head_joint_2",
+            "wheel_LF_Joint",
+            "wheel_LR_Joint",
+            "wheel_RF_Joint",
+            "wheel_RR_Joint"
+          ],
+          "position": [
+            1.0405539384763838e-12,
+            4.320260174187093e-12,
+            7.04954107908221e-12,
+            -8.419835464984612e-18,
+            -7.625388372689486e-05,
+            9.448688472621143e-05,
+            -0.5999803062037099,
+            0.9999126639509573,
+            -1.2493356270715597e-05,
+            -9.300785893574357e-05,
+            -8.97027341183275e-05,
+            0.426861068144595,
+            0.426861068144595,
+            -0.426861068144595,
+            0.426861068144595,
+            -0.426861068144595,
+            0.426861068144595,
+            -9.82942183312104e-12,
+            0.00011843963371532651,
+            0.5999999999814435,
+            0.9993165527473871,
+            -9.762665982165272e-13,
+            -1.6191102873460748e-11,
+            1.1238325388471097e-11,
+            0.0008993615307645307,
+            0.0008993615307645307,
+            -0.0008993615307645307,
+            0.0008993615307645307,
+            -0.0008993615307645307,
+            0.0008993615307645307,
+            1.4499999999999984,
+            0.6500000000079683,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "velocity": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            2.5847379792054426e-17,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "effort": []
+        },
+        "multi_dof_joint_state": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_torso_base"
+          },
+          "joint_names": [],
+          "transforms": [],
+          "twist": [],
+          "wrench": []
+        },
+        "attached_collision_objects": [
+          {
+            "link_name": "astribot_arm_left_tcp_link",
+            "object": {
+              "header": {
+                "stamp": {
+                  "sec": 0,
+                  "nanosec": 0
+                },
+                "frame_id": "astribot_arm_left_tcp_link"
+              },
+              "pose": {
+                "position": {
+                  "x": 0.005997577741976943,
+                  "y": -0.1000008784758708,
+                  "z": 0.00013315841734361166
+                },
+                "orientation": {
+                  "x": -0.5004068445318721,
+                  "y": -0.499592823467698,
+                  "z": -0.4995928279618912,
+                  "w": 0.5004068414143327
+                }
+              },
+              "id": "transport_box_01",
+              "type": {
+                "key": "",
+                "db": ""
+              },
+              "primitives": [
+                {
+                  "type": 1,
+                  "dimensions": [
+                    0.07146969384566991,
+                    0.07146969384566991,
+                    0.1314696938456699
+                  ],
+                  "polygon": {
+                    "points": []
+                  }
+                }
+              ],
+              "primitive_poses": [
+                {
+                  "position": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                  },
+                  "orientation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                  }
+                }
+              ],
+              "meshes": [],
+              "mesh_poses": [],
+              "planes": [],
+              "plane_poses": [],
+              "subframe_names": [],
+              "subframe_poses": [],
+              "operation": 0
+            },
+            "touch_links": [
+              "astribot_arm_left_tcp_link",
+              "astribot_gripper_left_Link_L11",
+              "astribot_gripper_left_Link_R11"
+            ],
+            "detach_posture": {
+              "header": {
+                "stamp": {
+                  "sec": 0,
+                  "nanosec": 0
+                },
+                "frame_id": ""
+              },
+              "joint_names": [],
+              "points": []
+            },
+            "weight": 0.0
+          }
+        ],
+        "is_diff": false
+      },
+      "tcp_base_xyz_m": [
+        0.21983363703705666,
+        0.07961279693399742,
+        0.6893863104478828
+      ],
+      "tcp_world_xyz_m": [
+        0.21982276606583376,
+        0.07963380216618418,
+        0.8186100442996563
+      ],
+      "tcp_base_quaternion_xyzw": [
+        0.42408701233314355,
+        0.03272473174616397,
+        0.2936646058721664,
+        0.8560609774779101
+      ],
+      "body_base_xyz_m": [
+        0.2723283001414941,
+        0.03591798962776938,
+        0.6160975764848494
+      ],
+      "body_base_rpy_degrees": [
+        14.446721469385446,
+        -39.677977572478106,
+        -66.53607576979162
+      ],
+      "conservative": {
+        "dimensions_m": [
+          0.07146969384566991,
+          0.07146969384566991,
+          0.1314696938456699
+        ],
+        "center_station_m": [
+          0.17231979066990694,
+          -0.6640581445020718,
+          0.2278212963915454
+        ],
+        "projected_half_height_station_m": 0.07866994184269961,
+        "corners_station_m": [
+          [
+            0.1631193305206066,
+            -0.6885820196581895,
+            0.14915135454884582
+          ],
+          [
+            0.10066351717145121,
+            -0.6270809284357999,
+            0.24713690224453908
+          ],
+          [
+            0.22207137272318989,
+            -0.6505786690292884,
+            0.16287429882168442
+          ],
+          [
+            0.1596155593740345,
+            -0.5890775778068987,
+            0.2608598465173777
+          ],
+          [
+            0.18502402196577938,
+            -0.7390387111972448,
+            0.19478274626571315
+          ],
+          [
+            0.12256820861662399,
+            -0.6775376199748552,
+            0.2927682939614064
+          ],
+          [
+            0.24397606416836265,
+            -0.7010353605683437,
+            0.20850569053855175
+          ],
+          [
+            0.18152025081920728,
+            -0.639534269345954,
+            0.306491238234245
+          ]
+        ],
+        "corners_base_m": [
+          [
+            0.26312652088712885,
+            0.011394605186831507,
+            0.5374276359530215
+          ],
+          [
+            0.2006740324568756,
+            0.07289910096128382,
+            0.6354131659473715
+          ],
+          [
+            0.32208062540291016,
+            0.04939475451080613,
+            0.5511505857267315
+          ],
+          [
+            0.2596281369726569,
+            0.11089925028525843,
+            0.6491361157210815
+          ],
+          [
+            0.2850284633103313,
+            -0.039063271029719675,
+            0.5830590372486173
+          ],
+          [
+            0.22257597488007808,
+            0.022441224744732632,
+            0.6810445672429674
+          ],
+          [
+            0.34398256782611264,
+            -0.0010631217057450529,
+            0.5967819870223273
+          ],
+          [
+            0.2815300793958594,
+            0.060441374068707254,
+            0.6947675170166774
+          ]
+        ],
+        "support_normal_clearance_m": -0.36834864545115414,
+        "station_local_xy_aabb_overlap_m": [
+          -0.050663517171451206,
+          -0.5390775778068987
+        ],
+        "obb_sat_intersects": false,
+        "largest_separating_axis_gap_m": 0.5390775778068987
+      },
+      "nominal": {
+        "dimensions_m": [
+          0.06,
+          0.06,
+          0.12
+        ],
+        "center_station_m": [
+          0.17231979066990694,
+          -0.6640581445020718,
+          0.2278212963915454
+        ],
+        "projected_half_height_station_m": 0.0696330182570423,
+        "corners_station_m": [
+          [
+            0.16688302055293391,
+            -0.6868985538484389,
+            0.15818827813450312
+          ],
+          [
+            0.10987598431006756,
+            -0.6307629477569684,
+            0.2476253596362371
+          ],
+          [
+            0.21637424322128593,
+            -0.654994107151663,
+            0.16970891873145738
+          ],
+          [
+            0.15936720697841958,
+            -0.5988585010601924,
+            0.25914600023319134
+          ],
+          [
+            0.1852723743613943,
+            -0.7292577879439511,
+            0.19649659254989948
+          ],
+          [
+            0.12826533811852794,
+            -0.6731221818524806,
+            0.28593367405163345
+          ],
+          [
+            0.2347635970297463,
+            -0.6973533412471752,
+            0.20801723314685372
+          ],
+          [
+            0.17775656078687996,
+            -0.6412177351557047,
+            0.29745431464858774
+          ]
+        ],
+        "corners_base_m": [
+          [
+            0.26689030085327864,
+            0.01307786756822615,
+            0.5464645599765396
+          ],
+          [
+            0.2098862994563649,
+            0.06921658119144466,
+            0.635901625321233
+          ],
+          [
+            0.31638325486795693,
+            0.044979626716122864,
+            0.5579852051915671
+          ],
+          [
+            0.2593792534710432,
+            0.10111834033934139,
+            0.6474222705362604
+          ],
+          [
+            0.28527734681194505,
+            -0.02928236108380263,
+            0.5847728824334384
+          ],
+          [
+            0.2282733454150313,
+            0.0268563525394159,
+            0.6742099477781317
+          ],
+          [
+            0.33477030082662335,
+            0.002619398064094093,
+            0.5962935276484659
+          ],
+          [
+            0.2777662994297096,
+            0.05875811168731261,
+            0.6857305929931592
+          ]
+        ],
+        "support_normal_clearance_m": -0.35931172186549687,
+        "station_local_xy_aabb_overlap_m": [
+          -0.059875984310067576,
+          -0.5488585010601924
+        ],
+        "obb_sat_intersects": false,
+        "largest_separating_axis_gap_m": 0.5488585010601924
+      }
+    }
+  },
+  "first_to_bad": {
+    "tcp_delta_base_m": [
+      0.10066869337777887,
+      -0.03751865253733788,
+      -0.05707825937304545
+    ],
+    "body_center_drop_along_station_normal_m": 0.056100477160550666,
+    "conservative_projected_half_height_increase_m": 0.005127010058094725,
+    "combined_bottom_drop_m": 0.06122748721864539
+  },
+  "conclusion": "Increasing the lift to 60 mm produced positive first-state clearance, but the cached TRANSPORT_POSTURE path again brought the authoritative conservative box into the pick station by sample 119. Endpoint lift height alone does not establish collision freedom of the later loaded posture path.",
+  "limits": [
+    "Only first, first-bad and last planned states were captured; no reconstruction of all 840 waypoints or path safety claim.",
+    "Station comes from the saved initial full scene, not a separate dump of the rejected cached scene.",
+    "These are planned pre-execution states; the offline SAT checks this box/station pair only, not all MoveIt collisions.",
+    "No new candidate or solution recommendation is made in this closeout."
+  ]
+}
