@@ -128,7 +128,7 @@ struct SingleBoxRequestSource::Impl {
   Context bind(Context c,int64_t now) {
     detail::require(!calibration_fault,"CAMERA_INFO_CHANGED_WITHOUT_REVISION");
     detail::require(!infos.empty()&&!info_revision.empty(),"CAMERA_INFO_NOT_READY");
-    detail::require(c.clock_epoch>0&&(!clock_fault||c.clock_epoch!=owner_clock_epoch),"CLOCK_EPOCH_NOT_ADVANCED");
+    detail::require(!clock_fault||c.clock_epoch!=owner_clock_epoch,"CLOCK_EPOCH_NOT_ADVANCED");
     clock_fault=false;owner_clock_epoch=c.clock_epoch;
     auto frame=health_frame();
     detail::require(detail::fresh(infos.rbegin()->second.value->header.stamp,infos.rbegin()->second.received,now,250000000LL),

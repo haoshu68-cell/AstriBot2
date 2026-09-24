@@ -1,0 +1,26 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 7 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 7 tests from SingleBoxProtocol
+[ RUN      ] SingleBoxProtocol.RealSubscriptionsProduceBoundRequest
+[       OK ] SingleBoxProtocol.RealSubscriptionsProduceBoundRequest (33 ms)
+[ RUN      ] SingleBoxProtocol.CalibrationChangeLatchesUntilAuthoritativeRevisionChanges
+[WARN] [1790222581.788058119] [m3_single_box_source_test]: RGBD_REQUEST_SOURCE: CAMERA_INFO_CHANGED_WITHOUT_REVISION
+[       OK ] SingleBoxProtocol.CalibrationChangeLatchesUntilAuthoritativeRevisionChanges (59 ms)
+[ RUN      ] SingleBoxProtocol.ProjectionEpochCannotReuseCachedOrRepeatedFrame
+[       OK ] SingleBoxProtocol.ProjectionEpochCannotReuseCachedOrRepeatedFrame (71 ms)
+[ RUN      ] SingleBoxProtocol.LateReceiptPauseAndDuplicateMessagesDoNotRenewLease
+[       OK ] SingleBoxProtocol.LateReceiptPauseAndDuplicateMessagesDoNotRenewLease (149 ms)
+[ RUN      ] SingleBoxProtocol.RollbackRequiresNewOwnerClockEpochAndFreshFrame
+[WARN] [1790222582.066708755] [tf2_buffer]: Detected jump back in time. Clearing TF buffer.
+[       OK ] SingleBoxProtocol.RollbackRequiresNewOwnerClockEpochAndFreshFrame (48 ms)
+[ RUN      ] SingleBoxProtocol.InitialZeroClockEpochIsValidButRollbackStillRequiresChange
+[WARN] [1790222582.115539977] [tf2_buffer]: Detected jump back in time. Clearing TF buffer.
+[       OK ] SingleBoxProtocol.InitialZeroClockEpochIsValidButRollbackStillRequiresChange (49 ms)
+[ RUN      ] SingleBoxProtocol.LaterClientCannotResetFrozenOriginalDeadline
+[       OK ] SingleBoxProtocol.LaterClientCannotResetFrozenOriginalDeadline (31 ms)
+[----------] 7 tests from SingleBoxProtocol (440 ms total)
+
+[----------] Global test environment tear-down
+[==========] 7 tests from 1 test suite ran. (443 ms total)
+[  PASSED  ] 7 tests.

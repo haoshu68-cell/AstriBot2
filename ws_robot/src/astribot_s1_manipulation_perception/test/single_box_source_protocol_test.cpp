@@ -109,6 +109,17 @@ TEST_F(SingleBoxProtocol, RollbackRequiresNewOwnerClockEpochAndFreshFrame) {
   EXPECT_EQ(capture_error(),"CLOCK_EPOCH_NOT_ADVANCED");
   task.context.clock_epoch=3;EXPECT_EQ(capture().context.clock_epoch,3u);
 }
+TEST_F(SingleBoxProtocol, InitialZeroClockEpochIsValidButRollbackStillRequiresChange) {
+  task.context.clock_epoch=0;prime();
+  ASSERT_EQ(capture().context.clock_epoch,0u);
+  set_time(9100000000LL);EXPECT_NE(capture_error(),"ACCEPTED");
+  frame.camera.source_epoch="camera_after_rollback";
+  frame.projection.processing_epoch="projector_after_rollback";
+  frame.projection.epoch_first_capture_stamp.sec=9;
+  stamps(9100000000LL);health();frames();
+  EXPECT_EQ(capture_error(),"CLOCK_EPOCH_NOT_ADVANCED");
+  task.context.clock_epoch=1;EXPECT_EQ(capture().context.clock_epoch,1u);
+}
 TEST_F(SingleBoxProtocol, LaterClientCannotResetFrozenOriginalDeadline) {
   prime();auto request=capture();request.result_deadline_steady=std::chrono::steady_clock::now()-1ms;
   auto client_node=std::make_shared<rclcpp::Node>("m3_expired_request_client");
