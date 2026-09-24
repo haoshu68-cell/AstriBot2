@@ -1,0 +1,32 @@
+--- prepare_transfer_goal.py.before
++++ prepare_transfer_goal.py.after
+@@ -76,13 +76,13 @@
+     pre_place=place.copy();pre_place[2,3]+=config['approach_m']
+     goal.pick_target=target(pick,'gazebo_world');goal.pick_pre_target=target(pre_pick,'gazebo_world')
+     pick_exit=pre_pick.copy()
+-    pick_inward=observed('astribot_s1')[:2,3]-pick[:2,3]
+-    pick_distance=np.linalg.norm(pick_inward);pick_exit_distance=float(config['pick_exit_inward_m'])
+-    if not math.isfinite(pick_exit_distance) or pick_exit_distance<=0. or pick_distance<=pick_exit_distance:
++    pick_forward=observed('astribot_s1')[:2,0]
++    pick_forward_norm=np.linalg.norm(pick_forward);pick_exit_distance=float(config['pick_exit_forward_m'])
++    if not math.isfinite(pick_exit_distance) or pick_exit_distance<=0. or pick_forward_norm<=0.:
+         raise RuntimeError('INVALID_PICK_EXIT_DISTANCE')
+-    # Leave this station laterally during the existing 30 mm Cartesian lift,
++    # Leave this station along the robot's horizontal forward direction during the 30 mm lift,
+     # before the unchanged OMPL move to the compact transport posture.
+-    pick_exit[:2,3]+=pick_exit_distance*pick_inward/pick_distance
++    pick_exit[:2,3]+=pick_exit_distance*pick_forward/pick_forward_norm
+     goal.pick_exit_targets=[target(pick_exit,'gazebo_world')]
+     goal.place_target=target(place,'gazebo_world');goal.place_pre_target=target(pre_place,'gazebo_world')
+     # nav_goal is a configured map goal. Transform it to physical world only
+--- scenario.json.before
++++ scenario.json.after
+@@ -28,7 +28,7 @@
+   "mass_kg": 0.2,
+   "grasp_offset_m": 0.1,
+   "approach_m": 0.03,
+-  "pick_exit_inward_m": 0.12,
++  "pick_exit_forward_m": 0.12,
+   "orientation_xyzw": [
+     0.5,
+     0.5,
