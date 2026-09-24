@@ -1,0 +1,58 @@
+{
+  "status": "PASS_OFFLINE_ARTIFACT_CHECKS",
+  "command": "python3 /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/scene_binding_scene01_motion/analyze_recorded_motion.py",
+  "exit_code": 0,
+  "original_summary_input_hashes_verified": 6,
+  "raw_scene_cdr_files_verified": 2,
+  "source_sha256": {
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/first_stage/result.json": "430f773197e80d9c655cdb18b4d3e5613d56179869134753bc36d6a525b04a47",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/own_lease_journal.json": "94a7195162ad6dc9744d020061ab1cf2f6f315834cb0ba9cc99dd09f11be1a97",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/first_stage.json": "9fd14aeee660482a523f0ab6d433d2ee95bdafd2eef3eceae076a8addb74b682",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/first_stage.mp4": "06f45921c9076f3f8669a44e66f9249b769c4cfde9416c7266602e21bb0b74d2",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/summary.json": "811ffdda72312637d7e81e54abc603cdb247c318266085d6c1365ce32e3eccf7",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/execution_motion_summary.json": "05ac117fa11ea95d395f4f4a221966ae0598bf8e293d471a5967ad8f4c5fcb94",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/first_motion_jtc_window.json": "4d41251a9690e00b1bdf184e3d9202200159f37393960f87a55073d711edc8ca",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/head_snapshot/camera_info.json": "92e42e39736dc10c77ba480eb572503b157a000557add6c7cb5bb61b07210232",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/stack/session.log": "49e07252ed9b51c4fe110c3cab21cabd37cb7b3c879d954a22ca8bdd153b0232",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/used_run_first_stage.py": "2ed7e38dcadae2b1eaf0f3cef32bb1cab496966a45c6996a2b7aad7bbde913f2",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/recorder_identity.json": "ffda89ca889f47ad8f3d5c9b91c38d29f9721dabeda2dfc7dcdc04c85f558fdc",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/result.json": "b58e17cb11af258608b9649e590b8e0ea165cbc99281ffae1e4bbbbe23df4b66",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/raw_scene_manifest.json": "223c7dfaea25867aafbee73aa3ff2108379c49462805d968834e21f8ee5ff4e2",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/post_cleanup_identity_audit.json": "19afac2468ae7fa6192a6eab1fdd128a8c9f6673578aaf622ff5340d0b8e2278",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/native_scene_cdr/14274b04-9956-4947-98cd-21a64c83a736_1/initial_scene.cdr": "6f60187e70800ee3271385e577dd6297cc03fd04228b2b951d603e63c6a80558",
+    "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/native_scene_cdr/14274b04-9956-4947-98cd-21a64c83a736_1/last_recheck_scene.cdr": "f52c1825df092abc19554eab7ae81a337bcab05895506acc1606ea6f2a07acba",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py": "219904f2a6d3ba3804eddba2d647604651e50f8103abfb5a22819c6d7d78a79e"
+  },
+  "owner_confirmation": "M2 explicitly confirmed observer was not started, no off-directory copy exists, guard original reason absent.",
+  "scope": {
+    "actual_left_arm_motion": "OBSERVED",
+    "event_order": "CONSISTENT",
+    "exact_video_jtc_alignment": "NOT_MEASURED",
+    "continuous_motion_video_coverage": "NOT_VERIFIED",
+    "camera_motion_age": "NOT_MEASURED",
+    "guard_root_cause": "UNKNOWN",
+    "complete_first_stage": "NOT_PASSED",
+    "six_envelope_acks": "NOT_OBSERVED",
+    "full_pick": "NOT_EVALUATED"
+  },
+  "independent_checks": [
+    "camera_current_code independently verified six child UUID chains and actual JTC motion",
+    "camera_gap_stats independently verified missing motion-window sensor metadata and pre-action-only snapshot/STALE logs"
+  ],
+  "visual_review": "Decoded original frames117/118/126 and inspected JTC timing plot; before/after pose change observable, no exact source-time video synchronization claimed.",
+  "artifact_sha256": {
+    "README.md": "04a7af4157c3b11ba745936c91b31088c6cd51ee4060354d35ad0b60ffdbbe5a",
+    "analyze_recorded_motion.py": "d83a9905486ccbcbfde90c068f48174f52b1c309f4dab2831dec7e84a96b2407",
+    "before_after_excerpt.mp4": "6012463b5d8384b38d1851f8e966d06126b0ff04532c8402dcbe33da97e29891",
+    "camera_evidence_gaps.json": "ef7c005e72d99ba1e5ea5d65216aa9f0576bbb4a025ebb5da36dea5ac1377f80",
+    "frame_110.png": "abc1fc25c3d16472b4bb1506700dd236ae10b3eef83b83aae21e51f92b455aed",
+    "frame_117.png": "f91c04156d88d73befa9f9e4e55b88d5205f4ef0bf17bb3c8a39286e9270f436",
+    "frame_118.png": "b8d586cfd4c99ce8b5d706d94112ae884adf2a8253a93fb5dcd6db0ea896032c",
+    "frame_119.png": "e2f56aa8e7adf0e8fd904a234bcf17c63c4110987060f63a1efab0b6f2c312dd",
+    "frame_126.png": "cd9aa6fa2d8ab0d79c84772d93d101daa9a3a3767b7b759fe5621a298dd66d9f",
+    "left_joint_timing.png": "504997656ac06e24f5058d027267a32a174d7f693a49f31c868458ca9579ad9c",
+    "left_jtc.csv": "acfdebc24058a6dfb0ecc8f75b2371315dd71e74238aaf40df43202744f5b65d",
+    "motion_video_report.json": "bc416375fc862d25743ff9f97def6d256e806a8342e089f1bf482766485b6680",
+    "recorded_events.json": "083255c0a61692a881ffc1fcc718e0db18f274c45806f92615ccad2e67f65c33"
+  }
+}

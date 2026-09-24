@@ -1,0 +1,79 @@
+{
+  "schema": "astribot.m5.video_sidecar_freeze/1",
+  "frozen_at_utc": "2026-09-24T04:47:04.326162+00:00",
+  "scope": "Validation recorder only. No ROS/Gazebo/GPU initialized; not a live-motion acceptance.",
+  "before_sha256": "219904f2a6d3ba3804eddba2d647604651e50f8103abfb5a22819c6d7d78a79e",
+  "source_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py": "dc19af167a6c2e8583df95f43283470714d73901137f95f724532a9ee461e92f",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py": "fd4bbcfce185234d3237a27e1bb1b85e1b5b9bd9eb16d1bcb1c1ce120ebef857"
+  },
+  "artifacts_sha256": {
+    "record_transport_demo.before.py": "219904f2a6d3ba3804eddba2d647604651e50f8103abfb5a22819c6d7d78a79e",
+    "before_snapshot.json": "76ab0ba93a085176ae8e29024fea4c076154f02070b8f421ad3431ed054ea9bd",
+    "record_transport_demo.after.py": "dc19af167a6c2e8583df95f43283470714d73901137f95f724532a9ee461e92f",
+    "record_transport_demo.sidecar.patch": "96d48003895840c546a1b4ac6a394647566143557ced8f85aa433e7eb4af0bb0",
+    "tests_red.txt": "8e7b0bb1da811104f19cbae1905e3de51f0edfa5b510acfece6263a578bf8544",
+    "tests_green.txt": "354190d94781c5f49c3fdc6b2a0dacb1d7f0f711bad8f9c69f94fa8cc3e88e9c",
+    "independent_review.json": "b935b770fdc0358657725246d087d9717a4d827f78e9a3b256ccbf57b253cdbb",
+    "root_review.json": "03f756ac6d9c3dd06ff7627ff2f83ea1050d29d74e9f8c71d78dedbe2dd4635a",
+    "runner_readonly_review.json": "d310ad054e23ded9fb46328911b703a97d417ca2950e11cf75cb27cb5dad6881",
+    "README.md": "03aec8b6645ab5e9983afe4d368129ae33babe58bc9fad8045ffd7477b480424"
+  },
+  "checks": {
+    "python_ast": "PASS",
+    "exact_patch_apply_reverse": [
+      {
+        "command": [
+          "git",
+          "apply",
+          "--check",
+          "record_transport_demo.sidecar.patch"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "command": [
+          "git",
+          "apply",
+          "record_transport_demo.sidecar.patch"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "command": [
+          "git",
+          "apply",
+          "--reverse",
+          "record_transport_demo.sidecar.patch"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "source_and_test_roundtrip_byte_equal": true,
+    "diff_check": "PASS",
+    "retained_tests": {
+      "count": 4,
+      "result": "PASS",
+      "log": "tests_green.txt",
+      "rerun_on_resume": false,
+      "scope": "Real OpenCV encode/decode, substituted ROS callbacks; retained pre-pause result; source unchanged since test"
+    }
+  },
+  "independent_review": {
+    "status": "NO_BLOCKING_FINDING_FOR_BOUNDED_CAPTURE",
+    "artifacts": [
+      "independent_review.json",
+      "root_review.json"
+    ]
+  },
+  "live_ros_gazebo": "NOT_RUN",
+  "coordinator_independent_test_run": {
+    "artifact": "root_review.json",
+    "tests_passed": 4,
+    "scope": "Real offline OpenCV encode/decode, substituted ROS; no live motion"
+  },
+  "handoff": "READY_FOR_OWNER_RUNTIME_PREFLIGHT"
+}

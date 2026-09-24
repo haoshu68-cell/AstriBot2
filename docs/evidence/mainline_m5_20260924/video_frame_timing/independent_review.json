@@ -1,0 +1,195 @@
+{
+  "schema": "astribot.m5.video_frame_timing.independent_review/1",
+  "reviewed_at_utc": "2026-09-24T04:48:09.238179+00:00",
+  "scope": "Independent offline source and targeted-test review against preserved pre-sidecar version; only this review JSON is written.",
+  "source_identity": {
+    "recorder": {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "sha256": "dc19af167a6c2e8583df95f43283470714d73901137f95f724532a9ee461e92f"
+    },
+    "targeted_tests": {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py",
+      "sha256": "fd4bbcfce185234d3237a27e1bb1b85e1b5b9bd9eb16d1bcb1c1ce120ebef857"
+    },
+    "before_snapshot": {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/video_frame_timing/record_transport_demo.before.py",
+      "sha256": "219904f2a6d3ba3804eddba2d647604651e50f8103abfb5a22819c6d7d78a79e"
+    },
+    "existing_green_test_log": {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/video_frame_timing/tests_green.txt",
+      "sha256": "354190d94781c5f49c3fdc6b2a0dacb1d7f0f711bad8f9c69f94fa8cc3e88e9c"
+    }
+  },
+  "ros_initialized": false,
+  "ros_commands_executed": false,
+  "gazebo_or_gpu_used": false,
+  "tests_rerun": false,
+  "existing_test_evidence": {
+    "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/video_frame_timing/tests_green.txt",
+    "reported_tests": 4,
+    "reported_failures": 0,
+    "result": "OK",
+    "layer": "Substituted ROS delivery and real OpenCV encode/decode; not live ROS/DDS or OS signal integration",
+    "review_action": "Read existing log and all four tests; did not rerun."
+  },
+  "blocking_issues": [],
+  "blocks_next_authorized_bounded_capture": false,
+  "verdict": "NO_NEW_BLOCKING_FINDING_FOR_NEXT_AUTHORIZED_BOUNDED_CAPTURE",
+  "runtime_capture_acceptance": "NOT_MEASURED",
+  "findings": [
+    {
+      "id": "source_stamp_preservation",
+      "status": "SUPPORTED_BY_CODE_AND_EXISTING_TEST",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "lines": [
+        54,
+        55,
+        56,
+        76,
+        77,
+        78
+      ],
+      "detail": "Head and overview preserve original header nanosecond stamp, frame and topic; receive clocks are sampled before conversion. Zero, duplicate and regressing source stamps are retained rather than rewritten. Zero is not evidence of valid simulation time."
+    },
+    {
+      "id": "cached_head_age",
+      "status": "SUPPORTED_BY_CODE_AND_EXISTING_TEST",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "lines": [
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        80,
+        81,
+        91,
+        92
+      ],
+      "detail": "Cached image and metadata update only on a head callback. Overview reuse does not refresh head source or receive time. Cache residence age is derivable from overview receive_monotonic_ns minus head receive_monotonic_ns, not a source-to-receive latency."
+    },
+    {
+      "id": "status_event_frame_binding",
+      "status": "SUPPORTED_BY_CODE_AND_EXISTING_TEST",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "lines": [
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        68,
+        69,
+        70,
+        71,
+        85,
+        91,
+        92
+      ],
+      "detail": "All decoded status callbacks get a local receive sequence and are retained even without a new overview frame. Frame rows reference the latest status actually used by the single-threaded callback path. Legacy stage_frames.frame remains the next frame index and alone does not prove a stage was visible. receive_seq is local observer order, not publisher sequence."
+    },
+    {
+      "id": "clock_semantics",
+      "status": "SUPPORTED_BY_CODE",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "lines": [
+        35,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        101,
+        110
+      ],
+      "detail": "Observed clock is explicit /clock source time with its own receive clocks, null before first clock. Immutable-by-replacement dictionaries keep cached historical clock metadata stable. No default system clock is labeled as simulation ROS time."
+    },
+    {
+      "id": "encoding_and_no_insertion",
+      "status": "SUPPORTED_BY_CODE_AND_EXISTING_TEST",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "lines": [
+        30,
+        75,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95
+      ],
+      "detail": "Only an actual overview callback invokes writer.write. Zero-based frame_index maps completed writes; no timer repeats/inserts frames. Fixed 10 fps playback time remains distinct from observed elapsed time."
+    },
+    {
+      "id": "controlled_exit_evidence",
+      "status": "PARTIALLY_SUPPORTED",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "lines": [
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112
+      ],
+      "detail": "Loop callback exceptions and KeyboardInterrupt propagate through finally after writer release, sidecar close and summary serialization. Existing tests exercise these paths using substituted ROS delivery. They do not exercise actual SIGINT/SIGTERM, rclpy shutdown, disk errors or forced termination."
+    },
+    {
+      "id": "historical_compatibility",
+      "status": "SUPPORTED_BY_DIFF",
+      "detail": "Existing CLI arguments/defaults, image conversion/composition, legacy terminal rules, native_hold mapping, stage_frames keys and 10 fps output are retained. Metadata fields and one /clock subscription are additive; historical files remain attributable to the preserved before hash. Additional callback/write work can change runtime timing and is not proven free of observer overhead."
+    }
+  ],
+  "nonblocking_issues_and_limits": [
+    {
+      "id": "per_capture_decode_required",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "line": 90,
+      "detail": "Recorder does not verify decodable frame count itself; completed writer.write calls are not guaranteed successful encoded frames. Require owner post-capture decode count == sidecar row count == summary.frames, contiguous frame indexes and parseable rows; failed verification is incomplete evidence."
+    },
+    {
+      "id": "exit_status_external",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "line": 110,
+      "detail": "Summary does not record completed/interrupted/error status. Owner must retain actual process return code, stop signal/reason and stderr. Summary existence or a nonzero frame count alone is not a successful-capture verdict."
+    },
+    {
+      "id": "finally_only_status_flush",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "line": 64,
+      "detail": "status_events remain in memory until finally writes summary. SIGKILL/abrupt process loss can omit them and final MP4 metadata; do not claim crash-durable evidence. Frame sidecar is line-buffered but is not fsync durability."
+    },
+    {
+      "id": "partial_clock_observation",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "line": 46,
+      "detail": "Clock callbacks update the latest value; the full clock stream is not logged. Source discontinuities between retained frame/status/head samples may be missed. This recorder cannot prove absence of clock rollback or assign a trustworthy epoch by itself."
+    },
+    {
+      "id": "unique_output_owner_precondition",
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/record_transport_demo.py",
+      "line": 33,
+      "detail": "Outputs use overwrite behavior, as the preexisting video path did. Owner must provide a new output path and freeze identities/hashes; no automatic refusal of an old evidence path is implemented."
+    },
+    {
+      "id": "legacy_and_source_scope",
+      "detail": "Status JSON schema assumptions and rgb8-only conversion are inherited. This review does not broaden supported publishers or encodings. Saved source stamps can characterize duplicate/gap observations but do not establish rendering/DDS causal attribution or raw depth timing."
+    }
+  ],
+  "next_capture_gate": [
+    "Owner freezes this reviewed recorder/test identity and uses a new output path under the assigned session.",
+    "Save actual recorder identity, configured topics, subscription presence, termination reason, return code and logs.",
+    "After bounded capture, decode actual MP4 and verify sidecar/summary counts and source/status references; no frame insertion.",
+    "Treat any abrupt termination, metadata mismatch or missing needed source interval as incomplete evidence; do not upgrade existing four offline tests to runtime acceptance."
+  ]
+}

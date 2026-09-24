@@ -1,5 +1,5 @@
 {
-  "scope": "Raw six-camera presence/timing baseline. Optional inputs do not imply M5 motion coverage acceptance. Stage source must be provided explicitly.",
+  "scope": "Raw six-camera presence/timing baseline plus required execution guard raw status. Optional inputs do not imply M5 motion coverage acceptance. Stage source must be provided explicitly.",
   "topics": [
     {
       "topic": "/camera/raw/head_rgbd/image",
@@ -341,6 +341,14 @@
       "type": "std_msgs/msg/String",
       "qos": "reliable",
       "required": false,
+      "gap_budget_sec": null
+    },
+    {
+      "topic": "/transport/execution_guard/status",
+      "kind": "status",
+      "type": "astribot_transport_msgs/msg/ExecutionGuardStatus",
+      "qos": "reliable",
+      "required": true,
       "gap_budget_sec": null
     }
   ]

@@ -1,0 +1,260 @@
+--- a/tools/sim/record_transport_demo.py
++++ b/tools/sim/record_transport_demo.py
+@@ -10,6 +10,7 @@
+ from rclpy.qos import qos_profile_sensor_data
+ from sensor_msgs.msg import Image
+ from std_msgs.msg import String
++from rosgraph_msgs.msg import Clock
+ 
+ 
+ def main():
+@@ -29,26 +30,52 @@
+     writer = cv2.VideoWriter(str(output), cv2.VideoWriter_fourcc(*'mp4v'), 10., (1280, 720))
+     if not writer.isOpened():
+         raise RuntimeError('Cannot open video writer')
++    frame_sidecar = output.with_suffix('.frames.jsonl').open('w', buffering=1)
+     head, latest = [None], [None]
++    head_metadata, observed_clock = [None], [None]
+     status = {'stage': 'WAITING', 'object_state': 'WORLD'}
++    status_metadata = [dict(receive_seq=0, raw_status=None,
++                            receive_monotonic_ns=None, receive_wall_ns=None, observed_clock=None)]
++    status_events = []
+     terminal, count = [None], [0]
+     stage_frames = []
++    def receive_time():
++        return dict(receive_monotonic_ns=time.monotonic_ns(), receive_wall_ns=time.time_ns(),
++                    observed_clock=observed_clock[0])
++    def clock_cb(message):
++        observed_clock[0] = dict(source_ns=message.clock.sec*10**9+message.clock.nanosec,
++                                 receive_monotonic_ns=time.monotonic_ns(), receive_wall_ns=time.time_ns())
+     def frame(message):
+         if message.encoding != 'rgb8':
+             raise RuntimeError('Expected rgb8')
+         return np.ndarray((message.height, message.width, 3), np.uint8,
+                           buffer=bytes(message.data), strides=(message.step,3,1))[:,:,::-1].copy()
++    def head_cb(message):
++        metadata = receive_time()
++        metadata.update(source_ns=message.header.stamp.sec*10**9+message.header.stamp.nanosec,
++                        frame_id=message.header.frame_id, topic=args.head_topic)
++        head[0] = frame(message)
++        head_metadata[0] = metadata
+     def status_cb(message):
++        metadata = receive_time()
+         raw = json.loads(message.data)
++        metadata.update(receive_seq=status_metadata[0]['receive_seq']+1, raw_status=raw)
++        status_metadata[0] = metadata
++        status_events.append(metadata)
+         incoming = (dict(stage=raw['reason'], object_state='phase='+raw['phase']+
+                          ' | hold_confirmed='+str(raw['hold_confirmed']))
+                     if args.status_format == 'native_hold' else raw)
+         if incoming['stage'] != status['stage']:
+-            stage_frames.append(dict(frame=count[0], stage=incoming['stage'], wall_time=time.time(), raw_status=raw))
++            stage_frames.append(dict(frame=count[0], stage=incoming['stage'],
++                                     wall_time=metadata['receive_wall_ns']/1e9, raw_status=raw,
++                                     status_receive_seq=metadata['receive_seq']))
+         status.update(incoming)
+         if args.status_format == 'legacy' and status['stage'] in ('SUCCEEDED', 'FAULT', 'CANCELED'):
+             terminal[0] = terminal[0] or time.monotonic()
+     def overview_cb(message):
++        metadata = receive_time()
++        metadata.update(source_ns=message.header.stamp.sec*10**9+message.header.stamp.nanosec,
++                        frame_id=message.header.frame_id, topic='/transport/overview')
+         picture = frame(message)
+         if head[0] is not None:
+             picture[460:700,940:1260] = cv2.resize(head[0], (320,240))
+@@ -57,20 +84,30 @@
+         cv2.putText(picture, args.title, (24,30), cv2.FONT_HERSHEY_SIMPLEX,.8,(240,240,240),2,cv2.LINE_AA)
+         cv2.putText(picture, status['stage']+'  |  '+status.get('object_state',''), (24,62), cv2.FONT_HERSHEY_SIMPLEX,.7,(120,220,255),2,cv2.LINE_AA)
+         cv2.putText(picture, 'Kinematic attachment simulation | NOT force/contact validation', (24,700),cv2.FONT_HERSHEY_SIMPLEX,.5,(240,240,240),1,cv2.LINE_AA)
+-        writer.write(picture);count[0] += 1;latest[0]=picture
++        encode_started = time.monotonic_ns()
++        writer.write(picture)
++        encode_finished = time.monotonic_ns()
++        # OpenCV reports no successful frame count; decode and compare after capture.
++        frame_sidecar.write(json.dumps(dict(frame_index=count[0], overview=metadata,
++            head=head_metadata[0], status=status_metadata[0],
++            encode_started_monotonic_ns=encode_started,
++            encode_finished_monotonic_ns=encode_finished), separators=(',', ':'))+'\n')
++        count[0] += 1;latest[0]=picture
+         if count[0]%20 == 0:
+             cv2.imwrite(str(output.with_suffix('.jpg')), picture)
+-    subscriptions = [node.create_subscription(Image,args.head_topic,lambda m:head.__setitem__(0,frame(m)),qos_profile_sensor_data),
++    subscriptions = [node.create_subscription(Image,args.head_topic,head_cb,qos_profile_sensor_data),
+                      node.create_subscription(Image,'/transport/overview',overview_cb,qos_profile_sensor_data),
+-                     node.create_subscription(String,args.status_topic,status_cb,10)]
++                     node.create_subscription(String,args.status_topic,status_cb,10),
++                     node.create_subscription(Clock,'/clock',clock_cb,qos_profile_sensor_data)]
+     start=time.monotonic()
+     try:
+         while time.monotonic()-start < args.timeout and (terminal[0] is None or time.monotonic()-terminal[0]<2):
+             rclpy.spin_once(node,timeout_sec=.1)
+     finally:
+         writer.release()
++        frame_sidecar.close()
+         if latest[0] is not None:cv2.imwrite(str(output.with_suffix('.jpg')),latest[0])
+-        output.with_suffix('.json').write_text(json.dumps(dict(frames=count[0],encoding_fps=10,wall_duration_s=time.monotonic()-start,last_status=status,stage_frames=stage_frames,source='actual_gazebo_images',status_topic=args.status_topic,status_format=args.status_format,task_id=args.task_id,timing='10 fps received frames; not a wall-time performance measurement'),indent=2)+'\n')
++        output.with_suffix('.json').write_text(json.dumps(dict(frames=count[0],encoding_fps=10,wall_duration_s=time.monotonic()-start,last_status=status,stage_frames=stage_frames,status_events=status_events,source='actual_gazebo_images',status_topic=args.status_topic,status_format=args.status_format,task_id=args.task_id,timing='10 fps received frames; not a wall-time performance measurement',frame_timing_schema='astribot.video_frame_timing/1',frame_sidecar=str(output.with_suffix('.frames.jsonl')),frame_count_semantics='completed writer.write calls; decode verification required',clock_semantics='observed_clock is latest received /clock and its receive times; null before first clock'),indent=2)+'\n')
+         node.destroy_node()
+         if rclpy.ok():rclpy.shutdown()
+ 
+--- /dev/null
++++ b/tools/sim/test_record_transport_demo.py
+@@ -0,0 +1,158 @@
++"""Offline recorder checks: real OpenCV encode/decode, substituted ROS delivery."""
++import importlib.util
++import json
++from pathlib import Path
++import sys
++import tempfile
++from types import ModuleType, SimpleNamespace
++import unittest
++from unittest.mock import patch
++
++import cv2
++import numpy as np
++
++
++SCRIPT = Path(__file__).with_name('record_transport_demo.py')
++
++
++def image(stamp_ns, head=False, encoding='rgb8'):
++    height, width = (240, 320) if head else (720, 1280)
++    return SimpleNamespace(
++        header=SimpleNamespace(stamp=SimpleNamespace(
++            sec=stamp_ns//10**9, nanosec=stamp_ns % 10**9), frame_id='head' if head else 'overview'),
++        encoding=encoding, height=height, width=width, step=width*3,
++        data=np.full((height, width, 3), 80, dtype=np.uint8).tobytes())
++
++
++class RecorderTest(unittest.TestCase):
++    def run_recording(self, directory, events, native=True, error=None, error_type=RuntimeError):
++        callbacks = {}
++        now = [100.0]
++        node = SimpleNamespace(
++            create_subscription=lambda typ, topic, callback, qos: callbacks.setdefault(topic, callback),
++            destroy_node=lambda: None)
++        ros = ModuleType('rclpy')
++        ros.init = lambda: None
++        ros.create_node = lambda name: node
++        ros.shutdown = lambda: None
++        ros.ok = lambda: True
++
++        def spin_once(node, timeout_sec):
++            if events:
++                delta, topic, message = events.pop(0)
++                now[0] = 100.0 + delta
++                if isinstance(message, BaseException):
++                    raise message
++                # Old recorder did not subscribe /clock; still deliver other events
++                # so missing output fails on the feature assertion, not the fixture.
++                if topic in callbacks:
++                    callbacks[topic](message)
++            else:
++                now[0] = 120.0
++
++        ros.spin_once = spin_once
++        qos = ModuleType('rclpy.qos')
++        qos.qos_profile_sensor_data = object()
++        sensor = ModuleType('sensor_msgs.msg')
++        sensor.Image = object
++        std = ModuleType('std_msgs.msg')
++        std.String = object
++        graph = ModuleType('rosgraph_msgs.msg')
++        graph.Clock = object
++        modules = {'rclpy': ros, 'rclpy.qos': qos, 'sensor_msgs.msg': sensor,
++                   'std_msgs.msg': std, 'rosgraph_msgs.msg': graph}
++        output = Path(directory)/'clip.mp4'
++        args = [str(SCRIPT), '--output', str(output), '--timeout', '10',
++                '--head-topic', '/head', '--status-topic', '/status',
++                '--status-format', 'native_hold' if native else 'legacy', '--task-id', 'test-task']
++        with patch.dict(sys.modules, modules), patch.object(sys, 'argv', args):
++            spec = importlib.util.spec_from_file_location('recorder_under_test', SCRIPT)
++            recorder = importlib.util.module_from_spec(spec)
++            spec.loader.exec_module(recorder)
++            recorder.time = SimpleNamespace(
++                monotonic=lambda: now[0], monotonic_ns=lambda: round(now[0]*1e9),
++                time=lambda: now[0]+1000, time_ns=lambda: round((now[0]+1000)*1e9))
++            if error:
++                with self.assertRaisesRegex(error_type, error):
++                    recorder.main()
++            else:
++                recorder.main()
++        self.assertTrue(output.with_suffix('.frames.jsonl').exists(),
++                        'Each actual encoded frame needs its original source and receive times')
++        rows = [json.loads(line) for line in output.with_suffix('.frames.jsonl').read_text().splitlines()]
++        summary = json.loads(output.with_suffix('.json').read_text())
++        decoder = cv2.VideoCapture(str(output))
++        decoded = 0
++        while decoder.read()[0]:
++            decoded += 1
++        decoder.release()
++        self.assertEqual(decoded, len(rows), 'Sidecar must map one-to-one to decodable frames')
++        self.assertEqual(summary['frames'], decoded)
++        return rows, summary
++
++    def test_native_frames_preserve_cached_head_gaps_and_intermediate_status(self):
++        # Refreshing cached metadata or attaching status to a nonexistent frame
++        # would falsify the input age / motion-coverage evidence.
++        status = lambda reason: SimpleNamespace(data=json.dumps(
++            dict(reason=reason, phase='EXECUTING', hold_confirmed=False, context_id='context-1')))
++        clock = SimpleNamespace(clock=SimpleNamespace(sec=10, nanosec=500))
++        events = [(.1, '/transport/overview', image(10_000_000_000)),
++                  (.15, '/clock', clock), (.2, '/head', image(10_100_000_000, head=True)),
++                  (.3, '/transport/overview', image(10_200_000_000)),
++                  (.8, '/status', status('EXECUTING_FIRST_MTC_STAGE')),
++                  (.9, '/status', status('EXECUTION_GUARD_UNHEALTHY')),
++                  (1.2, '/transport/overview', image(10_200_000_000)),
++                  (1.3, '/transport/overview', image(9_000_000_000))]
++        with tempfile.TemporaryDirectory() as directory:
++            rows, summary = self.run_recording(directory, events)
++        self.assertEqual([r['frame_index'] for r in rows], [0, 1, 2, 3])
++        self.assertEqual([r['overview']['source_ns'] for r in rows],
++                         [10_000_000_000, 10_200_000_000, 10_200_000_000, 9_000_000_000])
++        self.assertIsNone(rows[0]['head'])
++        self.assertIsNone(rows[0]['overview']['observed_clock'])
++        self.assertEqual(rows[1]['overview']['observed_clock']['source_ns'], 10_000_000_500)
++        self.assertEqual(rows[1]['head'], rows[3]['head'])
++        self.assertEqual(rows[3]['head']['source_ns'], 10_100_000_000)
++        self.assertEqual(rows[3]['head']['receive_monotonic_ns'], 100_200_000_000)
++        self.assertEqual(rows[2]['overview']['receive_monotonic_ns'] -
++                         rows[1]['overview']['receive_monotonic_ns'], 900_000_000)
++        self.assertEqual([r['status']['receive_seq'] for r in rows], [0, 0, 2, 2])
++        self.assertEqual([e['receive_seq'] for e in summary['status_events']], [1, 2])
++        self.assertEqual([e['frame'] for e in summary['stage_frames']], [2, 2])
++        self.assertEqual(rows[2]['status']['raw_status']['context_id'], 'context-1')
++        self.assertEqual(summary['task_id'], 'test-task')
++        self.assertEqual(summary['status_format'], 'native_hold')
++        for row in rows:
++            self.assertLessEqual(row['overview']['receive_monotonic_ns'], row['encode_started_monotonic_ns'])
++            self.assertLessEqual(row['encode_started_monotonic_ns'], row['encode_finished_monotonic_ns'])
++
++    def test_legacy_status_and_zero_source_stamp_are_not_rewritten(self):
++        events = [(.1, '/status', SimpleNamespace(data='{"stage":"SUCCEEDED","object_state":"PLACED"}')),
++                  (.2, '/transport/overview', image(0))]
++        with tempfile.TemporaryDirectory() as directory:
++            rows, summary = self.run_recording(directory, events, native=False)
++        self.assertEqual(rows[0]['overview']['source_ns'], 0)
++        self.assertIsNone(rows[0]['overview']['observed_clock'])
++        self.assertEqual(summary['last_status']['stage'], 'SUCCEEDED')
++        self.assertEqual(rows[0]['status']['raw_status']['object_state'], 'PLACED')
++
++    def test_callback_error_still_flushes_existing_frame_evidence(self):
++        events = [(.1, '/transport/overview', image(10)),
++                  (.2, '/transport/overview', image(20, encoding='unexpected'))]
++        with tempfile.TemporaryDirectory() as directory:
++            rows, summary = self.run_recording(directory, events, error='Expected rgb8')
++        self.assertEqual(len(rows), 1)
++        self.assertEqual(rows[0]['overview']['source_ns'], 10)
++
++    def test_interrupt_preserves_frames_without_swallowing_interruption(self):
++        events = [(.1, '/transport/overview', image(30)),
++                  (.2, '/transport/overview', KeyboardInterrupt('owned stop'))]
++        with tempfile.TemporaryDirectory() as directory:
++            rows, summary = self.run_recording(directory, events, error='owned stop',
++                                               error_type=KeyboardInterrupt)
++        self.assertEqual(len(rows), 1)
++        self.assertEqual(rows[0]['overview']['source_ns'], 30)
++
++
++if __name__ == '__main__':
++    unittest.main()

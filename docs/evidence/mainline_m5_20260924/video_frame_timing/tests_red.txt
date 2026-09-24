@@ -1,0 +1,38 @@
+test_callback_error_still_flushes_existing_frame_evidence (test_record_transport_demo.RecorderTest) ... FAIL
+test_legacy_status_and_zero_source_stamp_are_not_rewritten (test_record_transport_demo.RecorderTest) ... FAIL
+test_native_frames_preserve_cached_head_gaps_and_intermediate_status (test_record_transport_demo.RecorderTest) ... FAIL
+
+======================================================================
+FAIL: test_callback_error_still_flushes_existing_frame_evidence (test_record_transport_demo.RecorderTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py", line 141, in test_callback_error_still_flushes_existing_frame_evidence
+    rows, summary = self.run_recording(directory, events, error='Expected rgb8')
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py", line 78, in run_recording
+    self.assertTrue(output.with_suffix('.frames.jsonl').exists(),
+AssertionError: False is not true : Each actual encoded frame needs its original source and receive times
+
+======================================================================
+FAIL: test_legacy_status_and_zero_source_stamp_are_not_rewritten (test_record_transport_demo.RecorderTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py", line 131, in test_legacy_status_and_zero_source_stamp_are_not_rewritten
+    rows, summary = self.run_recording(directory, events, native=False)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py", line 78, in run_recording
+    self.assertTrue(output.with_suffix('.frames.jsonl').exists(),
+AssertionError: False is not true : Each actual encoded frame needs its original source and receive times
+
+======================================================================
+FAIL: test_native_frames_preserve_cached_head_gaps_and_intermediate_status (test_record_transport_demo.RecorderTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py", line 105, in test_native_frames_preserve_cached_head_gaps_and_intermediate_status
+    rows, summary = self.run_recording(directory, events)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/sim/test_record_transport_demo.py", line 78, in run_recording
+    self.assertTrue(output.with_suffix('.frames.jsonl').exists(),
+AssertionError: False is not true : Each actual encoded frame needs its original source and receive times
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.065s
+
+FAILED (failures=3)

@@ -1,0 +1,29 @@
+{
+  "schema": "astribot.m5.runner_readonly_review/1",
+  "reviewed_at_utc": "2026-09-24T04:49:36.376288+00:00",
+  "scope": "Observer/video evidence integration only; no robot safety or motion acceptance and no ROS/Gazebo/GPU operations. Owner may execute actual preflight after coordinator release.",
+  "source_sha256": {
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/run_first_stage.py": "13af6d905e43c747890a6e34b776792b749ede957737fd72b22e0f2eeb1fc3ae",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/verify_first_stage.py": "11d3ec039751a99b76d5dd7edabb75f710463f84f83349aa69e291bb2e5779f5",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/observer_topics.json": "8afd2cf3f187d80f388366e8b1eaaa0bee950a5ca27fd16ecdf9240c5d1f8bad",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/record_transport_demo.py": "dc19af167a6c2e8583df95f43283470714d73901137f95f724532a9ee461e92f"
+  },
+  "verdict": "READY_FOR_OWNER_RUNTIME_PREFLIGHT",
+  "blocking_issues": [],
+  "reviewed_items": {
+    "independent_41_topic_configuration_and_hash": "PASS",
+    "pre_action_receipt_written_before_acquire": "PASS",
+    "observer_20_second_stop_grace": "PASS",
+    "observer_return_code_and_terminal_manifest_errors": "PASS",
+    "frozen_recorder_copy_matches_reviewed_source": "PASS",
+    "postcapture_decode_count_sidecar_count_summary_count_and_contiguous_indices": "IMPLEMENTED_NOT_RUN",
+    "recorder_returncode_preserved": "PASS"
+  },
+  "notes": [
+    "Owner runner evolved after the first independent four-item review; this receipt identifies the later read-only snapshot including video decode integration.",
+    "Source identity must be preserved at launch; this record does not apply to later unreviewed code changes.",
+    "Interrupted observer window is INCOMPLETE, not a complete 300-second PASS.",
+    "Decoded count agreement does not establish action-window coverage or guarantee recorder exited normally; inspect recorder returncode/log and frame source/receive interval.",
+    "Actual DDS subscriptions and messages remain subject to owner preflight."
+  ]
+}

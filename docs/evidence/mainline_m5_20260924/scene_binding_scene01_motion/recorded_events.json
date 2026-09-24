@@ -1,0 +1,347 @@
+{
+  "task_id": "m1_task_59fda05391c54fdc9c25d09e55db0c0e",
+  "parent_request": "m1_request_2f1c3f134ee14094ac12e600963a2bae",
+  "feedback_transitions": [
+    {
+      "observer_ros_s": 33.781,
+      "receive_steady_s": 79840.163383695,
+      "phase": "1",
+      "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK"
+    },
+    {
+      "observer_ros_s": 33.825,
+      "receive_steady_s": 79840.211907402,
+      "phase": "2",
+      "reason": "PLANNING_COMPLETE_OPERATION"
+    },
+    {
+      "observer_ros_s": 38.248000000000005,
+      "receive_steady_s": 79844.712447223,
+      "phase": "2",
+      "reason": "WAITING_FOR_EXECUTION_GUARD"
+    },
+    {
+      "observer_ros_s": 38.297000000000004,
+      "receive_steady_s": 79844.761505222,
+      "phase": "2",
+      "reason": "EXECUTING_FIRST_MTC_STAGE"
+    },
+    {
+      "observer_ros_s": 38.639,
+      "receive_steady_s": 79845.116725709,
+      "phase": "5",
+      "reason": "EXECUTION_GUARD_UNHEALTHY"
+    }
+  ],
+  "journal": [
+    {
+      "journal_index": 0,
+      "event": "reserved",
+      "lease_issued_at_ns": 33736000000,
+      "reason": "RESERVED",
+      "details": null
+    },
+    {
+      "journal_index": 1,
+      "event": "navigation_revoked",
+      "lease_issued_at_ns": 33736000000,
+      "reason": "RESERVED",
+      "details": {
+        "epoch": 79805550672870
+      }
+    },
+    {
+      "journal_index": 2,
+      "event": "scene_evidence",
+      "lease_issued_at_ns": 33736000000,
+      "reason": "RESERVED",
+      "details": {
+        "bytes": 211820,
+        "context": "m1_context_883eacd0507c4c6195b730fe1a3d133f",
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/native_scene_cdr/14274b04-9956-4947-98cd-21a64c83a736_1/initial_scene.cdr",
+        "role": "initial",
+        "ros_ns": 33785000000,
+        "steady_ns": 79840164316401
+      }
+    },
+    {
+      "journal_index": 3,
+      "event": "before_child_submission",
+      "lease_issued_at_ns": 33736000000,
+      "reason": "EXECUTING",
+      "details": null
+    },
+    {
+      "journal_index": 4,
+      "event": "planner_submission",
+      "lease_issued_at_ns": 33736000000,
+      "reason": "EXECUTING",
+      "details": {
+        "context": "m1_context_883eacd0507c4c6195b730fe1a3d133f",
+        "geometry_sequence": 622
+      }
+    },
+    {
+      "journal_index": 5,
+      "event": "planner_terminal",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "context": "m1_context_883eacd0507c4c6195b730fe1a3d133f",
+        "success": true
+      }
+    },
+    {
+      "journal_index": 6,
+      "event": "scene_evidence",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "bytes": 211820,
+        "context": "m1_context_883eacd0507c4c6195b730fe1a3d133f",
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/native_scene_cdr/14274b04-9956-4947-98cd-21a64c83a736_1/last_recheck_scene.cdr",
+        "role": "recheck",
+        "ros_ns": 38202000000,
+        "steady_ns": 79844665866307
+      }
+    },
+    {
+      "journal_index": 7,
+      "event": "scene_evidence",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "bytes": 211820,
+        "context": "m1_context_883eacd0507c4c6195b730fe1a3d133f",
+        "path": "/home/yjh/WorkSpace/astribot_validation/M1_scene_binding_20260924/scene_binding_scene01/native_scene_cdr/14274b04-9956-4947-98cd-21a64c83a736_1/last_recheck_scene.cdr",
+        "role": "recheck",
+        "ros_ns": 38252000000,
+        "steady_ns": 79844715369539
+      }
+    },
+    {
+      "journal_index": 8,
+      "event": "child_submission",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "arm_left_controller"
+      }
+    },
+    {
+      "journal_index": 9,
+      "event": "child_submission",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "arm_right_controller"
+      }
+    },
+    {
+      "journal_index": 10,
+      "event": "child_submission",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "gripper_left_controller"
+      }
+    },
+    {
+      "journal_index": 11,
+      "event": "child_submission",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "gripper_right_controller"
+      }
+    },
+    {
+      "journal_index": 12,
+      "event": "child_submission",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "head_controller"
+      }
+    },
+    {
+      "journal_index": 13,
+      "event": "child_submission",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "torso_controller"
+      }
+    },
+    {
+      "journal_index": 14,
+      "event": "child_response",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "arm_left_controller",
+        "uuid": "4ee2f7625dbd5f318deed9fb3caeccea"
+      }
+    },
+    {
+      "journal_index": 15,
+      "event": "child_response",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "701b2441d99f2bd95f2ac755dea49bef"
+      }
+    },
+    {
+      "journal_index": 16,
+      "event": "child_response",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "2f5770d111c4d07bbb4f9bbb901d2bf9"
+      }
+    },
+    {
+      "journal_index": 17,
+      "event": "child_response",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "aa22db28ec8ff9ac943f298164d0ebc9"
+      }
+    },
+    {
+      "journal_index": 18,
+      "event": "child_response",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "a9d0827392624dc2c24da11ba34a20e5"
+      }
+    },
+    {
+      "journal_index": 19,
+      "event": "child_response",
+      "lease_issued_at_ns": 38113000000,
+      "reason": "EXECUTING",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "161c535599e8878afca5d2ce676aad6b"
+      }
+    },
+    {
+      "journal_index": 20,
+      "event": "stop_requested",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "EXECUTION_GUARD_UNHEALTHY",
+      "details": null
+    },
+    {
+      "journal_index": 21,
+      "event": "quarantined",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": null
+    },
+    {
+      "journal_index": 22,
+      "event": "navigation_revoked",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": {
+        "epoch": 79805550672870
+      }
+    },
+    {
+      "journal_index": 23,
+      "event": "child_terminal",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": {
+        "controller": "arm_left_controller",
+        "result_code": 5,
+        "success": false,
+        "uuid": "4ee2f7625dbd5f318deed9fb3caeccea"
+      }
+    },
+    {
+      "journal_index": 24,
+      "event": "child_terminal",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": {
+        "controller": "arm_right_controller",
+        "result_code": 5,
+        "success": false,
+        "uuid": "701b2441d99f2bd95f2ac755dea49bef"
+      }
+    },
+    {
+      "journal_index": 25,
+      "event": "child_terminal",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": {
+        "controller": "gripper_left_controller",
+        "result_code": 5,
+        "success": false,
+        "uuid": "2f5770d111c4d07bbb4f9bbb901d2bf9"
+      }
+    },
+    {
+      "journal_index": 26,
+      "event": "child_terminal",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": {
+        "controller": "gripper_right_controller",
+        "result_code": 5,
+        "success": false,
+        "uuid": "aa22db28ec8ff9ac943f298164d0ebc9"
+      }
+    },
+    {
+      "journal_index": 27,
+      "event": "child_terminal",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": {
+        "controller": "head_controller",
+        "result_code": 5,
+        "success": false,
+        "uuid": "a9d0827392624dc2c24da11ba34a20e5"
+      }
+    },
+    {
+      "journal_index": 28,
+      "event": "child_terminal",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": {
+        "controller": "torso_controller",
+        "result_code": 5,
+        "success": false,
+        "uuid": "161c535599e8878afca5d2ce676aad6b"
+      }
+    },
+    {
+      "journal_index": 29,
+      "event": "result_release_pending",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RESOURCE_CLOCK_RESET",
+      "details": null
+    },
+    {
+      "journal_index": 30,
+      "event": "resource_handoff_committed",
+      "lease_issued_at_ns": 38506000000,
+      "reason": "RELEASED",
+      "details": null
+    }
+  ],
+  "journal_time_warning": "issued_at is a lease field, not an event timestamp; use explicit scene_evidence ros_ns/steady_ns or observer feedback timestamps where available."
+}
