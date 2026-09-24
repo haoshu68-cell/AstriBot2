@@ -1,0 +1,16 @@
+# Owned workstation projector candidate. Start only in the assigned session.
+# Does not alter the navigation projector, camera angle, calibration or epochs.
+single_box_projector:
+  ros__parameters:
+    use_sim_time: true
+    camera_id: head_rgbd
+    depth_topic: /camera/raw/head_rgbd/depth_image
+    camera_info_topic: /camera/raw/head_rgbd/camera_info
+    output_topic: /manipulation/single_box/head_rgbd/points
+    processing_health_topic: /perception/projection_health/single_box/head_rgbd
+    projection_backend: cpu
+    allow_cpu_fallback: false
+    decimation: 1
+    min_depth: 0.08
+    max_depth: 5.0
+    max_pair_age_sec: 0.25

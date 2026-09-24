@@ -1,0 +1,22 @@
+manipulation_perception_server:
+  ros__parameters:
+    camera_id: head_rgbd
+    optical_frame: head_rgbd_camera_optical_frame
+    camera_health_topic: /perception/camera_health/head_rgbd
+    # Set to /perception/projection_health/<camera_id> for supervised RGB-D
+    # clouds. Requests must then carry the matching processing_epoch.
+    # Empty is reserved for independently versioned external snapshot sources.
+    projection_health_topic: ''
+    # Required authoritative deployment context; zero intentionally denies all goals.
+    calibration_revision: 0
+    planning_scene_revision: 0
+    envelope_epoch: 0
+    max_input_age_sec: 0.5
+    max_health_age_sec: 0.5
+    # Perception-only expiry. Does not change downstream execution freshness gates.
+    max_result_age_sec: 5.0
+    grasp_worker: ''
+    grasp_model: ''
+    grasp_device: cuda
+    pose_worker: ''
+    model_registry: ''

@@ -1,0 +1,20 @@
+# Preparation template; paired launch requires actual nonzero task versions.
+# Frame copied from prior raw-camera receipt; owner must verify current capture and health.
+manipulation_perception_server:
+  ros__parameters:
+    use_sim_time: true
+    camera_id: head_rgbd
+    optical_frame: astribot_s1/astribot_head_link_2/head_rgbd_sensor
+    camera_health_topic: /perception/camera_health/head_rgbd
+    projection_health_topic: /perception/projection_health/single_box/head_rgbd
+    calibration_revision: 0
+    planning_scene_revision: 0
+    envelope_epoch: 0
+    max_input_age_sec: 0.5
+    max_result_age_sec: 5.0
+    max_health_age_sec: 0.5
+    grasp_device: cuda
+    grasp_worker: /home/yjh/.cache/astribot/graspnet/build_cuda/graspnet_worker
+    grasp_model: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/models/graspnet_cuda_v2.pt
+    pose_worker: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/m3_perception_planning_20260924/install/astribot_object_pose_core/lib/astribot_object_pose_core/object_pose_register
+    model_registry: /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m3_perception_planning_20260924/normal_box/registry.json

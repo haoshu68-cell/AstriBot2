@@ -1,0 +1,43 @@
+{
+  "schema": "astribot.m3.offline_delivery/1",
+  "recorded_at": "2026-09-24T10:25:37.775179+08:00",
+  "implementation": "PASS",
+  "isolated_build": "PASS",
+  "checks": {
+    "contract_final": {
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "time": "0"
+    },
+    "protocol_final": {
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "time": "1.244"
+    },
+    "box_final": {
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "time": "0.034"
+    }
+  },
+  "model_inference_with_new_client": "NOT_RUN",
+  "simulation": "NOT_RUN",
+  "hardware": "NOT_RUN",
+  "whole_m3_acceptance": false,
+  "remaining": [
+    "known BOX registry and current-camera segmented cloud",
+    "owned scene proposal commit and readback/revalidation by M1",
+    "real model total deadline feasibility",
+    "full closing sweep and actual grasp/place execution"
+  ],
+  "build_parallelism": {
+    "package_executor": "sequential",
+    "colcon_make_flags": "-j28 -l28",
+    "peak_concurrent_compilers": "NOT_RECORDED",
+    "single_compiler_claim_withdrawn": true,
+    "final_semantic_test_target": "direct cmake --build --parallel 1"
+  }
+}

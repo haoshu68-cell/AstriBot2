@@ -1,0 +1,99 @@
+{
+  "status": "PASS",
+  "scope": "installed CLI declarations and original input rejection; no pose fit",
+  "recorded_at": "2026-09-24T10:43:50.270454+08:00",
+  "cases": [
+    {
+      "case": "valid_prism",
+      "exit": 2,
+      "result": {
+        "schema": "astribot.object_pose/1",
+        "method": "known_cad_ppf_icp",
+        "success": false,
+        "reason": "invalid_scene_shape",
+        "camera_from_object": null,
+        "coverage": 0,
+        "model_coverage": 0,
+        "total_model_coverage": 0,
+        "visible_model_coverage": null,
+        "visible_model_points": 0,
+        "observable_normal_directions": 0,
+        "scene_coverage": 0,
+        "rmse_m": null,
+        "ambiguous": false,
+        "symmetry_equivalent": false,
+        "candidate_count": 0
+      },
+      "stderr": ""
+    },
+    {
+      "case": "cube",
+      "exit": 2,
+      "result": {
+        "schema": "astribot.object_pose/1",
+        "method": "known_cad_ppf_icp",
+        "success": false,
+        "reason": "invalid_square_prism_z_model",
+        "camera_from_object": null,
+        "coverage": 0,
+        "model_coverage": 0,
+        "total_model_coverage": 0,
+        "visible_model_coverage": null,
+        "visible_model_points": 0,
+        "observable_normal_directions": 0,
+        "scene_coverage": 0,
+        "rmse_m": null,
+        "ambiguous": false,
+        "symmetry_equivalent": false,
+        "candidate_count": 0
+      },
+      "stderr": "square_prism_z requires x=y and z different; cubes need 24 rotations\n"
+    },
+    {
+      "case": "wrong_x_y",
+      "exit": 2,
+      "result": {
+        "schema": "astribot.object_pose/1",
+        "method": "known_cad_ppf_icp",
+        "success": false,
+        "reason": "invalid_square_prism_z_model",
+        "camera_from_object": null,
+        "coverage": 0,
+        "model_coverage": 0,
+        "total_model_coverage": 0,
+        "visible_model_coverage": null,
+        "visible_model_points": 0,
+        "observable_normal_directions": 0,
+        "scene_coverage": 0,
+        "rmse_m": null,
+        "ambiguous": false,
+        "symmetry_equivalent": false,
+        "candidate_count": 0
+      },
+      "stderr": "square_prism_z requires x=y and z different; cubes need 24 rotations\n"
+    },
+    {
+      "case": "cad_mismatch",
+      "exit": 2,
+      "result": {
+        "schema": "astribot.object_pose/1",
+        "method": "known_cad_ppf_icp",
+        "success": false,
+        "reason": "invalid_square_prism_z_model",
+        "camera_from_object": null,
+        "coverage": 0,
+        "model_coverage": 0,
+        "total_model_coverage": 0,
+        "visible_model_coverage": null,
+        "visible_model_points": 0,
+        "observable_normal_directions": 0,
+        "scene_coverage": 0,
+        "rmse_m": null,
+        "ambiguous": false,
+        "symmetry_equivalent": false,
+        "candidate_count": 0
+      },
+      "stderr": "square_prism_z CAD bounds disagree with registered box\n"
+    }
+  ]
+}

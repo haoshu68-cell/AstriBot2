@@ -1,0 +1,31 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 5 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 5 tests from BoxRegistration
+Warning: Link 'livox_mid360_left' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+Warning: Link 'livox_mid360_right' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+Warning: Link 'camera_link' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+[INFO] [1790216389.784613752] [moveit_robot_model.robot_model]: Loading robot model 'astribot_s1'...
+[WARN] [1790216389.791626386] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790216389.796764724] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790216389.800452229] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790216389.802403896] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[ RUN      ] BoxRegistration.UsesCadWidthAndActualCommanderClosure
+M3_BOX_GEOMETRY width=0.06 q=0.466377314821 open_gap=0.0975270967228 tcp_translation=-0.0564122767507,-0.006,3.74666920697e-07
+[       OK ] BoxRegistration.UsesCadWidthAndActualCommanderClosure (0 ms)
+[ RUN      ] BoxRegistration.CandidateDepthChangesTcpAlongApproachByThirtyMillimeters
+[       OK ] BoxRegistration.CandidateDepthChangesTcpAlongApproachByThirtyMillimeters (0 ms)
+[ RUN      ] BoxRegistration.ChangedCadWidthUsesNewClosureAndFk
+[       OK ] BoxRegistration.ChangedCadWidthUsesNewClosureAndFk (0 ms)
+[ RUN      ] BoxRegistration.RejectsSlantedOffCenterTooWideAndUnknownDepth
+[       OK ] BoxRegistration.RejectsSlantedOffCenterTooWideAndUnknownDepth (0 ms)
+[ RUN      ] BoxRegistration.RotatedCameraDoesNotChangeRelativeBoxRegistration
+[       OK ] BoxRegistration.RotatedCameraDoesNotChangeRelativeBoxRegistration (0 ms)
+[----------] 5 tests from BoxRegistration (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 1 test suite ran. (34 ms total)
+[  PASSED  ] 5 tests.

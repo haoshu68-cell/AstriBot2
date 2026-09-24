@@ -1,0 +1,33 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 9 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 6 tests from CloudContract
+[ RUN      ] CloudContract.ReadsOrganizedCloudWithRowPadding
+[       OK ] CloudContract.ReadsOrganizedCloudWithRowPadding (0 ms)
+[ RUN      ] CloudContract.RejectsTruncatedRow
+[       OK ] CloudContract.RejectsTruncatedRow (0 ms)
+[ RUN      ] CloudContract.RejectsOverlappingFields
+[       OK ] CloudContract.RejectsOverlappingFields (0 ms)
+[ RUN      ] CloudContract.RejectsEndianAndNan
+[       OK ] CloudContract.RejectsEndianAndNan (0 ms)
+[ RUN      ] CloudContract.RejectsMissingAndWrongType
+[       OK ] CloudContract.RejectsMissingAndWrongType (0 ms)
+[ RUN      ] CloudContract.RejectsHugeDimensionsAndTooFewPoints
+[       OK ] CloudContract.RejectsHugeDimensionsAndTooFewPoints (0 ms)
+[----------] 6 tests from CloudContract (0 ms total)
+
+[----------] 2 tests from RotationContract
+[ RUN      ] RotationContract.RejectsReflectionsAndNonfinite
+[       OK ] RotationContract.RejectsReflectionsAndNonfinite (0 ms)
+[ RUN      ] RotationContract.RejectsScaledOrSkewedMatrix
+[       OK ] RotationContract.RejectsScaledOrSkewedMatrix (0 ms)
+[----------] 2 tests from RotationContract (0 ms total)
+
+[----------] 1 test from SnapshotContract
+[ RUN      ] SnapshotContract.RequiresFreshNonfutureStampAndBoundedExpiry
+[       OK ] SnapshotContract.RequiresFreshNonfutureStampAndBoundedExpiry (0 ms)
+[----------] 1 test from SnapshotContract (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 9 tests from 3 test suites ran. (1 ms total)
+[  PASSED  ] 9 tests.

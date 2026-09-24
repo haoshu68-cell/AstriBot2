@@ -1,0 +1,19 @@
+[0.281s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_transport_msgs' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_transport_msgs
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_transport_msgs
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_object_pose_core
+Finished <<< astribot_object_pose_core [3.34s]
+Starting >>> astribot_perception_msgs
+Finished <<< astribot_perception_msgs [0.34s]
+Starting >>> astribot_transport_msgs
+Finished <<< astribot_transport_msgs [0.39s]
+Starting >>> astribot_s1_manipulation_perception
+Finished <<< astribot_s1_manipulation_perception [27.9s]
+
+Summary: 4 packages finished [32.2s]

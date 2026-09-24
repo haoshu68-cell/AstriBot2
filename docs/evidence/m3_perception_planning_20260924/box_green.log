@@ -1,0 +1,28 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from BoxRegistration
+Warning: Link 'livox_mid360_left' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+Warning: Link 'livox_mid360_right' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+Warning: Link 'camera_link' is not known to URDF. Cannot disable/enable collisons.
+         at line 594 in ./src/model.cpp
+[INFO] [1790216248.867823063] [moveit_robot_model.robot_model]: Loading robot model 'astribot_s1'...
+[WARN] [1790216248.880554439] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790216248.894953960] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790216248.907148103] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[WARN] [1790216248.916147853] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[ RUN      ] BoxRegistration.UsesCadWidthAndActualCommanderClosure
+[       OK ] BoxRegistration.UsesCadWidthAndActualCommanderClosure (0 ms)
+[ RUN      ] BoxRegistration.CandidateDepthChangesTcpAlongApproachByThirtyMillimeters
+[       OK ] BoxRegistration.CandidateDepthChangesTcpAlongApproachByThirtyMillimeters (0 ms)
+[ RUN      ] BoxRegistration.ChangedCadWidthUsesNewClosureAndFk
+[       OK ] BoxRegistration.ChangedCadWidthUsesNewClosureAndFk (0 ms)
+[ RUN      ] BoxRegistration.RejectsSlantedOffCenterTooWideAndUnknownDepth
+[       OK ] BoxRegistration.RejectsSlantedOffCenterTooWideAndUnknownDepth (0 ms)
+[----------] 4 tests from BoxRegistration (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (71 ms total)
+[  PASSED  ] 4 tests.

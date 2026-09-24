@@ -1,0 +1,35 @@
+{
+  "scope": "current source xacro, sensor-disabled geometry-only model, not complete simulation configuration",
+  "arguments": [
+    "robot_name:=astribot_s1",
+    "use_camera:=false",
+    "use_lidar:=false",
+    "use_wrist_cameras:=false",
+    "use_stereo_cameras:=false"
+  ],
+  "grasp_preload_m": 0.004,
+  "sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/m3_perception_planning_20260924/registration_robot.urdf": "ebff3fec9cb4ee27c1a50b504506d3884c3082795d9c35db9fc90439b5c0898a",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_moveit_config/config/astribot_s1.srdf": "1a272c8af5508d0c78c40685bc1afcd2c38bbe3678bd4d3e69bac829647c668c",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/src/gripper_commander.cpp": "d3152de9eecc7d1a73000f6fa2bcc34e4d4074e8e86da948e5047a96bee7f957",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/astribot_config/robot_config/astribot_s1/model/meshes/s1_gripper/obj/astribot_gripper_L11_Link_collision_mesh.obj": "6fa7d39b316b243a50712f09a1f80f669cdfb4633215fd064cf0b3b31ac2da95",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/astribot_config/robot_config/astribot_s1/model/meshes/s1_gripper/obj/astribot_gripper_R11_Link_collision_mesh.obj": "2eaeed10fc374830f1bed3c0ed0c59dabfbbc594d18b1ffa949a53c0e8957929",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_manipulation/lib/libastribot_s1_manipulation_gripper.so": "55d42235e5a3e86ebe61e79e4d5ce937a19de4cee45df118a1d7819be71ed978"
+  },
+  "pad_meshes": [
+    {
+      "link": "astribot_gripper_left_Link_L11",
+      "mesh_uri": "package://astribot_s1_description/meshes/s1_gripper/obj/astribot_gripper_L11_Link_collision_mesh.obj",
+      "resolved_runtime_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/astribot_config/robot_config/astribot_s1/model/meshes/s1_gripper/obj/astribot_gripper_L11_Link_collision_mesh.obj",
+      "sha256": "6fa7d39b316b243a50712f09a1f80f669cdfb4633215fd064cf0b3b31ac2da95"
+    },
+    {
+      "link": "astribot_gripper_left_Link_R11",
+      "mesh_uri": "package://astribot_s1_description/meshes/s1_gripper/obj/astribot_gripper_R11_Link_collision_mesh.obj",
+      "resolved_runtime_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/astribot_config/robot_config/astribot_s1/model/meshes/s1_gripper/obj/astribot_gripper_R11_Link_collision_mesh.obj",
+      "sha256": "2eaeed10fc374830f1bed3c0ed0c59dabfbbc594d18b1ffa949a53c0e8957929"
+    }
+  ],
+  "installed_gripper_header_matches_source": true,
+  "library_scope": "reuse existing installed gripper component; no motion calls; installed library hash recorded, source not rebuilt by M3"
+}

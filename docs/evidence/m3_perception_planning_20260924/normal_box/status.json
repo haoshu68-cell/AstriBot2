@@ -1,0 +1,46 @@
+{
+  "recorded_at": "2026-09-24T10:45:44.215862+08:00",
+  "scope": "square-prism CLI declaration, registry and normal BOX assets",
+  "implementation": "PASS",
+  "offline_assets": "PASS",
+  "isolated_build": "PASS",
+  "cpp_semantic_tests": {
+    "status": "PASS",
+    "tests": 4,
+    "failures": 0
+  },
+  "actual_model_inference": "NOT_RUN",
+  "simulation": "NOT_RUN",
+  "resource_owner": "M2",
+  "source_sha256": {
+    "ws_robot/src/astribot_object_pose_core/src/register_cli.cpp": "2b15b243f38411c3546ecd327eebe6224322644198016d855c0a5c2217acc3bd",
+    "ws_robot/src/astribot_object_pose_core/tests/square_prism_cli_test.cpp": "ed5c76501cd94b5459dc36b066667ae9981d4e23f87cc087803025cb68819de5",
+    "ws_robot/src/astribot_object_pose_core/CMakeLists.txt": "02c2e762b473c20a7b6182d255cbe7680aafd7179fdb6dfbc9b6cc88a97660f2",
+    "ws_robot/src/astribot_object_pose_core/README.md": "91980865df62bdac3229bbf02b93c28bd520dfec8e63c9b0e0090878cbc66bea",
+    "ws_robot/src/astribot_s1_manipulation_perception/src/manipulation_perception_server.cpp": "033dcd995076c084b3d1ca07f08ae99861c4a2645d39084e7c88ae9b0a68fd51"
+  },
+  "installed_cli_boundaries": {
+    "status": "PASS",
+    "cases": 4
+  },
+  "m2_fixture_geometry_binding": "PASS",
+  "compilation_processes_owned_remaining": 0,
+  "installed_sha256": {
+    "runs/m3_perception_planning_20260924/install/astribot_object_pose_core/lib/astribot_object_pose_core/object_pose_register": "5416ab48442e871a35747de16aa9f17179531dff1232abce00056d29babcd3b4",
+    "runs/m3_perception_planning_20260924/install/astribot_s1_manipulation_perception/lib/astribot_s1_manipulation_perception/manipulation_perception_server": "e6c6ba8ea4378231922fa4a95906665b27664eb6bb251105dcc4830a9305f9f6"
+  },
+  "retained_failure": "semantic_tests.log/xml: OpenCV test reader rejects legitimate JSON null; product output unchanged, corrected reader passes",
+  "remaining": [
+    "current camera/health/TF/epoch and segmented object cloud",
+    "real concurrent model inference plus full MTC within original capture+5s",
+    "M1 scene transaction/readback/remaining-plan revalidation",
+    "model-driven full grasp/place; frictional contact unvalidated"
+  ],
+  "build_parallelism": {
+    "package_executor": "sequential",
+    "colcon_make_flags": "-j28 -l28",
+    "peak_concurrent_compilers": "NOT_RECORDED",
+    "single_compiler_claim_withdrawn": true,
+    "final_semantic_test_target": "direct cmake --build --parallel 1"
+  }
+}
