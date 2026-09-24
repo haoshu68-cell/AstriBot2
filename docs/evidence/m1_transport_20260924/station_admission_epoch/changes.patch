@@ -1,0 +1,78 @@
+--- docs/evidence/m1_transport_20260924/station_admission_epoch/hold_executor_before.cpp
++++ ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -185,7 +185,7 @@
+     input_.object_id=goal.object_id;input_.operation="PICK";input_.context_id=goal.context_id+"_op_1_PICK";
+     input_.touch_links=goal.touch_links;input_.grasp_width_m=goal.grasp_width_m;
+     transfer_started_=wall();transfer_budget_=int64_t(goal.timeout_s*1000000000.);
+-    transfer_phase_=TransferPhase::PICK_PREPARE;navigation_started_=false;navigation_cleanup_revoke_=false;station_pending_=false;station_scene_unresolved_=false;station_ready_=false;final_scene_pending_=false;
++    transfer_phase_=TransferPhase::PICK_PREPARE;navigation_started_=false;navigation_cleanup_revoke_=false;station_bound_=false;station_pending_=false;station_scene_unresolved_=false;station_ready_=false;final_scene_pending_=false;
+     navigation_=std::make_unique<FixedStationNavigation>(*this,"/navigate_to_pose");
+     start();hold_id_=authority_->lease_id()+"_hold_1_0";operation_started_ros_=now().nanoseconds();
+     const auto *state=payload_consumer_->current(now().nanoseconds(),wall());
+@@ -302,7 +302,6 @@
+   const auto ros=now().nanoseconds(),steady=wall();
+   const auto *state=payload_consumer_->current(ros,steady);
+   if(!state||!state->observation.full_inventory||state->observation.status!=Observation::EMPTY||!state->observation.objects.empty())throw std::runtime_error("TRANSFER_REQUIRES_CONFIRMED_EMPTY");
+-  (void)observe_stations(goal,ros,steady,true);
+  }
+  bool navigation_revoked(int64_t ros,int64_t steady) {
+   if(revoke_pending_&&steady-revoke_sent_>3000*MS){revoke_client_->remove_pending_request(revoke_request_);revoke_pending_=false;throw std::runtime_error("NAVIGATION_REVOCATION_TIMEOUT");}
+@@ -431,8 +430,18 @@
+   if(final_scene_pending_&&steady-final_checked_at_>3000*MS)throw std::runtime_error("TRANSFER_FINAL_SCENE_TIMEOUT");
+   if(transfer_phase_==TransferPhase::PICK_PREPARE||transfer_phase_==TransferPhase::PLACE_PREPARE) {
+    (void)payload_world_base(ros,ros,steady);
+-   if(!world_snapshot_||world_snapshot_stamp_<operation_started_ros_)return;
+-   if(navigation_revoked(ros,steady))prepare_station_scene();return;
++   if(!world_snapshot_||world_snapshot_stamp_<operation_started_ros_) {
++    if(steady-started_>3000*MS)throw std::runtime_error("STATION_WORLD_OBSERVATION_STALE");
++    return;
++   }
++   if(!station_pending_&&!station_ready_) {
++    // full_ready binds the new inbox epoch before acceptance. Bind station
++    // identities only from its first fresh operation capture, before scene
++    // submission or any child motion; the scene callback rechecks them.
++    (void)observe_stations(*transfer_parent_->get_goal(),ros,steady,!station_bound_);station_bound_=true;
++    if(navigation_revoked(ros,steady))prepare_station_scene();
++   }
++   return;
+   }
+   if(transfer_phase_==TransferPhase::PICK&&hold_confirmed_) {
+    const auto *state=payload_consumer_->current(ros,steady);
+@@ -577,6 +586,7 @@
+    // the previous generation cannot append after this clear, and source
+    // captures older than the new binding cannot seed the new world buffer.
+    world_inbox_->bind(ros);
++   world_snapshot_.reset();world_snapshot_stamp_=0;
+    payload_epoch_=state->observation.source_epoch;payload_clock_=state->observation.clock_epoch;payload_ledger_epoch_=state->ledger_epoch;
+    return true;
+   }catch(const std::exception &error){reason_=error.what();return false;}
+@@ -1281,7 +1291,7 @@
+  TransferPhase transfer_phase_=TransferPhase::PICK_PREPARE;
+  rclcpp_action::Server<Transfer>::SharedPtr transfer_server_;std::shared_ptr<TransferParent> transfer_parent_;
+  std::unique_ptr<FixedStationNavigation> navigation_;
+- bool navigation_started_=false,navigation_cleanup_revoke_=false,station_pending_=false,station_scene_unresolved_=false,station_ready_=false,final_scene_pending_=false;
++ bool navigation_started_=false,navigation_cleanup_revoke_=false,station_bound_=false,station_pending_=false,station_scene_unresolved_=false,station_ready_=false,final_scene_pending_=false;
+  int64_t transfer_started_=0,transfer_budget_=0,station_sent_=0,operation_started_ros_=0,final_checked_at_=0;
+  moveit_msgs::msg::PlanningScene station_before_,station_diff_;
+  std::optional<std::pair<ignition::msgs::Pose_V,PayloadCommand::Receipt>> world_snapshot_;int64_t world_snapshot_stamp_=0;
+--- docs/evidence/m1_transport_20260924/station_admission_epoch/payload_frames_test_before.cpp
++++ ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp
+@@ -37,8 +37,18 @@
+ 
+ TEST(PayloadWorldInbox, RebindingDropsQueuedAndInFlightPreviousEpoch) {
+  PayloadWorldInbox inbox;
++ const auto unbound=inbox.ticket();
++ inbox.receive(poses(1000000000,.13),{1000000000,2000000000},unbound);
++ EXPECT_TRUE(inbox.take().empty());
+  inbox.bind(1000000000);
++ // A callback begun before the first binding cannot seed the new epoch,
++ // even when its source capture is newer than the binding time.
++ inbox.receive(poses(1100000000,.13),{1100000000,2000000000},unbound);
++ EXPECT_TRUE(inbox.take().empty());
+  const auto previous=inbox.ticket();
++ inbox.receive(poses(1100000000,.13),{1100000000,2000000000},previous);
++ auto first=inbox.take();ASSERT_EQ(first.size(),1u);
++ EXPECT_EQ(first.front().first.header().stamp().nsec(),100000000);
+  inbox.receive(poses(1100000000,.13),{1100000000,2000000000},previous);
+  // Rebind while the old capture still satisfies the original 300 ms lease.
+  inbox.bind(1150000000);

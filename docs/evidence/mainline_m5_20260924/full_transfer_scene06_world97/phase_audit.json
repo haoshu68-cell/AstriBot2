@@ -1,0 +1,79 @@
+{
+  "schema": "astribot.m5.parent_phase_evidence/1",
+  "classification": "PARENT_REJECTED_BEFORE_EXECUTION",
+  "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/full_transfer/result.json",
+  "source_sha256": "fa84ce81b451948eb3dc35675513a2c90b0831350cb0fd503f913318276c1298",
+  "result_fields": {
+    "passed": false,
+    "task_id": "fixed_transfer_717619ab28b347a8a1c6b8217558e6b2",
+    "context_id": "613725bae30849a3ab3b073e9bcdf9ea",
+    "python_parent_goals_sent": 1,
+    "python_navigation_goals_sent": 0,
+    "python_controller_goals_sent": 0,
+    "python_fixed_requests_sent": 0,
+    "error": "RuntimeError('PARENT_REJECTED')",
+    "resource_disposition": "NO_ACCEPTED_PARENT",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "goal_uuid": "8c850fbd8190436ca2263ab4f8d5a3c6",
+    "lease_epoch": null,
+    "admission_uncertain": false
+  },
+  "submission": {
+    "event_index": 3,
+    "steady_s": 1936.623297659,
+    "ros_s": 47.95,
+    "goal_uuid": "8c850fbd8190436ca2263ab4f8d5a3c6",
+    "task_id": "fixed_transfer_717619ab28b347a8a1c6b8217558e6b2",
+    "request_id": "869290ed952e4d4a8b5a6afcf01c2b1c",
+    "context_id": "613725bae30849a3ab3b073e9bcdf9ea",
+    "object_id": "transport_box_01"
+  },
+  "record_counts": {
+    "feedback_records": 0,
+    "navigation_execution_records": 0,
+    "nav_status_records": 0,
+    "navigation_goal_uuids": 0,
+    "typed_hold_records": 43,
+    "envelopes": 0,
+    "acks": 0,
+    "renew_events": 0
+  },
+  "event_kinds": {
+    "service": 3,
+    "parent_submission": 1
+  },
+  "first_stale_status": {
+    "receive_monotonic_ns": 1936654871502,
+    "receive_wall_ns": 1790246468264642521,
+    "observed_clock": {
+      "source_ns": 48066000000,
+      "receive_monotonic_ns": 1936654577518,
+      "receive_wall_ns": 1790246468264348589
+    },
+    "receive_seq": 425,
+    "raw_status": {
+      "authority_reason": "IDLE",
+      "cleanup_reason": "",
+      "epoch": "2e12e974-660d-46c5-b843-b906bcfca598",
+      "hold_confirmed": false,
+      "hold_id": "",
+      "hold_reason": "NO_HOLD",
+      "lease_id": "",
+      "phase": "0",
+      "reason": "STATION_WORLD_OBSERVATION_STALE"
+    }
+  },
+  "first_stale_receive_after_submission_ms": 31.573843,
+  "parent_acceptance_response_saved": false,
+  "parent_terminal_present": false,
+  "coverage": {
+    "PICK": "NOT_EXECUTED",
+    "NAVIGATE": "NOT_EXECUTED",
+    "PLACE": "NOT_EXECUTED",
+    "attach": "NO_SUCCESS_EVIDENCE",
+    "final_place": "NO_SUCCESS_EVIDENCE",
+    "accepted_parent_cancel_release": "NOT_APPLICABLE_NO_ACCEPTED_PARENT"
+  },
+  "scope": "Rejected client result and contemporaneous native status; does not diagnose internal stale cause or treat initial empty inventory as successful final placement."
+}

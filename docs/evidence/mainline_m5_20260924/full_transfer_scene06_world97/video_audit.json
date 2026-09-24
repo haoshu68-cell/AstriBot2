@@ -1,0 +1,253 @@
+{
+  "schema": "astribot.m5.video_review/1",
+  "case": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97",
+  "classification": "PREPARATION_VIDEO_PARENT_REJECTED_NO_EXECUTION_COVERAGE",
+  "scope": "One offline CPU decode of closed original video, frame sidecar/status consistency and unchanged source hashes. No ROS, GPU, second recording or re-encoding.",
+  "owner_cleanup_complete": true,
+  "original_video": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/full_transfer.mp4",
+  "decoded_frames": 149,
+  "sidecar_rows": 149,
+  "metadata_frames": 149,
+  "frame_indices_contiguous": true,
+  "sidecar_status_matches_actual_recorder_events": true,
+  "owner_decode_matches": true,
+  "resolution": [
+    1280,
+    720
+  ],
+  "encoding_fps": 10.0,
+  "playback_duration_sec": 14.9,
+  "recorder_wall_duration_sec": 23.330411929999855,
+  "overview_source_first_last_ns": [
+    29601000000,
+    48500000000
+  ],
+  "overview_receive_first_last_ns": [
+    1915453131194,
+    1937190569311
+  ],
+  "overview_receive_span_sec": 21.737438117,
+  "overview_source_nonpositive_intervals": 0,
+  "head_missing_frames": 24,
+  "head_cached_age_max_ms": 287.90141,
+  "native_status_counts": {
+    "WAITING_FOR_TASK": 424,
+    "STATION_WORLD_OBSERVATION_STALE": 24
+  },
+  "stage_frames": [
+    {
+      "frame": 2,
+      "stage": "WAITING_FOR_TASK",
+      "wall_time": 1790246447.0856104,
+      "raw_status": {
+        "authority_reason": "IDLE",
+        "cleanup_reason": "",
+        "epoch": "2e12e974-660d-46c5-b843-b906bcfca598",
+        "hold_confirmed": false,
+        "hold_id": "",
+        "hold_reason": "NO_HOLD",
+        "lease_id": "",
+        "phase": "0",
+        "reason": "WAITING_FOR_TASK"
+      },
+      "status_receive_seq": 1
+    },
+    {
+      "frame": 145,
+      "stage": "STATION_WORLD_OBSERVATION_STALE",
+      "wall_time": 1790246468.2646425,
+      "raw_status": {
+        "authority_reason": "IDLE",
+        "cleanup_reason": "",
+        "epoch": "2e12e974-660d-46c5-b843-b906bcfca598",
+        "hold_confirmed": false,
+        "hold_id": "",
+        "hold_reason": "NO_HOLD",
+        "lease_id": "",
+        "phase": "0",
+        "reason": "STATION_WORLD_OBSERVATION_STALE"
+      },
+      "status_receive_seq": 425
+    }
+  ],
+  "keyframes": [
+    {
+      "frame_index": 0,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene06_world97/frame_0000.png",
+      "sidecar": {
+        "frame_index": 0,
+        "overview": {
+          "receive_monotonic_ns": 1915453131194,
+          "receive_wall_ns": 1790246447062902664,
+          "observed_clock": {
+            "source_ns": 29603000000,
+            "receive_monotonic_ns": 1915447244137,
+            "receive_wall_ns": 1790246447057015638
+          },
+          "source_ns": 29601000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": null,
+        "status": {
+          "receive_seq": 0,
+          "raw_status": null,
+          "receive_monotonic_ns": null,
+          "receive_wall_ns": null,
+          "observed_clock": null
+        },
+        "encode_started_monotonic_ns": 1915458258637,
+        "encode_finished_monotonic_ns": 1915466220939
+      },
+      "overview_receive_relative_to_parent_submission_ms": -21170.166465,
+      "image_sha256": "e7ea14fa2162fd5cf0575db9425cf7330a67236c3361a441e6e161bfecaf3175"
+    },
+    {
+      "frame_index": 144,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene06_world97/frame_0144.png",
+      "sidecar": {
+        "frame_index": 144,
+        "overview": {
+          "receive_monotonic_ns": 1936641437731,
+          "receive_wall_ns": 1790246468251208951,
+          "observed_clock": {
+            "source_ns": 48053000000,
+            "receive_monotonic_ns": 1936640607999,
+            "receive_wall_ns": 1790246468250379331
+          },
+          "source_ns": 48000000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 1936617026580,
+          "receive_wall_ns": 1790246468226798484,
+          "observed_clock": {
+            "source_ns": 48041000000,
+            "receive_monotonic_ns": 1936614808473,
+            "receive_wall_ns": 1790246468224579724
+          },
+          "source_ns": 48000000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 1936604958209,
+          "receive_wall_ns": 1790246468214729426,
+          "observed_clock": {
+            "source_ns": 48031000000,
+            "receive_monotonic_ns": 1936604630960,
+            "receive_wall_ns": 1790246468214402099
+          },
+          "receive_seq": 424,
+          "raw_status": {
+            "authority_reason": "IDLE",
+            "cleanup_reason": "",
+            "epoch": "2e12e974-660d-46c5-b843-b906bcfca598",
+            "hold_confirmed": false,
+            "hold_id": "",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "",
+            "phase": "0",
+            "reason": "WAITING_FOR_TASK"
+          }
+        },
+        "encode_started_monotonic_ns": 1936644842334,
+        "encode_finished_monotonic_ns": 1936649055429
+      },
+      "overview_receive_relative_to_parent_submission_ms": 18.140072,
+      "image_sha256": "a8482c460e7ad9b7e39a9692e65657fcf451a3e2393960cd525e54ab5f072b96"
+    },
+    {
+      "frame_index": 148,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene06_world97/frame_0148.png",
+      "sidecar": {
+        "frame_index": 148,
+        "overview": {
+          "receive_monotonic_ns": 1937190569311,
+          "receive_wall_ns": 1790246468800340603,
+          "observed_clock": {
+            "source_ns": 48554000000,
+            "receive_monotonic_ns": 1937189552005,
+            "receive_wall_ns": 1790246468799323504
+          },
+          "source_ns": 48500000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 1937165501878,
+          "receive_wall_ns": 1790246468775273325,
+          "observed_clock": {
+            "source_ns": 48535000000,
+            "receive_monotonic_ns": 1937162448594,
+            "receive_wall_ns": 1790246468772219902
+          },
+          "source_ns": 48500000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 1937154889988,
+          "receive_wall_ns": 1790246468764661078,
+          "observed_clock": {
+            "source_ns": 48526000000,
+            "receive_monotonic_ns": 1937153533143,
+            "receive_wall_ns": 1790246468763304590
+          },
+          "receive_seq": 435,
+          "raw_status": {
+            "authority_reason": "IDLE",
+            "cleanup_reason": "",
+            "epoch": "2e12e974-660d-46c5-b843-b906bcfca598",
+            "hold_confirmed": false,
+            "hold_id": "",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "",
+            "phase": "0",
+            "reason": "STATION_WORLD_OBSERVATION_STALE"
+          }
+        },
+        "encode_started_monotonic_ns": 1937196151454,
+        "encode_finished_monotonic_ns": 1937199416520
+      },
+      "overview_receive_relative_to_parent_submission_ms": 567.271652,
+      "image_sha256": "95a500cf79192287abebd43bf4fa229e9bfb0df8818e75d940166d513b71380f"
+    }
+  ],
+  "input_sha256": {
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/full_transfer.mp4": "7dc49c032a94fde72b78e8b86f215f41a42bf6d6427495f2047c3e26207625bc",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/full_transfer.json": "109f81d3364b594270255bb864f4ed28d23be43580605c3646dc4b100c5db47b",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/full_transfer.frames.jsonl": "3598b253b33597c14a4bff7c43ccd177b9cacf136e1b5d1bdd95d8fc0bd29e65",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/result.json": "c38b9996b973016e5f5ff48587e412d44c89921cde44a40c7bfc1a7a61454fb6",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/full_transfer/result.json": "fa84ce81b451948eb3dc35675513a2c90b0831350cb0fd503f913318276c1298",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/used_record_transport_demo.py": "dc19af167a6c2e8583df95f43283470714d73901137f95f724532a9ee461e92f",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/used_observer_topics_transfer.json": "522350a02b95ae97014c2793eda2cade7a1fbb123d64dd59887c9fc236e83e98",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/m5_observer/manifest.json": "b69bbc90fe475ad704ab0d07cc15a906e249992f69977d4c0c4bf26685bd47be",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/recorder.log": "ad61edff1998d1a9a74ff22f521c650848c70142c6cc3123f6791959057a93b8",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/payload_physical_state.log": "63e6d685ee37dc52b6ca746cd62ed8c1f5c7c798c3ffc8e8d45a2175d0ca6f71",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene06_world97/transfer_goal.json": "a840ff715eb556751334f925aaac42575d4aad5ac15eb9c9797e5ad569587a1d"
+  },
+  "not_proven": [
+    "accepted parent Action",
+    "PICK execution",
+    "carried NAVIGATE",
+    "PLACE/detach/final placement",
+    "final EMPTY following transfer",
+    "continuous visual coverage of those unexecuted stages"
+  ],
+  "visual_review": {
+    "inspected_frame_indices": [
+      0,
+      144,
+      148
+    ],
+    "observations": [
+      "Robot and orange box on the original visible station remain in the inspected overview frames.",
+      "At the current stationary box location, the overview box is outside the head inset and title overlay.",
+      "Inspected head inset shows the aisle rather than a clear view of the target box.",
+      "No grasp, carried navigation, release or final placement can be accepted from these preparation/rejection frames."
+    ],
+    "scope": "Three actual decoded frames inspected; no claim of unexecuted motion visibility or exhaustive per-frame visual review."
+  }
+}
