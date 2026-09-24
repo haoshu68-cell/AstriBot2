@@ -1227,7 +1227,17 @@ class RosBackend(Node):
                          gazebo='two_pose_observations', force_grasp_validated=False)
 
     def stop_and_hold(self):
-        self.cancel_active()
+        try:
+            self.cancel_active()
+        except Exception as cancel_error:
+            # An unknown executor outcome retains ownership, but must not skip
+            # the independent attempt to withdraw navigation permission.
+            try:
+                self.change_envelope(False, checked=False)
+            except Exception as hold_error:
+                raise TaskFailure('STOP_AND_HOLD_FAILED:cancel=' + str(cancel_error) +
+                                  ';hold=' + str(hold_error)) from cancel_error
+            raise
         self.change_envelope(False, checked=False)
 
 
