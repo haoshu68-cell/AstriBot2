@@ -1,0 +1,36 @@
+--- /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/verify_full_transfer.py.before
++++ /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/verify_full_transfer.py
+@@ -500,7 +500,32 @@
+         objects=[o for o in final_scene['world']['collision_objects'] if o['id']==goal.object_id]
+         if len(objects)!=1:raise RuntimeError('FINAL_WORLD_TARGET_NOT_UNIQUE')
+         obj=objects[0]
+-        if not obj['header']['frame_id'] or len(obj['primitives'])!=1 or obj['primitives'][0]['type']!=1 or obj['primitives'][0]['dimensions']!=scenario['size_xyz'] or len(obj['primitive_poses'])!=1 or obj['meshes'] or obj['planes']:raise RuntimeError('FINAL_WORLD_TARGET_GEOMETRY_MISMATCH')
++        # Bind retained collision geometry to this parent's completed physical transactions.
++        with journal.open() as stream:
++            stream.seek(journal_start);world_journal=[json.loads(line) for line in stream if line.strip()]
++        world_journal=[r for r in world_journal if r.get('lease_id')==binding[0] and r.get('epoch')==binding[1] and r.get('owner')==task_id]
++        world_transactions=[]
++        for stage in ('ATTACH_CONFIRM','DETACH_CONFIRM'):
++            submitted=[(i,r) for i,r in enumerate(world_journal) if r.get('event')=='physical_submission' and r['details']['stage'].split(':')[0]==stage]
++            if len(submitted)!=1:raise RuntimeError('FINAL_WORLD_PHYSICAL_SUBMISSION_REQUIRED:'+stage)
++            si,submission=submitted[0];transaction=submission['details']['transaction']
++            applied=[(i,r) for i,r in enumerate(world_journal) if r.get('event')=='physical_applied_scene_submission' and r['details']['transaction']==transaction]
++            confirmed=[(i,r) for i,r in enumerate(world_journal) if r.get('event')=='payload_transaction_confirmed' and r['details']['transaction']==transaction]
++            if len(applied)!=1 or len(confirmed)!=1:raise RuntimeError('FINAL_WORLD_CONFIRMED_TRANSACTION_REQUIRED:'+stage)
++            ai,application=applied[0];ci,confirmation=confirmed[0]
++            if not (si<ai<ci and confirmation['details']['stage'].split(':')[0]==stage and application['details']['command_id']==confirmation['details']['command_id'] and submission['details']['source_epoch']==final['source_epoch'] and submission['details']['clock_epoch']==final['clock_epoch']):raise RuntimeError('FINAL_WORLD_TRANSACTION_BINDING_MISMATCH:'+stage)
++            world_transactions.append(dict(submission_index=si,application_index=ai,confirmation_index=ci,submission=submission['details'],application=application['details'],confirmation=confirmation['details']))
++        attached,detached=world_transactions
++        if not (attached['confirmation_index']<detached['submission_index'] and detached['application']['command_id']==attached['application']['command_id']+1 and attached['application']['source_revision']<detached['application']['source_revision']==final['source_revision'] and detached['confirmation']['attachment_revision']==final['attachment_revision']):raise RuntimeError('FINAL_WORLD_PAYLOAD_TRANSITION_MISMATCH')
++        sources=[(i,r) for i,r in enumerate(payload_records) if r['kind']=='source' and r['message']['environment']=='simulation' and r['message']['session_id']==args.session and r['message']['source_id']==args.source and r['message']['source_epoch']==final['source_epoch'] and r['message']['clock_epoch']==final['clock_epoch'] and r['message']['revision']==attached['application']['source_revision'] and r['message']['sequence']==attached['application']['source_sequence']]
++        if len(sources)!=1:raise RuntimeError('FINAL_WORLD_BOUND_SOURCE_REQUIRED')
++        source_index,source_record=sources[0];source=source_record['message']
++        if not (source['full_inventory'] and source['status']==2 and len(source['objects'])==1 and source['objects'][0]['object']['id']==goal.object_id):raise RuntimeError('FINAL_WORLD_BOUND_INVENTORY_MISMATCH')
++        ledgers=[(i,r) for i,r in enumerate(payload_records) if r['kind']=='ledger' and r['message']['confirmed'] and r['message']['ledger_epoch']==final['ledger_epoch'] and r['message']['attachment_revision']==attached['confirmation']['attachment_revision'] and all(r['message']['observation'][k]==source[k] for k in ('environment','session_id','source_id','source_epoch','clock_epoch','revision','full_inventory','status','objects'))]
++        if not ledgers:raise RuntimeError('FINAL_WORLD_BOUND_LEDGER_REQUIRED')
++        ledger_index,ledger_record=ledgers[-1];expected=source['objects'][0]['object']
++        report['final_world_geometry_source']=dict(transactions=world_transactions,source_record_index=source_index,ledger_record_index=ledger_index,source=source,ledger=ledger_record['message'],expected_primitives=expected['primitives'],actual_primitives=obj['primitives'],independent_pre_detach_scene=False)
++        if not obj['header']['frame_id'] or len(obj['primitives'])!=1 or obj['primitives'][0]['type']!=1 or obj['primitives']!=expected['primitives'] or len(obj['primitive_poses'])!=1 or obj['primitive_poses']!=expected['primitive_poses'] or obj['meshes'] or obj['planes']:raise RuntimeError('FINAL_WORLD_TARGET_GEOMETRY_MISMATCH')
+         report['final_full_scene']=final_scene;report['final_ledger']=copy.deepcopy(latest['ledger']);report['final_geometry']=message_dict(latest['geometry']);report['final_source_identity']=final
+         report['final_stop']=stop()
+         if not ready() or source_identity(summary())!=source_identity(final) or not fresh('envelope') or not 0<=ros()-latest['envelope']['stamp']<.3 or latest['envelope']['allowed'] or any(active_nav.values()):raise RuntimeError('FINAL_EMPTY_STOP_DENIAL_LOST')

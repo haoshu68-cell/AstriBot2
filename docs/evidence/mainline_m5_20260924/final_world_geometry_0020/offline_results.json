@@ -1,0 +1,47 @@
+{
+  "scope": "Offline production block only; real scene21 geometry plus explicitly synthetic successful ATTACH/DETACH journal confirmations; NOT a successful scene21 or full transfer",
+  "cases": [
+    {
+      "name": "real_conservative_shape_with_synthetic_completed_transactions",
+      "expected_error": null,
+      "observed_error": null,
+      "passed": true
+    },
+    {
+      "name": "dimension_tampered",
+      "expected_error": "FINAL_WORLD_TARGET_GEOMETRY_MISMATCH",
+      "observed_error": "FINAL_WORLD_TARGET_GEOMETRY_MISMATCH",
+      "passed": true
+    },
+    {
+      "name": "nominal_size_regression",
+      "expected_error": "FINAL_WORLD_TARGET_GEOMETRY_MISMATCH",
+      "observed_error": "FINAL_WORLD_TARGET_GEOMETRY_MISMATCH",
+      "passed": true
+    },
+    {
+      "name": "source_missing",
+      "expected_error": "FINAL_WORLD_BOUND_SOURCE_REQUIRED",
+      "observed_error": "FINAL_WORLD_BOUND_SOURCE_REQUIRED",
+      "passed": true
+    },
+    {
+      "name": "source_wrong_revision",
+      "expected_error": "FINAL_WORLD_BOUND_SOURCE_REQUIRED",
+      "observed_error": "FINAL_WORLD_BOUND_SOURCE_REQUIRED",
+      "passed": true
+    },
+    {
+      "name": "ledger_wrong_revision",
+      "expected_error": "FINAL_WORLD_BOUND_LEDGER_REQUIRED",
+      "observed_error": "FINAL_WORLD_BOUND_LEDGER_REQUIRED",
+      "passed": true
+    },
+    {
+      "name": "detach_wrong_revision",
+      "expected_error": "FINAL_WORLD_PAYLOAD_TRANSITION_MISMATCH",
+      "observed_error": "FINAL_WORLD_PAYLOAD_TRANSITION_MISMATCH",
+      "passed": true
+    }
+  ]
+}
