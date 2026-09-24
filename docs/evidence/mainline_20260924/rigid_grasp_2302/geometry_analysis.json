@@ -1,0 +1,171 @@
+{
+  "schema": "mainline.rigid_grasp_geometry/1",
+  "created_at_utc": "2026-09-24T15:03:45.756211+00:00",
+  "case": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene12_world79",
+  "scope": "Offline geometric reconstruction only; no ROS, simulation, build, motion, runtime mutation or grasp acceptance in this analysis.",
+  "input_files": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene12_world79/executor_registration/robot_state_publisher.urdf",
+      "sha256": "dd446d845424fd2519b0eb000e911cb9bbe542822e9d1488575d1ab762300d2a"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene12_world79/executor_registration/move_group.urdf",
+      "sha256": "81eb98a9f32a75889aeec39f04f2504f04a317cb70f3cc6859b4cd099c0e2c95"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene12_world79/fixtures/transport_box_01.sdf",
+      "sha256": "5c185f45dcc074525d3787dd99e12ae802c41b38f043c89408c93abb09a0a550"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene12_world79/used_scenario.json",
+      "sha256": "f2557cd0bbc35cd13ac3e9e5611260c577158b54ca0c87b1a0d62f0f6deb58d5"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/src/gripper_commander.cpp",
+      "sha256": "9bc2212cc485fbb2213237b064047d77ffe84f48d54ff3655ebd99d3417b46b6"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/gripper_commander.hpp",
+      "sha256": "178b870d8efccbac3d2fe64ab00c2519a5955237f4e229b41dbf955e5ad76a0f"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_moveit_config/config/astribot_s1.srdf",
+      "sha256": "1a272c8af5508d0c78c40685bc1afcd2c38bbe3678bd4d3e69bac829647c668c"
+    }
+  ],
+  "collision_meshes": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/install/astribot_s1_description/share/astribot_s1_description/meshes/s1_gripper/obj/astribot_gripper_L11_Link_collision_mesh.obj",
+      "sha256": "6fa7d39b316b243a50712f09a1f80f669cdfb4633215fd064cf0b3b31ac2da95",
+      "raw_decimal_bounds": [
+        [
+          -0.005,
+          -0.014,
+          -0.004998
+        ],
+        [
+          0.025,
+          0.014,
+          0.0663
+        ]
+      ],
+      "float32_vertex_bounds": [
+        [
+          -0.004999999888241291,
+          -0.014000000432133675,
+          -0.004997999873012304
+        ],
+        [
+          0.02500000037252903,
+          0.014000000432133675,
+          0.06629999727010727
+        ]
+      ]
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/READY_profile_20260924_1133/install/astribot_s1_description/share/astribot_s1_description/meshes/s1_gripper/obj/astribot_gripper_R11_Link_collision_mesh.obj",
+      "sha256": "2eaeed10fc374830f1bed3c0ed0c59dabfbbc594d18b1ffa949a53c0e8957929",
+      "raw_decimal_bounds": [
+        [
+          -0.025,
+          -0.014,
+          -0.004998
+        ],
+        [
+          0.005,
+          0.014,
+          0.0663
+        ]
+      ],
+      "float32_vertex_bounds": [
+        [
+          -0.02500000037252903,
+          -0.014000000432133675,
+          -0.004997999873012304
+        ],
+        [
+          0.004999999888241291,
+          0.014000000432133675,
+          0.06629999727010727
+        ]
+      ]
+    }
+  ],
+  "model_consistency": {
+    "relevant_gripper_and_tcp_xml_elements": 18,
+    "robot_state_publisher_equals_move_group": true
+  },
+  "input_angles": {
+    "target_rad": 0.4663773148205081,
+    "stable_measured_rad": 0.42754208,
+    "provenance": "Parent task supplied scene12 GRASP_CONFIRM target and stable measured angle; measured value is rounded to eight decimal places, not independently re-extracted in this audit."
+  },
+  "algorithm": {
+    "runtime_source_functions": [
+      "GripperCommander::buildJawTable",
+      "GripperCommander::jawWidthAtAngle",
+      "projectLinkOnAxis"
+    ],
+    "master_joint": "astribot_gripper_left_joint_L1",
+    "tcp_link": "astribot_arm_left_tcp_link",
+    "pad_links": [
+      "astribot_gripper_left_Link_L11",
+      "astribot_gripper_left_Link_R11"
+    ],
+    "jaw_axis_tcp": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "samples": 61,
+    "angle_range_rad": [
+      0.0,
+      0.93
+    ],
+    "vertex_precision": "OBJ decimal vertices cast to IEEE float32 before widening to float64, reproducing Assimp mesh import precision; target reverse interpolation matches supplied target within 2e-15 rad. Decimal-only reconstruction differs by 0.387 nm width.",
+    "steps": [
+      "Parse saved URDF joints and mimic multipliers; compose URDF origin Rz(yaw)Ry(pitch)Rx(roll) and local joint axis rotation from arm_left_link_7.",
+      "Load actual READY installed collision OBJ vertices, apply mesh scale and collision origin, take per-link axis-aligned min/max.",
+      "Transform all eight link AABB corners into TCP coordinates, project onto normalized +X, take separation of inward interval faces.",
+      "Sample q=i*0.93/60 for i=0..60 and linearly interpolate exactly as runtime jawWidthAtAngle; invert monotonic sampled width table."
+    ],
+    "analytic_decimal_gap_m": "2*(0.0145 + 0.04125*cos(q) - 0.036379080527138*sin(q) - 0.005*cos(0.03) - 0.0663*sin(0.03)); for imported mesh equivalence cast 0.005 and 0.0663 through float32.",
+    "upstream_moveit_contract": "LinkModel getShapeExtentsAtOrigin and getCenteredBoundingBoxOffset describe link-local AABB including collision origins; local dependency link_model.cpp lines 96-115 confirmed mesh vertex accumulation."
+  },
+  "results": {
+    "target": {
+      "q_rad": 0.4663773148205081,
+      "raw_gap_m": 0.05600039426962951,
+      "sampled_table_gap_m": 0.05599999999999989
+    },
+    "actual_rounded": {
+      "q_rad": 0.42754208,
+      "raw_gap_m": 0.05993296907794059,
+      "sampled_table_gap_m": 0.059931655464683924
+    },
+    "object_width_m": 0.06,
+    "configured_default_preload_m": 0.004,
+    "q_for_56mm_rad": 0.46637731482050704,
+    "q_for_60mm_rad": 0.42686106814459407,
+    "original_endpoint_error_rad": 0.0388352348205081,
+    "zero_preload_endpoint_error_against_observed_rad": 0.0006810118554059219,
+    "unchanged_endpoint_tolerance_rad": 0.02,
+    "most_open_existing_tolerance_edge": {
+      "q_rad": 0.4463773148205081,
+      "sampled_gap_m": 0.058032911122837434,
+      "shortfall_to_60mm_m": 0.0019670888771625636
+    }
+  },
+  "conclusion": "The commanded 56 mm opening requires approximately 4 mm geometric compression/penetration of the 60 mm rigid static box. The observed angle corresponds to approximately 59.9317 mm; original angular error 0.0388352 rad exceeds the unchanged 0.02 rad endpoint limit. A 60 mm zero-preload target predicts only about 0.0006810 rad difference from this observed angle.",
+  "minimal_change_recommendation": "Explicitly set grasp_preload_m=0 only in simulation-only MTC planning for this rigid kinematic payload; retain generic GripperCommander 4 mm default, endpoint tolerance 0.02 rad, collision/scene checks and physical attachment confirmation. Re-run the same parent PICK-NAV-PLACE action and require real endpoint convergence before attachment.",
+  "limits": [
+    "AABB jaw width is the existing planning metric, not independent signed mesh contact distance.",
+    "The actual input q is rounded; last reported numeric digits are arithmetic precision, not measurement precision.",
+    "Rigid-body contact solver can have small penetration; actual ~0.0683 mm apparent deficit does not imply object compressibility.",
+    "No contact-force, force-closure, stable dynamic grasp, attachment, loaded navigation, placement or hardware acceptance is established.",
+    "Package file hashes bind the currently inspected READY installation; the scene runtime manifests identify that READY profile, but no separate historical per-mesh snapshot was recorded."
+  ],
+  "files_modified": [
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/rigid_grasp_2302/geometry_analysis.json"
+  ]
+}

@@ -1,0 +1,12 @@
+--- before/mtc_planner.cpp
++++ after/mtc_planner.cpp
+@@ -205,6 +205,9 @@
+         gc.group_name="gripper_left";gc.action_name="/gripper_left_controller/follow_joint_trajectory";
+         gc.tcp_link="astribot_arm_left_tcp_link";gc.left_pad_link="astribot_gripper_left_Link_L11";
+         gc.right_pad_link="astribot_gripper_left_Link_R11";
++        // This simulation-only sequence confirms a position endpoint against
++        // rigid payloads. A compression preload makes that endpoint unreachable.
++        gc.grasp_preload_m=0.;
+         std::string error;
+         if(gripper.configureForPlanning(task.getRobotModel(),gc,error)!=PlanErrorCode::kSuccess)throw std::runtime_error(error);
+         double grasp_angle;

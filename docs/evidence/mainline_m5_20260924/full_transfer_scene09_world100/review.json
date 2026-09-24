@@ -1,0 +1,785 @@
+{
+  "schema": "astribot.m5.light_video_review/1",
+  "case": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100",
+  "classification": "ACCEPTED_PARTIAL_PICK_CANCELED_RELEASED_NO_NAV_PLACE",
+  "scope": "Metadata/status identity checked; reused owner full-video decode proof and decoded five selected original frames only. No re-encoding, ROS/GPU, second recording, observer performance analysis or new experiment.",
+  "task_id": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+  "context_id": "70d8234c6317413480ebf2f21d1d25d6",
+  "goal_uuid": "5bab2ddfb0044fdba5872261edeb3c9c",
+  "lease_epoch": [
+    "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+    "30950cad-03b7-46fe-b91b-9f6129fd2b4e"
+  ],
+  "result": {
+    "passed": false,
+    "error": "RuntimeError('ODOM_STALE')",
+    "parent_terminal": {
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "TASK_CANCELED",
+        "cleanup_reason": "",
+        "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "5d8ff8070c9bdcfa096da640c332dff36773af76fa05f17c0ea390fa6cd26543"
+      }
+    },
+    "resource_disposition": "RELEASE_CONFIRMED",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "python_parent_goals_sent": 1,
+    "python_navigation_goals_sent": 0,
+    "python_controller_goals_sent": 0,
+    "python_fixed_requests_sent": 0
+  },
+  "parent_events": [
+    {
+      "kind": "parent_submission",
+      "wall": 3135.772058166,
+      "ros_s": 46.949000000000005,
+      "goal_uuid": "5bab2ddfb0044fdba5872261edeb3c9c",
+      "remaining_steady_s": 537.1932624890001
+    },
+    {
+      "kind": "cancel_requested",
+      "wall": 3180.162622083,
+      "ros_s": 85.46000000000001,
+      "goal_uuid": "5bab2ddfb0044fdba5872261edeb3c9c",
+      "identity": [
+        "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+        "30950cad-03b7-46fe-b91b-9f6129fd2b4e"
+      ]
+    },
+    {
+      "kind": "cancel_response",
+      "wall": 3180.173191629,
+      "ros_s": 85.691,
+      "response": {
+        "return_code": 0,
+        "goals_canceling": [
+          {
+            "goal_id": {
+              "uuid": [
+                91,
+                171,
+                45,
+                223,
+                176,
+                4,
+                79,
+                219,
+                165,
+                135,
+                34,
+                97,
+                237,
+                235,
+                60,
+                156
+              ]
+            },
+            "stamp": {
+              "sec": 47,
+              "nanosec": 31000000
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "parent_terminal",
+      "wall": 3180.928736857,
+      "ros_s": 86.28200000000001,
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "TASK_CANCELED",
+        "cleanup_reason": "",
+        "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "5d8ff8070c9bdcfa096da640c332dff36773af76fa05f17c0ea390fa6cd26543"
+      }
+    }
+  ],
+  "feedback_stage_spans": {
+    "PICK/": {
+      "first_record_index": 0,
+      "first_steady_s": 3135.808085092,
+      "first_ros_s": 47.050000000000004,
+      "first_reason": "RESERVED",
+      "samples": 464,
+      "last_record_index": 463,
+      "last_steady_s": 3158.925089087,
+      "last_ros_s": 67.09,
+      "last_reason": "PLANNING_COMPLETE_OPERATION"
+    },
+    "PICK/PREGRASP": {
+      "first_record_index": 464,
+      "first_steady_s": 3158.975997112,
+      "first_ros_s": 67.14,
+      "first_reason": "WAITING_FOR_EXECUTION_GUARD",
+      "samples": 273,
+      "last_record_index": 736,
+      "last_steady_s": 3172.574572938,
+      "last_ros_s": 79.11800000000001,
+      "last_reason": "REVALIDATING_SAME_REMAINING_PLAN"
+    },
+    "PICK/GRASP_APPROACH": {
+      "first_record_index": 737,
+      "first_steady_s": 3172.624607162,
+      "first_ros_s": 79.156,
+      "first_reason": "WAITING_FOR_EXECUTION_GUARD",
+      "samples": 91,
+      "last_record_index": 827,
+      "last_steady_s": 3177.124640622,
+      "last_ros_s": 83.208,
+      "last_reason": "REVALIDATING_SAME_REMAINING_PLAN"
+    },
+    "PICK/GRASP_CONFIRM": {
+      "first_record_index": 828,
+      "first_steady_s": 3177.199980428,
+      "first_ros_s": 83.27000000000001,
+      "first_reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+      "samples": 75,
+      "last_record_index": 902,
+      "last_steady_s": 3180.873582841,
+      "last_ros_s": 86.25,
+      "last_reason": "TASK_CANCELED"
+    }
+  },
+  "feedback_count": 903,
+  "navigation_goal_uuids": [],
+  "owner_video_decode": {
+    "decoded_frames": 548,
+    "sidecar_rows": 548,
+    "metadata_frames": 548,
+    "passed": true
+  },
+  "independently_checked_sidecar_rows": 548,
+  "sidecar_status_matches_recorder_events": true,
+  "full_decode_repeated_by_M5": false,
+  "selected_frames_decoded_by_M5": 5,
+  "playback_duration_sec": 54.8,
+  "recorder_wall_duration_sec": 94.02604028900032,
+  "video_tail_after_parent_terminal_sec": 25.81361157900028,
+  "keyframes": [
+    {
+      "frame_index": 315,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene09_world100/frame_0315.png",
+      "sidecar": {
+        "frame_index": 315,
+        "overview": {
+          "receive_monotonic_ns": 3158660626863,
+          "receive_wall_ns": 1790247690270398471,
+          "observed_clock": {
+            "source_ns": 66852000000,
+            "receive_monotonic_ns": 3158658044919,
+            "receive_wall_ns": 1790247690267815989
+          },
+          "source_ns": 66800000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 3158638453042,
+          "receive_wall_ns": 1790247690248225092,
+          "observed_clock": {
+            "source_ns": 66844000000,
+            "receive_monotonic_ns": 3158636954921,
+            "receive_wall_ns": 1790247690246725988
+          },
+          "source_ns": 66800000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 3158624362032,
+          "receive_wall_ns": 1790247690234133235,
+          "observed_clock": {
+            "source_ns": 66832000000,
+            "receive_monotonic_ns": 3158623736328,
+            "receive_wall_ns": 1790247690233507595
+          },
+          "receive_seq": 896,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "70d8234c6317413480ebf2f21d1d25d6_op_1_PICK",
+            "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+            "hold_confirmed": false,
+            "hold_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1_hold_1_0",
+            "hold_reason": "NO_HOLD",
+            "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "PLANNING_COMPLETE_OPERATION",
+            "stage_id": "",
+            "task_id": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 3158666184741,
+        "encode_finished_monotonic_ns": 3158669625971
+      },
+      "image_sha256": "615e308e6044c8757b1d181b6f4f540c4d3e1099ec19486561e8a8c5db9d970c"
+    },
+    {
+      "frame_index": 367,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene09_world100/frame_0367.png",
+      "sidecar": {
+        "frame_index": 367,
+        "overview": {
+          "receive_monotonic_ns": 3170370440130,
+          "receive_wall_ns": 1790247701980211235,
+          "observed_clock": {
+            "source_ns": 77152000000,
+            "receive_monotonic_ns": 3170369473813,
+            "receive_wall_ns": 1790247701979244903
+          },
+          "source_ns": 77100000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 3170347925679,
+          "receive_wall_ns": 1790247701957697178,
+          "observed_clock": {
+            "source_ns": 77137000000,
+            "receive_monotonic_ns": 3170346206975,
+            "receive_wall_ns": 1790247701955978695
+          },
+          "source_ns": 77100000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 3170324079398,
+          "receive_wall_ns": 1790247701933850393,
+          "observed_clock": {
+            "source_ns": 77116000000,
+            "receive_monotonic_ns": 3170323964802,
+            "receive_wall_ns": 1790247701933736010
+          },
+          "receive_seq": 1130,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "70d8234c6317413480ebf2f21d1d25d6_op_1_PICK",
+            "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+            "hold_confirmed": false,
+            "hold_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1_hold_1_0",
+            "hold_reason": "WAITING_FOR_MEASURED_SETTLING",
+            "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+            "stage_id": "PREGRASP",
+            "task_id": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 3170373926318,
+        "encode_finished_monotonic_ns": 3170376188610
+      },
+      "image_sha256": "46a9f3df516bc0ee7519ba89d169528e6e0e866272dff050d8cfa60f1c1b9de9"
+    },
+    {
+      "frame_index": 396,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene09_world100/frame_0396.png",
+      "sidecar": {
+        "frame_index": 396,
+        "overview": {
+          "receive_monotonic_ns": 3174848780010,
+          "receive_wall_ns": 1790247706458551151,
+          "observed_clock": {
+            "source_ns": 81152000000,
+            "receive_monotonic_ns": 3174846512783,
+            "receive_wall_ns": 1790247706456284234
+          },
+          "source_ns": 81100000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 3174827467421,
+          "receive_wall_ns": 1790247706437238661,
+          "observed_clock": {
+            "source_ns": 81135000000,
+            "receive_monotonic_ns": 3174826548898,
+            "receive_wall_ns": 1790247706436320314
+          },
+          "source_ns": 81100000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 3174824457031,
+          "receive_wall_ns": 1790247706434228117,
+          "observed_clock": {
+            "source_ns": 81134000000,
+            "receive_monotonic_ns": 3174824341108,
+            "receive_wall_ns": 1790247706434112227
+          },
+          "receive_seq": 1220,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "70d8234c6317413480ebf2f21d1d25d6_op_1_PICK",
+            "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+            "hold_confirmed": false,
+            "hold_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1_hold_1_1",
+            "hold_reason": "WAITING_FOR_MEASURED_SETTLING",
+            "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+            "stage_id": "GRASP_APPROACH",
+            "task_id": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 3174852579793,
+        "encode_finished_monotonic_ns": 3174857245251
+      },
+      "image_sha256": "be72c2aa1989d8298be07e10419eda76b5e7d396583691467a7e46304c2f1aec"
+    },
+    {
+      "frame_index": 423,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene09_world100/frame_0423.png",
+      "sidecar": {
+        "frame_index": 423,
+        "overview": {
+          "receive_monotonic_ns": 3180118233984,
+          "receive_wall_ns": 1790247711728005189,
+          "observed_clock": {
+            "source_ns": 85653000000,
+            "receive_monotonic_ns": 3180117433798,
+            "receive_wall_ns": 1790247711727205162
+          },
+          "source_ns": 85600000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 3180081019555,
+          "receive_wall_ns": 1790247711690791006,
+          "observed_clock": {
+            "source_ns": 85650000000,
+            "receive_monotonic_ns": 3180075996549,
+            "receive_wall_ns": 1790247711685767582
+          },
+          "source_ns": 85600000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 3180074058009,
+          "receive_wall_ns": 1790247711683829166,
+          "observed_clock": {
+            "source_ns": 85647000000,
+            "receive_monotonic_ns": 3180073239490,
+            "receive_wall_ns": 1790247711683010731
+          },
+          "receive_seq": 1325,
+          "raw_status": {
+            "authority_reason": "EXECUTING",
+            "cleanup_reason": "",
+            "context_id": "70d8234c6317413480ebf2f21d1d25d6_op_1_PICK",
+            "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+            "hold_confirmed": false,
+            "hold_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1_hold_1_2",
+            "hold_reason": "WAITING_FOR_MEASURED_SETTLING",
+            "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+            "navigation_goal_uuid": "",
+            "object_id": "transport_box_01",
+            "phase": "2",
+            "reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+            "stage_id": "GRASP_CONFIRM",
+            "task_id": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+            "task_phase": "PICK"
+          }
+        },
+        "encode_started_monotonic_ns": 3180121885283,
+        "encode_finished_monotonic_ns": 3180124112050
+      },
+      "image_sha256": "3802fda110c98bf87288db30b7c9d0574ed3530c5c9e1d37c22526a3cedb4d3b"
+    },
+    {
+      "frame_index": 547,
+      "image": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/full_transfer_scene09_world100/frame_0547.png",
+      "sidecar": {
+        "frame_index": 547,
+        "overview": {
+          "receive_monotonic_ns": 3206742348436,
+          "receive_wall_ns": 1790247738352119662,
+          "observed_clock": {
+            "source_ns": 106541000000,
+            "receive_monotonic_ns": 3206740673314,
+            "receive_wall_ns": 1790247738350444609
+          },
+          "source_ns": 106500000000,
+          "frame_id": "normal_grasp_observer/camera_link/overview",
+          "topic": "/transport/overview"
+        },
+        "head": {
+          "receive_monotonic_ns": 3206722336931,
+          "receive_wall_ns": 1790247738332108424,
+          "observed_clock": {
+            "source_ns": 106524000000,
+            "receive_monotonic_ns": 3206718611571,
+            "receive_wall_ns": 1790247738328382734
+          },
+          "source_ns": 106500000000,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "topic": "/camera/raw/head_rgbd/image"
+        },
+        "status": {
+          "receive_monotonic_ns": 3206723653831,
+          "receive_wall_ns": 1790247738333424983,
+          "observed_clock": {
+            "source_ns": 106524000000,
+            "receive_monotonic_ns": 3206718611571,
+            "receive_wall_ns": 1790247738328382734
+          },
+          "receive_seq": 1858,
+          "raw_status": {
+            "authority_reason": "RELEASED",
+            "cleanup_reason": "",
+            "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+            "hold_confirmed": false,
+            "hold_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1_hold_1_2",
+            "hold_reason": "HOLD_CANCELED",
+            "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+            "phase": "0",
+            "reason": "TASK_CANCELED"
+          }
+        },
+        "encode_started_monotonic_ns": 3206747751778,
+        "encode_finished_monotonic_ns": 3206749853194
+      },
+      "image_sha256": "cf61dd050042c97a2f2e6b4209b1ba65216cba8fbf14c63341594471ddb5c33f"
+    }
+  ],
+  "release_journal": [
+    {
+      "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+      "event": "resource_handoff_committed",
+      "issued_at": 85345000000,
+      "joints": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7",
+        "astribot_arm_right_joint_1",
+        "astribot_arm_right_joint_2",
+        "astribot_arm_right_joint_3",
+        "astribot_arm_right_joint_4",
+        "astribot_arm_right_joint_5",
+        "astribot_arm_right_joint_6",
+        "astribot_arm_right_joint_7",
+        "astribot_gripper_left_joint_L1",
+        "astribot_gripper_right_joint_L1",
+        "astribot_head_joint_1",
+        "astribot_head_joint_2",
+        "astribot_torso_joint_1",
+        "astribot_torso_joint_2",
+        "astribot_torso_joint_3",
+        "astribot_torso_joint_4"
+      ],
+      "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+      "operation_context": "",
+      "operation_sequence": 0,
+      "owner": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+      "phase": 0,
+      "reason": "RELEASED",
+      "renewal_sequence": 217,
+      "request": "4984e2e410c643f698db9532e9fba070",
+      "requests": [
+        [
+          "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+          "4984e2e410c643f698db9532e9fba070"
+        ]
+      ],
+      "schema": "astribot.resource/1",
+      "side_effects": false,
+      "valid_until": 87345000000
+    }
+  ],
+  "cleanup_stop": {
+    "passed": true,
+    "samples": 36,
+    "span_s": 0.7000000000000028,
+    "start_ros_s": 86.3,
+    "end_ros_s": 87.0,
+    "drift_m": 0.0,
+    "rotation_rad": 0.0,
+    "speed_mps": 0.0,
+    "angular_speed_radps": 0.0,
+    "command_max": 0.0,
+    "command_observed": true,
+    "fresh": true
+  },
+  "input_sha256": {
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/result.json": "5c16253272ad42d246299e6b462ca4c16756790b69265abc36bb6b689db6cb7e",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/full_transfer/result.json": "bba8cd9eb3171a8485efb31c35b5a4701360e94e6ac3fd9bafb5721c48596e15",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/full_transfer.mp4": "7d6c0eef17acf93dcd07cb76fc8417bcf1d3745770a9cf0c3c8aa810a17be221",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/full_transfer.json": "748ccf80718b878e2b72959f1568e638d741cb90969df9db39f9d79f210a3099",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/full_transfer.frames.jsonl": "d4af925e8aac39c103bce470ef4d122c5e239b165d4210ebf88c6c055f489ca6",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/used_record_transport_demo.py": "dc19af167a6c2e8583df95f43283470714d73901137f95f724532a9ee461e92f",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/used_observer_topics_transfer.json": "522350a02b95ae97014c2793eda2cade7a1fbb123d64dd59887c9fc236e83e98",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/m5_observer/manifest.json": "4e1e1ab0c4bee0b3f185bc75bc6ca819efbd5dc094b16f9e770e30d065f36cdc",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene09_world100/recorder.log": "ad61edff1998d1a9a74ff22f521c650848c70142c6cc3123f6791959057a93b8"
+  },
+  "visual_review": {
+    "reviewed_frames": [
+      315,
+      367,
+      396,
+      423,
+      547
+    ],
+    "actual_motion_visible": "Left arm changes from initial posture to above the orange box, approaches it, and the gripper closes near the box.",
+    "object_result": "Box remains on original station in selected frames; physical records confirm no attachment.",
+    "occlusion": "Overview target region is outside title and head inset; gripper partially masks contact detail. Head inset is largely obstructed by the moving arm.",
+    "cancel_tail": "Final selected frame remains at the box with TASK_CANCELED; resource release is established separately by parent result and journal.",
+    "scope": "Five-frame visual inspection only, no whole-video visual or completed grasp/navigation/place claim."
+  },
+  "not_covered": [
+    "completed PICK/attachment/lift",
+    "carried NAVIGATE",
+    "PLACE and final placed object",
+    "normal full-chain success"
+  ],
+  "payload_evidence": {
+    "source_inventory_samples": 847,
+    "source_inventory_all_empty": true,
+    "diagnostic_samples": 847,
+    "physical_execution_records": 847,
+    "physical_all_detached_no_commands_applied": true,
+    "scope": "No attach success; initial/continuing empty inventory is not final placement proof."
+  },
+  "stage_confirmed_records": [
+    {
+      "details": {
+        "children": "arm_left_controller:ab073d5b67d81109d4d7e11de201cebc;arm_right_controller:852d9062e58010345577942622362d47;gripper_left_controller:70ed379b5a514c0a1e9d1ee22cfb61ba;gripper_right_controller:78d7d2cef031630afd72a6167c1e1838;head_controller:b78da22ea150e326a20a65bdf5c7434f;mtc:818ccbf0f4ba8447eddfff4f39fbce25;torso_controller:b7a03b9e369205045a7db814d98fca31;",
+        "context": "70d8234c6317413480ebf2f21d1d25d6_op_1_PICK",
+        "index": 0,
+        "stage_id": "PREGRASP"
+      },
+      "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+      "event": "stage_confirmed",
+      "issued_at": 77217000000,
+      "joints": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7",
+        "astribot_arm_right_joint_1",
+        "astribot_arm_right_joint_2",
+        "astribot_arm_right_joint_3",
+        "astribot_arm_right_joint_4",
+        "astribot_arm_right_joint_5",
+        "astribot_arm_right_joint_6",
+        "astribot_arm_right_joint_7",
+        "astribot_gripper_left_joint_L1",
+        "astribot_gripper_right_joint_L1",
+        "astribot_head_joint_1",
+        "astribot_head_joint_2",
+        "astribot_torso_joint_1",
+        "astribot_torso_joint_2",
+        "astribot_torso_joint_3",
+        "astribot_torso_joint_4"
+      ],
+      "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+      "operation_context": "",
+      "operation_sequence": 0,
+      "owner": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+      "phase": 2,
+      "reason": "EXECUTING",
+      "renewal_sequence": 171,
+      "request": "4984e2e410c643f698db9532e9fba070",
+      "requests": [
+        [
+          "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+          "4984e2e410c643f698db9532e9fba070"
+        ]
+      ],
+      "schema": "astribot.resource/1",
+      "side_effects": true,
+      "valid_until": 79217000000
+    },
+    {
+      "details": {
+        "children": "arm_left_controller:7d14743cdc92a42a672e8e9a9d244129;arm_right_controller:337ef1f6fc0e42725b07d66e267c69bf;gripper_left_controller:ed0b77912e9dc589b95c63180a391ec8;gripper_right_controller:101a72a89ca91df18f5f93e542134842;head_controller:62eeed86f881611fbc27bd6c42137894;torso_controller:b82ecb59980f888889ab05d494b36f50;",
+        "context": "70d8234c6317413480ebf2f21d1d25d6_op_1_PICK",
+        "index": 1,
+        "stage_id": "GRASP_APPROACH"
+      },
+      "epoch": "30950cad-03b7-46fe-b91b-9f6129fd2b4e",
+      "event": "stage_confirmed",
+      "issued_at": 81200000000,
+      "joints": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7",
+        "astribot_arm_right_joint_1",
+        "astribot_arm_right_joint_2",
+        "astribot_arm_right_joint_3",
+        "astribot_arm_right_joint_4",
+        "astribot_arm_right_joint_5",
+        "astribot_arm_right_joint_6",
+        "astribot_arm_right_joint_7",
+        "astribot_gripper_left_joint_L1",
+        "astribot_gripper_right_joint_L1",
+        "astribot_head_joint_1",
+        "astribot_head_joint_2",
+        "astribot_torso_joint_1",
+        "astribot_torso_joint_2",
+        "astribot_torso_joint_3",
+        "astribot_torso_joint_4"
+      ],
+      "lease_id": "30950cad-03b7-46fe-b91b-9f6129fd2b4e_1",
+      "operation_context": "",
+      "operation_sequence": 0,
+      "owner": "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+      "phase": 2,
+      "reason": "EXECUTING",
+      "renewal_sequence": 193,
+      "request": "4984e2e410c643f698db9532e9fba070",
+      "requests": [
+        [
+          "fixed_transfer_7ba565080db04532b2cb9beba7f4037e",
+          "4984e2e410c643f698db9532e9fba070"
+        ]
+      ],
+      "schema": "astribot.resource/1",
+      "side_effects": true,
+      "valid_until": 83200000000
+    }
+  ],
+  "child_terminal_summary": [
+    {
+      "controller": "arm_left_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "ab073d5b67d81109d4d7e11de201cebc"
+    },
+    {
+      "controller": "arm_right_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "852d9062e58010345577942622362d47"
+    },
+    {
+      "controller": "gripper_left_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "70ed379b5a514c0a1e9d1ee22cfb61ba"
+    },
+    {
+      "controller": "gripper_right_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "78d7d2cef031630afd72a6167c1e1838"
+    },
+    {
+      "controller": "head_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "b78da22ea150e326a20a65bdf5c7434f"
+    },
+    {
+      "controller": "torso_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "b7a03b9e369205045a7db814d98fca31"
+    },
+    {
+      "controller": "arm_left_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "7d14743cdc92a42a672e8e9a9d244129"
+    },
+    {
+      "controller": "arm_right_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "337ef1f6fc0e42725b07d66e267c69bf"
+    },
+    {
+      "controller": "gripper_left_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "ed0b77912e9dc589b95c63180a391ec8"
+    },
+    {
+      "controller": "gripper_right_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "101a72a89ca91df18f5f93e542134842"
+    },
+    {
+      "controller": "head_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "62eeed86f881611fbc27bd6c42137894"
+    },
+    {
+      "controller": "torso_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "b82ecb59980f888889ab05d494b36f50"
+    },
+    {
+      "controller": "arm_right_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "d13f2d7470dbb21569eff834b264fd2c"
+    },
+    {
+      "controller": "gripper_left_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "ae63fd9cd1b0adcc015b9ee96f56fa85"
+    },
+    {
+      "controller": "gripper_right_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "b0c7535376cee9119e6147a7d2e30cc0"
+    },
+    {
+      "controller": "head_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "e476650a57ca33f990fb921fb22a83e7"
+    },
+    {
+      "controller": "torso_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "739c7823b11d0db60e905af73ce1d102"
+    },
+    {
+      "controller": "arm_left_controller",
+      "result_code": 4,
+      "success": true,
+      "uuid": "bf80b8e3de12b886b0adc6d9127989a3"
+    }
+  ]
+}
