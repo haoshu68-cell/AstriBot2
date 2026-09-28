@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
+#include <chrono>
+#include <map>
+#include <geometric_shapes/shape_operations.h>
 #include <joint_trajectory_controller/trajectory.hpp>
 
 namespace astribot_s1_manipulation {
@@ -45,25 +48,18 @@ std::pair<Hull, Hull> split(const Hull& hull, double ratio) {
   }
   return {std::move(left), std::move(right)};
 }
-}  // namespace
-
-bool sampleControllerTrajectory(
-  const robot_trajectory::RobotTrajectory& trajectory, double maximum_joint_span,
-  std::size_t maximum_samples, std::vector<moveit::core::RobotState>& states,
-  std::string& error) {
-  states.clear();
-  error.clear();
-  if (!std::isfinite(maximum_joint_span) || maximum_joint_span <= 0 || maximum_samples == 0) {
-    error = "INVALID_CONTROLLER_SAMPLING_LIMIT";
-    return false;
-  }
+bool controllerMessage(const robot_trajectory::RobotTrajectory& trajectory,
+  moveit_msgs::msg::RobotTrajectory& message, std::string& error) {
   if (!trajectory.getGroup() || trajectory.getWayPointCount() == 0) {
     error = "EMPTY_EXTERNAL_TRAJECTORY";
     return false;
   }
-  moveit_msgs::msg::RobotTrajectory message;
   trajectory.getRobotTrajectoryMsg(message);
   const auto& path = message.joint_trajectory;
+  if (path.points.empty() || !message.multi_dof_joint_trajectory.points.empty()) {
+    error = "UNSUPPORTED_CONTROLLER_JOINTS";
+    return false;
+  }
   // This API validates parameterized plans beginning at their explicit first
   // state. The controller's measured-state-to-first-point interval is a separate
   // execution admission check, and must not be silently guessed here.
@@ -86,6 +82,23 @@ bool sampleControllerTrajectory(
           return false;
         }
   }
+  return true;
+}
+}  // namespace
+
+bool sampleControllerTrajectory(
+  const robot_trajectory::RobotTrajectory& trajectory, double maximum_joint_span,
+  std::size_t maximum_samples, std::vector<moveit::core::RobotState>& states,
+  std::string& error) {
+  states.clear();
+  error.clear();
+  if (!std::isfinite(maximum_joint_span) || maximum_joint_span <= 0 || maximum_samples == 0) {
+    error = "INVALID_CONTROLLER_SAMPLING_LIMIT";
+    return false;
+  }
+  moveit_msgs::msg::RobotTrajectory message;
+  if (!controllerMessage(trajectory, message, error)) return false;
+  const auto& path = message.joint_trajectory;
   states.push_back(trajectory.getFirstWayPoint());
   joint_trajectory_controller::Trajectory sampler;
   struct Interval { int64_t begin, end; Hull hull; };
@@ -135,5 +148,120 @@ bool sampleControllerTrajectory(
     }
   }
   return true;
+}
+
+ControllerSweepResult checkControllerSweep(
+  const planning_scene::PlanningSceneConstPtr& scene,
+  const robot_trajectory::RobotTrajectory& trajectory,
+  double clearance_m, std::size_t maximum_states, double budget_seconds) {
+  ControllerSweepResult result;
+  const auto deadline=std::chrono::steady_clock::now()+std::chrono::duration<double>(budget_seconds);
+  if(!std::isfinite(clearance_m)||clearance_m<0||!std::isfinite(budget_seconds)||budget_seconds<=0||maximum_states==0) {
+    result.reason="INVALID_SWEEP_BUDGET";return result;
+  }
+  if(scene->getCollisionDetectorName()!="FCL") {
+    result.reason="UNSUPPORTED_SWEEP_COLLISION_BACKEND";return result;
+  }
+  moveit_msgs::msg::RobotTrajectory message;
+  if(!controllerMessage(trajectory,message,result.reason))return result;
+  const auto& path=message.joint_trajectory;
+  const auto& initial=trajectory.getFirstWayPoint();
+  // Bound every collision body's extent from its link origin. The ancestor
+  // walk below adds fixed offsets and the full possible prismatic extension.
+  std::vector<std::pair<const moveit::core::LinkModel*,double>> bodies;
+  auto body=[&](const moveit::core::LinkModel* link,const auto& shapes,const auto& poses,double scale,double padding) {
+    double extent=0;
+    for(std::size_t i=0;i<shapes.size();++i) {
+      const auto type=shapes[i]->type;
+      if(type!=shapes::SPHERE&&type!=shapes::BOX&&type!=shapes::CYLINDER&&type!=shapes::CONE&&type!=shapes::MESH) {
+        result.reason="UNSUPPORTED_SWEEP_BODY_SHAPE";return false;
+      }
+      Eigen::Vector3d center;double radius;
+      shapes::computeShapeBoundingSphere(shapes[i].get(),center,radius);
+      const double size=poses[i].translation().norm()+scale*(center.norm()+radius)+padding;
+      if(!std::isfinite(size)){result.reason="INVALID_SWEEP_BODY_EXTENT";return false;}
+      extent=std::max(extent,size);
+    }
+    if(!std::isfinite(extent)){result.reason="INVALID_SWEEP_BODY_EXTENT";return false;}
+    if(!shapes.empty())bodies.emplace_back(link,extent);
+    return true;
+  };
+  for(const auto* link:initial.getRobotModel()->getLinkModels())
+    if(!body(link,link->getShapes(),link->getCollisionOriginTransforms(),
+        std::max(1.,scene->getCollisionEnv()->getLinkScale(link->getName())),
+        std::max(0.,scene->getCollisionEnv()->getLinkPadding(link->getName()))))return result;
+  std::vector<const moveit::core::AttachedBody*> attached;
+  initial.getAttachedBodies(attached);
+  for(const auto* item:attached)
+    if(!body(item->getAttachedLink(),item->getShapes(),item->getShapePosesInLinkFrame(),1.,0.))return result;
+  const auto& acm=scene->getAllowedCollisionMatrix();
+  double certified=std::numeric_limits<double>::max();
+  auto distances=[&](moveit::core::RobotState& state,double displacement) {
+    state.update();++result.checked_states;
+    const double world=scene->getCollisionEnv()->distanceRobot(state,acm);
+    const double self=scene->getCollisionEnvUnpadded()->distanceSelf(state,acm);
+    if(std::chrono::steady_clock::now()>=deadline){result.reason="SWEEP_BUDGET_EXHAUSTED";return -1;}
+    if(std::isnan(world)||std::isnan(self)){result.reason="SWEEP_DISTANCE_UNAVAILABLE";return -1;}
+    if(world<=clearance_m||self<=clearance_m){result.verdict=SweepVerdict::RISK;result.reason="SWEEP_CLEARANCE_VIOLATION";return -1;}
+    const double bound=std::min(world-displacement,self-2*displacement);
+    if(bound>clearance_m) {certified=std::min(certified,bound);return 1;}
+    return 0;
+  };
+  auto first=initial;
+  if(distances(first,0)<0)return result;
+  joint_trajectory_controller::Trajectory sampler;
+  struct Interval {int64_t begin,end;Hull hull;};
+  for(std::size_t segment=1;segment<path.points.size();++segment) {
+    const auto& a=path.points[segment-1];const auto& b=path.points[segment];
+    const auto begin=rclcpp::Duration(a.time_from_start).nanoseconds(),end=rclcpp::Duration(b.time_from_start).nanoseconds();
+    std::vector<Interval> pending{{begin,end,positionHull(a,b,(end-begin)*1e-9)}};
+    while(!pending.empty()) {
+      if(std::chrono::steady_clock::now()>=deadline||result.checked_states>=maximum_states) {
+        result.reason="SWEEP_BUDGET_EXHAUSTED";return result;
+      }
+      auto interval=std::move(pending.back());pending.pop_back();
+      std::map<std::string,double> spans;
+      for(std::size_t j=0;j<interval.hull.size();++j) {
+        const auto range=std::minmax_element(interval.hull[j].begin(),interval.hull[j].end());
+        const double span=*range.second-*range.first;
+        if(!std::isfinite(span)){result.reason="INVALID_CONTROLLER_SPLINE";return result;}
+        spans[path.joint_names[j]]=span;
+      }
+      Point point;sampler.interpolate_between_points(rclcpp::Time(begin),a,rclcpp::Time(end),b,rclcpp::Time(interval.end),point);
+      auto state=trajectory.getWayPoint(segment-1);state.setVariablePositions(path.joint_names,point.positions);state.update();
+      double displacement=0;
+      for(const auto& item:bodies) {
+        double radius=item.second,motion=0;
+        for(auto* link=item.first;link;link=link->getParentLinkModel()) {
+          const auto* joint=link->getParentJointModel();
+          const auto* source=joint;double factor=1.;
+          while(source->getMimic()){factor*=source->getMimicFactor();source=source->getMimic();}
+          const auto found=spans.find(source->getName());
+          const double span=found==spans.end()?0:std::abs(factor)*found->second;
+          if(span>0) {
+            if(joint->getType()==moveit::core::JointModel::REVOLUTE)motion+=radius*span;
+            else if(joint->getType()==moveit::core::JointModel::PRISMATIC)motion+=span;
+            else {result.reason="UNSUPPORTED_SWEEP_JOINT";return result;}
+          }
+          radius+=link->getJointOriginTransform().translation().norm()+state.getJointTransform(joint).translation().norm();
+          if(joint->getType()==moveit::core::JointModel::PRISMATIC)radius+=span;
+        }
+        displacement=std::max(displacement,motion);
+      }
+      const int checked=distances(state,displacement);
+      if(checked<0)return result;
+      if(checked==0) {
+        if(interval.end-interval.begin<2){result.reason="SWEEP_INTERVAL_UNRESOLVED";return result;}
+        const auto middle=interval.begin+(interval.end-interval.begin)/2;
+        auto halves=split(interval.hull,double(middle-interval.begin)/double(interval.end-interval.begin));
+        pending.push_back({middle,interval.end,std::move(halves.second)});
+        pending.push_back({interval.begin,middle,std::move(halves.first)});
+      }
+    }
+  }
+  if(std::chrono::steady_clock::now()>=deadline){result.reason="SWEEP_BUDGET_EXHAUSTED";return result;}
+  result.verdict=SweepVerdict::CLEAR;result.reason="FIXED_SCENE_SPLINE_CLEAR";
+  result.clearance_lower_bound=certified;
+  return result;
 }
 }  // namespace astribot_s1_manipulation
