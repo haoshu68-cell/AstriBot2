@@ -1,0 +1,219 @@
+{
+  "evidence_layer": "offline_and_isolated_plugin",
+  "domain": 87,
+  "source_baseline": "2775a3d4",
+  "note": "Original JTC owner-loss test confirms an existing gap. Native baseline includes obsolete/contradictory timestamp assertions. Fixed-station test lacked its explicit domain acknowledgement and is INVALID pending rerun. No physical stopping or full-stack acceptance claimed.",
+  "results": [
+    {
+      "package": "astribot_s1_manipulation",
+      "suite": "controller_trajectory_test.gtest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_manipulation",
+      "suite": "gripper_planning_only_test.gtest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_manipulation",
+      "suite": "controller_stop_test.gtest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_manipulation",
+      "suite": "grasp_candidate_gate_test.gtest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_mtc",
+      "suite": "payload_transition_test.gtest",
+      "tests": "24",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_mtc",
+      "suite": "canonical_scene_test.gtest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_mtc",
+      "suite": "trajectory_time_scaling_test.gtest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_mtc",
+      "suite": "support_selection_test.gtest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "resource_journal_test.gtest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "arm_hold_test.gtest",
+      "tests": "28",
+      "failures": "5",
+      "errors": "0",
+      "failed_cases": [
+        "SourceAndFrozenClockWallExpiryRevoke",
+        "ExpiredHoldCannotReviveWhenTimerDidNotObserveGap",
+        "SameCaptureTightenedLeaseCannotBeIgnored",
+        "CoordinatorObservationRejectsFalseOldAndMismatchedHold",
+        "CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries"
+      ]
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "scene_binding_test.gtest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "payload_client_test.gtest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "resource_authority_test.gtest",
+      "tests": "17",
+      "failures": "1",
+      "errors": "0",
+      "failed_cases": [
+        "WallExpiryAndClockResetDoNotRenew"
+      ]
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "mtc_plan_test.gtest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "fixed_station_scene_test.gtest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "trajectory_digest_test.gtest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "payload_frames_test.gtest",
+      "tests": "4",
+      "failures": "3",
+      "errors": "0",
+      "failed_cases": [
+        "UsesTopLevelModelAndActualFixedChainWithInterpolation",
+        "WrongEntityAndDuplicateRenewalCannotSupplyWorldTruth",
+        "RebindingDropsQueuedAndInFlightPreviousEpoch"
+      ]
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "child_actions_test.gtest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "latest_time_contract_test.gtest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "fixed_station_navigation_test.gtest",
+      "tests": "18",
+      "failures": "18",
+      "errors": "0",
+      "failed_cases": [
+        "SameLeaseLegUsesSlamMapPoseAndPostTerminalStop",
+        "LegacyProtectionCannotReplaceControllerAndCancellationStillRequiresStop",
+        "CancelTargetsOnlyOwnedGoalAndTerminalDoesNotProveStopped",
+        "NonzeroSilenceCannotBeMistakenForFinalZero",
+        "SuccessfulTerminalWithoutObservedZeroDoesNotProveStop",
+        "FinalZeroCannotReplaceMeasuredStopWindow",
+        "LeadingPositiveAckIsCurrentEvidence",
+        "FutureNegativeAckCannotAdmitNavigation",
+        "BoundAckRevocationBelongsToNav2AndUserCancelStillStops",
+        "ZeroAckStampRemainsInvalid",
+        "BoundAckExpiryDoesNotDuplicateNav2Admission",
+        "IntentPrecedesPermissionAndBindingDoesNotResendGoal",
+        "SuccessBeforePermissionCannotCompleteNavigation",
+        "LeadingEnvelopeAndSlamPoseCompleteWithoutTF",
+        "BoundEnvelopeExpiryDoesNotDuplicateNav2Admission",
+        "FutureNegativeEnvelopeCannotAdmitThenBoundMonitoringBelongsToNav2",
+        "BoundEnvelopeUpdatesDoNotCancelOwnedGoal",
+        "ZeroEnvelopeStampRemainsInvalid"
+      ]
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "payload_scene_test.gtest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "failed_cases": []
+    },
+    {
+      "package": "astribot_s1_transport_native",
+      "suite": "payload_command_test.gtest",
+      "tests": "9",
+      "failures": "3",
+      "errors": "0",
+      "failed_cases": [
+        "FrozenClockCannotExtendRemainingSourceLease",
+        "DuplicateCaptureCannotRenewItsOriginalDeadline",
+        "FreshSourceAndReceiptAndNewRevisionAreRequired"
+      ]
+    }
+  ]
+}

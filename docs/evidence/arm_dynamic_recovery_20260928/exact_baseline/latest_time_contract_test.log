@@ -1,0 +1,42 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 12 tests from 4 test suites.
+[----------] Global test environment set-up.
+[----------] 4 tests from LatestHold
+[ RUN      ] LatestHold.LeadingAndFormerlyExpiredObservationUsesSteadySettling
+[       OK ] LatestHold.LeadingAndFormerlyExpiredObservationUsesSteadySettling (0 ms)
+[ RUN      ] LatestHold.CurrentGeometryDoesNotExpireAndClaimsWatchdogRemains
+[       OK ] LatestHold.CurrentGeometryDoesNotExpireAndClaimsWatchdogRemains (0 ms)
+[ RUN      ] LatestHold.OldGeometryCannotOverrideLatestButExplicitInvalidRevokes
+[       OK ] LatestHold.OldGeometryCannotOverrideLatestButExplicitInvalidRevokes (0 ms)
+[ RUN      ] LatestHold.CancelStillRevokes
+[       OK ] LatestHold.CancelStillRevokes (0 ms)
+[----------] 4 tests from LatestHold (0 ms total)
+
+[----------] 2 tests from LatestResource
+[ RUN      ] LatestResource.RosRollbackAndJumpCannotEndLeaseButSteadyExpiryDoes
+[       OK ] LatestResource.RosRollbackAndJumpCannotEndLeaseButSteadyExpiryDoes (0 ms)
+[ RUN      ] LatestResource.RenewalAndTerminalStopRetainAuthorityBoundaries
+[       OK ] LatestResource.RenewalAndTerminalStopRetainAuthorityBoundaries (0 ms)
+[----------] 2 tests from LatestResource (0 ms total)
+
+[----------] 2 tests from LatestPayload
+[ RUN      ] LatestPayload.SourceClockDoesNotExpireTransactionEvidence
+[       OK ] LatestPayload.SourceClockDoesNotExpireTransactionEvidence (0 ms)
+[ RUN      ] LatestPayload.RebindingRejectsPreviousCallbackGeneration
+[       OK ] LatestPayload.RebindingRejectsPreviousCallbackGeneration (0 ms)
+[----------] 2 tests from LatestPayload (0 ms total)
+
+[----------] 4 tests from SlamPoseStop
+[ RUN      ] SlamPoseStop.MissingOrInsufficientObservedWindowDoesNotConfirmStop
+[       OK ] SlamPoseStop.MissingOrInsufficientObservedWindowDoesNotConfirmStop (0 ms)
+[ RUN      ] SlamPoseStop.ReversingJitterDoesNotAccumulateAbsoluteTravel
+[       OK ] SlamPoseStop.ReversingJitterDoesNotAccumulateAbsoluteTravel (0 ms)
+[ RUN      ] SlamPoseStop.NetDriftAndOutOfWindowExcursionCannotHideByReturning
+[       OK ] SlamPoseStop.NetDriftAndOutOfWindowExcursionCannotHideByReturning (0 ms)
+[ RUN      ] SlamPoseStop.WrappedYawCrossingDoesNotInventFullRotation
+[       OK ] SlamPoseStop.WrappedYawCrossingDoesNotInventFullRotation (0 ms)
+[----------] 4 tests from SlamPoseStop (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 12 tests from 4 test suites ran. (0 ms total)
+[  PASSED  ] 12 tests.

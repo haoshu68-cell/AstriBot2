@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="4" failures="0" disabled="0" errors="0" time="3.807" timestamp="2026-09-28T12:20:13" name="AllTests">
+  <testsuite name="OwnedController" tests="4" failures="0" disabled="0" errors="0" time="3.806" timestamp="2026-09-28T12:21:44">
+    <testcase name="LostOwnerAbortsAndHoldsInsteadOfCompletingOldTrajectory" status="run" result="completed" time="1.232" timestamp="2026-09-28T12:21:44" classname="OwnedController">
+<properties>
+<property name="position_at_owner_loss" value="0.122236"/>
+<property name="held_position" value="0.269861"/>
+<property name="update_ns_mean" value="18216.533333"/>
+<property name="update_ns_p99" value="40488.000000"/>
+<property name="update_ns_max" value="45547.000000"/>
+<property name="dispatch_and_update_ns_mean" value="122295.941667"/>
+<property name="dispatch_and_update_ns_p99" value="195065.000000"/>
+<property name="dispatch_and_update_ns_max" value="197402.000000"/>
+<property name="update_samples" value="120"/>
+</properties>
+    </testcase>
+    <testcase name="ExpiredLeaseCannotBeRevivedByLateHeartbeat" status="run" result="completed" time="0.93" timestamp="2026-09-28T12:21:45" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="18408.955556"/>
+<property name="update_ns_p99" value="38120.000000"/>
+<property name="update_ns_max" value="38120.000000"/>
+<property name="dispatch_and_update_ns_mean" value="131650.933333"/>
+<property name="dispatch_and_update_ns_p99" value="226352.000000"/>
+<property name="dispatch_and_update_ns_max" value="226352.000000"/>
+<property name="update_samples" value="90"/>
+</properties>
+    </testcase>
+    <testcase name="ExplicitRevocationStopsBeforeLeaseTimeout" status="run" result="completed" time="0.468" timestamp="2026-09-28T12:21:46" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="15806.133333"/>
+<property name="update_ns_p99" value="38297.000000"/>
+<property name="update_ns_max" value="38297.000000"/>
+<property name="dispatch_and_update_ns_mean" value="131921.422222"/>
+<property name="dispatch_and_update_ns_p99" value="227835.000000"/>
+<property name="dispatch_and_update_ns_max" value="227835.000000"/>
+<property name="update_samples" value="45"/>
+</properties>
+    </testcase>
+    <testcase name="HeartbeatCallbacksRaceRealtimeExpiryWithoutRevival" status="run" result="completed" time="1.176" timestamp="2026-09-28T12:21:47" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="13845.533333"/>
+<property name="update_ns_p99" value="24894.000000"/>
+<property name="update_ns_max" value="24894.000000"/>
+<property name="dispatch_and_update_ns_mean" value="132004.666667"/>
+<property name="dispatch_and_update_ns_p99" value="168495.000000"/>
+<property name="dispatch_and_update_ns_max" value="168495.000000"/>
+<property name="update_samples" value="15"/>
+</properties>
+    </testcase>
+  </testsuite>
+</testsuites>

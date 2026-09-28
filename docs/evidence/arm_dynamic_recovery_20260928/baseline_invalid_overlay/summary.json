@@ -1,0 +1,69 @@
+{
+  "source_commit": "2775a3d4",
+  "method": "Unmodified package extracted with git archive, Release build of original targets, same dependency overlay. No controller-type edits.",
+  "results": [
+    {
+      "suite": "arm_hold_test",
+      "returncode": 1,
+      "tests": 28,
+      "failures": [
+        "SustainedMeasuredSettlingAndClaimsProduceBoundedHold",
+        "ClaimLossRevokesAndCannotAutomaticallyRecover",
+        "DuplicateControllerClaimsAreRejected",
+        "AttachmentChangeAndReturnCannotReviveOldHold",
+        "DriftOutsideOriginalReservationRevokes",
+        "CancelClearsRequestAndHoldCannotReuseId",
+        "SourceAndFrozenClockWallExpiryRevoke",
+        "FutureSameVersionDoesNotDisplaceCurrentEvidence",
+        "RequestReferencesCurrentGeometryAndSameHold",
+        "FreshResourceRenewalMaintainsOwnershipButNewOwnerRevokes",
+        "ExpiredHoldCannotReviveWhenTimerDidNotObserveGap",
+        "SameCaptureTightenedLeaseCannotBeIgnored",
+        "FirstControllerResponseAfterSettlingCanCompleteInitialization",
+        "ClaimsMayRefreshBeforeFirstConfirmationButNotAcrossConfirmedGap",
+        "CoordinatorObservationAcceptsFirstAndLaterFreshPositive",
+        "CoordinatorObservationRejectsFalseOldAndMismatchedHold",
+        "CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries"
+      ]
+    },
+    {
+      "suite": "resource_authority_test",
+      "returncode": 1,
+      "tests": 17,
+      "failures": [
+        "WallExpiryAndClockResetDoNotRenew"
+      ]
+    },
+    {
+      "suite": "payload_command_test",
+      "returncode": 1,
+      "tests": 9,
+      "failures": [
+        "FrozenClockCannotExtendRemainingSourceLease",
+        "DuplicateCaptureCannotRenewItsOriginalDeadline",
+        "FreshSourceAndReceiptAndNewRevisionAreRequired"
+      ]
+    },
+    {
+      "suite": "payload_frames_test",
+      "returncode": 1,
+      "tests": 4,
+      "failures": [
+        "UsesTopLevelModelAndActualFixedChainWithInterpolation",
+        "WrongEntityAndDuplicateRenewalCannotSupplyWorldTruth",
+        "RebindingDropsQueuedAndInFlightPreviousEpoch"
+      ]
+    },
+    {
+      "suite": "latest_time_contract_test",
+      "returncode": 1,
+      "tests": 12,
+      "failures": [
+        "LeadingAndFormerlyExpiredObservationUsesSteadySettling",
+        "CurrentGeometryDoesNotExpireAndClaimsWatchdogRemains",
+        "OldGeometryCannotOverrideLatestButExplicitInvalidRevokes",
+        "CancelStillRevokes"
+      ]
+    }
+  ]
+}

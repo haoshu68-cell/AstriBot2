@@ -1,0 +1,107 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 28 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 28 tests from Fixture
+[ RUN      ] Fixture.ZeroMotionWithoutTaskAuthorityNeverConfirms
+[       OK ] Fixture.ZeroMotionWithoutTaskAuthorityNeverConfirms (0 ms)
+[ RUN      ] Fixture.MissingOrUnfinishedExecutorProofRejected
+[       OK ] Fixture.MissingOrUnfinishedExecutorProofRejected (0 ms)
+[ RUN      ] Fixture.SustainedMeasuredSettlingAndClaimsProduceBoundedHold
+[       OK ] Fixture.SustainedMeasuredSettlingAndClaimsProduceBoundedHold (0 ms)
+[ RUN      ] Fixture.SingleFrameOrDuplicateDoesNotProveSettling
+[       OK ] Fixture.SingleFrameOrDuplicateDoesNotProveSettling (0 ms)
+[ RUN      ] Fixture.SettlingBudgetIsQuarterOfHoldError
+[       OK ] Fixture.SettlingBudgetIsQuarterOfHoldError (0 ms)
+[ RUN      ] Fixture.ClaimLossRevokesAndCannotAutomaticallyRecover
+[       OK ] Fixture.ClaimLossRevokesAndCannotAutomaticallyRecover (0 ms)
+[ RUN      ] Fixture.DuplicateControllerClaimsAreRejected
+[       OK ] Fixture.DuplicateControllerClaimsAreRejected (0 ms)
+[ RUN      ] Fixture.UnownedJointCannotReceiveHoldAuthorization
+[       OK ] Fixture.UnownedJointCannotReceiveHoldAuthorization (0 ms)
+[ RUN      ] Fixture.AttachmentChangeAndReturnCannotReviveOldHold
+[       OK ] Fixture.AttachmentChangeAndReturnCannotReviveOldHold (0 ms)
+[ RUN      ] Fixture.DriftOutsideOriginalReservationRevokes
+[       OK ] Fixture.DriftOutsideOriginalReservationRevokes (0 ms)
+[ RUN      ] Fixture.CancelClearsRequestAndHoldCannotReuseId
+[       OK ] Fixture.CancelClearsRequestAndHoldCannotReuseId (0 ms)
+[ RUN      ] Fixture.SourceAndFrozenClockWallExpiryRevoke
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:82: Failure
+Value of: h.status(T+900*MS,T+900*MS).hold_confirmed
+  Actual: true
+Expected: false
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:85: Failure
+Value of: second.status(T+600*MS,T+900*MS).hold_confirmed
+  Actual: true
+Expected: false
+[  FAILED  ] Fixture.SourceAndFrozenClockWallExpiryRevoke (0 ms)
+[ RUN      ] Fixture.FutureSameVersionDoesNotDisplaceCurrentEvidence
+[       OK ] Fixture.FutureSameVersionDoesNotDisplaceCurrentEvidence (0 ms)
+[ RUN      ] Fixture.MalformedJointArraysAndNanCannotConfirm
+[       OK ] Fixture.MalformedJointArraysAndNanCannotConfirm (0 ms)
+[ RUN      ] Fixture.RequestReferencesCurrentGeometryAndSameHold
+[       OK ] Fixture.RequestReferencesCurrentGeometryAndSameHold (0 ms)
+[ RUN      ] Fixture.FreshResourceRenewalMaintainsOwnershipButNewOwnerRevokes
+[       OK ] Fixture.FreshResourceRenewalMaintainsOwnershipButNewOwnerRevokes (0 ms)
+[ RUN      ] Fixture.ExpiredHoldCannotReviveWhenTimerDidNotObserveGap
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:111: Failure
+Value of: h.status(T+1000*MS,T+1000*MS).hold_confirmed
+  Actual: true
+Expected: false
+[  FAILED  ] Fixture.ExpiredHoldCannotReviveWhenTimerDidNotObserveGap (0 ms)
+[ RUN      ] Fixture.SameCaptureTightenedLeaseCannotBeIgnored
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:116: Failure
+Expected: (h.status(T+620*MS,T+620*MS).lease_s) <= (.030000001), actual: 0.3 vs 0.03
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:117: Failure
+Value of: h.status(T+650*MS,T+650*MS).hold_confirmed
+  Actual: true
+Expected: false
+[  FAILED  ] Fixture.SameCaptureTightenedLeaseCannotBeIgnored (0 ms)
+[ RUN      ] Fixture.ResourceQueueDelayDoesNotRenewWallLease
+[       OK ] Fixture.ResourceQueueDelayDoesNotRenewWallLease (0 ms)
+[ RUN      ] Fixture.OneSequenceCannotRepresentThreeDifferentCaptures
+[       OK ] Fixture.OneSequenceCannotRepresentThreeDifferentCaptures (0 ms)
+[ RUN      ] Fixture.ResourceGapDuringSettlingCannotBeHiddenByRenewal
+[       OK ] Fixture.ResourceGapDuringSettlingCannotBeHiddenByRenewal (0 ms)
+[ RUN      ] Fixture.FirstControllerResponseAfterSettlingCanCompleteInitialization
+[       OK ] Fixture.FirstControllerResponseAfterSettlingCanCompleteInitialization (0 ms)
+[ RUN      ] Fixture.ZeroSequenceRevokesInvalidCapture
+[       OK ] Fixture.ZeroSequenceRevokesInvalidCapture (0 ms)
+[ RUN      ] Fixture.SameSequenceCannotChangeAttachmentIdentity
+[       OK ] Fixture.SameSequenceCannotChangeAttachmentIdentity (0 ms)
+[ RUN      ] Fixture.ClaimsMayRefreshBeforeFirstConfirmationButNotAcrossConfirmedGap
+[       OK ] Fixture.ClaimsMayRefreshBeforeFirstConfirmationButNotAcrossConfirmedGap (0 ms)
+[ RUN      ] Fixture.CoordinatorObservationAcceptsFirstAndLaterFreshPositive
+[       OK ] Fixture.CoordinatorObservationAcceptsFirstAndLaterFreshPositive (0 ms)
+[ RUN      ] Fixture.CoordinatorObservationRejectsFalseOldAndMismatchedHold
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:186: Failure
+Value of: h.observationMatches(changed,first,first,first,first,first)
+  Actual: true
+Expected: false
+[  FAILED  ] Fixture.CoordinatorObservationRejectsFalseOldAndMismatchedHold (0 ms)
+[ RUN      ] Fixture.CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:195: Failure
+Value of: h.observationMatches(observed,first,received,received,expires,expires-1)
+  Actual: true
+Expected: false
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:198: Failure
+Value of: h.observationMatches(observed,first,received,received,received,expires)
+  Actual: true
+Expected: false
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:199: Failure
+Value of: h.observationMatches(observed,first,received,received,received-1,received)
+  Actual: true
+Expected: false
+[  FAILED  ] Fixture.CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries (0 ms)
+[----------] 28 tests from Fixture (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 28 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 23 tests.
+[  FAILED  ] 5 tests, listed below:
+[  FAILED  ] Fixture.SourceAndFrozenClockWallExpiryRevoke
+[  FAILED  ] Fixture.ExpiredHoldCannotReviveWhenTimerDidNotObserveGap
+[  FAILED  ] Fixture.SameCaptureTightenedLeaseCannotBeIgnored
+[  FAILED  ] Fixture.CoordinatorObservationRejectsFalseOldAndMismatchedHold
+[  FAILED  ] Fixture.CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries
+
+ 5 FAILED TESTS

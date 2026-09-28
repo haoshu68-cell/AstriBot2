@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="9" failures="3" disabled="0" errors="0" time="0.001" timestamp="2026-09-28T11:55:19" name="AllTests">
+  <testsuite name="PayloadCommand" tests="9" failures="3" disabled="0" errors="0" time="0.001" timestamp="2026-09-28T11:55:19">
+    <testcase name="ContinuesActualPluginCounterAndRequiresAppliedInventory" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand" />
+    <testcase name="ReconciliationTransitionRequiresANewerCompleteCapture" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand" />
+    <testcase name="FrozenClockCannotExtendRemainingSourceLease" status="run" result="completed" time="0.001" timestamp="2026-09-28T11:55:19" classname="PayloadCommand">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:46&#x0A;Expected: command.applied(value,{1300000000,2000000000},1300000000,2100000000) throws an exception of type std::runtime_error.&#x0A;  Actual: it throws nothing." type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:46
+Expected: command.applied(value,{1300000000,2000000000},1300000000,2100000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:49&#x0A;Expected: delayed.applied(value,{1300000000,2000000000},1300000000,2100000000) throws an exception of type std::runtime_error.&#x0A;  Actual: it throws nothing." type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:49
+Expected: delayed.applied(value,{1300000000,2000000000},1300000000,2100000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.]]></failure>
+    </testcase>
+    <testcase name="DuplicateCaptureCannotRenewItsOriginalDeadline" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:56&#x0A;Expected: command.applied(value,{1100000000,2300000000},1100000000,2300000000) throws an exception of type std::runtime_error.&#x0A;  Actual: it throws nothing." type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:56
+Expected: command.applied(value,{1100000000,2300000000},1100000000,2300000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.]]></failure>
+    </testcase>
+    <testcase name="SourceAndPluginIdentityAreBoundAcrossThePhysicalCommand" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand" />
+    <testcase name="CannotOverridePendingForeignOrExhaustedCommands" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand" />
+    <testcase name="FreshSourceAndReceiptAndNewRevisionAreRequired" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:80&#x0A;Expected: PayloadCommand(&quot;fixture&quot;,true,inventory(),{SECOND+300000000,SECOND},SECOND+300000000,SECOND+300000000) throws an exception of type std::runtime_error.&#x0A;  Actual: it throws nothing." type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:80
+Expected: PayloadCommand("fixture",true,inventory(),{SECOND+300000000,SECOND},SECOND+300000000,SECOND+300000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:81&#x0A;Expected: PayloadCommand(&quot;fixture&quot;,true,inventory(),{SECOND,SECOND},SECOND,SECOND+300000000) throws an exception of type std::runtime_error.&#x0A;  Actual: it throws nothing." type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:81
+Expected: PayloadCommand("fixture",true,inventory(),{SECOND,SECOND},SECOND,SECOND+300000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:86&#x0A;Expected: command.applied(value,{SECOND+100,SECOND+100},SECOND+100,SECOND+100) throws an exception of type std::runtime_error.&#x0A;  Actual: it throws nothing." type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:86
+Expected: command.applied(value,{SECOND+100,SECOND+100},SECOND+100,SECOND+100) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.]]></failure>
+    </testcase>
+    <testcase name="DetachDoesNotClaimTheWholeInventoryIsEmpty" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand" />
+    <testcase name="RejectsMalformedExternalCounterAndDuplicateIdentity" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="PayloadCommand" />
+  </testsuite>
+</testsuites>

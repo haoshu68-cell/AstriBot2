@@ -1,0 +1,82 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 12 tests from 4 test suites.
+[----------] Global test environment set-up.
+[----------] 4 tests from LatestHold
+[ RUN      ] LatestHold.LeadingAndFormerlyExpiredObservationUsesSteadySettling
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:28: Failure
+Value of: hold.status(S/2,S+600*MS).hold_confirmed
+  Actual: false
+Expected: true
+[  FAILED  ] LatestHold.LeadingAndFormerlyExpiredObservationUsesSteadySettling (1 ms)
+[ RUN      ] LatestHold.CurrentGeometryDoesNotExpireAndClaimsWatchdogRemains
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:28: Failure
+Value of: hold.status(S/2,S+600*MS).hold_confirmed
+  Actual: false
+Expected: true
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:34: Failure
+Value of: hold.status(100*S,S+1000*MS).hold_confirmed
+  Actual: false
+Expected: true
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:36: Failure
+Expected equality of these values:
+  hold.reason()
+    Which is: "WAITING_FOR_CONTROLLER_STATE"
+  "HOLD_CONTROLLER_STATE_EXPIRED"
+[  FAILED  ] LatestHold.CurrentGeometryDoesNotExpireAndClaimsWatchdogRemains (0 ms)
+[ RUN      ] LatestHold.OldGeometryCannotOverrideLatestButExplicitInvalidRevokes
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:28: Failure
+Value of: hold.status(S/2,S+600*MS).hold_confirmed
+  Actual: false
+Expected: true
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:40: Failure
+Value of: hold.status(S/2,S+610*MS).hold_confirmed
+  Actual: false
+Expected: true
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:42: Failure
+Value of: hold.status(S/2,S+615*MS).hold_confirmed
+  Actual: false
+Expected: true
+[  FAILED  ] LatestHold.OldGeometryCannotOverrideLatestButExplicitInvalidRevokes (0 ms)
+[ RUN      ] LatestHold.CancelStillRevokes
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp:28: Failure
+Value of: hold.status(S/2,S+600*MS).hold_confirmed
+  Actual: false
+Expected: true
+[  FAILED  ] LatestHold.CancelStillRevokes (0 ms)
+[----------] 4 tests from LatestHold (1 ms total)
+
+[----------] 2 tests from LatestResource
+[ RUN      ] LatestResource.RosRollbackAndJumpCannotEndLeaseButSteadyExpiryDoes
+[       OK ] LatestResource.RosRollbackAndJumpCannotEndLeaseButSteadyExpiryDoes (0 ms)
+[ RUN      ] LatestResource.RenewalAndTerminalStopRetainAuthorityBoundaries
+[       OK ] LatestResource.RenewalAndTerminalStopRetainAuthorityBoundaries (0 ms)
+[----------] 2 tests from LatestResource (0 ms total)
+
+[----------] 2 tests from LatestPayload
+[ RUN      ] LatestPayload.SourceClockDoesNotExpireTransactionEvidence
+[       OK ] LatestPayload.SourceClockDoesNotExpireTransactionEvidence (0 ms)
+[ RUN      ] LatestPayload.RebindingRejectsPreviousCallbackGeneration
+[       OK ] LatestPayload.RebindingRejectsPreviousCallbackGeneration (0 ms)
+[----------] 2 tests from LatestPayload (0 ms total)
+
+[----------] 4 tests from SlamPoseStop
+[ RUN      ] SlamPoseStop.MissingOrInsufficientObservedWindowDoesNotConfirmStop
+[       OK ] SlamPoseStop.MissingOrInsufficientObservedWindowDoesNotConfirmStop (0 ms)
+[ RUN      ] SlamPoseStop.ReversingJitterDoesNotAccumulateAbsoluteTravel
+[       OK ] SlamPoseStop.ReversingJitterDoesNotAccumulateAbsoluteTravel (0 ms)
+[ RUN      ] SlamPoseStop.NetDriftAndOutOfWindowExcursionCannotHideByReturning
+[       OK ] SlamPoseStop.NetDriftAndOutOfWindowExcursionCannotHideByReturning (0 ms)
+[ RUN      ] SlamPoseStop.WrappedYawCrossingDoesNotInventFullRotation
+[       OK ] SlamPoseStop.WrappedYawCrossingDoesNotInventFullRotation (0 ms)
+[----------] 4 tests from SlamPoseStop (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 12 tests from 4 test suites ran. (1 ms total)
+[  PASSED  ] 8 tests.
+[  FAILED  ] 4 tests, listed below:
+[  FAILED  ] LatestHold.LeadingAndFormerlyExpiredObservationUsesSteadySettling
+[  FAILED  ] LatestHold.CurrentGeometryDoesNotExpireAndClaimsWatchdogRemains
+[  FAILED  ] LatestHold.OldGeometryCannotOverrideLatestButExplicitInvalidRevokes
+[  FAILED  ] LatestHold.CancelStillRevokes
+
+ 4 FAILED TESTS

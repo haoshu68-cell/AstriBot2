@@ -1,0 +1,25 @@
+[0.358s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_humble/opt/ros/humble' in the environment variable AMENT_PREFIX_PATH doesn't contain any 'local_setup.*' files.
+Starting >>> astribot_s1_manipulation
+Finished <<< astribot_s1_manipulation [22.9s]
+Starting >>> astribot_s1_transport_mtc
+--- stderr: astribot_s1_transport_mtc
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp: In member function ‘void Planner::run(const std::shared_ptr<rclcpp_action::ServerGoalHandle<astribot_transport_msgs::action::PlanManipulation> >&)’:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:146:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  146 |     {std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};}
+      |                                                                                                                ^
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:146:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:146:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:146:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:371:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  371 |       std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};
+      |                                                                                                                 ^
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:371:113: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:371:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:371:113: note: in C++11 and above a default constructor can be explicit
+---
+Finished <<< astribot_s1_transport_mtc [34.3s]
+Starting >>> astribot_s1_transport_native
+Finished <<< astribot_s1_transport_native [0.98s]
+
+Summary: 3 packages finished [58.5s]
+  1 package had stderr output: astribot_s1_transport_mtc

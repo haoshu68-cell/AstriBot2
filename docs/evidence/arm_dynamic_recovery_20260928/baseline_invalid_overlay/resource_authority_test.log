@@ -1,0 +1,60 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 17 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 13 tests from AuthorityFixture
+[ RUN      ] AuthorityFixture.AcquisitionIsExclusiveAndReplayCannotRenew
+[       OK ] AuthorityFixture.AcquisitionIsExclusiveAndReplayCannotRenew (0 ms)
+[ RUN      ] AuthorityFixture.ExpiryQuarantinesRatherThanReleasing
+[       OK ] AuthorityFixture.ExpiryQuarantinesRatherThanReleasing (0 ms)
+[ RUN      ] AuthorityFixture.UncertainChildResultQuarantinesAndRequiresActualTerminalProof
+[       OK ] AuthorityFixture.UncertainChildResultQuarantinesAndRequiresActualTerminalProof (0 ms)
+[ RUN      ] AuthorityFixture.RenewalCannotReviveGapOrReplay
+[       OK ] AuthorityFixture.RenewalCannotReviveGapOrReplay (0 ms)
+[ RUN      ] AuthorityFixture.CancelAckAndTerminalAloneCannotRelease
+[       OK ] AuthorityFixture.CancelAckAndTerminalAloneCannotRelease (0 ms)
+[ RUN      ] AuthorityFixture.PureReservationMayReleaseWithoutInventedMotionEvidence
+[       OK ] AuthorityFixture.PureReservationMayReleaseWithoutInventedMotionEvidence (0 ms)
+[ RUN      ] AuthorityFixture.WallExpiryAndClockResetDoNotRenew
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp:55: Failure
+Value of: b.grant(T-1,T+1)
+  Actual: true
+Expected: false
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp:55: Failure
+Expected equality of these values:
+  b.phase()
+    Which is: 4-byte object <01-00 00-00>
+  ResourcePhase::QUARANTINED
+    Which is: 4-byte object <05-00 00-00>
+[  FAILED  ] AuthorityFixture.WallExpiryAndClockResetDoNotRenew (0 ms)
+[ RUN      ] AuthorityFixture.RestartRetainsUnresolvedResourcesAndRequestIdentity
+[       OK ] AuthorityFixture.RestartRetainsUnresolvedResourcesAndRequestIdentity (0 ms)
+[ RUN      ] AuthorityFixture.CommittedReleaseAndDuplicateSurviveRestart
+[       OK ] AuthorityFixture.CommittedReleaseAndDuplicateSurviveRestart (0 ms)
+[ RUN      ] AuthorityFixture.ContinueOperationPreservesLeaseAndDoesNotRenewIt
+[       OK ] AuthorityFixture.ContinueOperationPreservesLeaseAndDoesNotRenewIt (0 ms)
+[ RUN      ] AuthorityFixture.ContinueRequiresCurrentIdentityHoldAndBothEvidenceBoundaries
+[       OK ] AuthorityFixture.ContinueRequiresCurrentIdentityHoldAndBothEvidenceBoundaries (0 ms)
+[ RUN      ] AuthorityFixture.SuccessfulCompletionCommitsThenReleasesWithoutCancellation
+[       OK ] AuthorityFixture.SuccessfulCompletionCommitsThenReleasesWithoutCancellation (0 ms)
+[ RUN      ] AuthorityFixture.CancellationPreventsNormalCompletion
+[       OK ] AuthorityFixture.CancellationPreventsNormalCompletion (0 ms)
+[----------] 13 tests from AuthorityFixture (0 ms total)
+
+[----------] 4 tests from ResourceAuthority
+[ RUN      ] ResourceAuthority.PersistenceFailureNeverGrants
+[       OK ] ResourceAuthority.PersistenceFailureNeverGrants (0 ms)
+[ RUN      ] ResourceAuthority.FailedReleaseCommitKeepsResourcesQuarantined
+[       OK ] ResourceAuthority.FailedReleaseCommitKeepsResourcesQuarantined (0 ms)
+[ RUN      ] ResourceAuthority.ContinuationPersistenceFailureKeepsOwnershipUnresolved
+[       OK ] ResourceAuthority.ContinuationPersistenceFailureKeepsOwnershipUnresolved (0 ms)
+[ RUN      ] ResourceAuthority.NormalCompletionCommitFailuresCannotGrantNewOwner
+[       OK ] ResourceAuthority.NormalCompletionCommitFailuresCannotGrantNewOwner (0 ms)
+[----------] 4 tests from ResourceAuthority (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 17 tests from 2 test suites ran. (0 ms total)
+[  PASSED  ] 16 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] AuthorityFixture.WallExpiryAndClockResetDoNotRenew
+
+ 1 FAILED TEST

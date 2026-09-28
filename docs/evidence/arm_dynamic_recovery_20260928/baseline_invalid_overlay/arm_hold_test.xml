@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="28" failures="17" disabled="0" errors="0" time="0.001" timestamp="2026-09-28T11:55:19" name="AllTests">
+  <testsuite name="Fixture" tests="28" failures="17" disabled="0" errors="0" time="0.001" timestamp="2026-09-28T11:55:19">
+    <testcase name="ZeroMotionWithoutTaskAuthorityNeverConfirms" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="MissingOrUnfinishedExecutorProofRejected" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="SustainedMeasuredSettlingAndClaimsProduceBoundedHold" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:40&#x0A;Expected: (status.lease_s) &gt; (0.), actual: 0 vs 0" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:40
+Expected: (status.lease_s) > (0.), actual: 0 vs 0]]></failure>
+    </testcase>
+    <testcase name="SingleFrameOrDuplicateDoesNotProveSettling" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="SettlingBudgetIsQuarterOfHoldError" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="ClaimLossRevokesAndCannotAutomaticallyRecover" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="DuplicateControllerClaimsAreRejected" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="UnownedJointCannotReceiveHoldAuthorization" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="AttachmentChangeAndReturnCannotReviveOldHold" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="DriftOutsideOriginalReservationRevokes" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="CancelClearsRequestAndHoldCannotReuseId" status="run" result="completed" time="0.001" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="SourceAndFrozenClockWallExpiryRevoke" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="FutureSameVersionDoesNotDisplaceCurrentEvidence" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:88&#x0A;Value of: h.status(T+600*MS,T+601*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:88
+Value of: h.status(T+600*MS,T+601*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="MalformedJointArraysAndNanCannotConfirm" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="RequestReferencesCurrentGeometryAndSameHold" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+      <failure message="unknown file&#x0A;C++ exception with description &quot;ARM_HOLD_UNCONFIRMED&quot; thrown in the test body." type=""><![CDATA[unknown file
+C++ exception with description "ARM_HOLD_UNCONFIRMED" thrown in the test body.]]></failure>
+    </testcase>
+    <testcase name="FreshResourceRenewalMaintainsOwnershipButNewOwnerRevokes" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="ExpiredHoldCannotReviveWhenTimerDidNotObserveGap" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="SameCaptureTightenedLeaseCannotBeIgnored" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="ResourceQueueDelayDoesNotRenewWallLease" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="OneSequenceCannotRepresentThreeDifferentCaptures" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="ResourceGapDuringSettlingCannotBeHiddenByRenewal" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="FirstControllerResponseAfterSettlingCanCompleteInitialization" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:146&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:146
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="ZeroSequenceRevokesInvalidCapture" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="SameSequenceCannotChangeAttachmentIdentity" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture" />
+    <testcase name="ClaimsMayRefreshBeforeFirstConfirmationButNotAcrossConfirmedGap" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:163&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:163
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="CoordinatorObservationAcceptsFirstAndLaterFreshPositive" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:168&#x0A;Value of: hold.observationMatches(observed,first,first,first,first,first)&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:168
+Value of: hold.observationMatches(observed,first,first,first,first,first)
+  Actual: false
+Expected: true]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:170&#x0A;Value of: hold.observationMatches(observed,first,first+50*MS,first+50*MS,first+60*MS,first+60*MS)&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:170
+Value of: hold.observationMatches(observed,first,first+50*MS,first+50*MS,first+60*MS,first+60*MS)
+  Actual: false
+Expected: true]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:171&#x0A;Value of: h.status(first+60*MS,first+60*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:171
+Value of: h.status(first+60*MS,first+60*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="CoordinatorObservationRejectsFalseOldAndMismatchedHold" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+    <testcase name="CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:19" classname="Fixture">
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27&#x0A;Value of: h.status(T+600*MS,T+600*MS).hold_confirmed&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:27
+Value of: h.status(T+600*MS,T+600*MS).hold_confirmed
+  Actual: false
+Expected: true]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:194&#x0A;Value of: h.observationMatches(observed,first,received,received,expires-1,expires-1)&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:194
+Value of: h.observationMatches(observed,first,received,received,expires-1,expires-1)
+  Actual: false
+Expected: true]]></failure>
+      <failure message="/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:197&#x0A;Value of: h.observationMatches(observed,first,received,received,received,expires-1)&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp:197
+Value of: h.observationMatches(observed,first,received,received,received,expires-1)
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+  </testsuite>
+</testsuites>

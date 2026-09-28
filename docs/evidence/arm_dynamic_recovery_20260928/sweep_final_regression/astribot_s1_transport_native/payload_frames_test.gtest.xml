@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="4" failures="3" disabled="0" errors="0" time="0" timestamp="2026-09-28T12:13:17" name="AllTests">
+  <testsuite name="PayloadFrames" tests="3" failures="2" disabled="0" errors="0" time="0" timestamp="2026-09-28T12:13:17">
+    <testcase name="UsesTopLevelModelAndActualFixedChainWithInterpolation" status="run" result="completed" time="0" timestamp="2026-09-28T12:13:17" classname="astribot_s1_transport_native.PayloadFrames">
+      <failure message="/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:26&#x0A;The difference between result-&gt;translation().z() and .33 is 0.10000000000000001, which exceeds 1e-12, where&#x0A;result-&gt;translation().z() evaluates to 0.23000000000000001,&#x0A;.33 evaluates to 0.33000000000000002, and&#x0A;1e-12 evaluates to 9.9999999999999998e-13." type=""><![CDATA[/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:26
+The difference between result->translation().z() and .33 is 0.10000000000000001, which exceeds 1e-12, where
+result->translation().z() evaluates to 0.23000000000000001,
+.33 evaluates to 0.33000000000000002, and
+1e-12 evaluates to 9.9999999999999998e-13.]]></failure>
+      <failure message="/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:27&#x0A;Value of: frames.world_from_base(1150000000,1150000000,2050000000)&#x0A;  Actual: true&#x0A;Expected: false" type=""><![CDATA[/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:27
+Value of: frames.world_from_base(1150000000,1150000000,2050000000)
+  Actual: true
+Expected: false]]></failure>
+    </testcase>
+    <testcase name="WrongEntityAndDuplicateRenewalCannotSupplyWorldTruth" status="run" result="completed" time="0" timestamp="2026-09-28T12:13:17" classname="astribot_s1_transport_native.PayloadFrames">
+      <failure message="/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:35&#x0A;Expected: frames.world_from_base(1000000000,1100000000,2200000000) throws an exception of type std::runtime_error.&#x0A;  Actual: it throws nothing." type=""><![CDATA[/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:35
+Expected: frames.world_from_base(1000000000,1100000000,2200000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.]]></failure>
+    </testcase>
+    <testcase name="SameExecutorTfPollingUsesOriginalCaptureWithoutTimeoutWrapper" status="run" result="completed" time="0" timestamp="2026-09-28T12:13:17" classname="astribot_s1_transport_native.PayloadFrames" />
+  </testsuite>
+  <testsuite name="PayloadWorldInbox" tests="1" failures="1" disabled="0" errors="0" time="0" timestamp="2026-09-28T12:13:17">
+    <testcase name="RebindingDropsQueuedAndInFlightPreviousEpoch" status="run" result="completed" time="0" timestamp="2026-09-28T12:13:17" classname="astribot_s1_transport_native.PayloadWorldInbox">
+      <failure message="/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:60&#x0A;Value of: inbox.take().empty()&#x0A;  Actual: false&#x0A;Expected: true" type=""><![CDATA[/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:60
+Value of: inbox.take().empty()
+  Actual: false
+Expected: true]]></failure>
+    </testcase>
+  </testsuite>
+</testsuites>

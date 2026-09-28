@@ -1,0 +1,693 @@
+{
+  "evidence": "Isolated real JTC implementation, ideal position interface; not Gazebo or physical braking.",
+  "scope": "100 Hz controller updates and synthetic heartbeat; same one-joint 0 to 1 rad trajectory over 2 seconds; each run measures first 0.5 seconds.",
+  "limitation": "Shared host has other active simulation processes; descriptive microbenchmark, not exclusive full-stack performance acceptance.",
+  "binaries": {
+    "baseline": {
+      "path": "/tmp/astribot_arm_dynamic_recovery/build/astribot_s1_manipulation/controller_stop_test",
+      "sha256": "5f8a7acfe36cb8e42ea4c84d65f904d5248cc25eb148e35ab9dea4ed870e7b98"
+    },
+    "owned": {
+      "path": "/tmp/astribot_arm_dynamic_recovery/build/astribot_s1_manipulation/owned_controller_test",
+      "sha256": "7f0cccea4495e679b04506640542f0ac09cbffca47c61a3eb2c5b6cef1f53a1f"
+    }
+  },
+  "rounds": 30,
+  "domain": "87",
+  "summary": {
+    "update_ns_mean": {
+      "baseline_median": 18774.47,
+      "owned_median": 17203.510000000002,
+      "difference": -1570.9599999999991,
+      "percent": -8.367533144743899
+    },
+    "dispatch_and_update_ns_mean": {
+      "baseline_median": 110289.38,
+      "owned_median": 131197.81,
+      "difference": 20908.429999999993,
+      "percent": 18.957790858920397
+    }
+  },
+  "observations": [
+    {
+      "iteration": 0,
+      "kind": "baseline",
+      "update_ns_mean": 17479.36,
+      "update_ns_p99": 54976.0,
+      "update_ns_max": 54976.0,
+      "dispatch_and_update_ns_mean": 100717.96,
+      "dispatch_and_update_ns_p99": 193408.0,
+      "dispatch_and_update_ns_max": 193408.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 0,
+      "kind": "owned",
+      "update_ns_mean": 16848.76,
+      "update_ns_p99": 27638.0,
+      "update_ns_max": 27638.0,
+      "dispatch_and_update_ns_mean": 122823.2,
+      "dispatch_and_update_ns_p99": 210890.0,
+      "dispatch_and_update_ns_max": 210890.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 1,
+      "kind": "owned",
+      "update_ns_mean": 17836.62,
+      "update_ns_p99": 33569.0,
+      "update_ns_max": 33569.0,
+      "dispatch_and_update_ns_mean": 136381.62,
+      "dispatch_and_update_ns_p99": 235961.0,
+      "dispatch_and_update_ns_max": 235961.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 1,
+      "kind": "baseline",
+      "update_ns_mean": 16745.12,
+      "update_ns_p99": 28547.0,
+      "update_ns_max": 28547.0,
+      "dispatch_and_update_ns_mean": 104679.78,
+      "dispatch_and_update_ns_p99": 295357.0,
+      "dispatch_and_update_ns_max": 295357.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 2,
+      "kind": "baseline",
+      "update_ns_mean": 19883.02,
+      "update_ns_p99": 35729.0,
+      "update_ns_max": 35729.0,
+      "dispatch_and_update_ns_mean": 112101.78,
+      "dispatch_and_update_ns_p99": 216815.0,
+      "dispatch_and_update_ns_max": 216815.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 2,
+      "kind": "owned",
+      "update_ns_mean": 15742.8,
+      "update_ns_p99": 28024.0,
+      "update_ns_max": 28024.0,
+      "dispatch_and_update_ns_mean": 122701.04,
+      "dispatch_and_update_ns_p99": 212225.0,
+      "dispatch_and_update_ns_max": 212225.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 3,
+      "kind": "owned",
+      "update_ns_mean": 16170.74,
+      "update_ns_p99": 27517.0,
+      "update_ns_max": 27517.0,
+      "dispatch_and_update_ns_mean": 122782.5,
+      "dispatch_and_update_ns_p99": 244193.0,
+      "dispatch_and_update_ns_max": 244193.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 3,
+      "kind": "baseline",
+      "update_ns_mean": 20394.64,
+      "update_ns_p99": 36779.0,
+      "update_ns_max": 36779.0,
+      "dispatch_and_update_ns_mean": 118092.02,
+      "dispatch_and_update_ns_p99": 219150.0,
+      "dispatch_and_update_ns_max": 219150.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 4,
+      "kind": "baseline",
+      "update_ns_mean": 19503.32,
+      "update_ns_p99": 32072.0,
+      "update_ns_max": 32072.0,
+      "dispatch_and_update_ns_mean": 117469.86,
+      "dispatch_and_update_ns_p99": 230372.0,
+      "dispatch_and_update_ns_max": 230372.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 4,
+      "kind": "owned",
+      "update_ns_mean": 15160.6,
+      "update_ns_p99": 27024.0,
+      "update_ns_max": 27024.0,
+      "dispatch_and_update_ns_mean": 112921.88,
+      "dispatch_and_update_ns_p99": 187218.0,
+      "dispatch_and_update_ns_max": 187218.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 5,
+      "kind": "owned",
+      "update_ns_mean": 17225.08,
+      "update_ns_p99": 34406.0,
+      "update_ns_max": 34406.0,
+      "dispatch_and_update_ns_mean": 132227.64,
+      "dispatch_and_update_ns_p99": 196764.0,
+      "dispatch_and_update_ns_max": 196764.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 5,
+      "kind": "baseline",
+      "update_ns_mean": 19314.44,
+      "update_ns_p99": 40901.0,
+      "update_ns_max": 40901.0,
+      "dispatch_and_update_ns_mean": 112910.82,
+      "dispatch_and_update_ns_p99": 190744.0,
+      "dispatch_and_update_ns_max": 190744.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 6,
+      "kind": "baseline",
+      "update_ns_mean": 18562.24,
+      "update_ns_p99": 41602.0,
+      "update_ns_max": 41602.0,
+      "dispatch_and_update_ns_mean": 110320.88,
+      "dispatch_and_update_ns_p99": 193665.0,
+      "dispatch_and_update_ns_max": 193665.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 6,
+      "kind": "owned",
+      "update_ns_mean": 17689.34,
+      "update_ns_p99": 32546.0,
+      "update_ns_max": 32546.0,
+      "dispatch_and_update_ns_mean": 137117.2,
+      "dispatch_and_update_ns_p99": 208518.0,
+      "dispatch_and_update_ns_max": 208518.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 7,
+      "kind": "owned",
+      "update_ns_mean": 16127.52,
+      "update_ns_p99": 26780.0,
+      "update_ns_max": 26780.0,
+      "dispatch_and_update_ns_mean": 121792.66,
+      "dispatch_and_update_ns_p99": 206678.0,
+      "dispatch_and_update_ns_max": 206678.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 7,
+      "kind": "baseline",
+      "update_ns_mean": 16805.72,
+      "update_ns_p99": 35006.0,
+      "update_ns_max": 35006.0,
+      "dispatch_and_update_ns_mean": 98977.7,
+      "dispatch_and_update_ns_p99": 160809.0,
+      "dispatch_and_update_ns_max": 160809.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 8,
+      "kind": "baseline",
+      "update_ns_mean": 19144.64,
+      "update_ns_p99": 36628.0,
+      "update_ns_max": 36628.0,
+      "dispatch_and_update_ns_mean": 110998.84,
+      "dispatch_and_update_ns_p99": 184030.0,
+      "dispatch_and_update_ns_max": 184030.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 8,
+      "kind": "owned",
+      "update_ns_mean": 17024.64,
+      "update_ns_p99": 27975.0,
+      "update_ns_max": 27975.0,
+      "dispatch_and_update_ns_mean": 130248.26,
+      "dispatch_and_update_ns_p99": 273768.0,
+      "dispatch_and_update_ns_max": 273768.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 9,
+      "kind": "owned",
+      "update_ns_mean": 17631.94,
+      "update_ns_p99": 29922.0,
+      "update_ns_max": 29922.0,
+      "dispatch_and_update_ns_mean": 133111.18,
+      "dispatch_and_update_ns_p99": 204597.0,
+      "dispatch_and_update_ns_max": 204597.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 9,
+      "kind": "baseline",
+      "update_ns_mean": 19169.3,
+      "update_ns_p99": 29855.0,
+      "update_ns_max": 29855.0,
+      "dispatch_and_update_ns_mean": 114942.08,
+      "dispatch_and_update_ns_p99": 192563.0,
+      "dispatch_and_update_ns_max": 192563.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 10,
+      "kind": "baseline",
+      "update_ns_mean": 19679.6,
+      "update_ns_p99": 34955.0,
+      "update_ns_max": 34955.0,
+      "dispatch_and_update_ns_mean": 118133.32,
+      "dispatch_and_update_ns_p99": 369505.0,
+      "dispatch_and_update_ns_max": 369505.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 10,
+      "kind": "owned",
+      "update_ns_mean": 15610.84,
+      "update_ns_p99": 25654.0,
+      "update_ns_max": 25654.0,
+      "dispatch_and_update_ns_mean": 122249.72,
+      "dispatch_and_update_ns_p99": 195451.0,
+      "dispatch_and_update_ns_max": 195451.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 11,
+      "kind": "owned",
+      "update_ns_mean": 18716.26,
+      "update_ns_p99": 35113.0,
+      "update_ns_max": 35113.0,
+      "dispatch_and_update_ns_mean": 137559.98,
+      "dispatch_and_update_ns_p99": 207220.0,
+      "dispatch_and_update_ns_max": 207220.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 11,
+      "kind": "baseline",
+      "update_ns_mean": 18544.64,
+      "update_ns_p99": 33250.0,
+      "update_ns_max": 33250.0,
+      "dispatch_and_update_ns_mean": 108470.46,
+      "dispatch_and_update_ns_p99": 214851.0,
+      "dispatch_and_update_ns_max": 214851.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 12,
+      "kind": "baseline",
+      "update_ns_mean": 18032.72,
+      "update_ns_p99": 31643.0,
+      "update_ns_max": 31643.0,
+      "dispatch_and_update_ns_mean": 107145.1,
+      "dispatch_and_update_ns_p99": 170211.0,
+      "dispatch_and_update_ns_max": 170211.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 12,
+      "kind": "owned",
+      "update_ns_mean": 17350.64,
+      "update_ns_p99": 31856.0,
+      "update_ns_max": 31856.0,
+      "dispatch_and_update_ns_mean": 129500.34,
+      "dispatch_and_update_ns_p99": 202392.0,
+      "dispatch_and_update_ns_max": 202392.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 13,
+      "kind": "owned",
+      "update_ns_mean": 17461.24,
+      "update_ns_p99": 34678.0,
+      "update_ns_max": 34678.0,
+      "dispatch_and_update_ns_mean": 131916.36,
+      "dispatch_and_update_ns_p99": 225256.0,
+      "dispatch_and_update_ns_max": 225256.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 13,
+      "kind": "baseline",
+      "update_ns_mean": 17269.4,
+      "update_ns_p99": 30685.0,
+      "update_ns_max": 30685.0,
+      "dispatch_and_update_ns_mean": 100248.66,
+      "dispatch_and_update_ns_p99": 206050.0,
+      "dispatch_and_update_ns_max": 206050.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 14,
+      "kind": "baseline",
+      "update_ns_mean": 18128.82,
+      "update_ns_p99": 38693.0,
+      "update_ns_max": 38693.0,
+      "dispatch_and_update_ns_mean": 110257.88,
+      "dispatch_and_update_ns_p99": 219110.0,
+      "dispatch_and_update_ns_max": 219110.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 14,
+      "kind": "owned",
+      "update_ns_mean": 17200.62,
+      "update_ns_p99": 40695.0,
+      "update_ns_max": 40695.0,
+      "dispatch_and_update_ns_mean": 133827.6,
+      "dispatch_and_update_ns_p99": 247297.0,
+      "dispatch_and_update_ns_max": 247297.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 15,
+      "kind": "owned",
+      "update_ns_mean": 17545.82,
+      "update_ns_p99": 36365.0,
+      "update_ns_max": 36365.0,
+      "dispatch_and_update_ns_mean": 130756.6,
+      "dispatch_and_update_ns_p99": 291903.0,
+      "dispatch_and_update_ns_max": 291903.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 15,
+      "kind": "baseline",
+      "update_ns_mean": 18682.8,
+      "update_ns_p99": 39544.0,
+      "update_ns_max": 39544.0,
+      "dispatch_and_update_ns_mean": 109312.76,
+      "dispatch_and_update_ns_p99": 218594.0,
+      "dispatch_and_update_ns_max": 218594.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 16,
+      "kind": "baseline",
+      "update_ns_mean": 19862.2,
+      "update_ns_p99": 39496.0,
+      "update_ns_max": 39496.0,
+      "dispatch_and_update_ns_mean": 113093.5,
+      "dispatch_and_update_ns_p99": 177151.0,
+      "dispatch_and_update_ns_max": 177151.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 16,
+      "kind": "owned",
+      "update_ns_mean": 16992.54,
+      "update_ns_p99": 30741.0,
+      "update_ns_max": 30741.0,
+      "dispatch_and_update_ns_mean": 131639.02,
+      "dispatch_and_update_ns_p99": 213228.0,
+      "dispatch_and_update_ns_max": 213228.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 17,
+      "kind": "owned",
+      "update_ns_mean": 16722.6,
+      "update_ns_p99": 34140.0,
+      "update_ns_max": 34140.0,
+      "dispatch_and_update_ns_mean": 124592.1,
+      "dispatch_and_update_ns_p99": 197590.0,
+      "dispatch_and_update_ns_max": 197590.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 17,
+      "kind": "baseline",
+      "update_ns_mean": 17979.82,
+      "update_ns_p99": 47884.0,
+      "update_ns_max": 47884.0,
+      "dispatch_and_update_ns_mean": 104206.82,
+      "dispatch_and_update_ns_p99": 198750.0,
+      "dispatch_and_update_ns_max": 198750.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 18,
+      "kind": "baseline",
+      "update_ns_mean": 18299.54,
+      "update_ns_p99": 45599.0,
+      "update_ns_max": 45599.0,
+      "dispatch_and_update_ns_mean": 105928.32,
+      "dispatch_and_update_ns_p99": 175938.0,
+      "dispatch_and_update_ns_max": 175938.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 18,
+      "kind": "owned",
+      "update_ns_mean": 15765.72,
+      "update_ns_p99": 29447.0,
+      "update_ns_max": 29447.0,
+      "dispatch_and_update_ns_mean": 121980.78,
+      "dispatch_and_update_ns_p99": 220919.0,
+      "dispatch_and_update_ns_max": 220919.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 19,
+      "kind": "owned",
+      "update_ns_mean": 15497.44,
+      "update_ns_p99": 33236.0,
+      "update_ns_max": 33236.0,
+      "dispatch_and_update_ns_mean": 117763.74,
+      "dispatch_and_update_ns_p99": 224557.0,
+      "dispatch_and_update_ns_max": 224557.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 19,
+      "kind": "baseline",
+      "update_ns_mean": 17732.66,
+      "update_ns_p99": 38828.0,
+      "update_ns_max": 38828.0,
+      "dispatch_and_update_ns_mean": 104470.98,
+      "dispatch_and_update_ns_p99": 203055.0,
+      "dispatch_and_update_ns_max": 203055.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 20,
+      "kind": "baseline",
+      "update_ns_mean": 18555.5,
+      "update_ns_p99": 32006.0,
+      "update_ns_max": 32006.0,
+      "dispatch_and_update_ns_mean": 110818.2,
+      "dispatch_and_update_ns_p99": 223776.0,
+      "dispatch_and_update_ns_max": 223776.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 20,
+      "kind": "owned",
+      "update_ns_mean": 16828.54,
+      "update_ns_p99": 33386.0,
+      "update_ns_max": 33386.0,
+      "dispatch_and_update_ns_mean": 126064.52,
+      "dispatch_and_update_ns_p99": 220312.0,
+      "dispatch_and_update_ns_max": 220312.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 21,
+      "kind": "owned",
+      "update_ns_mean": 18384.42,
+      "update_ns_p99": 30256.0,
+      "update_ns_max": 30256.0,
+      "dispatch_and_update_ns_mean": 139364.28,
+      "dispatch_and_update_ns_p99": 219655.0,
+      "dispatch_and_update_ns_max": 219655.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 21,
+      "kind": "baseline",
+      "update_ns_mean": 19187.0,
+      "update_ns_p99": 42322.0,
+      "update_ns_max": 42322.0,
+      "dispatch_and_update_ns_mean": 115505.42,
+      "dispatch_and_update_ns_p99": 268171.0,
+      "dispatch_and_update_ns_max": 268171.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 22,
+      "kind": "baseline",
+      "update_ns_mean": 19305.98,
+      "update_ns_p99": 49452.0,
+      "update_ns_max": 49452.0,
+      "dispatch_and_update_ns_mean": 109546.14,
+      "dispatch_and_update_ns_p99": 189402.0,
+      "dispatch_and_update_ns_max": 189402.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 22,
+      "kind": "owned",
+      "update_ns_mean": 19444.081633,
+      "update_ns_p99": 38156.0,
+      "update_ns_max": 38156.0,
+      "dispatch_and_update_ns_mean": 141150.612245,
+      "dispatch_and_update_ns_p99": 194424.0,
+      "dispatch_and_update_ns_max": 194424.0,
+      "update_samples": 49.0
+    },
+    {
+      "iteration": 23,
+      "kind": "owned",
+      "update_ns_mean": 17057.46,
+      "update_ns_p99": 35546.0,
+      "update_ns_max": 35546.0,
+      "dispatch_and_update_ns_mean": 132590.44,
+      "dispatch_and_update_ns_p99": 275104.0,
+      "dispatch_and_update_ns_max": 275104.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 23,
+      "kind": "baseline",
+      "update_ns_mean": 19179.72,
+      "update_ns_p99": 49165.0,
+      "update_ns_max": 49165.0,
+      "dispatch_and_update_ns_mean": 107890.06,
+      "dispatch_and_update_ns_p99": 191222.0,
+      "dispatch_and_update_ns_max": 191222.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 24,
+      "kind": "baseline",
+      "update_ns_mean": 18397.9,
+      "update_ns_p99": 29641.0,
+      "update_ns_max": 29641.0,
+      "dispatch_and_update_ns_mean": 104908.46,
+      "dispatch_and_update_ns_p99": 233342.0,
+      "dispatch_and_update_ns_max": 233342.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 24,
+      "kind": "owned",
+      "update_ns_mean": 17206.4,
+      "update_ns_p99": 37256.0,
+      "update_ns_max": 37256.0,
+      "dispatch_and_update_ns_mean": 127733.4,
+      "dispatch_and_update_ns_p99": 210121.0,
+      "dispatch_and_update_ns_max": 210121.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 25,
+      "kind": "owned",
+      "update_ns_mean": 18773.58,
+      "update_ns_p99": 34351.0,
+      "update_ns_max": 34351.0,
+      "dispatch_and_update_ns_mean": 139608.46,
+      "dispatch_and_update_ns_p99": 262497.0,
+      "dispatch_and_update_ns_max": 262497.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 25,
+      "kind": "baseline",
+      "update_ns_mean": 19952.92,
+      "update_ns_p99": 45380.0,
+      "update_ns_max": 45380.0,
+      "dispatch_and_update_ns_mean": 113376.6,
+      "dispatch_and_update_ns_p99": 196772.0,
+      "dispatch_and_update_ns_max": 196772.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 26,
+      "kind": "baseline",
+      "update_ns_mean": 21412.9,
+      "update_ns_p99": 45332.0,
+      "update_ns_max": 45332.0,
+      "dispatch_and_update_ns_mean": 124437.24,
+      "dispatch_and_update_ns_p99": 212751.0,
+      "dispatch_and_update_ns_max": 212751.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 26,
+      "kind": "owned",
+      "update_ns_mean": 17654.86,
+      "update_ns_p99": 38443.0,
+      "update_ns_max": 38443.0,
+      "dispatch_and_update_ns_mean": 136406.12,
+      "dispatch_and_update_ns_p99": 242169.0,
+      "dispatch_and_update_ns_max": 242169.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 27,
+      "kind": "owned",
+      "update_ns_mean": 17377.76,
+      "update_ns_p99": 30702.0,
+      "update_ns_max": 30702.0,
+      "dispatch_and_update_ns_mean": 133266.54,
+      "dispatch_and_update_ns_p99": 230851.0,
+      "dispatch_and_update_ns_max": 230851.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 27,
+      "kind": "baseline",
+      "update_ns_mean": 19897.46,
+      "update_ns_p99": 40026.0,
+      "update_ns_max": 40026.0,
+      "dispatch_and_update_ns_mean": 113300.64,
+      "dispatch_and_update_ns_p99": 181682.0,
+      "dispatch_and_update_ns_max": 181682.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 28,
+      "kind": "baseline",
+      "update_ns_mean": 18330.14,
+      "update_ns_p99": 29759.0,
+      "update_ns_max": 29759.0,
+      "dispatch_and_update_ns_mean": 105586.38,
+      "dispatch_and_update_ns_p99": 167444.0,
+      "dispatch_and_update_ns_max": 167444.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 28,
+      "kind": "owned",
+      "update_ns_mean": 18958.8,
+      "update_ns_p99": 89619.0,
+      "update_ns_max": 89619.0,
+      "dispatch_and_update_ns_mean": 137483.88,
+      "dispatch_and_update_ns_p99": 285439.0,
+      "dispatch_and_update_ns_max": 285439.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 29,
+      "kind": "owned",
+      "update_ns_mean": 16480.9,
+      "update_ns_p99": 34066.0,
+      "update_ns_max": 34066.0,
+      "dispatch_and_update_ns_mean": 129649.24,
+      "dispatch_and_update_ns_p99": 244992.0,
+      "dispatch_and_update_ns_max": 244992.0,
+      "update_samples": 50.0
+    },
+    {
+      "iteration": 29,
+      "kind": "baseline",
+      "update_ns_mean": 18866.14,
+      "update_ns_p99": 38126.0,
+      "update_ns_max": 38126.0,
+      "dispatch_and_update_ns_mean": 110386.48,
+      "dispatch_and_update_ns_p99": 229093.0,
+      "dispatch_and_update_ns_max": 229093.0,
+      "update_samples": 50.0
+    }
+  ]
+}

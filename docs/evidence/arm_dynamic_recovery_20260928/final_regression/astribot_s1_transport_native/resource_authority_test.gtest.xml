@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="17" failures="1" disabled="0" errors="0" time="0.001" timestamp="2026-09-28T11:56:08" name="AllTests">
+  <testsuite name="AuthorityFixture" tests="13" failures="1" disabled="0" errors="0" time="0.001" timestamp="2026-09-28T11:56:08">
+    <testcase name="AcquisitionIsExclusiveAndReplayCannotRenew" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="ExpiryQuarantinesRatherThanReleasing" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="UncertainChildResultQuarantinesAndRequiresActualTerminalProof" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="RenewalCannotReviveGapOrReplay" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="CancelAckAndTerminalAloneCannotRelease" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="PureReservationMayReleaseWithoutInventedMotionEvidence" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="WallExpiryAndClockResetDoNotRenew" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture">
+      <failure message="/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp:55&#x0A;Value of: b.grant(T-1,T+1)&#x0A;  Actual: true&#x0A;Expected: false" type=""><![CDATA[/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp:55
+Value of: b.grant(T-1,T+1)
+  Actual: true
+Expected: false]]></failure>
+      <failure message="/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp:55&#x0A;Expected equality of these values:&#x0A;  b.phase()&#x0A;    Which is: 4-byte object &lt;01-00 00-00&gt;&#x0A;  ResourcePhase::QUARANTINED&#x0A;    Which is: 4-byte object &lt;05-00 00-00&gt;" type=""><![CDATA[/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp:55
+Expected equality of these values:
+  b.phase()
+    Which is: 4-byte object <01-00 00-00>
+  ResourcePhase::QUARANTINED
+    Which is: 4-byte object <05-00 00-00>]]></failure>
+    </testcase>
+    <testcase name="RestartRetainsUnresolvedResourcesAndRequestIdentity" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="CommittedReleaseAndDuplicateSurviveRestart" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="ContinueOperationPreservesLeaseAndDoesNotRenewIt" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="ContinueRequiresCurrentIdentityHoldAndBothEvidenceBoundaries" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="SuccessfulCompletionCommitsThenReleasesWithoutCancellation" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+    <testcase name="CancellationPreventsNormalCompletion" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.AuthorityFixture" />
+  </testsuite>
+  <testsuite name="ResourceAuthority" tests="4" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-28T11:56:08">
+    <testcase name="PersistenceFailureNeverGrants" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.ResourceAuthority" />
+    <testcase name="FailedReleaseCommitKeepsResourcesQuarantined" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.ResourceAuthority" />
+    <testcase name="ContinuationPersistenceFailureKeepsOwnershipUnresolved" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.ResourceAuthority" />
+    <testcase name="NormalCompletionCommitFailuresCannotGrantNewOwner" status="run" result="completed" time="0" timestamp="2026-09-28T11:56:08" classname="astribot_s1_transport_native.ResourceAuthority" />
+  </testsuite>
+</testsuites>

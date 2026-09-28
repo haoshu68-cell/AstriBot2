@@ -1,0 +1,12 @@
+[ 13%] Built target gtest_main
+[ 20%] Building CXX object CMakeFiles/astribot_s1_manipulation_core.dir/src/controller_trajectory.cpp.o
+[ 33%] Built target gtest
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_manipulation/src/controller_trajectory.cpp: In function ‘astribot_s1_manipulation::ControllerSweepResult astribot_s1_manipulation::checkControllerSweep(const PlanningSceneConstPtr&, const robot_trajectory::RobotTrajectory&, double, std::size_t, double)’:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_manipulation/src/controller_trajectory.cpp:162:13: error: ‘using element_type = const class planning_scene::PlanningScene’ {aka ‘const class planning_scene::PlanningScene’} has no member named ‘getActiveCollisionDetectorName’; did you mean ‘getCollisionDetectorName’?
+  162 |   if(scene->getActiveCollisionDetectorName()!="FCL") {
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |             getCollisionDetectorName
+gmake[3]: *** [CMakeFiles/astribot_s1_manipulation_core.dir/build.make:118：CMakeFiles/astribot_s1_manipulation_core.dir/src/controller_trajectory.cpp.o] 错误 1
+gmake[2]: *** [CMakeFiles/Makefile2:181：CMakeFiles/astribot_s1_manipulation_core.dir/all] 错误 2
+gmake[1]: *** [CMakeFiles/Makefile2:426：CMakeFiles/controller_trajectory_test.dir/rule] 错误 2
+gmake: *** [Makefile:322：controller_trajectory_test] 错误 2

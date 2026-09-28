@@ -1,0 +1,52 @@
+{
+  "source_commit": "2775a3d4",
+  "method": "Unmodified git archive package; baseline build library path prepended to LD_LIBRARY_PATH to prevent the current overlay library overriding DT_RUNPATH. Original test targets, Release build.",
+  "results": [
+    {
+      "suite": "arm_hold_test",
+      "returncode": 1,
+      "tests": 28,
+      "failures": [
+        "SourceAndFrozenClockWallExpiryRevoke",
+        "ExpiredHoldCannotReviveWhenTimerDidNotObserveGap",
+        "SameCaptureTightenedLeaseCannotBeIgnored",
+        "CoordinatorObservationRejectsFalseOldAndMismatchedHold",
+        "CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries"
+      ]
+    },
+    {
+      "suite": "resource_authority_test",
+      "returncode": 1,
+      "tests": 17,
+      "failures": [
+        "WallExpiryAndClockResetDoNotRenew"
+      ]
+    },
+    {
+      "suite": "payload_command_test",
+      "returncode": 1,
+      "tests": 9,
+      "failures": [
+        "FrozenClockCannotExtendRemainingSourceLease",
+        "DuplicateCaptureCannotRenewItsOriginalDeadline",
+        "FreshSourceAndReceiptAndNewRevisionAreRequired"
+      ]
+    },
+    {
+      "suite": "payload_frames_test",
+      "returncode": 1,
+      "tests": 4,
+      "failures": [
+        "UsesTopLevelModelAndActualFixedChainWithInterpolation",
+        "WrongEntityAndDuplicateRenewalCannotSupplyWorldTruth",
+        "RebindingDropsQueuedAndInFlightPreviousEpoch"
+      ]
+    },
+    {
+      "suite": "latest_time_contract_test",
+      "returncode": 0,
+      "tests": 12,
+      "failures": []
+    }
+  ]
+}

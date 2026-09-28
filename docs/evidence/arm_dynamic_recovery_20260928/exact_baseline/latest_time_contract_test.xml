@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="12" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-28T11:55:53" name="AllTests">
+  <testsuite name="LatestHold" tests="4" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-28T11:55:53">
+    <testcase name="LeadingAndFormerlyExpiredObservationUsesSteadySettling" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestHold" />
+    <testcase name="CurrentGeometryDoesNotExpireAndClaimsWatchdogRemains" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestHold" />
+    <testcase name="OldGeometryCannotOverrideLatestButExplicitInvalidRevokes" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestHold" />
+    <testcase name="CancelStillRevokes" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestHold" />
+  </testsuite>
+  <testsuite name="LatestResource" tests="2" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-28T11:55:53">
+    <testcase name="RosRollbackAndJumpCannotEndLeaseButSteadyExpiryDoes" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestResource" />
+    <testcase name="RenewalAndTerminalStopRetainAuthorityBoundaries" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestResource" />
+  </testsuite>
+  <testsuite name="LatestPayload" tests="2" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-28T11:55:53">
+    <testcase name="SourceClockDoesNotExpireTransactionEvidence" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestPayload" />
+    <testcase name="RebindingRejectsPreviousCallbackGeneration" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="LatestPayload" />
+  </testsuite>
+  <testsuite name="SlamPoseStop" tests="4" failures="0" disabled="0" errors="0" time="0" timestamp="2026-09-28T11:55:53">
+    <testcase name="MissingOrInsufficientObservedWindowDoesNotConfirmStop" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="SlamPoseStop" />
+    <testcase name="ReversingJitterDoesNotAccumulateAbsoluteTravel" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="SlamPoseStop" />
+    <testcase name="NetDriftAndOutOfWindowExcursionCannotHideByReturning" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="SlamPoseStop" />
+    <testcase name="WrappedYawCrossingDoesNotInventFullRotation" status="run" result="completed" time="0" timestamp="2026-09-28T11:55:53" classname="SlamPoseStop" />
+  </testsuite>
+</testsuites>

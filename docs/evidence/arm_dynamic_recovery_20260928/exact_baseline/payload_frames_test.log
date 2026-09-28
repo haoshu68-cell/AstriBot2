@@ -1,0 +1,45 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 3 tests from PayloadFrames
+[ RUN      ] PayloadFrames.UsesTopLevelModelAndActualFixedChainWithInterpolation
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:26: Failure
+The difference between result->translation().z() and .33 is 0.10000000000000001, which exceeds 1e-12, where
+result->translation().z() evaluates to 0.23000000000000001,
+.33 evaluates to 0.33000000000000002, and
+1e-12 evaluates to 9.9999999999999998e-13.
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:27: Failure
+Value of: frames.world_from_base(1150000000,1150000000,2050000000)
+  Actual: true
+Expected: false
+[  FAILED  ] PayloadFrames.UsesTopLevelModelAndActualFixedChainWithInterpolation (0 ms)
+[ RUN      ] PayloadFrames.WrongEntityAndDuplicateRenewalCannotSupplyWorldTruth
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:35: Failure
+Expected: frames.world_from_base(1000000000,1100000000,2200000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+[  FAILED  ] PayloadFrames.WrongEntityAndDuplicateRenewalCannotSupplyWorldTruth (0 ms)
+[ RUN      ] PayloadFrames.SameExecutorTfPollingUsesOriginalCaptureWithoutTimeoutWrapper
+[ERROR] [1790567753.402303235] [tf2_buffer]: Do not call canTransform or lookupTransform with a timeout unless you are using another thread for populating data. Without a dedicated thread it will always timeout.  If you have a separate thread servicing tf messages, call setUsingDedicatedThread(true) on your Buffer instance.
+Warning: Invalid frame ID "missing" passed to canTransform argument source_frame - frame does not exist
+         at line 95 in ./src/buffer_core.cpp
+[       OK ] PayloadFrames.SameExecutorTfPollingUsesOriginalCaptureWithoutTimeoutWrapper (0 ms)
+[----------] 3 tests from PayloadFrames (0 ms total)
+
+[----------] 1 test from PayloadWorldInbox
+[ RUN      ] PayloadWorldInbox.RebindingDropsQueuedAndInFlightPreviousEpoch
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp:60: Failure
+Value of: inbox.take().empty()
+  Actual: false
+Expected: true
+[  FAILED  ] PayloadWorldInbox.RebindingDropsQueuedAndInFlightPreviousEpoch (0 ms)
+[----------] 1 test from PayloadWorldInbox (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 2 test suites ran. (0 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] PayloadFrames.UsesTopLevelModelAndActualFixedChainWithInterpolation
+[  FAILED  ] PayloadFrames.WrongEntityAndDuplicateRenewalCannotSupplyWorldTruth
+[  FAILED  ] PayloadWorldInbox.RebindingDropsQueuedAndInFlightPreviousEpoch
+
+ 3 FAILED TESTS

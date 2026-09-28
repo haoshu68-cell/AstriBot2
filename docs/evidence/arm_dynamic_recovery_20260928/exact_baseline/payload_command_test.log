@@ -1,0 +1,51 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 9 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 9 tests from PayloadCommand
+[ RUN      ] PayloadCommand.ContinuesActualPluginCounterAndRequiresAppliedInventory
+[       OK ] PayloadCommand.ContinuesActualPluginCounterAndRequiresAppliedInventory (0 ms)
+[ RUN      ] PayloadCommand.ReconciliationTransitionRequiresANewerCompleteCapture
+[       OK ] PayloadCommand.ReconciliationTransitionRequiresANewerCompleteCapture (0 ms)
+[ RUN      ] PayloadCommand.FrozenClockCannotExtendRemainingSourceLease
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:46: Failure
+Expected: command.applied(value,{1300000000,2000000000},1300000000,2100000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:49: Failure
+Expected: delayed.applied(value,{1300000000,2000000000},1300000000,2100000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+[  FAILED  ] PayloadCommand.FrozenClockCannotExtendRemainingSourceLease (0 ms)
+[ RUN      ] PayloadCommand.DuplicateCaptureCannotRenewItsOriginalDeadline
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:56: Failure
+Expected: command.applied(value,{1100000000,2300000000},1100000000,2300000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+[  FAILED  ] PayloadCommand.DuplicateCaptureCannotRenewItsOriginalDeadline (0 ms)
+[ RUN      ] PayloadCommand.SourceAndPluginIdentityAreBoundAcrossThePhysicalCommand
+[       OK ] PayloadCommand.SourceAndPluginIdentityAreBoundAcrossThePhysicalCommand (0 ms)
+[ RUN      ] PayloadCommand.CannotOverridePendingForeignOrExhaustedCommands
+[       OK ] PayloadCommand.CannotOverridePendingForeignOrExhaustedCommands (0 ms)
+[ RUN      ] PayloadCommand.FreshSourceAndReceiptAndNewRevisionAreRequired
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:80: Failure
+Expected: PayloadCommand("fixture",true,inventory(),{SECOND+300000000,SECOND},SECOND+300000000,SECOND+300000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:81: Failure
+Expected: PayloadCommand("fixture",true,inventory(),{SECOND,SECOND},SECOND,SECOND+300000000) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+/tmp/astribot_arm_dynamic_recovery/baseline_source/ws_robot/src/astribot_s1_transport_native/test/payload_command_test.cpp:86: Failure
+Expected: command.applied(value,{SECOND+100,SECOND+100},SECOND+100,SECOND+100) throws an exception of type std::runtime_error.
+  Actual: it throws nothing.
+[  FAILED  ] PayloadCommand.FreshSourceAndReceiptAndNewRevisionAreRequired (0 ms)
+[ RUN      ] PayloadCommand.DetachDoesNotClaimTheWholeInventoryIsEmpty
+[       OK ] PayloadCommand.DetachDoesNotClaimTheWholeInventoryIsEmpty (0 ms)
+[ RUN      ] PayloadCommand.RejectsMalformedExternalCounterAndDuplicateIdentity
+[       OK ] PayloadCommand.RejectsMalformedExternalCounterAndDuplicateIdentity (0 ms)
+[----------] 9 tests from PayloadCommand (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 9 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 6 tests.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] PayloadCommand.FrozenClockCannotExtendRemainingSourceLease
+[  FAILED  ] PayloadCommand.DuplicateCaptureCannotRenewItsOriginalDeadline
+[  FAILED  ] PayloadCommand.FreshSourceAndReceiptAndNewRevisionAreRequired
+
+ 3 FAILED TESTS
