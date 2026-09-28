@@ -1,0 +1,46 @@
+[0.184s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_s1_manipulation' is in: /tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_manipulation, /tmp/astribot_arm_dynamic_recovery/install/astribot_s1_manipulation
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_s1_manipulation
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_s1_manipulation
+Starting >>> astribot_s1_transport_native
+Finished <<< astribot_s1_manipulation [16.2s]
+--- stderr: astribot_s1_transport_native
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/resource_journal_test.cpp: In member function ‘virtual void JournalTest_SymlinkAndLegacyCheckpointDenyStartup_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/resource_journal_test.cpp:30:43: warning: ignoring return value of ‘int symlink(const char*, const char*)’ declared with attribute ‘warn_unused_result’ [-Wunused-result]
+   30 |  {std::ofstream f(path+"/target");}symlink((path+"/target").c_str(),(path+"/lock").c_str());
+      |                                    ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp: In member function ‘void {anonymous}::FixedStationNavigationTest::step()’:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp:100:53: warning: converting to ‘builtin_interfaces::msg::Time_<std::allocator<void> >’ from initializer list would use explicit constructor ‘builtin_interfaces::msg::Time_<ContainerAllocator>::Time_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  100 |       if(envelope_zero_stamp)envelope.header.stamp={};
+      |                                                     ^
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp:100:53: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp:109:56: warning: converting to ‘builtin_interfaces::msg::Time_<std::allocator<void> >’ from initializer list would use explicit constructor ‘builtin_interfaces::msg::Time_<ContainerAllocator>::Time_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  109 |           if(controller_ack_zero_stamp)a.header.stamp={};
+      |                                                        ^
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp:109:56: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp: In member function ‘void astribot::transport::HoldExecutor::validate_transfer_goal(const Goal&)’:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:346:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  346 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |   ^~~
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:346:62: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  346 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |                                                              ^~~
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp: In member function ‘void astribot::transport::HoldExecutor::record_controller_start(const string&)’:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:1212:9: error: inconsistent deduction for ‘auto’: ‘const std::_Rb_tree_iterator<std::pair<const std::__cxx11::basic_string<char>, std::shared_ptr<const astribot_transport_msgs::msg::ControllerTrajectoryStart_<std::allocator<void> > > > >’ and then ‘const std::_Rb_tree_iterator<std::pair<const std::__cxx11::basic_string<char>, std::shared_ptr<rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory> > > >’
+ 1212 |   const auto found=controller_starts_.find(name), handle=handles_.find(name);
+      |         ^~~~
+gmake[2]: *** [CMakeFiles/trajectory_executor.dir/build.make:76：CMakeFiles/trajectory_executor.dir/src/hold_executor.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:894：CMakeFiles/trajectory_executor.dir/all] 错误 2
+gmake: *** [Makefile:146：all] 错误 2
+---
+Failed   <<< astribot_s1_transport_native [31.8s, exited with code 2]
+
+Summary: 1 package finished [31.9s]
+  1 package failed: astribot_s1_transport_native
+  1 package had stderr output: astribot_s1_transport_native

@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="18" failures="0" disabled="0" errors="0" time="13.598" timestamp="2026-09-28T14:52:03" name="AllTests">
+  <testsuite name="OwnedController" tests="17" failures="0" disabled="0" errors="0" time="13.575" timestamp="2026-09-28T14:52:03">
+    <testcase name="StartUsesFirstControlCycleAfterDelayedAcceptance" status="run" result="completed" time="0.329" timestamp="2026-09-28T14:52:03" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="6279.913043"/>
+<property name="update_ns_p99" value="17075.000000"/>
+<property name="update_ns_max" value="17075.000000"/>
+<property name="dispatch_and_update_ns_mean" value="53396.565217"/>
+<property name="dispatch_and_update_ns_p99" value="123722.000000"/>
+<property name="dispatch_and_update_ns_max" value="123722.000000"/>
+<property name="update_samples" value="23"/>
+</properties>
+    </testcase>
+    <testcase name="CancelHoldDoesNotReplaceRetainedStartWithAnotherGoal" status="run" result="completed" time="0.483" timestamp="2026-09-28T14:52:04" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="7318.446809"/>
+<property name="update_ns_p99" value="17234.000000"/>
+<property name="update_ns_max" value="17234.000000"/>
+<property name="dispatch_and_update_ns_mean" value="64703.255319"/>
+<property name="dispatch_and_update_ns_p99" value="183203.000000"/>
+<property name="dispatch_and_update_ns_max" value="183203.000000"/>
+<property name="update_samples" value="47"/>
+</properties>
+    </testcase>
+    <testcase name="PreemptingCommandGetsItsOwnStartAndUuid" status="run" result="completed" time="0.413" timestamp="2026-09-28T14:52:04" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="7178.475000"/>
+<property name="update_ns_p99" value="16305.000000"/>
+<property name="update_ns_max" value="16305.000000"/>
+<property name="dispatch_and_update_ns_mean" value="70498.150000"/>
+<property name="dispatch_and_update_ns_p99" value="137944.000000"/>
+<property name="dispatch_and_update_ns_max" value="137944.000000"/>
+<property name="update_samples" value="40"/>
+</properties>
+    </testcase>
+    <testcase name="FutureHeaderIsNotReportedAsFirstSamplingTime" status="run" result="completed" time="0.263" timestamp="2026-09-28T14:52:04" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="8542.760000"/>
+<property name="update_ns_p99" value="16152.000000"/>
+<property name="update_ns_max" value="16152.000000"/>
+<property name="dispatch_and_update_ns_mean" value="81999.080000"/>
+<property name="dispatch_and_update_ns_p99" value="134808.000000"/>
+<property name="dispatch_and_update_ns_max" value="134808.000000"/>
+<property name="update_samples" value="25"/>
+</properties>
+    </testcase>
+    <testcase name="ConcurrentGoalHandoffsNeverInventAStartState" status="run" result="completed" time="1.237" timestamp="2026-09-28T14:52:05" classname="OwnedController">
+<properties>
+<property name="bound_start_records" value="25"/>
+<property name="unknown_start_records" value="0"/>
+<property name="update_ns_mean" value="6857.666667"/>
+<property name="update_ns_p99" value="13409.000000"/>
+<property name="update_ns_max" value="13409.000000"/>
+<property name="dispatch_and_update_ns_mean" value="79043.866667"/>
+<property name="dispatch_and_update_ns_p99" value="118174.000000"/>
+<property name="dispatch_and_update_ns_max" value="118174.000000"/>
+<property name="update_samples" value="15"/>
+</properties>
+    </testcase>
+    <testcase name="FreshOwnerKeepsOriginalTrajectory" status="run" result="completed" time="0.771" timestamp="2026-09-28T14:52:06" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="7673.533333"/>
+<property name="update_ns_p99" value="21604.000000"/>
+<property name="update_ns_max" value="21604.000000"/>
+<property name="dispatch_and_update_ns_mean" value="61072.866667"/>
+<property name="dispatch_and_update_ns_p99" value="124430.000000"/>
+<property name="dispatch_and_update_ns_max" value="124430.000000"/>
+<property name="update_samples" value="75"/>
+</properties>
+    </testcase>
+    <testcase name="UpdateCycleBenchmark" status="run" result="completed" time="0.666" timestamp="2026-09-28T14:52:07" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="6745.260000"/>
+<property name="update_ns_p99" value="15224.000000"/>
+<property name="update_ns_max" value="15224.000000"/>
+<property name="dispatch_and_update_ns_mean" value="62446.560000"/>
+<property name="dispatch_and_update_ns_p99" value="187844.000000"/>
+<property name="dispatch_and_update_ns_max" value="187844.000000"/>
+<property name="update_samples" value="50"/>
+</properties>
+    </testcase>
+    <testcase name="LostOwnerAbortsAndHoldsInsteadOfCompletingOldTrajectory" status="run" result="completed" time="1.225" timestamp="2026-09-28T14:52:07" classname="OwnedController">
+<properties>
+<property name="position_at_owner_loss" value="0.122094"/>
+<property name="held_position" value="0.268880"/>
+<property name="update_ns_mean" value="8033.816667"/>
+<property name="update_ns_p99" value="16685.000000"/>
+<property name="update_ns_max" value="16895.000000"/>
+<property name="dispatch_and_update_ns_mean" value="79473.408333"/>
+<property name="dispatch_and_update_ns_p99" value="145756.000000"/>
+<property name="dispatch_and_update_ns_max" value="157193.000000"/>
+<property name="update_samples" value="120"/>
+</properties>
+    </testcase>
+    <testcase name="ExpiredLeaseCannotBeRevivedByLateHeartbeat" status="run" result="completed" time="0.92" timestamp="2026-09-28T14:52:09" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="9362.811111"/>
+<property name="update_ns_p99" value="30521.000000"/>
+<property name="update_ns_max" value="30521.000000"/>
+<property name="dispatch_and_update_ns_mean" value="79030.100000"/>
+<property name="dispatch_and_update_ns_p99" value="206391.000000"/>
+<property name="dispatch_and_update_ns_max" value="206391.000000"/>
+<property name="update_samples" value="90"/>
+</properties>
+    </testcase>
+    <testcase name="ExplicitRevocationStopsBeforeLeaseTimeout" status="run" result="completed" time="0.462" timestamp="2026-09-28T14:52:09" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="6623.822222"/>
+<property name="update_ns_p99" value="14980.000000"/>
+<property name="update_ns_max" value="14980.000000"/>
+<property name="dispatch_and_update_ns_mean" value="61372.888889"/>
+<property name="dispatch_and_update_ns_p99" value="164095.000000"/>
+<property name="dispatch_and_update_ns_max" value="164095.000000"/>
+<property name="update_samples" value="45"/>
+</properties>
+    </testcase>
+    <testcase name="DuplicateSequenceCannotExtendAuthority" status="run" result="completed" time="1.172" timestamp="2026-09-28T14:52:10" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="8815.669565"/>
+<property name="update_ns_p99" value="35163.000000"/>
+<property name="update_ns_max" value="53519.000000"/>
+<property name="dispatch_and_update_ns_mean" value="75612.921739"/>
+<property name="dispatch_and_update_ns_p99" value="164716.000000"/>
+<property name="dispatch_and_update_ns_max" value="184238.000000"/>
+<property name="update_samples" value="115"/>
+</properties>
+    </testcase>
+    <testcase name="DirectTrajectoryTopicIsNotAnAlternateEntry" status="run" result="completed" time="0.26" timestamp="2026-09-28T14:52:11" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="5500.880000"/>
+<property name="update_ns_p99" value="10307.000000"/>
+<property name="update_ns_max" value="10307.000000"/>
+<property name="dispatch_and_update_ns_mean" value="57026.360000"/>
+<property name="dispatch_and_update_ns_p99" value="120905.000000"/>
+<property name="dispatch_and_update_ns_max" value="120905.000000"/>
+<property name="update_samples" value="25"/>
+</properties>
+    </testcase>
+    <testcase name="NewLeaseCannotTakeOverAnExecutingGoal" status="run" result="completed" time="0.463" timestamp="2026-09-28T14:52:11" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="7097.755556"/>
+<property name="update_ns_p99" value="15121.000000"/>
+<property name="update_ns_max" value="15121.000000"/>
+<property name="dispatch_and_update_ns_mean" value="63973.711111"/>
+<property name="dispatch_and_update_ns_p99" value="145863.000000"/>
+<property name="dispatch_and_update_ns_max" value="145863.000000"/>
+<property name="update_samples" value="45"/>
+</properties>
+    </testcase>
+    <testcase name="StaleOrFutureSourceCannotExtendLease" status="run" result="completed" time="1.072" timestamp="2026-09-28T14:52:12" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="8468.190476"/>
+<property name="update_ns_p99" value="21669.000000"/>
+<property name="update_ns_max" value="23862.000000"/>
+<property name="dispatch_and_update_ns_mean" value="81533.466667"/>
+<property name="dispatch_and_update_ns_p99" value="191698.000000"/>
+<property name="dispatch_and_update_ns_max" value="209675.000000"/>
+<property name="update_samples" value="105"/>
+</properties>
+    </testcase>
+    <testcase name="NormalCompletionPreservesEndpoint" status="run" result="completed" time="2.361" timestamp="2026-09-28T14:52:13" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="5763.416309"/>
+<property name="update_ns_p99" value="22196.000000"/>
+<property name="update_ns_max" value="45471.000000"/>
+<property name="dispatch_and_update_ns_mean" value="48899.643777"/>
+<property name="dispatch_and_update_ns_p99" value="140441.000000"/>
+<property name="dispatch_and_update_ns_max" value="156974.000000"/>
+<property name="update_samples" value="233"/>
+</properties>
+    </testcase>
+    <testcase name="HeartbeatCallbacksRaceRealtimeExpiryWithoutRevival" status="run" result="completed" time="1.167" timestamp="2026-09-28T14:52:15" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="6037.400000"/>
+<property name="update_ns_p99" value="14310.000000"/>
+<property name="update_ns_max" value="14310.000000"/>
+<property name="dispatch_and_update_ns_mean" value="55293.466667"/>
+<property name="dispatch_and_update_ns_p99" value="111271.000000"/>
+<property name="dispatch_and_update_ns_max" value="111271.000000"/>
+<property name="update_samples" value="15"/>
+</properties>
+    </testcase>
+    <testcase name="FreshLeaseWaitsForControlCycleBeforeAdmittingGoal" status="run" result="completed" time="0.311" timestamp="2026-09-28T14:52:16" classname="OwnedController">
+<properties>
+<property name="update_ns_mean" value="6035.640000"/>
+<property name="update_ns_p99" value="13326.000000"/>
+<property name="update_ns_max" value="13326.000000"/>
+<property name="dispatch_and_update_ns_mean" value="53639.920000"/>
+<property name="dispatch_and_update_ns_p99" value="164046.000000"/>
+<property name="dispatch_and_update_ns_max" value="164046.000000"/>
+<property name="update_samples" value="25"/>
+</properties>
+    </testcase>
+  </testsuite>
+  <testsuite name="OwnedControllerDiscovery" tests="1" failures="0" disabled="0" errors="0" time="0.017" timestamp="2026-09-28T14:52:17">
+    <testcase name="InstalledPluginCanBeLoaded" status="run" result="completed" time="0.017" timestamp="2026-09-28T14:52:17" classname="OwnedControllerDiscovery" />
+  </testsuite>
+</testsuites>

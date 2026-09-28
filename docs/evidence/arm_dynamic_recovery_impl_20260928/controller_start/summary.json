@@ -1,0 +1,73 @@
+{
+  "controller_tests": {
+    "passed": 19,
+    "new": 6,
+    "concurrent_goals": 25,
+    "concurrent_bound": 25,
+    "concurrent_unknown": 0,
+    "note": "Concurrent run validates every observed BOUND UUID against actual sampled trajectory endpoint and exact cycle state. It did not hit UNKNOWN branch."
+  },
+  "manipulation_package": {
+    "ctest_targets_passed": 6,
+    "registered": 74,
+    "passed": 73,
+    "skipped": 1,
+    "skip": "ObservedCloud.SameCloudProcessingBenchmark"
+  },
+  "native_related_ctest_targets_passed": 2,
+  "protocol": {
+    "domain150": "6 starts bound, before/after response, wrong UUID ignored; explicit cancel and resource release passed",
+    "domain152": "guard negative then positive remains revoked; resources released",
+    "domain153": "guard lost remains stop; resources released",
+    "domain149": "fixture UUID numpy.uint8 type failure; evidence retained and domain not reused"
+  },
+  "scope": "Controller/isolated ROS shadow evidence only; no online CLEAR, stop budget, dynamic obstacle, recovery, hardware or full-stack acceptance",
+  "runtime_artifacts": {
+    "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_manipulation/lib/libastribot_owned_trajectory_controller.so": {
+      "sha256": "942b392c8f5a7011ded8fc7997cefe3f1b3c8b4d98d0aa1d5a79671a82b3fb44",
+      "resolved": "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_manipulation/lib/libastribot_owned_trajectory_controller.so"
+    },
+    "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_transport_msgs/lib/libastribot_transport_msgs__rosidl_typesupport_cpp.so": {
+      "sha256": "ad9ecd561d395d32047bc68a7d92b978619ad8d59b8c1e42bd05a637dc3a16ff",
+      "resolved": "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_transport_msgs/lib/libastribot_transport_msgs__rosidl_typesupport_cpp.so"
+    },
+    "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_transport_native/lib/astribot_s1_transport_native/trajectory_executor": {
+      "sha256": "de5c0551b1bea835b4f1c90b5ac8f68ee919c02e9c9692fa619847e7aa944103",
+      "resolved": "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_transport_native/lib/astribot_s1_transport_native/trajectory_executor"
+    }
+  },
+  "ctest_xml": [
+    {
+      "file": "controller_trajectory_test.gtest.xml",
+      "tests": 23,
+      "failures": 0
+    },
+    {
+      "file": "gripper_planning_only_test.gtest.xml",
+      "tests": 4,
+      "failures": 0
+    },
+    {
+      "file": "observed_pointcloud_test.gtest.xml",
+      "tests": 15,
+      "failures": 0
+    },
+    {
+      "file": "controller_stop_test.gtest.xml",
+      "tests": 3,
+      "failures": 0
+    },
+    {
+      "file": "grasp_candidate_gate_test.gtest.xml",
+      "tests": 10,
+      "failures": 0
+    },
+    {
+      "file": "owned_controller_test.gtest.xml",
+      "tests": 19,
+      "failures": 0
+    }
+  ],
+  "source_commit": "df8a6042",
+  "open_loop_fixture_correction": "Initial test tried changing read-only open_loop_control and correctly failed. Final test configures it before activation; no runtime fallback/change was added."
+}

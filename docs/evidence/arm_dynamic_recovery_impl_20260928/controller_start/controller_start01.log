@@ -1,0 +1,167 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 16 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 15 tests from OwnedController
+[ RUN      ] OwnedController.StartUsesFirstControlCycleAfterDelayedAcceptance
+[WARN] [1790578158.785753006] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578158.785821061] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578158.785827397] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578158.785835369] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578158.786584429] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578158.787818407] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578158.943393005] [stop_probe]: Received new action goal
+[INFO] [1790578158.943438399] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.StartUsesFirstControlCycleAfterDelayedAcceptance (328 ms)
+[ RUN      ] OwnedController.CancelHoldDoesNotReplaceRetainedStartWithAnotherGoal
+[WARN] [1790578159.110603899] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578159.110640084] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578159.110645318] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578159.110649806] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578159.110691683] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578159.111115442] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578159.264556632] [stop_probe]: Received new action goal
+[INFO] [1790578159.264594129] [stop_probe]: Accepted new action goal
+[INFO] [1790578159.365713737] [stop_probe]: Got request to cancel goal
+[INFO] [1790578159.365741944] [stop_probe]: Canceling active action goal because cancel callback received.
+[       OK ] OwnedController.CancelHoldDoesNotReplaceRetainedStartWithAnotherGoal (482 ms)
+[ RUN      ] OwnedController.PreemptingCommandGetsItsOwnStartAndUuid
+[WARN] [1790578159.593273944] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578159.593306494] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578159.593311670] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578159.593315739] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578159.593359868] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578159.593787186] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578159.746862699] [stop_probe]: Received new action goal
+[INFO] [1790578159.746893580] [stop_probe]: Accepted new action goal
+[INFO] [1790578159.898950437] [stop_probe]: Received new action goal
+[INFO] [1790578159.898987055] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.PreemptingCommandGetsItsOwnStartAndUuid (412 ms)
+[ RUN      ] OwnedController.FreshOwnerKeepsOriginalTrajectory
+[WARN] [1790578160.005228443] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578160.005263562] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578160.005269147] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578160.005273592] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578160.005319394] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578160.005744290] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578160.159414853] [stop_probe]: Received new action goal
+[INFO] [1790578160.159451053] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.FreshOwnerKeepsOriginalTrajectory (768 ms)
+[ RUN      ] OwnedController.UpdateCycleBenchmark
+[WARN] [1790578160.772872470] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578160.772905606] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578160.772910825] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578160.772915249] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578160.772956000] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578160.773394415] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578160.926398193] [stop_probe]: Received new action goal
+[INFO] [1790578160.926435027] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.UpdateCycleBenchmark (666 ms)
+[ RUN      ] OwnedController.LostOwnerAbortsAndHoldsInsteadOfCompletingOldTrajectory
+[WARN] [1790578161.438727127] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578161.438771900] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578161.438777711] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578161.438782264] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578161.438981011] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578161.439426503] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578161.592828458] [stop_probe]: Received new action goal
+[INFO] [1790578161.592866694] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.LostOwnerAbortsAndHoldsInsteadOfCompletingOldTrajectory (1225 ms)
+[ RUN      ] OwnedController.ExpiredLeaseCannotBeRevivedByLateHeartbeat
+[WARN] [1790578162.664053123] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578162.664093476] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578162.664099213] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578162.664103683] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578162.664149067] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578162.664582061] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578162.818071705] [stop_probe]: Received new action goal
+[INFO] [1790578162.818105606] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.ExpiredLeaseCannotBeRevivedByLateHeartbeat (921 ms)
+[ RUN      ] OwnedController.ExplicitRevocationStopsBeforeLeaseTimeout
+[WARN] [1790578163.585332071] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578163.585369048] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578163.585374255] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578163.585378713] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578163.585423928] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578163.585844735] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578163.739493058] [stop_probe]: Received new action goal
+[INFO] [1790578163.739530769] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.ExplicitRevocationStopsBeforeLeaseTimeout (465 ms)
+[ RUN      ] OwnedController.DuplicateSequenceCannotExtendAuthority
+[WARN] [1790578164.050434132] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578164.050473343] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578164.050478611] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578164.050482830] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578164.050526204] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578164.050947585] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578164.207476145] [stop_probe]: Received new action goal
+[INFO] [1790578164.207514043] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.DuplicateSequenceCannotExtendAuthority (1180 ms)
+[ RUN      ] OwnedController.DirectTrajectoryTopicIsNotAnAlternateEntry
+[WARN] [1790578165.230947872] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578165.230984786] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578165.230990155] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578165.230994501] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578165.231037084] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578165.231438340] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[       OK ] OwnedController.DirectTrajectoryTopicIsNotAnAlternateEntry (262 ms)
+[ RUN      ] OwnedController.NewLeaseCannotTakeOverAnExecutingGoal
+[WARN] [1790578165.494358002] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578165.494412015] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578165.494425006] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578165.494435271] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578165.494519450] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578165.495075680] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578165.651296878] [stop_probe]: Received new action goal
+[INFO] [1790578165.651336845] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.NewLeaseCannotTakeOverAnExecutingGoal (469 ms)
+[ RUN      ] OwnedController.StaleOrFutureSourceCannotExtendLease
+[WARN] [1790578165.963388539] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578165.963449771] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578165.963462908] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578165.963473627] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578165.963562954] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578165.964122202] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578166.119684849] [stop_probe]: Received new action goal
+[INFO] [1790578166.119737272] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.StaleOrFutureSourceCannotExtendLease (1077 ms)
+[ RUN      ] OwnedController.NormalCompletionPreservesEndpoint
+[WARN] [1790578167.039150002] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578167.039185513] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578167.039194189] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578167.039198445] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578167.039249641] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578167.039667129] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578167.193459948] [stop_probe]: Received new action goal
+[INFO] [1790578167.193491605] [stop_probe]: Accepted new action goal
+[INFO] [1790578169.199500283] [stop_probe]: Goal reached, success!
+[       OK ] OwnedController.NormalCompletionPreservesEndpoint (2368 ms)
+[ RUN      ] OwnedController.HeartbeatCallbacksRaceRealtimeExpiryWithoutRevival
+[WARN] [1790578169.406799090] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578169.406832412] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578169.406837494] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578169.406841964] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578169.406886770] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578169.407305707] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578169.560416422] [stop_probe]: Received new action goal
+[INFO] [1790578169.560471808] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.HeartbeatCallbacksRaceRealtimeExpiryWithoutRevival (1167 ms)
+[ RUN      ] OwnedController.FreshLeaseWaitsForControlCycleBeforeAdmittingGoal
+[WARN] [1790578170.574082296] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790578170.574117806] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790578170.574123049] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790578170.574127189] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790578170.574169357] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790578170.574590633] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790578170.882189811] [stop_probe]: Received new action goal
+[INFO] [1790578170.882226694] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.FreshLeaseWaitsForControlCycleBeforeAdmittingGoal (313 ms)
+[----------] 15 tests from OwnedController (12104 ms total)
+
+[----------] 1 test from OwnedControllerDiscovery
+[ RUN      ] OwnedControllerDiscovery.InstalledPluginCanBeLoaded
+[       OK ] OwnedControllerDiscovery.InstalledPluginCanBeLoaded (15 ms)
+[----------] 1 test from OwnedControllerDiscovery (15 ms total)
+
+[----------] Global test environment tear-down
+[==========] 16 tests from 2 test suites ran. (12138 ms total)
+[  PASSED  ] 16 tests.

@@ -1,0 +1,692 @@
+Start testing: Sep 28 15:08 CST
+----------------------------------------------------------
+1/6 Testing: observed_pointcloud_test
+1/6 Test: observed_pointcloud_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/observed_pointcloud_test.gtest.xml" "--package-name" "astribot_s1_manipulation" "--output-file" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/ament_cmake_gtest/observed_pointcloud_test.txt" "--command" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/observed_pointcloud_test" "--gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/observed_pointcloud_test.gtest.xml"
+Directory: /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation
+"observed_pointcloud_test" start time: Sep 28 15:08 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation':
+ - /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/observed_pointcloud_test --gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/observed_pointcloud_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 15 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 15 tests from ObservedCloud
+[ RUN      ] ObservedCloud.PluginCanBeLoadedByActualMonitorLoader
+[ERROR] [1790579329.703145434] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579329.703177611] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[       OK ] ObservedCloud.PluginCanBeLoadedByActualMonitorLoader (10 ms)
+[ RUN      ] ObservedCloud.FreshFreeVoxelDoesNotCertifyTwentyMmTestRodIsAbsent
+[ERROR] [1790579329.709958320] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579329.709970246] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[ERROR] [1790579329.710428463] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579329.710436603] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579329.711571474] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[       OK ] ObservedCloud.FreshFreeVoxelDoesNotCertifyTwentyMmTestRodIsAbsent (156 ms)
+[ RUN      ] ObservedCloud.TwentyMmRodReturnsOccupyFiveCmMapAfterFreeObservation
+[ERROR] [1790579329.866456602] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579329.866471972] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[ERROR] [1790579329.866924335] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579329.866930167] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579329.867403464] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[       OK ] ObservedCloud.TwentyMmRodReturnsOccupyFiveCmMapAfterFreeObservation (257 ms)
+[ RUN      ] ObservedCloud.AtomicSnapshotRetainsSourceAndFreeRayEvidence
+[ERROR] [1790579330.122562457] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579330.122581185] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579330.123077515] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[       OK ] ObservedCloud.AtomicSnapshotRetainsSourceAndFreeRayEvidence (155 ms)
+[ RUN      ] ObservedCloud.TwoSourcesProduceOrderedImmutableSnapshots
+[ERROR] [1790579330.278116162] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579330.278132888] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579330.278627190] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[INFO] [1790579330.279055224] [astribot.observed_pointcloud_updater]: Listening to '/cloud_torso' using message filter with target frame 'base base '
+[       OK ] ObservedCloud.TwoSourcesProduceOrderedImmutableSnapshots (307 ms)
+[ RUN      ] ObservedCloud.ModelClearingCannotManufactureFreeEvidence
+[ERROR] [1790579330.585075263] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579330.585096472] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579330.585601743] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[       OK ] ObservedCloud.ModelClearingCannotManufactureFreeEvidence (156 ms)
+[ RUN      ] ObservedCloud.SameInputMapMatchesUpstreamIncludingSelfFilter
+[ERROR] [1790579330.740576395] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579330.740593279] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[ERROR] [1790579330.741459657] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579330.741469031] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579330.742026260] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[INFO] [1790579330.742501976] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/cloud_baseline' using message filter with target frame 'base '
+[       OK ] ObservedCloud.SameInputMapMatchesUpstreamIncludingSelfFilter (409 ms)
+[ RUN      ] ObservedCloud.EmptyInvalidAndRepeatedFramesDoNotInventNewCaptureEvidence
+[ERROR] [1790579331.149455032] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579331.149478184] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579331.149969831] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[ERROR] [1790579331.401358237] [astribot.observed_pointcloud_updater]: POINT_CLOUD_LAYOUT_INVALID
+[       OK ] ObservedCloud.EmptyInvalidAndRepeatedFramesDoNotInventNewCaptureEvidence (557 ms)
+[ RUN      ] ObservedCloud.MissingTransformDoesNotPublishIntegratedEvidence
+[ERROR] [1790579331.708823087] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579331.708847760] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579331.709896691] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[       OK ] ObservedCloud.MissingTransformDoesNotPublishIntegratedEvidence (259 ms)
+[ RUN      ] ObservedCloud.MissingCameraOriginDoesNotUseCloudFrameOrigin
+[ERROR] [1790579331.965860223] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579331.965879630] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579331.966402339] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base missing_camera '
+[       OK ] ObservedCloud.MissingCameraOriginDoesNotUseCloudFrameOrigin (255 ms)
+[ RUN      ] ObservedCloud.RejectedRobotTransformsDoNotPublishIntegratedEvidence
+[ERROR] [1790579332.221383041] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579332.221401226] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579332.221910934] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[ERROR] [1790579332.272666302] [moveit.ros.occupancy_map_updater]: Transform cache was not updated. Self-filtering may fail. If transforms were not available yet, consider setting robot_description_planning.shape_transform_cache_lookup_wait_time to wait longer for transforms
+[       OK ] ObservedCloud.RejectedRobotTransformsDoNotPublishIntegratedEvidence (156 ms)
+[ RUN      ] ObservedCloud.SnapshotContainsActualSensorTransform
+[ERROR] [1790579332.377223234] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579332.377238646] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579332.377748422] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base camera '
+[       OK ] ObservedCloud.SnapshotContainsActualSensorTransform (257 ms)
+[ RUN      ] ObservedCloud.BaseFrameCloudRaysStartAtCameraAndUseCameraRange
+[ERROR] [1790579332.634514684] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579332.634532998] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579332.635036154] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base camera '
+[INFO] [1790579332.635247837] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base camera '
+[       OK ] ObservedCloud.BaseFrameCloudRaysStartAtCameraAndUseCameraRange (358 ms)
+[ RUN      ] ObservedCloud.ConcurrentCameraCallbacksKeepRevisionAndTreeTogether
+[ERROR] [1790579332.991651553] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579332.991667344] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790579332.992157410] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base base '
+[INFO] [1790579332.992527628] [astribot.observed_pointcloud_updater]: Listening to '/cloud_torso' using message filter with target frame 'base base '
+[       OK ] ObservedCloud.ConcurrentCameraCallbacksKeepRevisionAndTreeTogether (306 ms)
+[ RUN      ] ObservedCloud.SameCloudProcessingBenchmark
+[ERROR] [1790579333.297878661] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790579333.297896904] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[  SKIPPED ] ObservedCloud.SameCloudProcessingBenchmark (3 ms)
+[----------] 15 tests from ObservedCloud (3601 ms total)
+
+[----------] Global test environment tear-down
+[==========] 15 tests from 1 test suite ran. (3605 ms total)
+[  PASSED  ] 14 tests.
+[  SKIPPED ] 1 test, listed below:
+[  SKIPPED ] ObservedCloud.SameCloudProcessingBenchmark
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/observed_pointcloud_test.gtest.xml'
+-- run_test.py: verify result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/observed_pointcloud_test.gtest.xml'
+<end of output>
+Test time =   3.76 sec
+----------------------------------------------------------
+Test Passed.
+"observed_pointcloud_test" end time: Sep 28 15:08 CST
+"observed_pointcloud_test" time elapsed: 00:00:03
+----------------------------------------------------------
+
+2/6 Testing: controller_trajectory_test
+2/6 Test: controller_trajectory_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_trajectory_test.gtest.xml" "--package-name" "astribot_s1_manipulation" "--output-file" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/ament_cmake_gtest/controller_trajectory_test.txt" "--command" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/controller_trajectory_test" "--gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_trajectory_test.gtest.xml"
+Directory: /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation
+"controller_trajectory_test" start time: Sep 28 15:08 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation':
+ - /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/controller_trajectory_test --gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_trajectory_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 23 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 23 tests from ControllerTrajectory
+[ RUN      ] ControllerTrajectory.LinearSamplesPreserveEndpointsAndJointStep
+[INFO] [1790579333.451737399] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.451747416] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.LinearSamplesPreserveEndpointsAndJointStep (0 ms)
+[ RUN      ] ControllerTrajectory.CubicOvershootHitsObstacleOutsideWaypointLine
+[INFO] [1790579333.451937426] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.451939070] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[ERROR] [1790579333.452103591] [astribot_s1_manipulation.external_trajectory]: EXTERNAL_COLLISION_SNAPSHOT frame=base group=slide_group first_bad_index=36 checked_states=63 trajectory_waypoints=2 reason=environment collision: obstacle<->tip
+first={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, name: ["slide"], position: [0.0000000000000000], velocity: [2.0000000000000000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [], is_diff: false}
+bad={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, name: ["slide"], position: [0.58868408203125000], velocity: [2.0000000000000000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [], is_diff: false}
+last={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, name: ["slide"], position: [0.20000000000000018], velocity: [2.0000000000000000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [], is_diff: false}
+[       OK ] ControllerTrajectory.CubicOvershootHitsObstacleOutsideWaypointLine (1 ms)
+[ RUN      ] ControllerTrajectory.QuinticExcursionWithIdenticalPositionsAndVelocities
+[INFO] [1790579333.452133562] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.452134925] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[ERROR] [1790579333.452188441] [astribot_s1_manipulation.external_trajectory]: EXTERNAL_COLLISION_SNAPSHOT frame=base group=slide_group first_bad_index=19 checked_states=41 trajectory_waypoints=2 reason=environment collision: obstacle<->tip
+first={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, name: ["slide"], position: [0.0000000000000000], velocity: [0.0000000000000000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [], is_diff: false}
+bad={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, name: ["slide"], position: [0.30281066894531250], velocity: [0.0000000000000000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [], is_diff: false}
+last={joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, name: ["slide"], position: [0.0000000000000000], velocity: [0.0000000000000000], effort: []}, multi_dof_joint_state: {header: {stamp: {sec: 0, nanosec: 0}, frame_id: "base"}, joint_names: [], transforms: [], twist: [], wrench: []}, attached_collision_objects: [], is_diff: false}
+[       OK ] ControllerTrajectory.QuinticExcursionWithIdenticalPositionsAndVelocities (0 ms)
+[ RUN      ] ControllerTrajectory.SplineJointLimitOvershootIsRejected
+[INFO] [1790579333.452222489] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.452223863] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.SplineJointLimitOvershootIsRejected (0 ms)
+[ RUN      ] ControllerTrajectory.BoundUsesWholeCurveInsteadOfEndpointOrMidpointDelta
+[INFO] [1790579333.452380766] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.452381950] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.BoundUsesWholeCurveInsteadOfEndpointOrMidpointDelta (0 ms)
+[ RUN      ] ControllerTrajectory.OddNanosecondIntervalsAndStationarySegments
+[INFO] [1790579333.452433727] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.452434936] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.OddNanosecondIntervalsAndStationarySegments (0 ms)
+[ RUN      ] ControllerTrajectory.SampleBudgetExhaustionIsFailure
+[INFO] [1790579333.452483707] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.452484865] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.SampleBudgetExhaustionIsFailure (0 ms)
+[ RUN      ] ControllerTrajectory.InvalidTimeAndNonfiniteDerivativeAreRejected
+[INFO] [1790579333.452511252] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.452512401] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.InvalidTimeAndNonfiniteDerivativeAreRejected (0 ms)
+[ RUN      ] ControllerTrajectory.FixedSeedHermiteExtremaAndInputPreservation
+[INFO] [1790579333.452539157] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.452540308] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.FixedSeedHermiteExtremaAndInputPreservation (2 ms)
+[ RUN      ] ControllerTrajectory.SweepFindsThinObstacleBetweenSafeSamples
+[INFO] [1790579333.455012342] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455013913] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.SweepFindsThinObstacleBetweenSafeSamples (1 ms)
+[ RUN      ] ControllerTrajectory.SweepCertifiesClearanceAndReportsBudgetExhaustion
+[INFO] [1790579333.455112136] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455113880] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.SweepCertifiesClearanceAndReportsBudgetExhaustion (0 ms)
+[ RUN      ] ControllerTrajectory.SweepChecksOtherArmOutsideTheTrajectoryGroup
+[INFO] [1790579333.455160308] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455161610] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.SweepChecksOtherArmOutsideTheTrajectoryGroup (0 ms)
+[ RUN      ] ControllerTrajectory.SweepIncludesAttachedPayload
+[INFO] [1790579333.455191560] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455192685] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.SweepIncludesAttachedPayload (0 ms)
+[ RUN      ] ControllerTrajectory.RevoluteOffsetAndMimicBodiesAreBounded
+[INFO] [1790579333.455248241] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455249526] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790579333.455279119] [moveit_robot_model.robot_model]: Loading robot model 'rotor_test'...
+[INFO] [1790579333.455280309] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.RevoluteOffsetAndMimicBodiesAreBounded (0 ms)
+[ RUN      ] ControllerTrajectory.CommandChecksActualStartToSingleFuturePoint
+[INFO] [1790579333.455356155] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455357523] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.CommandChecksActualStartToSingleFuturePoint (0 ms)
+[ RUN      ] ControllerTrajectory.CommandStartUsesJtcMeasuredVelocityAndImplicitZeroAcceleration
+[INFO] [1790579333.455397606] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455398911] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.CommandStartUsesJtcMeasuredVelocityAndImplicitZeroAcceleration (0 ms)
+[ RUN      ] ControllerTrajectory.CommandPreservesMixedDerivativeFields
+[INFO] [1790579333.455445883] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455447100] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.CommandPreservesMixedDerivativeFields (0 ms)
+[ RUN      ] ControllerTrajectory.FutureHeaderIncludesWaitingIntervalInSpline
+[INFO] [1790579333.455482006] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455483201] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.FutureHeaderIncludesWaitingIntervalInSpline (0 ms)
+[ RUN      ] ControllerTrajectory.LateStartAndZeroTimePositionJumpAreNotCertified
+[INFO] [1790579333.455514827] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455516006] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.LateStartAndZeroTimePositionJumpAreNotCertified (0 ms)
+[ RUN      ] ControllerTrajectory.MalformedCommandBoundaryIsUnknownWithoutSampling
+[INFO] [1790579333.455540589] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455541743] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[ERROR] [1790579333.455548914] [moveit_robot_model.robot_model]: Joint 'absent' not found in model 'spline_test'
+[       OK ] ControllerTrajectory.MalformedCommandBoundaryIsUnknownWithoutSampling (0 ms)
+[ RUN      ] ControllerTrajectory.CommandStartUsesContinuousJointShortArc
+[INFO] [1790579333.455569094] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455570214] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[INFO] [1790579333.455585401] [moveit_robot_model.robot_model]: Loading robot model 'continuous_test'...
+[INFO] [1790579333.455586565] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.CommandStartUsesContinuousJointShortArc (0 ms)
+[ RUN      ] ControllerTrajectory.CommandMissingStartDerivativesMatchInstalledJtc
+[INFO] [1790579333.455616491] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455617666] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.CommandMissingStartDerivativesMatchInstalledJtc (0 ms)
+[ RUN      ] ControllerTrajectory.CommandPreparationAndFirstSegmentShareBudget
+[INFO] [1790579333.455665826] [moveit_robot_model.robot_model]: Loading robot model 'spline_test'...
+[INFO] [1790579333.455666991] [moveit_robot_model.robot_model]: No root/virtual joint specified in SRDF. Assuming fixed joint
+[       OK ] ControllerTrajectory.CommandPreparationAndFirstSegmentShareBudget (0 ms)
+[----------] 23 tests from ControllerTrajectory (4 ms total)
+
+[----------] Global test environment tear-down
+[==========] 23 tests from 1 test suite ran. (4 ms total)
+[  PASSED  ] 23 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_trajectory_test.gtest.xml'
+-- run_test.py: verify result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_trajectory_test.gtest.xml'
+<end of output>
+Test time =   0.06 sec
+----------------------------------------------------------
+Test Passed.
+"controller_trajectory_test" end time: Sep 28 15:08 CST
+"controller_trajectory_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/6 Testing: controller_stop_test
+3/6 Test: controller_stop_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_stop_test.gtest.xml" "--package-name" "astribot_s1_manipulation" "--output-file" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/ament_cmake_gtest/controller_stop_test.txt" "--command" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/controller_stop_test" "--gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_stop_test.gtest.xml"
+Directory: /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation
+"controller_stop_test" start time: Sep 28 15:08 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation':
+ - /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/controller_stop_test --gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_stop_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from ControllerStop
+[ RUN      ] ControllerStop.UpdateCycleBenchmark
+[WARN] [1790579333.507823160] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579333.507884791] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579333.507891857] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579333.507897373] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579333.508442705] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579333.509605983] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579333.511351860] [stop_probe]: Received new action goal
+[INFO] [1790579333.511366740] [stop_probe]: Accepted new action goal
+[       OK ] ControllerStop.UpdateCycleBenchmark (519 ms)
+[ RUN      ] ControllerStop.AcceptedTrajectoryContinuesAfterOwnerDisappears
+[WARN] [1790579334.022617812] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579334.022649126] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579334.022654353] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579334.022658776] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579334.022700569] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579334.023117499] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579334.024126642] [stop_probe]: Received new action goal
+[INFO] [1790579334.024137221] [stop_probe]: Accepted new action goal
+[       OK ] ControllerStop.AcceptedTrajectoryContinuesAfterOwnerDisappears (664 ms)
+[ RUN      ] ControllerStop.CancelStopsNewReferencesOnIdealPositionInterfaces
+[WARN] [1790579334.687260105] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579334.687295647] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579334.687301314] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579334.687305495] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579334.687353179] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579334.687781469] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579334.688766798] [stop_probe]: Received new action goal
+[INFO] [1790579334.688778084] [stop_probe]: Accepted new action goal
+[INFO] [1790579334.941414263] [stop_probe]: Got request to cancel goal
+[INFO] [1790579334.941449518] [stop_probe]: Canceling active action goal because cancel callback received.
+[       OK ] ControllerStop.CancelStopsNewReferencesOnIdealPositionInterfaces (665 ms)
+[----------] 3 tests from ControllerStop (1848 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (1851 ms total)
+[  PASSED  ] 3 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_stop_test.gtest.xml'
+-- run_test.py: verify result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/controller_stop_test.gtest.xml'
+<end of output>
+Test time =   2.01 sec
+----------------------------------------------------------
+Test Passed.
+"controller_stop_test" end time: Sep 28 15:08 CST
+"controller_stop_test" time elapsed: 00:00:02
+----------------------------------------------------------
+
+4/6 Testing: owned_controller_test
+4/6 Test: owned_controller_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/owned_controller_test.gtest.xml" "--package-name" "astribot_s1_manipulation" "--output-file" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/ament_cmake_gtest/owned_controller_test.txt" "--command" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/owned_controller_test" "--gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/owned_controller_test.gtest.xml"
+Directory: /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation
+"owned_controller_test" start time: Sep 28 15:08 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation':
+ - /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/owned_controller_test --gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/owned_controller_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 19 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 17 tests from OwnedController
+[ RUN      ] OwnedController.StartUsesFirstControlCycleAfterDelayedAcceptance
+[WARN] [1790579335.513588900] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579335.513652726] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579335.513659395] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579335.513668075] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579335.514237726] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579335.515440077] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579335.671273561] [stop_probe]: Received new action goal
+[INFO] [1790579335.671310225] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.StartUsesFirstControlCycleAfterDelayedAcceptance (328 ms)
+[ RUN      ] OwnedController.CancelHoldDoesNotReplaceRetainedStartWithAnotherGoal
+[WARN] [1790579335.838864589] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579335.838895546] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579335.838900703] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579335.838904740] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579335.839050556] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579335.839472355] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579335.993077473] [stop_probe]: Received new action goal
+[INFO] [1790579335.993109982] [stop_probe]: Accepted new action goal
+[INFO] [1790579336.094295459] [stop_probe]: Got request to cancel goal
+[INFO] [1790579336.094319543] [stop_probe]: Canceling active action goal because cancel callback received.
+[       OK ] OwnedController.CancelHoldDoesNotReplaceRetainedStartWithAnotherGoal (484 ms)
+[ RUN      ] OwnedController.PreemptingCommandGetsItsOwnStartAndUuid
+[WARN] [1790579336.323919286] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579336.323970077] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579336.323983021] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579336.323993441] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579336.324078415] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579336.324620934] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579336.479062575] [stop_probe]: Received new action goal
+[INFO] [1790579336.479093928] [stop_probe]: Accepted new action goal
+[INFO] [1790579336.631056943] [stop_probe]: Received new action goal
+[INFO] [1790579336.631087989] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.PreemptingCommandGetsItsOwnStartAndUuid (415 ms)
+[ RUN      ] OwnedController.FutureHeaderIsNotReportedAsFirstSamplingTime
+[WARN] [1790579336.737499391] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579336.737531595] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579336.737537073] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579336.737541198] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579336.737580768] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579336.737997796] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579336.891477323] [stop_probe]: Received new action goal
+[INFO] [1790579336.891503835] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.FutureHeaderIsNotReportedAsFirstSamplingTime (260 ms)
+[ RUN      ] OwnedController.ConcurrentGoalHandoffsNeverInventAStartState
+[WARN] [1790579336.997675605] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579336.997705785] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579336.997711086] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579336.997715237] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579336.997755455] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579336.998183804] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579337.151737563] [stop_probe]: Received new action goal
+[INFO] [1790579337.151778905] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.194153888] [stop_probe]: Received new action goal
+[INFO] [1790579337.194172767] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.236903063] [stop_probe]: Received new action goal
+[INFO] [1790579337.236933562] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.280076259] [stop_probe]: Received new action goal
+[INFO] [1790579337.280110106] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.323350453] [stop_probe]: Received new action goal
+[INFO] [1790579337.323373773] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.366395496] [stop_probe]: Received new action goal
+[INFO] [1790579337.366428938] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.409962812] [stop_probe]: Received new action goal
+[INFO] [1790579337.409993317] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.452958444] [stop_probe]: Received new action goal
+[INFO] [1790579337.452987309] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.496352467] [stop_probe]: Received new action goal
+[INFO] [1790579337.496412894] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.539597147] [stop_probe]: Received new action goal
+[INFO] [1790579337.539620647] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.582778952] [stop_probe]: Received new action goal
+[INFO] [1790579337.582818570] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.625882483] [stop_probe]: Received new action goal
+[INFO] [1790579337.625908677] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.669020974] [stop_probe]: Received new action goal
+[INFO] [1790579337.669056339] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.711775027] [stop_probe]: Received new action goal
+[INFO] [1790579337.711800742] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.754997859] [stop_probe]: Received new action goal
+[INFO] [1790579337.755023781] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.798093324] [stop_probe]: Received new action goal
+[INFO] [1790579337.798115229] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.841249890] [stop_probe]: Received new action goal
+[INFO] [1790579337.841277637] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.884419994] [stop_probe]: Received new action goal
+[INFO] [1790579337.884440488] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.927374626] [stop_probe]: Received new action goal
+[INFO] [1790579337.927393107] [stop_probe]: Accepted new action goal
+[INFO] [1790579337.970505900] [stop_probe]: Received new action goal
+[INFO] [1790579337.970536265] [stop_probe]: Accepted new action goal
+[INFO] [1790579338.013350572] [stop_probe]: Received new action goal
+[INFO] [1790579338.013382917] [stop_probe]: Accepted new action goal
+[INFO] [1790579338.056618871] [stop_probe]: Received new action goal
+[INFO] [1790579338.056641310] [stop_probe]: Accepted new action goal
+[INFO] [1790579338.099489103] [stop_probe]: Received new action goal
+[INFO] [1790579338.099499778] [stop_probe]: Accepted new action goal
+[INFO] [1790579338.142629113] [stop_probe]: Received new action goal
+[INFO] [1790579338.142653967] [stop_probe]: Accepted new action goal
+[INFO] [1790579338.185566267] [stop_probe]: Received new action goal
+[INFO] [1790579338.185600976] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.ConcurrentGoalHandoffsNeverInventAStartState (1237 ms)
+[ RUN      ] OwnedController.FreshOwnerKeepsOriginalTrajectory
+[WARN] [1790579338.235678172] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579338.235707531] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579338.235712726] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579338.235717180] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579338.235775334] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579338.236193728] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579338.389757703] [stop_probe]: Received new action goal
+[INFO] [1790579338.389784261] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.FreshOwnerKeepsOriginalTrajectory (769 ms)
+[ RUN      ] OwnedController.UpdateCycleBenchmark
+[WARN] [1790579339.004540693] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579339.004572657] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579339.004577672] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579339.004581771] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579339.004623513] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579339.005041275] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579339.158408142] [stop_probe]: Received new action goal
+[INFO] [1790579339.158432440] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.UpdateCycleBenchmark (666 ms)
+[ RUN      ] OwnedController.LostOwnerAbortsAndHoldsInsteadOfCompletingOldTrajectory
+[WARN] [1790579339.670144328] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579339.670174425] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579339.670179697] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579339.670183848] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579339.670228790] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579339.670642010] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579339.824233364] [stop_probe]: Received new action goal
+[INFO] [1790579339.824260543] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.LostOwnerAbortsAndHoldsInsteadOfCompletingOldTrajectory (1223 ms)
+[ RUN      ] OwnedController.ExpiredLeaseCannotBeRevivedByLateHeartbeat
+[WARN] [1790579340.892587144] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579340.892618967] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579340.892624110] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579340.892628344] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579340.892669341] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579340.893093050] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579341.046487933] [stop_probe]: Received new action goal
+[INFO] [1790579341.046515342] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.ExpiredLeaseCannotBeRevivedByLateHeartbeat (918 ms)
+[ RUN      ] OwnedController.ExplicitRevocationStopsBeforeLeaseTimeout
+[WARN] [1790579341.811171294] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579341.811200172] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579341.811205529] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579341.811209991] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579341.811255373] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579341.811672476] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579341.964700772] [stop_probe]: Received new action goal
+[INFO] [1790579341.964732782] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.ExplicitRevocationStopsBeforeLeaseTimeout (462 ms)
+[ RUN      ] OwnedController.DuplicateSequenceCannotExtendAuthority
+[WARN] [1790579342.273222638] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579342.273256386] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579342.273261507] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579342.273265617] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579342.273307714] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579342.273734283] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579342.427331514] [stop_probe]: Received new action goal
+[INFO] [1790579342.427355876] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.DuplicateSequenceCannotExtendAuthority (1174 ms)
+[ RUN      ] OwnedController.DirectTrajectoryTopicIsNotAnAlternateEntry
+[WARN] [1790579343.447505067] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579343.447539680] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579343.447545239] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579343.447549806] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579343.447591856] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579343.448026895] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[       OK ] OwnedController.DirectTrajectoryTopicIsNotAnAlternateEntry (261 ms)
+[ RUN      ] OwnedController.NewLeaseCannotTakeOverAnExecutingGoal
+[WARN] [1790579343.707646159] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579343.707676830] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579343.707682085] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579343.707686585] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579343.707727649] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579343.708146792] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579343.861507643] [stop_probe]: Received new action goal
+[INFO] [1790579343.861530957] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.NewLeaseCannotTakeOverAnExecutingGoal (463 ms)
+[ RUN      ] OwnedController.StaleOrFutureSourceCannotExtendLease
+[WARN] [1790579344.170337248] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579344.170380590] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579344.170385771] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579344.170390094] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579344.170434485] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579344.170852820] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579344.324050158] [stop_probe]: Received new action goal
+[INFO] [1790579344.324076490] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.StaleOrFutureSourceCannotExtendLease (1070 ms)
+[ RUN      ] OwnedController.NormalCompletionPreservesEndpoint
+[WARN] [1790579345.241840804] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579345.241872813] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579345.241878095] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579345.241882629] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579345.241925078] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579345.242350168] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579345.395950376] [stop_probe]: Received new action goal
+[INFO] [1790579345.395975245] [stop_probe]: Accepted new action goal
+[INFO] [1790579347.400177936] [stop_probe]: Goal reached, success!
+[       OK ] OwnedController.NormalCompletionPreservesEndpoint (2367 ms)
+[ RUN      ] OwnedController.HeartbeatCallbacksRaceRealtimeExpiryWithoutRevival
+[WARN] [1790579347.607641368] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579347.607671183] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579347.607676600] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579347.607680654] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579347.607721920] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579347.608153696] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579347.761039141] [stop_probe]: Received new action goal
+[INFO] [1790579347.761064322] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.HeartbeatCallbacksRaceRealtimeExpiryWithoutRevival (1167 ms)
+[ RUN      ] OwnedController.FreshLeaseWaitsForControlCycleBeforeAdmittingGoal
+[WARN] [1790579348.775288820] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579348.775321392] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579348.775326638] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579348.775330597] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579348.775372715] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579348.775790946] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579349.081276467] [stop_probe]: Received new action goal
+[INFO] [1790579349.081309908] [stop_probe]: Accepted new action goal
+[       OK ] OwnedController.FreshLeaseWaitsForControlCycleBeforeAdmittingGoal (312 ms)
+[----------] 17 tests from OwnedController (13576 ms total)
+
+[----------] 1 test from OpenLoopOwnedController
+[ RUN      ] OpenLoopOwnedController.UsesPreviousCommandInsteadOfMeasuredState
+[WARN] [1790579349.086845358] [stop_probe]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1790579349.086874707] [stop_probe]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1790579349.086880027] [stop_probe]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1790579349.086884495] [stop_probe]: Using 'splines' interpolation method.
+[INFO] [1790579349.086927982] [stop_probe]: Controller state will be published at 50.00 Hz.
+[INFO] [1790579349.087357624] [stop_probe]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1790579349.240686505] [stop_probe]: Received new action goal
+[INFO] [1790579349.240714722] [stop_probe]: Accepted new action goal
+[INFO] [1790579349.442881995] [stop_probe]: Received new action goal
+[INFO] [1790579349.442907061] [stop_probe]: Accepted new action goal
+[       OK ] OpenLoopOwnedController.UsesPreviousCommandInsteadOfMeasuredState (442 ms)
+[----------] 1 test from OpenLoopOwnedController (442 ms total)
+
+[----------] 1 test from OwnedControllerDiscovery
+[ RUN      ] OwnedControllerDiscovery.InstalledPluginCanBeLoaded
+[       OK ] OwnedControllerDiscovery.InstalledPluginCanBeLoaded (2 ms)
+[----------] 1 test from OwnedControllerDiscovery (2 ms total)
+
+[----------] Global test environment tear-down
+[==========] 19 tests from 3 test suites ran. (14024 ms total)
+[  PASSED  ] 19 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/owned_controller_test.gtest.xml'
+-- run_test.py: verify result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/owned_controller_test.gtest.xml'
+<end of output>
+Test time =  14.17 sec
+----------------------------------------------------------
+Test Passed.
+"owned_controller_test" end time: Sep 28 15:09 CST
+"owned_controller_test" time elapsed: 00:00:14
+----------------------------------------------------------
+
+5/6 Testing: grasp_candidate_gate_test
+5/6 Test: grasp_candidate_gate_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml" "--package-name" "astribot_s1_manipulation" "--output-file" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/ament_cmake_gtest/grasp_candidate_gate_test.txt" "--command" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/grasp_candidate_gate_test" "--gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml"
+Directory: /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation
+"grasp_candidate_gate_test" start time: Sep 28 15:09 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation':
+ - /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/grasp_candidate_gate_test --gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 10 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 3 tests from GraspPose
+[ RUN      ] GraspPose.RejectsNonUnitQuaternion
+[       OK ] GraspPose.RejectsNonUnitQuaternion (0 ms)
+[ RUN      ] GraspPose.RejectsOverflowQuaternion
+[       OK ] GraspPose.RejectsOverflowQuaternion (0 ms)
+[ RUN      ] GraspPose.AcceptsUnitQuaternion
+[       OK ] GraspPose.AcceptsUnitQuaternion (0 ms)
+[----------] 3 tests from GraspPose (0 ms total)
+
+[----------] 1 test from GraspGate
+[ RUN      ] GraspGate.MissingContextMustNotPass
+[INFO] [1790579349.683308002] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[WARN] [1790579349.684179144] [grasp_candidate_gate]: No grasp candidate passed the safety gate: VALIDATION_CONTEXT_MISSING
+[       OK ] GraspGate.MissingContextMustNotPass (15 ms)
+[----------] 1 test from GraspGate (15 ms total)
+
+[----------] 6 tests from ConfiguredGraspGate
+[ RUN      ] ConfiguredGraspGate.ScreensMatchingCandidateWithoutExecutionPermission
+[INFO] [1790579349.693491498] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[       OK ] ConfiguredGraspGate.ScreensMatchingCandidateWithoutExecutionPermission (6 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsSceneMismatch
+[INFO] [1790579349.699484036] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[       OK ] ConfiguredGraspGate.RejectsSceneMismatch (6 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsEnvelopeMismatch
+[INFO] [1790579349.705292959] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[       OK ] ConfiguredGraspGate.RejectsEnvelopeMismatch (5 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsUncheckedCollision
+[INFO] [1790579349.711112605] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[       OK ] ConfiguredGraspGate.RejectsUncheckedCollision (6 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsArrayFrameMismatch
+[INFO] [1790579349.716789391] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[       OK ] ConfiguredGraspGate.RejectsArrayFrameMismatch (6 ms)
+[ RUN      ] ConfiguredGraspGate.PinnedContextCannotPretendToUpdate
+[INFO] [1790579349.722429145] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[       OK ] ConfiguredGraspGate.PinnedContextCannotPretendToUpdate (3 ms)
+[----------] 6 tests from ConfiguredGraspGate (32 ms total)
+
+[----------] Global test environment tear-down
+[==========] 10 tests from 3 test suites ran. (49 ms total)
+[  PASSED  ] 10 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml'
+-- run_test.py: verify result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml'
+<end of output>
+Test time =   0.19 sec
+----------------------------------------------------------
+Test Passed.
+"grasp_candidate_gate_test" end time: Sep 28 15:09 CST
+"grasp_candidate_gate_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/6 Testing: gripper_planning_only_test
+6/6 Test: gripper_planning_only_test
+Command: "/usr/bin/python3" "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/gripper_planning_only_test.gtest.xml" "--package-name" "astribot_s1_manipulation" "--output-file" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/ament_cmake_gtest/gripper_planning_only_test.txt" "--command" "/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/gripper_planning_only_test" "--gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/gripper_planning_only_test.gtest.xml"
+Directory: /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation
+"gripper_planning_only_test" start time: Sep 28 15:09 CST
+Output:
+----------------------------------------------------------
+-- run_test.py: invoking following command in '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation':
+ - /tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/gripper_planning_only_test --gtest_output=xml:/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/gripper_planning_only_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from GripperPlanningOnly
+[ RUN      ] GripperPlanningOnly.PlanningDoesNotCreateControllerEndpoints
+[  SKIPPED ] GripperPlanningOnly.PlanningDoesNotCreateControllerEndpoints (0 ms)
+[ RUN      ] GripperPlanningOnly.GeometryMatchesDefaultExecutionConfiguration
+[  SKIPPED ] GripperPlanningOnly.GeometryMatchesDefaultExecutionConfiguration (0 ms)
+[ RUN      ] GripperPlanningOnly.AllExecutionEntrypointsRejectWithoutDiscoveryOrSending
+[  SKIPPED ] GripperPlanningOnly.AllExecutionEntrypointsRejectWithoutDiscoveryOrSending (0 ms)
+[ RUN      ] GripperPlanningOnly.ReconfiguringForPlanningRemovesPreviousExecutionEndpoints
+[  SKIPPED ] GripperPlanningOnly.ReconfiguringForPlanningRemovesPreviousExecutionEndpoints (0 ms)
+[----------] 4 tests from GripperPlanningOnly (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 0 tests.
+[  SKIPPED ] 4 tests, listed below:
+[  SKIPPED ] GripperPlanningOnly.PlanningDoesNotCreateControllerEndpoints
+[  SKIPPED ] GripperPlanningOnly.GeometryMatchesDefaultExecutionConfiguration
+[  SKIPPED ] GripperPlanningOnly.AllExecutionEntrypointsRejectWithoutDiscoveryOrSending
+[  SKIPPED ] GripperPlanningOnly.ReconfiguringForPlanningRemovesPreviousExecutionEndpoints
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/gripper_planning_only_test.gtest.xml'
+-- run_test.py: verify result file '/tmp/astribot_arm_dynamic_recovery_impl/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/gripper_planning_only_test.gtest.xml'
+<end of output>
+Test time =   0.06 sec
+----------------------------------------------------------
+Test Passed.
+"gripper_planning_only_test" end time: Sep 28 15:09 CST
+"gripper_planning_only_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 28 15:09 CST
+
+gtest =  20.24 sec*proc
+

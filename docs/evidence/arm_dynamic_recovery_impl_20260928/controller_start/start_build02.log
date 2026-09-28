@@ -1,0 +1,28 @@
+[0.210s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_transport_msgs' is in: /tmp/astribot_arm_dynamic_recovery/install/astribot_transport_msgs
+	'astribot_s1_manipulation' is in: /tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_manipulation, /tmp/astribot_arm_dynamic_recovery/install/astribot_s1_manipulation
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_s1_manipulation astribot_transport_msgs
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_transport_msgs
+Finished <<< astribot_transport_msgs [5.63s]
+Starting >>> astribot_s1_manipulation
+--- stderr: astribot_s1_manipulation
+In file included from /home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_manipulation/src/owned_trajectory_controller.cpp:1:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/owned_trajectory_controller.hpp:5:10: fatal error: astribot_transport_msgs/msg/controller_trajectory_start.hpp: 没有那个文件或目录
+    5 | #include <astribot_transport_msgs/msg/controller_trajectory_start.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/astribot_owned_trajectory_controller.dir/build.make:76：CMakeFiles/astribot_owned_trajectory_controller.dir/src/owned_trajectory_controller.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:395：CMakeFiles/astribot_owned_trajectory_controller.dir/all] 错误 2
+gmake: *** [Makefile:146：all] 错误 2
+---
+Failed   <<< astribot_s1_manipulation [0.16s, exited with code 2]
+
+Summary: 1 package finished [5.97s]
+  1 package failed: astribot_s1_manipulation
+  1 package had stderr output: astribot_s1_manipulation

@@ -2,7 +2,24 @@
 
 参见 [summary.json](summary.json) 的来源/二进制哈希及 [参数依据](../../ARM_DYNAMIC_RECOVERY_PARAMETERS_20260928.md)。基线 `1e5c7857`，本轮几何实现提交 `dca8d1c2`。新工作目录及私有构建/安装均未覆盖旧分支、主工作区或共享部署。
 
-## 验证结果
+## 按参数续做：实际部署与首周期绑定
+
+实现提交 `df8a6042`。运行时只扩展已有 C++ 控制器/执行器和一个消息，没有新增运行节点或替代插值器。
+
+- [controller_start/summary.json](controller_start/summary.json)：操作包 6/6 CTest 目标通过；74 个注册用例，73 通过、1 个性能用例跳过。控制器专项 19 项通过，包括新增 6 项首周期测试。并发 25 个 Goal 的每个 BOUND 记录均与该周期实际采用的轨迹端点和状态一致；这一轮 UNKNOWN 记录数为 0，不声称覆盖了所有交叠时序。
+- 执行器的三个隔离 ROS 场景通过：domain150 六路首周期记录与 UUID、原始命令摘要和阶段代次绑定（含先收到首周期、后收到 Goal 响应，以及不相关 UUID）；domain152 风险后立即恢复正向状态仍撤销；domain153 保护心跳中断仍停止。均确认释放资源。domain149 是验证脚本把 NumPy uint8 当成普通 int 构造消息的失败，保留结果且未复用该 domain。
+- 首周期记录为影子证据。执行器没有因收到它而批准在线 CLEAR、恢复或重规划。保留初始状态的关节顺序；将来接到几何检查时必须按最终原始命令的关节顺序使用。
+- [dense_simulation/summary.json](dense_simulation/summary.json)：自有 domain95、固定六相机，把原有两路投影的抽稀改成 1，观察到 230400 点/帧。实际采集到入图的最大仿真时间差为头部 557 ms、躯干 527 ms。短窗口和观察者接收数不能代表完整帧率、最坏时延上界或覆盖验收。
+- 此次导航诊断配置存在 policy-off/arm coupling 冲突，supervisor 两次拒绝后自行收尾，**整栈就绪失败**。20 mm 真实渲染试棒与动态障碍尚未运行，没有机器人运动指令。最后停稳观察没有样本，不作成功判据。
+- [move_group_teardown/summary.json](move_group_teardown/summary.json)：新增更新器和原更新器，在无 Gazebo 的相同 MoveGroup 参数下均以 -11 退出。旧实验日志也有同样问题。launch 返回 0 不代表节点正常退出，原报告已更正；具体依赖生命周期修复仍待验证。
+
+密集输入的源数据、部署清单、参数、世界统计、进程启动身份及库映射以 `.gz` 保存；[artifacts.json](dense_simulation/artifacts.json) 记录解压后的 SHA-256 和大小，逐项校验通过。这些是历史实验产物；后续私有安装已加入首周期记录，重新启动须生成新的部署清单。
+
+构建诊断保留了：命令全局参数位置错误、旧 CMake 缓存选到旧消息包、混用两种迭代器的编译错误及修复；开环初测试图运行中改变 JTC 的只读参数，被框架拒绝。最后使用配置阶段启用开环的有效用例通过，没有为该测试增加运行时回退或修改只读契约。
+
+复现控制器回归：按 [env.sh](env.sh) 使用私有安装，在空闲隔离 domain 运行 `astribot_s1_manipulation` 的 CTest。协议入口为 `ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py`，必须选择无历史账本的新 domain；其 `--output` 的同名 `.log` 是子进程日志，外层输出应另存 `.console.log`，不能重定向覆盖它。感知只读采集入口为 `tools/validation/measure_arm_scene_input.py --output <新目录>`，先加载目标会话的实际 overlay/domain/传输配置。
+
+## 前一阶段验证结果
 
 - [parameter_regression.log](parameter_regression.log)：6/6 CTest 目标通过，68 个注册用例中 67 通过，`ObservedCloud.SameCloudProcessingBenchmark` 跳过。安装版本的 gtest XML 未编码该跳过；以 [ctest_details.log](ctest_details.log) 中的 SKIPPED 为准。不将跳过记为性能通过。
 - [coverage_test.log](coverage_test.log)：5 cm 地图中 20 mm 试棒的有效回波入图与射线空闲体素反例，两项通过。

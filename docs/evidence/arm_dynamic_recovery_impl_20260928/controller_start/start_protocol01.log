@@ -1,0 +1,38 @@
+[INFO] [1790578453.785404537] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Asked to publish result for goal that does not exist
+ line 953, in run
+    self._target(*self._args, **self._kwargs)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 323, in spin
+    self.spin_once()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 863, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 860, in _spin_once_impl
+    future.result()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 109, in result
+    raise self.exception()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 272, in _execute_coroutine_step
+    result = coro.send(None)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+    await call_coroutine(entity, arg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 436, in _execute_service
+    response = await await_or_execute(srv.callback, request, srv.srv_type.Response())
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+    return callback(*args)
+  File "/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py", line 81, in callback
+    publish_start(name,key,req.goal)
+  File "/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py", line 70, in publish_start
+    message=ControllerTrajectoryStart(binding=ControllerTrajectoryStart.BOUND,
+  File "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_transport_msgs/local/lib/python3.10/dist-packages/astribot_transport_msgs/msg/_controller_trajectory_start.py", line 120, in __init__
+    self.goal_id = kwargs.get('goal_id')
+  File "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_transport_msgs/local/lib/python3.10/dist-packages/astribot_transport_msgs/msg/_controller_trajectory_start.py", line 213, in goal_id
+    len(value) == 16 and
+AssertionError: The 'goal_id' field must be a set or sequence with length 16 and each value of type 'int' and each unsigned integer in [0, 255]
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py", line 273, in <module>
+    if __name__=='__main__':main()
+  File "/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py", line 211, in main
+    wait(lambda:any(h for _,h in holds),8,'no first-stage HOLD')
+  File "/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py", line 202, in wait
+    raise AssertionError(label)
+AssertionError: no first-stage HOLD

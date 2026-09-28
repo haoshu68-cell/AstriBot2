@@ -1,5 +1,21 @@
 # 机械臂动态避障分支实施记录
 
+## 按已选参数推进（2026-09-28，续）
+
+仍在独立分支 `codex/arm-dynamic-recovery-implementation`，没有修改共享控制器、模型或相机源码，没有合并主线。
+
+1. **逐像素输入已做实际部署实验**：先验证旧部署 1086 项文件/依赖清单，再复制本任务的冻结启动包，仅将已有两路投影节点的 `decimation` 改为 1。没有另起投影链。自有 domain95、六相机、独占仿真会话中观察到 230400 点/帧；头部参数读回为 1，躯干读回超时，不能记为读回通过。两路 Octomap `point_subsample=1`、底盘保持 true/3.0、MoveGroup 执行关闭均已读回。
+2. **实际时延仍不支持开放恢复**：约 20 秒窗口，头部/躯干分别有 112/120 个不同采集时刻的地图快照。采集到入图（仿真时间）中位数为 102/80 ms，最大 557/527 ms；回调处理（墙钟）中位数约 38/35 ms。这不是 50 Hz 几何检查的耗时。按障碍 2 m/s，仅最大观测延迟就对应约 1.114/1.054 m 接近距离，尚未计入控制反应、制动及误差，不能把它当已验收停止距离。
+3. **首周期绑定已实现为影子证据**：在原 `OwnedTrajectoryController` 中发布 `ControllerTrajectoryStart`，记录 JTC 实际首次采样时间、插值初始状态和 Goal UUID。接受/取消回调与更新周期交叠时，绑定标记为 UNKNOWN；不以发送时间、轨迹 header 或晚到反馈替代首周期。非阻塞发布沿用 realtime publisher，保留最后一条记录。执行器保存最终原始命令，按 UUID 把首周期记录与命令摘要、阶段代次关联；无关 UUID 不会绑定。它没有开放在线 CLEAR 或改变运动放行。
+4. **隔离验证**：实际 JTC 的首周期专项覆盖延迟开始、取消保持、抢占、未来 header、并发 Goal 交接及配置时启用的开环控制。ROS 协议夹具验证六个控制器首周期记录在 Goal 响应前/后到达的绑定，并复测保护撤销和心跳失联仍能终止、释放资源。测试计数及原始失败见下方证据；合成控制器协议不是 Gazebo 动作验收。
+5. **本轮仿真不算整栈就绪**：冻结导航配置默认启用机械臂速度耦合，与 supervisor 的 policy-off 诊断配置冲突；两次启动均拒绝，随后 supervisor 自动回收自有仿真。真实渲染 20 mm 试棒、动态试件、全臂制动、在线场景覆盖及有界恢复均未验收。共享仿真资源随后交给主线任务；本轮未发送机器人运动命令。
+
+**退出记录更正**：MoveGroup 子进程在 SIGINT 后以 -11 退出，而 launch 返回 0。此前“正常退出”的表述不准确：旧 `session02` 日志也有相同崩溃。本轮在不启动 Gazebo 的隔离环境，用新增更新器和原更新器分别复现 -11；故障地址在退出前属于 `libmoveit_move_group_default_capabilities.so.2.5.9`。尚未验证依赖生命周期的具体修复，未用进程消失或 launch=0 代替成功。自有进程身份均已退出、性能锁已释放；最终只读停稳采样发生在仿真退出后，没有关节/SLAM 数据，明确不计作停稳证明。
+
+证据：[首周期绑定](evidence/arm_dynamic_recovery_impl_20260928/controller_start/summary.json)、[密集输入仿真](evidence/arm_dynamic_recovery_impl_20260928/dense_simulation/summary.json)、[退出崩溃对照](evidence/arm_dynamic_recovery_impl_20260928/move_group_teardown/summary.json)。采集工具为 `tools/validation/measure_arm_scene_input.py`。依赖本机 JTC 2.53.3 的首采样语义，已对照[官方实现](https://github.com/ros-controls/ros2_controllers/blob/2.53.3/joint_trajectory_controller/src/joint_trajectory_controller.cpp)与实际安装插件验证。
+
+**整体未完成、未合并。** 下一门槛仍是实际试棒覆盖、感知尾延迟和全臂停止范围。恢复状态机尚未接入；不能用已通过的影子绑定跳过这些前提。重新进行仿真前须修正 policy-off 诊断配置、取得独占资源，并重新冻结已修改的私有安装清单。
+
 ## 新分支续做记录（2026-09-28）
 
 按用户选择，从已有 `codex/arm-dynamic-recovery` 的 `1e5c7857` 新建 `codex/arm-dynamic-recovery-implementation`，独立目录为 `/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl`。原工作区及其未提交修改未动。用户随后授权调研标准并确定首版尺寸/速度；结果见 [参数与评定依据](ARM_DYNAMIC_RECOVERY_PARAMETERS_20260928.md)。
@@ -80,7 +96,7 @@
 
 **尾延迟仍需处理**：`23_process_loss.json` 从最后一次心跳到观察到保持为 **381.758 ms**；目前没有隔离控制更新、仿真停顿和观测传输各自贡献，禁止将 300 ms 租约直接当作整机停止上限。单独采集的一段世界统计窗口 RTF 中位数 0.9996、最小 0.2712；它不是每轮或全程 RTF。当前只记录时延分布，未批准全臂制动预算。
 
-收尾前独立只读检查通过：已观察 Goal 均终态、执行心跳发布者为 0、关节与 map 下 `/slam/pose` 停稳。MoveGroup 和 supervisor 随后正常退出，`remaining_owned_pids=[]`、`log_capture_errors=[]`，四个记录的启动/运行进程均退出，独占锁实测已释放。已经通知申请资源的主线窗口，不再占用 Gazebo/GPU。
+收尾前独立只读检查通过：已观察 Goal 均终态、执行心跳发布者为 0、关节与 map 下 `/slam/pose` 停稳。自有进程随后退出，`remaining_owned_pids=[]`、`log_capture_errors=[]`，独占锁实测已释放。**续做时复核原日志发现 MoveGroup 子进程退出码为 -11，先前以 launch 返回 0 写成“正常退出”有误；更正见本文顶部及退出崩溃对照。** 已经通知申请资源的主线窗口，不再占用 Gazebo/GPU。
 
 原始结果、部署清单、模型、加载库哈希和退出记录见 [gazebo_stop](evidence/arm_dynamic_recovery_20260928/gazebo_stop)。压缩归档逐文件校验 SHA-256，可解出完整 JSON 样本；单次探索结果与 120 次重复分开保存。相机原点修复后另跑操作能力包的六个 CTest 目标，全通过；性能用例仍按规定单独执行，不用跳过记录代替性能通过。
 

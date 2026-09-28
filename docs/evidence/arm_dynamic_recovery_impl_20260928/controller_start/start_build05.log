@@ -1,0 +1,15 @@
+Starting >>> astribot_s1_transport_native
+--- stderr: astribot_s1_transport_native
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp: In member function ‘void astribot::transport::HoldExecutor::validate_transfer_goal(const Goal&)’:
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:351:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  351 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |   ^~~
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:351:62: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  351 |   for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
+      |                                                              ^~~
+---
+[Processing: astribot_s1_transport_native]
+Finished <<< astribot_s1_transport_native [45.9s]
+
+Summary: 1 package finished [46.0s]
+  1 package had stderr output: astribot_s1_transport_native

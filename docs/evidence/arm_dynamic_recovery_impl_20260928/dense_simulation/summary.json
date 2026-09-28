@@ -1,0 +1,180 @@
+{
+  "evidence": "partial static Gazebo camera/MoveGroup integration; NOT full-stack readiness or obstacle acceptance",
+  "seconds": 20.03805184364319,
+  "sources": {
+    "/moveit/observed_octomap/torso_rgbd": {
+      "count": 120,
+      "distinct_capture_stamps": 120,
+      "capture_to_integrated_sim_seconds": {
+        "p50": 0.0799999999999983,
+        "p95": 0.15014999999999942,
+        "p99": 0.488049999999991,
+        "max": 0.527000000000001
+      },
+      "callback_processing_wall_seconds": {
+        "p50": 0.035438013500000004,
+        "p99": 0.06641544626000001,
+        "max": 0.07181837
+      },
+      "capture_span_sim_seconds": 19.39999999999999,
+      "obstacle_approach_during_max_observation_latency_metres_at_2mps": 1.054000000000002
+    },
+    "/moveit/observed_octomap/head_rgbd": {
+      "count": 112,
+      "distinct_capture_stamps": 112,
+      "capture_to_integrated_sim_seconds": {
+        "p50": 0.10199999999999676,
+        "p95": 0.2524000000000034,
+        "p99": 0.4526699999999903,
+        "max": 0.5570000000000022
+      },
+      "callback_processing_wall_seconds": {
+        "p50": 0.037972493499999996,
+        "p99": 0.09853206896,
+        "max": 0.100343699
+      },
+      "capture_span_sim_seconds": 19.200000000000003,
+      "obstacle_approach_during_max_observation_latency_metres_at_2mps": 1.1140000000000043
+    }
+  },
+  "counts": {
+    "/clock": 19517,
+    "/camera/raw/torso_rgbd/camera_info": 395,
+    "/camera/raw/head_rgbd/camera_info": 393,
+    "/camera/raw/torso_rgbd/depth_image": 303,
+    "/slam/pose": 197,
+    "/camera/raw/head_rgbd/depth_image": 347,
+    "/camera/head_rgbd/points": 247,
+    "/camera/torso_rgbd/points": 296,
+    "/moveit/observed_octomap/torso_rgbd": 120,
+    "/moveit/observed_octomap/head_rgbd": 112,
+    "/joint_states": 1856,
+    "/camera/torso_rgbd/points_raw": 235,
+    "/camera/head_rgbd/points_raw": 233
+  },
+  "parameters": {
+    "head_rgbd_pointcloud": {
+      "decimation": {
+        "type": 2,
+        "bool_value": false,
+        "integer_value": 1,
+        "double_value": 0.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "use_sim_time": {
+        "type": 1,
+        "bool_value": true,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    },
+    "torso_rgbd_pointcloud": {
+      "error": "RESPONSE_TIMEOUT"
+    },
+    "omni_effort_drive_node": {
+      "idle_position_hold": {
+        "type": 1,
+        "bool_value": true,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "idle_position_kp": {
+        "type": 3,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 3.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    },
+    "move_group": {
+      "allow_trajectory_execution": {
+        "type": 1,
+        "bool_value": false,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "use_sim_time": {
+        "type": 1,
+        "bool_value": true,
+        "integer_value": 0,
+        "double_value": 0.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "head_rgbd.point_subsample": {
+        "type": 2,
+        "bool_value": false,
+        "integer_value": 1,
+        "double_value": 0.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      },
+      "torso_rgbd.point_subsample": {
+        "type": 2,
+        "bool_value": false,
+        "integer_value": 1,
+        "double_value": 0.0,
+        "string_value": "",
+        "byte_array_value": [],
+        "bool_array_value": [],
+        "integer_array_value": [],
+        "double_array_value": [],
+        "string_array_value": []
+      }
+    }
+  },
+  "no_robot_goals_sent": true,
+  "twenty_mm_rendered_target": "NOT_RUN",
+  "dynamic_obstacle": "NOT_RUN",
+  "navigation_readiness": "FAILED: policy off conflicts with enabled arm chassis coupling",
+  "move_group_exit": "SIGSEGV during destruction after owner SIGINT; cause unconfirmed",
+  "stationary_baseline_only": {
+    "joint_samples": 1856,
+    "joint_max_absolute_net_from_first_rad": 4.615708346675067e-10,
+    "slam_frame": "map",
+    "slam_samples": 197,
+    "slam_xyz_max_absolute_net_from_first_m": [
+      0.00011545583595831688,
+      3.8546558311092216e-05,
+      9.687082435802519e-06
+    ],
+    "slam_yaw_max_absolute_net_from_first_rad": 2.25868203334469e-05,
+    "final_closeout_capture": "No joint or SLAM samples; simulation already exited, NOT_ACCEPTED as final stationary proof"
+  }
+}
