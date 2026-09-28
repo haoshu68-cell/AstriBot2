@@ -35,6 +35,7 @@ find_package(tf2_ros REQUIRED)
 find_package(control_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(astribot_transport_msgs REQUIRED)
+find_package(astribot_perception_msgs REQUIRED)
 
 set(ASTRIBOT_MANIPULATION_DEPS
   astribot_eigen_vendor
@@ -123,6 +124,10 @@ astribot_target_eigen(transport_skill_planner)
 target_link_libraries(self_collision_pair_generator ${PROJECT_NAME}_core)
 ament_target_dependencies(self_collision_pair_generator ${ASTRIBOT_MANIPULATION_DEPS})
 
+add_executable(grasp_candidate_gate_node src/grasp_candidate_gate_node.cpp)
+ament_target_dependencies(grasp_candidate_gate_node
+  rclcpp geometry_msgs astribot_perception_msgs)
+
 install(
   DIRECTORY include/
   DESTINATION include
@@ -138,6 +143,7 @@ install(
 
 install(
   TARGETS planning_demo_node self_collision_pair_generator transport_skill_planner
+  grasp_candidate_gate_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -149,7 +155,7 @@ install(
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME}_core ${PROJECT_NAME}_gripper)
-ament_export_dependencies(astribot_eigen_vendor ${ASTRIBOT_MANIPULATION_DEPS})
+ament_export_dependencies(astribot_eigen_vendor ${ASTRIBOT_MANIPULATION_DEPS} astribot_perception_msgs)
 ament_export_targets(export_${PROJECT_NAME})
 
 astribot_target_eigen(${PROJECT_NAME}_core)
@@ -157,6 +163,7 @@ astribot_target_eigen(${PROJECT_NAME}_ompl_extension)
 astribot_target_eigen(${PROJECT_NAME}_gripper)
 astribot_target_eigen(planning_demo_node)
 astribot_target_eigen(self_collision_pair_generator)
+astribot_target_eigen(grasp_candidate_gate_node)
 find_package(moveit_ros_move_group REQUIRED)
 add_library(astribot_cancellable_execution SHARED src/cancellable_execution.cpp)
 ament_target_dependencies(astribot_cancellable_execution rclcpp rclcpp_action pluginlib moveit_ros_move_group moveit_ros_planning moveit_ros_planning_interface moveit_msgs)
@@ -165,6 +172,8 @@ pluginlib_export_plugin_description_file(moveit_ros_move_group cancellable_execu
 install(TARGETS astribot_cancellable_execution LIBRARY DESTINATION lib)
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(grasp_candidate_gate_test test_grasp_candidate_gate.cpp)
+  ament_target_dependencies(grasp_candidate_gate_test rclcpp geometry_msgs astribot_perception_msgs)
   ament_add_gtest(gripper_planning_only_test test_gripper_planning_only.cpp)
   target_link_libraries(gripper_planning_only_test ${PROJECT_NAME}_gripper)
   ament_target_dependencies(gripper_planning_only_test ${ASTRIBOT_MANIPULATION_DEPS} rclcpp_action control_msgs sensor_msgs)

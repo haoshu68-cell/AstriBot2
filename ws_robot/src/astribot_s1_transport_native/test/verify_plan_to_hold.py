@@ -104,6 +104,8 @@ def main():
         res.controller=[ControllerState(name=n,state='active',type='joint_trajectory_controller/JointTrajectoryController',claimed_interfaces=[j+'/position' for j in js]) for n,js in groups.items()];return res
     def scene(req,res):
         nonlocal scene_calls
+        res.scene.world.octomap.header.frame_id="astribot_torso_base"
+        res.scene.world.octomap.origin.orientation.w=1.
         scene_calls+=1;res.scene.robot_state.joint_state.name=list(positions);res.scene.robot_state.joint_state.position=list(positions.values())
         if args.mode=='navigation_positive':
             e=NavigationEnvelopeV2();e.header.stamp=stamp();e.valid_until=stamp(.3);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE;e.navigation_allowed=True;envelopes.publish(e);stop.wait(.1)

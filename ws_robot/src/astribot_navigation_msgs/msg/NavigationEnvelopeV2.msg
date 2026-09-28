@@ -18,6 +18,11 @@ geometry_msgs/Polygon reserved_footprint
 # reserved_footprint plus clearance_m; Nav2 footprint_padding must be zero.
 geometry_msgs/Polygon installed_footprint
 string installed_geometry_hash
+# Fixed-posture height layers include clearance exactly once; empty layers retain identity.
+string height_geometry_hash
+EnvelopeSlice[] height_slices
+string height_profile_revision
+float64 ground_in_base_m
 float64 clearance_m
 bool navigation_allowed
 string reason

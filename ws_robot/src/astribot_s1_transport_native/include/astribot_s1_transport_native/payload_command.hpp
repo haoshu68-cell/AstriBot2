@@ -21,7 +21,7 @@ private:
  std::string model_,source_epoch_,plugin_epoch_;
  uint64_t entity_=0,source_clock_=0,plugin_clock_=0,revision_=0;
  int64_t capture_=0;
- int64_t latest_capture_=0,deadline_=0,unconfirmed_capture_=0;
+ int64_t latest_capture_=0,unconfirmed_capture_=0;
  uint32_t command_=0;
  bool attach_=false;
 };

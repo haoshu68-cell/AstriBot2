@@ -5,6 +5,7 @@
 #include <octomap_msgs/conversions.h>
 #include <srdfdom/model.h>
 #include <urdf_parser/urdf_parser.h>
+#include <thread>
 
 namespace transport = astribot_s1_transport_mtc;
 using Request = astribot_transport_msgs::srv::RevalidatePayloadTransition::Request;
@@ -29,15 +30,19 @@ protected:
 
   void SetUp() override {
     const auto urdf=urdf::parseURDF(R"(<robot name="transition_test">
-      <link name="astribot_torso_base"/><link name="tcp"><collision><geometry>
+      <link name="astribot_torso_base"/><link name="slide_x_link"/><link name="other_link"/>
+      <link name="tcp"><collision><geometry>
       <box size="0.02 0.02 0.02"/></geometry></collision></link>
       <joint name="slide" type="prismatic"><parent link="astribot_torso_base"/>
-      <child link="tcp"/><axis xyz="1 0 0"/><limit lower="-1" upper="1" effort="10" velocity="1"/>
-      </joint></robot>)");
+      <child link="slide_x_link"/><axis xyz="1 0 0"/><limit lower="-1" upper="1" effort="10" velocity="1"/>
+      </joint><joint name="slide_y" type="prismatic"><parent link="slide_x_link"/><child link="tcp"/>
+      <axis xyz="0 1 0"/><limit lower="-1" upper="1" effort="10" velocity="1"/></joint>
+      <joint name="other" type="prismatic"><parent link="astribot_torso_base"/><child link="other_link"/>
+      <axis xyz="0 0 1"/><limit lower="-1" upper="1" effort="10" velocity="1"/></joint></robot>)");
     ASSERT_TRUE(urdf);
     auto srdf=std::make_shared<srdf::Model>();
     ASSERT_TRUE(srdf->initString(*urdf,R"(<robot name="transition_test"><group name="slide_group">
-      <joint name="slide"/></group></robot>)"));
+      <joint name="slide"/><joint name="slide_y"/></group></robot>)"));
     model=std::make_shared<moveit::core::RobotModel>(urdf,srdf);
     auto scene=std::make_shared<planning_scene::PlanningScene>(model);
     scene->getCurrentStateNonConst().setToDefaultValues();
@@ -74,11 +79,36 @@ protected:
     }
   }
   std::vector<transport::CachedStage> validate() {
-    return transport::revalidatePayloadTransition(request,"context",binding,stages,created,.1,.1);
+    return transport::revalidatePayloadTransition(request,"context",binding,stages,created,.1,.1).stages;
   }
   void expectRejected(const std::string& expected) {
     try {validate();FAIL()<<"accepted invalid transition";}
     catch(const std::runtime_error& error) {EXPECT_NE(std::string(error.what()).find(expected),std::string::npos)<<error.what();}
+  }
+  void prepareTransportCollision() {
+    const auto obstacle=box("wall",.05,.2,.06);
+    binding.input_scene.world.collision_objects.back()=obstacle;
+    request.scene.world.collision_objects.front()=obstacle;
+    for(size_t index=4;index<6;++index) {
+      auto scene=planning_scene::PlanningScene::clone(stages[index].scene);
+      ASSERT_TRUE(scene->processCollisionObjectMsg(obstacle));
+      auto state=scene->getCurrentState();state.setVariablePosition("slide",index==4?0.:.05);state.update();
+      scene->setCurrentState(state);stages[index].scene=scene;
+      auto path=std::make_shared<robot_trajectory::RobotTrajectory>(model,"slide_group");
+      path->addSuffixWayPoint(state,0.);state.setVariablePosition("slide",index==4?.05:.4);state.update();
+      path->addSuffixWayPoint(state,4.);stages[index].trajectory=path;
+    }
+  }
+  robot_trajectory::RobotTrajectoryPtr detour(const planning_scene::PlanningSceneConstPtr& scene,
+    const moveit::core::RobotState& goal,const moveit::core::JointModelGroup* group,double y=-.15) {
+    auto path=std::make_shared<robot_trajectory::RobotTrajectory>(model,group->getName());
+    auto state=scene->getCurrentState();path->addSuffixWayPoint(state,0.);
+    state.setVariablePosition("slide_y",y);state.update();path->addSuffixWayPoint(state,0.);
+    state.setVariablePosition("slide",goal.getVariablePosition("slide"));state.update();path->addSuffixWayPoint(state,0.);
+    path->addSuffixWayPoint(goal,0.);return path;
+  }
+  transport::PayloadTransitionResult replan(const transport::TransportReplanner& planner,double scaling=2.5) {
+    return transport::revalidatePayloadTransition(request,"context",binding,stages,created,.1,.1,planner,scaling,.1);
   }
 };
 
@@ -245,4 +275,162 @@ TEST_F(PayloadTransition, RevalidationPreservesScaledOwnerAndCacheMessages) {
     confirmed[i].trajectory->getRobotTrajectoryMsg(first);repeated[i].trajectory->getRobotTrajectoryMsg(second);
     EXPECT_EQ(owner[i-4],first);EXPECT_EQ(owner[i-4],second);
   }
+}
+
+TEST_F(PayloadTransition, ReplansOnlyCollidingTransportUsingActualLiftEndAndExactOwnerBoundaries) {
+  prepareTransportCollision();
+  moveit_msgs::msg::RobotTrajectory original_lift,original_transport;
+  stages[4].trajectory->getRobotTrajectoryMsg(original_lift);
+  stages[5].trajectory->getRobotTrajectoryMsg(original_transport);
+  moveit_msgs::msg::RobotState expected_start;
+  moveit::core::robotStateToRobotStateMsg(stages[5].scene->getCurrentState(),expected_start);
+  unsigned calls=0;
+  auto result=replan([&](const auto& scene,const auto& goal,const auto* group,const auto deadline) {
+    ++calls;EXPECT_EQ(group,stages[5].trajectory->getGroup());
+    EXPECT_DOUBLE_EQ(scene->getCurrentState().getVariablePosition("slide"),.05);
+    EXPECT_DOUBLE_EQ(goal.getVariablePosition("slide"),.4);
+    EXPECT_LE(deadline,created+std::chrono::seconds(120));
+    EXPECT_LE(deadline,std::chrono::steady_clock::now()+std::chrono::seconds(10));
+    const auto* body=scene->getCurrentState().getAttachedBody("payload");EXPECT_NE(body,nullptr);
+    EXPECT_DOUBLE_EQ(dynamic_cast<const shapes::Box*>(body->getShapes().front().get())->size[0],.08);
+    collision_detection::AllowedCollision::Type permission;
+    const bool has_permission=scene->getAllowedCollisionMatrix().getEntry("payload","wall",permission);
+    EXPECT_TRUE(!has_permission || permission==collision_detection::AllowedCollision::NEVER);
+    auto path=detour(scene,goal,group);
+    path->getWayPointPtr(0)->setVariablePosition("slide",.05009);
+    path->getWayPointPtr(path->getWayPointCount()-1)->setVariablePosition("slide",.40009);
+    return path;
+  });
+  EXPECT_EQ(calls,1u);EXPECT_TRUE(result.transport_replanned);ASSERT_EQ(result.stages.size(),6u);
+  moveit_msgs::msg::RobotTrajectory actual_lift,actual_transport,unchanged;
+  result.stages[4].trajectory->getRobotTrajectoryMsg(actual_lift);EXPECT_EQ(actual_lift,original_lift);
+  result.stages[5].trajectory->getRobotTrajectoryMsg(actual_transport);EXPECT_NE(actual_transport,original_transport);
+  stages[5].trajectory->getRobotTrajectoryMsg(unchanged);EXPECT_EQ(unchanged,original_transport);
+  EXPECT_TRUE(binding.transaction_id.empty());EXPECT_FALSE(binding.transport_replanned);
+  EXPECT_EQ(actual_transport.joint_trajectory.points.front().positions,original_transport.joint_trajectory.points.front().positions);
+  EXPECT_EQ(actual_transport.joint_trajectory.points.back().positions,original_transport.joint_trajectory.points.back().positions);
+  moveit_msgs::msg::RobotState actual_start;
+  moveit::core::robotStateToRobotStateMsg(result.stages[5].scene->getCurrentState(),actual_start);
+  EXPECT_EQ(actual_start.joint_state.name,expected_start.joint_state.name);
+  EXPECT_EQ(actual_start.joint_state.position,expected_start.joint_state.position);
+  for(size_t i=0;i<result.stages[5].trajectory->getWayPointCount();++i) {
+    const auto* body=result.stages[5].trajectory->getWayPoint(i).getAttachedBody("payload");ASSERT_NE(body,nullptr);
+    EXPECT_DOUBLE_EQ(dynamic_cast<const shapes::Box*>(body->getShapes().front().get())->size[0],.08);
+    if(i)EXPECT_GT(result.stages[5].trajectory->getWayPointDurationFromPrevious(i),0.);
+  }
+}
+
+TEST_F(PayloadTransition, ClearOriginalSuffixDoesNotInvokePlannerOrChangeTiming) {
+  unsigned calls=0;
+  const auto result=replan([&](const auto&,const auto&,const auto*,const auto)->robot_trajectory::RobotTrajectoryPtr {
+    ++calls;throw std::runtime_error("UNEXPECTED_REPLAN");
+  });
+  EXPECT_EQ(calls,0u);EXPECT_FALSE(result.transport_replanned);
+  for(size_t i=4;i<6;++i) {
+    moveit_msgs::msg::RobotTrajectory old,current;
+    stages[i].trajectory->getRobotTrajectoryMsg(old);result.stages[i].trajectory->getRobotTrajectoryMsg(current);
+    EXPECT_EQ(old,current);
+  }
+}
+
+TEST_F(PayloadTransition, SameTransactionReplaysReplannedFlagAndOriginalNewTimingWithoutAnotherPlan) {
+  prepareTransportCollision();
+  auto result=replan([&](const auto& scene,const auto& goal,const auto* group,const auto) {return detour(scene,goal,group);});
+  binding.transaction_id=request.transaction_id;binding.confirmed_scene=request.scene;
+  binding.transport_replanned=result.transport_replanned;stages=result.stages;
+  unsigned calls=0;
+  const auto repeated=replan([&](const auto&,const auto&,const auto*,const auto)->robot_trajectory::RobotTrajectoryPtr {
+    ++calls;throw std::runtime_error("UNEXPECTED_REPLAN");
+  });
+  EXPECT_EQ(calls,0u);EXPECT_TRUE(repeated.transport_replanned);
+  for(size_t i=4;i<6;++i) {
+    moveit_msgs::msg::RobotTrajectory first,second;
+    result.stages[i].trajectory->getRobotTrajectoryMsg(first);repeated.stages[i].trajectory->getRobotTrajectoryMsg(second);
+    EXPECT_EQ(first,second);
+  }
+  // New occupancy on the same transaction is rechecked, never replanned away.
+  octomap::OcTree tree(.005);tree.updateNode(octomap::point3d(.2,-.15,0.),true);
+  ASSERT_TRUE(octomap_msgs::binaryMapToMsg(tree,request.scene.world.octomap.octomap));
+  EXPECT_THROW(replan([&](const auto&,const auto&,const auto*,const auto)->robot_trajectory::RobotTrajectoryPtr {
+    ++calls;throw std::runtime_error("UNEXPECTED_REPLAN");
+  }),std::runtime_error);
+  EXPECT_EQ(calls,0u);
+}
+
+TEST_F(PayloadTransition, FailedActualLiftAndNonCollisionErrorsNeverInvokeTransportPlanner) {
+  prepareTransportCollision();
+  unsigned calls=0;transport::TransportReplanner planner=[&](const auto& scene,const auto& goal,const auto* group,const auto) {
+    ++calls;return detour(scene,goal,group);
+  };
+  auto& end=*stages[4].trajectory->getWayPointPtr(1);end.setVariablePosition("slide",.4);end.update();
+  EXPECT_THROW(replan(planner),std::runtime_error);EXPECT_EQ(calls,0u);
+  prepareTransportCollision();
+  auto& invalid=*stages[5].trajectory->getWayPointPtr(1);invalid.setVariablePosition("slide",1.01);invalid.update();
+  EXPECT_THROW(replan(planner),std::runtime_error);EXPECT_EQ(calls,0u);
+}
+
+TEST_F(PayloadTransition, PlaceCollisionNeverInvokesTransportPlanner) {
+  prepareTransportCollision();binding.operation="PLACE";binding.input_scene=request.scene;
+  request.scene.robot_state.attached_collision_objects.clear();
+  request.scene.world.collision_objects.push_back(box("payload",.08,.2,0.));
+  stages[3].id="DETACH_CONFIRM";stages[4].id="RETREAT:0";stages[5].id="STOW";
+  unsigned calls=0;
+  EXPECT_THROW(replan([&](const auto& scene,const auto& goal,const auto* group,const auto) {
+    ++calls;return detour(scene,goal,group);
+  }),std::runtime_error);
+  EXPECT_EQ(calls,0u);
+}
+
+TEST_F(PayloadTransition, PlannerFailureOrStillCollidingReplacementCannotMutateOriginalCache) {
+  prepareTransportCollision();moveit_msgs::msg::RobotTrajectory original;
+  stages[5].trajectory->getRobotTrajectoryMsg(original);
+  EXPECT_THROW(replan([](const auto&,const auto&,const auto*,const auto)->robot_trajectory::RobotTrajectoryPtr {
+    throw std::runtime_error("PLANNER_FAILED");
+  }),std::runtime_error);
+  EXPECT_THROW(replan([](const auto&,const auto&,const auto*,const auto)->robot_trajectory::RobotTrajectoryPtr {
+    return {};
+  }),std::runtime_error);
+  EXPECT_THROW(replan([&](const auto&,const auto&,const auto*,const auto) {
+    return std::make_shared<robot_trajectory::RobotTrajectory>(*stages[5].trajectory,true);
+  }),std::runtime_error);
+  moveit_msgs::msg::RobotTrajectory unchanged;stages[5].trajectory->getRobotTrajectoryMsg(unchanged);
+  EXPECT_EQ(original,unchanged);EXPECT_TRUE(binding.transaction_id.empty());EXPECT_FALSE(binding.transport_replanned);
+}
+
+TEST_F(PayloadTransition, ReplannedTrajectoryRetainsOriginalScalingAndJointMarginBoundaries) {
+  prepareTransportCollision();
+  auto callback=[&](const auto& scene,const auto& goal,const auto* group,const auto) {return detour(scene,goal,group);};
+  const auto normal=replan(callback,1.);const auto slow=replan(callback,2.5);
+  for(size_t i=0;i<normal.stages[5].trajectory->getWayPointCount();++i) {
+    EXPECT_NEAR(slow.stages[5].trajectory->getWayPointDurationFromPrevious(i),
+      2.5*normal.stages[5].trajectory->getWayPointDurationFromPrevious(i),1e-9);
+    for(auto variable:normal.stages[5].trajectory->getGroup()->getVariableIndexList()) {
+      EXPECT_NEAR(slow.stages[5].trajectory->getWayPoint(i).getVariableVelocities()[variable],
+        normal.stages[5].trajectory->getWayPoint(i).getVariableVelocities()[variable]/2.5,1e-9);
+      EXPECT_NEAR(slow.stages[5].trajectory->getWayPoint(i).getVariableAccelerations()[variable],
+        normal.stages[5].trajectory->getWayPoint(i).getVariableAccelerations()[variable]/6.25,1e-9);
+    }
+  }
+  for(double y:{-.9+1e-6,-.9})EXPECT_NO_THROW(replan([&](const auto& scene,const auto& goal,const auto* group,const auto) {
+    return detour(scene,goal,group,y);
+  }));
+  EXPECT_THROW(replan([&](const auto& scene,const auto& goal,const auto* group,const auto) {
+    return detour(scene,goal,group,-.9-1e-6);
+  }),std::runtime_error);
+}
+
+TEST_F(PayloadTransition, ReplannerCannotMoveOtherJointsOrUseBudgetBeyondOriginalContext) {
+  prepareTransportCollision();
+  EXPECT_THROW(replan([&](const auto& scene,const auto& goal,const auto* group,const auto) {
+    auto path=detour(scene,goal,group);path->getWayPointPtr(1)->setVariablePosition("other",.01);return path;
+  }),std::runtime_error);
+  created=std::chrono::steady_clock::now()-std::chrono::seconds(119);
+  unsigned calls=0;
+  try {
+    replan([&](const auto& scene,const auto& goal,const auto* group,const auto deadline) {
+      ++calls;EXPECT_LE(deadline,created+std::chrono::seconds(120));
+      std::this_thread::sleep_until(deadline+std::chrono::milliseconds(1));return detour(scene,goal,group);
+    });FAIL()<<"accepted beyond the original context deadline";
+  }catch(const std::runtime_error& error) {EXPECT_NE(std::string(error.what()).find("BUDGET_EXHAUSTED"),std::string::npos);}
+  EXPECT_EQ(calls,1u);EXPECT_TRUE(binding.transaction_id.empty());
 }

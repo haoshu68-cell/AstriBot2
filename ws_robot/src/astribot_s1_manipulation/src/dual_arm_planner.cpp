@@ -85,8 +85,12 @@ public:
       return it->second;
     }
     try {
+      // Planning-only move_group omits ExecuteTrajectory. MoveIt's default
+      // constructor waits forever for that optional server, blocking PlanSkill.
+      // Bound discovery; plan()/execute() still check their own action server.
       auto mgi = std::make_shared<moveit::planning_interface::MoveGroupInterface>(
-        node_, group_name);
+        node_, group_name, std::shared_ptr<tf2_ros::Buffer>(),
+        rclcpp::Duration::from_seconds(2.0));
       move_groups_.emplace(group_name, mgi);
       return mgi;
     } catch (const std::exception & e) {

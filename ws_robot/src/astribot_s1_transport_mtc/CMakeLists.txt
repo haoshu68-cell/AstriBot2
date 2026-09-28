@@ -41,6 +41,7 @@ install(TARGETS transport_scene_signature EXPORT transport_scene_signature_targe
  ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
 install(FILES include/astribot_s1_transport_mtc/canonical_octomap.hpp
  include/astribot_s1_transport_mtc/canonical_scene.hpp
+ include/astribot_s1_transport_mtc/base_motion_limits.hpp
  DESTINATION include/${PROJECT_NAME})
 ament_export_targets(transport_scene_signature_targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(moveit_msgs)
@@ -57,6 +58,10 @@ if(BUILD_TESTING)
   target_link_libraries(payload_transition_test transport_scene_signature ${OCTOMAP_LIBRARIES})
   ament_target_dependencies(payload_transition_test astribot_s1_manipulation astribot_transport_msgs moveit_ros_planning_interface)
   astribot_target_eigen(payload_transition_test)
+  ament_add_gtest(support_selection_test test/support_selection_test.cpp)
+  target_include_directories(support_selection_test PRIVATE include)
+  ament_target_dependencies(support_selection_test moveit_core)
+  astribot_target_eigen(support_selection_test)
   enable_testing()
   add_executable(execution_guard_test test/execution_guard_test.cpp)
   target_include_directories(execution_guard_test PRIVATE include)

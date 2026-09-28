@@ -1,7 +1,11 @@
 #pragma once
 #include <cmath>
 #include <limits>
+#include <sstream>
+#include <moveit/robot_state/conversions.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit_msgs/msg/robot_state.hpp>
+#include <rclcpp/logging.hpp>
 #include "collision_validator.hpp"
 #include "singularity_monitor.hpp"
 #include "trajectory_time_optimizer.hpp"
@@ -37,8 +41,24 @@ inline bool validateExternalTrajectoryGeometry(
   }
   CollisionValidator collision;
   if(!collision.configure(scene,CollisionParams{},error)) return false;
-  auto report=collision.checkStates(states,group->getName());
-  if(report.collision) {error="EXTERNAL_COLLISION:"+report.reason;return false;}
+  size_t first_bad_index=0;
+  auto report=collision.checkStates(states,group->getName(),&first_bad_index);
+  if(report.collision) {
+    error="EXTERNAL_COLLISION:"+report.reason;
+    moveit_msgs::msg::RobotState first,bad,last;
+    moveit::core::robotStateToRobotStateMsg(states.front(),first,true);
+    moveit::core::robotStateToRobotStateMsg(states[first_bad_index],bad,true);
+    moveit::core::robotStateToRobotStateMsg(states.back(),last,true);
+    std::ostringstream snapshots;snapshots.precision(std::numeric_limits<double>::max_digits10);
+    snapshots<<"first=";moveit_msgs::msg::to_flow_style_yaml(first,snapshots);
+    snapshots<<"\nbad=";moveit_msgs::msg::to_flow_style_yaml(bad,snapshots);
+    snapshots<<"\nlast=";moveit_msgs::msg::to_flow_style_yaml(last,snapshots);
+    RCLCPP_ERROR(rclcpp::get_logger("astribot_s1_manipulation.external_trajectory"),
+      "EXTERNAL_COLLISION_SNAPSHOT frame=%s group=%s first_bad_index=%zu checked_states=%zu trajectory_waypoints=%zu reason=%s\n%s",
+      scene->getPlanningFrame().c_str(),group->getName().c_str(),first_bad_index,states.size(),trajectory.getWayPointCount(),
+      report.reason.c_str(),snapshots.str().c_str());
+    return false;
+  }
   if(group->getName()=="arm_left" || group->getName()=="arm_right") {
     SingularityMonitor singularity;
     if(!singularity.configure(SingularityParams{},error)) return false;

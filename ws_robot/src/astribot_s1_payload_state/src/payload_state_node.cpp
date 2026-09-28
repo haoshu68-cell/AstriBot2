@@ -39,17 +39,35 @@ class PayloadStateNode:public rclcpp::Node {
         for(const auto &event:batch)ledger_->observe(*event.value,get_clock()->now().nanoseconds(),steady(),event.receipt);
         now=get_clock()->now().nanoseconds();wall=steady();
         if(future && future->wait_for(std::chrono::seconds(0))==std::future_status::ready) {
-          try {auto response=future->get();ledger_->reconcile(*ticket,response->scene,now,wall);}
-          catch(const std::exception &e) {RCLCPP_WARN(get_logger(),"Scene readback failed: %s",e.what());}
+          try {
+            auto response=future->get();const bool reconciled=ledger_->reconcile(*ticket,response->scene,now,wall);
+            RCLCPP_INFO(get_logger(),"PAYLOAD_SCENE_TIMING event=ready request=%lld generation=%llu sent_ros=%lld sent_steady=%lld handled_ros=%lld handled_steady=%lld elapsed_ns=%lld reconciled=%d",
+              static_cast<long long>(future->request_id),static_cast<unsigned long long>(ticket->generation),
+              static_cast<long long>(ticket->ros_at),static_cast<long long>(ticket->steady_at),
+              static_cast<long long>(now),static_cast<long long>(wall),static_cast<long long>(wall-ticket->steady_at),reconciled);
+          }
+          catch(const std::exception &e) {RCLCPP_WARN(get_logger(),"Scene readback failed: %s; PAYLOAD_SCENE_TIMING event=error request=%lld generation=%llu sent_ros=%lld sent_steady=%lld handled_ros=%lld handled_steady=%lld elapsed_ns=%lld",
+            e.what(),static_cast<long long>(future->request_id),static_cast<unsigned long long>(ticket->generation),
+            static_cast<long long>(ticket->ros_at),static_cast<long long>(ticket->steady_at),
+            static_cast<long long>(now),static_cast<long long>(wall),static_cast<long long>(wall-ticket->steady_at));}
           future.reset();ticket.reset();
         }
-        if(future && wall-ticket->steady_at>=kLease) {scene_->remove_pending_request(future->request_id);future.reset();ticket.reset();}
+        if(future && wall-ticket->steady_at>=kLease) {
+          RCLCPP_WARN(get_logger(),"PAYLOAD_SCENE_TIMING event=timeout request=%lld generation=%llu sent_ros=%lld sent_steady=%lld handled_ros=%lld handled_steady=%lld elapsed_ns=%lld",
+            static_cast<long long>(future->request_id),static_cast<unsigned long long>(ticket->generation),
+            static_cast<long long>(ticket->ros_at),static_cast<long long>(ticket->steady_at),
+            static_cast<long long>(now),static_cast<long long>(wall),static_cast<long long>(wall-ticket->steady_at));
+          scene_->remove_pending_request(future->request_id);future.reset();ticket.reset();
+        }
         if(!future && (last_request<0 || wall-last_request>=100000000) && scene_->service_is_ready()) {
           ticket=ledger_->request(now,wall);
           if(ticket) {
             auto request=std::make_shared<Service::Request>();
             request->components.components=moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS;
             future=scene_->async_send_request(request);last_request=wall;
+            RCLCPP_INFO(get_logger(),"PAYLOAD_SCENE_TIMING event=send request=%lld generation=%llu sent_ros=%lld sent_steady=%lld submitted_steady=%lld",
+              static_cast<long long>(future->request_id),static_cast<unsigned long long>(ticket->generation),
+              static_cast<long long>(ticket->ros_at),static_cast<long long>(ticket->steady_at),static_cast<long long>(steady()));
           }
         }
         if(last_publish<0 || wall-last_publish>=50000000 || overflow || !batch.empty()) {

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "astribot_s1_transport_native/arm_hold.hpp"
 #include <cmath>
+#include <limits>
 using namespace astribot::transport;
 namespace {
 constexpr int64_t T=1000000000,MS=1000000;
@@ -160,5 +161,46 @@ TEST_F(Fixture, ClaimsMayRefreshBeforeFirstConfirmationButNotAcrossConfirmedGap)
   EXPECT_FALSE(h.status(T+600*MS,T+600*MS).hold_confirmed);
   h.controllers(controllers(),T+600*MS,T+600*MS,T+600*MS,T+600*MS);
   EXPECT_TRUE(h.status(T+600*MS,T+600*MS).hold_confirmed);
+}
+TEST_F(Fixture, CoordinatorObservationAcceptsFirstAndLaterFreshPositive) {
+  ready();const auto first=T+600*MS;
+  auto observed=h.status(first,first);const ArmHold &hold=h;
+  EXPECT_TRUE(hold.observationMatches(observed,first,first,first,first,first));
+  observed=h.status(first+40*MS,first+40*MS);
+  EXPECT_TRUE(hold.observationMatches(observed,first,first+50*MS,first+50*MS,first+60*MS,first+60*MS));
+  EXPECT_TRUE(h.status(first+60*MS,first+60*MS).hold_confirmed);
+}
+TEST_F(Fixture, CoordinatorObservationRejectsFalseOldAndMismatchedHold) {
+  ready();const auto first=T+600*MS;const auto valid=h.status(first,first);
+  auto changed=valid;changed.hold_confirmed=false;
+  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
+  changed=valid;changed.owner_id="other";
+  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
+  changed=valid;changed.hold_id="previous";
+  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
+  changed=valid;changed.attachment_revision="previous_payload";
+  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
+  changed=valid;changed.header.stamp=stamp(first-1);
+  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
+  changed=valid;changed.header.stamp=stamp(first+1);
+  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
+  changed=valid;changed.header.stamp.nanosec=1000000000;
+  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
+  h.cancel();EXPECT_FALSE(h.observationMatches(valid,first,first,first,first,first));
+}
+TEST_F(Fixture, CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries) {
+  ready();const auto first=T+600*MS;auto observed=h.status(first,first);observed.lease_s=.1;
+  const auto received=first+20*MS,expires=first+100*MS;
+  EXPECT_TRUE(h.observationMatches(observed,first,received,received,expires-1,expires-1));
+  EXPECT_FALSE(h.observationMatches(observed,first,received,received,expires,expires-1));
+  // A frozen ROS clock cannot extend the source's remaining lease at receipt.
+  EXPECT_TRUE(h.observationMatches(observed,first,received,received,received,expires-1));
+  EXPECT_FALSE(h.observationMatches(observed,first,received,received,received,expires));
+  EXPECT_FALSE(h.observationMatches(observed,first,received,received,received-1,received));
+  EXPECT_FALSE(h.observationMatches(observed,first,received,received,received,received-1));
+  for(const auto lease:{0.,-.1,.500000001,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}) {
+    observed.lease_s=lease;
+    EXPECT_FALSE(h.observationMatches(observed,first,received,received,received,received));
+  }
 }
 }

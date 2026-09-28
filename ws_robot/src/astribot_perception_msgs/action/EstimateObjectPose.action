@@ -1,0 +1,31 @@
+# Known-CAD object pose estimation only. The model ID resolves a startup registry;
+# clients cannot supply model paths or simulator ground truth.
+std_msgs/Header header
+string task_id
+string object_id
+string camera_id
+string source_epoch
+string processing_epoch
+string model_id
+sensor_msgs/PointCloud2 object_cloud
+uint64 calibration_revision
+uint64 planning_scene_revision
+uint64 envelope_epoch
+builtin_interfaces/Time valid_until
+float32 timeout_sec
+---
+bool success
+string reason_code
+ObjectPoseObservation observation
+float64 model_coverage
+float64 visible_model_coverage
+bool visibility_model_used
+uint32 observable_normal_directions
+float64 scene_coverage
+float64 rmse_m
+bool symmetry_equivalent
+float32 inference_time_sec
+---
+uint32 processed_points
+float32 inference_time_sec
+string state

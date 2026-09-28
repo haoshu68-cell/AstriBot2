@@ -81,9 +81,23 @@ TEST_F(PayloadClientTest, PropagatesPhysicalErrorDuringIncompleteInventory) {
 TEST_F(PayloadClientTest, NoReadbackTimesOutAndKeepsUnresolvedCommand) {
  int64_t ros=1000000000;PayloadClient client("fixture",[&]{return ros;},options);
  const auto at=steady();client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at);
- EXPECT_THROW(client.applied(inventory(ros),{ros,at},ros,at+2000000000),std::runtime_error);
+ ros=1010000000;const auto call_steady=steady();
+ const auto complete=inventory(ros,true);
+ std::this_thread::sleep_for(std::chrono::seconds(2));
+ EXPECT_THROW(client.applied(inventory(ros),{ros,at},ros,steady()),std::runtime_error);
  EXPECT_TRUE(client.unresolved());
- EXPECT_THROW(client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at+2000000000),std::runtime_error);
+ // Fresh physical input cannot complete an expired application using an old
+ // caller clock that was sampled before waiting. All steady samples are real.
+ std::optional<nlohmann::json> value;const auto until=steady()+1000000000;
+ while(!value&&steady()<until) {
+  publish(ros);std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  value=client.observation(ros,steady());
+ }
+ ASSERT_TRUE(value);
+ try {client.applied(complete,{ros,call_steady},ros,call_steady);ADD_FAILURE()<<"expired command completed";}
+ catch(const std::runtime_error &error){EXPECT_EQ(std::string(error.what()),"PAYLOAD_APPLICATION_TIMEOUT");}
+ EXPECT_TRUE(client.unresolved());
+ EXPECT_THROW(client.begin(true,request(),.08,inventory(ros),{ros,at},ros,steady()),std::runtime_error);
 }
 TEST_F(PayloadClientTest, DetachContinuesCounterAndDoesNotRequireGlobalEmpty) {
  std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
@@ -103,15 +117,50 @@ TEST_F(PayloadClientTest, DetachContinuesCounterAndDoesNotRequireGlobalEmpty) {
  EXPECT_TRUE(applied);EXPECT_FALSE(client.unresolved());EXPECT_EQ(commands,1u);
  {std::lock_guard<std::mutex> lock(mutex);EXPECT_EQ(received.id(),9u);EXPECT_TRUE(received.name().empty());EXPECT_DOUBLE_EQ(received.position().x(),1.);}
 }
-TEST_F(PayloadClientTest, RepeatedPhysicalCaptureCannotRefreshItsReceiptBeforeFirstPoll) {
+TEST_F(PayloadClientTest, RepeatedPhysicalCaptureRemainsUsableWithinCommandBudget) {
  std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
  auto at=steady();client.begin(true,request(),.08,inventory(ros),{ros,at},ros,at);
  ros=1020000000;
  const auto deadline=steady()+450000000;
  while(steady()<deadline){publish(1010000000);std::this_thread::sleep_for(std::chrono::milliseconds(5));}
  at=steady();
- try {client.applied(inventory(ros,true),{ros,at},ros,at);FAIL()<<"old physical capture remained usable";}
- catch(const std::runtime_error &error){EXPECT_NE(std::string(error.what()).find("PAYLOAD_STATE_STALE"),std::string::npos);}
- EXPECT_TRUE(client.unresolved());
+ EXPECT_TRUE(client.applied(inventory(ros,true),{ros,at},ros,at));
+ EXPECT_FALSE(client.unresolved());
 }
+
+TEST_F(PayloadClientTest, SourceLeadingAndRosRollbackKeepLatestObservation) {
+ std::atomic<int64_t> ros{1000000000};PayloadClient client("fixture",[&]{return ros.load();},options);
+ // Every callback receipt necessarily follows this saved caller snapshot.
+ const auto call_ros=ros.load(),call_steady=steady();
+ std::optional<nlohmann::json> value;const auto until=steady()+1000000000;
+ while(!value&&steady()<until) {
+  publish(call_ros,"",false,0);std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  value=client.observation(call_ros,call_steady);
+ }
+ ASSERT_TRUE(value);EXPECT_EQ(value->at("stamp_ns"),call_ros);EXPECT_EQ(commands,0u);
+ // Local ROS order does not alter the real source stamp or invalidate evidence.
+ ros=call_ros-1000000;
+ EXPECT_EQ(client.observation(call_ros,steady())->at("stamp_ns"),call_ros);
+ EXPECT_EQ(client.observation(ros.load(),steady())->at("stamp_ns"),call_ros);
+ EXPECT_EQ(commands,0u);
+}
+TEST_F(PayloadClientTest, OlderErrorCannotOverrideNewerStateButCurrentErrorPropagates) {
+ int64_t ros=1000000000;PayloadClient client("fixture",[&]{return ros;},options);
+ std::optional<nlohmann::json> value;const auto until=steady()+1000000000;
+ while(!value&&steady()<until) {
+  publish(2000000000,"",false,0);std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  value=client.observation(ros,steady());
+ }
+ ASSERT_TRUE(value);
+ for(int i=0;i<10;++i){publish(1500000000,"OLD_ERROR",false,0);std::this_thread::sleep_for(std::chrono::milliseconds(5));}
+ EXPECT_EQ(client.observation(ros,steady())->at("stamp_ns"),2000000000);
+ bool rejected=false;const auto deadline=steady()+1000000000;
+ while(!rejected&&steady()<deadline) {
+  publish(2100000000,"CURRENT_ERROR",false,0);std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  try {(void)client.observation(ros,steady());}
+  catch(const std::runtime_error &error){rejected=true;EXPECT_EQ(std::string(error.what()),"PAYLOAD_PHYSICAL_ERROR:CURRENT_ERROR");}
+ }
+ EXPECT_TRUE(rejected);
+}
+
 }

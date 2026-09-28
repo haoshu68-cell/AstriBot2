@@ -42,7 +42,7 @@ bool ResourceAuthority::record(const std::string &event,const nlohmann::json &de
 }
 void ResourceAuthority::quarantine(const std::string &reason){phase_=ResourcePhase::QUARANTINED;reason_=reason;persist("quarantined");}
 bool ResourceAuthority::clocks(int64_t now,int64_t steady) {
- const bool okay=now>=0&&now<=MAX_TIME-LEASE&&steady>=0&&(last_ros_<0||now>=last_ros_)&&(last_steady_<0||steady>=last_steady_);
+ const bool okay=steady>=0&&(last_steady_<0||steady>=last_steady_);
  last_ros_=now;last_steady_=steady;if(!okay)quarantine("RESOURCE_CLOCK_RESET");return okay;
 }
 Acquisition ResourceAuthority::acquire(const std::string &task,const std::string &request,int64_t now,int64_t steady) {
@@ -60,7 +60,7 @@ Acquisition ResourceAuthority::acquire(const std::string &task,const std::string
 }
 std::optional<ResourceGrant> ResourceAuthority::grant(int64_t now,int64_t steady) {
  if(!clocks(now,steady)||storage_failed_||phase_==ResourcePhase::IDLE||phase_==ResourcePhase::STOPPING||phase_==ResourcePhase::QUARANTINED)return {};
- if(now>=lease_.valid_until||steady-lease_.received_steady>=lease_.valid_until-lease_.received_at){quarantine("RESOURCE_LEASE_EXPIRED");return {};}
+ if(steady-lease_.received_steady>=lease_.valid_until-lease_.received_at){quarantine("RESOURCE_LEASE_EXPIRED");return {};}
  return lease_;
 }
 bool ResourceAuthority::renew(const std::string &lease,const std::string &epoch,uint64_t sequence,int64_t now,int64_t steady) {

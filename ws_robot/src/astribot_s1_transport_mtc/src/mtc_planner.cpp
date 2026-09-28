@@ -15,6 +15,7 @@
 #include "astribot_s1_transport_mtc/canonical_octomap.hpp"
 #include "astribot_s1_transport_mtc/canonical_scene.hpp"
 #include "astribot_s1_transport_mtc/payload_transition.hpp"
+#include "astribot_s1_transport_mtc/support_selection.hpp"
 
 namespace mtc=moveit::task_constructor;
 using Action=astribot_transport_msgs::action::PlanManipulation;
@@ -205,6 +206,9 @@ class Planner {
         gc.group_name="gripper_left";gc.action_name="/gripper_left_controller/follow_joint_trajectory";
         gc.tcp_link="astribot_arm_left_tcp_link";gc.left_pad_link="astribot_gripper_left_Link_L11";
         gc.right_pad_link="astribot_gripper_left_Link_R11";
+        // This simulation-only sequence confirms a position endpoint against
+        // rigid payloads. A compression preload makes that endpoint unreachable.
+        gc.grasp_preload_m=0.;
         std::string error;
         if(gripper.configureForPlanning(task.getRobotModel(),gc,error)!=PlanErrorCode::kSuccess)throw std::runtime_error(error);
         double grasp_angle;
@@ -269,9 +273,13 @@ class Planner {
             state->getAllowedCollisionMatrixNonConst()=original_acm;
           });sequence->insert(std::move(restore));
         } else {
+          // Resolve the actual target support using the measured attachment.
+          // .025 m is the existing maximum physical placement tolerance.
+          const auto support_id=astribot_s1_transport_mtc::selectPlaceSupport(
+            canonical_scene,goal->target,goal->object_id,.025);
           const auto original_acm=scene->getAllowedCollisionMatrix();
           auto support=std::make_unique<mtc::stages::ModifyPlanningScene>("_SUPPORT_ALLOW");
-          support->allowCollisions(goal->object_id,goal->object_id+"_place_station",true);
+          support->allowCollisions(goal->object_id,support_id,true);
           sequence->insert(std::move(support));
           arm("PLACE_APPROACH",goal->target,cartesian);
           hand("RELEASE",gripper.openAngle());attachment(false);
@@ -405,22 +413,68 @@ public:
         struct Release {std::atomic<bool>& busy;~Release(){busy=false;}} release{busy_};
         try {
           std::lock_guard<std::mutex> guard(mutex_);
-          auto stages=astribot_s1_transport_mtc::revalidatePayloadTransition(*request,cached_context_,
-            cached_payload_,cached_stages_,cached_at_,velocity_scaling_,acceleration_scaling_);
+          auto candidate=astribot_s1_transport_mtc::revalidatePayloadTransition(*request,cached_context_,
+            cached_payload_,cached_stages_,cached_at_,velocity_scaling_,acceleration_scaling_,
+            [this](const planning_scene::PlanningSceneConstPtr& scene,const moveit::core::RobotState& goal,
+                   const moveit::core::JointModelGroup* group,std::chrono::steady_clock::time_point deadline) {
+              mtc::solvers::PipelinePlanner pipeline(node_);pipeline.setPlannerId("RRTConnectConfig");
+              pipeline.setTimeout(3.);pipeline.setMaxVelocityScalingFactor(velocity_scaling_);
+              pipeline.setMaxAccelerationScalingFactor(acceleration_scaling_);pipeline.init(scene->getRobotModel());
+              auto target=planning_scene::PlanningScene::clone(scene);target->setCurrentState(goal);
+              moveit_msgs::msg::Constraints constraints;
+              for(const auto& joint:group->getVariableNames()) {
+                const auto& bounds=scene->getRobotModel()->getVariableBounds(joint);
+                if(!bounds.position_bounded_)continue;
+                const auto interval=astribot_s1_transport_mtc::planningInterval(
+                  bounds.min_position_,bounds.max_position_,joint_margin_);
+                moveit_msgs::msg::JointConstraint constraint;constraint.joint_name=joint;
+                constraint.position=(interval.lower+interval.upper)/2.;
+                constraint.tolerance_above=constraint.tolerance_below=(interval.upper-interval.lower)/2.;
+                constraint.weight=1.;constraints.joint_constraints.push_back(constraint);
+              }
+              const auto remaining=std::chrono::duration<double>(deadline-std::chrono::steady_clock::now()).count();
+              if(remaining<=0.)throw std::runtime_error("MTC_PAYLOAD_BUDGET_EXHAUSTED");
+              robot_trajectory::RobotTrajectoryPtr path;
+              const auto planned=pipeline.plan(scene,target,group,std::min(3.,remaining),path,constraints);
+              if(!planned)throw std::runtime_error("MTC_PAYLOAD_REPLAN_FAILED:"+planned.message);
+              return path;
+            },trajectory_time_scaling_,joint_margin_);
+          std::vector<Segment> remaining;
+          for(size_t index=request->start_index;index<candidate.stages.size();++index) {
+            const auto& stage=candidate.stages[index];Segment segment;segment.stage_id=stage.id;
+            segment.kind=stage.trajectory->getGroupName()=="gripper_left"?"GRIPPER":"ARM";
+            moveit::core::robotStateToRobotStateMsg(stage.scene->getCurrentState(),segment.expected_start);
+            stage.trajectory->getRobotTrajectoryMsg(segment.trajectory);remaining.push_back(std::move(segment));
+          }
+          if(remaining.size()!=2)throw std::runtime_error("MTC_PAYLOAD_REMAINING_STAGE_COUNT");
           // Prepare the binding before committing either half. An exception
           // leaves the original cache and its original expiry intact.
           auto binding=cached_payload_;binding.transaction_id=request->transaction_id;
-          binding.confirmed_scene=request->scene;
-          cached_stages_.swap(stages);std::swap(cached_payload_,binding);
-          response->success=true;response->reason="MTC_PAYLOAD_REMAINING_SEQUENCE_REVALIDATED";
-        } catch(const std::exception& error){response->success=false;response->reason=error.what();}
+          binding.confirmed_scene=request->scene;binding.transport_replanned=candidate.transport_replanned;
+          response->remaining_stages=std::move(remaining);response->transport_replanned=candidate.transport_replanned;
+          response->reason="MTC_PAYLOAD_REMAINING_SEQUENCE_REVALIDATED";
+          if(std::chrono::steady_clock::now()>=candidate.deadline)
+            throw std::runtime_error("MTC_PAYLOAD_BUDGET_EXHAUSTED");
+          cached_stages_.swap(candidate.stages);std::swap(cached_payload_,binding);
+          response->success=true;
+        } catch(const std::exception& error) {
+          response->success=false;response->remaining_stages.clear();response->transport_replanned=false;
+          response->reason=error.what();
+        }
       });
     server_=rclcpp_action::create_server<Action>(node_,"/transport/plan_manipulation",
       [this](const rclcpp_action::GoalUUID&,std::shared_ptr<const Action::Goal>) {
-        bool free=false;return busy_.compare_exchange_strong(free,true)?rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE:rclcpp_action::GoalResponse::REJECT;
+        // A failed goal reply skips the accepted callback. Reserve only there.
+        return busy_.load()?rclcpp_action::GoalResponse::REJECT:rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
       },[this](const std::shared_ptr<Handle>) {
         std::lock_guard<std::mutex> guard(mutex_);if(active_)active_->preempt();return rclcpp_action::CancelResponse::ACCEPT;
       },[this](const std::shared_ptr<Handle> goal) {
+        bool free=false;
+        if(!busy_.compare_exchange_strong(free,true)) {
+          auto result=std::make_shared<Action::Result>();
+          result->context_id=goal->get_goal()->context_id;result->reason="MTC_BUSY";
+          goal->abort(result);return;
+        }
         if(worker_.joinable())worker_.join();worker_=std::thread([this,goal]{run(goal);});
       });
   }

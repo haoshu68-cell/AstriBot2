@@ -26,7 +26,7 @@ from astribot_logging import get_logger
 import os
 import xml.etree.ElementTree as ET
 
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory, get_package_prefix, PackageNotFoundError
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, OpaqueFunction, SetLaunchConfiguration
 from launch.conditions import IfCondition
@@ -71,6 +71,14 @@ def _fixed_camera_mount_semantic(urdf_xml, srdf_xml):
 
 
 def _prepare_robot_descriptions(context):
+    # sensors_3d.yaml always enables the pointcloud updater. Fail before
+    # move_group starts instead of silently planning with an empty OctoMap.
+    try:
+        sensor_prefix = get_package_prefix('moveit_ros_perception')
+    except PackageNotFoundError as error:
+        raise RuntimeError('Missing moveit_ros_perception: camera obstacle updater unavailable') from error
+    if not os.path.isfile(os.path.join(sensor_prefix, 'lib', 'libmoveit_pointcloud_octomap_updater.so')):
+        raise RuntimeError('Missing PointCloudOctomapUpdater library in ' + sensor_prefix)
     content = Command([
         'xacro ', PathJoinSubstitution([
             FindPackageShare('astribot_s1_description'), 'urdf', 'astribot_s1.xacro']),
@@ -170,6 +178,8 @@ def generate_launch_description():
     ompl_planning = _load_yaml('astribot_s1_moveit_config', 'config/ompl_planning.yaml') or {}
     controllers = _load_yaml(
         'astribot_s1_moveit_config', 'config/moveit_controllers.yaml') or {}
+    sensors_3d = _load_yaml(
+        'astribot_s1_moveit_config', 'config/sensors_3d.yaml') or {}
 
     robot_description_kinematics = {'robot_description_kinematics': kinematics}
     robot_description_planning = {'robot_description_planning': joint_limits}
@@ -206,6 +216,7 @@ def generate_launch_description():
                 planning_pipeline,
                 _controllers_for_execution(controllers,
                     LaunchConfiguration('allow_trajectory_execution').perform(context).lower() == 'true'),
+                sensors_3d,
                 {'use_sim_time': use_sim_time},
                 {'allow_trajectory_execution': ParameterValue(LaunchConfiguration('allow_trajectory_execution'), value_type=bool)},
                 {'capabilities': LaunchConfiguration('extra_capabilities'),

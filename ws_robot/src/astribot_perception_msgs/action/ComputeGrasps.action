@@ -1,0 +1,32 @@
+# The action is an inference request only; it never executes a robot command.
+string task_id
+# Explicit camera snapshot. No hidden subscription or simulator truth is used.
+std_msgs/Header header
+string source_epoch
+# Required when the server is configured for the supervised projection source.
+# Copy from ProjectionHealth for this cloud; never substitute camera source_epoch.
+string processing_epoch
+sensor_msgs/PointCloud2 object_cloud
+builtin_interfaces/Time valid_until
+uint64 envelope_epoch
+string arm_id
+string camera_id
+string object_id
+string object_class
+geometry_msgs/Polygon workspace
+uint32 max_candidates
+float32 timeout_sec
+uint64 calibration_revision
+uint64 planning_scene_revision
+---
+bool success
+string reason_code
+astribot_perception_msgs/GraspCandidate[] candidates
+float32 inference_time_sec
+uint32 raw_candidate_count
+uint32 filtered_candidate_count
+---
+uint32 processed_points
+uint32 candidate_count
+float32 inference_time_sec
+string state

@@ -1,0 +1,391 @@
+{
+  "created_at": "2026-09-28T03:12:51.904073+00:00",
+  "source_worktree": "/home/yjh/WorkSpace/astribot_sdk_ros2",
+  "source_head": "854a8206d295dce5249c7adf5229e9e439559eb8",
+  "source_branch": "chassis-effort-drive",
+  "target_branch": "codex/arm-dynamic-recovery",
+  "merge_target": "chassis-effort-drive",
+  "reason": "Snapshot only the reviewed manipulation stack and local build dependencies; existing prerequisite changes are not dynamic recovery implementation. The source worktree and index are unchanged.",
+  "packages": [
+    "astribot_eigen_vendor",
+    "astribot_navigation_msgs",
+    "astribot_payload_msgs",
+    "astribot_perception_msgs",
+    "astribot_s1_manipulation",
+    "astribot_s1_moveit_config",
+    "astribot_s1_payload_state",
+    "astribot_s1_transport_mtc",
+    "astribot_s1_transport_native",
+    "astribot_transport_msgs"
+  ],
+  "files": [
+    {
+      "path": ".agents/skills/robot-runtime-cpp/SKILL.md",
+      "sha256": "8955250b01d14821efe7647fbdf9d8a5d5864c17ec245044d192c0f6ed2aed7e"
+    },
+    {
+      "path": ".agents/skills/ros2-stack-ops/SKILL.md",
+      "sha256": "4341d7184c1cb62e7b1403da887d4d34853e5cb86a920862dd5eb7e034d58fa1"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "9c360bdf9d1281db6fa61cfec63f46bc28ee6d7d8994dc16572da0283395c28a"
+    },
+    {
+      "path": "docs/MOVEIT_DYNAMIC_AVOIDANCE_RECOVERY_PLAN_20260928.md",
+      "sha256": "cf929e13726ae59c329f9d7271486b3cfc7a4909936f8974c37527ea4e2847d2"
+    },
+    {
+      "path": "docs/evidence/moveit_dynamic_avoidance_20260928/source_audit.json",
+      "sha256": "ffee23b896f5a9a0eb26c1f2bd1bf7dc8159327dae0f9c060f88309ad55e9379"
+    },
+    {
+      "path": "ws_robot/src/astribot_navigation_msgs/CMakeLists.txt",
+      "sha256": "61dc5b79c91962408b96c106e2940bc0bc97df7e470dbdb45f8e8610c71aae85"
+    },
+    {
+      "path": "ws_robot/src/astribot_navigation_msgs/msg/NavigationEnvelopeV2.msg",
+      "sha256": "b972fe33a9986acf05693c87d3b12c714e7cf450682e367524b128fd7e3e4092"
+    },
+    {
+      "path": "ws_robot/src/astribot_navigation_msgs/msg/RobotGeometryState.msg",
+      "sha256": "3bf0d92f0dc10edab8de49bcc347f50f168f75d9a0e7327c602225cb6329f38c"
+    },
+    {
+      "path": "ws_robot/src/astribot_navigation_msgs/msg/StartManeuver.msg",
+      "deleted": true
+    },
+    {
+      "path": "ws_robot/src/astribot_navigation_msgs/msg/StartManeuverRequest.msg",
+      "deleted": true
+    },
+    {
+      "path": "ws_robot/src/astribot_navigation_msgs/srv/AssessNavigationStart.srv",
+      "sha256": "0b7b2c7710215dda183f0aa7d284063ac1be76ea4c91c89057e88f96ac654673"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/CMakeLists.txt",
+      "sha256": "38537c5eda76b9316acb694c25fa723eeec207dab5d21f1a2bc87b29b8734303"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/action/ComputeGrasps.action",
+      "sha256": "bffdc24969a9b8a864e1d54ae08e9231ca7f0dca86d3ed20a1c0360a59de890e"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/action/EstimateObjectPose.action",
+      "sha256": "7e07d7ad9b38690537da480f09ee409d197a3d5791b00a06353c8f1b18e0da3c"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/msg/CameraHealth.msg",
+      "sha256": "b3030ba741c16ad749bad04d3ebfbb8064f1df0ed182b7ba2225220e82fa3144"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/msg/CameraSessionState.msg",
+      "sha256": "267f1e23521d0a53bb5c9b59b9d3b192de4d153ff2417741899169bbacd64e25"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/msg/Detection2D.msg",
+      "sha256": "67a7abe545a04a5dc2b877dd92e17279c4bcf01d39f3cbf3d07849b61fbc4472"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/msg/GraspCandidate.msg",
+      "sha256": "13b94b52c8a945e5dddcaa962ba41ec3086746c55dd0e0dcaf13edd805f26f1d"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/msg/GraspCandidateArray.msg",
+      "sha256": "7f0e2e3b251cc862264577c7ceddbfef61c35d915c2e2962f18ee230ab011bf5"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/msg/ObjectPoseObservation.msg",
+      "sha256": "954dfd38d6aa668a46752e4fae85d3193c092308d159b07ff36d261de691ae09"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/msg/ProjectionHealth.msg",
+      "sha256": "6a7613aa1744dd3a1847938d14ac11edf1eb0cb3d602cba0d5c5d84f6e361401"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/package.xml",
+      "sha256": "a62ca87443cdb764fb8331efa0928a7399fcc1d6e0719be7986af2019ed6f3d1"
+    },
+    {
+      "path": "ws_robot/src/astribot_perception_msgs/srv/SetCameraSession.srv",
+      "sha256": "4e8c5a24d00e254f3d72d78f2696b4257ba34061530a78ebef7e96930b5e2a6f"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_manipulation/CMakeLists.txt",
+      "sha256": "94c38d6ae376c7b36ed23018a07f126c11a4880e07718e63d37f1534bf935c87"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/external_trajectory_validator.hpp",
+      "sha256": "4d1f16ce587f1daa23f06543adbfc4daa5191b049173dd3f37662bb5c09d35ee"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_manipulation/package.xml",
+      "sha256": "4ccd4fce05b77f772d368677f8f62f2540a8d824ce1b22000ffd0448c7f9ed4c"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_manipulation/src/dual_arm_planner.cpp",
+      "sha256": "a17ca563e7bab5106156be2761fada8b9cd7ab525e674cf8f987bd75ec2df747"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_manipulation/src/grasp_candidate_gate_node.cpp",
+      "sha256": "3bb408b25c4bc072d31e9c2e488701614ffa0d87b0d9d7c6a7b527bdeb650df4"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_manipulation/test_grasp_candidate_gate.cpp",
+      "sha256": "aef03e4e8ad59209f6b42d5f399630dbf5e5f4a065e46709e72ff0cc080157e3"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_moveit_config/config/astribot_s1.srdf",
+      "sha256": "1a272c8af5508d0c78c40685bc1afcd2c38bbe3678bd4d3e69bac829647c668c"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_moveit_config/config/sensors_3d.yaml",
+      "sha256": "a301118c857c8e6e805a3433f25bd8e7c57e0f9d30294fe22149637b122fab8d"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_moveit_config/launch/move_group.launch.py",
+      "sha256": "cd4d136092015cd4c498ea62ae78399d7b64894bd51f74a2e2463b9502de2fd2"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_moveit_config/package.xml",
+      "sha256": "3e55c89e4be0104e2d9a3ac5daca33648c0fd46d625d270c7e60f754f2c5a732"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/CMakeLists.txt",
+      "sha256": "b283b4c1cb3b36047c061544385f6a525f674809c06c48221c158f5af13cde09"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/include/astribot_s1_payload_state/kinematic_geometry.hpp",
+      "sha256": "6503d7b6655c753f69d9db0229055fbd683cc0da6a218d90d41d250707394b47"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/src/consumer.cpp",
+      "sha256": "c014f189dc413568cde8578982bc244a5509d4f23fa6766ec1151da5cca4ad04"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/src/ledger.cpp",
+      "sha256": "88a47004e97e5b250a29dc18e019f1b583cbabd15436492ca90f32b31b6299df"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/src/payload_state_node.cpp",
+      "sha256": "a4a48f7774410bb188a8ed5e73083c306f80a4fad7989df7c2fc1a31f625bc5e"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/test/consumer_test.cpp",
+      "sha256": "5e536b54bce43af6da05054bb6088e19ed5f4f8bb637b812a09f2365dd8ff4dd"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/test/latest_time_contract_test.cpp",
+      "sha256": "9ca3d0d021f9146f8178273034339d1c9ded5abd84fb8768ed3be506ee56aede"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_payload_state/test/ledger_test.cpp",
+      "sha256": "098d126e1abb5e82921f2189b22257597be0d39ec9a1bc090c2059f228bc3802"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/CMakeLists.txt",
+      "sha256": "cfef95d18d1b577587ebf98c3e4e52f62444a6f6b5e7064fe3243c61b911eaa7"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/README.md",
+      "sha256": "3e0e68494221a61e1ac89cec54b69059dfe6e31af4f6aecf683e38c1c59d245e"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/base_motion_limits.hpp",
+      "sha256": "b22975ae76c22c3c03c74f1b0249fe3f55b77b90e13582cc5e75b9445519a7cb"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/execution_guard.hpp",
+      "sha256": "b1a202eaa4d39790053ae7bdab97f208923490c636edb27e312602250e8eeb7a"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/payload_transition.hpp",
+      "sha256": "85dc1b1b6347b8436a37b8e7504cdaee403083aa315f340c6fa4ad02423dcb63"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/support_selection.hpp",
+      "sha256": "c969222ac921f9b0d2fa7a90026588da5a7722d7de3d7b401588d1635056b737"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/src/execution_guard.cpp",
+      "sha256": "d28f09448ea35dc18d04254e876c68599c1f2304ca063b51297936c37a141760"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp",
+      "sha256": "da621a4bd79aa60beb00ee0d0a8292990db354999fb06ef6564f4172f03c7f01"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/src/payload_transition.cpp",
+      "sha256": "0dfa7b1dec11683d5d991825960561ae3435f16a2dbfa1b45dea5315fe50c811"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/test/execution_guard_test.cpp",
+      "sha256": "4b5d053eb190dab11aa6ec1e33affb32cd8d0dbf31eb6084ded13cd208866f95"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/test/payload_transition_test.cpp",
+      "sha256": "28dadf7ecc0527e823c663a0d2c21bff56bc9d820a96af5570fa3a6c680f3bbd"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_mtc/test/support_selection_test.cpp",
+      "sha256": "974271fd3d0085f7641e9383120fa85cae124fafbd968d4b5a91a56bb26e4b3f"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/CMakeLists.txt",
+      "sha256": "43d742f0a36e43ff5b839f2a08c76c52b3aade1a9bb132c62d335c7f5ea6e4fd"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/README.md",
+      "sha256": "41bb5e473cf1284369029f803a334b2452e5d554c078cf3c506c942bb8edc0a9"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/action/FixedStationTransfer.action",
+      "sha256": "6b2f5506287838a96ad7e99e2802d7805a2ae3c523c6241a79ec9dc60e46a18c"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/action/ManipulationToHold.action",
+      "sha256": "3e80d613c65320faed3c2eda61cb303c8a1553a3793a569d38397b647bed5210"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/arm_hold.hpp",
+      "sha256": "793f109da0a20328c6a6ea87f944fc968f4d628b6201bead67c9147c928be12f"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/fixed_station_navigation.hpp",
+      "sha256": "57de0b7ca109f9f768a8532c2b3f290fa2b437503d26d7a24b61a9532a1b601c"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/fixed_station_scene.hpp",
+      "sha256": "fe2845994327ba74b07e8535f57cd5a53c92c03df5c83b42ceda03c851451a4b"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/mtc_plan.hpp",
+      "sha256": "61c10e3336a185b99f2ebf46bbeab7a957df80a05c70dab58686c496cebdbfdc"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/payload_client.hpp",
+      "sha256": "909d1d8f4e1af751ee327c438de43519e3af0afb70c51287b5a02dc94041a785"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/payload_command.hpp",
+      "sha256": "13c61fd4fa47db2625b6284bc6ed8f8bad5702440c413251f7df7826d9ce7455"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/payload_frames.hpp",
+      "sha256": "17f9074325c55cfedf4b10dd85cd9839bb412fa32d34ba7615a4d27cd9f07fdb"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/payload_scene.hpp",
+      "sha256": "f1e99cc0342a26623ad8ad6f04e86e8d7ae0806b5d06a93147dee23166e8cb36"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/slam_pose_stop_window.hpp",
+      "sha256": "b93350dba5a565d14ff12b7c8a31c80f58b5467206c460ec2fc2b376e8a9ac8a"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/trajectory_digest.hpp",
+      "sha256": "bb039cf42526f28e7b756377cb733df49412cf177aa5d86b3a1ce10707ce1e02"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/package.xml",
+      "sha256": "0c37929bf08a2177338a8b21d8287a5c0c6405e061cde2124baac7e13f2c8b1b"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/arm_hold.cpp",
+      "sha256": "22f9870bb18d670dc298474819e9f62dc831ce991b6865a6ea5aa26b305f3430"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/fixed_station_navigation.cpp",
+      "sha256": "68172e5b3d01021ebb3f03a2a9139c714a32b9747bb27ca20c46cb999e152bd6"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/fixed_station_scene.cpp",
+      "sha256": "3f3a53e1e7907ff7001c49aa168584eda728c6d472c5d768e164d8757b02af91"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp",
+      "sha256": "db84b670d3712a17ad9cb7e487f8a9b172e638595f11613be4c688d9514321c4"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/mtc_plan.cpp",
+      "sha256": "2cb838e982c0194332be1558d6a37ba71c148104858ee6953e72c108ea1280fa"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/payload_client.cpp",
+      "sha256": "949d5c12e3d27966a47c520e68a2115ae785910af3df64e6f3072fa004c806db"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/payload_command.cpp",
+      "sha256": "2b2a1b0ac7f5c6adc78a852896dd97c2597ae7d489fa59d1cfaf0f114ab50962"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/payload_frames.cpp",
+      "sha256": "6ccb00ccadea2860a6caaef7792ceaf2acfdd8ccca11b34e0c2572871c35c588"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/payload_scene.cpp",
+      "sha256": "a4b257132b36cab8215a4f4db3dce9939448f6a98430f2f69cca24306211999b"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/src/resource_authority.cpp",
+      "sha256": "b8a0e4ba0505e6e2fd9e3d19eded77c40573590055da2a815c1a2f0ddb4644fb"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp",
+      "sha256": "8d0a7970a9ca0e794265ea65d32dbc18bea84c3f5b5e35056a16a7f61acd8d15"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp",
+      "sha256": "40715b4bdbb91c5a3d1f8cd46f98e037531433fb29395a6f05dccd3acffcd01c"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/fixed_station_scene_test.cpp",
+      "sha256": "ba27a1288ae1e321a7bd1e40a15cd5775804e6476611f71a71935521e4d28424"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/full_physical_fixture.cpp",
+      "sha256": "d771f165839f14e9b3307214354d2248b5d20343b849596dc75b165383660fd3"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/latest_time_contract_test.cpp",
+      "sha256": "5dcd4d57df4ab925054bf1ba02208cae633e9979bfedc991d5409ba132eec733"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/mtc_plan_test.cpp",
+      "sha256": "d7f9d45dc32ed7f5ce2af7b3a47e3e3c1f4e67445f775051ef51d526c3252e34"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/payload_client_test.cpp",
+      "sha256": "bbf9a8bbf4dcaba056e678d6b3176dfb01b7dfa293a090fff3b6b3dc7c1a61d3"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/payload_frames_test.cpp",
+      "sha256": "5d8c7c88dd86b617db988d05a73742c7ef06d59cbf04e23b1b8b2b3aff4befcb"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/payload_scene_test.cpp",
+      "sha256": "17a77a787b4e365744fe9886c5ae66724b76448b762076e351b2db39e6e8f840"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp",
+      "sha256": "369581f5a5ad29db702ede2a21e6e33ded824ef2ed86a8053818901b9d7771d2"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/trajectory_digest_test.cpp",
+      "sha256": "4cb894b9b0f6267e8cf110b84f41ad9efce5cad4dac26c3c28fe31e8a17b270f"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/verify_full_manipulation.py",
+      "sha256": "0a92c35cc5771d56374bbe8834818e6b8b1c825f1ae94f69906af7998ce2265a"
+    },
+    {
+      "path": "ws_robot/src/astribot_s1_transport_native/test/verify_plan_to_hold.py",
+      "sha256": "fb2fc6b6772d008f2a34352412fc49735083516b6b1609061a4b5be80b966f9d"
+    },
+    {
+      "path": "ws_robot/src/astribot_transport_msgs/srv/RevalidatePayloadTransition.srv",
+      "sha256": "60f865eb542476f214005800ebedab830e75acbc2b42cd66f39e5094163aec31"
+    }
+  ]
+}

@@ -46,22 +46,22 @@ TEST_F(Fixture, MissingInventoryOrWrongSourceCannotClearLoad) {
   EXPECT_FALSE(ledger.observe(bad,T+1,T+1));EXPECT_FALSE(ledger.state(T+1,T+1).confirmed);
   EXPECT_FALSE(ledger.state(T+1,T+1).observation.objects.empty());
 }
-TEST_F(Fixture, ForeignSessionIsIgnoredWithoutRenewal) {
+TEST_F(Fixture, ForeignSessionDoesNotReplaceConfirmedSource) {
   confirm();auto bad=empty(2,1,T+100);bad.session_id="foreign";EXPECT_FALSE(ledger.observe(bad,T+100,T+100));
-  EXPECT_TRUE(ledger.state(T+100,T+100).confirmed);EXPECT_FALSE(ledger.state(T+kLease,T+kLease).confirmed);
+  EXPECT_TRUE(ledger.state(T+100,T+100).confirmed);EXPECT_TRUE(ledger.state(T+kLease,T+kLease).confirmed);
 }
-TEST_F(Fixture, SourceAndSteadyDeadlinesAreStrictAndHeartbeatCannotRenew) {
+TEST_F(Fixture, ObservationDoesNotExpireBySourceOrSteadyAge) {
   confirm();EXPECT_TRUE(ledger.state(T+kLease-1,T+kLease-1).confirmed);
-  EXPECT_FALSE(ledger.state(T+kLease,T+kLease).confirmed);
+  EXPECT_TRUE(ledger.state(T+kLease,T+kLease).confirmed);
 }
-TEST_F(Fixture, FrozenRosTimeExpiresOnWallClock) {
-  confirm();EXPECT_FALSE(ledger.state(T,T+kLease).confirmed);
+TEST_F(Fixture, FrozenRosTimeRetainsLatestObservation) {
+  confirm();EXPECT_TRUE(ledger.state(T,T+kLease).confirmed);
 }
-TEST_F(Fixture, RepeatedEvidenceAndScenePollingDoNotRenewCapture) {
+TEST_F(Fixture, RepeatedEvidenceRetainsDiagnosticCaptureDeadline) {
   confirm();auto ticket=ledger.request(T+100,T+100);ASSERT_TRUE(ticket);
   EXPECT_FALSE(ledger.observe(empty(),T+100,T+100));
   EXPECT_TRUE(ledger.reconcile(*ticket,scene(empty()),T+100,T+100));
-  EXPECT_FALSE(ledger.state(T+kLease,T+kLease).confirmed);
+  EXPECT_TRUE(ledger.state(T+kLease,T+kLease).confirmed);
 }
 TEST_F(Fixture, EmptyLoadedEmptyNeverReusesVersion) {
   confirm();auto first=ledger.state(T,T);confirm(loaded(2,2,T+10),T+10,T+10);auto second=ledger.state(T+10,T+10);
@@ -94,9 +94,9 @@ TEST_F(Fixture, SourceRestartNeedsReadbackAndRetiredEpochCannotReturn) {
   auto old=empty(100,100,T+2);EXPECT_FALSE(ledger.observe(old,T+2,T+2));
   EXPECT_EQ(ledger.state(T+2,T+2).observation.source_epoch,"boot_b");
 }
-TEST_F(Fixture, ClockRollbackRequiresNewClockEpoch) {
-  confirm();EXPECT_FALSE(ledger.state(T-1,T+1).confirmed);
-  EXPECT_FALSE(ledger.observe(empty(2,1,T),T,T+2));
+TEST_F(Fixture, LocalClockRollbackDoesNotChangeSourceEpoch) {
+  confirm();EXPECT_TRUE(ledger.state(T-1,T+1).confirmed);
+  EXPECT_TRUE(ledger.observe(empty(2,1,T),T,T+2));
   auto o=empty(3,2,T);o.clock_epoch=1;ASSERT_TRUE(ledger.observe(o,T,T+3));
   EXPECT_FALSE(ledger.state(T,T+3).confirmed);auto ticket=ledger.request(T,T+3);ASSERT_TRUE(ticket);
   EXPECT_TRUE(ledger.reconcile(*ticket,scene(o),T,T+3));
@@ -106,8 +106,8 @@ TEST_F(Fixture, PendingReleaseCannotPublishEmpty) {
   EXPECT_TRUE(ledger.observe(pending,T+1,T+1));EXPECT_FALSE(ledger.state(T+1,T+1).confirmed);
   EXPECT_FALSE(ledger.request(T+1,T+1));
 }
-TEST_F(Fixture, FutureOrExcessivelyLeasedObservationIsNotEvidence) {
-  EXPECT_FALSE(ledger.observe(empty(1,1,T+1),T,T));auto o=empty();o.valid_until=stamp(T+kLease+1);
+TEST_F(Fixture, FutureObservationAcceptedButConflictingDuplicateRejected) {
+  EXPECT_TRUE(ledger.observe(empty(1,1,T+1),T,T));auto o=empty();o.valid_until=stamp(T+kLease+1);
   EXPECT_FALSE(ledger.observe(o,T,T));EXPECT_FALSE(ledger.state(T,T).confirmed);
 }
 TEST_F(Fixture, DualDistinctPayloadsAcceptedAndDuplicateObjectRejected) {
@@ -155,22 +155,22 @@ TEST_F(Fixture, InvalidPhysicalEvidenceCannotBeHealedBySceneAlone) {
   ASSERT_FALSE(ledger.observe(bad,T+1,T+1));
   EXPECT_FALSE(ledger.request(T+2,T+2));
 }
-TEST_F(Fixture, ForgedLongLeaseSameCaptureDoesNotRenewWallDeadline) {
+TEST_F(Fixture, DiagnosticDeadlineDoesNotControlConfirmation) {
   auto o=empty();o.valid_until=stamp(T+200);confirm(o);
   o.sequence=2;o.valid_until=stamp(T+400);
   ASSERT_TRUE(ledger.observe(o,T+100,T+100));
-  EXPECT_FALSE(ledger.state(T+200,T+200).confirmed);
+  EXPECT_TRUE(ledger.state(T+200,T+200).confirmed);
 }
 TEST_F(Fixture, MalformedStateCannotBeClearedByIdenticalGoodReplay) {
   confirm();auto bad=loaded(2,1,T+1);ASSERT_FALSE(ledger.observe(bad,T+1,T+1));
   EXPECT_FALSE(ledger.observe(empty(),T+2,T+2));EXPECT_FALSE(ledger.request(T+2,T+2));
 }
 
-TEST_F(Fixture, WorkerQueueAgeIsIncludedInOriginalCaptureLease) {
+TEST_F(Fixture, QueuedObservationRemainsValidAndSceneRequestIsTimed) {
   ASSERT_TRUE(ledger.observe(empty(),T,T+400000000,Receipt{T,T}));
   auto ticket=ledger.request(T,T+400000000);ASSERT_TRUE(ticket);
   ASSERT_TRUE(ledger.reconcile(*ticket,scene(empty()),T,T+400000000));
-  EXPECT_FALSE(ledger.state(T,T+kLease).confirmed);
+  EXPECT_TRUE(ledger.state(T,T+kLease).confirmed);
 }
 TEST_F(Fixture, OverflowFaultCannotBeHealedBySceneReadback) {
   confirm();ledger.source_fault("INPUT_QUEUE_OVERFLOW",T,T);
@@ -181,16 +181,16 @@ TEST_F(Fixture, NewLedgerStartsWithIdentifiableUnknownState) {
   EXPECT_EQ(s.observation.session_id,"session");EXPECT_EQ(s.observation.source_id,"physical_inventory");
   EXPECT_EQ(s.observation.environment,"simulation");EXPECT_EQ(s.ledger_epoch,"ledger_boot");
 }
-TEST_F(Fixture, AcceptedFutureSameContextPacketDoesNotRevokeOldEvidence) {
+TEST_F(Fixture, FutureSameContextPacketReplacesOlderObservation) {
   confirm();auto future=empty(2,1,T+1);
-  EXPECT_FALSE(ledger.observe(future,T,T+100));EXPECT_TRUE(ledger.state(T,T+100).confirmed);
+  EXPECT_TRUE(ledger.observe(future,T,T+100));EXPECT_TRUE(ledger.state(T,T+100).confirmed);
   future.status=Observation::UNKNOWN;
   EXPECT_FALSE(ledger.observe(future,T,T+101));EXPECT_FALSE(ledger.state(T,T+101).confirmed);
 }
-TEST_F(Fixture, IdenticalCaptureCannotExtendRosValidity) {
+TEST_F(Fixture, SourceDeadlineIsPreservedAsDiagnostic) {
   auto o=empty();o.valid_until=stamp(T+200);confirm(o);
   o.sequence=2;o.valid_until=stamp(T+400);ASSERT_TRUE(ledger.observe(o,T+100,T+100));
-  EXPECT_LE(ns(ledger.state(T+100,T+100).valid_until),T+200);
+  EXPECT_EQ(ns(ledger.state(T+100,T+100).valid_until),T+400);
 }
 
 TEST_F(Fixture, FaultRecoveryRequiresNewCaptureNotMerelyNewSequence) {
@@ -244,9 +244,9 @@ TEST_F(Fixture, SceneQuaternionSignNearHalfTurnIsEquivalent) {
   returned.robot_state.attached_collision_objects[0].object.pose.orientation.w=-1e-16;
   EXPECT_TRUE(ledger.reconcile(*ticket,returned,T,T));
 }
-TEST_F(Fixture, DelayedPreFaultCaptureCannotMoveRecoveryFloor) {
+TEST_F(Fixture, FaultRecoveryUsesSourceOrderingNotLocalReceiveTime) {
   confirm();ledger.source_fault("INVENTORY_CHANGED",T+100000000,T+100000000);
-  EXPECT_FALSE(ledger.observe(empty(2,1,T+80000000),T+160000000,T+160000000));
+  EXPECT_TRUE(ledger.observe(empty(2,1,T+80000000),T+160000000,T+160000000));
   EXPECT_FALSE(ledger.state(T+160000000,T+160000000).confirmed);
   auto fresh=empty(3,1,T+120000000);
   ASSERT_TRUE(ledger.observe(fresh,T+200000000,T+200000000));

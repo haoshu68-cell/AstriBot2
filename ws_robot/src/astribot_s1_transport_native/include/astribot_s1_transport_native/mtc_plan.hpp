@@ -3,6 +3,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 namespace astribot::transport {
 // The MTC result is an external input. Preserve the legacy PlanGuard's complete
@@ -17,10 +18,14 @@ public:
  const Stage &check(const std::string &name,const std::string &kind,int64_t steady,
    const sensor_msgs::msg::JointState &actual,const std::set<std::string> &attached) const;
  void acknowledge();
+ // Atomic adoption at the physical payload barrier; never renews plan expiry.
+ void adoptPayloadSuffix(const std::vector<Stage>& suffix,bool transport_replanned,int64_t steady);
+ const Stage &current() const {if(complete())throw std::logic_error("MTC_PLAN_ALREADY_CONSUMED");return stages_[index_];}
  bool complete() const{return index_==stages_.size();}
  size_t index() const{return index_;}
 private:
  std::vector<Stage> stages_;
+ std::string operation_;
  int64_t created_;
  std::set<std::string> joints_;
  size_t index_=0;

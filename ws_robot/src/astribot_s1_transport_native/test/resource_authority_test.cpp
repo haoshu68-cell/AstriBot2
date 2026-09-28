@@ -81,7 +81,11 @@ TEST(ResourceAuthority, FailedReleaseCommitKeepsResourcesQuarantined) {
 TEST_F(AuthorityFixture, ContinueOperationPreservesLeaseAndDoesNotRenewIt) {
  ASSERT_TRUE(acquire().accepted);a.submitted(T,T);a.holding(T+MS,T+MS);
  const auto original=*a.grant(T+MS,T+MS);
- ASSERT_TRUE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+2*MS,T+2*MS));
+ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,"transfer:op:2:PLACE",1,true,true,T+2*MS,T+2*MS));
+ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,std::string(118,'a')+"_op_2_PLACE",1,true,true,T+2*MS,T+2*MS));
+ EXPECT_EQ(a.phase(),ResourcePhase::HOLDING);
+ const auto context=std::string(117,'a')+"_op_2_PLACE";
+ ASSERT_TRUE(a.continue_from_hold(original.lease_id,original.epoch,context,1,true,true,T+2*MS,T+2*MS));
  EXPECT_EQ(a.phase(),ResourcePhase::RESERVED);
  const auto continued=*a.grant(T+2*MS,T+2*MS);
  EXPECT_EQ(continued.owner_id,original.owner_id);EXPECT_EQ(continued.lease_id,original.lease_id);
@@ -89,7 +93,7 @@ TEST_F(AuthorityFixture, ContinueOperationPreservesLeaseAndDoesNotRenewIt) {
  EXPECT_EQ(records.back()["event"],"operation_continuation_committed");
  EXPECT_TRUE(records.back()["side_effects"].get<bool>());
  a.submitted(T+3*MS,T+3*MS);a.holding(T+4*MS,T+4*MS);
- EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+5*MS,T+5*MS));
+ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,context,1,true,true,T+5*MS,T+5*MS));
  EXPECT_EQ(a.phase(),ResourcePhase::HOLDING);
 }
 TEST_F(AuthorityFixture, ContinueRequiresCurrentIdentityHoldAndBothEvidenceBoundaries) {

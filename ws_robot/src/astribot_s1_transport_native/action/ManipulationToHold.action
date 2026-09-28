@@ -1,0 +1,27 @@
+# Full six-stage PICK or PLACE, followed by a retained resource lease and Hold.
+# This is distinct from PlanToHold's first-stage-only commissioning contract.
+# No arbitrary external trajectory is accepted. Navigation requires its own
+# fixed-envelope transaction after the final measured Hold.
+string task_id
+string request_id
+string context_id
+string operation
+string object_id
+geometry_msgs/PoseStamped pre_target
+geometry_msgs/PoseStamped target
+geometry_msgs/PoseStamped[] exit_targets
+string[] touch_links
+float64 grasp_width_m
+---
+bool resources_released
+string reason
+string lease_id
+---
+string phase
+string reason
+string lease_id
+string resource_epoch
+string hold_id
+bool hold_confirmed
+string context_id
+string stage_id

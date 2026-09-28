@@ -1,0 +1,15 @@
+uint8 ACQUIRE=0
+uint8 RENEW=1
+uint8 RELEASE=2
+std_msgs/Header header
+uint8 operation
+string camera_id
+string owner_id
+string execution_id
+string request_id
+string session_token
+float64 lease_sec
+---
+bool accepted
+astribot_perception_msgs/CameraSessionState state
+string reason_code
