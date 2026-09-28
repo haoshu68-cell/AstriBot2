@@ -68,7 +68,7 @@ def main():
     groups['head_controller']=[f'astribot_head_joint_{i}' for i in range(1,3)]
     groups['torso_controller']=[f'astribot_torso_joint_{i}' for i in range(1,5)]
     positions={j:0. for names in groups.values() for j in names}
-    events=[];statuses=[];holds=[];goals={};canceled=set();entities=[];geometry_samples=[]
+    events=[];statuses=[];holds=[];goals={};canceled=set();entities=[];geometry_samples=[];planned_stages=[]
     controller_stage={};current_ros_ns=0;controller_responses=[];status_receipts=[]
     ledger_states=[];delayed=deque();physical=dict(command=7,attached=args.operation=='PLACE',revision=1)
     scene_state=PlanningScene();scene_state.world.octomap.header.frame_id='astribot_torso_base';scene_state.world.octomap.origin.orientation.w=1.
@@ -139,6 +139,7 @@ def main():
                         s.trajectory.joint_trajectory.joint_names=active
                         s.trajectory.joint_trajectory.points=[JointTrajectoryPoint(positions=before,time_from_start=Duration()),JointTrajectoryPoint(positions=[planned[j] for j in active],time_from_start=Duration(nanosec=250000000))]
                     res.result.stages.append(s)
+                planned_stages[:]=copy.deepcopy(res.result.stages)
             else:
                 stop.wait(.12)
                 res.status=4
@@ -184,7 +185,11 @@ def main():
             if o.operation==o.ADD:scene_state.world.collision_objects.append(copy.deepcopy(o))
         for o in req.scene.robot_state.attached_collision_objects:
             scene_state.robot_state.attached_collision_objects=[v for v in scene_state.robot_state.attached_collision_objects if v.object.id!=o.object.id]
-            if o.object.operation==o.object.ADD:scene_state.robot_state.attached_collision_objects.append(copy.deepcopy(o))
+            if o.object.operation==o.object.ADD:
+                # MoveIt attachment removes the same world object. The real
+                # PlanningScene behavior is covered by payload_scene_test.
+                scene_state.world.collision_objects=[v for v in scene_state.world.collision_objects if v.id!=o.object.id]
+                scene_state.robot_state.attached_collision_objects.append(copy.deepcopy(o))
         scene_applied_at=time.monotonic();event('scene_applied');res.success=True;return res
     def revalidate(req,res):
         raise AssertionError('no occupancy revalidation expected')
@@ -195,7 +200,8 @@ def main():
         assert len([e for e in events if e['event']=='send' and e['controller']!='mtc'])==18
         assert bool(req.scene.robot_state.attached_collision_objects)==(args.operation=='PICK')
         event('payload_revalidate',source_revision=ledger_states[-1].observation.revision,transaction=req.transaction_id)
-        res.context_id=req.context_id;res.transaction_id=req.transaction_id;res.success=True;res.reason='fixture remaining payload trajectory check';return res
+        res.context_id=req.context_id;res.transaction_id=req.transaction_id;res.success=True;res.reason='fixture remaining payload trajectory check'
+        res.remaining_stages=copy.deepcopy(planned_stages[4:]);return res
     def physical_command(message):
         value=json.loads(message.data)
         assert value['command']==8 and value['attached']==(args.operation=='PICK')
