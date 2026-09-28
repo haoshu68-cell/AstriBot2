@@ -1,0 +1,180 @@
+{
+  "source_commit": "beab7bc1",
+  "trials": 120,
+  "functional_passed": 120,
+  "functional_failed": 0,
+  "performance_acceptance": "NO_ACCEPTED_BRAKING_BUDGET",
+  "physical_braking_envelope_accepted": false,
+  "scope": "Owned Gazebo six-camera/SLAM stack, empty left joint7 only; not native task executor recovery, whole-arm/load, continuous collision or hardware acceptance.",
+  "percentile_method": "nearest rank ceil(p*n)-1; n=30 means p99 equals observed maximum; not a future bound",
+  "cases": {
+    "cancel": {
+      "n": 30,
+      "passed": 30,
+      "metrics": {
+        "stop_to_desired_hold_seconds": {
+          "median": 0.020006634499623033,
+          "p95": 0.03683489099967119,
+          "p99": 0.037209805999737,
+          "maximum": 0.037209805999737
+        },
+        "stop_to_confirmation_seconds": {
+          "median": 0.6854170104998047,
+          "p95": 0.778833336000389,
+          "p99": 0.8154203840003902,
+          "maximum": 0.8154203840003902
+        },
+        "maximum_post_trigger_displacement_rad": {
+          "median": 0.0004674338575154785,
+          "p95": 0.00047114615929044756,
+          "p99": 0.00047482473077588034,
+          "maximum": 0.00047482473077588034
+        },
+        "last_heartbeat_to_hold_seconds": {
+          "median": 0.0416701540007125,
+          "p95": 0.06949363199964864,
+          "p99": 0.07474323699898378,
+          "maximum": 0.07474323699898378
+        }
+      },
+      "maximum_observed_joint_speed_rad_s": 0.05234957323037596,
+      "maximum_observed_state_receipt_gap_s": 0.11781588899975759
+    },
+    "lease_loss": {
+      "n": 30,
+      "passed": 30,
+      "metrics": {
+        "stop_to_desired_hold_seconds": {
+          "median": 0.2848110490003819,
+          "p95": 0.31450984200091625,
+          "p99": 0.32657045499945525,
+          "maximum": 0.32657045499945525
+        },
+        "stop_to_confirmation_seconds": {
+          "median": 0.9430580665002708,
+          "p95": 0.9749876890000451,
+          "p99": 0.9894424960002652,
+          "maximum": 0.9894424960002652
+        },
+        "maximum_post_trigger_displacement_rad": {
+          "median": 0.015978745873127722,
+          "p95": 0.01733064398272708,
+          "p99": 0.017330643983028013,
+          "maximum": 0.017330643983028013
+        },
+        "last_heartbeat_to_hold_seconds": {
+          "median": 0.31212051150032494,
+          "p95": 0.3252710590004426,
+          "p99": 0.3299640850000287,
+          "maximum": 0.3299640850000287
+        }
+      },
+      "maximum_observed_joint_speed_rad_s": 0.06268063433602575,
+      "maximum_observed_state_receipt_gap_s": 0.5736547439992137
+    },
+    "revoke": {
+      "n": 30,
+      "passed": 30,
+      "metrics": {
+        "stop_to_desired_hold_seconds": {
+          "median": 0.020040174000314437,
+          "p95": 0.030382699000256252,
+          "p99": 0.03045276000011654,
+          "maximum": 0.03045276000011654
+        },
+        "stop_to_confirmation_seconds": {
+          "median": 0.6725362759998461,
+          "p95": 0.7906441680006537,
+          "p99": 0.8702241749997484,
+          "maximum": 0.8702241749997484
+        },
+        "maximum_post_trigger_displacement_rad": {
+          "median": 0.0005193709527789823,
+          "p95": 0.0005234957325197173,
+          "p99": 0.0005275830343014834,
+          "maximum": 0.0005275830343014834
+        },
+        "last_heartbeat_to_hold_seconds": {
+          "median": 0.03885886950047279,
+          "p95": 0.06718006800110743,
+          "p99": 0.0695242040001176,
+          "maximum": 0.0695242040001176
+        }
+      },
+      "maximum_observed_joint_speed_rad_s": 0.05234957323037029,
+      "maximum_observed_state_receipt_gap_s": 0.5788233969997236
+    },
+    "process_loss": {
+      "n": 30,
+      "passed": 30,
+      "metrics": {
+        "stop_to_desired_hold_seconds": {
+          "median": 0.2873897495001074,
+          "p95": 0.3224114849999751,
+          "p99": 0.35385509700063267,
+          "maximum": 0.35385509700063267
+        },
+        "stop_to_confirmation_seconds": {
+          "median": 0.9403599424986169,
+          "p95": 1.016940612998951,
+          "p99": 1.0563825120007095,
+          "maximum": 1.0563825120007095
+        },
+        "maximum_post_trigger_displacement_rad": {
+          "median": 0.01597874587305275,
+          "p95": 0.017223208591878803,
+          "p99": 0.017330643982511516,
+          "maximum": 0.017330643982511516
+        },
+        "last_heartbeat_to_hold_seconds": {
+          "median": 0.30884076900110813,
+          "p95": 0.33772624199991697,
+          "p99": 0.3817581160001282,
+          "maximum": 0.3817581160001282
+        }
+      },
+      "maximum_observed_joint_speed_rad_s": 0.06268063433602665,
+      "maximum_observed_state_receipt_gap_s": 0.17220874000122421
+    }
+  },
+  "tail_case": {
+    "path": "stop_repeats/23_process_loss.json",
+    "last_heartbeat_to_observed_hold_s": 0.3817581160001282,
+    "interpretation": "Observed end-to-end latency includes update and receipt sampling/queue delay. Cause not isolated. 300 ms lease is not a measured whole-system stop bound."
+  },
+  "world_stats_window": {
+    "n": 20,
+    "rtf_min": 0.2712,
+    "rtf_median": 0.9996,
+    "rtf_max": 1.0108,
+    "sim_start": {
+      "sec": "1193",
+      "nsec": 251000000
+    },
+    "sim_end": {
+      "sec": "1195",
+      "nsec": 76000000
+    },
+    "scope": "One separate world-statistics window during repetitions, not per-trial/full-run RTF"
+  },
+  "last_trial_end_wall": 1790573939.070014,
+  "raw_report_count": 120,
+  "validation_script_sha256": "9c4583d879a614df98ce2d59bf1748b7c15bf2ce37277ad97590b2362c44fd5c",
+  "first_trial_end_wall": 1790573256.1533425,
+  "archive_sha256": "ba4880fb21806f3a5c90b76232e253aaf251d5d2c59003cf720671fd152bc09e",
+  "closeout": {
+    "state": "stopped",
+    "remaining_owned_pids": [],
+    "log_capture_errors": [],
+    "stopped_at": null,
+    "stop_reason": null,
+    "checked_wall": 1790574012.7417176,
+    "processes_exited": {
+      "3373171": true,
+      "3373925": true,
+      "3389871": true,
+      "3390048": true
+    },
+    "exclusive_lock_released": true
+  }
+}

@@ -1,6 +1,6 @@
 {
-  "total_cases": 244,
-  "passed_cases": 232,
+  "total_cases": 246,
+  "passed_cases": 234,
   "inherited_failures": 12,
   "new_test_failures": 0,
   "scope": "Aggregated component results: sweep regression, controller readiness rerun and atomic Octomap integration tests (performance test executed separately). Not whole-stack acceptance.",
@@ -213,11 +213,19 @@
     {
       "package": "astribot_s1_manipulation",
       "suite": "observed_pointcloud_test",
-      "tests": 11,
+      "tests": 13,
       "failures": 0,
       "errors": 0,
       "failed_cases": [],
       "evidence": "observed_octomap/observed_pointcloud_test_final.xml"
     }
-  ]
+  ],
+  "camera_origin_fix": "13/13 tests including two new transformed-cloud/missing-camera-transform tests; camera_origin_fix/summary.json",
+  "gazebo_stop": {
+    "functional_trials": 120,
+    "functional_passed": 120,
+    "scope": "Empty left joint7 cancellation, heartbeat loss, revocation and actual SIGKILL; not online collision avoidance or automatic recovery acceptance.",
+    "evidence": "gazebo_stop/summary.json",
+    "physical_braking_envelope_accepted": false
+  }
 }

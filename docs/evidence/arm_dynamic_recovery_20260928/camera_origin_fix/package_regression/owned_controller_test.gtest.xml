@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="13" failures="0" disabled="0" errors="0" time="10.875" timestamp="2026-09-28T13:40:30" name="AllTests">
+  <testsuite name="OwnedControllerDiscovery" tests="1" failures="0" disabled="0" errors="0" time="0.021" timestamp="2026-09-28T13:40:30">
+    <testcase name="InstalledPluginCanBeLoaded" status="run" result="completed" time="0.021" timestamp="2026-09-28T13:40:30" classname="astribot_s1_manipulation.OwnedControllerDiscovery" />
+  </testsuite>
+  <testsuite name="OwnedController" tests="12" failures="0" disabled="0" errors="0" time="10.849" timestamp="2026-09-28T13:40:30">
+    <testcase name="FreshOwnerKeepsOriginalTrajectory" status="run" result="completed" time="0.776" timestamp="2026-09-28T13:40:30" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="6782.186667"/>
+<property name="update_ns_p99" value="18504.000000"/>
+<property name="update_ns_max" value="18504.000000"/>
+<property name="dispatch_and_update_ns_mean" value="53210.626667"/>
+<property name="dispatch_and_update_ns_p99" value="139755.000000"/>
+<property name="dispatch_and_update_ns_max" value="139755.000000"/>
+<property name="update_samples" value="75"/>
+</properties>
+    </testcase>
+    <testcase name="UpdateCycleBenchmark" status="run" result="completed" time="0.665" timestamp="2026-09-28T13:40:31" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="7980.240000"/>
+<property name="update_ns_p99" value="15768.000000"/>
+<property name="update_ns_max" value="15768.000000"/>
+<property name="dispatch_and_update_ns_mean" value="74760.080000"/>
+<property name="dispatch_and_update_ns_p99" value="141481.000000"/>
+<property name="dispatch_and_update_ns_max" value="141481.000000"/>
+<property name="update_samples" value="50"/>
+</properties>
+    </testcase>
+    <testcase name="LostOwnerAbortsAndHoldsInsteadOfCompletingOldTrajectory" status="run" result="completed" time="1.225" timestamp="2026-09-28T13:40:32" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="position_at_owner_loss" value="0.121791"/>
+<property name="held_position" value="0.268846"/>
+<property name="update_ns_mean" value="7435.033333"/>
+<property name="update_ns_p99" value="18047.000000"/>
+<property name="update_ns_max" value="18686.000000"/>
+<property name="dispatch_and_update_ns_mean" value="81365.841667"/>
+<property name="dispatch_and_update_ns_p99" value="157028.000000"/>
+<property name="dispatch_and_update_ns_max" value="184458.000000"/>
+<property name="update_samples" value="120"/>
+</properties>
+    </testcase>
+    <testcase name="ExpiredLeaseCannotBeRevivedByLateHeartbeat" status="run" result="completed" time="0.917" timestamp="2026-09-28T13:40:33" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="5900.955556"/>
+<property name="update_ns_p99" value="17883.000000"/>
+<property name="update_ns_max" value="17883.000000"/>
+<property name="dispatch_and_update_ns_mean" value="57566.233333"/>
+<property name="dispatch_and_update_ns_p99" value="166924.000000"/>
+<property name="dispatch_and_update_ns_max" value="166924.000000"/>
+<property name="update_samples" value="90"/>
+</properties>
+    </testcase>
+    <testcase name="ExplicitRevocationStopsBeforeLeaseTimeout" status="run" result="completed" time="0.462" timestamp="2026-09-28T13:40:34" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="6232.155556"/>
+<property name="update_ns_p99" value="22495.000000"/>
+<property name="update_ns_max" value="22495.000000"/>
+<property name="dispatch_and_update_ns_mean" value="50081.755556"/>
+<property name="dispatch_and_update_ns_p99" value="131566.000000"/>
+<property name="dispatch_and_update_ns_max" value="131566.000000"/>
+<property name="update_samples" value="45"/>
+</properties>
+    </testcase>
+    <testcase name="DuplicateSequenceCannotExtendAuthority" status="run" result="completed" time="1.172" timestamp="2026-09-28T13:40:35" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="8654.626087"/>
+<property name="update_ns_p99" value="28606.000000"/>
+<property name="update_ns_max" value="64573.000000"/>
+<property name="dispatch_and_update_ns_mean" value="72880.652174"/>
+<property name="dispatch_and_update_ns_p99" value="166500.000000"/>
+<property name="dispatch_and_update_ns_max" value="167619.000000"/>
+<property name="update_samples" value="115"/>
+</properties>
+    </testcase>
+    <testcase name="DirectTrajectoryTopicIsNotAnAlternateEntry" status="run" result="completed" time="0.26" timestamp="2026-09-28T13:40:36" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="6647.400000"/>
+<property name="update_ns_p99" value="12992.000000"/>
+<property name="update_ns_max" value="12992.000000"/>
+<property name="dispatch_and_update_ns_mean" value="74597.800000"/>
+<property name="dispatch_and_update_ns_p99" value="153680.000000"/>
+<property name="dispatch_and_update_ns_max" value="153680.000000"/>
+<property name="update_samples" value="25"/>
+</properties>
+    </testcase>
+    <testcase name="NewLeaseCannotTakeOverAnExecutingGoal" status="run" result="completed" time="0.462" timestamp="2026-09-28T13:40:36" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="6105.533333"/>
+<property name="update_ns_p99" value="22012.000000"/>
+<property name="update_ns_max" value="22012.000000"/>
+<property name="dispatch_and_update_ns_mean" value="52179.177778"/>
+<property name="dispatch_and_update_ns_p99" value="127303.000000"/>
+<property name="dispatch_and_update_ns_max" value="127303.000000"/>
+<property name="update_samples" value="45"/>
+</properties>
+    </testcase>
+    <testcase name="StaleOrFutureSourceCannotExtendLease" status="run" result="completed" time="1.071" timestamp="2026-09-28T13:40:36" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="7635.904762"/>
+<property name="update_ns_p99" value="17002.000000"/>
+<property name="update_ns_max" value="21162.000000"/>
+<property name="dispatch_and_update_ns_mean" value="68907.504762"/>
+<property name="dispatch_and_update_ns_p99" value="123885.000000"/>
+<property name="dispatch_and_update_ns_max" value="166682.000000"/>
+<property name="update_samples" value="105"/>
+</properties>
+    </testcase>
+    <testcase name="NormalCompletionPreservesEndpoint" status="run" result="completed" time="2.362" timestamp="2026-09-28T13:40:37" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="6461.484979"/>
+<property name="update_ns_p99" value="21084.000000"/>
+<property name="update_ns_max" value="38756.000000"/>
+<property name="dispatch_and_update_ns_mean" value="58299.326180"/>
+<property name="dispatch_and_update_ns_p99" value="145751.000000"/>
+<property name="dispatch_and_update_ns_max" value="148852.000000"/>
+<property name="update_samples" value="233"/>
+</properties>
+    </testcase>
+    <testcase name="HeartbeatCallbacksRaceRealtimeExpiryWithoutRevival" status="run" result="completed" time="1.167" timestamp="2026-09-28T13:40:40" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="4768.666667"/>
+<property name="update_ns_p99" value="15853.000000"/>
+<property name="update_ns_max" value="15853.000000"/>
+<property name="dispatch_and_update_ns_mean" value="45264.666667"/>
+<property name="dispatch_and_update_ns_p99" value="159961.000000"/>
+<property name="dispatch_and_update_ns_max" value="159961.000000"/>
+<property name="update_samples" value="15"/>
+</properties>
+    </testcase>
+    <testcase name="FreshLeaseWaitsForControlCycleBeforeAdmittingGoal" status="run" result="completed" time="0.31" timestamp="2026-09-28T13:40:41" classname="astribot_s1_manipulation.OwnedController">
+<properties>
+<property name="update_ns_mean" value="7032.960000"/>
+<property name="update_ns_p99" value="14976.000000"/>
+<property name="update_ns_max" value="14976.000000"/>
+<property name="dispatch_and_update_ns_mean" value="67658.200000"/>
+<property name="dispatch_and_update_ns_p99" value="143803.000000"/>
+<property name="dispatch_and_update_ns_max" value="143803.000000"/>
+<property name="update_samples" value="25"/>
+</properties>
+    </testcase>
+  </testsuite>
+</testsuites>

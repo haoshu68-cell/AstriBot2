@@ -1,0 +1,123 @@
+{
+  "simulation": [
+    "ros2",
+    "launch",
+    "astribot_s1_navigation",
+    "nav2_full_bringup.launch.py",
+    "env:=sim",
+    "launch_gazebo:=true",
+    "launch_navigation:=false",
+    "control_loopback_udp:=true",
+    "launch_slam:=true",
+    "navigation_geometry_mode:=legacy",
+    "mode:=mapping",
+    "exploration:=false",
+    "scan_source:=slice_scan",
+    "headless:=true",
+    "use_rviz:=false",
+    "use_lidar:=true",
+    "use_camera:=true",
+    "use_camera_postprocess:=false",
+    "use_camera_pointcloud:=true",
+    "enable_depth_obstacles:=true",
+    "obstacle_layer_plugin:=nav2_costmap_2d::ObstacleLayer",
+    "use_wrist_cameras:=true",
+    "use_stereo_cameras:=true",
+    "camera_profile:=/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_description/share/astribot_s1_description/config/simulation_navigation_full/camera_head_rgbd.yaml",
+    "torso_camera_profile:=/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_description/share/astribot_s1_description/config/simulation_navigation_full/camera_torso_rgbd.yaml",
+    "camera_calibration_dir:=/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_description/share/astribot_s1_description/config/simulation_navigation_full",
+    "camera_mounts_profile:=/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_description/share/astribot_s1_description/config/camera_mounts_reference_sim.yaml",
+    "ros_domain_id:=93",
+    "spawn_x:=0.0",
+    "spawn_y:=0.0",
+    "spawn_yaw:=0.0",
+    "save_path:=/tmp/astribot_arm_dynamic_recovery/simulation/session01/slam_sessions/"
+  ],
+  "navigation": [
+    "ros2",
+    "launch",
+    "astribot_s1_navigation",
+    "navigation.launch.py",
+    "use_sim_time:=true",
+    "controller_plugin:=mppi",
+    "max_linear_speed:=0.35",
+    "navigation_policy_stage:=off",
+    "navigation_geometry_mode:=legacy",
+    "scan_topic:=/scan_from_cloud",
+    "enable_depth_obstacles:=true",
+    "obstacle_layer_plugin:=nav2_costmap_2d::ObstacleLayer",
+    "map_manager_params_file:=/tmp/astribot_arm_dynamic_recovery/simulation/session01/map_manager.yaml",
+    "operator_runtime_params_file:=/tmp/astribot_arm_dynamic_recovery/simulation/session01/mapping_runtime.yaml",
+    "enable_voxel_adapter:=true",
+    "voxel_adapter_params_file:=/tmp/astribot_arm_dynamic_recovery/simulation/session01/voxel_session_adapter.yaml"
+  ],
+  "mapping_session": [
+    "ros2",
+    "run",
+    "astribot_s1_exploration",
+    "mapping_session_node",
+    "--ros-args",
+    "-p",
+    "use_sim_time:=true",
+    "-p",
+    "require_navigation_zones:=true"
+  ],
+  "logs": "/tmp/astribot_arm_dynamic_recovery/simulation/session01",
+  "isolation": {
+    "ROS_DOMAIN_ID": "93",
+    "ROS_LOCALHOST_ONLY": "1",
+    "IGN_PARTITION": "astribot_arm_recovery_p0_20260928",
+    "GZ_PARTITION": "astribot_arm_recovery_p0_20260928",
+    "IGN_DISCOVERY_MSG_PORT": "18186",
+    "IGN_DISCOVERY_SRV_PORT": "18187",
+    "IGN_IP": "127.0.0.1",
+    "GZ_IP": "127.0.0.1",
+    "ASTRIBOT_SIM_INSTANCE": "arm_recovery_p0_20260928"
+  },
+  "locks": [
+    "/tmp/astribot_sim_domain93.lock",
+    "/tmp/astribot_sim_partition_astribot_arm_recovery_p0_20260928.lock"
+  ],
+  "performance_lease": {
+    "path": "/tmp/astribot_sim_performance.lock",
+    "exclusive": true
+  },
+  "real_time_factor": 1.0,
+  "nav_transport": "udp",
+  "camera_baseline": {
+    "path": "/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_description/share/astribot_s1_description/config/simulation_navigation_full/launch_preset.yaml",
+    "baseline_id": "joint_navigation_full_v1",
+    "sha256": "8942e6b0952a982ad3edb3b9fb8aa293f0c528a06ea6a720f3e145056cdd625f",
+    "explicit_overrides": {}
+  },
+  "runtime_preflight": {
+    "passed": true,
+    "manifest": "/tmp/astribot_arm_dynamic_recovery/simulation/runtime_manifest.json",
+    "errors": [],
+    "sha256": "e3e32a49b82cc505c27199c4e271858fcd1583b39ab0165ba9c9d04c8a4ad16d",
+    "prefixes": {
+      "astribot_s1_gazebo_bringup": "/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_gazebo_bringup",
+      "astribot_s1_description": "/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_description",
+      "astribot_s1_chassis_effort_drive": "/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_chassis_effort_drive",
+      "astribot_s1_chassis_effort_drive_native": "/tmp/astribot_arm_dynamic_recovery/simulation/frozen/astribot_s1_chassis_effort_drive_native",
+      "astribot_s1_moveit_config": "/tmp/astribot_arm_dynamic_recovery/install/astribot_s1_moveit_config",
+      "astribot_s1_manipulation": "/tmp/astribot_arm_dynamic_recovery/install/astribot_s1_manipulation",
+      "astribot_transport_msgs": "/tmp/astribot_arm_dynamic_recovery/install/astribot_transport_msgs",
+      "astribot_s1_transport_mtc": "/tmp/astribot_arm_dynamic_recovery/install/astribot_s1_transport_mtc",
+      "astribot_s1_transport_native": "/tmp/astribot_arm_dynamic_recovery/install/astribot_s1_transport_native",
+      "astribot_s1_navigation": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260928/departure_no_deviation/deployment/prefixes/astribot_s1_navigation",
+      "astribot_s1_slam": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_s1_slam",
+      "astribot_s1_perception_components": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260928/departure_no_deviation/deployment/prefixes/astribot_s1_perception_components",
+      "astribot_s1_robot_geometry": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260928/departure_no_deviation/deployment/prefixes/astribot_s1_robot_geometry",
+      "gz_ros2_control": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922/gz_control_fix/install/gz_ros2_control"
+    },
+    "artifact_count": 638
+  },
+  "logging": {
+    "layout": "unified",
+    "file": "/tmp/astribot_arm_dynamic_recovery/simulation/session01/session.log",
+    "level": "info",
+    "max_bytes": 10485760,
+    "backup_count": 5
+  }
+}

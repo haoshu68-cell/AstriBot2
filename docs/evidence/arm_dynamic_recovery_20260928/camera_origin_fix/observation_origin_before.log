@@ -1,0 +1,38 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+Note: Google Test filter = ObservedCloud.BaseFrameCloudRaysStartAtCameraAndUseCameraRange
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from ObservedCloud
+[ RUN      ] ObservedCloud.BaseFrameCloudRaysStartAtCameraAndUseCameraRange
+[ERROR] [1790572216.091294913] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790572216.091332504] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790572216.097171655] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790572216.097526068] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_manipulation/test/observed_pointcloud_test.cpp:227: Failure
+Expected equality of these values:
+  map->search(.05,.05,.05)
+    Which is: 0x6034a89c0c60
+  nullptr
+    Which is: (nullptr)
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_manipulation/test/observed_pointcloud_test.cpp:228: Failure
+Expected equality of these values:
+  received.back().sensor_to_map
+    Which is: 56-byte object <00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 F0-3F>
+  tf.transform
+    Which is: 56-byte object <00-00 00-00 00-00 00-00 00-00 00-00 00-00 E0-3F 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 00-00 F0-3F>
+/home/yjh/WorkSpace/astribot_arm_dynamic_recovery/ws_robot/src/astribot_s1_manipulation/test/observed_pointcloud_test.cpp:230: Failure
+Expected equality of these values:
+  clipped->search(.05,2.25,.05)
+    Which is: 0x6034a8a58100
+  nullptr
+    Which is: (nullptr)
+[  FAILED  ] ObservedCloud.BaseFrameCloudRaysStartAtCameraAndUseCameraRange (370 ms)
+[----------] 1 test from ObservedCloud (370 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (375 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] ObservedCloud.BaseFrameCloudRaysStartAtCameraAndUseCameraRange
+
+ 1 FAILED TEST

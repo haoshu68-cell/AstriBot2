@@ -1,0 +1,170 @@
+{
+  "counts": {
+    "/clock": 7295,
+    "/joint_states": 730,
+    "/arm_left_controller/state": 347,
+    "/moveit/observed_octomap": 104,
+    "/camera/torso_rgbd/points": 146,
+    "/camera/head_rgbd/points": 145,
+    "/slam/pose": 73
+  },
+  "controllers": [
+    {
+      "name": "joint_state_broadcaster",
+      "state": "active",
+      "type": "joint_state_broadcaster/JointStateBroadcaster",
+      "claimed_interfaces": []
+    },
+    {
+      "name": "torso_controller",
+      "state": "active",
+      "type": "astribot_s1_manipulation/OwnedTrajectoryController",
+      "claimed_interfaces": [
+        "astribot_torso_joint_1/position",
+        "astribot_torso_joint_2/position",
+        "astribot_torso_joint_3/position",
+        "astribot_torso_joint_4/position"
+      ]
+    },
+    {
+      "name": "head_controller",
+      "state": "active",
+      "type": "astribot_s1_manipulation/OwnedTrajectoryController",
+      "claimed_interfaces": [
+        "astribot_head_joint_1/position",
+        "astribot_head_joint_2/position"
+      ]
+    },
+    {
+      "name": "arm_left_controller",
+      "state": "active",
+      "type": "astribot_s1_manipulation/OwnedTrajectoryController",
+      "claimed_interfaces": [
+        "astribot_arm_left_joint_1/position",
+        "astribot_arm_left_joint_2/position",
+        "astribot_arm_left_joint_3/position",
+        "astribot_arm_left_joint_4/position",
+        "astribot_arm_left_joint_5/position",
+        "astribot_arm_left_joint_6/position",
+        "astribot_arm_left_joint_7/position"
+      ]
+    },
+    {
+      "name": "arm_right_controller",
+      "state": "active",
+      "type": "astribot_s1_manipulation/OwnedTrajectoryController",
+      "claimed_interfaces": [
+        "astribot_arm_right_joint_1/position",
+        "astribot_arm_right_joint_2/position",
+        "astribot_arm_right_joint_3/position",
+        "astribot_arm_right_joint_4/position",
+        "astribot_arm_right_joint_5/position",
+        "astribot_arm_right_joint_6/position",
+        "astribot_arm_right_joint_7/position"
+      ]
+    },
+    {
+      "name": "wheel_effort_controller",
+      "state": "active",
+      "type": "forward_command_controller/ForwardCommandController",
+      "claimed_interfaces": [
+        "wheel_RF_Joint/effort",
+        "wheel_LF_Joint/effort",
+        "wheel_RR_Joint/effort",
+        "wheel_LR_Joint/effort"
+      ]
+    },
+    {
+      "name": "gripper_left_controller",
+      "state": "active",
+      "type": "astribot_s1_manipulation/OwnedTrajectoryController",
+      "claimed_interfaces": [
+        "astribot_gripper_left_joint_L1/position"
+      ]
+    },
+    {
+      "name": "gripper_right_controller",
+      "state": "active",
+      "type": "astribot_s1_manipulation/OwnedTrajectoryController",
+      "claimed_interfaces": [
+        "astribot_gripper_right_joint_L1/position"
+      ]
+    }
+  ],
+  "chassis_parameters": [
+    {
+      "type": 1,
+      "bool": true,
+      "double": 0.0,
+      "string": ""
+    },
+    {
+      "type": 3,
+      "bool": false,
+      "double": 3.0,
+      "string": ""
+    }
+  ],
+  "move_group_parameters": [
+    {
+      "type": 1,
+      "bool": false,
+      "double": 0.0,
+      "string": ""
+    },
+    {
+      "type": 1,
+      "bool": true,
+      "double": 0.0,
+      "string": ""
+    },
+    {
+      "file": "/tmp/astribot_arm_dynamic_recovery/simulation/move_group_get_parameters_2.xml",
+      "sha256": "054c8d636ad0ed8bf50190607f14cbe01fb35f5fa3b95458f89588b7f25f3315"
+    },
+    {
+      "file": "/tmp/astribot_arm_dynamic_recovery/simulation/move_group_get_parameters_3.xml",
+      "sha256": "7b1afa31711f458f100c3057c0109dd958a0a330a975756309a79b6ad46d048c"
+    }
+  ],
+  "last": {
+    "/moveit/observed_octomap": {
+      "receive_monotonic": 14481.588418767,
+      "stamp": 63.05,
+      "frame": "astribot_torso_base",
+      "source": "torso_rgbd",
+      "epoch": "38662e3d-89d1-4300-b174-c1c9800cda56",
+      "revision": 105,
+      "bytes": 223470,
+      "free_keys": 59872,
+      "processing_seconds": 0.024470231,
+      "sensor_frame": "torso_rgbd_camera_optical_frame",
+      "sensor_origin": [
+        0.10438131403992806,
+        -5.7382645496373286e-08,
+        1.0100020341012004
+      ],
+      "cloud_origin": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "/slam/pose": {
+      "receive_monotonic": 14481.548461741,
+      "stamp": 63.0,
+      "frame": "map",
+      "position": [
+        0.0001928031439546174,
+        0.0004943803339657327,
+        0.01675590339263626
+      ],
+      "orientation": [
+        3.498591665816527e-05,
+        -2.0337429661087303e-05,
+        4.8156693883485695e-05,
+        1.000000142480148
+      ]
+    }
+  }
+}

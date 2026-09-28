@@ -1,0 +1,43 @@
+{
+  "source_commit": "beab7bc1",
+  "branch": "codex/arm-dynamic-recovery",
+  "merge_target": "chassis-effort-drive",
+  "domain": 94,
+  "partition": "astribot_arm_recovery_p0_20260928_b",
+  "exclusive_simulation_lock": "/tmp/astribot_sim_performance.lock",
+  "query_environment": {
+    "ROS_DOMAIN_ID": "94",
+    "ROS_LOCALHOST_ONLY": "0",
+    "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp",
+    "FASTRTPS_DEFAULT_PROFILES_FILE": "/tmp/astribot_arm_dynamic_recovery/simulation/session02/nav_udp.xml"
+  },
+  "session_environment": {
+    "ROS_DOMAIN_ID": "94",
+    "ROS_LOCALHOST_ONLY": "1",
+    "IGN_PARTITION": "astribot_arm_recovery_p0_20260928_b",
+    "GZ_PARTITION": "astribot_arm_recovery_p0_20260928_b",
+    "IGN_DISCOVERY_MSG_PORT": "18188",
+    "IGN_DISCOVERY_SRV_PORT": "18189",
+    "IGN_IP": "127.0.0.1",
+    "GZ_IP": "127.0.0.1",
+    "ASTRIBOT_SIM_INSTANCE": "arm_recovery_p0_20260928_b"
+  },
+  "repeated_experiment": {
+    "trials_per_case": 30,
+    "order": [
+      "cancel",
+      "lease_loss",
+      "revoke",
+      "process_loss"
+    ],
+    "delta_rad": "0.2 if (zero_based_trial + case_index) % 2 == 0 else -0.2",
+    "joint": 7,
+    "duration_s": 4,
+    "trigger_measured_displacement_rad": 0.025,
+    "abort_remaining_trials_on_first_failure": true
+  },
+  "validation_script_sha256": "9c4583d879a614df98ce2d59bf1748b7c15bf2ce37277ad97590b2362c44fd5c",
+  "physical_braking_envelope_accepted": false,
+  "hardware_run": false,
+  "native_task_recovery_tested": false
+}
