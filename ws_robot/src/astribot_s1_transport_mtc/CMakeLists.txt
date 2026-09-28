@@ -42,6 +42,7 @@ install(TARGETS transport_scene_signature EXPORT transport_scene_signature_targe
 install(FILES include/astribot_s1_transport_mtc/canonical_octomap.hpp
  include/astribot_s1_transport_mtc/canonical_scene.hpp
  include/astribot_s1_transport_mtc/base_motion_limits.hpp
+ include/astribot_s1_transport_mtc/execution_guard.hpp
  DESTINATION include/${PROJECT_NAME})
 ament_export_targets(transport_scene_signature_targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(moveit_msgs)
