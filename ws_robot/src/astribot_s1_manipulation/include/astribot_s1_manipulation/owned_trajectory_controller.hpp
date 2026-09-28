@@ -25,6 +25,7 @@ private:
   rclcpp::Publisher<Heartbeat>::SharedPtr acknowledgement_;
   // -1: no heartbeat yet; 0: irrevocably expired/revoked for this lease.
   std::atomic<int64_t> deadline_{-1};
+  std::atomic<bool> cycle_ready_{false};
   std::string lease_id_;
   uint64_t sequence_{0};
   int64_t source_stamp_{0};

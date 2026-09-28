@@ -28,7 +28,7 @@ controller_interface::CallbackReturn OwnedTrajectoryController::on_configure(
   action_server_ = rclcpp_action::create_server<FollowJTrajAction>(
     get_node(), "~/follow_joint_trajectory",
     [this](const auto& id, const auto goal) {
-      return permitted() ? goal_received_callback(id, goal) : rclcpp_action::GoalResponse::REJECT;
+      return cycle_ready_.load() && permitted() ? goal_received_callback(id, goal) : rclcpp_action::GoalResponse::REJECT;
     },
     [this](const auto goal) { return goal_cancelled_callback(goal); },
     [this](const auto goal) { goal_accepted_callback(goal); });
@@ -37,6 +37,9 @@ controller_interface::CallbackReturn OwnedTrajectoryController::on_configure(
     "/transport/execution_heartbeat", rclcpp::QoS(10),
     [this](Heartbeat::ConstSharedPtr value) {
       heartbeat(*value);
+      // New authority is acknowledged only after a control cycle finishes;
+      // otherwise a previous no-authority hold update may overwrite a new goal.
+      if(permitted()&&!cycle_ready_.load())return;
       Heartbeat acknowledgement;
       acknowledgement.stamp = get_node()->now(); acknowledgement.lease_id = lease_id_;
       acknowledgement.sequence = sequence_; acknowledgement.active = permitted();
@@ -47,7 +50,7 @@ controller_interface::CallbackReturn OwnedTrajectoryController::on_configure(
 
 controller_interface::CallbackReturn OwnedTrajectoryController::on_activate(
   const rclcpp_lifecycle::State& state) {
-  deadline_ = -1; lease_id_.clear(); sequence_ = 0; source_stamp_ = 0;
+  deadline_ = -1; cycle_ready_ = false; lease_id_.clear(); sequence_ = 0; source_stamp_ = 0;
   return JointTrajectoryController::on_activate(state);
 }
 
@@ -62,6 +65,7 @@ void OwnedTrajectoryController::heartbeat(const Heartbeat& value) {
     if (*rt_active_goal_.readFromNonRT() || rt_has_pending_goal_.load()) {
       deadline_ = 0; return;
     }
+    cycle_ready_ = false;
     lease_id_ = value.lease_id; sequence_ = 0; source_stamp_ = 0; deadline_ = -1;
   }
   if (!value.active) { deadline_ = 0; return; }
@@ -82,6 +86,7 @@ controller_interface::return_type OwnedTrajectoryController::update(
   auto deadline = deadline_.load();
   if (deadline > 0 && steady_now() >= deadline) deadline_.compare_exchange_strong(deadline, 0);
   if (!permitted()) {
+    cycle_ready_ = false;
     const auto goal = *rt_active_goal_.readFromRT();
     if (goal) {
       goal->setAborted(expired_result_);
@@ -95,7 +100,9 @@ controller_interface::return_type OwnedTrajectoryController::update(
       traj_msg_external_point_ptr_.initRT(set_hold_position());
     }
   }
-  return JointTrajectoryController::update(time, period);
+  const auto result=JointTrajectoryController::update(time, period);
+  if(result==controller_interface::return_type::OK&&permitted())cycle_ready_=true;
+  return result;
 }
 }  // namespace astribot_s1_manipulation
 
