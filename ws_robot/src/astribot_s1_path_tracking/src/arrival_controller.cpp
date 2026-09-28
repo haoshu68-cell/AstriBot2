@@ -70,9 +70,7 @@ void ArrivalGoalChecker::report(bool ready)
 bool ArrivalGoalChecker::isGoalReached(const geometry_msgs::msg::Pose &,
   const geometry_msgs::msg::Pose &, const geometry_msgs::msg::Twist &)
 {
-  const double age = (clock_->now() - reported_).seconds();
-  // The controller already checked the fresh localization stop window and tolerances.
-  return ready_ && age >= 0.0 && age <= 0.2;
+  return ready_;
 }
 bool ArrivalGoalChecker::getTolerances(geometry_msgs::msg::Pose & pose,
   geometry_msgs::msg::Twist & velocity)
@@ -132,12 +130,13 @@ void ArrivalController::configure(
   nav2_util::declare_parameter_if_not_declared(node,"navigation_policy_stage",rclcpp::ParameterValue("off"));
   const auto stage=node->get_parameter("navigation_policy_stage").as_string();
   policy_takeover_=stage=="p3" || stage=="p4" || stage=="p5";
-  if (policy_enabled_ && policy_takeover_) {start_maneuver_.configure(node);}
   if (policy_enabled_ && (stage=="p4" || stage=="p5")) {
     corridor_simulated_=node->get_parameter("use_sim_time").as_bool();
     corridor_alignment_sub_=node->create_subscription<CorridorAlignment>(
       "navigation_policy/corridor_alignment",1,[this](CorridorAlignment::ConstSharedPtr msg) {
         std::lock_guard<std::mutex> lock(corridor_mutex_);
+        if(corridor_alignment_ && msg->reference_path==corridor_alignment_->reference_path &&
+            rclcpp::Time(msg->stamp)<rclcpp::Time(corridor_alignment_->stamp))return;
         corridor_alignment_=msg;corridor_received_=std::chrono::steady_clock::now();
       });
   }
@@ -219,7 +218,9 @@ void ArrivalController::configure(
   }
   ThreePhaseController::configure(parent, name, tf, costmap);
   slip_.configure(node,name);
-  if (policy_enabled_ || slip_.enabled()) {
+  if (policy_enabled_ || slip_.enabled() ||
+    node->get_parameter(name + ".corner_turn_enabled").as_bool())
+  {
     for (const auto & suffix : {".inner.vx_max", ".inner.desired_linear_vel"}) {
       if (node->has_parameter(name+suffix)) {
         nominal_speed_=node->get_parameter(name+suffix).as_double();break;
@@ -240,7 +241,6 @@ void ArrivalController::resetAttempt()
 {
   slip_.reset();
   if (arrival_progress_) {arrival_progress_->clear();}
-  start_maneuver_.reset();
   started_ = refining_ = holding_ = completion_logged_ = false;
   xy_held_ = yaw_held_ = corridor_terminal_coast_ = false;
   xy_coast_.reset(); yaw_coast_.reset();
@@ -260,7 +260,6 @@ void ArrivalController::cleanup()
   slip_.cleanup();
   bridge_status_sub_.reset();
   {std::lock_guard<std::mutex> guard(bridge_status_mutex_);bridge_error_.clear();bridge_status_stamp_=-1;}
-  start_maneuver_.cleanup();
   corridor_alignment_sub_.reset();
   {std::lock_guard<std::mutex> lock(corridor_mutex_);corridor_alignment_.reset();}
   tracking_path_ = nav_msgs::msg::Path();
@@ -273,9 +272,8 @@ void ArrivalController::cleanup()
   resetAttempt();
   ThreePhaseController::cleanup();
 }
-void ArrivalController::setPlan(const nav_msgs::msg::Path & path)
+void ArrivalController::applyPlan(const nav_msgs::msg::Path & path)
 {
-  if (arrival_progress_) {arrival_progress_->clear();}
   if (path.poses.empty() || path.header.frame_id.empty()) {
     fail("INVALID_PATH: empty path or frame");
   }
@@ -283,36 +281,68 @@ void ArrivalController::setPlan(const nav_msgs::msg::Path & path)
     if (!validPose(pose.pose) || (!pose.header.frame_id.empty() &&
       pose.header.frame_id != path.header.frame_id)) {fail("INVALID_PATH: invalid pose/frame");}
   }
-  const bool takeover=policy_takeover_ && has_goal_ && !refining_ && path!=tracking_path_ &&
-    path.header.frame_id==goal_.header.frame_id &&
-    distance(path.poses.back().pose,goal_.pose)<1e-4 &&
-    std::abs(yawError(path.poses.back().pose,goal_.pose))<1e-4;
+  ThreePhaseController::applyPlan(path);
+  const bool refresh=planUpdate()==PlanUpdate::EquivalentRefresh;
+  const bool takeover=policy_takeover_ && !refining_ &&
+    planUpdate()==PlanUpdate::RouteReplacement;
+  if (arrival_progress_) {arrival_progress_->clear();}
   auto goal = path.poses.back();
   goal.header.frame_id = path.header.frame_id;
   goal.header.stamp = builtin_interfaces::msg::Time();  // fixed world target, latest TF
-  if (last_tick_ >= 0 && clock_->now().seconds() - last_tick_ > 0.5) {resetAttempt();}
-  if (!has_goal_ || goal.header.frame_id != goal_.header.frame_id ||
+  if (planUpdate()==PlanUpdate::NewExecution || !has_goal_ || goal.header.frame_id != goal_.header.frame_id ||
     distance(goal.pose, goal_.pose) > 1e-4 || std::abs(yawError(goal.pose, goal_.pose)) > 1e-4)
   {
     resetAttempt();
   }
   goal_ = goal; has_goal_ = true;
   tracking_path_ = path;
-  slip_.pause();
-  start_maneuver_.reset();
+  if (planUpdate()==PlanUpdate::RouteReplacement) {
+    // The old terminal maneuver belongs to a different route. Keep the task's
+    // elapsed/progress budget, but reacquire the replacement before refining.
+    refining_=holding_=completion_logged_=false;
+    xy_held_=yaw_held_=corridor_terminal_coast_=false;
+    xy_coast_.reset();yaw_coast_.reset();xy_settling_.reset();yaw_settling_.reset();
+  }
+  if (!refresh) {slip_.pause();}
   ++plan_revision_;
-  metrics_anchor_.reset();
+  if (!refresh) {metrics_anchor_.reset();}
   if (active_path_pub_) {active_path_pub_->publish(path);}
-  ThreePhaseController::setPlan(path);
   if(takeover) {preparePolicyTakeover();}
 }
+void ArrivalController::limitCornerTranslation(geometry_msgs::msg::Twist & command)
+{
+  double cap=nominal_speed_;
+  {
+    std::lock_guard<std::mutex> lock(speed_limit_mutex_);
+    if (external_speed_limit_>0.) {
+      cap=std::min(cap,external_speed_percentage_ ?
+        nominal_speed_*external_speed_limit_/100. : external_speed_limit_);
+    }
+  }
+  if (policy_enabled_) {cap=std::min(cap,policy_lease_.linearSpeedLimit(clock_->now()));}
+  const double speed=std::hypot(command.linear.x,command.linear.y);
+  if (speed>cap && speed>0.) {
+    command.linear.x*=std::max(0.,cap)/speed;
+    command.linear.y*=std::max(0.,cap)/speed;
+  }
+}
+
+double ArrivalController::cornerStoppingDistance(double speed) const
+{
+  if (braking_model_=="constant_time") {return braking_xy_*std::abs(speed);}
+  try {
+    return referenceStopDistance(speed,normal_acceleration_,normal_jerk_)+
+      (braking_model_=="position_hold"?linear_offset_.distance(speed):0.);
+  } catch(const std::out_of_range & error) {throw nav2_core::PlannerException(error.what());}
+}
+
 void ArrivalController::setSpeedLimit(const double & limit, const bool & percentage)
 {
   if (!std::isfinite(limit) || limit < 0 || (percentage && limit > 100)) {
     fail("INVALID_SPEED_LIMIT");
   }
   speed_scale_ = limit == 0 ? 1.0 : std::min(1.0, percentage ? limit / 100.0 : limit / max_v_);
-  if (policy_enabled_ || slip_.enabled()) {
+  {
     std::lock_guard<std::mutex> lock(speed_limit_mutex_);
     external_speed_limit_=limit;external_speed_percentage_=percentage;
   }
@@ -333,18 +363,32 @@ geometry_msgs::msg::PoseStamped ArrivalController::inFrame(
 {
   if (pose.header.frame_id.empty() || !validPose(pose.pose)) {fail("INVALID_POSE");}
   try {
-    return pose.header.frame_id == frame ? pose : tf_->transform(pose, frame, tf2::durationFromSec(0.05));
+    if(pose.header.frame_id==frame)return pose;
+    auto latest=pose;latest.header.stamp={};
+    return tf_->transform(latest, frame, tf2::durationFromSec(0.05));
   } catch (const tf2::TransformException & e) {fail(std::string("TF_UNAVAILABLE: ") + e.what());}
 }
 
 bool ArrivalController::safeCommand(const geometry_msgs::msg::PoseStamped & pose,
   const geometry_msgs::msg::Twist & command, const geometry_msgs::msg::Twist & measured)
 {
-  if (!geometry_guard_.ready() || !costmap_->isCurrent()) {return false;}
+  auto reject = [&](const char * reason, double x, double y, double yaw,
+      int step = -1, int steps = 0, double cost = -1.) {
+    RCLCPP_WARN(logger_,
+      "COMMAND_SAFETY_REJECT reason=%s frame=%s x=%.6f y=%.6f yaw=%.6f step=%d/%d cost=%.1f "
+      "cmd=(%.6f,%.6f,%.6f) measured=(%.6f,%.6f,%.6f)",
+      reason, costmap_->getGlobalFrameID().c_str(), x, y, yaw, step, steps, cost,
+      command.linear.x, command.linear.y, command.angular.z,
+      measured.linear.x, measured.linear.y, measured.angular.z);
+    return false;
+  };
+  const double unavailable = std::numeric_limits<double>::quiet_NaN();
+  if (!geometry_guard_.ready()) {return reject("ENVELOPE_NOT_READY", unavailable, unavailable, unavailable);}
+  if (!costmap_->isCurrent()) {return reject("COSTMAP_NOT_CURRENT", unavailable, unavailable, unavailable);}
   auto local = inFrame(pose, costmap_->getGlobalFrameID());
   auto * map = costmap_->getCostmap();
   auto footprint = costmap_->getRobotFootprint();
-  if (footprint.size() < 3) {return false;}
+  if (footprint.size() < 3) {return reject("FOOTPRINT_TOO_SMALL", unavailable, unavailable, unavailable);}
   std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*map->getMutex());
   nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *> collision(map);
   for (const auto & twist : {command, measured}) {
@@ -365,10 +409,13 @@ bool ArrivalController::safeCommand(const geometry_msgs::msg::PoseStamped & pose
       }
       unsigned int mx, my;
       const double cost = collision.footprintCostAtPose(x, y, yaw, footprint);
-      if (geometry_guard_.enabled() && astribot_s1_robot_geometry::collision(*map,footprint,x,y,yaw,sweep/(2*steps))) {return false;}
-      if (!map->worldToMap(x, y, mx, my) || cost < 0 || cost >= 254 || map->getCost(mx, my) >= 253) {
-        return false;
+      if (geometry_guard_.enabled() && astribot_s1_robot_geometry::collision(*map,footprint,x,y,yaw,sweep/(2*steps))) {
+        return reject("FILLED_FOOTPRINT_COLLISION", x, y, yaw, i, steps, cost);
       }
+      if (!map->worldToMap(x, y, mx, my)) {return reject("SWEEP_OUTSIDE_COSTMAP", x, y, yaw, i, steps, cost);}
+      if (cost < 0) {return reject("FOOTPRINT_COST_INVALID", x, y, yaw, i, steps, cost);}
+      if (cost >= 254) {return reject("FOOTPRINT_COST_BLOCKED", x, y, yaw, i, steps, cost);}
+      if (map->getCost(mx, my) >= 253) {return reject("CENTER_COST_BLOCKED", x, y, yaw, i, steps, map->getCost(mx, my));}
       x += (std::cos(yaw)*twist.linear.x - std::sin(yaw)*twist.linear.y)/steps;
       y += (std::sin(yaw)*twist.linear.x + std::cos(yaw)*twist.linear.y)/steps;
       yaw += twist.angular.z/steps;
@@ -470,6 +517,20 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
   nav2_core::GoalChecker * checker)
 {
+  auto command=computeCommand(pose,velocity,checker);
+  if (policy_enabled_ && policy_lease_.restrict(command.twist,clock_->now()) &&
+    (std::hypot(command.twist.linear.x,command.twist.linear.y)>0. || command.twist.angular.z!=0.) &&
+    !safeCommand(pose,command.twist,velocity)) {
+    fail("POLICY_RESTRICTED_SWEEP_BLOCKED");
+  }
+  return command;
+}
+
+geometry_msgs::msg::TwistStamped ArrivalController::computeCommand(
+  const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
+  nav2_core::GoalChecker * checker)
+{
+  applyPendingPlan();
   arrival_progress_->clear();
   if (!geometry_guard_.ready()) {fail("ENVELOPE_V2_NOT_READY");}
   auto * arrival = dynamic_cast<ArrivalGoalChecker *>(checker);
@@ -479,43 +540,40 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
     std::lock_guard<std::mutex> guard(bridge_status_mutex_);
     if (!bridge_error_.empty()) {fail(bridge_error_);}
   }
-  if (checker_ != arrival || generation_ != arrival->generation()) {
+  if (checker_ != arrival) {
     holding_ = xy_held_ = yaw_held_ = corridor_terminal_coast_ = false; checker_ = arrival; generation_ = arrival->generation();
     xy_coast_.reset(); yaw_coast_.reset();
     xy_settling_.reset(); yaw_settling_.reset();
   }
+  generation_=arrival->generation();
   last_tick_ = clock_->now().seconds();
   if (!error_.empty()) {fail(error_);}
   if (!has_goal_) {fail("INVALID_PATH: no target");}
   if (!std::isfinite(velocity.linear.x) || !std::isfinite(velocity.linear.y) ||
     !std::isfinite(velocity.angular.z)) {fail("INVALID_VELOCITY");}
-  const double now = clock_->now().seconds();
-  const double navigation_age = now - rclcpp::Time(pose.header.stamp).seconds();
-  if (navigation_age < -0.05 || navigation_age > pose_timeout_) {fail("NAVIGATION_POSE_STALE");}
+  const double now=std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
   auto current = inFrame(pose, goal_.header.frame_id);
+  observeCornerPose(current,velocity,clock_->now().seconds());
   if (!started_) {
     started_ = true; started_at_ = progress_at_ = now; anchor_ = current;
   }
   if (now < started_at_ || now < progress_at_) {fail("CLOCK_JUMP");}
-  double start_heading=0.;
-  const bool start_maneuver=policy_enabled_ && policy_takeover_ && !refining_ &&
-    distance(current.pose,goal_.pose)>capture_ &&
-    startManeuverHeading(tf2::getYaw(current.pose.orientation),start_heading);
-  StartManeuverChannel::Reply::ConstSharedPtr maneuver;
-  if (start_maneuver) {
-    maneuver=start_maneuver_.exchange(tracking_path_,current,start_heading);
-    if (maneuver && maneuver->mode==StartManeuverChannel::Reply::FAILED) {fail(maneuver->reason);}
-  }
   if (policy_enabled_) {
     const auto policy_status=policy_lease_.status(clock_->now());
     if (policy_status!=PolicyLease::Status::Fresh) {
       if (policy_status==PolicyLease::Status::WaitForClock) {
         slip_.pause();xy_settling_.reset();yaw_settling_.reset();holding_=false;
         publishPhase("POLICY_CLOCK_WAIT");
+        recordCornerPause(current,velocity,now);
         geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
       }
       RCLCPP_ERROR(logger_, "POLICY_LEASE_EVIDENCE %s", policy_lease_.freshnessDetail(clock_->now()).c_str());
-      fail("POLICY_LEASE_EXPIRED");
+      slip_.pause();xy_settling_.reset();yaw_settling_.reset();holding_=false;
+      publishPhase("POLICY_LEASE_WAIT");
+      recordCornerPause(current,velocity,now);
+      // Nav2 publishes zero while retrying under its existing failure_tolerance.
+      // A transient expiry must not latch error_ and reject a later fresh lease.
+      throw nav2_core::PlannerException("PATH_TRACKING/POLICY_LEASE_EXPIRED");
     }
     if (policy_paused_ && policy_tick_>=0) {
       const double duration=std::max(0.0,now-policy_tick_);
@@ -523,17 +581,18 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
       if (refining_) {refine_at_+=duration;}
       accountPolicyPause(duration,clock_->now());
     }
-    policy_tick_=now;policy_paused_=policy_lease_.held(clock_->now()) ||
-      (start_maneuver && (!maneuver || maneuver->mode==StartManeuverChannel::Reply::WAIT));
+    policy_tick_=now;policy_paused_=policy_lease_.held(clock_->now());
     if (policy_paused_) {
       xy_settling_.reset(); yaw_settling_.reset(); holding_=false;
       publishPhase("POLICY_HOLD");
+      recordCornerPause(current,velocity,now);
       geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
     }
     const double policy_cap=policy_lease_.linearSpeedLimit(clock_->now());
     if (policy_cap<=0.) {
       xy_settling_.reset(); yaw_settling_.reset(); holding_=false;
       policy_paused_=true;publishPhase("POLICY_HOLD");
+      recordCornerPause(current,velocity,now);
       geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
     }
     std::lock_guard<std::mutex> lock(speed_limit_mutex_);
@@ -544,22 +603,11 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
     // Zero is Nav2's reset sentinel and must never represent a policy stop.
     ThreePhaseController::setSpeedLimit(effective,false);
   }
-  if (start_maneuver && maneuver && maneuver->mode==StartManeuverChannel::Reply::REVERSE) {
-    geometry_msgs::msg::TwistStamped command;command.header=pose.header;
-    command.twist=maneuver->command;
-    double cap=policy_lease_.linearSpeedLimit(clock_->now());
-    {
-      std::lock_guard<std::mutex> lock(speed_limit_mutex_);
-      const double external=external_speed_limit_==0. ? nominal_speed_ :
-        (external_speed_percentage_ ? nominal_speed_*external_speed_limit_/100. : external_speed_limit_);
-      cap=std::min({cap,nominal_speed_,external});
-    }
-    const double scale=std::min(1.,cap/std::max(1e-12,std::hypot(command.twist.linear.x,command.twist.linear.y)));
-    command.twist.linear.x*=scale;command.twist.linear.y*=scale;command.twist.angular.z*=scale;
-    if (!safeCommand(pose,command.twist,velocity)) {fail("START_HEADING_UNREACHABLE: REVERSE_LOCAL_SWEEP_BLOCKED");}
-    policy_paused_=true;progress_at_=now;anchor_=current;
-    publishPhase("REVERSE_EXIT");
-    return command;
+  // Lease/HOLD processing keeps priority, but every motion owner shares the
+  // same replacement stop barrier before corridor or normal tracking.
+  if (!cornerReanchorReady(current,velocity,clock_->now())) {
+    publishPhase("REANCHOR_SETTLING");
+    geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
   }
   const bool corridor_tracking=policy_enabled_ && policy_lease_.corridorTrackingRequired(clock_->now());
   geometry_msgs::msg::Pose corridor_heading;
@@ -646,7 +694,9 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
     geometry_msgs::msg::TwistStamped stopped;stopped.header=pose.header;return stopped;
   }
   if (now - started_at_ > total_timeout_) {fail("GOAL_TIMEOUT");}
-  if (!refining_ && distance(current.pose, goal_.pose) <= capture_) {
+  if (!refining_ && distance(current.pose, goal_.pose) <= capture_ &&
+    terminalRefinementAllowed(current,capture_))
+  {
     refining_ = true; refine_at_ = progress_at_ = now;
     best_error_ = std::numeric_limits<double>::infinity();
     RCLCPP_INFO(logger_, "ARRIVAL_REFINING source=%s", source_.c_str());
@@ -657,6 +707,14 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
     {anchor_ = current; progress_at_ = now;}
     if (now-progress_at_ > progress_timeout_) {fail("NO_MOTION_PROGRESS");}
     auto cmd = ThreePhaseController::computeVelocityCommands(current, velocity, checker);
+    if (phase() == Phase::kAlignCorner && policy_enabled_) {
+      const double cap = policy_lease_.cornerAngularSpeedLimit(clock_->now());
+      if (cap <= 0.) {fail("CORNER_ROTATION_REQUIRES_ROUTE: current policy forbids in-place turn");}
+      cmd.twist.angular.z = std::clamp(cmd.twist.angular.z, -cap, cap);
+    }
+    if (phase()==Phase::kCornerApproach || phase()==Phase::kAlignCorner) {
+      limitCornerTranslation(cmd.twist);
+    }
     if (phase() == Phase::kFollow) {
       double cap = localSharpPathLimit(current);
       if (braking_model_!="constant_time") {
@@ -702,10 +760,6 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
     {std::lock_guard<std::mutex> guard(observation_mutex_);
       if (!observed_) {fail("POSE_UNAVAILABLE: " + source_);}
       observation = observation_;
-    }
-    const double age = now - rclcpp::Time(observation.header.stamp).seconds();
-    if (age < -0.05 || age > pose_timeout_ || rclcpp::Time(observation.header.stamp).nanoseconds() == 0) {
-      fail("POSE_STALE: " + source_);
     }
     current = inFrame(observation, goal_.header.frame_id);
   }
@@ -795,7 +849,7 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
   holding_ = within && xy_held_ && yaw_held_;
   if (holding_ && residual_inside) {
     if (!safeCommand(pose, cmd.twist, velocity)) {fail("REFINEMENT_BLOCKED: unsafe final footprint");}
-    arrival_progress_->report(now);
+    arrival_progress_->report(clock_->now().seconds());
     xy_coast_.reset(); yaw_coast_.reset();
     arrival->report(true);
     publishPhase("DONE");
@@ -889,7 +943,7 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
   if (!safeCommand(pose, cmd.twist, velocity)) {fail("REFINEMENT_BLOCKED: unsafe footprint sweep");}
   xy_settling_.command(std::hypot(cmd.twist.linear.x,cmd.twist.linear.y)<=1e-9,now);
   yaw_settling_.command(std::abs(cmd.twist.angular.z)<=1e-9,now);
-  if (within) {arrival_progress_->report(now);} else {arrival_progress_->clear();}
+  if (within) {arrival_progress_->report(clock_->now().seconds());} else {arrival_progress_->clear();}
   logMetrics(current, velocity, *arrival,
     xy_coast_.active() || yaw_coast_.active() ? "COAST" : (holding_ ? "SETTLING" : "REFINE"));
   return cmd;

@@ -2,7 +2,6 @@
 import math
 import numpy as np
 import pytest
-from astribot_s1_robot_geometry._geometry_native import scan_occupied_cells
 
 
 def reference(ranges, lo, hi, start, step, track, map_tf, info, mask, resolution):
@@ -28,6 +27,7 @@ def reference(ranges, lo, hi, start, step, track, map_tf, info, mask, resolution
 
 
 def test_rotated_maps_extrinsics_negative_cells_and_invalid_returns():
+    from astribot_s1_robot_geometry._geometry_native import scan_occupied_cells
     rng = np.random.default_rng(19374)
     for _ in range(80):
         transforms = []
@@ -44,6 +44,7 @@ def test_rotated_maps_extrinsics_negative_cells_and_invalid_returns():
 
 
 def test_exact_range_bounds_empty_output_and_duplicate_cells():
+    from astribot_s1_robot_geometry._geometry_native import scan_occupied_cells
     tf = (0., 0., 0., 0., 0., 0., 1.)
     args = ([.099, .1, 9.949, 9.95, 10., np.inf, np.nan], .1, 10., 0., .001,
             tf, tf, (1., 0., 0., 0., .1), np.zeros((10, 10), bool), .05)
@@ -54,6 +55,7 @@ def test_exact_range_bounds_empty_output_and_duplicate_cells():
 
 @pytest.mark.parametrize('kind', ['quaternion', 'resolution', 'overflow'])
 def test_invalid_geometry_is_rejected(kind):
+    from astribot_s1_robot_geometry._geometry_native import scan_occupied_cells
     tf = [0., 0., 0., 0., 0., 0., 1.]
     resolution = .05
     if kind == 'quaternion':tf[6] = 0.

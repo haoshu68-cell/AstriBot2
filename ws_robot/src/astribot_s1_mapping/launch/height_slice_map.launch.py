@@ -12,7 +12,7 @@ def generate_launch_description():
     return LaunchDescription([
         *[DeclareLaunchArgument(name) for name in required],
         Node(package="astribot_s1_mapping", executable="height_slice_map_node", output="screen",
-             parameters=[config, {name: ParameterValue(LaunchConfiguration(name),
+             parameters=[{"height_profile_path": config}, {name: ParameterValue(LaunchConfiguration(name),
                                       value_type=float if name == "ground_z" else str)
                                   for name in required}]),
     ])

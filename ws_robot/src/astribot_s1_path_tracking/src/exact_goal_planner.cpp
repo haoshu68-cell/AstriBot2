@@ -103,6 +103,12 @@ private:
     if (pathDistance(path.poses.back(),goal)>std::sqrt(2.0)*_costmap->getResolution()) {
       throw nav2_core::PlannerException("Requested goal unavailable: planner returned a substitute endpoint");
     }
+    if constexpr (std::is_same_v<Search,nav2_smac_planner::SmacPlanner2D>) {
+      try {anchorGridPathStart(path,start,_costmap->getResolution());}
+      catch(const std::invalid_argument & error) {
+        throw nav2_core::PlannerException(std::string("PATH_START_UNAVAILABLE: ")+error.what());
+      }
+    }
     path.poses.back()=goal;path.poses.back().header=path.header;
     auto before=pathQuality(path);
     // Curvature and clearance are independent: Smac2D checks the centre, while

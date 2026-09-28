@@ -1,6 +1,7 @@
 // Copyright 2026 Astribot
 
 #include "astribot_s1_path_tracking/three_phase_controller.hpp"
+#include "astribot_s1_path_tracking/corner_sweep.hpp"
 
 
 #include <algorithm>
@@ -50,10 +51,29 @@ void ThreePhaseController::configure(
   }
   logger_ = node->get_logger();
   clock_ = node->get_clock();
-  phase_started_ = clock_->now();
+  phase_started_ = budget_clock_.now();
 
   declareAndLoadParams();
+  alignment_collision_.configure(node,costmap_ros);
+  std::string progress_name="progress_checker", progress_plugin;
+  node->get_parameter_or("progress_checker_plugin",progress_name,progress_name);
+  node->get_parameter_or(progress_name+".plugin",progress_plugin,std::string{});
+  if(progress_plugin=="astribot_s1_path_tracking::PolicyProgressChecker") {
+    execution_=ControllerExecution::forNode(node.get());
+  } else if(corner_turn_enabled_) {
+    throw std::runtime_error("corner tracking requires PolicyProgressChecker execution lifecycle");
+  }
   loadInnerController(parent_, tf_, costmap_ros_);
+  if (corner_turn_enabled_) {
+    double vx=1., vx_min=-1., vy=1., wz=2.;
+    node->get_parameter_or(name_+".inner.vx_max",vx,vx);
+    node->get_parameter_or(name_+".inner.vx_min",vx_min,vx_min);
+    node->get_parameter_or(name_+".inner.vy_max",vy,vy);
+    node->get_parameter_or(name_+".inner.wz_max",wz,wz);
+    corner_feedback_linear_bound_mps_=std::max(corner_approach_speed_mps_,
+      std::hypot(std::max(std::abs(vx),std::abs(vx_min)),vy));
+    corner_feedback_angular_bound_radps_=std::max(align_max_vel_,std::abs(wz));
+  }
 
   RCLCPP_INFO(
     logger_,
@@ -84,6 +104,17 @@ void ThreePhaseController::configure(
       "[%s] 接近段限速已**禁用**(approach_enabled=false): 终段速度完全由内层决定，"
       "过冲会回到 0.146m 量级（run11 实测 p50）—— 这是显式回退档，不是默认值",
       name_.c_str());
+  }
+
+  if (corner_turn_enabled_) {
+    RCLCPP_INFO(
+      logger_,
+      "[%s] 标准角点跟踪已启用: turn=[%.1f°, %.1f°] segment>=%.2fm "
+      "prepare=%.2fm capture=%.3fm terminal_guard=%.2fm v=[%.3f, %.3f]m/s",
+      name_.c_str(), corner_min_angle_rad_ * 180.0 / M_PI,
+      corner_max_angle_rad_ * 180.0 / M_PI, corner_min_segment_m_,
+      corner_approach_distance_m_, corner_capture_radius_m_, corner_terminal_guard_m_,
+      corner_approach_min_speed_mps_, corner_approach_speed_mps_);
   }
 }
 
@@ -119,6 +150,24 @@ void ThreePhaseController::declareAndLoadParams()
   declare_parameter_if_not_declared(node, p + "approach_enabled", rclcpp::ParameterValue(true));
   declare_parameter_if_not_declared(node, p + "approach_dist", rclcpp::ParameterValue(1.50));
   declare_parameter_if_not_declared(node, p + "approach_v_min", rclcpp::ParameterValue(0.05));
+  declare_parameter_if_not_declared(node, p + "corner_turn_enabled", rclcpp::ParameterValue(false));
+  declare_parameter_if_not_declared(node, p + "corner_min_angle", rclcpp::ParameterValue(0.61));
+  declare_parameter_if_not_declared(node, p + "corner_max_angle", rclcpp::ParameterValue(2.75));
+  declare_parameter_if_not_declared(node, p + "corner_min_segment", rclcpp::ParameterValue(0.25));
+  declare_parameter_if_not_declared(
+    node, p + "corner_approach_distance", rclcpp::ParameterValue(0.25));
+  declare_parameter_if_not_declared(
+    node, p + "corner_capture_radius", rclcpp::ParameterValue(0.04));
+  declare_parameter_if_not_declared(
+    node, p + "corner_lateral_tolerance", rclcpp::ParameterValue(0.15));
+  declare_parameter_if_not_declared(
+    node, p + "corner_approach_speed", rclcpp::ParameterValue(0.08));
+  declare_parameter_if_not_declared(
+    node, p + "corner_approach_min_speed", rclcpp::ParameterValue(0.02));
+  declare_parameter_if_not_declared(node, p + "corner_approach_kp", rclcpp::ParameterValue(0.8));
+  declare_parameter_if_not_declared(
+    node, p + "corner_terminal_guard", rclcpp::ParameterValue(0.10));
+  declare_parameter_if_not_declared(node, p + "corner_timeout", rclcpp::ParameterValue(15.0));
   declare_parameter_if_not_declared(
     node, p + "align_inertia_enabled", rclcpp::ParameterValue(true));
   declare_parameter_if_not_declared(node, p + "align_coast_lag", rclcpp::ParameterValue(0.03));
@@ -144,6 +193,18 @@ void ThreePhaseController::declareAndLoadParams()
   node->get_parameter(p + "approach_enabled", approach_enabled_);
   node->get_parameter(p + "approach_dist", approach_dist_m_);
   node->get_parameter(p + "approach_v_min", approach_v_min_);
+  node->get_parameter(p + "corner_turn_enabled", corner_turn_enabled_);
+  node->get_parameter(p + "corner_min_angle", corner_min_angle_rad_);
+  node->get_parameter(p + "corner_max_angle", corner_max_angle_rad_);
+  node->get_parameter(p + "corner_min_segment", corner_min_segment_m_);
+  node->get_parameter(p + "corner_approach_distance", corner_approach_distance_m_);
+  node->get_parameter(p + "corner_capture_radius", corner_capture_radius_m_);
+  node->get_parameter(p + "corner_lateral_tolerance", corner_lateral_tolerance_m_);
+  node->get_parameter(p + "corner_approach_speed", corner_approach_speed_mps_);
+  node->get_parameter(p + "corner_approach_min_speed", corner_approach_min_speed_mps_);
+  node->get_parameter(p + "corner_approach_kp", corner_approach_kp_);
+  node->get_parameter(p + "corner_terminal_guard", corner_terminal_guard_m_);
+  node->get_parameter(p + "corner_timeout", corner_timeout_sec_);
   node->get_parameter(p + "align_inertia_enabled", align_inertia_enabled_);
   node->get_parameter(p + "align_coast_lag", align_coast_lag_);
   node->get_parameter(p + "align_coast_decel", align_coast_decel_);
@@ -193,6 +254,28 @@ void ThreePhaseController::declareAndLoadParams()
   if (!(new_attempt_gap_sec_ > 0.0) || !(new_attempt_gap_sec_ < align_timeout_sec_)) {
     throw nav2_core::PlannerException(
       "ThreePhaseController: new_attempt_gap 必须 in (0, align_timeout)");
+  }
+
+  if (corner_turn_enabled_) {
+    if (!(corner_min_angle_rad_ > 0.0) || !(corner_min_angle_rad_ < corner_max_angle_rad_) ||
+      !(corner_max_angle_rad_ < M_PI) || !(corner_min_segment_m_ > 0.0) ||
+      !(corner_approach_distance_m_ > corner_capture_radius_m_) ||
+      !(corner_capture_radius_m_ > 0.0) || !(corner_lateral_tolerance_m_ > 0.0) ||
+      !(corner_approach_speed_mps_ > 0.0) || !(corner_approach_min_speed_mps_ > 0.0) ||
+      !(corner_approach_min_speed_mps_ <= corner_approach_speed_mps_) ||
+      !(corner_approach_kp_ > 0.0) || !(corner_terminal_guard_m_ >= 0.0) ||
+      !(corner_timeout_sec_ > 0.0))
+    {
+      throw nav2_core::PlannerException(
+        "ThreePhaseController: standard corner parameters are inconsistent");
+    }
+    if (corner_approach_distance_m_ > approach_dist_m_ && approach_enabled_) {
+      RCLCPP_WARN(
+        logger_,
+        "[%s] corner_approach_distance=%.3f exceeds approach_dist=%.3f; "
+        "corner phase remains bounded and uses its own speed cap",
+        name_.c_str(), corner_approach_distance_m_, approach_dist_m_);
+    }
   }
 
   if (approach_enabled_) {
@@ -301,6 +384,8 @@ void ThreePhaseController::loadInnerController(
 
 void ThreePhaseController::cleanup()
 {
+  alignment_collision_.cleanup();
+  pending_plan_.reset();beginExecution();execution_.reset();execution_generation_=0;
   if (inner_) {
     inner_->cleanup();
     inner_.reset();
@@ -317,6 +402,7 @@ void ThreePhaseController::activate()
 
 void ThreePhaseController::deactivate()
 {
+  pending_plan_.reset();beginExecution();
   if (inner_) {
     inner_->deactivate();
   }
@@ -337,7 +423,7 @@ void ThreePhaseController::enterPhase(
       RCLCPP_INFO(
         logger_, "[%s] 相位仍为 %s，但按新目标重置计时器 : %s",
         name_.c_str(), toString(phase_), why);
-      phase_started_ = now;
+      phase_started_ = budget_clock_.now();
       if (p == Phase::kAlignStart) {start_alignment_engaged_ = false;}
     }
     return;
@@ -345,76 +431,514 @@ void ThreePhaseController::enterPhase(
   RCLCPP_INFO(
     logger_, "[%s] 相位 %s -> %s : %s", name_.c_str(), toString(phase_), toString(p), why);
   phase_ = p;
-  phase_started_ = now;
+  phase_started_ = budget_clock_.now();
   align_coasting_ = false;
   if (p == Phase::kAlignStart) {start_alignment_engaged_ = false;}
 }
 
+void ThreePhaseController::resetCornerState(bool clear_detection)
+{
+  corner_stop_.reset();corner_braking_=false;corner_stage_=CornerStage::Idle;
+  corner_active_ = false;
+  corner_cursor_ = 0U;
+  corner_completed_count_ = 0U;
+  corner_started_s_ = 0.0;
+  corner_heading_ = 0.0;
+  corner_position_ = {};
+  corner_reanchor_pending_ = false;
+  corner_position_recovering_ = false;
+  if (clear_detection) {
+    corners_.clear();
+  }
+  emitCornerState("reset");
+}
+
+namespace {
+std::vector<PlanarPoint> directedVertices(const nav_msgs::msg::Path & path)
+{
+  std::vector<PlanarPoint> result;
+  for (const auto & pose : path.poses) {
+    const PlanarPoint next{pose.pose.position.x, pose.pose.position.y};
+    if (!result.empty() && std::hypot(next.x-result.back().x, next.y-result.back().y)<1e-8) {
+      continue;
+    }
+    while (result.size()>=2U) {
+      const auto & a=result[result.size()-2U];const auto & b=result.back();
+      const double ax=b.x-a.x, ay=b.y-a.y, bx=next.x-b.x, by=next.y-b.y;
+      if (ax*bx+ay*by<=0. || std::abs(ax*by-ay*bx)>1e-8*std::hypot(ax,ay)*std::hypot(bx,by)) {
+        break;
+      }
+      result.pop_back();
+    }
+    result.push_back(next);
+  }
+  return result;
+}
+bool sameDirectedRoute(const nav_msgs::msg::Path & old_path, const nav_msgs::msg::Path & new_path)
+{
+  if (old_path.header.frame_id!=new_path.header.frame_id) {return false;}
+  const auto a=directedVertices(old_path), b=directedVertices(new_path);
+  if (a.size()!=b.size()) {return false;}
+  for (std::size_t i=0;i<a.size();++i) {
+    if (std::hypot(a[i].x-b[i].x,a[i].y-b[i].y)>1e-4) {return false;}
+  }
+  return true;
+}
+}
+
 void ThreePhaseController::setPlan(const nav_msgs::msg::Path & path)
 {
-  plan_ = path;
-  if (inner_) {
-    inner_->setPlan(path);
-  }
+  // Nav2 calls progress_checker.reset() after this callback at execution start.
+  // Commit on the first control tick, when that explicit generation is known.
+  if (execution_) {pending_plan_=path;return;}
+  applyPlan(path);
+}
 
-  const rclcpp::Time now = clock_->now();
+void ThreePhaseController::beginExecution()
+{
+  has_last_goal_=false;has_corner_pose_=false;has_tick_=false;accepted_plan_stamp_ns_=0;
+  resetCornerState(true);start_alignment_engaged_=false;arrival_logged_=false;
+}
 
-  if (path.poses.size() < 2U) {
-    start_heading_valid_ = false;
-    has_last_goal_ = false;
-    enterPhase(Phase::kFollow, now, "路径顶点少于 2 个，无起始方向", true);
-    return;
-  }
-
-  const auto & end = path.poses.back().pose.position;
-  const PlanarPoint cur_end{end.x, end.y};
-
-  const bool same_goal =
-    has_last_goal_ && isSameGoal(last_goal_end_, cur_end, new_goal_epsilon_m_);
-  last_goal_end_ = cur_end;
-  has_last_goal_ = true;
-
-  std::vector<PlanarPoint> pts;
-  pts.reserve(path.poses.size());
-  for (const auto & ps : path.poses) {
-    pts.push_back(PlanarPoint{ps.pose.position.x, ps.pose.position.y});
-  }
-  double h = 0.0;
-  if (pathStartHeading(pts, lookahead_m_, h)) {
-    start_heading_ = h;
-    start_heading_valid_ = true;
-  } else {
-    start_heading_valid_ = false;
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, 5000,
-      "[%s] 路径退化，无法估计起始方向，跳过起步对齐段", name_.c_str());
-  }
-
-  if (same_goal) {
-    const double idle_gap = has_tick_ ? (now - last_tick_time_).seconds() : 0.0;
-    if (isFreshFollowAttempt(has_tick_, idle_gap, new_attempt_gap_sec_)) {
-      RCLCPP_INFO(
-        logger_,
-        "[%s] 同一目标的新一次下发（距上次 tick %.2fs > %.2fs，上个 action 已结束），"
-        "重置相位 %s 的计时器",
-        name_.c_str(), idle_gap, new_attempt_gap_sec_, toString(phase_));
-      phase_started_ = now;
-      return;
+void ThreePhaseController::applyPendingPlan()
+{
+  if (!pending_plan_) {return;}
+  if (execution_) {
+    const auto generation=execution_->generation();
+    if (generation==0) {
+      throw nav2_core::PlannerException("CONTROLLER_EXECUTION_UNAVAILABLE: PolicyProgressChecker required");
     }
-    RCLCPP_DEBUG(
-      logger_, "[%s] 同一目标的重规划，保持相位 %s", name_.c_str(), toString(phase_));
+    if (generation!=execution_generation_) {beginExecution();execution_generation_=generation;}
+  }
+  applyPlan(*pending_plan_);
+  pending_plan_.reset();
+}
+
+void ThreePhaseController::applyPlan(const nav_msgs::msg::Path & path)
+{
+  const rclcpp::Time now=clock_->now();
+  if (path.poses.empty()) {
+    plan_update_=PlanUpdate::NewExecution;
+    plan_=path;if(inner_){inner_->setPlan(path);}
+    start_heading_valid_=false;has_last_goal_=false;resetCornerState(true);
+    enterPhase(Phase::kFollow,now,"空路径，无起始方向",true);
     return;
   }
-
-  arrival_logged_ = false;
-
-  if (align_start_enabled_ && start_heading_valid_) {
-    enterPhase(Phase::kAlignStart, now, "收到新目标", true);
-  } else {
-    enterPhase(
-      Phase::kFollow, now,
-      align_start_enabled_ ? "起始方向不可用" : "起步对齐已关闭", true);
+  const auto & end=path.poses.back().pose.position;
+  const PlanarPoint cur_end{end.x,end.y};
+  bool same_goal=has_last_goal_ && isSameGoal(last_goal_end_,cur_end,new_goal_epsilon_m_);
+  if (corner_turn_enabled_ && !plan_.poses.empty()) {
+    same_goal=same_goal && std::hypot(end.x-plan_.poses.back().pose.position.x,
+      end.y-plan_.poses.back().pose.position.y)<1e-4 && path.header.frame_id==plan_.header.frame_id &&
+      std::abs(shortestAngularDiff(yawOf(plan_.poses.back().pose),yawOf(path.poses.back().pose)))<1e-4;
   }
+  const double idle_gap=has_tick_?(now-last_tick_time_).seconds():0.;
+  const bool fresh=(execution_ || corner_turn_enabled_) ? !has_last_goal_ :
+    isFreshFollowAttempt(has_tick_,idle_gap,new_attempt_gap_sec_);
+  const bool same_route=same_goal && sameDirectedRoute(plan_,path);
+  const bool equivalent=corner_turn_enabled_ && same_route;
+  const bool continuing=corner_turn_enabled_ && same_goal && !fresh;
+  const auto old_phase_started=phase_started_;
+  const bool was_corner_active=corner_active_;
+  const int64_t new_stamp=rclcpp::Time(path.header.stamp).nanoseconds();
+  const int64_t old_stamp=fresh ? 0 : accepted_plan_stamp_ns_;
+  if (corner_turn_enabled_ && old_stamp>0 && new_stamp>0 && new_stamp<old_stamp) {
+    return;  // Keep the latest plan when an older observation arrives.
+  }
+  if (continuing) {
+    if (!equivalent) {
+      if (new_stamp<=0 || (old_stamp>0 && new_stamp<=old_stamp)) {
+        throw nav2_core::PlannerException("CORNER_UNVERSIONED_REPLAN: changed geometry without newer stamp");
+      }
+      const auto & first=path.poses.front().pose.position;
+      if (!has_corner_pose_ || last_corner_pose_.header.frame_id!=path.header.frame_id ||
+        std::hypot(first.x-last_corner_pose_.pose.position.x,
+          first.y-last_corner_pose_.pose.position.y)>corner_approach_distance_m_)
+      {
+        throw nav2_core::PlannerException("CORNER_REPLAN_START_UNCONFIRMED: new route must start at current pose");
+      }
+    }
+  }
+  std::vector<PlanarPoint> points;
+  for (const auto & pose:path.poses) {points.push_back({pose.pose.position.x,pose.pose.position.y});}
+  if (corner_turn_enabled_) {
+    const auto issue=inspectCornerGeometry(points,corner_min_segment_m_,corner_min_angle_rad_,corner_max_angle_rad_);
+    const char * reason=nullptr;
+    switch(issue.kind) {
+      case CornerGeometry::ShortApproach:reason="CORNER_SHORT_APPROACH";break;
+      case CornerGeometry::DenseDogleg:reason="CORNER_DENSE_GEOMETRY";break;
+      case CornerGeometry::Turnaround:reason="CORNER_UNSUPPORTED_REVERSAL";break;
+      case CornerGeometry::TerminalHandoff:
+        RCLCPP_INFO(logger_,"CORNER_TERMINAL_HANDOFF index=%zu short terminal leg; not a completed corner",issue.index);
+        break;
+      default:break;
+    }
+    if(reason) {throw nav2_core::PlannerException(std::string(reason)+": index="+std::to_string(issue.index));}
+  }
+  auto detected=corner_turn_enabled_?detectStandardCorners(points,corner_min_segment_m_,
+    corner_min_angle_rad_,corner_max_angle_rad_):std::vector<PathCorner>{};
+  if (continuing && equivalent && detected.size()!=corners_.size()) {
+    throw nav2_core::PlannerException("CORNER_REPLAN_IDENTITY_CHANGED: corner sequence differs");
+  }
+  if (corner_turn_enabled_) {
+    const auto vertices=directedVertices(path);
+    for (std::size_t i=1;i+1<vertices.size();++i) {
+      const auto & a=vertices[i-1];const auto & b=vertices[i];const auto & c=vertices[i+1];
+      if (std::hypot(b.x-a.x,b.y-a.y)<corner_min_segment_m_ ||
+        std::hypot(c.x-b.x,c.y-b.y)<corner_min_segment_m_) {continue;}
+      const double turn=std::abs(shortestAngularDiff(
+        std::atan2(b.y-a.y,b.x-a.x),std::atan2(c.y-b.y,c.x-b.x)));
+      if (turn>corner_max_angle_rad_) {
+        throw nav2_core::PlannerException("CORNER_UNSUPPORTED_REVERSAL: route needs a separate turnaround maneuver");
+      }
+    }
+  }
+  // Validate before committing either the full path or the inner segment.
+  plan_=path;last_goal_end_=cur_end;has_last_goal_=true;corners_=std::move(detected);
+  accepted_plan_stamp_ns_=std::max(old_stamp,new_stamp);
+  plan_update_=(same_goal && !fresh) ?
+    (same_route?PlanUpdate::EquivalentRefresh:PlanUpdate::RouteReplacement):PlanUpdate::NewExecution;
+  if (corner_turn_enabled_) {
+    ++corner_plan_revision_;
+    if (!(continuing && equivalent)) {
+      resetCornerState(false);
+      corner_reanchor_pending_=continuing;
+      if (!continuing) {has_corner_pose_=false;}
+    } else if (corner_active_ && corner_cursor_<corners_.size()) {
+      corner_position_=corners_[corner_cursor_].position;
+      corner_heading_=corners_[corner_cursor_].outgoing_heading;
+    }
+  } else {resetCornerState(false);}
+  if(inner_){inner_->setPlan(path);}updateCornerSegment();
+  auto heading_points=points;
+  if (corner_turn_enabled_ && !corners_.empty()) {
+    const std::size_t begin=corner_completed_count_>0?corners_.at(corner_completed_count_-1).index:0;
+    const std::size_t end=corner_cursor_<corners_.size()?corners_[corner_cursor_].index:points.size()-1;
+    heading_points.assign(points.begin()+begin,points.begin()+end+1);
+  }
+  double heading=0.;start_heading_valid_=pathStartHeading(heading_points,lookahead_m_,heading);
+  if(start_heading_valid_){start_heading_=heading;}
+  if (same_goal && (!corner_turn_enabled_ || (continuing && equivalent))) {
+    if(fresh){phase_started_=budget_clock_.now();}
+    if (continuing && equivalent) {emitCornerState("plan_refresh");}
+    return;
+  }
+  arrival_logged_=false;
+  enterPhase(align_start_enabled_ && start_heading_valid_?Phase::kAlignStart:Phase::kFollow,
+    now,continuing?"validated route change; settle before reanchor":"new execution context",true);
+  if (continuing && was_corner_active) {phase_started_=old_phase_started;}
+  RCLCPP_DEBUG(logger_,"CORNER_PLAN revision=%zu corners=%zu cursor=%zu preserved=%d",
+    corner_plan_revision_,corners_.size(),corner_cursor_,continuing && equivalent);
+}
+
+bool ThreePhaseController::terminalRefinementAllowed(
+  const geometry_msgs::msg::PoseStamped & pose, double capture_radius) const
+{
+  if (!corner_turn_enabled_) {return true;}
+  if (corner_active_ || corner_reanchor_pending_ ||
+    pose.header.frame_id!=plan_.header.frame_id) {return false;}
+  if (plan_.poses.size()<2U) {return true;}
+  const std::size_t begin=corner_completed_count_>0U ?
+    corners_.at(corner_completed_count_-1U).index : 0U;
+  const std::size_t end=corner_cursor_<corners_.size() ?
+    corners_[corner_cursor_].index : plan_.poses.size()-1U;
+  std::vector<PlanarPoint> leg;
+  double remaining=0.;
+  for (std::size_t i=begin;i<plan_.poses.size();++i) {
+    const auto & p=plan_.poses[i].pose.position;
+    if (i<=end) {leg.push_back({p.x,p.y});}
+    if (i>begin) {
+      const auto & previous=plan_.poses[i-1U].pose.position;
+      remaining+=std::hypot(p.x-previous.x,p.y-previous.y);
+    }
+  }
+  // Heading-only paths have no segment to project onto; Arrival still checks goal distance.
+  if (remaining==0.) {return capture_radius>=0.;}
+  double progress=0.,lateral=0.;
+  if (!projectPathProgress(leg,{pose.pose.position.x,pose.pose.position.y},progress,lateral)) {
+    return false;
+  }
+  // Restrict projection to the current ordered leg, never a nearby future leg.
+  return std::isfinite(remaining) && remaining-progress<=capture_radius;
+}
+
+void ThreePhaseController::updateCornerSegment()
+{
+  if (!inner_ || !corner_turn_enabled_) {return;}
+  if (plan_.poses.size()<2U) {inner_->setPlan(plan_);return;}
+  const std::size_t begin=corner_completed_count_>0U ?
+    corners_.at(corner_completed_count_-1U).index : 0U;
+  std::size_t end=plan_.poses.size()-1U;
+  bool stop_at_corner=false;
+  if (corner_cursor_<corners_.size()) {
+    const auto & corner=corners_[corner_cursor_];
+    double remaining=0.;
+    for (std::size_t i=corner.index+1U;i<plan_.poses.size();++i) {
+      const auto & a=plan_.poses[i-1U].pose.position;
+      const auto & b=plan_.poses[i].pose.position;
+      remaining+=std::hypot(b.x-a.x,b.y-a.y);
+    }
+    if (remaining>corner_approach_distance_m_+corner_terminal_guard_m_) {
+      end=corner.index;stop_at_corner=true;
+    }
+  }
+  // Only completed corners advance the start. A skipped terminal corner has
+  // not been traversed, so it cannot discard the incoming route.
+  auto segment=plan_;
+  segment.poses.assign(plan_.poses.begin()+begin,plan_.poses.begin()+end+1U);
+  if (stop_at_corner) {
+    auto & orientation=segment.poses.back().pose.orientation;
+    orientation.x=orientation.y=0.;
+    orientation.z=std::sin(corners_[corner_cursor_].incoming_heading/2.);
+    orientation.w=std::cos(corners_[corner_cursor_].incoming_heading/2.);
+  }
+  inner_->setPlan(segment);
+}
+
+bool ThreePhaseController::maybeStartCorner(
+  const geometry_msgs::msg::PoseStamped & pose, double /*robot_yaw*/, double goal_xy_tolerance,
+  double measured_speed)
+{
+  if (!corner_turn_enabled_ || phase_ != Phase::kFollow || corners_.empty() ||
+    corner_cursor_ >= corners_.size() || plan_.poses.size() < 2U)
+  {
+    return false;
+  }
+  std::vector<PlanarPoint> points;
+  points.reserve(plan_.poses.size());
+  for (const auto & item : plan_.poses) {
+    points.push_back({item.pose.position.x, item.pose.position.y});
+  }
+  const auto & corner=corners_[corner_cursor_];
+  const std::size_t begin=corner_cursor_>0U?corners_[corner_cursor_-1U].index:0U;
+  const double begin_arc=corner_cursor_>0U?corners_[corner_cursor_-1U].arc_length:0.;
+  const std::vector<PlanarPoint> leg(points.begin()+begin,points.begin()+corner.index+1U);
+  double progress=0.,lateral=0.;
+  const PlanarPoint current{pose.pose.position.x,pose.pose.position.y};
+  if (!projectPathProgress(leg,current,progress,lateral)) {return false;}
+  progress+=begin_arc;
+  const double overshoot=(current.x-corner.position.x)*std::cos(corner.incoming_heading)+
+    (current.y-corner.position.y)*std::sin(corner.incoming_heading);
+  if (overshoot>corner_capture_radius_m_) {
+    throw nav2_core::PlannerException("CORNER_MISSED: crossed an unconfirmed corner");
+  }
+  if (corner_active_) {return true;}
+  const double remaining = corner.arc_length - progress;
+  double total_arc = 0.0;
+  for (std::size_t i = 1U; i < points.size(); ++i) {
+    total_arc += std::hypot(
+      points[i].x - points[i - 1U].x, points[i].y - points[i - 1U].y);
+  }
+  const double post_corner_guard = std::max(corner_terminal_guard_m_, goal_xy_tolerance);
+  if (total_arc - corner.arc_length <= corner_approach_distance_m_ + post_corner_guard) {
+    RCLCPP_WARN(
+      logger_,
+      "[%s] 标准角点 #%zu 距终点 %.3fm 小于接近段+终点保护 %.3fm，跳过原地转向，"
+      "交给终点 GoalChecker/ALIGN_GOAL，避免 action 先判到位",
+      name_.c_str(), corner.index, total_arc - corner.arc_length,
+      corner_approach_distance_m_ + post_corner_guard);
+    ++corner_cursor_;
+    updateCornerSegment();
+    return false;
+  }
+  const double distance = std::hypot(
+    corner.position.x - current.x, corner.position.y - current.y);
+  const double entry=std::max(corner_approach_distance_m_,
+    cornerStoppingDistance(measured_speed)+corner_capture_radius_m_);
+  if (remaining < -corner_capture_radius_m_ || remaining > entry ||
+    distance > entry + corner_capture_radius_m_ ||
+    std::fabs(lateral) > corner_lateral_tolerance_m_)
+  {
+    return false;
+  }
+  corner_active_ = true;
+  corner_stop_.reset();corner_braking_=false;setCornerStage(CornerStage::Approach);
+  corner_position_ = corner.position;
+  corner_heading_ = corner.outgoing_heading;
+  corner_started_s_ = clock_->now().seconds();
+  enterPhase(Phase::kCornerApproach, clock_->now(), "接近标准角点，禁止提前转弯", true);
+  RCLCPP_INFO(
+    logger_, "[%s] CORNER_APPROACH index=%zu turn=%.1fdeg remaining=%.3fm lateral=%.3fm "
+    "heading=%.1fdeg",
+    name_.c_str(), corner.index, corner.turn_angle * 180.0 / M_PI, remaining, lateral,
+    corner.outgoing_heading * 180.0 / M_PI);
+  return true;
+}
+
+geometry_msgs::msg::TwistStamped ThreePhaseController::cornerApproachCommand(
+  const geometry_msgs::msg::PoseStamped & pose,
+  const geometry_msgs::msg::PoseStamped & phase_pose,
+  const geometry_msgs::msg::Twist & velocity,
+  nav2_core::GoalChecker * goal_checker,
+  double distance_to_corner)
+{
+  geometry_msgs::msg::TwistStamped stop;
+  stop.header = pose.header;
+  const double measured = std::hypot(velocity.linear.x, velocity.linear.y);
+  const double now=clock_->now().seconds();
+  const bool stopped=cornerStopped(phase_pose,velocity,now);
+  if (distance_to_corner <= corner_capture_radius_m_) {
+    recordCornerCommand(stop.twist,now);setCornerStage(CornerStage::SettlingBeforeTurn);
+    if (!stopped) {return stop;}
+    corner_braking_=false;setCornerStage(CornerStage::Turning);
+    enterPhase(Phase::kAlignCorner, clock_->now(), "角点源帧停稳确认，开始转向", true);
+    return stop;
+  }
+
+  if (measured>.01 && cornerStoppingDistance(measured)>=distance_to_corner-corner_capture_radius_m_*.5) {
+    corner_braking_=true;
+  }
+  if (corner_braking_) {
+    recordCornerCommand(stop.twist,now);setCornerStage(CornerStage::SettlingBeforeTurn);
+    if (stopped) {corner_braking_=false;}
+    return stop;
+  }
+  setCornerStage(CornerStage::Approach);
+
+  auto command = inner_->computeVelocityCommands(pose, velocity, goal_checker);
+  const double speed = std::hypot(command.twist.linear.x, command.twist.linear.y);
+  double cap = std::min(corner_approach_speed_mps_, corner_approach_kp_ * distance_to_corner);
+  cap = std::max(corner_approach_min_speed_mps_, cap);
+  if (speed > 1e-6 && (speed >= corner_approach_min_speed_mps_ || measured > 0.01)) {
+    const double scale = std::min(1.0, cap / speed);
+    command.twist.linear.x *= scale;
+    command.twist.linear.y *= scale;
+  } else {
+    // corner_position_ is stored in the plan frame.  The Nav2 pose can arrive
+    // in a local frame, so use the transformed pose for this fallback vector.
+    const double yaw = yawOf(phase_pose.pose);
+    const double dx = corner_position_.x - phase_pose.pose.position.x;
+    const double dy = corner_position_.y - phase_pose.pose.position.y;
+    const double forward = std::cos(yaw) * dx + std::sin(yaw) * dy;
+    const double lateral = -std::sin(yaw) * dx + std::cos(yaw) * dy;
+    const double norm = std::max(distance_to_corner, 1e-9);
+    command.twist.linear.x = cap * forward / norm;
+    command.twist.linear.y = cap * lateral / norm;
+  }
+  // The defining invariant of this phase is no early rotation.
+  command.twist.angular.z = 0.0;
+  recordCornerCommand(command.twist,now);
+  return command;
+}
+
+bool ThreePhaseController::cornerStopped(const geometry_msgs::msg::PoseStamped & pose,
+  const geometry_msgs::msg::Twist & velocity,double now)
+{
+  (void)now;
+  const bool stable=corner_stop_.observe(rclcpp::Time(pose.header.stamp).seconds(),budget_clock_.now().seconds(),
+    pose.pose.position.x,pose.pose.position.y,yawOf(pose.pose),cornerSettleDuration(),
+    cornerSourceMaxGap(),align_settled_wz_,corner_capture_radius_m_*.25,align_tol_rad_*.5);
+  return stable && std::hypot(velocity.linear.x,velocity.linear.y)<=.01 &&
+    std::abs(velocity.angular.z)<=align_settled_wz_;
+}
+
+void ThreePhaseController::recordCornerCommand(const geometry_msgs::msg::Twist & command,double now)
+{
+  (void)now;
+  corner_stop_.command(command.linear.x,command.linear.y,command.angular.z,budget_clock_.now().seconds());
+}
+
+bool ThreePhaseController::cornerReanchorReady(const geometry_msgs::msg::PoseStamped & pose,
+  const geometry_msgs::msg::Twist & velocity,const rclcpp::Time & now)
+{
+  if (!corner_turn_enabled_ || !corner_reanchor_pending_) {return true;}
+  checkPhaseTimeout(now);
+  const bool stopped=cornerStopped(pose,velocity,now.seconds());
+  geometry_msgs::msg::Twist zero;recordCornerCommand(zero,now.seconds());
+  setCornerStage(CornerStage::ReanchorSettling);
+  if (!stopped) {return false;}
+  corner_reanchor_pending_=false;setCornerStage(CornerStage::Idle);
+  return true;
+}
+
+void ThreePhaseController::recordCornerPause(const geometry_msgs::msg::PoseStamped & pose,
+  const geometry_msgs::msg::Twist & velocity,double now)
+{
+  if (!corner_turn_enabled_) {return;}
+  cornerStopped(pose,velocity,now);
+  geometry_msgs::msg::Twist zero;recordCornerCommand(zero,now);
+}
+
+void ThreePhaseController::setCornerStage(CornerStage stage)
+{
+  if (stage==corner_stage_) {return;}
+  corner_stage_=stage;
+  emitCornerState("transition");
+}
+
+void ThreePhaseController::emitCornerState(const char * reason)
+{
+  if (!corner_turn_enabled_ || !clock_) {return;}
+  const char * names[]={"IDLE","APPROACH","SETTLING_BEFORE_TURN","TURNING","SETTLING_AFTER_TURN","RECOVERING","REANCHOR_SETTLING"};
+  const double pose_s=has_corner_pose_?rclcpp::Time(last_corner_pose_.header.stamp).seconds():0.;
+  RCLCPP_INFO(logger_,
+    "CORNER_STATE state=%s cursor=%zu revision=%zu pose_s=%.9f "
+    "schema=1 execution=%llu event=%llu ros_s=%.9f pose_valid=%d active=%d reason=%s",
+    names[static_cast<int>(corner_stage_)],corner_cursor_,corner_plan_revision_,pose_s,
+    static_cast<unsigned long long>(execution_generation_),
+    static_cast<unsigned long long>(++corner_event_sequence_),clock_->now().seconds(),
+    has_corner_pose_ && pose_s>0.,corner_active_,reason);
+}
+
+void ThreePhaseController::observeCornerPose(
+  const geometry_msgs::msg::PoseStamped & pose,
+  const geometry_msgs::msg::Twist & velocity, double now_s)
+{
+  if (!corner_turn_enabled_) {return;}
+  if (has_corner_pose_ && !corners_.empty() && phase_!=Phase::kDone) {
+    const double dt=now_s-last_corner_pose_time_s_;
+    const double translation=std::hypot(pose.pose.position.x-last_corner_pose_.pose.position.x,
+      pose.pose.position.y-last_corner_pose_.pose.position.y);
+    const double rotation=std::abs(shortestAngularDiff(yawOf(last_corner_pose_.pose),yawOf(pose.pose)));
+    // A pose jump can also spike differentiated odometry. It must not enlarge
+    // its own acceptance region beyond the configured controller motion range.
+    const double linear=std::hypot(velocity.linear.x,velocity.linear.y);
+    const double translation_limit=std::max(corner_approach_distance_m_,
+      std::min(linear,corner_feedback_linear_bound_mps_)*dt+2.*corner_capture_radius_m_);
+    const double rotation_limit=std::max(corner_min_angle_rad_,
+      std::min(std::abs(velocity.angular.z),corner_feedback_angular_bound_radps_)*dt+2.*align_tol_rad_);
+    if (dt<0. || pose.header.frame_id!=last_corner_pose_.header.frame_id ||
+      translation>translation_limit || rotation>rotation_limit)
+    {
+      RCLCPP_WARN_THROTTLE(logger_,*clock_,500,
+        "CORNER_POSE_DISCONTINUITY source=%.6f previous=%.6f dt=%.6f "
+        "old=(%.6f,%.6f) new=(%.6f,%.6f) distance=%.6f/%.6f rotation=%.6f/%.6f "
+        "velocity=%.6f angular_velocity=%.6f bounds=(%.6f,%.6f)",
+        rclcpp::Time(pose.header.stamp).seconds(),rclcpp::Time(last_corner_pose_.header.stamp).seconds(),dt,
+        last_corner_pose_.pose.position.x,last_corner_pose_.pose.position.y,
+        pose.pose.position.x,pose.pose.position.y,translation,translation_limit,rotation,rotation_limit,
+        linear,velocity.angular.z,corner_feedback_linear_bound_mps_,corner_feedback_angular_bound_radps_);
+      throw nav2_core::PlannerException("CORNER_LOCALIZATION_DISCONTINUITY: reacquire route before motion");
+    }
+  }
+  last_corner_pose_=pose;has_corner_pose_=true;last_corner_pose_time_s_=now_s;
+}
+
+geometry_msgs::msg::TwistStamped ThreePhaseController::cornerRotationCommand(
+  const geometry_msgs::msg::PoseStamped & pose,
+  const geometry_msgs::msg::Twist & velocity, double error)
+{
+  const double dx=corner_position_.x-pose.pose.position.x;
+  const double dy=corner_position_.y-pose.pose.position.y;
+  const double distance=std::hypot(dx,dy);
+  if (!std::isfinite(distance) || distance>corner_lateral_tolerance_m_) {
+    throw nav2_core::PlannerException("CORNER_POSITION_LOST: displacement outside recovery region");
+  }
+  if (distance>corner_capture_radius_m_) {corner_position_recovering_=true;}
+  if (distance<corner_capture_radius_m_*.5) {corner_position_recovering_=false;}
+  auto command=rotateOnly(error,velocity.angular.z,pose.header);
+  if (corner_position_recovering_) {command.twist.angular.z=0.;}
+  // Closed-loop position holding counters rotation-induced translation without
+  // feeding localization noise into the wheels. Existing execution sweeps apply.
+  const double deadband=corner_capture_radius_m_*.25;
+  if (distance>deadband) {
+    const double speed=std::min(corner_approach_speed_mps_*.5,
+      corner_approach_kp_*(distance-deadband));
+    const double yaw=yawOf(pose.pose);
+    command.twist.linear.x=speed*(std::cos(yaw)*dx+std::sin(yaw)*dy)/distance;
+    command.twist.linear.y=speed*(-std::sin(yaw)*dx+std::cos(yaw)*dy)/distance;
+  }
+  return command;
 }
 
 void ThreePhaseController::resolveTolerances(
@@ -531,12 +1055,19 @@ void ThreePhaseController::noteDeliveredYawAccuracy(double yaw_tol)
 
 void ThreePhaseController::checkPhaseTimeout(const rclcpp::Time & now)
 {
-  const double elapsed = (now - phase_started_).seconds();
+  const double elapsed = (budget_clock_.now() - phase_started_).seconds();
   if (phase_ == Phase::kAlignStart || phase_ == Phase::kAlignGoal) {
     if (elapsed > align_timeout_sec_) {
       throw nav2_core::PlannerException(
         std::string("ThreePhaseController: ") + toString(phase_) + " 段超时 " +
         std::to_string(elapsed) + "s > " + std::to_string(align_timeout_sec_) + "s，原地对齐未完成");
+    }
+  } else if (phase_ == Phase::kCornerApproach || phase_ == Phase::kAlignCorner) {
+    if (elapsed > corner_timeout_sec_) {
+      throw nav2_core::PlannerException(
+        std::string("ThreePhaseController: ") + toString(phase_) + " 段超时 " +
+        std::to_string(elapsed) + "s > " + std::to_string(corner_timeout_sec_) +
+        "s，标准角点未完成");
     }
   } else if (phase_ == Phase::kFollow && follow_timeout_sec_ > 0.0) {
     if (elapsed > follow_timeout_sec_) {
@@ -604,6 +1135,7 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
   if (!inner_) {
     throw nav2_core::PlannerException("ThreePhaseController: 内层控制器不可用");
   }
+  applyPendingPlan();
   const rclcpp::Time now = clock_->now();
 
   last_tick_time_ = now;
@@ -616,10 +1148,17 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
   auto phase_pose = pose;
   if (!plan_.poses.empty() && pose.header.frame_id != plan_.header.frame_id) {
     try {
-      phase_pose = tf_->transform(pose, plan_.header.frame_id);
+      auto latest=pose;latest.header.stamp={};
+      phase_pose = tf_->transform(latest, plan_.header.frame_id);
     } catch (const tf2::TransformException & ex) {
       throw nav2_core::PlannerException(
               std::string("ThreePhaseController: cannot transform pose to plan frame: ") + ex.what());
+    }
+  }
+  if (corner_turn_enabled_) {
+    observeCornerPose(phase_pose,velocity,now.seconds());
+    if (!cornerReanchorReady(phase_pose,velocity,now)) {
+      geometry_msgs::msg::TwistStamped stop;stop.header=pose.header;return stop;
     }
   }
   const double robot_yaw = yawOf(phase_pose.pose);
@@ -671,6 +1210,99 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
   }
 
   const double wz_now = velocity.angular.z;
+  if (phase_ == Phase::kFollow) {
+    maybeStartCorner(phase_pose, robot_yaw, xy_tol,std::hypot(velocity.linear.x,velocity.linear.y));
+  }
+  if (phase_ == Phase::kCornerApproach || phase_ == Phase::kAlignCorner) {
+    checkPhaseTimeout(now);
+    if (phase_ == Phase::kAlignCorner) {
+      if (!costmap_ros_ || !costmap_ros_->isCurrent()) {
+        throw nav2_core::PlannerException("CORNER_ROTATION_BLOCKED: costmap unavailable");
+      }
+      auto local = phase_pose;
+      try {
+        if (local.header.frame_id != costmap_ros_->getGlobalFrameID()) {
+          local = tf_->transform(phase_pose, costmap_ros_->getGlobalFrameID());
+        }
+      } catch (const tf2::TransformException & error) {
+        throw nav2_core::PlannerException(std::string("CORNER_ROTATION_TF_UNAVAILABLE: ") + error.what());
+      }
+      auto * map = costmap_ros_->getCostmap();
+      const double local_yaw = yawOf(local.pose);
+      const double target_yaw = local_yaw + shortestAngularDiff(robot_yaw, corner_heading_);
+      {
+        std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*map->getMutex());
+        if (!cornerRotationClear(*map, costmap_ros_->getRobotFootprint(),
+            local.pose.position.x, local.pose.position.y, local_yaw, target_yaw)) {
+          throw nav2_core::PlannerException("CORNER_ROTATION_BLOCKED: full footprint sweep");
+        }
+      }
+      const double corner_error = shortestAngularDiff(robot_yaw, corner_heading_);
+      const bool corner_stopped=cornerStopped(phase_pose,velocity,now.seconds());
+      if (headingSettled(
+          corner_error, wz_now, align_tol_rad_,
+          align_inertia_enabled_ ? align_settled_wz_ : std::numeric_limits<double>::infinity()) &&
+        std::hypot(velocity.linear.x, velocity.linear.y) <= 0.01 &&
+        std::hypot(corner_position_.x-phase_pose.pose.position.x,
+          corner_position_.y-phase_pose.pose.position.y)<=corner_capture_radius_m_*.5)
+      {
+        geometry_msgs::msg::TwistStamped stop;stop.header=pose.header;
+        recordCornerCommand(stop.twist,now.seconds());setCornerStage(CornerStage::SettlingAfterTurn);
+        if (!corner_stopped) {return stop;}
+        RCLCPP_INFO(
+          logger_, "[%s] ALIGN_CORNER 完成 index=%zu error=%.3fdeg，恢复路径跟踪",
+          name_.c_str(), corner_cursor_, std::fabs(corner_error) * 180.0 / M_PI);
+        ++corner_cursor_;
+        corner_completed_count_=corner_cursor_;
+        corner_active_ = false;
+        setCornerStage(CornerStage::Idle);corner_stop_.reset();
+        updateCornerSegment();
+        enterPhase(Phase::kFollow, now, "标准角点原地转向完成", true);
+        return stop;
+      }
+      auto command=cornerRotationCommand(phase_pose, velocity, corner_error);
+      setCornerStage(corner_position_recovering_?CornerStage::Recovering:CornerStage::Turning);
+      {
+        std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*map->getMutex());
+        for (const auto & twist : {command.twist,velocity}) {
+          if (!cornerCommandClear(*map,costmap_ros_->getRobotFootprint(),
+              local.pose.position.x,local.pose.position.y,local_yaw,
+              twist.linear.x,twist.linear.y,twist.angular.z)) {
+            throw nav2_core::PlannerException("CORNER_COMMAND_BLOCKED: correction or feedback sweep");
+          }
+        }
+      }
+      command.header=pose.header;
+      recordCornerCommand(command.twist,now.seconds());
+      return command;
+    }
+    const double distance_to_corner = std::hypot(
+      corner_position_.x - phase_pose.pose.position.x,
+      corner_position_.y - phase_pose.pose.position.y);
+    auto command=cornerApproachCommand(
+      pose, phase_pose, velocity, goal_checker, distance_to_corner);
+    auto local=phase_pose;
+    try {
+      if (local.header.frame_id!=costmap_ros_->getGlobalFrameID()) {
+        local=tf_->transform(local,costmap_ros_->getGlobalFrameID());
+      }
+    } catch (const tf2::TransformException & error) {
+      throw nav2_core::PlannerException(std::string("CORNER_APPROACH_TF_UNAVAILABLE: ")+error.what());
+    }
+    auto * map=costmap_ros_->getCostmap();
+    {
+      std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*map->getMutex());
+      for (const auto & twist : {command.twist,velocity}) {
+        if (!cornerCommandClear(*map,costmap_ros_->getRobotFootprint(),
+            local.pose.position.x,local.pose.position.y,yawOf(local.pose),
+            twist.linear.x,twist.linear.y,twist.angular.z)) {
+          throw nav2_core::PlannerException("CORNER_APPROACH_BLOCKED: command or feedback sweep");
+        }
+      }
+    }
+    return command;
+  }
+
   if (phase_ == Phase::kAlignStart && needsStartAlign(start_err, start_min_angle_rad_)) {
     start_alignment_engaged_ = true;
   }
@@ -687,7 +1319,7 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
       Phase::kFollow : Phase::kAlignStart;
   }
   if (next != phase_) {
-    const double held = (now - phase_started_).seconds();
+    const double held = (budget_clock_.now() - phase_started_).seconds();
     char detail[256];
     const char * why =
       (phase_ == Phase::kDone && next == Phase::kFollow) ?
@@ -710,9 +1342,25 @@ geometry_msgs::msg::TwistStamped ThreePhaseController::computeVelocityCommands(
 
   switch (phase_) {
     case Phase::kAlignStart:
+      if (std::abs(start_err)>align_tol_rad_ || std::abs(wz_now)>align_settled_wz_) {
+        alignment_collision_.requireRotationClear(pose,yawOf(pose.pose)+start_err);
+      }
       return rotateOnly(start_err, wz_now, pose.header);
 
+    case Phase::kCornerApproach:
+    case Phase::kAlignCorner:
+      // Corner phases return above after their explicit stop/rotate handling.
+      // Keep a conservative zero command if a future change reaches here.
+      {
+        geometry_msgs::msg::TwistStamped stop;
+        stop.header = pose.header;
+        return stop;
+      }
+
     case Phase::kAlignGoal:
+      if (std::abs(goal_err)>align_tol_rad_ || std::abs(wz_now)>align_settled_wz_) {
+        alignment_collision_.requireRotationClear(pose,yawOf(pose.pose)+goal_err);
+      }
       return rotateOnly(goal_err, wz_now, pose.header);
 
     case Phase::kFollow: {

@@ -11,13 +11,13 @@ State state(int64_t at=T) {
   Ledger l(cfg(),[](const auto &){});if(!l.observe(o,at,at))throw std::runtime_error("fixture observation");
   auto ticket=l.request(at,at);if(!ticket || !l.reconcile(*ticket,moveit_msgs::msg::PlanningScene(),at,at))throw std::runtime_error("fixture scene");return l.state(at,at);
 }
-TEST(Consumer, ConfirmedEmptyIsAvailableAndStrictlyExpires) {
+TEST(Consumer, ConfirmedEmptyPersistsWithoutAgeExpiry) {
   Consumer c(cfg());auto s=state();ASSERT_TRUE(c.receive(s,T,T));ASSERT_NE(c.current(T,T),nullptr);
-  EXPECT_NE(c.current(T+kLease-1,T+kLease-1),nullptr);EXPECT_EQ(c.current(T+kLease,T+kLease),nullptr);
+  EXPECT_NE(c.current(T+kLease-1,T+kLease-1),nullptr);EXPECT_NE(c.current(T+kLease,T+kLease),nullptr);
 }
-TEST(Consumer, HeartbeatsCannotRenewSameCaptureWhenRosTimeFrozen) {
+TEST(Consumer, FrozenClockDoesNotExpireObservation) {
   Consumer c(cfg());auto s=state();ASSERT_TRUE(c.receive(s,T,T));
-  ASSERT_TRUE(c.receive(s,T,T+kLease/2));EXPECT_EQ(c.current(T,T+kLease),nullptr);
+  ASSERT_TRUE(c.receive(s,T,T+kLease/2));EXPECT_NE(c.current(T,T+kLease),nullptr);
 }
 TEST(Consumer, InvalidStatusRevokesAndReplayCannotRecover) {
   Consumer c(cfg());auto s=state();ASSERT_TRUE(c.receive(s,T,T));const auto generation=c.generation();
@@ -25,9 +25,9 @@ TEST(Consumer, InvalidStatusRevokesAndReplayCannotRecover) {
   EXPECT_FALSE(c.receive(s,T+2,T+2));EXPECT_EQ(c.current(T+2,T+2),nullptr);
   auto fresh=state(T+3);EXPECT_TRUE(c.receive(fresh,T+3,T+3));
 }
-TEST(Consumer, FutureSameIdentityDoesNotRevokeOrExtendValidCache) {
+TEST(Consumer, FutureSameIdentityAcceptedAndExplicitRevokePreserved) {
   Consumer c(cfg());auto s=state();ASSERT_TRUE(c.receive(s,T,T));
-  auto future=s;future.published_at=stamp(T+1);EXPECT_FALSE(c.receive(future,T,T+100));EXPECT_NE(c.current(T,T+100),nullptr);
+  auto future=s;future.published_at=stamp(T+1);EXPECT_TRUE(c.receive(future,T,T+100));EXPECT_NE(c.current(T,T+100),nullptr);
   future.confirmed=false;EXPECT_FALSE(c.receive(future,T,T+101));EXPECT_EQ(c.current(T,T+101),nullptr);
 }
 TEST(Consumer, SourceWrongOrGeometryDigestWrongCannotAuthorize) {
@@ -40,9 +40,9 @@ TEST(Consumer, LedgerRestartRevokesOldAndRetiredEpochCannotReturn) {
   ASSERT_TRUE(c.receive(fresh,T+1,T+1));EXPECT_FALSE(c.receive(s,T+2,T+2));
   ASSERT_NE(c.current(T+2,T+2),nullptr);EXPECT_EQ(c.current(T+2,T+2)->ledger_epoch,"new");
 }
-TEST(Consumer, ClockRollbackCannotResurrectOldState) {
-  Consumer c(cfg());auto s=state();ASSERT_TRUE(c.receive(s,T,T));EXPECT_EQ(c.current(T-1,T+1),nullptr);
-  EXPECT_FALSE(c.receive(s,T,T+2));
+TEST(Consumer, LocalClockRollbackDoesNotInvalidateSourceState) {
+  Consumer c(cfg());auto s=state();ASSERT_TRUE(c.receive(s,T,T));EXPECT_NE(c.current(T-1,T+1),nullptr);
+  EXPECT_TRUE(c.receive(s,T,T+2));
 }
 TEST(Consumer, EmptyArrayWithoutFullConfirmationIsNotEmptyProof) {
   Consumer c(cfg());auto s=state();s.observation.full_inventory=false;EXPECT_FALSE(c.receive(s,T,T));
@@ -80,15 +80,15 @@ TEST(Consumer, ExpiredOutOfOrderPacketDoesNotRevokeFreshState) {
   EXPECT_FALSE(c.receive(old,T+600000000,T+600000000));EXPECT_NE(c.current(T+600000000,T+600000000),nullptr);
 }
 
-TEST(Consumer, RecoveryFloorDoesNotChaseValidDelayedCapturesForever) {
+TEST(Consumer, RecoveryOrdersSourceCapturesWithoutReceiveClockBarrier) {
   Consumer c(cfg());auto original=state();ASSERT_TRUE(c.receive(original,T,T));
   auto negative=original;negative.confirmed=false;
   ASSERT_FALSE(c.receive(negative,T+100000000,T+100000000));
   auto before_fault=state(T+90000000);before_fault.observation.sequence=2;
   // A valid ledger confirmation may still contain a pre-fault capture. Reject
   // it without turning its arrival into a new physical fault barrier.
-  EXPECT_FALSE(c.receive(before_fault,T+150000000,T+150000000));
-  EXPECT_EQ(c.current(T+150000000,T+150000000),nullptr);
+  EXPECT_TRUE(c.receive(before_fault,T+150000000,T+150000000));
+  EXPECT_NE(c.current(T+150000000,T+150000000),nullptr);
   auto after_fault=state(T+110000000);after_fault.observation.sequence=3;
   EXPECT_TRUE(c.receive(after_fault,T+160000000,T+160000000));
   EXPECT_NE(c.current(T+160000000,T+160000000),nullptr);

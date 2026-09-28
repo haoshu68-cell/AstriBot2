@@ -1,5 +1,6 @@
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
+    <RequireNavigationEnvelope reason="{navigation_envelope_failure}">
     <PolicyExecution session="{policy_session}" goal="{goal}">
     <ReactiveSequence>
       <ReactiveFallback>
@@ -9,5 +10,6 @@
       <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="precise_goal_checker"/>
     </ReactiveSequence>
     </PolicyExecution>
+    </RequireNavigationEnvelope>
   </BehaviorTree>
 </root>

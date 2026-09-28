@@ -1,0 +1,16 @@
+# Read-only start admission. Does not plan a route, command motion or clear alarms.
+string execution_id
+geometry_msgs/PoseStamped goal
+---
+uint8 READY=0
+uint8 RECOVERY_REQUIRED=1
+uint8 BLOCKED=2
+uint8 UNAVAILABLE=3
+uint8 state
+string reason
+std_msgs/Header header
+geometry_msgs/PoseStamped evaluated_start
+string height_map_revision
+string costmap_revision
+string geometry_hash
+uint64 envelope_epoch

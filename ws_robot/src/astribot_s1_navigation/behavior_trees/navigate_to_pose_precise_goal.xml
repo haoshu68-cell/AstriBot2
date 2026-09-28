@@ -1,6 +1,14 @@
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
     <PolicyExecution session="{policy_session}" goal="{goal}">
+    <Sequence>
+      <EnsureNavigationStart session="{policy_session}" goal="{goal}">
+        <Sequence>
+          <ComputePathToPose goal="{goal}" path="{departure_path}" planner_id="Departure"/>
+          <FollowPath path="{departure_path}" controller_id="Departure" goal_checker_id="precise_goal_checker"/>
+        </Sequence>
+      </EnsureNavigationStart>
+    <RequireNavigationEnvelope reason="{navigation_envelope_failure}">
     <ReactiveSequence>
       <ReactiveFallback>
         <KeepSafePath session="{policy_session}" path="{path}" goal="{goal}"/>
@@ -8,6 +16,8 @@
       </ReactiveFallback>
       <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="precise_goal_checker"/>
     </ReactiveSequence>
+    </RequireNavigationEnvelope>
+    </Sequence>
     </PolicyExecution>
   </BehaviorTree>
 </root>

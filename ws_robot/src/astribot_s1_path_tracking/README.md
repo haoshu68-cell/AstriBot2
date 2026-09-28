@@ -49,6 +49,41 @@ ThreePhaseController 已按清理前备份恢复，ArrivalController 继承它�
 仿真启动脚本默认限速 0.35 m/s；跟踪总时长不参与质量评价。
 同路线两轮的改善与尚未改善项见 [验证记录](../../../docs/HEADING_CONVERGENCE_VALIDATION.md)。
 
+## 标准角点跟踪
+
+`corner_turn_enabled` 打开后，标准折角按有序路段执行：当前段跟踪 → 角点接近 →
+持续停稳 → 转向与位置保持 → 持续停稳 → 下一段。连续曲率跟踪继续使用原控制链。
+当前段的起步朝向前瞻不跨越尚未完成的角点。
+
+- 支持范围由原参数 `corner_min_angle`～`corner_max_angle`、`corner_min_segment` 定义。
+  短首段、间距不足的反向双角和配置外掉头明确拒绝，并记录原因；同向短斜接保留原检测方式。
+- 接近入口取原 `corner_approach_distance` 与“当前实测速度的既有制动预算＋捕获半径”的较大值。
+  Arrival 复用 `arrival.braking_model`；`position_hold` 的实测残余位移曲线不外推标定范围。
+  独立 ThreePhase 插件仍使用原距离入口；不能据此宣称它具有 Arrival 制动模型。
+- `CORNER_APPROACH` 保持零角速度及原接近限速；进入捕获区后输出零指令，复用
+  `arrival.settle_time` / `arrival.pose_timeout` 的位姿窗口。重复、乱序、过期、跳变或持续漂移不构成停稳。
+  转向完成也须同时满足原位置/角度/速度条件和新源帧停稳窗口。
+- `CORNER_STATE` 日志明确区分 `APPROACH`、`SETTLING_BEFORE_TURN`、`TURNING`、
+  `SETTLING_AFTER_TURN`、`RECOVERING`、`REANCHOR_SETTLING`；旧高层相位话题仍兼容策略层。
+  故障注入应匹配真实子状态，不能把 `FOLLOW` 解释为位置恢复。
+
+任务代次由同一 controller_server 内的 `PolicyProgressChecker::reset()` 提供。
+`setPlan()` 暂存路径，首个控制周期在 Nav2 完成任务复位后提交。
+因此开启角点模式必须配套 `astribot_s1_path_tracking::PolicyProgressChecker`，MPPI/RPP 配置已统一。
+同一代次等价刷新保持游标、相位及停稳/超时计时；替换路线统一停稳并重定位当前路段，
+该停稳屏障也覆盖倒退脱离和走廊运动。拒绝的暂存路径保持拒绝，不能在失败容忍重试时恢复旧路线。
+路径源时间的独立高水位不会被零时间戳等价刷新清除；新任务代次可明确使用缓存路径。
+`new_attempt_gap` 仅保留给关闭角点且没有执行代次所有者的旧接口，不能判断当前角点任务身份。
+
+`nav_msgs/Path` 不携带必经点语义。近终点角点仍按原终端保留距离交给 Arrival，记录
+`CORNER_TERMINAL_HANDOFF`，不能算作已完成角点；必须经过/转向的任务须拆成显式航点目标。
+旋转和位置保持继续使用原足迹扫掠与策略约束；只有当前 costmap 足迹确实包含双臂及载荷，
+才具备对应完整外形证据。legacy 与 fixed_v2 不作等价验收。
+
+本次 C92 修复仅完成离线编译、对象级回归和简化接近段回放；尚未运行新候选的 Gazebo/RViz
+或真机验证。控制器代次与 Nav2 action 调用顺序、动态中断、完整外形、多角度重复及 A/B
+跟踪质量仍待集成验收，不能将单个终点成功或离线测试通过等同于 C 阶段通过。
+
 ## 到位判定
 
 默认同时满足以下条件，连续保持 0.6 秒后返回成功：
@@ -123,14 +158,13 @@ precise_goal_checker:
 | NO_MOTION_PROGRESS | 跟踪阶段持续无实测运动 |
 | REFINEMENT_NO_PROGRESS | 精调阶段联合误差持续无改善 |
 | REFINEMENT_TIMEOUT / GOAL_TIMEOUT | 精调或目标尝试超过预算 |
-| START_HEADING_UNREACHABLE | 起步完整转向不安全，且倒退退出无安全路径、缺少后向覆盖、偏离限制或超过恢复预算 |
 
 同目标周期重规划不会重置预算。Humble Controller 接口不提供 Action UUID，因此同目标
 重新尝试以控制拍空档超过 0.5 秒识别；紧密重试可能共用预算。
 碰撞检查使用导航位姿注册的局部代价地图，检查当前速度与指令速度的 1 秒足迹扫掠。
 它判定局部不可执行，不证明目标在全局永久不可达。
 
-P3 及之后启用起步动作通道：ThreePhaseController 提供实际起步目标航向，ArrivalController 在原地转向前请求短时许可。完整转向可行时执行原转向控制；不可行时只执行经策略验证的低速 x− 退出指令，退出停稳并重新通过扫掠检查后恢复原转向。FOLLOW、MPPI/RPP 及到位精调控制律不变，恢复期间暂停原进度计时，独立恢复预算仍有效。动作消息不直接发布底盘速度，外部限速、局部足迹检查和末级保护继续约束输出。具体原因见 `START_HEADING_UNREACHABLE` 后缀及策略状态中的 `start_maneuver`；仿真参数和真机验证开关见导航策略包。
+起点检查、告警和恢复编排由 [`astribot_s1_navigation_recovery`](../astribot_s1_navigation_recovery/README.md) 负责，在最终目标路径规划前完成；需要恢复时，通过 `DeparturePlanner` / `DepartureController` 执行退出，实测停稳并复检 READY 后才继续目标规划与跟踪。ArrivalController 中的旧起步请求/回复和自动倒退分支已移除。普通 ALIGN 保留实时碰撞检查与原转向控制律，FOLLOW、MPPI/RPP、到位精调及现有政策约束保持原职责。恢复原因与阶段由 `/navigation/start_alarm` 记录。
 
 ## 构建与仿真
 
@@ -171,3 +205,18 @@ ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
 进展指标和到位确认都计入残余运动裕量，避免运动中过零被误判为最佳收敛、或刚进入容差就结束后继续漂出。制动转换记录 `ARRIVAL_COAST`，精调指标仍按 2 Hz 输出。模型与 Gazebo 结果不替代真机负载、地面和定位扰动下的复测。
 
 低速平移的 SLAM/厂家反馈同窗对比与有限补偿由 `SlipMonitor` / `LinearSlip` 提供，集成在 `ArrivalController`。真机配置当前为 `monitor`，保持基线指令；可选的 `compensate` 需要真实测量时间有效。参数、输入坐标要求及验收步骤见 [低速打滑补偿说明](../../../docs/LINEAR_SLIP_COMPENSATION_20260917.md)。
+
+
+### 标准角点候选的重规划与漂移边界（2026-09-22，待阶段验收）
+
+候选仍沿用 `CORNER_APPROACH → ALIGN_CORNER → FOLLOW`。等价路径按有序顶点和入/出射方向匹配，允许共线重采样；同目标旧时间戳路径拒绝接管。几何改变须具有较新的源时间，且新路径起点接近最新机器人位姿，实际停稳后再重新对齐。已完成角点之前的路径不再交给内层跟踪器；跳过终端短角点不会删除未走过的前段。自交路径的角点投影仅在当前有序路段内计算。
+
+转向采用既有角速度和余转控制，并在角点附近增加有死区的小幅位置反馈：默认 1 cm 死区，平移修正上限为 `corner_approach_speed / 2`（当前 0.04 m/s）；偏离超过 4 cm 暂停转向，恢复到 2 cm 内后继续。恢复范围外拒绝继续；转向完成须同时满足角度、实际速度与角点位置条件。完整剩余转向、纠偏指令及实测速度均检查机身填充轮廓扫掠。这里的 4 cm / 2 cm 来自现有 `corner_capture_radius`，没有变更速度、制动、平滑和终点阈值配置。
+
+角点路径执行中的显著位姿/时钟不连续先于终点接管检查，异常交给 Nav2 失败停车链。它不替代定位质量判定，也不构成新的设备指令通道。Humble 的控制接口仍缺少 Action UUID；紧密重试的执行身份限制仍适用，不能把源时间和路径几何描述成完整事务协议。
+
+接近段已停住而内层指令低于现有最小接近速度时，使用指向角点的有限纠偏，并检查该指令及实测运动的完整机身扫掠。角点接近和转向中的平移纠偏共同遵守外部绝对/百分比限速及策略限速；启用角点时也初始化内层额定速度，不依赖社会策略或打滑模块是否启用。
+
+闭环仍有待修问题：近 180° 回头路径可能因欧式距离近而提前进入终点精调，漏走回头点；部分物理传送式位姿故障由碰撞保护而非不连续检测拦截。当前候选不可据此宣称完整路线和故障边界通过。
+
+当前阶段、源/运行库哈希、单元与仿真证据见 `docs/evidence/unified_navigation_resume_20260921/STATUS.md`。候选未部署真机，不以局部通过代替 C1–C4 的完整回归。

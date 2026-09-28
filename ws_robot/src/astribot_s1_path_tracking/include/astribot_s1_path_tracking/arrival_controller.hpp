@@ -11,7 +11,6 @@
 #include "astribot_bridge_msgs/msg/bridge_status.hpp"
 #include "astribot_s1_path_tracking/policy_lease.hpp"
 #include "astribot_s1_path_tracking/corridor_lease.hpp"
-#include "astribot_s1_path_tracking/start_maneuver_channel.hpp"
 #include "astribot_navigation_msgs/msg/corridor_alignment.hpp"
 #include "std_msgs/msg/string.hpp"
 #include <cstdint>
@@ -38,6 +37,7 @@ public:
   double stoppedLinear() const {return stopped_v_;}
   double stoppedAngular() const {return stopped_w_;}
 private:
+  friend class ArrivalControllerTestPeer;
   rclcpp::Clock::SharedPtr clock_;
   rclcpp::Time reported_{0, 0, RCL_ROS_TIME};
   bool ready_{false};
@@ -54,14 +54,22 @@ public:
     std::shared_ptr<nav2_costmap_2d::Costmap2DROS>) override;
   void cleanup() override;
   void deactivate() override;
-  void setPlan(const nav_msgs::msg::Path &) override;
   void setSpeedLimit(const double &, const bool &) override;
   geometry_msgs::msg::TwistStamped computeVelocityCommands(
     const geometry_msgs::msg::PoseStamped &, const geometry_msgs::msg::Twist &,
     nav2_core::GoalChecker *) override;
 protected:
+  void applyPlan(const nav_msgs::msg::Path &) override;
+  double cornerStoppingDistance(double speed) const override;
+  double cornerSettleDuration() const override {return settle_time_;}
+  double cornerSourceMaxGap() const override {return pose_timeout_;}
   bool hasTerminalRefinement() const override {return true;}
 private:
+  friend class ArrivalControllerTestPeer;
+  geometry_msgs::msg::TwistStamped computeCommand(
+    const geometry_msgs::msg::PoseStamped &, const geometry_msgs::msg::Twist &,
+    nav2_core::GoalChecker *);
+  void limitCornerTranslation(geometry_msgs::msg::Twist & command);
   EnvelopeGuard geometry_guard_;
   std::shared_ptr<ArrivalProgress> arrival_progress_;
   PolicyLease policy_lease_;
@@ -71,7 +79,6 @@ private:
   int64_t bridge_status_stamp_{-1};
   rclcpp::Subscription<PolicyLease::Message>::SharedPtr policy_sub_;
   bool policy_takeover_{false};
-  StartManeuverChannel start_maneuver_;
   bool policy_enabled_{false}, policy_paused_{false};
   double policy_tick_{-1};
   std::mutex speed_limit_mutex_;

@@ -1,6 +1,7 @@
 #include "nav2_controller/plugins/pose_progress_checker.hpp"
 #include "astribot_s1_path_tracking/policy_lease.hpp"
 #include "astribot_s1_path_tracking/arrival_progress.hpp"
+#include "astribot_s1_path_tracking/controller_execution.hpp"
 #include "nav2_util/node_utils.hpp"
 #include "pluginlib/class_list_macros.hpp"
 namespace astribot_s1_path_tracking {
@@ -11,6 +12,7 @@ public:
     PoseProgressChecker::initialize(parent,name);
     auto node=parent.lock();
     arrival_=ArrivalProgress::forNode(node.get());
+    execution_=ControllerExecution::forNode(node.get());
     nav2_util::declare_parameter_if_not_declared(node,"navigation_policy_enabled",rclcpp::ParameterValue(false));
     if (node->get_parameter("navigation_policy_enabled").as_bool()) {
       sub_=node->create_subscription<PolicyLease::Message>("navigation_policy/constraint",10,
@@ -32,9 +34,11 @@ public:
   }
   void reset() override {
     PoseProgressChecker::reset();last_=-1;paused_=false;
+    if (execution_) {execution_->begin();}
     if (arrival_) {arrival_->clear();}
   }
 private:
+  std::shared_ptr<ControllerExecution> execution_;
   std::shared_ptr<ArrivalProgress> arrival_;
   PolicyLease lease_;
   rclcpp::Subscription<PolicyLease::Message>::SharedPtr sub_;

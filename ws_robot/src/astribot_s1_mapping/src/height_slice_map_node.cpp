@@ -2,6 +2,8 @@
 #include "astribot_s1_mapping/height_slice_grid.hpp"
 #include <astribot_slam_msgs/msg/height_slice_maps.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <yaml-cpp/yaml.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <Eigen/Geometry>
@@ -41,10 +43,14 @@ class HeightSliceMapNode:public rclcpp::Node {
     const auto frame=declare_parameter<std::string>("frame_id","");
     const auto reference=declare_parameter<std::string>("ground_reference","");
     const auto ground=declare_parameter<double>("ground_z",NAN);
-    const auto resolution=declare_parameter<double>("resolution",.05);
-    const auto edges=declare_parameter<std::vector<double>>("height_edges",std::vector<double>{});
-    const auto names=declare_parameter<std::vector<std::string>>("layer_names",std::vector<std::string>{});
-    const auto max_cells=declare_parameter<int64_t>("max_grid_cells",20000000);
+    const auto profile_path=declare_parameter<std::string>("height_profile_path",
+      ament_index_cpp::get_package_share_directory("astribot_s1_mapping")+"/config/height_slices.yaml");
+    const auto profile_bytes=readFile(profile_path);
+    const auto profile_parameters=YAML::Load(profile_bytes)["/**"]["ros__parameters"];
+    const auto resolution=profile_parameters["resolution"].as<double>();
+    const auto edges=profile_parameters["height_edges"].as<std::vector<double>>();
+    const auto names=profile_parameters["layer_names"].as<std::vector<std::string>>();
+    const auto max_cells=profile_parameters["max_grid_cells"].as<int64_t>();
     if(session.empty()||output.empty()||frame.empty()||reference.empty()||max_cells<=0)
       throw std::invalid_argument("session/output/frame/ground_reference and grid budget required");
     astribot_s1_mapping::HeightSliceGrid slices(resolution,ground,edges);
@@ -103,7 +109,7 @@ class HeightSliceMapNode:public rclcpp::Node {
     bundle.below_band_points=slices.below;bundle.above_band_points=slices.above;bundle.nonfinite_points=slices.nonfinite;
     bundle.evidence_kind="static_archive_occupied_endpoints_only";
     json profile={{"height_edges",edges},{"layer_names",names},{"ground_z",ground},{"ground_reference",reference},{"frame_id",frame},{"resolution",resolution}};
-    bundle.profile_revision=sha256(profile.dump());
+    bundle.profile_revision=sha256(profile_bytes);
     if(!fs::create_directory(output))throw std::runtime_error("output directory must not exist: "+output.string());
     json report={{"session_directory",session.string()},{"map_revision",bundle.map_revision},{"profile_revision",bundle.profile_revision},{"profile",profile},
       {"evidence_kind",bundle.evidence_kind},{"input_sha256",hashes},{"width",width},{"height",height},{"point_counts",slices.counts},

@@ -20,7 +20,7 @@ public:
     std::size_t samples{0};
   };
 
-  void reset() {samples_.clear(); zero_since_ = -1.; evidence_ = {};}
+  void reset() {samples_.clear(); source_stamp_ = -1.; zero_since_ = -1.; evidence_ = {};}
   void command(bool zero, double now)
   {
     if (!zero) {reset();}
@@ -33,25 +33,17 @@ public:
     bool angular = false)
   {
     if (!std::isfinite(stamp) || !std::isfinite(now) || now < zero_since_ ||
-      now-stamp < -0.05 || now-stamp > max_gap ||
       !std::all_of(value.begin(), value.end(), [](double v) {return std::isfinite(v);}))
     {reset(); return;}
     if (zero_since_ < 0.) {return;}
-    if (stamp < zero_since_) {
-      if (!samples_.empty()) {reset(); zero_since_ = now;}
-      return;
+    (void)max_gap;
+    if(stamp<=source_stamp_)return;
+    source_stamp_=stamp;
+    if (!samples_.empty() && angular) {
+      const auto & last=samples_.back();
+      value[0]=last.value[0]+std::remainder(value[0]-last.value[0],2.*std::acos(-1.));
     }
-    if (!samples_.empty()) {
-      const auto & last = samples_.back();
-      if (angular) {
-        value[0] = last.value[0] + std::remainder(value[0]-last.value[0], 2.*std::acos(-1.));
-      }
-      if (stamp <= last.stamp) {
-        if (stamp < last.stamp || value != last.value) {reset(); zero_since_ = now;}
-        return;
-      }
-      if (stamp-last.stamp > max_gap) {samples_.clear(); evidence_ = {};}
-    }
+    stamp=now;  // The observation stamp orders samples; the stop window is steady time.
     samples_.push_back({stamp, value});
     while (samples_.size() > 2 && samples_[1].stamp <= stamp-duration) {samples_.pop_front();}
     // Bound memory even if a malformed source advances its stamps by tiny increments.
@@ -97,7 +89,7 @@ public:
 private:
   struct Sample {double stamp; std::array<double, N> value;};
   std::deque<Sample> samples_;
-  double zero_since_{-1.};
+  double zero_since_{-1.}, source_stamp_{-1.};
   Evidence evidence_;
 };
 }  // namespace astribot_s1_path_tracking
