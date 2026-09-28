@@ -25,7 +25,7 @@ from control_msgs.action import FollowJointTrajectory as FJT
 from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import ListControllers
 from rosgraph_msgs.msg import Clock
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from std_msgs.msg import String
 from moveit_msgs.srv import GetPlanningScene, ApplyPlanningScene
 from moveit_msgs.msg import PlanningScene, CollisionObject, AttachedCollisionObject
@@ -39,7 +39,7 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from astribot_navigation_msgs.msg import RobotGeometryState, ArmHoldStatus, NavigationEnvelopeV2
 from astribot_navigation_msgs.srv import SetRobotEnvelope
 from astribot_transport_msgs.action import PlanManipulation
-from astribot_transport_msgs.msg import ManipulationStage, ExecutionGuardStatus
+from astribot_transport_msgs.msg import ManipulationStage, ExecutionGuardStatus, ExecutionHeartbeat
 from astribot_transport_msgs.srv import SetExecutionGuard, RevalidateManipulation, RevalidatePayloadTransition
 from astribot_s1_transport_native.action import ManipulationToHold as PlanToHold
 from astribot_s1_transport_native.srv import RenewHold
@@ -150,9 +150,13 @@ def main():
     for name,action,endpoint in [(n,FJT,'/'+n+'/follow_joint_trajectory') for n in groups]+[('mtc',PlanManipulation,'/transport/plan_manipulation')]:
         action_status_publishers[name]=fixture.create_publisher(GoalStatusArray,endpoint+'/_action/status',qos_profile_action_status_default)
         entities.extend([fixture.create_service(action.Impl.SendGoalService,endpoint+'/_action/send_goal',send(name),callback_group=group),fixture.create_service(action.Impl.GetResultService,endpoint+'/_action/get_result',result(name),callback_group=group),fixture.create_service(action.Impl.CancelGoalService,endpoint+'/_action/cancel_goal',cancel(name),callback_group=group),action_status_publishers[name],fixture.create_publisher(action.Impl.FeedbackMessage,endpoint+'/_action/feedback',10)])
+    heartbeat_acks={name:fixture.create_publisher(ExecutionHeartbeat,'/'+name+'/execution_heartbeat_ack',10) for name in groups}
+    def execution_heartbeat(message):
+        for publisher in heartbeat_acks.values():publisher.publish(message)
+    entities.append(fixture.create_subscription(ExecutionHeartbeat,'/transport/execution_heartbeat',execution_heartbeat,10,callback_group=group))
     def controllers(req,res):
         event('controllers_read')
-        res.controller=[ControllerState(name=n,state='active',type='joint_trajectory_controller/JointTrajectoryController',claimed_interfaces=[j+'/position' for j in js]) for n,js in groups.items()]
+        res.controller=[ControllerState(name=n,state='active',type='astribot_s1_manipulation/OwnedTrajectoryController',claimed_interfaces=[j+'/position' for j in js]) for n,js in groups.items()]
         controller_responses.append(time.monotonic())
         event('controllers_response_ready',controllers=list(groups));return res
     def scene(req,res):
@@ -224,7 +228,7 @@ def main():
     transform=TransformStamped();transform.header.frame_id=base;transform.child_frame_id='wrist';transform.transform.translation.x=.1;transform.transform.translation.z=1.;transform.transform.rotation.w=1.
     tf_pub.publish(TFMessage(transforms=[transform]))
     clock=fixture.create_publisher(Clock,'/clock',10);geometry=fixture.create_publisher(RobotGeometryState,'/navigation/geometry_state',10)
-    odom=fixture.create_publisher(Odometry,'/odom',qos_profile_sensor_data);envelopes=fixture.create_publisher(NavigationEnvelopeV2,'/navigation/envelope_v2',10)
+    slam_pose=fixture.create_publisher(PoseWithCovarianceStamped,'/slam/pose',qos_profile_sensor_data);envelopes=fixture.create_publisher(NavigationEnvelopeV2,'/navigation/envelope_v2',10)
     guard_pub=fixture.create_publisher(ExecutionGuardStatus,'/transport/execution_guard/status',10)
     def publish():
         nonlocal sequence,revision_injected,late_raw_sent,geometry_model_injected
@@ -264,7 +268,7 @@ def main():
                 geometry_model_injected=True;event('complete_geometry_model_changed',source_id=g.source_id,clock_epoch=g.clock_epoch,model_revision=g.model_revision,attachment_revision=g.attachment_revision)
         geometry.publish(g)
         geometry_samples.append(dict(wall=time.monotonic(),capture_ns=at_ns,confirmed=g.complete,positions=joint_snapshot,source_id=g.source_id,clock_epoch=g.clock_epoch,model_revision=g.model_revision,attachment_revision=g.attachment_revision))
-        od=Odometry();od.header.stamp=at;od.header.frame_id='odom';od.child_frame_id=base;od.pose.pose.orientation.w=1.;odom.publish(od)
+        od=PoseWithCovarianceStamped();od.header.stamp=at;od.header.frame_id='map';od.pose.pose.orientation.w=1.;slam_pose.publish(od)
         e=NavigationEnvelopeV2();e.header.stamp=at;e.valid_until=stamp(.28);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE if navigation else e.HOLD;e.navigation_allowed=navigation;envelopes.publish(e)
         guard_pub.publish(ExecutionGuardStatus(stamp=at,joint_stamp=at,base_stamp=at,context_id=guard['context'],active=guard['active'],healthy=guard['active'],reason='EXECUTION_WITHIN_BOUNDS'))
     def publish_clock():
@@ -306,7 +310,7 @@ def main():
         owned=[process]+auxiliaries
         event('owned_processes',partition=os.environ['IGN_PARTITION'],boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),processes=[dict(pid=v.pid,start_ticks=Path('/proc/'+str(v.pid)+'/stat').read_text().split(') ',1)[1].split()[19],argv=v.args) for v in owned])
         event('artifact_identity',hashes={str(v.resolve()):hashlib.sha256(v.read_bytes()).hexdigest() for v in [Path(__file__),args.executable,args.physical_fixture,args.ledger_executable]},environment={k:os.environ.get(k,'') for k in ['ROS_DOMAIN_ID','ROS_LOCALHOST_ONLY','IGN_PARTITION','LD_LIBRARY_PATH','AMENT_PREFIX_PATH']})
-        wait(lambda:action.server_is_ready() and len(statuses)>8 and ledger_states and ledger_states[-1].confirmed,10,'startup')
+        wait(lambda:action.server_is_ready() and len(statuses)>16 and ledger_states and ledger_states[-1].confirmed,10,'startup')
         # A second query well before the native 500ms pending timeout, followed
         # by native status, establishes the normal request/response cadence.
         # Never retry the task goal or extend the product claims lifetime.

@@ -15,7 +15,7 @@ Geometry geometry(int64_t at,uint64_t sequence){
  g.joint_position_error_bounds={.004};g.joint_source_stamps={g.header.stamp};return g;
 }
 std::vector<controller_manager_msgs::msg::ControllerState> claims(){
- controller_manager_msgs::msg::ControllerState c;c.state="active";c.type="joint_trajectory_controller/JointTrajectoryController";c.claimed_interfaces={"left/position"};return {c};
+ controller_manager_msgs::msg::ControllerState c;c.state="active";c.type="astribot_s1_manipulation/OwnedTrajectoryController";c.claimed_interfaces={"left/position"};return {c};
 }
 class LatestHold:public ::testing::Test {
 protected:

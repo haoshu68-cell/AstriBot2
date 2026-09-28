@@ -22,14 +22,14 @@ from control_msgs.action import FollowJointTrajectory as FJT
 from controller_manager_msgs.msg import ControllerState
 from controller_manager_msgs.srv import ListControllers
 from rosgraph_msgs.msg import Clock
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from std_msgs.msg import String
 from moveit_msgs.srv import GetPlanningScene
 from trajectory_msgs.msg import JointTrajectoryPoint
 from astribot_navigation_msgs.msg import RobotGeometryState, ArmHoldStatus, NavigationEnvelopeV2
 from astribot_navigation_msgs.srv import SetRobotEnvelope
 from astribot_transport_msgs.action import PlanManipulation
-from astribot_transport_msgs.msg import ManipulationStage, ExecutionGuardStatus
+from astribot_transport_msgs.msg import ManipulationStage, ExecutionGuardStatus, ExecutionHeartbeat
 from astribot_transport_msgs.srv import SetExecutionGuard, RevalidateManipulation
 from astribot_s1_transport_native.action import PlanToHold
 from astribot_s1_transport_native.srv import RenewHold
@@ -37,7 +37,7 @@ from astribot_s1_transport_native.srv import RenewHold
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--mode',choices=['normal','wrong_context','start_changed','scene_changed','pending_cancel','unknown_result','no_endpoint','occupancy_changed','revalidate_rejected','revalidate_wrong_context','revalidate_scene_race','cold_start','expired_fixed','warm_ack_race','coordinator_changed','revoke_unacked','navigation_positive','revoke_rejected'],required=True)
+    p.add_argument('--mode',choices=['normal','wrong_context','start_changed','scene_changed','pending_cancel','unknown_result','no_endpoint','occupancy_changed','revalidate_rejected','revalidate_wrong_context','revalidate_scene_race','cold_start','expired_fixed','warm_ack_race','coordinator_changed','revoke_unacked','navigation_positive','revoke_rejected','controller_lease_missing','controller_lease_revoked','guard_lost','guard_revoked'],required=True)
     p.add_argument('--domain',type=int,required=True);p.add_argument('--executable',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     args=p.parse_args();assert os.environ.get('ROS_DOMAIN_ID')==str(args.domain)
     journal=Path.home()/'.local/state/astribot/transport'/f'domain_{args.domain}.jsonl'
@@ -91,7 +91,7 @@ def main():
                     res.result.stages.append(s)
                 if args.mode=='start_changed':positions[groups['arm_left_controller'][0]]=.04;stop.wait(.15)
             else:
-                stop.wait(.12)
+                stop.wait(.8 if args.mode in ('guard_lost','guard_revoked') else .12)
                 res.status=0 if args.mode=='unknown_result' and name=='arm_left_controller' else 4
                 res.result.error_code=0
                 if args.mode!='no_endpoint':
@@ -100,8 +100,14 @@ def main():
         return callback
     for name,action,endpoint in [(n,FJT,'/'+n+'/follow_joint_trajectory') for n in groups]+[('mtc',PlanManipulation,'/transport/plan_manipulation')]:
         entities.extend([fixture.create_service(action.Impl.SendGoalService,endpoint+'/_action/send_goal',send(name),callback_group=group),fixture.create_service(action.Impl.GetResultService,endpoint+'/_action/get_result',result(name),callback_group=group),fixture.create_service(action.Impl.CancelGoalService,endpoint+'/_action/cancel_goal',cancel(name),callback_group=group),fixture.create_publisher(GoalStatusArray,endpoint+'/_action/status',qos_profile_action_status_default),fixture.create_publisher(action.Impl.FeedbackMessage,endpoint+'/_action/feedback',10)])
+    heartbeat_acks={name:fixture.create_publisher(ExecutionHeartbeat,'/'+name+'/execution_heartbeat_ack',10) for name in groups}
+    def execution_heartbeat(message):
+        if args.mode=='controller_lease_revoked':message.active=False
+        for name,publisher in heartbeat_acks.items():
+            if args.mode!='controller_lease_missing' or name!='head_controller':publisher.publish(message)
+    entities.append(fixture.create_subscription(ExecutionHeartbeat,'/transport/execution_heartbeat',execution_heartbeat,10,callback_group=group))
     def controllers(req,res):
-        res.controller=[ControllerState(name=n,state='active',type='joint_trajectory_controller/JointTrajectoryController',claimed_interfaces=[j+'/position' for j in js]) for n,js in groups.items()];return res
+        res.controller=[ControllerState(name=n,state='active',type='astribot_s1_manipulation/OwnedTrajectoryController',claimed_interfaces=[j+'/position' for j in js]) for n,js in groups.items()];return res
     def scene(req,res):
         nonlocal scene_calls
         res.scene.world.octomap.header.frame_id="astribot_torso_base"
@@ -138,14 +144,14 @@ def main():
     entities.extend([fixture.create_service(ListControllers,'/controller_manager/list_controllers',controllers,callback_group=group),fixture.create_service(GetPlanningScene,'/get_planning_scene',scene,callback_group=group),fixture.create_service(SetExecutionGuard,'/transport/execution_guard/set',set_guard,callback_group=group),fixture.create_service(SetRobotEnvelope,'/navigation/set_robot_envelope',revoke,callback_group=group)])
     entities.append(fixture.create_service(RevalidateManipulation,'/transport/revalidate_manipulation',revalidate,callback_group=group))
     clock=fixture.create_publisher(Clock,'/clock',10);geometry=fixture.create_publisher(RobotGeometryState,'/navigation/geometry_state',10)
-    odom=fixture.create_publisher(Odometry,'/odom',qos_profile_sensor_data);envelopes=fixture.create_publisher(NavigationEnvelopeV2,'/navigation/envelope_v2',10)
+    slam_pose=fixture.create_publisher(PoseWithCovarianceStamped,'/slam/pose',qos_profile_sensor_data);envelopes=fixture.create_publisher(NavigationEnvelopeV2,'/navigation/envelope_v2',10)
     guard_pub=fixture.create_publisher(ExecutionGuardStatus,'/transport/execution_guard/status',10)
     def publish():
         nonlocal sequence
         at=stamp();clock.publish(Clock(clock=at));sequence+=1
         g=RobotGeometryState();g.header.stamp=at;g.header.frame_id='astribot_torso_base';g.valid_until=stamp(.3);g.source_id='m1_fixture';g.sequence=sequence;g.model_revision='model';g.attachment_revision='empty'
         g.complete=g.attachment_state_confirmed=True;g.joints.name=list(positions);g.joints.position=list(positions.values());g.joint_position_error_bounds=[.004]*22;g.joint_source_stamps=[at]*22;geometry.publish(g)
-        o=Odometry();o.header.stamp=at;o.header.frame_id='odom';o.child_frame_id='astribot_torso_base';o.pose.pose.orientation.w=1.;odom.publish(o)
+        o=PoseWithCovarianceStamped();o.header.stamp=at;o.header.frame_id='map';o.pose.pose.orientation.w=1.;slam_pose.publish(o)
         e=NavigationEnvelopeV2();e.header.stamp=at;e.valid_until=stamp(.3);e.coordinator_session_id='m1_coordinator';e.epoch=envelope_epoch;e.mode=e.FIXED_POSTURE if navigation else e.HOLD;e.navigation_allowed=navigation
         if args.mode=='expired_fixed' and not navigation:e.mode=e.FIXED_POSTURE;e.valid_until=at
         publish_envelope=True
@@ -157,7 +163,9 @@ def main():
         if args.mode=='coordinator_changed' and any(v['event']=='navigation_revoked' for v in events):e.coordinator_session_id='restarted'
         if args.mode=='navigation_positive' and any(v['event']=='navigation_revoked' for v in events):e.mode=e.FIXED_POSTURE;e.navigation_allowed=True
         if publish_envelope and (args.mode not in ('cold_start','revoke_rejected','revoke_unacked') or navigation):envelopes.publish(e)
-        guard_pub.publish(ExecutionGuardStatus(stamp=at,joint_stamp=at,base_stamp=at,context_id=guard['context'],active=guard['active'],healthy=guard['active'],reason='EXECUTION_WITHIN_BOUNDS'))
+        if args.mode=='guard_revoked' and guard['active'] and any(e['event']=='send' and e['controller']=='arm_left_controller' for e in events):
+            guard_pub.publish(ExecutionGuardStatus(stamp=at,joint_stamp=at,base_stamp=at,context_id=guard['context'],active=True,healthy=False,reason='INJECTED_RISK_BEFORE_CLEAR'))
+        if args.mode!='guard_lost' or not any(e['event']=='send' and e['controller']=='arm_left_controller' for e in events):guard_pub.publish(ExecutionGuardStatus(stamp=at,joint_stamp=at,base_stamp=at,context_id=guard['context'],active=guard['active'],healthy=guard['active'],reason='EXECUTION_WITHIN_BOUNDS'))
     entities.append(fixture.create_timer(.04,publish,callback_group=group))
     entities.append(client.create_subscription(String,'/transport/hold_executor/status',lambda m:statuses.append(json.loads(m.data)),10))
     entities.append(client.create_subscription(ArmHoldStatus,'/navigation/arm_hold',lambda m:holds.append((time.monotonic(),m.hold_confirmed)),10))
@@ -176,7 +184,7 @@ def main():
         raise AssertionError(label)
     try:
         process=subprocess.Popen([str(args.executable.resolve()),'--ros-args','-p','use_sim_time:=true','-p','simulation_commissioning:=true'],stdout=log,stderr=subprocess.STDOUT)
-        wait(lambda:action.server_is_ready() and len(statuses)>8,8,'startup')
+        wait(lambda:action.server_is_ready() and len(statuses)>16,8,'startup')
         goal=PlanToHold.Goal(task_id='test_'+uuid.uuid4().hex,request_id='request',context_id='context',operation='PICK',object_id='box',grasp_width_m=.04)
         goal.pre_target.header.frame_id=goal.target.header.frame_id='astribot_torso_base';goal.pre_target.pose.orientation.w=goal.target.pose.orientation.w=1.;goal.exit_targets=[goal.pre_target]
         sent=action.send_goal_async(goal);wait(sent.done,4,'accept');handle=sent.result();assert handle.accepted
@@ -217,6 +225,11 @@ def main():
         if args.mode=='pending_cancel':
             assert any(e['event']=='cancel_ack' and e['controller']=='mtc' for e in events)
         if args.mode=='no_endpoint':assert 'ENDPOINT_NOT_REACHED' in outcome['reason']
+        if args.mode=='guard_revoked':assert 'INJECTED_RISK_BEFORE_CLEAR' in outcome['reason']
+        if args.mode=='guard_lost':assert 'EXECUTION_GUARD_HEARTBEAT_EXPIRED' in outcome['reason']
+        if args.mode in ('controller_lease_missing','controller_lease_revoked'):
+            assert not any(e['event']=='send' and e['controller']!='mtc' for e in events)
+            assert ('TIMEOUT' if args.mode=='controller_lease_missing' else 'CONTROLLER_EXECUTION_LEASE_REVOKED') in outcome['reason']
         event('assertions_passed')
     finally:
         if process is not None and process.poll() is None:

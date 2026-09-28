@@ -29,6 +29,7 @@ class Guard : public rclcpp::Node {
   double joint_limit_;
   astribot_s1_transport_mtc::BaseMotionLimits base_limits_;
   std::chrono::steady_clock::time_point armed_wall_;
+  std::chrono::steady_clock::time_point joint_received_,base_received_;
   bool observed_{false};
   void publish() {status_.stamp=now();publisher_->publish(status_);}
   void set(const std::shared_ptr<Service::Request> req,std::shared_ptr<Service::Response> response) {
@@ -57,12 +58,14 @@ class Guard : public rclcpp::Node {
     std::string problem;
     if(fault_.empty()) {
       if(!state_)problem="MANIPULATION_TRACKING_STATE_UNAVAILABLE";
+      else if(wall-joint_received_>=std::chrono::milliseconds(300))problem="MANIPULATION_TRACKING_STATE_STALE";
       else if(state_->header.stamp.sec<0||state_->header.stamp.nanosec>=1000000000u||(state_->header.stamp.sec==0&&state_->header.stamp.nanosec==0))problem="MANIPULATION_TRACKING_STATE_INVALID";
       else {
         status_.joint_stamp=state_->header.stamp;
         problem=astribot_s1_transport_mtc::trackingFault(joints_,state_->joint_names,
           state_->desired.positions,state_->actual.positions,joint_limit_,status_.maximum_joint_error_rad);
         if(!slam_pose_) {if(problem.empty())problem="MANIPULATION_BASE_STATE_UNAVAILABLE";}
+        else if(wall-base_received_>=std::chrono::milliseconds(300))problem="MANIPULATION_BASE_STATE_STALE";
         else {
           status_.base_stamp=slam_pose_->header.stamp;
           const auto &p=slam_pose_->pose.pose.position;const auto &q=slam_pose_->pose.pose.orientation;
@@ -99,11 +102,11 @@ public:
       if(state_&&s->header.frame_id==state_->header.frame_id&&s->header.stamp.sec>=0&&s->header.stamp.nanosec<1000000000u&&
          (s->header.stamp.sec>0||s->header.stamp.nanosec>0)&&
          int64_t(s->header.stamp.sec)*1000000000+s->header.stamp.nanosec<=int64_t(state_->header.stamp.sec)*1000000000+state_->header.stamp.nanosec)return;
-      state_=s;
+      state_=s;joint_received_=std::chrono::steady_clock::now();
     });
     pose_subscription_=create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/slam/pose",rclcpp::SensorDataQoS(),[this](geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr s){
       if(slam_pose_&&int64_t(s->header.stamp.sec)*1000000000+s->header.stamp.nanosec<=int64_t(slam_pose_->header.stamp.sec)*1000000000+slam_pose_->header.stamp.nanosec)return;
-      slam_pose_=s;
+      slam_pose_=s;base_received_=std::chrono::steady_clock::now();
     });
     service_=create_service<Service>("/transport/execution_guard/set",std::bind(&Guard::set,this,std::placeholders::_1,std::placeholders::_2));
     timer_=create_wall_timer(std::chrono::milliseconds(20),std::bind(&Guard::tick,this));

@@ -33,6 +33,7 @@ find_package(rclcpp_action REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(control_msgs REQUIRED)
+find_package(joint_trajectory_controller REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(astribot_transport_msgs REQUIRED)
 find_package(astribot_perception_msgs REQUIRED)
@@ -47,6 +48,7 @@ set(ASTRIBOT_MANIPULATION_DEPS
   moveit_msgs
   geometry_msgs
   trajectory_msgs
+  joint_trajectory_controller
   tf2
   tf2_eigen
   tf2_geometry_msgs
@@ -56,6 +58,7 @@ add_library(${PROJECT_NAME}_core SHARED
   src/error_codes.cpp
   src/singularity_monitor.cpp
   src/collision_validator.cpp
+  src/controller_trajectory.cpp
   src/closed_chain_constraint.cpp
   src/trajectory_metrics.cpp
   src/trajectory_time_optimizer.cpp
@@ -170,8 +173,24 @@ ament_target_dependencies(astribot_cancellable_execution rclcpp rclcpp_action pl
 astribot_target_eigen(astribot_cancellable_execution)
 pluginlib_export_plugin_description_file(moveit_ros_move_group cancellable_execution_plugins.xml)
 install(TARGETS astribot_cancellable_execution LIBRARY DESTINATION lib)
+add_library(astribot_owned_trajectory_controller SHARED src/owned_trajectory_controller.cpp)
+target_include_directories(astribot_owned_trajectory_controller PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+ament_target_dependencies(astribot_owned_trajectory_controller
+  joint_trajectory_controller astribot_transport_msgs pluginlib)
+pluginlib_export_plugin_description_file(controller_interface owned_trajectory_controller_plugins.xml)
+install(TARGETS astribot_owned_trajectory_controller LIBRARY DESTINATION lib)
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(controller_trajectory_test test/controller_trajectory_test.cpp)
+  target_link_libraries(controller_trajectory_test ${PROJECT_NAME}_core)
+  ament_target_dependencies(controller_trajectory_test ${ASTRIBOT_MANIPULATION_DEPS})
+  astribot_target_eigen(controller_trajectory_test)
+  ament_add_gtest(controller_stop_test test/controller_stop_test.cpp TIMEOUT 30)
+  ament_target_dependencies(controller_stop_test joint_trajectory_controller rclcpp_action)
+  ament_add_gtest(owned_controller_test test/owned_controller_test.cpp TIMEOUT 30)
+  target_link_libraries(owned_controller_test astribot_owned_trajectory_controller)
+  ament_target_dependencies(owned_controller_test joint_trajectory_controller astribot_transport_msgs rclcpp_action)
   ament_add_gtest(grasp_candidate_gate_test test_grasp_candidate_gate.cpp)
   ament_target_dependencies(grasp_candidate_gate_test rclcpp geometry_msgs astribot_perception_msgs)
   ament_add_gtest(gripper_planning_only_test test_gripper_planning_only.cpp)

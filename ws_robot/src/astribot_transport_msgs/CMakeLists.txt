@@ -7,6 +7,6 @@ find_package(moveit_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME} "srv/PlanSkill.srv" "msg/ManipulationStage.msg" "action/PlanManipulation.action"
   "srv/SetExecutionGuard.srv" "srv/RevalidateManipulation.srv" "srv/RevalidatePayloadTransition.srv"
-  "msg/ExecutionGuardStatus.msg" DEPENDENCIES geometry_msgs moveit_msgs builtin_interfaces)
+  "msg/ExecutionGuardStatus.msg" "msg/ExecutionHeartbeat.msg" DEPENDENCIES geometry_msgs moveit_msgs builtin_interfaces)
 ament_export_dependencies(rosidl_default_runtime)
 ament_package()

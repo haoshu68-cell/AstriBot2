@@ -7,12 +7,13 @@
 #include <moveit_msgs/msg/robot_state.hpp>
 #include <rclcpp/logging.hpp>
 #include "collision_validator.hpp"
+#include "controller_trajectory.hpp"
 #include "singularity_monitor.hpp"
 #include "trajectory_time_optimizer.hpp"
 
 namespace astribot_s1_manipulation {
-// Read-only geometry revalidation of the bound path. The existing position
-// interpolation checks do not prove the controller spline's swept volume.
+// Read-only revalidation of the actual controller spline. The bounded joint
+// sampling is not a proof of the Cartesian swept volume between samples.
 inline bool validateExternalTrajectoryGeometry(
   const planning_scene::PlanningSceneConstPtr& scene,
   const robot_trajectory::RobotTrajectory& trajectory, std::string& error)
@@ -20,24 +21,11 @@ inline bool validateExternalTrajectoryGeometry(
   const auto* group = trajectory.getGroup();
   if (!group || trajectory.getWayPointCount() == 0) {error="EMPTY_EXTERNAL_TRAJECTORY"; return false;}
   std::vector<moveit::core::RobotState> states;
-  for (size_t i=0; i<trajectory.getWayPointCount(); ++i) {
-    const auto& state=trajectory.getWayPoint(i);
+  if (!sampleControllerTrajectory(trajectory,.025,10000,states,error)) return false;
+  for (const auto& state:states) {
     for(auto idx:group->getVariableIndexList())
       if(!std::isfinite(state.getVariablePositions()[idx])) {error="INVALID_EXTERNAL_JOINT_VALUE"; return false;}
     if (!state.satisfiesBounds(group,1e-6)) {error="EXTERNAL_JOINT_LIMIT"; return false;}
-    if (i) {
-      const auto& previous=trajectory.getWayPoint(i-1);
-      double step=0.;
-      for (auto idx:group->getVariableIndexList()) step=std::max(step,std::abs(state.getVariablePositions()[idx]-previous.getVariablePositions()[idx]));
-      if (!std::isfinite(step) || step>100.) {error="INVALID_EXTERNAL_JOINT_VALUE"; return false;}
-      const int count=std::max(1,int(std::ceil(step/.025)));
-      for(int j=1;j<count;++j) {
-        moveit::core::RobotState sample(previous);
-        previous.interpolate(state,double(j)/count,sample);sample.update();states.push_back(sample);
-      }
-    }
-    states.push_back(state);
-    if(states.size()>10000) {error="EXTERNAL_PATH_TOO_LARGE"; return false;}
   }
   CollisionValidator collision;
   if(!collision.configure(scene,CollisionParams{},error)) return false;

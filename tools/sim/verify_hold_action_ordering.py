@@ -27,6 +27,7 @@ from controller_manager_msgs.srv import ListControllers
 from rosgraph_msgs.msg import Clock
 from std_msgs.msg import String
 from astribot_navigation_msgs.msg import RobotGeometryState, ArmHoldStatus
+from astribot_transport_msgs.msg import ExecutionHeartbeat
 from astribot_s1_transport_native.action import HoldResources
 from astribot_s1_transport_native.srv import RenewHold
 
@@ -127,9 +128,14 @@ def main():
             fixture.create_publisher(GoalStatusArray, endpoint+'/_action/status', qos_profile_action_status_default),
             fixture.create_publisher(FJT.Impl.FeedbackMessage, endpoint+'/_action/feedback', 10)]
 
+    heartbeat_acks=[fixture.create_publisher(ExecutionHeartbeat,'/'+name+'/execution_heartbeat_ack',10) for name in names()]
+    def heartbeat(message):
+        for publisher in heartbeat_acks:publisher.publish(message)
+    entities.append(fixture.create_subscription(ExecutionHeartbeat,'/transport/execution_heartbeat',heartbeat,10,callback_group=group))
+
     def controllers(request, response):
         response.controller = [ControllerState(name=name, state='active',
-            type='joint_trajectory_controller/JointTrajectoryController',
+            type='astribot_s1_manipulation/OwnedTrajectoryController',
             claimed_interfaces=[n+'/position' for n in joints]) for name,joints in names().items()]
         return response
     entities.append(fixture.create_service(ListControllers, '/controller_manager/list_controllers', controllers, callback_group=group))
@@ -179,6 +185,7 @@ def main():
             raise AssertionError(statuses[-1:])
         result_future=goal.get_result_async()
         if args.mode=='pending_cancel':
+            wait(lambda:len([e for e in events if e['event']=='send_received'])==6,3,'child submissions missing')
             canceled_future=goal.cancel_goal_async();wait(canceled_future.done,3,'cancel acknowledgement timeout');assert canceled_future.result().goals_canceling
         wait(result_future.done,16,'terminal timeout');value=result_future.result()
         outcome.update(status=value.status,resources_released=value.result.resources_released,reason=value.result.reason)

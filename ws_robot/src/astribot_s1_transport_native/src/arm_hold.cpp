@@ -117,7 +117,7 @@ void ArmHold::controllers(const std::vector<controller_manager_msgs::msg::Contro
   if(request_steady<claims_steady_)return;
   std::set<std::string> interfaces;
   bool valid=request_steady>=0 && request_steady<=steady && steady-request_steady<500*MS;
-  for(const auto &controller:controllers)if(controller.state=="active" && controller.type=="joint_trajectory_controller/JointTrajectoryController")
+  for(const auto &controller:controllers)if(controller.state=="active" && controller.type=="astribot_s1_manipulation/OwnedTrajectoryController")
     for(const auto &interface:controller.claimed_interfaces)if(!interfaces.insert(interface).second)valid=false;
   if(!valid) {claims_.clear();if(confirmed_once_)revoke("HOLD_CONTROLLER_STATE_INVALID");return;}
   claims_=std::move(interfaces);claims_ros_=request_at;claims_steady_=request_steady;

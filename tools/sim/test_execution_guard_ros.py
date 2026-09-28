@@ -11,8 +11,7 @@ import time
 import rclpy
 from ament_index_python.packages import get_package_prefix
 from control_msgs.msg import JointTrajectoryControllerState
-from geometry_msgs.msg import TransformStamped,PoseStamped
-from tf2_msgs.msg import TFMessage
+from geometry_msgs.msg import PoseWithCovarianceStamped,PoseStamped
 from astribot_transport_msgs.srv import SetExecutionGuard
 from astribot_transport_msgs.msg import ExecutionGuardStatus
 
@@ -33,20 +32,21 @@ def main():
     args.output.mkdir(exist_ok=False,parents=True)
     binary=get_package_prefix('astribot_s1_transport_mtc')+'/lib/astribot_s1_transport_mtc/execution_guard'
     with (args.output/'guard.log').open('w') as log:
-        child=subprocess.Popen([binary,'--ros-args','-p','base_frame:=guard_test_base'],stdout=log,stderr=subprocess.STDOUT)
+        child=subprocess.Popen([binary],stdout=log,stderr=subprocess.STDOUT)
         rclpy.init();node=rclpy.create_node('guard_protocol_test');status=[];records=[]
         joint=node.create_publisher(JointTrajectoryControllerState,'/arm_left_controller/state',10)
-        tf=node.create_publisher(TFMessage,'/tf',10)
+        slam=node.create_publisher(PoseWithCovarianceStamped,'/slam/pose',10)
         node.create_subscription(ExecutionGuardStatus,'/transport/execution_guard/status',lambda s:status.append(s),100)
         client=node.create_client(SetExecutionGuard,'/transport/execution_guard/set')
-        error=0.;offset=0.;publish_joint=True
+        error=0.;offset=0.;publish_joint=True;publish_base=True;joint_stamp=None
         def step():
             stamp=node.get_clock().now().to_msg()
             if publish_joint:
-                m=JointTrajectoryControllerState();m.header.stamp=stamp;m.joint_names=['arm']
+                m=JointTrajectoryControllerState();m.header.stamp=joint_stamp or stamp;m.joint_names=['arm']
                 m.desired.positions=[0.];m.actual.positions=[error];joint.publish(m)
-            t=TransformStamped();t.header.stamp=stamp;t.header.frame_id='guard_test_world';t.child_frame_id='guard_test_base'
-            t.transform.translation.x=offset;t.transform.rotation.w=1.;tf.publish(TFMessage(transforms=[t]))
+            t=PoseWithCovarianceStamped();t.header.stamp=stamp;t.header.frame_id='map'
+            t.pose.pose.position.x=offset;t.pose.pose.orientation.w=1.
+            if publish_base:slam.publish(t)
             rclpy.spin_once(node,timeout_sec=.01)
         def until(predicate,timeout=3.):
             end=time.monotonic()+timeout
@@ -55,7 +55,7 @@ def main():
                 if time.monotonic()>end:raise TimeoutError('guard evidence timed out')
                 step()
         def set_guard(context,enable=True):
-            pose=PoseStamped();pose.header.frame_id='guard_test_world';pose.pose.orientation.w=1.
+            pose=PoseStamped();pose.header.frame_id='map';pose.pose.orientation.w=1.
             f=client.call_async(SetExecutionGuard.Request(enable=enable,context_id=context,joint_names=['arm'],base_reference=pose))
             until(f.done);return f.result()
         def state(context,healthy):
@@ -77,6 +77,14 @@ def main():
             offset=0.;assert set_guard('three').accepted;until(lambda:state('three',True))
             publish_joint=False;until(lambda:state('three',False) and status[-1].reason=='MANIPULATION_TRACKING_STATE_STALE')
             records.append('source_timeout_rejected');assert set_guard('three',False).accepted
+            publish_joint=True;assert set_guard('four').accepted;until(lambda:state('four',True))
+            joint_stamp=status[-1].joint_stamp
+            until(lambda:state('four',False) and status[-1].reason=='MANIPULATION_TRACKING_STATE_STALE')
+            records.append('duplicate_source_cannot_extend_evidence');assert set_guard('four',False).accepted
+            joint_stamp=None;assert set_guard('five').accepted;until(lambda:state('five',True))
+            publish_base=False
+            until(lambda:state('five',False) and status[-1].reason=='MANIPULATION_BASE_STATE_STALE')
+            records.append('slam_loss_rejected');assert set_guard('five',False).accepted
             passed=True
         finally:
             node.destroy_node();rclpy.shutdown()

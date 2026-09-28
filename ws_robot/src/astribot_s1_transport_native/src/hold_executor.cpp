@@ -39,6 +39,7 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <control_msgs/action/follow_joint_trajectory.hpp>
 #include <controller_manager_msgs/srv/list_controllers.hpp>
+#include <astribot_transport_msgs/msg/execution_heartbeat.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <algorithm>
 #include <cctype>
@@ -83,6 +84,7 @@ using Parent=rclcpp_action::ServerGoalHandle<Action>;
 using Trajectory=control_msgs::action::FollowJointTrajectory;
 using Child=rclcpp_action::ClientGoalHandle<Trajectory>;
 using Query=controller_manager_msgs::srv::ListControllers;
+using ExecutionHeartbeat=astribot_transport_msgs::msg::ExecutionHeartbeat;
 std::map<std::string,std::vector<std::string>> resources(){
  std::map<std::string,std::vector<std::string>> result;
  for(auto side:{"left","right"}) {
@@ -120,6 +122,16 @@ public:
    clients_[name]=rclcpp_action::create_client<Trajectory>(this,"/"+name+"/follow_joint_trajectory");
   }
   authority_=std::make_unique<ResourceAuthority>(boot_epoch(),all_joints_,[this](const auto &record){journal_->append(record);},journal_->restored());
+  heartbeat_pub_=create_publisher<ExecutionHeartbeat>("/transport/execution_heartbeat",10);
+  for(const auto& name:names_)heartbeat_subs_.push_back(create_subscription<ExecutionHeartbeat>(
+   "/"+name+"/execution_heartbeat_ack",10,[this,name](ExecutionHeartbeat::ConstSharedPtr value){
+    if(!owned()||value->lease_id!=authority_->lease_id())return;
+    if(!value->active){stopping("CONTROLLER_EXECUTION_LEASE_REVOKED:"+name);return;}
+    auto found=heartbeat_acks_.find(name);
+    if(found!=heartbeat_acks_.end()&&value->sequence<=found->second.first)return;
+    if(value->sequence==0||value->sequence>heartbeat_sequence_)return;
+    heartbeat_acks_[name]={value->sequence,wall()};
+   }));
   hold_pub_=create_publisher<Hold>("/navigation/arm_hold",10);
   state_pub_=create_publisher<std_msgs::msg::String>("/transport/hold_executor/status",rclcpp::QoS(1).transient_local());
   geometry_sub_=create_subscription<Geometry>("/navigation/geometry_state",10,[this](Geometry::SharedPtr value){receive(*value);});
@@ -148,8 +160,15 @@ public:
    envelope_=*m;++envelope_sequence_;
   });
   guard_sub_=create_subscription<GuardState>("/transport/execution_guard/status",10,[this](GuardState::SharedPtr m){
-   if(guard_state_&&m->context_id==guard_state_->context_id&&ns(m->stamp)<ns(guard_state_->stamp))return;
-   guard_state_=*m;
+   if(owned()&&!stop_at_&&motion_sent_&&!guard_disarm_requested_&&m->context_id==guard_context()&&
+      (!m->active||!m->healthy))stopping("EXECUTION_GUARD_UNHEALTHY:"+m->reason);
+   if(guard_state_&&m->context_id==guard_state_->context_id&&ns(m->stamp)<=ns(guard_state_->stamp))return;
+   const auto source=ns(m->stamp),ros=now().nanoseconds();
+   // Queue replay, duplicate timestamps and a frozen ROS clock cannot extend
+   // this execution-time heartbeat. A leading /clock sample is retried on the
+   // next publication; it does not establish permission ahead of local time.
+   if(source<=0||m->stamp.nanosec>=1000000000u||source>ros||ros-source>=300*MS)return;
+   guard_state_=*m;guard_received_=wall();
   });
   observed_hold_sub_=create_subscription<Hold>("/navigation/arm_hold_observed",10,[this](Hold::ConstSharedPtr m){
    if(observed_hold_&&m->owner_id==observed_hold_->owner_id&&m->hold_id==observed_hold_->hold_id&&ns(m->header.stamp)<ns(observed_hold_->header.stamp))return;
@@ -1063,16 +1082,18 @@ private:
    if(steady-scene_verified_at_>2000*MS){stopping("EXECUTION_GUARD_TIMEOUT");return;}
    if(!guard_ack_||!revoke_ack_)return;
    if(stage_kind_=="ARM") {
-    if(!guard_state_||guard_state_->context_id!=guard_context()||!guard_state_->active)return;
+    if(!guard_state_||guard_state_->context_id!=guard_context()||!guard_state_->active||steady-guard_received_>=300*MS)return;
     if(!guard_state_->healthy){if(guard_state_->reason!="WAITING_FOR_EXECUTION_EVIDENCE")stopping(guard_state_->reason);return;}
 
    }
    if(!scene_final_verified_){if(!scene_pending_)query_scene(true);return;}
    std::set<std::string> attached(geometry_->attachment_ids.begin(),geometry_->attachment_ids.end());
    plan_->check(stage_name(),plan_->current().kind,steady,geometry_->joints,attached);
+   if(!execution_leases_ready(steady))return;
    motion_sent_=true;send_children();reason_=full_operation_?"EXECUTING_MTC_STAGE:"+stage_id_:"EXECUTING_FIRST_MTC_STAGE";
   }
   if(motion_sent_&&stage_kind_=="ARM"&&!guard_disarm_requested_){
+   if(steady-guard_received_>=300*MS){stopping("EXECUTION_GUARD_HEARTBEAT_EXPIRED");return;}
    if(!guard_state_||guard_state_->context_id!=guard_context()||!guard_state_->active||!guard_state_->healthy){stopping("EXECUTION_GUARD_UNHEALTHY");return;}
   }
  }
@@ -1127,7 +1148,7 @@ private:
   for(const auto &controller:claims_)if(controller.state=="active") {
    if(groups_.count(controller.name)) {
     seen.insert(controller.name);
-    if(controller.type!="joint_trajectory_controller/JointTrajectoryController"){reason_="CONTROLLER_TYPE_CHANGED";return false;}
+    if(controller.type!="astribot_s1_manipulation/OwnedTrajectoryController"){reason_="CONTROLLER_TYPE_CHANGED";return false;}
     std::set<std::string> expected;for(const auto &n:groups_.at(controller.name))expected.insert(n+"/position");
     if(std::set<std::string>(controller.claimed_interfaces.begin(),controller.claimed_interfaces.end())!=expected){reason_="CONTROLLER_RESOURCE_CHANGED";return false;}
    }
@@ -1155,6 +1176,7 @@ private:
   return true;
  }
  void start() {
+  heartbeat_acks_.clear();heartbeat_sequence_=0;
   auto child_names=names_;
 #ifdef PLAN_TO_HOLD_EXECUTOR
   payload_observation_bound_=false;payload_raw_failure_.clear();
@@ -1171,8 +1193,17 @@ private:
 #ifdef PLAN_TO_HOLD_EXECUTOR
   revoke_ack_=false;revoke_pending_=false;revocation_verified_=false;revoke_navigation();
 #else
-  send_children();
+  reason_="WAITING_FOR_CONTROLLER_EXECUTION_LEASES";
 #endif
+ }
+ void publish_execution_heartbeat(bool active) {
+  ExecutionHeartbeat message;message.stamp=now();message.lease_id=authority_->lease_id();
+  message.sequence=++heartbeat_sequence_;message.active=active;heartbeat_pub_->publish(message);
+ }
+ bool execution_leases_ready(int64_t steady) {
+  if(heartbeat_acks_.size()!=names_.size()){reason_="WAITING_FOR_CONTROLLER_EXECUTION_LEASES";return false;}
+  for(const auto& [name,ack]:heartbeat_acks_)if(steady-ack.second>=300*MS){reason_="CONTROLLER_EXECUTION_LEASE_ACK_EXPIRED:"+name;return false;}
+  return true;
  }
  void send_children() {
   try {
@@ -1250,7 +1281,9 @@ private:
  }
  void stopping(const std::string &reason) {
   if(!owned())return;
-  if(!stop_at_){stop_at_=wall();stop_ros_=now().nanoseconds();stop_reason_=reason;reason_=reason;authority_->stop(stop_reason_,stop_ros_,stop_at_);hold_.cancel();settling_.clear();
+  if(!stop_at_){stop_at_=wall();stop_ros_=now().nanoseconds();stop_reason_=reason;reason_=reason;
+   publish_execution_heartbeat(false);
+   authority_->stop(stop_reason_,stop_ros_,stop_at_);hold_.cancel();settling_.clear();
 #ifdef PLAN_TO_HOLD_EXECUTOR
    if(transfer_parent_&&navigation_started_){navigation_->cancel(stop_reason_);navigation_cleanup_revoke_=false;}
    revoke_navigation();
@@ -1298,6 +1331,10 @@ private:
 #endif
     geometry_valid=geometry_ready(ros,steady);
     if(!stop_at_&&(!grant||!geometry_valid||!claims_fresh(ros,steady)||!exclusive_graph()))stopping(grant?reason_:authority_->reason());
+    publish_execution_heartbeat(!stop_at_&&bool(grant));
+#ifndef PLAN_TO_HOLD_EXECUTOR
+    if(!stop_at_&&!motion_ever_sent_&&execution_leases_ready(steady))send_children();
+#endif
 #ifdef PLAN_TO_HOLD_EXECUTOR
     if(!stop_at_&&(!transfer_parent_||transfer_phase_==TransferPhase::PICK||transfer_phase_==TransferPhase::PLACE))advance_plan(ros,steady);
     if(payload_phase_!=PayloadPhase::NONE) {
@@ -1413,6 +1450,9 @@ private:
   std_msgs::msg::String message;message.data=status.dump();state_pub_->publish(message);
  }
  std::map<std::string,std::vector<std::string>> groups_;std::set<std::string> all_joints_,cancel_sent_;std::vector<std::string> names_;
+ rclcpp::Publisher<ExecutionHeartbeat>::SharedPtr heartbeat_pub_;
+ std::vector<rclcpp::Subscription<ExecutionHeartbeat>::SharedPtr> heartbeat_subs_;
+ std::map<std::string,std::pair<uint64_t,int64_t>> heartbeat_acks_;uint64_t heartbeat_sequence_=0;
  std::unique_ptr<ResourceJournal> journal_;std::unique_ptr<ResourceAuthority> authority_;ArmHold hold_;
  std::unique_ptr<ChildActions> children_;std::map<std::string,Child::SharedPtr> handles_;
  std::map<std::string,rclcpp_action::Client<Trajectory>::SharedPtr> clients_;
@@ -1472,7 +1512,8 @@ private:
  rclcpp::Client<SceneQuery>::SharedPtr scenes_;rclcpp::Client<GuardService>::SharedPtr guard_client_;rclcpp::Client<Revoke>::SharedPtr revoke_client_;
  rclcpp::Client<Revalidate>::SharedPtr revalidate_client_;
  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr slam_pose_sub_;rclcpp::Subscription<Envelope>::SharedPtr envelope_sub_;rclcpp::Subscription<GuardState>::SharedPtr guard_sub_;
- std::optional<geometry_msgs::msg::PoseWithCovarianceStamped> slam_pose_;std::optional<Envelope> envelope_;std::optional<GuardState> guard_state_;
+  std::optional<geometry_msgs::msg::PoseWithCovarianceStamped> slam_pose_;std::optional<Envelope> envelope_;std::optional<GuardState> guard_state_;
+ int64_t guard_received_=0;
  SlamPoseStopWindow base_stop_window_;
  geometry_msgs::msg::PoseWithCovarianceStamped reference_base_;Geometry reference_geometry_;Envelope reference_envelope_;
  astribot_s1_transport_mtc::BaseMotionLimits base_motion_limits_;
