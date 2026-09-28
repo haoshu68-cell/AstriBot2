@@ -81,6 +81,7 @@ bool ObservedPointCloudUpdater::setParams(const std::string& name_space)
   // This parameter is optional
   node_->get_parameter_or(name_space + ".ns", ns_, std::string());
   const bool configured = node_->get_parameter(name_space + ".point_cloud_topic", point_cloud_topic_) &&
+         node_->get_parameter(name_space + ".sensor_frame", sensor_frame_) &&
          node_->get_parameter(name_space + ".max_range", max_range_) &&
          node_->get_parameter(name_space + ".padding_offset", padding_) &&
          node_->get_parameter(name_space + ".padding_scale", scale_) &&
@@ -89,7 +90,7 @@ bool ObservedPointCloudUpdater::setParams(const std::string& name_space)
          node_->get_parameter(name_space + ".filtered_cloud_topic", filtered_cloud_topic_);
   return configured && point_subsample_ > 0 && std::isfinite(max_range_) && max_range_ > 0 &&
          std::isfinite(scale_) && scale_ > 0 && std::isfinite(padding_) && padding_ >= 0 &&
-         std::isfinite(max_update_rate_) && max_update_rate_ >= 0 && !point_cloud_topic_.empty();
+         std::isfinite(max_update_rate_) && max_update_rate_ >= 0 && !point_cloud_topic_.empty() && !sensor_frame_.empty();
 }
 
 bool ObservedPointCloudUpdater::initialize(const rclcpp::Node::SharedPtr& node)
@@ -133,6 +134,7 @@ void ObservedPointCloudUpdater::start()
   {
     point_cloud_filter_ = new tf2_ros::MessageFilter<sensor_msgs::msg::PointCloud2>(
         *point_cloud_subscriber_, *tf_buffer_, monitor_->getMapFrame(), 5, node_);
+    point_cloud_filter_->setTargetFrames({monitor_->getMapFrame(), sensor_frame_});
     point_cloud_filter_->registerCallback(
         [this](const sensor_msgs::msg::PointCloud2::ConstSharedPtr& cloud) { cloudMsgCallback(cloud); });
     RCLCPP_INFO(LOGGER, "Listening to '%s' using message filter with target frame '%s'", point_cloud_topic_.c_str(),
@@ -187,6 +189,7 @@ void ObservedPointCloudUpdater::cloudMsgCallback(const sensor_msgs::msg::PointCl
   observation.header = cloud_msg->header;
   observation.callback_stamp = node_->now();
   observation.source_id = source_id_;
+  observation.sensor_frame = sensor_frame_;
   observation.map_epoch = map_epoch;
   // PointCloud2 is an external byte buffer. The upstream iterators assume
   // packed native-endian float XYZ. Reject a different layout before reading it.
@@ -221,9 +224,9 @@ void ObservedPointCloudUpdater::cloudMsgCallback(const sensor_msgs::msg::PointCl
     monitor_->setMapFrame(cloud_msg->header.frame_id);
 
   /* get transform for cloud into map frame */
-  tf2::Stamped<tf2::Transform> map_h_sensor;
+  tf2::Stamped<tf2::Transform> map_h_cloud;
   if (monitor_->getMapFrame() == cloud_msg->header.frame_id)
-    map_h_sensor.setIdentity();
+    map_h_cloud.setIdentity();
   else
   {
     if (tf_buffer_)
@@ -232,7 +235,7 @@ void ObservedPointCloudUpdater::cloudMsgCallback(const sensor_msgs::msg::PointCl
       {
         tf2::fromMsg(tf_buffer_->lookupTransform(monitor_->getMapFrame(), cloud_msg->header.frame_id,
                                                  cloud_msg->header.stamp),
-                     map_h_sensor);
+                     map_h_cloud);
       }
       catch (tf2::TransformException& ex)
       {
@@ -244,18 +247,34 @@ void ObservedPointCloudUpdater::cloudMsgCallback(const sensor_msgs::msg::PointCl
       return;
   }
 
-  observation.sensor_to_map = tf2::toMsg(static_cast<const tf2::Transform&>(map_h_sensor));
-
-  /* compute sensor origin in map frame */
-  const tf2::Vector3& sensor_origin_tf = map_h_sensor.getOrigin();
-  octomap::point3d sensor_origin(sensor_origin_tf.getX(), sensor_origin_tf.getY(), sensor_origin_tf.getZ());
-  Eigen::Vector3d sensor_origin_eigen(sensor_origin_tf.getX(), sensor_origin_tf.getY(), sensor_origin_tf.getZ());
+  tf2::Transform cloud_h_sensor;
+  if (cloud_msg->header.frame_id == sensor_frame_) cloud_h_sensor.setIdentity();
+  else {
+    try {
+      tf2::fromMsg(tf_buffer_->lookupTransform(cloud_msg->header.frame_id, sensor_frame_,
+          cloud_msg->header.stamp).transform, cloud_h_sensor);
+    } catch (const tf2::TransformException& error) {
+      RCLCPP_ERROR(LOGGER, "Sensor origin transform unavailable: %s", error.what());
+      return;
+    }
+  }
+  const auto map_h_sensor = map_h_cloud * cloud_h_sensor;
+  observation.cloud_to_map = tf2::toMsg(static_cast<const tf2::Transform&>(map_h_cloud));
+  observation.sensor_to_map = tf2::toMsg(map_h_sensor);
+  const auto& sensor_origin_tf = map_h_sensor.getOrigin();
+  octomap::point3d sensor_origin(sensor_origin_tf.x(), sensor_origin_tf.y(), sensor_origin_tf.z());
+  const auto& cloud_origin = cloud_h_sensor.getOrigin();
+  Eigen::Vector3d sensor_origin_eigen(cloud_origin.x(), cloud_origin.y(), cloud_origin.z());
 
   if (!updateTransformCache(cloud_msg->header.frame_id, cloud_msg->header.stamp))
     return;
 
   /* mask out points on the robot */
-  shape_mask_->maskContainment(*cloud_msg, sensor_origin_eigen, 0.0, max_range_, mask_);
+  // ShapeMask's range check assumes coordinates relative to the sensor.
+  // These project clouds can already be in the base frame: apply range below
+  // using the actual camera origin, while retaining its robot containment test.
+  shape_mask_->maskContainment(*cloud_msg, sensor_origin_eigen, 0.0,
+      std::numeric_limits<double>::infinity(), mask_);
 
   octomap::KeySet free_cells, occupied_cells, model_cells, clip_cells, ray_free_cells;
   std::unique_ptr<sensor_msgs::msg::PointCloud2> filtered_cloud;
@@ -300,22 +319,21 @@ void ObservedPointCloudUpdater::cloudMsgCallback(const sensor_msgs::msg::PointCl
         {
           /* occupied cell at ray endpoint if ray is shorter than max range and this point
              isn't on a part of the robot*/
-          if (mask_[row_c + col] == point_containment_filter::ShapeMask::INSIDE)
+          const tf2::Vector3 point(pt_iter[0], pt_iter[1], pt_iter[2]);
+          const auto ray = point - cloud_origin;
+          if (ray.length() > max_range_)
           {
-            // transform to map frame
-            tf2::Vector3 point_tf = map_h_sensor * tf2::Vector3(pt_iter[0], pt_iter[1], pt_iter[2]);
-            model_cells.insert(tree_->coordToKey(point_tf.getX(), point_tf.getY(), point_tf.getZ()));
+            const auto clipped_point = map_h_cloud * (cloud_origin + ray.normalized() * max_range_);
+            clip_cells.insert(tree_->coordToKey(clipped_point.x(), clipped_point.y(), clipped_point.z()));
           }
-          else if (mask_[row_c + col] == point_containment_filter::ShapeMask::CLIP)
+          else if (mask_[row_c + col] == point_containment_filter::ShapeMask::INSIDE)
           {
-            tf2::Vector3 clipped_point_tf =
-                map_h_sensor * (tf2::Vector3(pt_iter[0], pt_iter[1], pt_iter[2]).normalize() * max_range_);
-            clip_cells.insert(
-                tree_->coordToKey(clipped_point_tf.getX(), clipped_point_tf.getY(), clipped_point_tf.getZ()));
+            const auto point_tf = map_h_cloud * point;
+            model_cells.insert(tree_->coordToKey(point_tf.x(), point_tf.y(), point_tf.z()));
           }
           else
           {
-            tf2::Vector3 point_tf = map_h_sensor * tf2::Vector3(pt_iter[0], pt_iter[1], pt_iter[2]);
+            tf2::Vector3 point_tf = map_h_cloud * tf2::Vector3(pt_iter[0], pt_iter[1], pt_iter[2]);
             occupied_cells.insert(tree_->coordToKey(point_tf.getX(), point_tf.getY(), point_tf.getZ()));
             // build list of valid points if we want to publish them
             if (filtered_cloud)

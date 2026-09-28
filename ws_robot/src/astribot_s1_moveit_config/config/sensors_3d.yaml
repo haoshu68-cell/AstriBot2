@@ -12,7 +12,7 @@ sensors:
 head_rgbd:
   sensor_plugin: astribot_s1_manipulation/ObservedPointCloudUpdater
   point_cloud_topic: /camera/head_rgbd/points
-  point_cloud_frame: astribot_torso_base
+  sensor_frame: head_rgbd_camera_optical_frame
   max_range: 4.0
   point_subsample: 1
   padding_offset: 0.02
@@ -23,7 +23,7 @@ head_rgbd:
 torso_rgbd:
   sensor_plugin: astribot_s1_manipulation/ObservedPointCloudUpdater
   point_cloud_topic: /camera/torso_rgbd/points
-  point_cloud_frame: astribot_torso_base
+  sensor_frame: torso_rgbd_camera_optical_frame
   max_range: 3.0
   point_subsample: 1
   padding_offset: 0.02

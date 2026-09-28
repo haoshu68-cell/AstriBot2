@@ -51,8 +51,10 @@ protected:
       std::this_thread::sleep_for(1ms);
     }
   }
-  std::shared_ptr<Updater> add(const std::string& name, bool upstream = false, Monitor* target = nullptr) {
+  std::shared_ptr<Updater> add(const std::string& name, bool upstream = false, Monitor* target = nullptr,
+                             const std::string& sensor_frame = "base") {
     node->declare_parameter(name + ".point_cloud_topic", "/cloud_" + name);
+    node->declare_parameter(name + ".sensor_frame", sensor_frame);
     node->declare_parameter(name + ".max_range", 3.0);
     node->declare_parameter(name + ".padding_offset", 0.0);
     node->declare_parameter(name + ".padding_scale", 1.0);
@@ -186,6 +188,12 @@ TEST_F(ObservedCloud, MissingTransformDoesNotPublishIntegratedEvidence) {
   pub->publish(msg);spin(200ms);EXPECT_TRUE(received.empty());EXPECT_EQ(monitor->getOcTreePtr()->size(),0u);
 }
 
+TEST_F(ObservedCloud, MissingCameraOriginDoesNotUseCloudFrameOrigin) {
+  add("head",false,nullptr,"missing_camera");auto pub=publisher("head");
+  pub->publish(cloud({{1.05f,0,0}}));spin(200ms);
+  EXPECT_TRUE(received.empty());EXPECT_EQ(monitor->getOcTreePtr()->size(),0u);
+}
+
 TEST_F(ObservedCloud, RejectedRobotTransformsDoNotPublishIntegratedEvidence) {
   auto updater=add("head");
   updater->setTransformCacheCallback([](const auto&,const auto&,auto&){return false;});
@@ -194,7 +202,7 @@ TEST_F(ObservedCloud, RejectedRobotTransformsDoNotPublishIntegratedEvidence) {
 }
 
 TEST_F(ObservedCloud, SnapshotContainsActualSensorTransform) {
-  add("head");tf2_ros::StaticTransformBroadcaster broadcaster(node);
+  add("head",false,nullptr,"camera");tf2_ros::StaticTransformBroadcaster broadcaster(node);
   geometry_msgs::msg::TransformStamped transform;
   transform.header.frame_id="base";transform.child_frame_id="camera";transform.header.stamp=node->now();
   transform.transform.translation.y=.5;transform.transform.rotation.w=1.;
@@ -206,6 +214,28 @@ TEST_F(ObservedCloud, SnapshotContainsActualSensorTransform) {
   auto map=tree(received.back());ASSERT_NE(map->search(1.05,.55,.05),nullptr);
   EXPECT_TRUE(map->isNodeOccupied(map->search(1.05,.55,.05)));
   EXPECT_EQ(map->search(1.05,.05,.05),nullptr);
+}
+
+TEST_F(ObservedCloud, BaseFrameCloudRaysStartAtCameraAndUseCameraRange) {
+  auto updater=add("head",false,nullptr,"camera");
+  updater->stop();node->set_parameter(rclcpp::Parameter("head.max_range",1.0));
+  ASSERT_TRUE(updater->setParams("head"));updater->start();
+  tf2_ros::StaticTransformBroadcaster broadcaster(node);
+  geometry_msgs::msg::TransformStamped tf;
+  tf.header.frame_id="base";tf.child_frame_id="camera";tf.header.stamp=node->now();
+  tf.transform.translation.y=.5;tf.transform.rotation.w=1.;broadcaster.sendTransform(tf);spin(100ms);
+  auto pub=publisher("head");
+  // Already transformed into base coordinates, as the real RGB-D producer does.
+  // This endpoint is inside 1 m of the camera and outside 1 m of the base origin.
+  pub->publish(cloud({{.05f,1.35f,.05f}}));spin();ASSERT_EQ(received.size(),1u);
+  auto map=tree(received.back());ASSERT_NE(map->search(.05,1.35,.05),nullptr);
+  EXPECT_TRUE(map->isNodeOccupied(map->search(.05,1.35,.05)));
+  EXPECT_EQ(map->search(.05,.05,.05),nullptr); // No fictitious ray through the robot origin.
+  EXPECT_EQ(received.back().sensor_to_map,tf.transform);
+  pub->publish(cloud({{.05f,2.25f,.05f}}));spin();ASSERT_EQ(received.size(),2u);
+  auto clipped=tree(received.back());EXPECT_EQ(clipped->search(.05,2.25,.05),nullptr);
+  ASSERT_NE(clipped->search(.05,1.45,.05),nullptr);
+  EXPECT_FALSE(clipped->isNodeOccupied(clipped->search(.05,1.45,.05)));
 }
 
 TEST_F(ObservedCloud, ConcurrentCameraCallbacksKeepRevisionAndTreeTogether) {

@@ -2,13 +2,13 @@
 
 `ObservedPointCloudUpdater` is the only configured point-cloud updater in this
 branch. It derives directly from MoveIt's `OccupancyMapUpdater`. It retains the
-existing ray integration, log-odds and self-filter behavior; it does not wrap the
+existing log-odds and self-filter behavior; it does not wrap the
 old updater or run a second map writer. `moveit_ros_perception` remains a build
 and runtime dependency for its existing `ShapeMask` implementation. The old
 updater is instantiated only by differential tests.
 
 For each successful integration it publishes `/moveit/observed_octomap` with the
-original cloud header, callback time, source name, actual transform used, and
+original cloud header, callback time, source name, cloud-to-map and sensor-to-map transforms, and
 the full resulting Octomap. Serialization and revision assignment happen under
 the same tree write lock as integration. The process epoch and revision identify
 the immutable snapshot; consumers must order by revision because callbacks from
@@ -37,6 +37,19 @@ require the next acceptance stages. No online automatic resume consumes this
 topic yet. `callback_stamp` is after the TF message filter; processing time does
 not include waiting in that filter. Full map serialization increases write-lock
 time and must be measured with the actual map and sensor load before acceptance.
+
+The first owned Gazebo readback exposed that the project RGB-D producer publishes
+points already transformed into `astribot_torso_base`. Its frame origin is not the
+camera origin. The upstream updater used that frame origin for rays and its
+range filter assumed sensor-relative points. Each configured updater therefore
+now requires the actual optical `sensor_frame`. Both transforms are queried at
+the source stamp; the TF filter waits for both. Rays and range clipping use the
+camera origin, while robot containment still uses the point cloud's frame.
+Missing camera transforms do not fall back to the cloud frame origin. The test
+with base-frame points and a translated camera failed before this correction;
+same-input parity with upstream remains tested when cloud and sensor frames
+coincide. This is a correction to the observed frame mismatch, and does change
+the wrongly cleared cells in that previous base-frame integration.
 
 ## Source and validation
 

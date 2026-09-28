@@ -84,6 +84,7 @@ private:
 
   /* params */
   std::string point_cloud_topic_;
+  std::string sensor_frame_;
   double scale_;
   double padding_;
   double max_range_;

@@ -7,6 +7,8 @@ string source_id
 # Epoch changes on process restart; revisions order integrations in that process.
 string map_epoch
 uint64 map_revision
+string sensor_frame
+geometry_msgs/Transform cloud_to_map
 geometry_msgs/Transform sensor_to_map
 octomap_msgs/Octomap octomap
 # Triples of full-depth OcTree keys traversed by this frame's measured rays AND
