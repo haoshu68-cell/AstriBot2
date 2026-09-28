@@ -1,0 +1,41 @@
+{
+  "branch": "codex/arm-dynamic-recovery-implementation",
+  "base_commit": "1e5c7857",
+  "implementation_commit": "dca8d1c2b4176794ecd063a4ee9925b547b2f003",
+  "workspace": "/home/yjh/WorkSpace/astribot_arm_dynamic_recovery_impl",
+  "build_prefix": "/tmp/astribot_arm_dynamic_recovery_impl",
+  "test_domain": 147,
+  "ctest_targets": 6,
+  "ctest_failed": 0,
+  "registered_cases": 68,
+  "passed_cases": 67,
+  "skipped_cases": [
+    "ObservedCloud.SameCloudProcessingBenchmark"
+  ],
+  "skip_evidence": "ctest_details.log (installed gtest XML does not encode the skip)",
+  "source_sha256": {
+    "ws_robot/src/astribot_s1_manipulation/include/astribot_s1_manipulation/controller_trajectory.hpp": "c4a6498cba92c278744fe0e88b291c7d2704e475e3272be347b7a543d769741e",
+    "ws_robot/src/astribot_s1_manipulation/src/controller_trajectory.cpp": "e9ad92c4a140328a5ca1b1ce80a72f0a4fcde0ddafb9616b6c98cf764a830502",
+    "ws_robot/src/astribot_s1_manipulation/test/controller_trajectory_test.cpp": "8bb58ab56e3ee23f537557dec9b755663dbd36ab51443baac0d2ff15c151ee00",
+    "ws_robot/src/astribot_s1_manipulation/test/observed_pointcloud_test.cpp": "89f96e591713004f7759ea85305e2827280eb41da8cbf58e8ba573259bff3ee1",
+    "tools/validation/measure_arm_depth_decimation.py": "f497d56ecb19a8fd5118d5120ec6b77d8628c85020e69ddae9d52a9c2a637579"
+  },
+  "binary_sha256": {
+    "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_manipulation/lib/libastribot_s1_manipulation_core.so": "2850c256f5bc950cce4bed4b0184a54810da8eaa0303e39ffb909c61c91c5890",
+    "/tmp/astribot_arm_dynamic_recovery_impl/install/astribot_s1_manipulation/lib/libastribot_observed_pointcloud_updater.so": "dc696e846ec55e7cf00dd06c20701ffd933f3d457f4d20932109e1e14c8c62bc",
+    "/opt/ros/humble/lib/libjoint_trajectory_controller.so": "9a91a169b16da2debedc4db6ebd2feabc6ab693e1a1bb525b0bd1128c1c1688f"
+  },
+  "scope": "C++ fixed-scene initial segment and isolated ROS/plugin/projection tests only",
+  "online_dynamic_avoidance_accepted": false,
+  "automatic_recovery_accepted": false,
+  "gazebo_run_this_turn": false,
+  "hardware_run": false,
+  "mainline_merged": false,
+  "projection_experiment": {
+    "cases": 12,
+    "decimation_4_target_lost": 4,
+    "decimation_1_target_lost": 0,
+    "output": "depth_decimation_final/result.json",
+    "interpretation": "Geometry comparison completed; decimation=4 fails the selected target. Camera and full-stack acceptance remain open."
+  }
+}

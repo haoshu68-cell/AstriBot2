@@ -2,6 +2,8 @@
 
 日期：2026-09-28。状态：**实施前技术方案与验收门槛。下文的现状和 NOT_RUN 为制定方案时的记录；当前实施与证据见 [分支实施记录](ARM_DYNAMIC_RECOVERY_PROGRESS_20260928.md)，整体功能尚未完成验收。**
 
+首版障碍尺寸、接近速度和实验范围已按用户授权完成标准/厂商调研并选定，见 [参数与评定依据](ARM_DYNAMIC_RECOVERY_PARAMETERS_20260928.md)。它们是待验收目标，不是当前已达到的能力。
+
 本方案以当前工作区源码为依据。Git HEAD 为 `854a8206d295dce5249c7adf5229e9e439559eb8`；工作区已有其他未提交修改，实际审阅文件以 [源码审计清单](/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/moveit_dynamic_avoidance_20260928/source_audit.json) 的 SHA-256 为准。清单记录的是本机安装版本，不代表在线进程实际使用的 overlay。此次没有启动、停止或接管 ROS/Gazebo 会话。
 
 ## 1. 决策与能力边界

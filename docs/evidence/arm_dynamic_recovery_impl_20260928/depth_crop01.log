@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/tmp/astribot_arm_dynamic_recovery_impl/crop_probe.py", line 131, in <module>
+    assert time.monotonic() < deadline, f'OUTPUT_TIMEOUT {camera} {distance} {phase}; received={list(clouds)} health={health} input={input_received}'
+AssertionError: OUTPUT_TIMEOUT head 1.0 0; received=[(1, 1790576479, 619644441)] health={1: {'processed': 1, 'errors': 0, 'reason': 'OK'}, 4: {'processed': 0, 'errors': 0, 'reason': 'NO_CURRENT_OUTPUT'}} input={'info': [1790576479, 619644441], 'depth': [1790576479, 619644441, 16384]}

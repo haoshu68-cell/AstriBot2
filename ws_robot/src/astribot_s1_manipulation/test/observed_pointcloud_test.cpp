@@ -8,6 +8,7 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <thread>
 #include <sstream>
+#include <cmath>
 
 using Observation = astribot_transport_msgs::msg::ObservedOctomap;
 using Updater = occupancy_map_monitor::OccupancyMapUpdater;
@@ -95,6 +96,55 @@ protected:
 TEST_F(ObservedCloud, PluginCanBeLoadedByActualMonitorLoader) {
   pluginlib::ClassLoader<Updater> loader("moveit_ros_occupancy_map_monitor", "occupancy_map_monitor::OccupancyMapUpdater");
   EXPECT_TRUE(loader.createSharedInstance("astribot_s1_manipulation/ObservedPointCloudUpdater"));
+}
+
+TEST_F(ObservedCloud, FreshFreeVoxelDoesNotCertifyTwentyMmTestRodIsAbsent) {
+  monitor.reset();
+  monitor = std::make_unique<Monitor>(node, std::shared_ptr<tf2_ros::Buffer>{}, "base", .05);
+  add("head"); auto pub = publisher("head");
+  // Independent geometry: a 20 mm diameter, 160 mm long cylinder has its
+  // axis at (1.025, .035), along z in [0, .160]. This background ray misses
+  // it, but crosses the same 50 mm cell as part of that cylinder.
+  const float x = 2.025f, y = .025f, z = .025f;
+  const double axis_distance = std::abs(x * .035 - y * 1.025) / std::hypot(x, y);
+  ASSERT_GT(axis_distance, .010);
+  const auto input = cloud({{x, y, z}});
+  pub->publish(input); spin();
+  ASSERT_EQ(received.size(), 1u);
+  EXPECT_EQ(received.back().header.stamp, input.header.stamp);
+  auto map = tree(received.back());
+  auto* cell = map->search(1.025, .035, .025);
+  ASSERT_NE(cell, nullptr);
+  EXPECT_FALSE(map->isNodeOccupied(cell));
+  const auto key = map->coordToKey(1.025, .035, .025);
+  const auto& free = received.back().ray_free_keys;
+  bool crossed = false;
+  for (std::size_t i = 0; i < free.size(); i += 3)
+    crossed = crossed || (free[i] == key[0] && free[i + 1] == key[1] && free[i + 2] == key[2]);
+  EXPECT_TRUE(crossed);
+  // Fresh ray evidence is correct; certifying the entire cell as observed
+  // would be incorrect. This is a coverage counterexample, not a camera test.
+}
+
+TEST_F(ObservedCloud, TwentyMmRodReturnsOccupyFiveCmMapAfterFreeObservation) {
+  monitor.reset();
+  monitor = std::make_unique<Monitor>(node, std::shared_ptr<tf2_ros::Buffer>{}, "base", .05);
+  add("head"); auto pub = publisher("head");
+  pub->publish(cloud({{2.025f, .025f, .025f}})); spin();
+  ASSERT_EQ(received.size(), 1u);
+  // Synthetic *measured* surface returns from the same 20 x 160 mm rod.
+  // This only tests integration; a real camera still has to produce them.
+  std::vector<std::array<float, 3>> returns;
+  for (int i = 0; i < 16; ++i) returns.push_back({1.015f, .035f, .005f + .01f * i});
+  pub->publish(cloud(returns)); spin();
+  ASSERT_EQ(received.size(), 2u);
+  auto map = tree(received.back());
+  for (const auto& point : returns) {
+    auto* cell = map->search(point[0], point[1], point[2]);
+    ASSERT_NE(cell, nullptr);
+    EXPECT_TRUE(map->isNodeOccupied(cell));
+  }
+  EXPECT_LT(received.front().map_revision, received.back().map_revision);
 }
 
 TEST_F(ObservedCloud, AtomicSnapshotRetainsSourceAndFreeRayEvidence) {
