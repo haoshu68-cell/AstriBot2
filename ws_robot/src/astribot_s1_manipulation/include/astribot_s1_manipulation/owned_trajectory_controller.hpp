@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <astribot_transport_msgs/msg/execution_heartbeat.hpp>
+#include <astribot_transport_msgs/msg/controller_trajectory_start.hpp>
 #include <joint_trajectory_controller/joint_trajectory_controller.hpp>
 
 namespace astribot_s1_manipulation {
@@ -30,5 +31,13 @@ private:
   uint64_t sequence_{0};
   int64_t source_stamp_{0};
   FollowJTrajAction::Result::SharedPtr expired_result_;
+  using Start = astribot_transport_msgs::msg::ControllerTrajectoryStart;
+  std::unique_ptr<realtime_tools::RealtimePublisher<Start>> start_publisher_;
+  Start start_record_;
+  trajectory_msgs::msg::JointTrajectoryPoint previous_command_;
+  bool start_pending_ = false;
+  // Action callbacks share JTC's mutually exclusive group; update is separate.
+  // Odd means a callback is changing the goal/trajectory handoff.
+  std::atomic_uint64_t goal_transition_{0};
 };
 }  // namespace astribot_s1_manipulation

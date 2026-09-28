@@ -15,7 +15,7 @@ from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import qos_profile_action_status_default, qos_profile_sensor_data
+from rclpy.qos import qos_profile_action_status_default, qos_profile_sensor_data, QoSProfile, DurabilityPolicy
 from action_msgs.msg import GoalStatusArray
 from builtin_interfaces.msg import Time, Duration
 from control_msgs.action import FollowJointTrajectory as FJT
@@ -29,7 +29,7 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from astribot_navigation_msgs.msg import RobotGeometryState, ArmHoldStatus, NavigationEnvelopeV2
 from astribot_navigation_msgs.srv import SetRobotEnvelope
 from astribot_transport_msgs.action import PlanManipulation
-from astribot_transport_msgs.msg import ManipulationStage, ExecutionGuardStatus, ExecutionHeartbeat
+from astribot_transport_msgs.msg import ManipulationStage, ExecutionGuardStatus, ExecutionHeartbeat, ControllerTrajectoryStart
 from astribot_transport_msgs.srv import SetExecutionGuard, RevalidateManipulation
 from astribot_s1_transport_native.action import PlanToHold
 from astribot_s1_transport_native.srv import RenewHold
@@ -64,9 +64,22 @@ def main():
     fixture=Node('m1_synthetic_controller_fixture');client=Node('m1_protocol_client');group=ReentrantCallbackGroup()
     executor=MultiThreadedExecutor(num_threads=16);executor.add_node(fixture);executor.add_node(client)
     thread=threading.Thread(target=executor.spin,daemon=True);thread.start()
+    start_publishers={name:fixture.create_publisher(ControllerTrajectoryStart,
+        '/'+name+'/trajectory_start',QoSProfile(depth=1,durability=DurabilityPolicy.TRANSIENT_LOCAL)) for name in groups}
+    def publish_start(name,key,goal):
+        message=ControllerTrajectoryStart(binding=ControllerTrajectoryStart.BOUND,
+            goal_id=[int(value) for value in key],sample_stamp=stamp(),joint_names=list(goal.trajectory.joint_names),
+            point_before=JointTrajectoryPoint(positions=[positions[j] for j in goal.trajectory.joint_names]))
+        start_publishers[name].publish(message)
+        event('controller_start',controller=name,uuid=bytes(key).hex(),
+              sample_stamp_ns=message.sample_stamp.sec*10**9+message.sample_stamp.nanosec,
+              positions=list(message.point_before.positions))
     def send(name):
         def callback(req,res):
             key=tuple(req.goal_id.uuid);goals[key]=(name,req.goal);event('send',controller=name)
+            if name=='head_controller':
+                publish_start(name,key,req.goal)
+                stop.wait(.05)  # Exercise start reception before the action response.
             if name=='mtc' and args.mode=='pending_cancel':stop.wait(1.2)
             res.accepted=True;res.stamp=stamp();event('accepted',controller=name);return res
         return callback
@@ -91,6 +104,11 @@ def main():
                     res.result.stages.append(s)
                 if args.mode=='start_changed':positions[groups['arm_left_controller'][0]]=.04;stop.wait(.15)
             else:
+                if name!='head_controller':
+                    # A retained record for an unrelated goal must not bind.
+                    publish_start(name,tuple(uuid.uuid4().bytes),goal)
+                    stop.wait(.03)
+                    publish_start(name,key,goal)
                 stop.wait(.8 if args.mode in ('guard_lost','guard_revoked') else .12)
                 res.status=0 if args.mode=='unknown_result' and name=='arm_left_controller' else 4
                 res.result.error_code=0
@@ -230,6 +248,19 @@ def main():
         if args.mode in ('controller_lease_missing','controller_lease_revoked'):
             assert not any(e['event']=='send' and e['controller']!='mtc' for e in events)
             assert ('TIMEOUT' if args.mode=='controller_lease_missing' else 'CONTROLLER_EXECUTION_LEASE_REVOKED') in outcome['reason']
+        if args.mode=='normal':
+            records=[json.loads(line) for line in journal.read_text().splitlines()]
+            starts=[row for row in records if row.get('event')=='controller_trajectory_start']
+            assert len(starts)==len(groups), starts
+            for row in starts:
+                data=row['details']
+                key=tuple(bytes.fromhex(data['uuid']))
+                assert key in goals and data['binding']=='BOUND', data
+                emitted=[e for e in events if e['event']=='controller_start' and e['uuid']==data['uuid']]
+                assert len(emitted)==1 and emitted[0]['sample_stamp_ns']==data['sample_stamp_ns'], data
+                assert emitted[0]['positions']==data['positions'], data
+                assert data['sent_digest'] and data['stage_generation']>0, data
+            event('controller_start_binding_assertions_passed',count=len(starts))
         event('assertions_passed')
     finally:
         if process is not None and process.poll() is None:

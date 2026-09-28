@@ -27,6 +27,7 @@
 #include <astribot_transport_msgs/srv/set_execution_guard.hpp>
 #include <astribot_transport_msgs/srv/revalidate_manipulation.hpp>
 #include <astribot_transport_msgs/msg/execution_guard_status.hpp>
+#include <astribot_transport_msgs/msg/controller_trajectory_start.hpp>
 #include <astribot_navigation_msgs/msg/navigation_envelope_v2.hpp>
 #include <astribot_navigation_msgs/srv/set_robot_envelope.hpp>
 #include <moveit_msgs/srv/get_planning_scene.hpp>
@@ -69,6 +70,7 @@ using PlannerHandle=rclcpp_action::ClientGoalHandle<Planner>;
 using SceneQuery=moveit_msgs::srv::GetPlanningScene;
 using GuardService=astribot_transport_msgs::srv::SetExecutionGuard;
 using GuardState=astribot_transport_msgs::msg::ExecutionGuardStatus;
+using ControllerStart=astribot_transport_msgs::msg::ControllerTrajectoryStart;
 using Envelope=astribot_navigation_msgs::msg::NavigationEnvelopeV2;
 using Revoke=astribot_navigation_msgs::srv::SetRobotEnvelope;
 using Revalidate=astribot_transport_msgs::srv::RevalidateManipulation;
@@ -141,6 +143,18 @@ public:
    response->reason=response->accepted?"RENEWED":authority_->reason();
   });
 #ifdef PLAN_TO_HOLD_EXECUTOR
+  for(const auto& name:names_)start_subs_.push_back(create_subscription<ControllerStart>(
+   "/"+name+"/trajectory_start",rclcpp::QoS(1).reliable().transient_local(),
+   [this,name](ControllerStart::ConstSharedPtr value){
+    if(!owned())return;
+    controller_starts_[name]=value;
+    if(value->binding!=ControllerStart::BOUND) {
+     if(!authority_->record("controller_trajectory_start_unknown",{{"controller",name},
+       {"sample_stamp_ns",ns(value->sample_stamp)},{"stage_generation",stage_generation_}}))stopping(authority_->reason());
+     return;
+    }
+    record_controller_start(name);
+   }));
   planner_=rclcpp_action::create_client<Planner>(this,"/transport/plan_manipulation");
   scenes_=create_client<SceneQuery>("/get_planning_scene");
   guard_client_=create_client<GuardService>("/transport/execution_guard/set");
@@ -1196,6 +1210,35 @@ private:
   reason_="WAITING_FOR_CONTROLLER_EXECUTION_LEASES";
 #endif
  }
+#ifdef PLAN_TO_HOLD_EXECUTOR
+ // Shadow evidence only. A start record does not authorize motion or establish
+ // scene coverage, tracking bounds, or a measured braking envelope.
+ void record_controller_start(const std::string& name) {
+  const auto found=controller_starts_.find(name);
+  const auto handle=handles_.find(name);
+  if(found==controller_starts_.end()||handle==handles_.end()||!handle->second||recorded_starts_.count(name))return;
+  const auto& start=*found->second;
+  if(start.binding!=ControllerStart::BOUND||start.goal_id!=handle->second->get_goal_id())return;
+  const auto& command=controller_commands_.at(name);
+  const auto count=command.joint_names.size();
+  const auto& point=start.point_before;
+  bool valid=start.joint_names.size()==count&&point.positions.size()==count&&
+    (point.velocities.empty()||point.velocities.size()==count)&&
+    (point.accelerations.empty()||point.accelerations.size()==count)&&
+    ns(start.sample_stamp)>0&&start.sample_stamp.nanosec<1000000000u;
+  std::set<std::string> reported(start.joint_names.begin(),start.joint_names.end());
+  valid=valid&&reported==std::set<std::string>(command.joint_names.begin(),command.joint_names.end());
+  for(const auto* values:{&point.positions,&point.velocities,&point.accelerations})
+   for(double value:*values)valid=valid&&std::isfinite(value);
+  nlohmann::json record={{"controller",name},{"uuid",canonical_goal_id(start.goal_id)},
+    {"stage_generation",stage_generation_},{"sent_digest",trajectory_digest(command)},
+    {"sample_stamp_ns",ns(start.sample_stamp)},{"binding",valid?"BOUND":"INVALID_START_RECORD"},
+    {"joint_names",start.joint_names},{"positions",point.positions},
+    {"velocities",point.velocities},{"accelerations",point.accelerations}};
+  if(!authority_->record("controller_trajectory_start",record)){stopping(authority_->reason());return;}
+  recorded_starts_.insert(name);
+ }
+#endif
  void publish_execution_heartbeat(bool active) {
   ExecutionHeartbeat message;message.stamp=now();message.lease_id=authority_->lease_id();
   message.sequence=++heartbeat_sequence_;message.active=active;heartbeat_pub_->publish(message);
@@ -1212,6 +1255,9 @@ private:
 #ifndef PLAN_TO_HOLD_EXECUTOR
    authority_->submitted(now().nanoseconds(),wall());
 #endif
+#ifdef PLAN_TO_HOLD_EXECUTOR
+   controller_commands_.clear();recorded_starts_.clear();
+#endif
    for(const auto &[name,joints]:groups_) {
     children_->submitted(name);if(!authority_->record("child_submission",{{"controller",name}}))throw std::runtime_error(authority_->reason());
     Trajectory::Goal goal;goal.trajectory.joint_names=joints;
@@ -1220,6 +1266,7 @@ private:
 #ifdef PLAN_TO_HOLD_EXECUTOR
     if(name==active_controller_)goal.trajectory=trajectory_;
     else goal.trajectory.points.front().time_from_start=trajectory_.points.back().time_from_start;
+    controller_commands_[name]=goal.trajectory;
 #endif
     nlohmann::json sent_metadata=nlohmann::json::object();
 #ifdef PLAN_TO_HOLD_EXECUTOR
@@ -1250,6 +1297,9 @@ private:
       auto response=sent_metadata;response["controller"]=name;response["uuid"]=id;
       if(!authority_->record("child_response",response))stopping(authority_->reason());
       if(!child)stopping("CHILD_GOAL_REJECTED:"+name);
+#ifdef PLAN_TO_HOLD_EXECUTOR
+      else record_controller_start(name);
+#endif
       // Cancellation is dispatched by tick(), outside action-client callbacks.
      }catch(const std::exception &e){stopping(e.what());}
     };
@@ -1469,6 +1519,10 @@ private:
  std::string reason_="WAITING_FOR_TASK",stop_reason_,hold_id_;
 #ifdef PLAN_TO_HOLD_EXECUTOR
 
+ std::vector<rclcpp::Subscription<ControllerStart>::SharedPtr> start_subs_;
+ std::map<std::string,ControllerStart::ConstSharedPtr> controller_starts_;
+ std::map<std::string,trajectory_msgs::msg::JointTrajectory> controller_commands_;
+ std::set<std::string> recorded_starts_;
  PayloadPhase payload_phase_=PayloadPhase::NONE;
  std::string payload_model_,payload_object_,payload_world_,payload_robot_,payload_xml_,payload_base_,payload_tcp_;
  astribot::payload::Config payload_config_;

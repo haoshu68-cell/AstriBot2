@@ -20,6 +20,7 @@ protected:
   rclcpp_action::Client<Follow>::SharedPtr client;
   rclcpp::executors::SingleThreadedExecutor executor;
   double position = 0, velocity = 0, command = 0;
+  bool open_loop_control = false;
   std::vector<double> update_ns, dispatch_and_update_ns;
   hardware_interface::CommandInterface command_interface{"joint", "position", &command};
   hardware_interface::StateInterface position_interface{"joint", "position", &position};
@@ -33,6 +34,7 @@ protected:
     options.allow_undeclared_parameters(true).automatically_declare_parameters_from_overrides(true);
     options.parameter_overrides({
       rclcpp::Parameter("joints", std::vector<std::string>{"joint"}),
+      rclcpp::Parameter("open_loop_control", open_loop_control),
       rclcpp::Parameter("command_interfaces", std::vector<std::string>{"position"}),
       rclcpp::Parameter("state_interfaces", std::vector<std::string>{"position", "velocity"})});
     ASSERT_EQ(controller.init("stop_probe", "", options), controller_interface::return_type::OK);

@@ -1,19 +1,32 @@
 #include "controller_fixture.hpp"
 #include <astribot_s1_manipulation/owned_trajectory_controller.hpp>
 #include <pluginlib/class_loader.hpp>
+#include <map>
+#include <set>
+#include <tuple>
 
-class OwnedController : public ControllerFixture<astribot_s1_manipulation::OwnedTrajectoryController> {
+class InspectableOwnedController : public astribot_s1_manipulation::OwnedTrajectoryController {
+public:
+  auto sampled_command() const { return traj_external_point_ptr_->get_trajectory_msg(); }
+};
+
+class OwnedController : public ControllerFixture<InspectableOwnedController> {
 protected:
   using Heartbeat = astribot_transport_msgs::msg::ExecutionHeartbeat;
-  using Base = ControllerFixture<astribot_s1_manipulation::OwnedTrajectoryController>;
+  using Base = ControllerFixture<InspectableOwnedController>;
   rclcpp::Publisher<Heartbeat>::SharedPtr publisher;
   bool publish_heartbeat = true, lease_active = true;
   std::string lease = "owner_lease_1";
   uint64_t sequence = 0;
+  using Start = astribot_transport_msgs::msg::ControllerTrajectoryStart;
+  rclcpp::Subscription<Start>::SharedPtr starts_subscription;
+  std::vector<Start> starts;
 
   void SetUp() override {
     Base::SetUp();
     publisher = owner->create_publisher<Heartbeat>("/transport/execution_heartbeat", 10);
+    starts_subscription = owner->create_subscription<Start>("/stop_probe/trajectory_start",
+      rclcpp::QoS(1).reliable().transient_local(), [this](Start::ConstSharedPtr value) { starts.push_back(*value); });
     advance(.15);
   }
 
@@ -25,6 +38,146 @@ protected:
     publisher->publish(message);
   }
 };
+
+TEST_F(OwnedController, StartUsesFirstControlCycleAfterDelayedAcceptance) {
+  Follow::Goal command;
+  command.trajectory.joint_names = {"joint"};
+  trajectory_msgs::msg::JointTrajectoryPoint point;
+  point.positions = {.8}; point.velocities = {0}; point.time_from_start.sec = 2;
+  command.trajectory.points = {point};
+  auto sent = client->async_send_goal(command);
+  ASSERT_EQ(executor.spin_until_future_complete(sent, std::chrono::seconds(2)), rclcpp::FutureReturnCode::SUCCESS);
+  auto goal = sent.get(); ASSERT_TRUE(goal);
+  const auto accepted = owner->now();
+  // Keep lease fresh while no control cycle occurs. Neither callback time nor
+  // the old hardware sample is the interpolation's initial point.
+  for(int i=0;i<8;++i) { beforeUpdate(); executor.spin_some(); std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
+  EXPECT_TRUE(starts.empty());
+  position = .17; velocity = .23;
+  const auto sampled = controller.get_node()->now();
+  ASSERT_EQ(controller.update(sampled, rclcpp::Duration::from_seconds(.01)), controller_interface::return_type::OK);
+  advance(.08);
+  ASSERT_EQ(starts.size(), 1u);
+  EXPECT_EQ(starts[0].binding, Start::BOUND);
+  EXPECT_EQ(starts[0].goal_id, goal->get_goal_id());
+  EXPECT_EQ(rclcpp::Time(starts[0].sample_stamp), sampled);
+  EXPECT_GT(rclcpp::Time(starts[0].sample_stamp), accepted);
+  EXPECT_EQ(starts[0].joint_names, command.trajectory.joint_names);
+  EXPECT_DOUBLE_EQ(starts[0].point_before.positions[0], .17);
+  EXPECT_DOUBLE_EQ(starts[0].point_before.velocities[0], .23);
+  EXPECT_EQ(rclcpp::Duration(starts[0].point_before.time_from_start).nanoseconds(), 0);
+}
+
+TEST_F(OwnedController, CancelHoldDoesNotReplaceRetainedStartWithAnotherGoal) {
+  auto goal = send(); ASSERT_TRUE(goal);
+  advance(.1); ASSERT_EQ(starts.size(), 1u);
+  const auto first = starts.front();
+  auto cancelled = client->async_cancel_goal(goal);
+  ASSERT_EQ(executor.spin_until_future_complete(cancelled, std::chrono::seconds(2)), rclcpp::FutureReturnCode::SUCCESS);
+  advance(.12);
+  ASSERT_EQ(starts.size(), 1u);
+  EXPECT_EQ(starts[0], first);
+  starts_subscription.reset(); starts.clear();
+  starts_subscription = owner->create_subscription<Start>("/stop_probe/trajectory_start",
+    rclcpp::QoS(1).reliable().transient_local(), [this](Start::ConstSharedPtr value) { starts.push_back(*value); });
+  advance(.1);
+  ASSERT_EQ(starts.size(), 1u);
+  EXPECT_EQ(starts[0], first);
+}
+
+TEST_F(OwnedController, PreemptingCommandGetsItsOwnStartAndUuid) {
+  auto first = send(); ASSERT_TRUE(first); advance(.15);
+  ASSERT_EQ(starts.size(), 1u);
+  auto second = send(); ASSERT_TRUE(second); advance(.1);
+  ASSERT_EQ(starts.size(), 2u);
+  EXPECT_EQ(starts[0].goal_id, first->get_goal_id());
+  EXPECT_EQ(starts[1].goal_id, second->get_goal_id());
+  EXPECT_NE(starts[0].sample_stamp, starts[1].sample_stamp);
+  EXPECT_GT(starts[1].point_before.positions[0], 0.);
+}
+
+TEST_F(OwnedController, FutureHeaderIsNotReportedAsFirstSamplingTime) {
+  Follow::Goal command;
+  command.trajectory.joint_names = {"joint"};
+  command.trajectory.header.stamp = owner->now() + rclcpp::Duration::from_seconds(.5);
+  trajectory_msgs::msg::JointTrajectoryPoint point;
+  point.positions = {.8}; point.time_from_start.sec = 1;
+  command.trajectory.points = {point};
+  auto sent = client->async_send_goal(command);
+  ASSERT_EQ(executor.spin_until_future_complete(sent, std::chrono::seconds(2)), rclcpp::FutureReturnCode::SUCCESS);
+  ASSERT_TRUE(sent.get());
+  advance(.1);
+  ASSERT_EQ(starts.size(), 1u);
+  EXPECT_EQ(starts[0].binding, Start::BOUND);
+  EXPECT_LT(rclcpp::Time(starts[0].sample_stamp), rclcpp::Time(command.trajectory.header.stamp));
+  EXPECT_DOUBLE_EQ(starts[0].point_before.positions[0], 0.);
+}
+
+class OpenLoopOwnedController : public OwnedController {
+protected:
+  void SetUp() override { open_loop_control=true; OwnedController::SetUp(); }
+};
+
+TEST_F(OpenLoopOwnedController, UsesPreviousCommandInsteadOfMeasuredState) {
+  ASSERT_TRUE(send()); advance(.2);
+  ASSERT_EQ(starts.size(),1u);
+  const double commanded=command;
+  ASSERT_GT(commanded,0.);
+  Follow::Goal goal;
+  goal.trajectory.joint_names={"joint"};
+  trajectory_msgs::msg::JointTrajectoryPoint point;
+  point.positions={.8};point.time_from_start.sec=2;goal.trajectory.points={point};
+  auto sent=client->async_send_goal(goal);
+  ASSERT_EQ(executor.spin_until_future_complete(sent,std::chrono::seconds(2)),rclcpp::FutureReturnCode::SUCCESS);
+  ASSERT_TRUE(sent.get());
+  position=commanded+.3;
+  advance(.08);
+  ASSERT_EQ(starts.size(),2u);
+  EXPECT_EQ(starts.back().goal_id,sent.get()->get_goal_id());
+  EXPECT_DOUBLE_EQ(starts.back().point_before.positions[0],commanded);
+}
+
+TEST_F(OwnedController, ConcurrentGoalHandoffsNeverInventAStartState) {
+  std::thread callbacks([this]{executor.spin();});
+  std::map<int64_t, std::tuple<double,double,double>> states;
+  std::map<rclcpp_action::GoalUUID,double> accepted;
+  for (int trial=0;trial<25;++trial) {
+    Follow::Goal command;
+    command.trajectory.joint_names = {"joint"};
+    trajectory_msgs::msg::JointTrajectoryPoint point;
+    point.positions = {double(trial+1)/100.}; point.time_from_start.sec = 2;
+    command.trajectory.points = {point};
+    auto sent = client->async_send_goal(command);
+    for(int cycle=0;cycle<40;++cycle) {
+      beforeUpdate();
+      const auto sampled = controller.get_node()->now();
+      const auto before=std::make_pair(position,velocity);
+      controller.update(sampled, rclcpp::Duration::from_seconds(.001));
+      states[sampled.nanoseconds()] = {before.first,before.second,
+        controller.sampled_command()->points.back().positions[0]};
+      const auto previous=position;position=this->command;velocity=(position-previous)/.001;
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    if (sent.wait_for(std::chrono::seconds(1))==std::future_status::ready && sent.get())
+      accepted[sent.get()->get_goal_id()] = point.positions[0];
+  }
+  executor.cancel();callbacks.join();
+  ASSERT_EQ(accepted.size(), 25u);
+  ASSERT_FALSE(starts.empty());
+  int bound=0, unknown=0;
+  for (const auto& start: starts) {
+    if(start.binding==Start::UNKNOWN) {++unknown;continue;}
+    ++bound;
+    ASSERT_TRUE(accepted.count(start.goal_id));
+    const auto found=states.find(rclcpp::Time(start.sample_stamp).nanoseconds());
+    ASSERT_NE(found, states.end());
+    EXPECT_DOUBLE_EQ(start.point_before.positions[0], std::get<0>(found->second));
+    EXPECT_DOUBLE_EQ(start.point_before.velocities[0], std::get<1>(found->second));
+    EXPECT_DOUBLE_EQ(accepted.at(start.goal_id), std::get<2>(found->second));
+  }
+  EXPECT_GT(bound,0);
+  RecordProperty("bound_start_records",bound);RecordProperty("unknown_start_records",unknown);
+}
 
 TEST(OwnedControllerDiscovery, InstalledPluginCanBeLoaded) {
   pluginlib::ClassLoader<controller_interface::ControllerInterface> loader(

@@ -30,8 +30,23 @@ controller_interface::CallbackReturn OwnedTrajectoryController::on_configure(
     [this](const auto& id, const auto goal) {
       return cycle_ready_.load() && permitted() ? goal_received_callback(id, goal) : rclcpp_action::GoalResponse::REJECT;
     },
-    [this](const auto goal) { return goal_cancelled_callback(goal); },
-    [this](const auto goal) { goal_accepted_callback(goal); });
+    [this](const auto goal) {
+      ++goal_transition_;
+      const auto result = goal_cancelled_callback(goal);
+      ++goal_transition_;
+      return result;
+    },
+    [this](const auto goal) {
+      ++goal_transition_;
+      goal_accepted_callback(goal);
+      ++goal_transition_;
+    });
+  start_publisher_ = std::make_unique<realtime_tools::RealtimePublisher<Start>>(
+      get_node()->create_publisher<Start>("~/trajectory_start", rclcpp::QoS(1).reliable().transient_local()));
+  start_record_.joint_names = params_.joints;
+  start_record_.point_before = state_current_;
+  previous_command_ = state_current_;
+  start_publisher_->msg_ = start_record_;
   acknowledgement_ = get_node()->create_publisher<Heartbeat>("~/execution_heartbeat_ack", 10);
   heartbeat_subscription_ = get_node()->create_subscription<Heartbeat>(
     "/transport/execution_heartbeat", rclcpp::QoS(10),
@@ -51,6 +66,7 @@ controller_interface::CallbackReturn OwnedTrajectoryController::on_configure(
 controller_interface::CallbackReturn OwnedTrajectoryController::on_activate(
   const rclcpp_lifecycle::State& state) {
   deadline_ = -1; cycle_ready_ = false; lease_id_.clear(); sequence_ = 0; source_stamp_ = 0;
+  start_pending_ = false;
   return JointTrajectoryController::on_activate(state);
 }
 
@@ -100,7 +116,26 @@ controller_interface::return_type OwnedTrajectoryController::update(
       traj_msg_external_point_ptr_.initRT(set_hold_position());
     }
   }
+  const auto transition = goal_transition_.load();
+  const auto sampling_goal = *rt_active_goal_.readFromRT();
+  const auto previous_trajectory = traj_external_point_ptr_->get_trajectory_msg();
+  const bool sampled_before = traj_external_point_ptr_->is_sampled_already();
+  if (params_.open_loop_control) previous_command_ = last_commanded_state_;
   const auto result=JointTrajectoryController::update(time, period);
+  if ((sampling_goal || transition != goal_transition_.load()) &&
+      traj_external_point_ptr_->is_sampled_already() &&
+      (!sampled_before || previous_trajectory != traj_external_point_ptr_->get_trajectory_msg())) {
+    // state_current_ is the very state JTC read for this cycle. JTC only changes
+    // its time_from_start after setting the interpolation's initial point.
+    start_record_.sample_stamp = time;
+    start_record_.point_before = params_.open_loop_control ? previous_command_ : state_current_;
+    start_record_.point_before.time_from_start = builtin_interfaces::msg::Duration();
+    const bool bound = sampling_goal && !(transition & 1u) && transition == goal_transition_.load();
+    start_record_.binding = bound ? Start::BOUND : Start::UNKNOWN;
+    start_record_.goal_id = bound ? sampling_goal->gh_->get_goal_id() : rclcpp_action::GoalUUID{};
+    start_pending_ = true;
+  }
+  if (start_pending_ && start_publisher_->tryPublish(start_record_)) start_pending_ = false;
   if(result==controller_interface::return_type::OK&&permitted())cycle_ready_=true;
   return result;
 }
