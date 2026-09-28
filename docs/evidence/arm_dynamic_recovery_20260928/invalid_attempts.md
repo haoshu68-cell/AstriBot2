@@ -10,3 +10,8 @@
 
 - `full_pick_normal.*`、`full_place_normal.*`：旧夹具没有模拟真实 MoveIt 附着时移除同名世界物体，也未返回现行服务要求的 `remaining_stages`。参照已通过的真实 PlanningScene 单测和服务定义修正验证夹具；`*_normal_final.json` 的全流程断言通过，生产负载代码未改。
 - `lease_readiness_before.*`：新增边界测试复现了尚无控制周期确认就接受新租约目标的行为；修复后的 13 项插件测试及 100 次故障/并发重复全部通过。
+# 点云更新器阶段补充
+
+- `observed_octomap/observation_initial_build.log`：直接链接感知包的全部导出库时遇到未定义 `GLUT::GLUT` 导入目标。实际仅需现有 ShapeMask，改为链接该库的公开导出目标；没有添加无关图形库依赖或替代运行路径。
+- `observed_octomap/observation_teardown_failure.*`：首轮 10 项测试中 9 项在夹具收尾时失败。销毁订阅回调组后才从 executor 移除节点，触发 ROS executor 的组归属异常。修正为先移除仍存活的节点，再销毁订阅和更新器；完整重跑 11/11 通过。原失败未计作通过。
+- 普通包回归中的点云性能用例为显式跳过；设置 `ASTRIBOT_OCTOMAP_BENCHMARK=1` 的独立结果才作为性能实验与该项通过证据。

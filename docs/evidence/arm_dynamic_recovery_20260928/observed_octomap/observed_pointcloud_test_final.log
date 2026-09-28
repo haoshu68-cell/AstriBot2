@@ -1,0 +1,75 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 11 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 11 tests from ObservedCloud
+[ RUN      ] ObservedCloud.PluginCanBeLoadedByActualMonitorLoader
+[ERROR] [1790571103.713690006] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571103.713718082] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[       OK ] ObservedCloud.PluginCanBeLoadedByActualMonitorLoader (9 ms)
+[ RUN      ] ObservedCloud.AtomicSnapshotRetainsSourceAndFreeRayEvidence
+[ERROR] [1790571103.720008017] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571103.720018221] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571103.721115933] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[       OK ] ObservedCloud.AtomicSnapshotRetainsSourceAndFreeRayEvidence (157 ms)
+[ RUN      ] ObservedCloud.TwoSourcesProduceOrderedImmutableSnapshots
+[ERROR] [1790571103.876602218] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571103.876617649] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571103.877095047] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790571103.877604749] [astribot.observed_pointcloud_updater]: Listening to '/cloud_torso' using message filter with target frame 'base '
+[       OK ] ObservedCloud.TwoSourcesProduceOrderedImmutableSnapshots (307 ms)
+[ RUN      ] ObservedCloud.ModelClearingCannotManufactureFreeEvidence
+[ERROR] [1790571104.183741092] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571104.183759478] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571104.184241458] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[       OK ] ObservedCloud.ModelClearingCannotManufactureFreeEvidence (156 ms)
+[ RUN      ] ObservedCloud.SameInputMapMatchesUpstreamIncludingSelfFilter
+[ERROR] [1790571104.339852757] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571104.339868500] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[ERROR] [1790571104.340737493] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571104.340747613] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571104.341328783] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790571104.341795434] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/cloud_baseline' using message filter with target frame 'base '
+[       OK ] ObservedCloud.SameInputMapMatchesUpstreamIncludingSelfFilter (409 ms)
+[ RUN      ] ObservedCloud.EmptyInvalidAndRepeatedFramesDoNotInventNewCaptureEvidence
+[ERROR] [1790571104.749304258] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571104.749320991] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571104.749794141] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[ERROR] [1790571105.000944273] [astribot.observed_pointcloud_updater]: POINT_CLOUD_LAYOUT_INVALID
+[       OK ] ObservedCloud.EmptyInvalidAndRepeatedFramesDoNotInventNewCaptureEvidence (558 ms)
+[ RUN      ] ObservedCloud.MissingTransformDoesNotPublishIntegratedEvidence
+[ERROR] [1790571105.307427955] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571105.307444400] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571105.307907381] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[       OK ] ObservedCloud.MissingTransformDoesNotPublishIntegratedEvidence (256 ms)
+[ RUN      ] ObservedCloud.RejectedRobotTransformsDoNotPublishIntegratedEvidence
+[ERROR] [1790571105.563019559] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571105.563035720] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571105.563514771] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[ERROR] [1790571105.614382840] [moveit.ros.occupancy_map_updater]: Transform cache was not updated. Self-filtering may fail. If transforms were not available yet, consider setting robot_description_planning.shape_transform_cache_lookup_wait_time to wait longer for transforms
+[       OK ] ObservedCloud.RejectedRobotTransformsDoNotPublishIntegratedEvidence (156 ms)
+[ RUN      ] ObservedCloud.SnapshotContainsActualSensorTransform
+[ERROR] [1790571105.718513590] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571105.718530131] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571105.719008196] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[       OK ] ObservedCloud.SnapshotContainsActualSensorTransform (256 ms)
+[ RUN      ] ObservedCloud.ConcurrentCameraCallbacksKeepRevisionAndTreeTogether
+[ERROR] [1790571105.974617616] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571105.974633661] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571105.975100761] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790571105.975422022] [astribot.observed_pointcloud_updater]: Listening to '/cloud_torso' using message filter with target frame 'base '
+[       OK ] ObservedCloud.ConcurrentCameraCallbacksKeepRevisionAndTreeTogether (307 ms)
+[ RUN      ] ObservedCloud.SameCloudProcessingBenchmark
+[ERROR] [1790571106.281906936] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571106.281925771] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[ERROR] [1790571106.282354927] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571106.282362853] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[ERROR] [1790571106.283094394] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790571106.283101141] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790571106.283581191] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790571106.283919774] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/cloud_baseline' using message filter with target frame 'base '
+[       OK ] ObservedCloud.SameCloudProcessingBenchmark (667 ms)
+[----------] 11 tests from ObservedCloud (3238 ms total)
+
+[----------] Global test environment tear-down
+[==========] 11 tests from 1 test suite ran. (3242 ms total)
+[  PASSED  ] 11 tests.

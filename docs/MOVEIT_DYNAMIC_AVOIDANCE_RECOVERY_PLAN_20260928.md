@@ -1,6 +1,6 @@
 # 机械臂运动中动态避障、自动恢复与重规划落地方案
 
-日期：2026-09-28。状态：**技术方案；功能尚未按本方案实施，新增实验均为 NOT_RUN。**
+日期：2026-09-28。状态：**实施前技术方案与验收门槛。下文的现状和 NOT_RUN 为制定方案时的记录；当前实施与证据见 [分支实施记录](ARM_DYNAMIC_RECOVERY_PROGRESS_20260928.md)，整体功能尚未完成验收。**
 
 本方案以当前工作区源码为依据。Git HEAD 为 `854a8206d295dce5249c7adf5229e9e439559eb8`；工作区已有其他未提交修改，实际审阅文件以 [源码审计清单](/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/moveit_dynamic_avoidance_20260928/source_audit.json) 的 SHA-256 为准。清单记录的是本机安装版本，不代表在线进程实际使用的 overlay。此次没有启动、停止或接管 ROS/Gazebo 会话。
 

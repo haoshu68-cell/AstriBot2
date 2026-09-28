@@ -1,0 +1,18 @@
+[0.276s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_humble/opt/ros/humble' in the environment variable AMENT_PREFIX_PATH doesn't contain any 'local_setup.*' files.
+Starting >>> astribot_transport_msgs
+Finished <<< astribot_transport_msgs [17.8s]
+Starting >>> astribot_s1_manipulation
+--- stderr: astribot_s1_manipulation
+CMake Error at CMakeLists.txt:187 (add_library):
+  Target "astribot_observed_pointcloud_updater" links to target "GLUT::GLUT"
+  but the target was not found.  Perhaps a find_package() call is missing for
+  an IMPORTED target, or an ALIAS target is missing?
+
+
+CMake Generate step failed.  Build files cannot be regenerated correctly.
+---
+Failed   <<< astribot_s1_manipulation [1.16s, exited with code 1]
+
+Summary: 1 package finished [19.2s]
+  1 package failed: astribot_s1_manipulation
+  1 package had stderr output: astribot_s1_manipulation

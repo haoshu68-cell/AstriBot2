@@ -1,0 +1,95 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 10 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 10 tests from ObservedCloud
+[ RUN      ] ObservedCloud.PluginCanBeLoadedByActualMonitorLoader
+[ERROR] [1790570777.725588881] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570777.725619783] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[       OK ] ObservedCloud.PluginCanBeLoadedByActualMonitorLoader (12 ms)
+[ RUN      ] ObservedCloud.AtomicSnapshotRetainsSourceAndFreeRayEvidence
+[ERROR] [1790570777.731838481] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570777.731848807] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570777.732927956] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.AtomicSnapshotRetainsSourceAndFreeRayEvidence (156 ms)
+[ RUN      ] ObservedCloud.TwoSourcesProduceOrderedImmutableSnapshots
+[ERROR] [1790570777.887992588] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570777.888009720] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570777.888531151] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790570777.888912291] [astribot.observed_pointcloud_updater]: Listening to '/cloud_torso' using message filter with target frame 'base '
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.TwoSourcesProduceOrderedImmutableSnapshots (307 ms)
+[ RUN      ] ObservedCloud.ModelClearingCannotManufactureFreeEvidence
+[ERROR] [1790570778.195339274] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570778.195358519] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570778.195813877] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.ModelClearingCannotManufactureFreeEvidence (156 ms)
+[ RUN      ] ObservedCloud.SameInputMapMatchesUpstreamIncludingSelfFilter
+[ERROR] [1790570778.351247243] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570778.351263670] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[ERROR] [1790570778.352107854] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570778.352114529] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570778.352625264] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790570778.353054057] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/cloud_baseline' using message filter with target frame 'base '
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.SameInputMapMatchesUpstreamIncludingSelfFilter (409 ms)
+[ RUN      ] ObservedCloud.EmptyInvalidAndRepeatedFramesDoNotInventNewCaptureEvidence
+[ERROR] [1790570778.760502073] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570778.760518302] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570778.760975634] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[ERROR] [1790570779.013610060] [astribot.observed_pointcloud_updater]: POINT_CLOUD_LAYOUT_INVALID
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.EmptyInvalidAndRepeatedFramesDoNotInventNewCaptureEvidence (559 ms)
+[ RUN      ] ObservedCloud.MissingTransformDoesNotPublishIntegratedEvidence
+[ERROR] [1790570779.318780843] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570779.318797204] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570779.319261028] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.MissingTransformDoesNotPublishIntegratedEvidence (256 ms)
+[ RUN      ] ObservedCloud.RejectedRobotTransformsDoNotPublishIntegratedEvidence
+[ERROR] [1790570779.574653155] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570779.574668365] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570779.575136243] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[ERROR] [1790570779.625768717] [moveit.ros.occupancy_map_updater]: Transform cache was not updated. Self-filtering may fail. If transforms were not available yet, consider setting robot_description_planning.shape_transform_cache_lookup_wait_time to wait longer for transforms
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.RejectedRobotTransformsDoNotPublishIntegratedEvidence (155 ms)
+[ RUN      ] ObservedCloud.SnapshotContainsActualSensorTransform
+[ERROR] [1790570779.729747727] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570779.729763869] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570779.730207503] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.SnapshotContainsActualSensorTransform (256 ms)
+[ RUN      ] ObservedCloud.ConcurrentCameraCallbacksKeepRevisionAndTreeTogether
+[ERROR] [1790570779.986054362] [moveit.ros.occupancy_map_monitor.middleware_handle]: List of sensors is empty!
+[WARN] [1790570779.986069465] [moveit.ros.occupancy_map_monitor]: Target frame specified but no TF instance (buffer) specified.No transforms will be applied to received data.
+[INFO] [1790570779.986537386] [astribot.observed_pointcloud_updater]: Listening to '/cloud_head' using message filter with target frame 'base '
+[INFO] [1790570779.986873460] [astribot.observed_pointcloud_updater]: Listening to '/cloud_torso' using message filter with target frame 'base '
+unknown file: Failure
+C++ exception with description "Callback group needs to be associated with executor." thrown in TearDown().
+[  FAILED  ] ObservedCloud.ConcurrentCameraCallbacksKeepRevisionAndTreeTogether (307 ms)
+[----------] 10 tests from ObservedCloud (2573 ms total)
+
+[----------] Global test environment tear-down
+[==========] 10 tests from 1 test suite ran. (2577 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 9 tests, listed below:
+[  FAILED  ] ObservedCloud.AtomicSnapshotRetainsSourceAndFreeRayEvidence
+[  FAILED  ] ObservedCloud.TwoSourcesProduceOrderedImmutableSnapshots
+[  FAILED  ] ObservedCloud.ModelClearingCannotManufactureFreeEvidence
+[  FAILED  ] ObservedCloud.SameInputMapMatchesUpstreamIncludingSelfFilter
+[  FAILED  ] ObservedCloud.EmptyInvalidAndRepeatedFramesDoNotInventNewCaptureEvidence
+[  FAILED  ] ObservedCloud.MissingTransformDoesNotPublishIntegratedEvidence
+[  FAILED  ] ObservedCloud.RejectedRobotTransformsDoNotPublishIntegratedEvidence
+[  FAILED  ] ObservedCloud.SnapshotContainsActualSensorTransform
+[  FAILED  ] ObservedCloud.ConcurrentCameraCallbacksKeepRevisionAndTreeTogether
+
+ 9 FAILED TESTS
