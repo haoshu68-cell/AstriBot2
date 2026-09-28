@@ -59,6 +59,7 @@ public:
   Phase phase() const {return phase_;}
 
 protected:
+  LayeredCollisionReader alignment_collision_;
   enum class PlanUpdate {NewExecution, EquivalentRefresh, RouteReplacement};
   virtual void applyPlan(const nav_msgs::msg::Path & path);
   void applyPendingPlan();
@@ -175,7 +176,6 @@ private:
   std::string name_;
   std::shared_ptr<tf2_ros::Buffer> tf_;
   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
-  LayeredCollisionReader alignment_collision_;
 
   std::unique_ptr<pluginlib::ClassLoader<nav2_core::Controller>> inner_loader_;
   nav2_core::Controller::Ptr inner_;

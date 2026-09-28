@@ -28,11 +28,13 @@ target_link_libraries(jerk_velocity_smoother ruckig::ruckig)
 install(TARGETS jerk_velocity_smoother RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 add_library(astribot_s1_mppi_critics SHARED
-  src/curvature_speed_limit_critic.cpp src/curvature_speed_math.cpp)
+  src/curvature_speed_limit_critic.cpp src/curvature_speed_math.cpp src/whole_body_collision_critic.cpp)
 target_include_directories(astribot_s1_mppi_critics PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 ament_target_dependencies(astribot_s1_mppi_critics
-  nav2_core nav2_costmap_2d nav2_mppi_controller pluginlib rclcpp rclcpp_lifecycle)
+  astribot_navigation_msgs astribot_slam_msgs nav2_core nav2_costmap_2d nav2_mppi_controller
+  pluginlib rclcpp rclcpp_lifecycle tf2 tf2_ros tf2_geometry_msgs)
+target_link_libraries(astribot_s1_mppi_critics astribot_s1_robot_geometry::geometry_core)
 pluginlib_export_plugin_description_file(nav2_mppi_controller critics.xml)
 
 add_library(astribot_path_guard_bt_node SHARED src/path_guard_bt.cpp)
@@ -54,6 +56,13 @@ astribot_target_eigen(astribot_path_guard_bt_node)
 astribot_target_eigen(jerk_velocity_smoother)
 if(BUILD_TESTING)
   enable_testing()
+  add_executable(whole_body_collision_critic_test test/whole_body_collision_critic_test.cpp)
+  target_include_directories(whole_body_collision_critic_test PRIVATE include)
+  target_link_libraries(whole_body_collision_critic_test astribot_s1_mppi_critics ${PROJECT_NAME})
+  ament_target_dependencies(whole_body_collision_critic_test astribot_s1_robot_geometry
+    astribot_navigation_msgs astribot_bridge_msgs astribot_slam_msgs nav2_mppi_controller nav2_core nav2_costmap_2d
+    pluginlib rclcpp rclcpp_lifecycle tf2 tf2_ros tf2_geometry_msgs)
+  add_test(NAME whole_body_collision_critic COMMAND whole_body_collision_critic_test)
   add_executable(layered_alignment_collision_test test/layered_alignment_collision_test.cpp)
   target_link_libraries(layered_alignment_collision_test astribot_s1_robot_geometry::geometry_core)
   target_compile_options(layered_alignment_collision_test PRIVATE -UNDEBUG)

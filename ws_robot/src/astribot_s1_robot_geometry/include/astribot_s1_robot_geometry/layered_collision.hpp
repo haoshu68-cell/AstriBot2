@@ -21,7 +21,9 @@ public:
     require(bool(maps_)&&bool(envelope_),"LAYERED_INPUT_MISSING");
     validateLayeredEnvelope(*envelope_);
     require(!frame_.empty()&&!maps_->header.frame_id.empty()&&!maps_->map_revision.empty(),"LAYERED_MAP_IDENTITY_MISSING");
-    require(!maps_->ground_reference.empty()&&maps_->evidence_kind=="gazebo_collision_geometry","LAYERED_MAP_SOURCE_MISMATCH");
+    require(!maps_->ground_reference.empty()&&
+      (maps_->evidence_kind=="gazebo_collision_geometry"||
+       maps_->evidence_kind=="static_archive_occupied_endpoints_only"),"LAYERED_MAP_SOURCE_MISMATCH");
     require(maps_->profile_revision==envelope_->height_profile_revision,"LAYERED_PROFILE_MISMATCH");
     require(std::isfinite(tx)&&std::isfinite(ty)&&std::isfinite(yaw)&&std::isfinite(maps_->ground_z),"LAYERED_TRANSFORM_INVALID");
     const auto count=envelope_->height_slices.size();
@@ -53,6 +55,12 @@ public:
       if(!layer.footprint.empty()) {
         require(convex(layer.footprint),"LAYERED_FOOTPRINT_NONCONVEX");nonempty=true;
         radius_=std::max(radius_,astribot_s1_robot_geometry::radius(layer.footprint));
+        double lx=layer.footprint.front().x,ux=lx,ly=layer.footprint.front().y,uy=ly;
+        for(const auto &p:layer.footprint) {
+          lx=std::min(lx,p.x);ux=std::max(ux,p.x);ly=std::min(ly,p.y);uy=std::max(uy,p.y);
+        }
+        min_x_=std::min(min_x_,lx);max_x_=std::max(max_x_,ux);
+        min_y_=std::min(min_y_,ly);max_y_=std::max(max_y_,uy);
       }
       // Integral occupancy makes empty-space samples constant-time. Unknown
       // remains blocked; a layer with no robot geometry is never queried.
@@ -70,6 +78,10 @@ public:
     }
     require(nonempty,"LAYERED_ROBOT_GEOMETRY_EMPTY");
     layers_=std::move(layers);
+    auto occupied=std::make_shared<std::vector<uint64_t>>((size_t(width_)+1)*(size_t(height_)+1),0);
+    for(const auto &layer:*layers_)if(!layer.footprint.empty())
+      for(size_t i=0;i<occupied->size();++i)(*occupied)[i]+=layer.blocked[i];
+    occupied_=std::move(occupied);
   }
   std::shared_ptr<const LayeredCollisionSnapshot> inFrame(const std::string &frame,double tx,double ty,double yaw) const {
     auto result=std::make_shared<LayeredCollisionSnapshot>(*this);
@@ -109,6 +121,17 @@ public:
     if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(yaw)||!std::isfinite(sampling_margin)||sampling_margin<0.)return true;
     const double gx=tx_+c_*x-s_*y,gy=ty_+s_*x+c_*y;
     const double c=std::cos(yaw+angle_),s=std::sin(yaw+angle_);
+    // One empty-space query across active height layers avoids per-layer polygon work.
+    const double bx0=gx+c*(c>=0?min_x_:max_x_)-s*(s>=0?max_y_:min_y_)-sampling_margin;
+    const double bx1=gx+c*(c>=0?max_x_:min_x_)-s*(s>=0?min_y_:max_y_)+sampling_margin;
+    const double by0=gy+s*(s>=0?min_x_:max_x_)+c*(c>=0?min_y_:max_y_)-sampling_margin;
+    const double by1=gy+s*(s>=0?max_x_:min_x_)+c*(c>=0?max_y_:min_y_)+sampling_margin;
+    if(bx0>=0.&&by0>=0.&&bx1<width_*resolution_&&by1<height_*resolution_) {
+      const unsigned x0=unsigned(bx0/resolution_),y0=unsigned(by0/resolution_);
+      const unsigned x1=unsigned(bx1/resolution_),y1=unsigned(by1/resolution_);
+      const auto at=[&](unsigned ix,unsigned iy){return (*occupied_)[size_t(iy)*(width_+1)+ix];};
+      if(at(x1+1,y1+1)+at(x0,y0)==at(x0,y1+1)+at(x1+1,y0))return false;
+    }
     for(const auto &layer:*layers_) {
       if(layer.footprint.empty())continue;
       Polygon p=layer.footprint;
@@ -139,10 +162,30 @@ public:
       if(collision(ax+t*(bx-ax),ay+t*(by-ay),ayaw+t*turn,margin))return true;}
     return false;
   }
+  // Exact constant body-twist arc. The caller selects the prediction horizon;
+  // this geometric operation does not claim a braking model or motion authority.
+  bool commandCollision(double x,double y,double yaw,double vx,double vy,double wz,double duration) const {
+    const double sweep=(std::hypot(vx,vy)+radius_*std::abs(wz))*duration;
+    const int steps=std::max(1,int(std::ceil(sweep/(resolution_*.5))));
+    const double c=std::cos(yaw),s=std::sin(yaw),margin=sweep/(2.*steps);
+    for(int i=0;i<=steps;++i) {
+      const double t=duration*double(i)/steps;
+      const double a=std::abs(wz)<1e-10?t:std::sin(wz*t)/wz;
+      const double b=std::abs(wz)<1e-10?0.:(1.-std::cos(wz*t))/wz;
+      const double dx=a*vx-b*vy,dy=b*vx+a*vy;
+      if(collision(x+c*dx-s*dy,y+s*dx+c*dy,yaw+wz*t,margin))return true;
+    }
+    return false;
+  }
 private:
-  struct Layer {const nav_msgs::msg::OccupancyGrid *grid;Polygon footprint;std::vector<uint64_t> blocked;};
+  struct Layer {
+    const nav_msgs::msg::OccupancyGrid *grid;Polygon footprint;std::vector<uint64_t> blocked;
+  };
   Maps::ConstSharedPtr maps_;Envelope::ConstSharedPtr envelope_;std::string frame_;
   std::shared_ptr<const std::vector<Layer>> layers_;double resolution_{},radius_{},tx_{},ty_{},angle_{},c_{1.},s_{};
+  std::shared_ptr<const std::vector<uint64_t>> occupied_;
+  double min_x_{std::numeric_limits<double>::infinity()},max_x_{-std::numeric_limits<double>::infinity()};
+  double min_y_{std::numeric_limits<double>::infinity()},max_y_{-std::numeric_limits<double>::infinity()};
   unsigned width_{},height_{};
 };
 } // namespace astribot_s1_robot_geometry

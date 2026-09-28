@@ -37,7 +37,7 @@ public:
     // This stage belongs to the fixed-posture mainline. Existing non-fixed
     // navigation gets a stationary handoff, never an unvalidated retreat.
     if(!guard_.enabled())return output;
-    const auto snapshot=reader_.snapshot(start);
+    const auto snapshot=reader_.snapshot(start,false);
     auto *map=map_->getCostmap();
     DepartureSelection selected;
     try {

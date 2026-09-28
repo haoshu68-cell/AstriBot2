@@ -209,26 +209,21 @@ void run() {
   stale.header.stamp=f.node->now()+rclcpp::Duration::from_seconds(100.);
   check(f.controller.computeVelocityCommands(stale,{},&f.checker).twist.linear.x<0.,"future feedback is not rejected by local clock");
 
-  std::cout<<"[scenario] admitted short segment does not repeat environment or permit checks"<<std::endl;
+  std::cout<<"[scenario] short segment checks refreshed geometry and revocation"<<std::endl;
   f.block(0,.4,.25,100);f.now+=.05;f.publish();
   f.controller.setPlan(f.path());check(f.tick().linear.x<0.,"admitted segment starts");
-  // These later inputs belong to the stop/recheck boundary, not a second
-  // in-motion admission. The executed short path and controller limits remain.
-  f.block(0,-.3,0.,100);++f.envelope.epoch;
+  f.block(0,-.33,0.,100);f.now+=.05;f.publish();
+  rejects([&]{f.tick(-.05);},"DEPARTURE_COMMAND_SWEEP_COLLISION");
+  f.block(0,-.33,0.,0);f.now+=.05;f.publish();
+  f.controller.setPlan(f.path(-.2));f.controller.setPlan(f.path());
   f.envelope.navigation_allowed=f.envelope.limits.transport_ready=false;
-  f.policy.hold=true;f.policy.max_linear_speed=0.;
-  f.now+=2.;f.publish(false);
-  command=f.tick(-.05);check(command.linear.x<0.&&std::abs(command.linear.x)<=.05,
-    "map age, geometry epoch and policy changes do not readmit the accepted segment");
-  f.tick(-.195);check(!f.ready(),"short segment still requires a measured stop");
-  const auto deadline=Steady::now()+std::chrono::seconds(2);
-  while(!f.ready()&&Steady::now()<deadline) {
-    f.now+=.05;f.publish(false);f.tick(-.195);std::this_thread::sleep_for(std::chrono::milliseconds(25));
-  }
-  check(f.ready(),"accepted short segment completes only with source and steady stopped evidence");
+  f.now+=.05;f.publish();
+  rejects([&]{f.tick();},"ENVELOPE_REVOKED");
+  f.envelope.navigation_allowed=f.envelope.limits.transport_ready=true;
+  f.block(0,-.33,0.,100);
   f.now+=.05;f.publish();f.actualTransform(-.195);
   check(f.assess()->state==Assessment::BLOCKED,"fresh post-stop assessment catches the new actual obstacle");
-  f.block(0,-.3,0.,0);f.now+=.05;f.publish();f.actualTransform(0.);
+  f.block(0,-.33,0.,0);f.now+=.05;f.publish();f.actualTransform(0.);
   check(f.assess()->state==Assessment::RECOVERY_REQUIRED,"2D-blocked actual start still requires another recovery step");
   f.actualTransform(-.3);
   check(f.assess()->state==Assessment::READY,"only fresh actual-pose assessment can admit normal navigation");

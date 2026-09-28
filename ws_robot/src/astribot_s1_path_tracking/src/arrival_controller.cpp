@@ -386,6 +386,15 @@ bool ArrivalController::safeCommand(const geometry_msgs::msg::PoseStamped & pose
   if (!geometry_guard_.ready()) {return reject("ENVELOPE_NOT_READY", unavailable, unavailable, unavailable);}
   if (!costmap_->isCurrent()) {return reject("COSTMAP_NOT_CURRENT", unavailable, unavailable, unavailable);}
   auto local = inFrame(pose, costmap_->getGlobalFrameID());
+  if (geometry_guard_.enabled()) {
+    const auto layers=alignment_collision_.snapshot(local,true);
+    for(const auto &twist:{command,measured}) {
+      if(layers->commandCollision(local.pose.position.x,local.pose.position.y,
+          tf2::getYaw(local.pose.orientation),twist.linear.x,twist.linear.y,twist.angular.z,1.))
+        return reject("WHOLE_BODY_SWEEP_COLLISION",local.pose.position.x,
+          local.pose.position.y,tf2::getYaw(local.pose.orientation));
+    }
+  }
   auto * map = costmap_->getCostmap();
   auto footprint = costmap_->getRobotFootprint();
   if (footprint.size() < 3) {return reject("FOOTPRINT_TOO_SMALL", unavailable, unavailable, unavailable);}
@@ -523,6 +532,8 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
     !safeCommand(pose,command.twist,velocity)) {
     fail("POLICY_RESTRICTED_SWEEP_BLOCKED");
   }
+  if(geometry_guard_.enabled()&&!safeCommand(pose,command.twist,velocity))
+    fail("WHOLE_BODY_FINAL_COMMAND_BLOCKED");
   return command;
 }
 

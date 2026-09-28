@@ -36,7 +36,7 @@ public:
     evidence_.clear();maps_.reset();cached_.reset();cached_envelope_.reset();costmap_.reset();clock_.reset();
   }
   std::shared_ptr<const LayeredCollisionSnapshot> snapshot(
-      const geometry_msgs::msg::PoseStamped &pose) {
+      const geometry_msgs::msg::PoseStamped &pose,bool require_navigation) {
     std::shared_ptr<const LayeredCollisionSnapshot> snapshot;
     try {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -46,6 +46,16 @@ public:
       const auto sample=evidence_.sample(now.nanoseconds());
       const auto &envelope=sample.message;
       if(!envelope)throw std::runtime_error("ALIGNMENT_ENVELOPE_MISSING");
+      if(require_navigation) {
+        const auto reason=EnvelopeEvidence::navigationReason(sample,costmap_->getBaseFrameID(),
+          now.nanoseconds(),std::chrono::steady_clock::now());
+        if(!reason.empty())throw std::runtime_error(reason);
+        const auto until=rclcpp::Time(envelope->valid_until);
+        const auto lease=until-rclcpp::Time(envelope->header.stamp);
+        const auto elapsed=std::chrono::steady_clock::now()-sample.received;
+        if(now>=until||std::chrono::duration<double>(elapsed).count()>=lease.seconds())
+          throw std::runtime_error("ENVELOPE_EXPIRED");
+      }
       if(envelope->header.frame_id!=costmap_->getBaseFrameID()||envelope->mode!=Envelope::FIXED_POSTURE)
         throw std::runtime_error("ALIGNMENT_ENVELOPE_FRAME_OR_MODE_MISMATCH");
       if(!maps_)throw std::runtime_error("ALIGNMENT_HEIGHT_MAP_MISSING");
@@ -66,7 +76,7 @@ public:
     return snapshot;
   }
   void requireRotationClear(const geometry_msgs::msg::PoseStamped &pose,double target_yaw) {
-    const auto checked=snapshot(pose);
+    const auto checked=snapshot(pose,true);
     if(checked->edgeCollision(pose.pose.position.x,pose.pose.position.y,tf2::getYaw(pose.pose.orientation),
         pose.pose.position.x,pose.pose.position.y,target_yaw))
       throw nav2_core::PlannerException("ALIGNMENT_LAYER_ROTATION_COLLISION");

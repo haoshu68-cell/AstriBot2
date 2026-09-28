@@ -29,7 +29,7 @@ void NavigationStartAssessment::assess(const Service::Request & req,Service::Res
     if(!guard_.enabled()) {res.state=Response::READY;res.reason="START_RECOVERY_NOT_APPLICABLE";return;}
     // A fresh fixed envelope is geometry evidence even while installation ACKs
     // are pending. Motion permission is checked by the execution boundary.
-    const auto layers=reader_.snapshot(res.evaluated_start);
+    const auto layers=reader_.snapshot(res.evaluated_start,false);
     res.height_map_revision=layers->revision();res.geometry_hash=layers->geometryHash();res.envelope_epoch=layers->envelopeEpoch();
     auto *map=map_->getCostmap();
     std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*map->getMutex());

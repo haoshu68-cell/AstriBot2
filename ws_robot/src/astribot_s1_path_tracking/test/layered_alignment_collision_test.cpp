@@ -78,12 +78,56 @@ int main() {
       }
       throw std::runtime_error(std::string(name)+": invalid input was accepted");
     };
-    f.maps->evidence_kind="static_archive_occupied_endpoints_only";reject(f,"archive source","LAYERED_MAP_SOURCE_MISMATCH");
+    f.maps->evidence_kind="static_archive_occupied_endpoints_only";
+    assert(!f.snapshot().collision(0.,0.,0.));
+    f.obstacle(1,.55,0.,-1);assert(f.snapshot().collision(0.,0.,0.));
+    f.maps->evidence_kind="unclassified";reject(f,"unknown source","LAYERED_MAP_SOURCE_MISMATCH");
     f.maps->evidence_kind="gazebo_collision_geometry";f.maps->ground_reference.clear();reject(f,"missing ground reference","LAYERED_MAP_SOURCE_MISMATCH");
     f.maps->ground_reference="world_horizontal_ground";
     f.maps->profile_revision=std::string(64,'b');reject(f,"profile mismatch","LAYERED_PROFILE_MISMATCH");
     f.maps->profile_revision=f.envelope->height_profile_revision;f.maps->height_edges[1]+=.02;reject(f,"height edge mismatch","LAYERED_HEIGHT_ALIGNMENT_MISMATCH");
     f.maps->height_edges[1]-=.02;f.envelope->height_slices[1].footprint.points[0].x-=.1f;reject(f,"slice hash mismatch","HEIGHT_GEOMETRY_HASH_MISMATCH");
+  }
+  {
+    Fixture f;f.obstacle(1,.5,.5);auto s=f.snapshot();
+    assert(s.commandCollision(0.,0.,0.,0.,0.,M_PI/2,1.));
+    assert(!s.commandCollision(0.,0.,0.,-.1,0.,0.,1.));
+    Fixture translated;translated.obstacle(1,-1.1,0.);
+    assert(!translated.snapshot().collision(0.,0.,0.));
+    assert(translated.snapshot().commandCollision(0.,0.,0.,-.5,0.,0.,1.));
+  }
+  {
+    Fixture f;
+    // A triangular arm layer exercises the loose cached bounding box. The
+    // oracle scans occupied cells without the new broad-phase shortcut.
+    f.envelope->height_slices[1].footprint.points.pop_back();f.rehash();
+    for(int i=0;i<15;++i) {
+      f.obstacle(i%2,-1.4+.19*i,.73*std::sin(i),i%3?100:-1);
+    }
+    auto snapshot=f.snapshot();
+    const auto oracle=[&](double x,double y,double yaw,double margin) {
+      for(size_t layer=0;layer<f.envelope->height_slices.size();++layer) {
+        const auto &slice=f.envelope->height_slices[layer];if(slice.footprint.points.empty())continue;
+        const auto &grid=f.maps->grids[layer];const double res=grid.info.resolution;
+        geometry::Polygon polygon;
+        for(const auto &point:slice.footprint.points) {
+          geometry_msgs::msg::Point p;
+          p.x=x-grid.info.origin.position.x+std::cos(yaw)*point.x-std::sin(yaw)*point.y;
+          p.y=y-grid.info.origin.position.y+std::sin(yaw)*point.x+std::cos(yaw)*point.y;
+          if(p.x-margin<0||p.y-margin<0||p.x+margin>=grid.info.width*res||p.y+margin>=grid.info.height*res)return true;
+          polygon.push_back(p);
+        }
+        for(unsigned iy=0;iy<grid.info.height;++iy)for(unsigned ix=0;ix<grid.info.width;++ix) {
+          const auto cell=grid.data[iy*grid.info.width+ix];if(cell>=0&&cell<65)continue;
+          if(geometry::intersects(polygon,ix*res-margin,iy*res-margin,(ix+1)*res+margin,(iy+1)*res+margin))return true;
+        }
+      }
+      return false;
+    };
+    for(int i=0;i<1000;++i) {
+      const double x=(i%19)*.117-.97,y=(i%23)*.083-.91,a=i*.073,margin=(i%3)*.009;
+      assert(snapshot.collision(x,y,a,margin)==oracle(x,y,a,margin));
+    }
   }
   std::cout<<"layered alignment: height separation, swept rotation, unknown, bounds, TF and profile/hash checks passed\n";
 }

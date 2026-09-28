@@ -28,6 +28,7 @@ bool finiteTwist(const geometry_msgs::msg::Twist &v) {
 struct DepartureController::State {
   rclcpp::Clock::SharedPtr clock;
   std::shared_ptr<tf2_ros::Buffer> tf;
+  LayeredCollisionReader collision_reader;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr phase_pub;
   std::shared_ptr<ArrivalProgress> progress;
@@ -72,12 +73,13 @@ struct DepartureController::State {
 DepartureController::DepartureController():state_(std::make_unique<State>()) {}
 DepartureController::~DepartureController()=default;
 void DepartureController::configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr &parent,std::string name,
-    std::shared_ptr<tf2_ros::Buffer> tf,std::shared_ptr<nav2_costmap_2d::Costmap2DROS>) {
+    std::shared_ptr<tf2_ros::Buffer> tf,std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap) {
   auto node=parent.lock();if(!node)throw std::runtime_error("DepartureController: expired parent");
   auto &s=*state_;s.clock=node->get_clock();s.tf=std::move(tf);
   nav2_util::declare_parameter_if_not_declared(node,"navigation_geometry_mode",rclcpp::ParameterValue("legacy"));
   s.capable=node->get_parameter("use_sim_time").as_bool()&&node->get_parameter("navigation_geometry_mode").as_string()=="fixed_v2";
   if(!s.capable){s.reset();return;}
+  s.collision_reader.configure(node,std::move(costmap));
   const auto parameter=[&](const char *key,double &value) {
     nav2_util::declare_parameter_if_not_declared(node,name+"."+key,rclcpp::ParameterValue(value));
     value=node->get_parameter(name+"."+key).as_double();
@@ -103,6 +105,7 @@ void DepartureController::configure(const rclcpp_lifecycle::LifecycleNode::WeakP
 void DepartureController::activate() {std::lock_guard<std::mutex> lock(state_->mutex);state_->active=true;}
 void DepartureController::deactivate() {std::lock_guard<std::mutex> lock(state_->mutex);state_->active=false;state_->reset();}
 void DepartureController::cleanup() {
+  state_->collision_reader.cleanup();
   deactivate();state_->path_pub.reset();state_->phase_pub.reset();state_->tf.reset();state_->clock.reset();
 }
 void DepartureController::setPlan(const nav_msgs::msg::Path &path) {
@@ -145,6 +148,10 @@ geometry_msgs::msg::TwistStamped DepartureController::computeVelocityCommands(
   const auto now=s.clock->now();const double seconds=now.seconds();const auto wall=Steady::now();
   const double stamp=rclcpp::Time(pose.header.stamp).seconds();
   auto current=s.inFrame(pose,s.path.header.frame_id);
+  const auto geometry=s.collision_reader.snapshot(current,true);
+  if(geometry->commandCollision(current.pose.position.x,current.pose.position.y,
+      tf2::getYaw(current.pose.orientation),velocity.linear.x,velocity.linear.y,velocity.angular.z,1.))
+    s.fail("DEPARTURE_MEASURED_SWEEP_COLLISION");
   const double yaw=tf2::getYaw(current.pose.orientation);
   const auto &anchor=s.path.poses.front().pose.position;const auto &goal=s.path.poses.back().pose.position;
   const double dx=current.pose.position.x-anchor.x,dy=current.pose.position.y-anchor.y;
@@ -165,9 +172,8 @@ geometry_msgs::msg::TwistStamped DepartureController::computeVelocityCommands(
   if(along>s.best+.005){s.best=along;s.progress_at=seconds;s.progress_wall=wall;}
   if(std::chrono::duration<double>(wall-s.progress_wall).count()>s.progress_timeout)
     s.fail("DEPARTURE_NO_PROGRESS");
-  // DeparturePlanner admitted this bounded short segment. Execution follows
-  // it to a measured stop; EnsureNavigationStart refreshes geometry/environment
-  // and reassesses the actual pose before another segment or normal planning.
+  // Refresh the fixed geometry and environment each cycle even for an admitted
+  // short segment. Post-stop start assessment still decides the next segment.
   geometry_msgs::msg::TwistStamped command;command.header=pose.header;
   if(distance<=s.position_tolerance) {
     s.phase("DEPARTURE_STOPPING");s.progress->report(seconds);
@@ -200,6 +206,8 @@ geometry_msgs::msg::TwistStamped DepartureController::computeVelocityCommands(
   const double ratio=std::min(1.,cap/std::max(std::hypot(v.linear.x,v.linear.y),1e-12));v.linear.x*=ratio;v.linear.y*=ratio;
   if(std::hypot(velocity.linear.x,velocity.linear.y)>.003)
     v.angular.z=std::clamp(s.heading_gain*angle-s.angular_damping*velocity.angular.z,-s.angular_speed,s.angular_speed);
+  if(geometry->commandCollision(current.pose.position.x,current.pose.position.y,yaw,
+      v.linear.x,v.linear.y,v.angular.z,1.))s.fail("DEPARTURE_COMMAND_SWEEP_COLLISION");
   s.phase("DEPARTURE_TRANSLATE");return command;
 }
 }
