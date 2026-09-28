@@ -250,3 +250,163 @@ TEST_F(ControllerTrajectory, RevoluteOffsetAndMimicBodiesAreBounded) {
   result=manipulation::checkControllerSweep(scene,trajectory,0.,10000,1.);
   EXPECT_EQ(result.verdict,manipulation::SweepVerdict::RISK) << result.reason;
 }
+
+TEST_F(ControllerTrajectory, CommandChecksActualStartToSingleFuturePoint) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"};
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {-.3}; end.positions = {.3}; end.time_from_start.sec = 1;
+  command.points = {end}; obstacle(0);
+  const auto original = command;
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, rclcpp::Time(1000000000LL), 0., 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::RISK) << result.reason;
+  EXPECT_EQ(command, original);
+}
+
+TEST_F(ControllerTrajectory, CommandStartUsesJtcMeasuredVelocityAndImplicitZeroAcceleration) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"};
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {0.}; before.velocities = {2.};
+  end.positions = {.2}; end.velocities = {-2.}; end.accelerations = {0.}; end.time_from_start.sec = 1;
+  command.points = {end};
+  const auto started = rclcpp::Time(1000000000LL);
+  joint_trajectory_controller::Trajectory installed(started, before,
+    std::make_shared<trajectory_msgs::msg::JointTrajectory>(command));
+  trajectory_msgs::msg::JointTrajectoryPoint sampled;
+  joint_trajectory_controller::TrajectoryPointConstIter a, b;
+  ASSERT_TRUE(installed.sample(started, joint_trajectory_controller::interpolation_methods::InterpolationMethod::VARIABLE_DEGREE_SPLINE, sampled, a, b));
+  ASSERT_TRUE(installed.sample(started + rclcpp::Duration::from_seconds(.5),
+    joint_trajectory_controller::interpolation_methods::InterpolationMethod::VARIABLE_DEGREE_SPLINE, sampled, a, b));
+  ASSERT_GT(sampled.positions[0], .6);
+  obstacle(sampled.positions[0]);
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, started, 0., 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::RISK) << result.reason;
+}
+
+TEST_F(ControllerTrajectory, CommandPreservesMixedDerivativeFields) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"};
+  trajectory_msgs::msg::JointTrajectoryPoint a, b;
+  a.positions = {0.}; a.velocities = {2.};
+  b.positions = {.2}; b.time_from_start.sec = 1; command.points = {a, b};
+  // End has no velocity: actual JTC interpolates linearly, not a fabricated
+  // zero-end-velocity cubic from a RobotTrajectory round trip.
+  obstacle(.35);
+  const auto original = command;
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    a, rclcpp::Time(1000000000LL), 0., 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::CLEAR) << result.reason;
+  EXPECT_EQ(command, original);
+}
+
+TEST_F(ControllerTrajectory, FutureHeaderIncludesWaitingIntervalInSpline) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"}; command.header.stamp.sec = 3;
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {0.}; before.velocities = {1.};
+  end.positions = {0.}; end.velocities = {-1.}; command.points = {end};
+  obstacle(.5);  // Two-second initial cubic, not a stationary wait then a jump.
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, rclcpp::Time(1000000000LL), 0., 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::RISK) << result.reason;
+}
+
+TEST_F(ControllerTrajectory, LateStartAndZeroTimePositionJumpAreNotCertified) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"};
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {0.}; end.positions = {.1}; command.points = {end};
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, rclcpp::Time(2000000000LL), 0., 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::UNKNOWN);
+  EXPECT_EQ(result.reason, "CONTROLLER_START_POSITION_JUMP");
+  command.header.stamp.sec = 1;
+  result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, rclcpp::Time(2000000000LL), 0., 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::UNKNOWN);
+  EXPECT_EQ(result.reason, "CONTROLLER_START_AFTER_FIRST_POINT");
+}
+
+TEST_F(ControllerTrajectory, MalformedCommandBoundaryIsUnknownWithoutSampling) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"};
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {0.}; end.positions = {.1}; end.time_from_start.sec = 1;
+  command.points = {end};
+  for (int fault = 0; fault < 7; ++fault) {
+    auto bad = command;
+    if (fault == 0) bad.joint_names = {"absent"};
+    if (fault == 1) bad.joint_names = {"slide", "slide"};
+    if (fault == 2) bad.points[0].positions.clear();
+    if (fault == 3) bad.points[0].accelerations = {1.};
+    if (fault == 4) bad.points[0].positions[0] = std::numeric_limits<double>::infinity();
+    if (fault == 5) bad.points[0].time_from_start.nanosec = 1000000000u;
+    if (fault == 6) bad.points.push_back(bad.points.front());
+    auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), bad,
+      before, rclcpp::Time(1000000000LL), 0., 10000, 1.);
+    EXPECT_EQ(result.verdict, manipulation::SweepVerdict::UNKNOWN) << fault;
+    EXPECT_EQ(result.checked_states, 0u) << fault;
+  }
+}
+
+TEST_F(ControllerTrajectory, CommandStartUsesContinuousJointShortArc) {
+  auto urdf = urdf::parseURDF(R"(<robot name="continuous_test"><link name="base"/>
+    <link name="tip"><collision><origin xyz=".4 0 0"/><geometry><sphere radius=".01"/></geometry></collision></link>
+    <joint name="turn" type="continuous"><parent link="base"/><child link="tip"/>
+      <axis xyz="0 0 1"/><limit effort="10" velocity="5"/></joint></robot>)");
+  ASSERT_TRUE(urdf);
+  auto srdf = std::make_shared<srdf::Model>();
+  ASSERT_TRUE(srdf->initString(*urdf, "<robot name='continuous_test'/>"));
+  model = std::make_shared<moveit::core::RobotModel>(urdf, srdf);
+  scene = std::make_shared<planning_scene::PlanningScene>(model);
+  obstacle(.4);
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"turn"};
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {3.13}; end.positions = {-3.13}; end.time_from_start.sec = 1;
+  command.points = {end};
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, rclcpp::Time(1000000000LL), .01, 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::CLEAR) << result.reason;
+}
+
+TEST_F(ControllerTrajectory, CommandMissingStartDerivativesMatchInstalledJtc) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"};
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {0.};
+  end.positions = {.2}; end.velocities = {-2.}; end.accelerations = {0.}; end.time_from_start.sec = 1;
+  command.points = {end};
+  const auto started = rclcpp::Time(1000000000LL);
+  joint_trajectory_controller::Trajectory installed(started, before,
+    std::make_shared<trajectory_msgs::msg::JointTrajectory>(command));
+  trajectory_msgs::msg::JointTrajectoryPoint sampled;
+  joint_trajectory_controller::TrajectoryPointConstIter a, b;
+  ASSERT_TRUE(installed.sample(started, joint_trajectory_controller::interpolation_methods::InterpolationMethod::VARIABLE_DEGREE_SPLINE, sampled, a, b));
+  ASSERT_TRUE(installed.sample(started + rclcpp::Duration::from_seconds(.6),
+    joint_trajectory_controller::interpolation_methods::InterpolationMethod::VARIABLE_DEGREE_SPLINE, sampled, a, b));
+  ASSERT_GT(sampled.positions[0], .3);
+  obstacle(sampled.positions[0]);
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, started, 0., 10000, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::RISK) << result.reason;
+}
+
+TEST_F(ControllerTrajectory, CommandPreparationAndFirstSegmentShareBudget) {
+  trajectory_msgs::msg::JointTrajectory command;
+  command.joint_names = {"slide"};
+  trajectory_msgs::msg::JointTrajectoryPoint before, end;
+  before.positions = {0.}; end.positions = {.2}; end.time_from_start.sec = 1;
+  command.points = {end};
+  auto result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, rclcpp::Time(1000000000LL), .01, 1, 1.);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::UNKNOWN);
+  EXPECT_EQ(result.reason, "SWEEP_BUDGET_EXHAUSTED");
+  result = manipulation::checkControllerCommand(scene, scene->getCurrentState(), command,
+    before, rclcpp::Time(1000000000LL), .01, 10000, 1e-12);
+  EXPECT_EQ(result.verdict, manipulation::SweepVerdict::UNKNOWN);
+  EXPECT_EQ(result.reason, "SWEEP_BUDGET_EXHAUSTED");
+}

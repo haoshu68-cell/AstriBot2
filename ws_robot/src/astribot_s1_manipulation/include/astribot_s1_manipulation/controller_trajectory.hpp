@@ -35,4 +35,18 @@ ControllerSweepResult checkControllerSweep(
   const robot_trajectory::RobotTrajectory& trajectory,
   double clearance_m, std::size_t maximum_states, double budget_seconds);
 
+// Exact FJT command, including the controller's start-to-first-point segment.
+// started_at and before must be captured at JTC's first control sample, not at
+// send_goal/acceptance. reference supplies other joints and attached geometry.
+// Uses Humble JTC spline interpolation; late starts and position jumps at t=0
+// are UNKNOWN. Like checkControllerSweep, CLEAR concerns fixed-scene command
+// geometry only, not sensing, physical tracking or stopping distance.
+ControllerSweepResult checkControllerCommand(
+  const planning_scene::PlanningSceneConstPtr& scene,
+  const moveit::core::RobotState& reference,
+  const trajectory_msgs::msg::JointTrajectory& command,
+  const trajectory_msgs::msg::JointTrajectoryPoint& before,
+  const rclcpp::Time& started_at,
+  double clearance_m, std::size_t maximum_states, double budget_seconds);
+
 }  // namespace astribot_s1_manipulation

@@ -5,6 +5,8 @@
 #include <utility>
 #include <chrono>
 #include <map>
+#include <set>
+#include <moveit/robot_model/revolute_joint_model.h>
 #include <geometric_shapes/shape_operations.h>
 #include <joint_trajectory_controller/trajectory.hpp>
 
@@ -150,9 +152,11 @@ bool sampleControllerTrajectory(
   return true;
 }
 
-ControllerSweepResult checkControllerSweep(
+namespace {
+ControllerSweepResult checkSpline(
   const planning_scene::PlanningSceneConstPtr& scene,
-  const robot_trajectory::RobotTrajectory& trajectory,
+  const moveit::core::RobotState& initial,
+  const trajectory_msgs::msg::JointTrajectory& path,
   double clearance_m, std::size_t maximum_states, double budget_seconds) {
   ControllerSweepResult result;
   const auto deadline=std::chrono::steady_clock::now()+std::chrono::duration<double>(budget_seconds);
@@ -162,10 +166,7 @@ ControllerSweepResult checkControllerSweep(
   if(scene->getCollisionDetectorName()!="FCL") {
     result.reason="UNSUPPORTED_SWEEP_COLLISION_BACKEND";return result;
   }
-  moveit_msgs::msg::RobotTrajectory message;
-  if(!controllerMessage(trajectory,message,result.reason))return result;
-  const auto& path=message.joint_trajectory;
-  const auto& initial=trajectory.getFirstWayPoint();
+
   // Bound every collision body's extent from its link origin. The ancestor
   // walk below adds fixed offsets and the full possible prismatic extension.
   std::vector<std::pair<const moveit::core::LinkModel*,double>> bodies;
@@ -228,7 +229,7 @@ ControllerSweepResult checkControllerSweep(
         spans[path.joint_names[j]]=span;
       }
       Point point;sampler.interpolate_between_points(rclcpp::Time(begin),a,rclcpp::Time(end),b,rclcpp::Time(interval.end),point);
-      auto state=trajectory.getWayPoint(segment-1);state.setVariablePositions(path.joint_names,point.positions);state.update();
+      auto state=initial;state.setVariablePositions(path.joint_names,point.positions);state.update();
       double displacement=0;
       for(const auto& item:bodies) {
         double radius=item.second,motion=0;
@@ -263,5 +264,100 @@ ControllerSweepResult checkControllerSweep(
   result.verdict=SweepVerdict::CLEAR;result.reason="FIXED_SCENE_SPLINE_CLEAR";
   result.clearance_lower_bound=certified;
   return result;
+}
+}  // namespace
+
+ControllerSweepResult checkControllerSweep(
+  const planning_scene::PlanningSceneConstPtr& scene,
+  const robot_trajectory::RobotTrajectory& trajectory,
+  double clearance_m, std::size_t maximum_states, double budget_seconds) {
+  ControllerSweepResult result;
+  moveit_msgs::msg::RobotTrajectory message;
+  if (!controllerMessage(trajectory, message, result.reason)) return result;
+  return checkSpline(scene, trajectory.getFirstWayPoint(), message.joint_trajectory,
+    clearance_m, maximum_states, budget_seconds);
+}
+
+ControllerSweepResult checkControllerCommand(
+  const planning_scene::PlanningSceneConstPtr& scene,
+  const moveit::core::RobotState& reference,
+  const trajectory_msgs::msg::JointTrajectory& command,
+  const Point& before, const rclcpp::Time& started_at,
+  double clearance_m, std::size_t maximum_states, double budget_seconds) {
+  ControllerSweepResult result;
+  const auto began = std::chrono::steady_clock::now();
+  if (!std::isfinite(clearance_m) || clearance_m < 0 || !std::isfinite(budget_seconds) ||
+      budget_seconds <= 0 || maximum_states == 0) {
+    result.reason = "INVALID_SWEEP_BUDGET"; return result;
+  }
+  const auto count = command.joint_names.size();
+  if (count == 0 || command.points.empty()) {
+    result.reason = "EMPTY_CONTROLLER_COMMAND"; return result;
+  }
+  std::set<std::string> names;
+  std::vector<bool> wrap;
+  for (const auto& name : command.joint_names) {
+    const auto* joint = reference.getRobotModel()->getJointModel(name);
+    if (!names.insert(name).second || !joint || joint->getVariableCount() != 1 || joint->getMimic()) {
+      result.reason = "INVALID_CONTROLLER_COMMAND_JOINT"; return result;
+    }
+    wrap.push_back(joint->getType() == moveit::core::JointModel::REVOLUTE &&
+      static_cast<const moveit::core::RevoluteJointModel*>(joint)->isContinuous());
+  }
+  // This is the ROS command boundary. Derivative-only input is not part of the
+  // executor's contract; never let JTC infer a different position trajectory.
+  auto valid = [count](const Point& point) {
+    if (point.positions.size() != count || !point.effort.empty() ||
+        (!point.velocities.empty() && point.velocities.size() != count) ||
+        (!point.accelerations.empty() && (point.accelerations.size() != count || point.velocities.empty())))
+      return false;
+    for (const auto* values : {&point.positions, &point.velocities, &point.accelerations})
+      for (double value : *values) if (!std::isfinite(value)) return false;
+    return true;
+  };
+  if (!valid(before)) { result.reason = "INVALID_CONTROLLER_START_STATE"; return result; }
+  int64_t previous = -1;
+  for (const auto& point : command.points) {
+    const auto& time = point.time_from_start;
+    const int64_t stamp = int64_t(time.sec) * 1000000000LL + time.nanosec;
+    if (!valid(point) || time.sec < 0 || time.nanosec >= 1000000000u || stamp <= previous) {
+      result.reason = "INVALID_CONTROLLER_COMMAND_POINT"; return result;
+    }
+    previous = stamp;
+  }
+  if (started_at.nanoseconds() <= 0 || command.header.stamp.sec < 0 ||
+      command.header.stamp.nanosec >= 1000000000u) {
+    result.reason = "INVALID_CONTROLLER_START_TIME"; return result;
+  }
+  const int64_t header = int64_t(command.header.stamp.sec) * 1000000000LL + command.header.stamp.nanosec;
+  const int64_t offset = header == 0 ? 0 : header - started_at.nanoseconds();
+  const int64_t first = offset + rclcpp::Duration(command.points.front().time_from_start).nanoseconds();
+  if (first < 0) { result.reason = "CONTROLLER_START_AFTER_FIRST_POINT"; return result; }
+  Point start = before;
+  // Match Trajectory::set_point_before_trajectory_msg in the installed JTC.
+  if (start.velocities.empty() && !command.points.front().velocities.empty()) start.velocities.assign(count, 0.);
+  if (start.accelerations.empty() && !command.points.front().accelerations.empty()) start.accelerations.assign(count, 0.);
+  joint_trajectory_controller::wraparound_joint(start.positions, command.points.front().positions, wrap);
+  auto initial = reference;
+  initial.setVariablePositions(command.joint_names, start.positions);
+  initial.update();
+  auto path = command;
+  path.header.stamp = builtin_interfaces::msg::Time();
+  for (auto& point : path.points)
+    point.time_from_start = rclcpp::Duration::from_nanoseconds(
+      offset + rclcpp::Duration(point.time_from_start).nanoseconds());
+  if (first > 0) {
+    start.time_from_start = rclcpp::Duration(0, 0);
+    path.points.insert(path.points.begin(), start);
+  } else {
+    for (std::size_t i = 0; i < count; ++i)
+      if (std::abs(start.positions[i] - path.points.front().positions[i]) > 1e-12) {
+        result.reason = "CONTROLLER_START_POSITION_JUMP"; return result;
+      }
+  }
+  const double remaining = budget_seconds -
+    std::chrono::duration<double>(std::chrono::steady_clock::now() - began).count();
+  if (remaining <= 0) { result.reason = "SWEEP_BUDGET_EXHAUSTED"; return result; }
+  return checkSpline(scene, initial, path, clearance_m, maximum_states, remaining);
 }
 }  // namespace astribot_s1_manipulation
