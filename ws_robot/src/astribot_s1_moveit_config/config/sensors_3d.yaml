@@ -10,7 +10,7 @@ sensors:
   - torso_rgbd
 
 head_rgbd:
-  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+  sensor_plugin: astribot_s1_manipulation/ObservedPointCloudUpdater
   point_cloud_topic: /camera/head_rgbd/points
   point_cloud_frame: astribot_torso_base
   max_range: 4.0
@@ -21,7 +21,7 @@ head_rgbd:
   filtered_cloud_topic: /moveit/filtered_head_rgbd_points
 
 torso_rgbd:
-  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+  sensor_plugin: astribot_s1_manipulation/ObservedPointCloudUpdater
   point_cloud_topic: /camera/torso_rgbd/points
   point_cloud_frame: astribot_torso_base
   max_range: 3.0

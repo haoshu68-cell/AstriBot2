@@ -74,11 +74,11 @@ def _prepare_robot_descriptions(context):
     # sensors_3d.yaml always enables the pointcloud updater. Fail before
     # move_group starts instead of silently planning with an empty OctoMap.
     try:
-        sensor_prefix = get_package_prefix('moveit_ros_perception')
+        sensor_prefix = get_package_prefix('astribot_s1_manipulation')
     except PackageNotFoundError as error:
-        raise RuntimeError('Missing moveit_ros_perception: camera obstacle updater unavailable') from error
-    if not os.path.isfile(os.path.join(sensor_prefix, 'lib', 'libmoveit_pointcloud_octomap_updater.so')):
-        raise RuntimeError('Missing PointCloudOctomapUpdater library in ' + sensor_prefix)
+        raise RuntimeError('Missing astribot_s1_manipulation: camera obstacle updater unavailable') from error
+    if not os.path.isfile(os.path.join(sensor_prefix, 'lib', 'libastribot_observed_pointcloud_updater.so')):
+        raise RuntimeError('Missing ObservedPointCloudUpdater library in ' + sensor_prefix)
     content = Command([
         'xacro ', PathJoinSubstitution([
             FindPackageShare('astribot_s1_description'), 'urdf', 'astribot_s1.xacro']),

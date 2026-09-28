@@ -37,6 +37,10 @@ find_package(joint_trajectory_controller REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(astribot_transport_msgs REQUIRED)
 find_package(astribot_perception_msgs REQUIRED)
+find_package(moveit_ros_perception REQUIRED)
+find_package(moveit_ros_occupancy_map_monitor REQUIRED)
+find_package(message_filters REQUIRED)
+find_package(octomap_msgs REQUIRED)
 
 set(ASTRIBOT_MANIPULATION_DEPS
   astribot_eigen_vendor
@@ -180,8 +184,25 @@ ament_target_dependencies(astribot_owned_trajectory_controller
   joint_trajectory_controller astribot_transport_msgs pluginlib)
 pluginlib_export_plugin_description_file(controller_interface owned_trajectory_controller_plugins.xml)
 install(TARGETS astribot_owned_trajectory_controller LIBRARY DESTINATION lib)
+add_library(astribot_observed_pointcloud_updater SHARED src/observed_pointcloud_updater.cpp)
+target_include_directories(astribot_observed_pointcloud_updater PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+ament_target_dependencies(astribot_observed_pointcloud_updater
+  rclcpp pluginlib astribot_transport_msgs moveit_ros_occupancy_map_monitor
+  moveit_core tf2_ros tf2_geometry_msgs message_filters sensor_msgs octomap_msgs)
+target_link_libraries(astribot_observed_pointcloud_updater
+  moveit_ros_perception::moveit_point_containment_filter)
+astribot_target_eigen(astribot_observed_pointcloud_updater)
+pluginlib_export_plugin_description_file(moveit_ros_occupancy_map_monitor observed_pointcloud_plugins.xml)
+install(TARGETS astribot_observed_pointcloud_updater LIBRARY DESTINATION lib)
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(observed_pointcloud_test test/observed_pointcloud_test.cpp TIMEOUT 60)
+  target_link_libraries(observed_pointcloud_test
+    astribot_observed_pointcloud_updater moveit_ros_perception::moveit_pointcloud_octomap_updater_core)
+  ament_target_dependencies(observed_pointcloud_test
+    rclcpp astribot_transport_msgs moveit_ros_occupancy_map_monitor sensor_msgs octomap_msgs)
+  astribot_target_eigen(observed_pointcloud_test)
   ament_add_gtest(controller_trajectory_test test/controller_trajectory_test.cpp)
   target_link_libraries(controller_trajectory_test ${PROJECT_NAME}_core)
   ament_target_dependencies(controller_trajectory_test ${ASTRIBOT_MANIPULATION_DEPS})
