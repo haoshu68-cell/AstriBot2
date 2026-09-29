@@ -1,0 +1,18 @@
+180:   static GeometryState calculate(std::shared_ptr<const RobotModel> model,JointValues q,JointValues errors,std::vector<Shape> attachments,double padding,GeometryState msg) {
+181:     const auto geometry=model->geometry(q,errors,attachments,padding);
+182:     msg.physical_footprint=rosPolygon(geometry.physical);msg.reserved_footprint=rosPolygon(geometry.reserved);msg.height_m=geometry.height;
+183:     for(const auto &slice:geometry.slices) {
+184:       astribot_navigation_msgs::msg::EnvelopeSlice output;output.z_min_m=slice.z_min;output.z_max_m=slice.z_max;output.footprint=rosPolygon(slice.footprint);msg.height_slices.push_back(output);
+185:     }
+186:     return msg;
+197:         if(attachment_consumer_) {
+198:           const auto steady_now=std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now().time_since_epoch()).count();
+199:           msg.valid_until=stamp(attachmentCompletionDeadline(*attachment_consumer_,ns(msg.valid_until),now,steady_now));
+200:         }
+201:         validateGeometryCompletion(work_context_,context(),attachments_.has_value() && bool(model_) && bool(samples_),ns(msg.header.stamp),ns(msg.valid_until),now,msg.height_m,coverage_max_,coverage_at_,filter_revision_,wall()-filter_at_);
+202:         msg.published_at=stamp(now);msg.complete=true;msg.attachment_state_confirmed=true;msg.reason="GEOMETRY_CURRENT";publisher_->publish(msg);
+222:     frame_=declare_parameter<std::string>("base_frame","astribot_torso_base");error_=declare_parameter("hold_error_rad",.003);padding_=declare_parameter("model_padding_m",.01);
+223:     maximum_age_=std::llround(declare_parameter("max_joint_age_s",.3)*1e9);maximum_skew_=std::llround(declare_parameter("max_joint_skew_s",.1)*1e9);
+224:     geometryRequire(error_>0 && error_<=.025 && padding_>=0 && padding_<=.1,"invalid geometry margins");
+225:     std::random_device entropy;std::string seed;for(int i=0;i<8;++i)seed+=std::to_string(entropy());source_=sha256(seed+std::to_string(wall()));
+226:     parameters_.client=create_client<GetParameters>("/robot_state_publisher/get_parameters");scene_.client=create_client<GetScene>("/get_planning_scene");coverage_.client=create_client<GetParameters>("/pointcloud_slice_scan_node/get_parameters");

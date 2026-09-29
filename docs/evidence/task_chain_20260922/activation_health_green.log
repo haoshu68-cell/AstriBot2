@@ -1,0 +1,43 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 17 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 17 tests from HealthContract
+[ RUN      ] HealthContract.ValidAlignedStreams
+[       OK ] HealthContract.ValidAlignedStreams (74 ms)
+[ RUN      ] HealthContract.RejectsInvalidIntrinsics
+[       OK ] HealthContract.RejectsInvalidIntrinsics (68 ms)
+[ RUN      ] HealthContract.RejectsMalformedDepth
+[       OK ] HealthContract.RejectsMalformedDepth (68 ms)
+[ RUN      ] HealthContract.RejectsUnknownCalibration
+[       OK ] HealthContract.RejectsUnknownCalibration (68 ms)
+[ RUN      ] HealthContract.PausedClockDoesNotKeepCameraHealthy
+[       OK ] HealthContract.PausedClockDoesNotKeepCameraHealthy (371 ms)
+[ RUN      ] HealthContract.SameRevisionCannotChangeIntrinsics
+[       OK ] HealthContract.SameRevisionCannotChangeIntrinsics (98 ms)
+[ RUN      ] HealthContract.InFlightRgbDoesNotInvalidateLastMatchedSnapshot
+[       OK ] HealthContract.InFlightRgbDoesNotInvalidateLastMatchedSnapshot (183 ms)
+[ RUN      ] HealthContract.DelayedDepthMatchesBufferedRgbAndInfo
+[       OK ] HealthContract.DelayedDepthMatchesBufferedRgbAndInfo (277 ms)
+[ RUN      ] HealthContract.UnmatchedNewFramesCannotRenewSnapshotLifetime
+[       OK ] HealthContract.UnmatchedNewFramesCannotRenewSnapshotLifetime (401 ms)
+[ RUN      ] HealthContract.PersistentSkewWithoutMatchedFramesIsRejected
+[       OK ] HealthContract.PersistentSkewWithoutMatchedFramesIsRejected (66 ms)
+[ RUN      ] HealthContract.MalformedDepthCannotHideBehindMatchedSnapshot
+[       OK ] HealthContract.MalformedDepthCannotHideBehindMatchedSnapshot (89 ms)
+[ RUN      ] HealthContract.FrameMismatchCannotHideBehindMatchedSnapshot
+[       OK ] HealthContract.FrameMismatchCannotHideBehindMatchedSnapshot (91 ms)
+[ RUN      ] HealthContract.RealLowRateRemainsRejected
+[       OK ] HealthContract.RealLowRateRemainsRejected (238 ms)
+[ RUN      ] HealthContract.ClockRollbackInvalidatesMatchedSnapshotAndChangesEpoch
+[       OK ] HealthContract.ClockRollbackInvalidatesMatchedSnapshotAndChangesEpoch (91 ms)
+[ RUN      ] HealthContract.MissingTaskSessionRejectsFreshImages
+[       OK ] HealthContract.MissingTaskSessionRejectsFreshImages (71 ms)
+[ RUN      ] HealthContract.TaskSessionReleaseImmediatelyRevokesHealth
+[       OK ] HealthContract.TaskSessionReleaseImmediatelyRevokesHealth (113 ms)
+[ RUN      ] HealthContract.LostSessionHeartbeatCannotUseFreshImages
+[       OK ] HealthContract.LostSessionHeartbeatCannotUseFreshImages (426 ms)
+[----------] 17 tests from HealthContract (2794 ms total)
+
+[----------] Global test environment tear-down
+[==========] 17 tests from 1 test suite ran. (2798 ms total)
+[  PASSED  ] 17 tests.

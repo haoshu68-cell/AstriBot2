@@ -1,0 +1,43 @@
+test_cancel_and_hold_failures_both_reach_caller (test_stop_and_hold.StopAndHoldTests) ... FAIL
+test_cancel_terminal_timeout_still_revokes_navigation (test_stop_and_hold.StopAndHoldTests) ... FAIL
+test_hold_failure_after_cancel_is_not_reported_as_success (test_stop_and_hold.StopAndHoldTests) ... ok
+test_pending_acceptance_timeout_still_revokes_navigation (test_stop_and_hold.StopAndHoldTests) ... FAIL
+test_success_requires_terminal_and_confirmed_hold (test_stop_and_hold.StopAndHoldTests) ... ok
+test_task_ledger_keeps_original_fault_and_both_cleanup_failures (test_stop_and_hold.StopAndHoldTests) ... FAIL
+
+======================================================================
+FAIL: test_cancel_and_hold_failures_both_reach_caller (test_stop_and_hold.StopAndHoldTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport/test/test_stop_and_hold.py", line 104, in test_cancel_and_hold_failures_both_reach_caller
+    self.assertIn('ENVELOPE_SERVICE_UNAVAILABLE', str(caught.exception))
+AssertionError: 'ENVELOPE_SERVICE_UNAVAILABLE' not found in 'EXECUTOR_TERMINAL_TIMEOUT'
+
+======================================================================
+FAIL: test_cancel_terminal_timeout_still_revokes_navigation (test_stop_and_hold.StopAndHoldTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport/test/test_stop_and_hold.py", line 77, in test_cancel_terminal_timeout_still_revokes_navigation
+    self.assertFalse(backend.envelope.transport_ready)
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_pending_acceptance_timeout_still_revokes_navigation (test_stop_and_hold.StopAndHoldTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport/test/test_stop_and_hold.py", line 92, in test_pending_acceptance_timeout_still_revokes_navigation
+    self.assertFalse(backend.envelope.transport_ready)
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_task_ledger_keeps_original_fault_and_both_cleanup_failures (test_stop_and_hold.StopAndHoldTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport/test/test_stop_and_hold.py", line 137, in test_task_ledger_keeps_original_fault_and_both_cleanup_failures
+    self.assertIn('ENVELOPE_SERVICE_UNAVAILABLE', state['stop_error'])
+AssertionError: 'ENVELOPE_SERVICE_UNAVAILABLE' not found in 'EXECUTOR_TERMINAL_TIMEOUT'
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.031s
+
+FAILED (failures=4)

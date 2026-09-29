@@ -11,7 +11,6 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from std_msgs.msg import String
 from astribot_navigation_msgs.msg import SocialAgentArray
-from astribot_navigation_msgs.srv import ResolveRoute
 from astribot_s1_social_navigation.contracts import validate_sample, SampleOrder, stamp_ns
 from astribot_s1_social_navigation.observer_node import transform_sample
 from .contracts import MetricBox, Vec3, Covariance3
@@ -38,36 +37,11 @@ class SocialAdapter:
         self.policy=SocialPolicy(node.profile,self.config)
         self.sample=None;self.pending=None;self.order=SampleOrder();self.epoch=None
         self.input_lock=threading.Lock();self.input_group=MutuallyExclusiveCallbackGroup()
-        self.context_lock=threading.Lock();self.context_group=MutuallyExclusiveCallbackGroup()
-        self.pending_context=None;self.response_snapshot=None
-        self.reason='SOCIAL_INPUT_UNAVAILABLE';self.context=None
+        self.reason='SOCIAL_INPUT_UNAVAILABLE';self.policy_context=None
         self.decision=None;self.last_diagnostic=-math.inf;self.last_reason=None
         self.status=node.create_publisher(String,'/social_navigation/behavior_status',10)
         node.create_subscription(SocialAgentArray,'/social_navigation/observed_agents',self.receive,
             QoSProfile(depth=1,reliability=ReliabilityPolicy.BEST_EFFORT),callback_group=self.input_group)
-        # P2 has no candidate coordinator. Reuse the existing BT route result
-        # channel for bounded failure, without issuing replacement paths.
-        if node.coordinator is None:
-            node.create_service(ResolveRoute,'/navigation_policy/resolve_route',self.resolve,
-                                callback_group=self.context_group)
-
-    def resolve(self,req,res):
-        res.evaluated_at=self.node.get_clock().now().to_msg()
-        if (not req.session_id or not req.reference_path.poses or
-            req.goal.pose!=req.reference_path.poses[-1].pose or
-            req.goal.header.frame_id!=req.reference_path.header.frame_id):
-            res.disposition=res.BLOCKED;res.reason='INVALID_EXECUTION_CONTEXT';return res
-        key=(req.session_id,self.node.epoch)
-        point=req.goal.pose.position;q=req.goal.pose.orientation
-        goal=(req.goal.header.frame_id,point.x,point.y,
-              math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)))
-        with self.context_lock:
-            self.pending_context=(key,self.node.get_clock().now().nanoseconds,goal)
-            snapshot=self.response_snapshot
-        if snapshot and snapshot[0]==key and snapshot[1]:
-            res.disposition=res.BLOCKED;res.reason=snapshot[1]
-        else:res.reason='KEEP_CURRENT_PATH_SOCIAL_WAIT'
-        return res
 
     def receive(self,message):
         # Receive independently of risk evaluation; a slow cycle must not drain
@@ -135,23 +109,19 @@ class SocialAdapter:
             return t.x+math.cos(yaw)*x-math.sin(yaw)*y,t.y+math.sin(yaw)*x+math.cos(yaw)*y,heading+yaw
         except Exception:return None
 
-    def apply(self,selection,valid,now):
+    def apply(self,selection,valid,now,context):
         n=self.node;seconds=now.ns*1e-9
-        with self.context_lock:context=self.pending_context
-        if context and context[0]!=self.context:
-            self.context=context[0];self.policy.reset();self.decision=None
+        if context and context[0]!=self.policy_context:
+            self.policy_context=context[0];self.policy.reset();self.decision=None
         world,error=self.observations(now)
         # No task means no wait budget; a later task must not inherit idle failure.
         active=bool(context and context[0][1]==now.epoch and
             0<=n.get_clock().now().nanoseconds-context[1]<=int(n.profile.planning_takeover['context_timeout_s']*1e9))
-        if n.coordinator is not None:active=n.coordinator.context is not None
         if not active:self.policy.reset()
         goal=self.goal_in_tracking_frame(context[2],now) if active and context else None
         self.decision=self.policy.select(selection,world,n.last_robot,n.path,valid and not error,
                                           seconds,error or 'SOCIAL_INPUT_UNAVAILABLE',
                                           goal=goal)
-        with self.context_lock:self.response_snapshot=(self.context,self.decision.failure)
-        if n.coordinator is not None and self.decision.failure:n.coordinator.failure=self.decision.failure
         if seconds-self.last_diagnostic>=self.config['diagnostic_period_s'] or self.last_reason!=self.decision.reason:
             data=asdict(self.decision);data.update(stamp_ns=now.ns,active=active,
                 source='none' if self.sample is None else self.sample.source_id,
@@ -165,4 +135,4 @@ class SocialAdapter:
             if self.last_reason!=self.decision.reason:
                 n.get_logger().info('SOCIAL_BEHAVIOR '+json.dumps(data,allow_nan=False))
             self.last_diagnostic=seconds;self.last_reason=self.decision.reason
-        return self.decision.selection
+        return self.decision

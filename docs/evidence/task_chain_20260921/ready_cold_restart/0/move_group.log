@@ -1,0 +1,179 @@
+[INFO] [launch]: All log files can be found below /home/yjh/.ros/log/astribot/2026-09-21-23-27-30-890009-sh-xf2731-442374
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [move_group-1]: process started with pid [442394]
+[move_group-1] Warning: Link 'livox_mid360_left' is not known to URDF. Cannot disable/enable collisons.
+[move_group-1]          at line 594 in ./src/model.cpp
+[move_group-1] Warning: Link 'livox_mid360_right' is not known to URDF. Cannot disable/enable collisons.
+[move_group-1]          at line 594 in ./src/model.cpp
+[move_group-1] Warning: Link 'camera_link' is not known to URDF. Cannot disable/enable collisons.
+[move_group-1]          at line 594 in ./src/model.cpp
+[move_group-1] [INFO] [1790004451.199225656] [moveit_rdf_loader.rdf_loader]: Loaded robot model in 0 seconds
+[move_group-1] [INFO] [1790004451.199248692] [moveit_robot_model.robot_model]: Loading robot model 'astribot_s1'...
+[move_group-1] [WARN] [1790004451.206334051] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004451.211765851] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004451.215997950] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004451.218324425] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004451.226669421] [kdl_parser]: The root link astribot_torso_base has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[move_group-1] [WARN] [1790004451.226781928] [kdl_parser]: The root link astribot_torso_base has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[move_group-1] [WARN] [1790004451.226832317] [kdl_parser]: The root link astribot_torso_base has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[move_group-1] [INFO] [1790004451.243854291] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Publishing maintained planning scene on 'monitored_planning_scene'
+[move_group-1] [INFO] [1790004451.243999414] [moveit.ros_planning_interface.moveit_cpp]: Listening to 'joint_states' for joint states
+[move_group-1] [INFO] [1790004451.244562517] [moveit_ros.current_state_monitor]: Listening to joint states on topic 'joint_states'
+[move_group-1] [INFO] [1790004451.244875457] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to '/attached_collision_object' for attached collision objects
+[move_group-1] [INFO] [1790004451.244885827] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Starting planning scene monitor
+[move_group-1] [INFO] [1790004451.245148406] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to '/planning_scene'
+[move_group-1] [INFO] [1790004451.245156764] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Starting world geometry update monitor for collision objects, attached objects, octomap updates.
+[move_group-1] [INFO] [1790004451.245428659] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to 'collision_object'
+[move_group-1] [INFO] [1790004451.245701299] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to 'planning_scene_world' for planning scene world geometry
+[move_group-1] [INFO] [1790004451.276169274] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/camera/head_rgbd/points' using message filter with target frame 'astribot_torso_base '
+[move_group-1] [INFO] [1790004451.276546712] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/camera/torso_rgbd/points' using message filter with target frame 'astribot_torso_base '
+[move_group-1] [INFO] [1790004451.276553624] [moveit.ros_planning_interface.moveit_cpp]: Loading planning pipeline 'ompl'
+[move_group-1] [INFO] [1790004451.284376973] [astribot_s1_manipulation.ompl_extension]: registered extra OMPL planners: 25 -> 30 total
+[move_group-1] [INFO] [1790004451.284383682] [astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::RRTstar
+[move_group-1] [INFO] [1790004451.284385455] [astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::BITstar
+[move_group-1] [INFO] [1790004451.284386675] [astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::InformedRRTstar
+[move_group-1] [INFO] [1790004451.284388737] [moveit.ros_planning.planning_pipeline]: Using planning interface 'OMPL (with BITstar / InformedRRTstar registered by astribot_s1_manipulation)'
+[move_group-1] [INFO] [1790004451.287136500] [moveit_ros.add_time_optimal_parameterization]: Param 'ompl.path_tolerance' was not set. Using default value: 0.100000
+[move_group-1] [INFO] [1790004451.287144770] [moveit_ros.add_time_optimal_parameterization]: Param 'ompl.resample_dt' was not set. Using default value: 0.100000
+[move_group-1] [INFO] [1790004451.287146731] [moveit_ros.add_time_optimal_parameterization]: Param 'ompl.min_angle_change' was not set. Using default value: 0.001000
+[move_group-1] [INFO] [1790004451.287163090] [moveit_ros.fix_workspace_bounds]: Param 'ompl.default_workspace_bounds' was not set. Using default value: 10.000000
+[move_group-1] [INFO] [1790004451.287169993] [moveit_ros.fix_start_state_bounds]: Param 'ompl.start_state_max_bounds_error' was set to 0.100000
+[move_group-1] [INFO] [1790004451.287172015] [moveit_ros.fix_start_state_bounds]: Param 'ompl.start_state_max_dt' was not set. Using default value: 0.500000
+[move_group-1] [INFO] [1790004451.287176814] [moveit_ros.fix_start_state_collision]: Param 'ompl.start_state_max_dt' was not set. Using default value: 0.500000
+[move_group-1] [INFO] [1790004451.287178506] [moveit_ros.fix_start_state_collision]: Param 'ompl.jiggle_fraction' was not set. Using default value: 0.020000
+[move_group-1] [INFO] [1790004451.287184358] [moveit_ros.fix_start_state_collision]: Param 'ompl.max_sampling_attempts' was not set. Using default value: 100
+[move_group-1] [INFO] [1790004451.287189272] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Add Time Optimal Parameterization'
+[move_group-1] [INFO] [1790004451.287191671] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Resolve constraint frames to robot links'
+[move_group-1] [INFO] [1790004451.287192785] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Workspace Bounds'
+[move_group-1] [INFO] [1790004451.287193864] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Start State Bounds'
+[move_group-1] [INFO] [1790004451.287194888] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Start State In Collision'
+[move_group-1] [INFO] [1790004451.287196016] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Start State Path Constraints'
+[move_group-1] [INFO] [1790004451.312396174] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for arm_left_controller
+[move_group-1] [INFO] [1790004451.313379580] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for arm_right_controller
+[move_group-1] [INFO] [1790004451.314447853] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for torso_controller
+[move_group-1] [INFO] [1790004451.315512248] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for gripper_left_controller
+[move_group-1] [INFO] [1790004451.316631922] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for gripper_right_controller
+[move_group-1] [INFO] [1790004451.316723094] [moveit.plugins.moveit_simple_controller_manager]: Returned 5 controllers in list
+[move_group-1] [INFO] [1790004451.316741433] [moveit.plugins.moveit_simple_controller_manager]: Returned 5 controllers in list
+[move_group-1] [INFO] [1790004451.316991943] [moveit_ros.trajectory_execution_manager]: Trajectory execution is not managing controllers
+[move_group-1] [INFO] [1790004451.316998963] [move_group.move_group]: MoveGroup debug mode is ON
+[move_group-1] [INFO] [1790004451.325848166] [move_group.move_group]: 
+[move_group-1] 
+[move_group-1] ********************************************************
+[move_group-1] * MoveGroup using: 
+[move_group-1] *     - ApplyPlanningSceneService
+[move_group-1] *     - ClearOctomapService
+[move_group-1] *     - CartesianPathService
+[move_group-1] *     - ExecuteTrajectoryAction
+[move_group-1] *     - GetPlanningSceneService
+[move_group-1] *     - KinematicsService
+[move_group-1] *     - MoveAction
+[move_group-1] *     - MotionPlanService
+[move_group-1] *     - QueryPlannersService
+[move_group-1] *     - StateValidationService
+[move_group-1] ********************************************************
+[move_group-1] 
+[move_group-1] [INFO] [1790004451.325871516] [moveit_move_group_capabilities_base.move_group_context]: MoveGroup context using planning plugin astribot_s1_manipulation/OmplPlannerExtension
+[move_group-1] [INFO] [1790004451.325875581] [moveit_move_group_capabilities_base.move_group_context]: MoveGroup context initialization complete
+[move_group-1] [96mLoading 'move_group/ApplyPlanningSceneService'...
+[move_group-1] [0m[96mLoading 'move_group/ClearOctomapService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupCartesianPathService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupExecuteTrajectoryAction'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupGetPlanningSceneService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupKinematicsService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupMoveAction'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupPlanService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupQueryPlannersService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupStateValidationService'...
+[move_group-1] [0m[92m
+[move_group-1] You can start planning now!
+[move_group-1] 
+[move_group-1] [INFO] [1790004454.138899879] [moveit_move_group_default_capabilities.plan_service_capability]: Received new planning service request...
+[move_group-1] [INFO] [1790004454.139522147] [astribot_s1_manipulation.ompl_extension]: planning request: group='arm_right' planner_id='RRTConnectConfig' allowed_time=5.00s
+[move_group-1] [0mDebug:   Starting goal sampling thread
+[move_group-1] Debug:   Waiting for space information to be set up before the sampling thread can begin computation...
+[move_group-1] [INFO] [1790004454.140115245] [moveit.ompl_planning.model_based_planning_context]: Planner configuration 'arm_right[RRTConnectConfig]' will use planner 'geometric::RRTConnect'. Additional configuration parameters will be set when the planner is constructed.
+[move_group-1] Debug:   The value of parameter 'longest_valid_segment_fraction' is now: '0.01'
+[move_group-1] Debug:   The value of parameter 'range' is now: '0'
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Planner range detected to be 5.352000
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Starting planning with 1 states already in datastructure
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waiting for goal region samples ...
+[move_group-1] Debug:   Beginning sampling thread computation
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waited 0.010068 seconds for the first goal sample.
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Stopped goal sampling thread after 10 sampling attempts
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Created 4 states (2 start + 2 goal)
+[move_group-1] Info:    Solution found in 0.012815 seconds
+[move_group-1] Info:    SimpleSetup: Path simplification took 0.010212 seconds and changed from 3 to 2 states
+[move_group-1] [INFO] [1790004454.166425631] [moveit_move_group_default_capabilities.plan_service_capability]: Received new planning service request...
+[move_group-1] [INFO] [1790004454.166984986] [astribot_s1_manipulation.ompl_extension]: planning request: group='arm_right' planner_id='RRTConnectConfig' allowed_time=5.00s
+[move_group-1] Debug:   Starting goal sampling thread
+[move_group-1] Debug:   Waiting for space information to be set up before the sampling thread can begin computation...
+[move_group-1] [INFO] [1790004454.167194991] [moveit.ompl_planning.model_based_planning_context]: Planner configuration 'arm_right[RRTConnectConfig]' will use planner 'geometric::RRTConnect'. Additional configuration parameters will be set when the planner is constructed.
+[move_group-1] Debug:   The value of parameter 'longest_valid_segment_fraction' is now: '0.01'
+[move_group-1] Debug:   The value of parameter 'range' is now: '0'
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Planner range detected to be 5.352000
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Starting planning with 1 states already in datastructure
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waiting for goal region samples ...
+[move_group-1] Debug:   Beginning sampling thread computation
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Stopped goal sampling thread after 10 sampling attempts
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waited 0.020094 seconds for the first goal sample.
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Created 4 states (2 start + 2 goal)
+[move_group-1] Info:    Solution found in 0.024098 seconds
+[move_group-1] Info:    SimpleSetup: Path simplification took 0.022446 seconds and changed from 3 to 2 states
+[move_group-1] [INFO] [1790004454.216109747] [moveit_move_group_default_capabilities.plan_service_capability]: Received new planning service request...
+[move_group-1] [INFO] [1790004454.216747672] [astribot_s1_manipulation.ompl_extension]: planning request: group='arm_right' planner_id='RRTConnectConfig' allowed_time=5.00s
+[move_group-1] Debug:   Starting goal sampling thread
+[move_group-1] Debug:   Waiting for space information to be set up before the sampling thread can begin computation...
+[move_group-1] [INFO] [1790004454.216936798] [moveit.ompl_planning.model_based_planning_context]: Planner configuration 'arm_right[RRTConnectConfig]' will use planner 'geometric::RRTConnect'. Additional configuration parameters will be set when the planner is constructed.
+[move_group-1] Debug:   The value of parameter 'longest_valid_segment_fraction' is now: '0.01'
+[move_group-1] Debug:   The value of parameter 'range' is now: '0'
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Planner range detected to be 5.352000
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Starting planning with 1 states already in datastructure
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waiting for goal region samples ...
+[move_group-1] Debug:   Beginning sampling thread computation
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waited 0.010060 seconds for the first goal sample.
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Stopped goal sampling thread after 10 sampling attempts
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Created 5 states (3 start + 2 goal)
+[move_group-1] Info:    Solution found in 0.015035 seconds
+[move_group-1] Info:    SimpleSetup: Path simplification took 0.020941 seconds and changed from 4 to 2 states
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [move_group-1]: sending signal 'SIGINT' to process[move_group-1]
+[move_group-1] [INFO] [1790004454.418003640] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[move_group-1] [INFO] [1790004454.420793966] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[move_group-1] [INFO] [1790004454.430277427] [moveit.ros_planning_interface.moveit_cpp]: Deleting MoveItCpp
+[move_group-1] [INFO] [1790004454.668773524] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Stopped publishing maintained planning scene.
+[move_group-1] [INFO] [1790004454.669595541] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Stopping world geometry monitor
+[move_group-1] [INFO] [1790004454.670535674] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Stopping planning scene monitor
+[move_group-1] Warning: class_loader.ClassLoader: SEVERE WARNING!!! Attempting to unload library while objects created by this loader exist in the heap! You should delete your objects before attempting to unload the library or destroying the ClassLoader. The library will NOT be unloaded.
+[move_group-1]          at line 127 in ./src/class_loader.cpp
+[INFO] [move_group-1]: process has finished cleanly [pid 442394]

@@ -1,0 +1,51 @@
+{
+  "schema": "astribot.live_action_summary/1",
+  "source": "new Gazebo RGB-D snapshots; static clear scene; HSV fixture mask",
+  "hardware_tested": false,
+  "execution_tested": false,
+  "groups": {
+    "live_grasp_gpu_v2_final": {
+      "trials": 20,
+      "successful": 20,
+      "min_latency_sec": 1.174982204999651,
+      "median_latency_sec": 1.210483033500168,
+      "max_latency_sec": 1.27734165999982,
+      "reason_codes": [
+        "PROPOSALS_REQUIRE_MTC_VALIDATION"
+      ],
+      "capture_age_max_sec": 0.138
+    },
+    "live_pose_v2_final": {
+      "trials": 10,
+      "successful": 10,
+      "min_latency_sec": 1.572241407999627,
+      "median_latency_sec": 1.5975221989999682,
+      "max_latency_sec": 1.6327757509998264,
+      "reason_codes": [
+        "KNOWN_MODEL_6D_POSE"
+      ],
+      "capture_age_max_sec": 0.156
+    },
+    "live_pose_far_v2_final": {
+      "trials": 3,
+      "successful": 3,
+      "reason_codes": [
+        "KNOWN_MODEL_6D_POSE"
+      ],
+      "min_latency_sec": 1.461191031999988,
+      "median_latency_sec": 1.4912071059998198,
+      "max_latency_sec": 1.5116008410004724
+    },
+    "live_pose_occluded_v2_final": {
+      "trials": 3,
+      "successful": 0,
+      "reason_codes": [
+        "no_acceptable_pose"
+      ],
+      "min_latency_sec": 1.1899217810005212,
+      "median_latency_sec": 1.2106421150001552,
+      "max_latency_sec": 1.220490744000017,
+      "expected_safe_rejections": 3
+    }
+  }
+}

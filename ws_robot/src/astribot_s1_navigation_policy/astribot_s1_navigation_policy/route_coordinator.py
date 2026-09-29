@@ -1,4 +1,4 @@
-"""P3 asynchronous candidate arbitration; the behavior tree alone commits paths."""
+"""Route service ownership; the behavior tree alone commits P3 candidate paths."""
 import math
 import time
 import copy
@@ -17,11 +17,14 @@ from .obstruction_retry import ObstructionRetry
 
 
 class RouteCoordinator:
-    def __init__(self, node):
+    def __init__(self, node, candidate_enabled=True):
         self.node=node;self.profile=node.profile;self.takeover=self.profile.planning_takeover
-        self.session=PlanningSession(str(node.boot),PlanningBudget(**self.profile.planning_budget))
+        self.candidate_enabled=candidate_enabled
+        self.session=(PlanningSession(str(node.boot),PlanningBudget(**self.profile.planning_budget))
+                      if candidate_enabled else None)
         self.rpc_group=MutuallyExclusiveCallbackGroup()
-        self.client=node.create_client(PlanCandidate,'/path_tracking/plan_candidate',callback_group=self.rpc_group)
+        self.client=(node.create_client(PlanCandidate,'/path_tracking/plan_candidate',callback_group=self.rpc_group)
+                     if candidate_enabled else None)
         self.mailbox_lock=threading.Lock();self.pending_route=None;self.route_response=None
         self.service=node.create_service(ResolveRoute,'/navigation_policy/resolve_route',self.resolve,
                                         callback_group=self.rpc_group)
@@ -29,12 +32,28 @@ class RouteCoordinator:
         self.last_poll=0.;self.future=None;self.request=None;self.mode=None
         self.options=[];self.chosen=None;self.ready=None;self.blocked_since=None
         self.attempted_episode=None;self.failure=None;self.audit=[];self.holding=False
+        self.failure_code=ResolveRoute.Response.NONE
+        self.execution_mode=ResolveRoute.Request.NORMAL;self.finished=False;self.alignment_used=False
+        self.recovery_resumed=False
         self.variants=[];self.variant_keys=set();self.safety_evidence=[];self.retry=ObstructionRetry()
 
     def steady(self):return Stamp(time.monotonic_ns(),'steady',self.node.epoch)
 
+    @property
+    def workstation_alignment(self):
+        return (self.execution_mode==ResolveRoute.Request.WORKSTATION_ALIGN and not self.finished and
+                self.context_epoch==self.node.epoch and
+                time.monotonic()-self.last_poll<=self.takeover['context_timeout_s'])
+
     def cancel(self):
-        with self.mailbox_lock:self.route_response=None
+        with self.mailbox_lock:
+            # Candidate cancellation invalidates path evidence, not a completed
+            # mode handover. The RPC still binds mode ACKs to their full key and
+            # existing cache lifetime; process_route replaces them normally.
+            if (self.route_response is not None and
+                    (not self.candidate_enabled or
+                     self.route_response[0][3]==ResolveRoute.Request.NORMAL)):
+                self.route_response=None
         if self.future is not None:
             self.client.remove_pending_request(self.future);self.future.cancel()
         self.future=None;self.request=None;self.options=[];self.chosen=None;self.ready=None;self.holding=False
@@ -43,13 +62,35 @@ class RouteCoordinator:
     @staticmethod
     def request_key(req):
         key=path_identity(req.reference_path)
-        if (not req.session_id or not req.reference_path.poses or
+        if (req.mode not in (req.NORMAL,req.WORKSTATION_ALIGN,req.FINISH,req.RECOVER,req.RESUME) or
+            not req.session_id or not req.reference_path.poses or
             req.goal.pose!=req.reference_path.poses[-1].pose or
             req.goal.header.frame_id!=req.reference_path.header.frame_id):
             raise ValueError('INVALID_EXECUTION_CONTEXT')
-        return req.session_id,key,req.allow_detour
+        return req.session_id,key,req.allow_detour,req.mode
 
     def resolve(self, req, res):
+        if not self.candidate_enabled:
+            # Preserve H2's immediate context/response handoff, without waiting
+            # for the P3 planner mailbox or granting replacement-path authority.
+            res.evaluated_at=self.node.get_clock().now().to_msg()
+            if req.mode!=req.NORMAL:
+                res.disposition=res.BLOCKED;res.reason='WORKSTATION_MODE_UNAVAILABLE';return res
+            if (not req.session_id or not req.reference_path.poses or
+                req.goal.pose!=req.reference_path.poses[-1].pose or
+                req.goal.header.frame_id!=req.reference_path.header.frame_id):
+                res.disposition=res.BLOCKED;res.reason='INVALID_EXECUTION_CONTEXT';return res
+            key=(req.session_id,self.node.epoch)
+            point=req.goal.pose.position;q=req.goal.pose.orientation
+            goal=(req.goal.header.frame_id,point.x,point.y,
+                  math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)))
+            with self.mailbox_lock:
+                self.pending_route=(key,self.node.get_clock().now().nanoseconds,goal)
+                snapshot=self.route_response
+            if snapshot and snapshot[0]==key and snapshot[1]:
+                res.disposition=res.BLOCKED;res.reason=snapshot[1]
+            else:res.reason='KEEP_CURRENT_PATH_SOCIAL_WAIT'
+            return res
         # Transport never touches the planner state or evaluates geometry. The
         # processing callback is its sole writer; replies carry a bounded proof.
         res.evaluated_at=self.node.get_clock().now().to_msg()
@@ -65,7 +106,14 @@ class RouteCoordinator:
         res.reason='ROUTE_EVALUATION_PENDING'
         return res
 
+    def social_context(self):
+        with self.mailbox_lock:return self.pending_route
+
+    def record_social_result(self, context, failure):
+        with self.mailbox_lock:self.route_response=(context[0] if context else None,failure)
+
     def process_route(self):
+        if not self.candidate_enabled:return
         with self.mailbox_lock:
             pending=self.pending_route;self.pending_route=None
         if pending is None:return
@@ -77,21 +125,63 @@ class RouteCoordinator:
     def evaluate_route(self, req, res):
         now=time.monotonic();res.reason='KEEP_CURRENT_PATH'
         try:
-            key=path_identity(req.reference_path)
-            if (not req.session_id or not req.reference_path.poses or
-                req.goal.pose!=req.reference_path.poses[-1].pose or
-                req.goal.header.frame_id!=req.reference_path.header.frame_id):
-                raise ValueError('INVALID_EXECUTION_CONTEXT')
+            key=self.request_key(req)[1]
+            if req.mode!=req.NORMAL:
+                if (req.session_id!=self.context or key!=self.key or self.goal is None or
+                    req.goal.pose!=self.goal.pose or req.goal.header.frame_id!=self.goal.header.frame_id):
+                    raise ValueError('WORKSTATION_CONTEXT_MISMATCH')
+                res.evaluated_at=self.node.get_clock().now().to_msg()
+                if req.mode==req.FINISH:
+                    self.cancel();self.finished=True;self.execution_mode=req.NORMAL
+                    self.node.retire_path_risk();res.disposition=res.FINISHED;res.reason='ROUTE_FINISHED';return res
+                if self.finished:raise ValueError('ROUTE_FINISHED')
+                if req.mode==req.RESUME:
+                    if self.context_epoch!=self.node.epoch:
+                        raise ValueError('RECOVERY_CONTEXT_UNAVAILABLE')
+                    if self.execution_mode!=req.RECOVER and not self.recovery_resumed:
+                        raise ValueError('RECOVERY_NOT_COMMITTED')
+                    self.cancel();self.failure=None;self.failure_code=res.NONE
+                    self.blocked_since=None;self.attempted_episode=None
+                    self.execution_mode=req.NORMAL;self.last_poll=now
+                    self.recovery_resumed=True
+                    self.session.clear_blockage(self.steady())
+                    self.node.retire_path_risk()
+                    res.disposition=res.RESUMED;res.reason='RECOVERY_REPLAN_READY';return res
+                if self.context_epoch!=self.node.epoch or now-self.last_poll>self.takeover['context_timeout_s']:
+                    raise ValueError('WORKSTATION_CONTEXT_UNAVAILABLE')
+                if req.mode==req.RECOVER:
+                    if self.execution_mode!=req.RECOVER:
+                        if self.failure_code!=res.OBSTRUCTION_DEADLINE:
+                            raise ValueError('RECOVERY_REQUIRES_PERCEPTION_OBSTRUCTION')
+                        self.cancel();self.execution_mode=req.RECOVER;self.recovery_resumed=False
+                        self.node.retire_path_risk()
+                    self.last_poll=now
+                    res.disposition=res.RECOVERY_COMMITTED;res.reason='PERCEPTION_RECOVERY';return res
+                if self.execution_mode!=req.WORKSTATION_ALIGN:
+                    if self.alignment_used or not self.failure or self.failure_code!=res.OBSTRUCTION_DEADLINE:
+                        raise ValueError('WORKSTATION_REQUIRES_OBSTRUCTION_DEADLINE')
+                    self.cancel();self.failure=None;self.failure_code=res.NONE
+                    self.execution_mode=req.WORKSTATION_ALIGN;self.alignment_used=True
+                    self.node.retire_path_risk()
+                self.last_poll=now
+                res.disposition=res.ALIGNMENT_COMMITTED;res.reason='WORKSTATION_ALIGNMENT';return res
+            if req.session_id==self.context and (self.finished or self.execution_mode!=req.NORMAL):
+                raise ValueError('ROUTE_FINISHED' if self.finished else 'WORKSTATION_MODE_ALREADY_COMMITTED')
+            if (req.session_id==self.context and self.failure_code==res.OBSTRUCTION_DEADLINE and key!=self.key):
+                raise ValueError('WORKSTATION_CONTEXT_MISMATCH')
             if req.session_id!=self.context:
                 # Execution identity, not a BT restart, owns the per-goal budget.
                 self.cancel();self.context=req.session_id;self.context_epoch=self.node.epoch;self.blocked_since=None
                 self.attempted_episode=None;self.failure=None;self.audit=[]
+                self.failure_code=res.NONE;self.execution_mode=req.NORMAL;self.finished=False;self.alignment_used=False
+                self.recovery_resumed=False
                 self.safety_evidence=[];self.retry.reset()
                 observed=self.node.execution.version
                 self.version=replace(observed,goal_id=observed.goal_id if observed.goal_id!='idle' else self.context)
                 self.session.activate(self.version,self.steady())
             if self.key!=key:
                 self.cancel();self.key=key
+                self.recovery_resumed=False
                 self.version=replace(self.version,path_revision=self.version.path_revision+1)
                 self.session.activate(self.version,self.steady())
             observed=self.node.execution.version
@@ -104,7 +194,7 @@ class RouteCoordinator:
             self.reference=req.reference_path;self.goal=req.goal;self.last_poll=now;self.allow_detour=req.allow_detour
             res.evaluated_at=self.node.get_clock().now().to_msg()
             if self.failure:
-                res.disposition=res.BLOCKED;res.reason=self.failure
+                res.disposition=res.BLOCKED;res.reason=self.failure;res.reason_code=self.failure_code
             elif self.ready is not None:
                 safe,_,reason=self.safe(self.ready)
                 if safe and self.session.response_current(self.request,self.version,self.steady()):
@@ -182,17 +272,28 @@ class RouteCoordinator:
         if request is not None:self.session.retire(request)
 
     def advance(self, selection, risk, valid):
+        if not self.candidate_enabled:return selection
         now=time.monotonic();n=self.node
+        if self.finished:return Selection('HOLD',0.,'ROUTE_FINISHED',episode=selection.episode)
+        if self.execution_mode==ResolveRoute.Request.RECOVER:
+            return Selection('HOLD',0.,'PERCEPTION_RECOVERY',episode=selection.episode)
+        if self.execution_mode==ResolveRoute.Request.WORKSTATION_ALIGN:
+            return (selection if self.workstation_alignment else
+                    Selection('HOLD',0.,'WORKSTATION_CONTEXT_UNAVAILABLE',episode=selection.episode))
         if selection.reason=='BLOCKED_CAPABILITY_NOT_ENABLED':
             selection=replace(selection,reason='WAITING_FOR_SAFE_ROUTE')
         if self.context is None or now-self.last_poll>self.takeover['context_timeout_s']:
             self.cancel();return selection
         if self.context_epoch!=n.epoch:
-            self.cancel();self.failure='CLOCK_RESET_REQUIRES_NEW_GOAL'
+            self.cancel();self.failure='CLOCK_RESET_REQUIRES_NEW_GOAL';self.failure_code=ResolveRoute.Response.NONE
         if self.failure:return Selection('HOLD',0.,self.failure,episode=selection.episode)
         if n.active_path_key!=self.key:
             self.cancel();return selection
         obstructed=valid and risk is not None and (risk.blocked or risk.immediate or risk.uncertain)
+        if obstructed and selection.motion=='HOLD':
+            self.cancel();self.failure='PERCEPTION_BLOCKED: recovery required'
+            self.failure_code=ResolveRoute.Response.OBSTRUCTION_DEADLINE
+            return Selection('HOLD',0.,self.failure,episode=selection.episode)
         if valid and risk is not None and not obstructed:
             self.cancel();self.blocked_since=None;self.attempted_episode=None
             self.retry.reset()
@@ -215,6 +316,7 @@ class RouteCoordinator:
             self.cancel()
             self.failure=('TEMPORARILY_BLOCKED: obstruction deadline' if valid else
                           'INPUT_UNAVAILABLE: input deadline')
+            self.failure_code=(ResolveRoute.Response.OBSTRUCTION_DEADLINE if valid else ResolveRoute.Response.NONE)
             return Selection('HOLD',0.,self.failure,episode=selection.episode)
         if not valid:
             self.cancel();return selection
@@ -256,7 +358,8 @@ class RouteCoordinator:
                             frozenset((Planning.LOCAL,Planning.GLOBAL)),n.last_world.observation_seq,self.steady())
                         self.attempted_episode=selection.episode;self.retry.attempted(n.last_world,now)
                         self.send(PlanCandidate.Request.LOCAL)
-                    except PlanningBudgetExhausted as error:self.failure=str(error)
+                    except PlanningBudgetExhausted as error:
+                        self.failure=str(error);self.failure_code=ResolveRoute.Response.NONE
         if self.request is not None or self.holding:
             return Selection('HOLD',0.,'ASSESSING_DETOURS',episode=selection.episode)
         return selection

@@ -1,0 +1,102 @@
+{
+  "scope": "Isolated ROS2 fixture, one articulated arm joint, empty and offset payload; no simulator or hardware",
+  "comparisons": [
+    {
+      "scenario": "empty",
+      "cpp_before_source_to_publish_ms": {
+        "p50": 25.331151,
+        "p95": 33.2593748,
+        "p99": 33.281159179999996
+      },
+      "cpp_after_source_to_publish_ms": {
+        "p50": 3.494997,
+        "p95": 7.271548,
+        "p99": 7.334698
+      },
+      "python_source_to_publish_ms": {
+        "p50": 33.621483,
+        "p95": 34.29700035,
+        "p99": 34.32419714
+      },
+      "latency_no_regression": true,
+      "receipt_latency_no_regression": true,
+      "cpp_before_cpu_percent_one_core": 0.9444077417689747,
+      "cpp_after_cpu_percent_one_core": 1.1665970695594474,
+      "python_cpu_percent_one_core": 8.666260077520118,
+      "cpp_rss_median_mib": 27.125,
+      "python_rss_median_mib": 76.99609375,
+      "all_rounds_valid": true
+    },
+    {
+      "scenario": "offset_payload",
+      "cpp_before_source_to_publish_ms": {
+        "p50": 33.270415,
+        "p95": 36.420504,
+        "p99": 36.4784278
+      },
+      "cpp_after_source_to_publish_ms": {
+        "p50": 13.272155999999999,
+        "p95": 20.1045975,
+        "p99": 20.299751450000002
+      },
+      "python_source_to_publish_ms": {
+        "p50": 37.660008,
+        "p95": 39.139219,
+        "p99": 39.1706982
+      },
+      "latency_no_regression": true,
+      "receipt_latency_no_regression": true,
+      "cpp_before_cpu_percent_one_core": 0.9444087847230107,
+      "cpp_after_cpu_percent_one_core": 1.1666017496216512,
+      "python_cpu_percent_one_core": 8.555141033307068,
+      "cpp_rss_median_mib": 26.6875,
+      "python_rss_median_mib": 77.87890625,
+      "all_rounds_valid": true
+    }
+  ],
+  "completion_faults": [
+    {
+      "scenario": "source_deadline",
+      "source_ns": 4300000000,
+      "clock_after_fault_ns": 4600000000,
+      "expected_reason": "GEOMETRY_COMPUTE_EXCEEDED_SOURCE_LEASE",
+      "observed_reasons": [
+        "GEOMETRY_COMPUTE_EXCEEDED_SOURCE_LEASE"
+      ],
+      "rejected_complete_source": true,
+      "worker_delay_ms": 120,
+      "pid": 45158,
+      "session_log": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/geometry/completion_faults/source_deadline/session.log"
+    },
+    {
+      "scenario": "clock_rollback",
+      "source_ns": 4300000000,
+      "clock_after_fault_ns": 4200000000,
+      "expected_reason": "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE",
+      "observed_reasons": [
+        "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE"
+      ],
+      "rejected_complete_source": true,
+      "worker_delay_ms": 120,
+      "pid": 45474,
+      "session_log": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/geometry/completion_faults/clock_rollback/session.log"
+    },
+    {
+      "scenario": "malformed_joint",
+      "source_ns": 4300000000,
+      "clock_after_fault_ns": 4300000000,
+      "expected_reason": "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE",
+      "observed_reasons": [
+        "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE"
+      ],
+      "rejected_complete_source": true,
+      "worker_delay_ms": 120,
+      "pid": 45722,
+      "session_log": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/geometry/completion_faults/malformed_joint/session.log"
+    }
+  ],
+  "cpp_complete_frames": 325,
+  "python_complete_frames": 323,
+  "performance_passed": true,
+  "excluded_batch": "contended_aborted: startup overlapped another test; entire partial batch excluded"
+}

@@ -1,0 +1,396 @@
+.F.F.F...FFFssssssssFFFFFF..ssssFFFF                                     [100%]
+=================================== FAILURES ===================================
+____________ test_runtime_rotation_toggle_changes_wire_output[cpp] _____________
+
+runtime = <function runtime.<locals>.start at 0x7546dd9fb010>
+
+    def test_runtime_rotation_toggle_changes_wire_output(runtime):
+        node = runtime()
+        node.drive(yaw=math.pi / 2.)
+        node.expect((.2, 0., .1))
+        assert node.set(enable_body_to_world=True).successful
+        node.drive(yaw=math.pi / 2.)
+>       node.expect((0., .2, .1))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d76c9de0>
+expected = (0.0, 0.2, 0.1)
+
+    def expect(self, expected):
+        assert self.events, 'No Twist output'
+>       assert self.events[-1] == pytest.approx(expected, abs=1e-8)
+E       assert (0.2, 0.0, 0.1) == approx((0.0 ± 1.0e-08, 0.2 ± 1.0e-08, 0.1 ± 1.0e-08))
+E        +  where approx((0.0 ± 1.0e-08, 0.2 ± 1.0e-08, 0.1 ± 1.0e-08)) = <function approx at 0x7546e2c8eb90>((0.0, 0.2, 0.1), abs=1e-08)
+E        +    where <function approx at 0x7546e2c8eb90> = pytest.approx
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:124: AssertionError
+________ test_runtime_odom_timeout_rejects_old_stamp_then_recovers[cpp] ________
+
+runtime = <function runtime.<locals>.start at 0x7546dd9fb250>
+
+    def test_runtime_odom_timeout_rejects_old_stamp_then_recovers(runtime):
+        node = runtime(enable_body_to_world=True)
+        node.drive(age=.25)
+        node.expect((.2, 0., .1))
+        assert node.set(odom_timeout_sec=.1).successful
+        node.drive(age=.25)
+>       node.expect((0., 0., 0.))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:172: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d7711ed0>
+expected = (0.0, 0.0, 0.0)
+
+    def expect(self, expected):
+        assert self.events, 'No Twist output'
+>       assert self.events[-1] == pytest.approx(expected, abs=1e-8)
+E       assert (0.2, 0.0, 0.1) == approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08))
+E        +  where approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08)) = <function approx at 0x7546e2c8eb90>((0.0, 0.0, 0.0), abs=1e-08)
+E        +    where <function approx at 0x7546e2c8eb90> = pytest.approx
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:124: AssertionError
+_________ test_runtime_command_timeout_stops_an_existing_command[cpp] __________
+
+runtime = <function runtime.<locals>.start at 0x7546dd9faef0>
+
+    def test_runtime_command_timeout_stops_an_existing_command(runtime):
+        node = runtime()
+        node.drive(.25, odom=False, cmd=False)
+        assert not any(event == (0., 0., 0.) for event in node.events)
+        assert node.set(cmd_timeout_sec=.05).successful
+        node.drive(.12, odom=False, cmd=False)
+>       node.expect((0., 0., 0.))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:184: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546dd9d5210>
+expected = (0.0, 0.0, 0.0)
+
+    def expect(self, expected):
+>       assert self.events, 'No Twist output'
+E       AssertionError: No Twist output
+E       assert []
+E        +  where [] = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546dd9d5210>.events
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:123: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-normal_height-0.3-0.134-pose0] _
+
+runtime = <function runtime.<locals>.start at 0x7546d7334ca0>
+name = 'normal_height', value = 0.3, restore = 0.134, pose = {}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+        node = runtime(enable_posture_monitor=True)
+        node.drive(.35, **pose)
+        node.expect((.2, 0., .1))
+        assert node.set(**{name: value}).successful
+        node.drive(.1, **pose)
+>       node.expect((0., 0., 0.))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:198: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546ddfb7d30>
+expected = (0.0, 0.0, 0.0)
+
+    def expect(self, expected):
+        assert self.events, 'No Twist output'
+>       assert self.events[-1] == pytest.approx(expected, abs=1e-8)
+E       assert (0.2, 0.0, 0.1) == approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08))
+E        +  where approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08)) = <function approx at 0x7546e2c8eb90>((0.0, 0.0, 0.0), abs=1e-08)
+E        +    where <function approx at 0x7546e2c8eb90> = pytest.approx
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:124: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_height_deviation-0.005-0.06-pose1] _
+
+runtime = <function runtime.<locals>.start at 0x7546d73345e0>
+name = 'max_height_deviation', value = 0.005, restore = 0.06
+pose = {'z': 0.154}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+        node = runtime(enable_posture_monitor=True)
+        node.drive(.35, **pose)
+        node.expect((.2, 0., .1))
+        assert node.set(**{name: value}).successful
+        node.drive(.1, **pose)
+>       node.expect((0., 0., 0.))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:198: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546ddfd01c0>
+expected = (0.0, 0.0, 0.0)
+
+    def expect(self, expected):
+        assert self.events, 'No Twist output'
+>       assert self.events[-1] == pytest.approx(expected, abs=1e-8)
+E       assert (0.2, 0.0, 0.1) == approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08))
+E        +  where approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08)) = <function approx at 0x7546e2c8eb90>((0.0, 0.0, 0.0), abs=1e-08)
+E        +    where <function approx at 0x7546e2c8eb90> = pytest.approx
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:124: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_tilt_rad-0.005-0.12-pose2] _
+
+runtime = <function runtime.<locals>.start at 0x7546d73355a0>
+name = 'max_tilt_rad', value = 0.005, restore = 0.12, pose = {'roll': 0.02}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+        node = runtime(enable_posture_monitor=True)
+        node.drive(.35, **pose)
+        node.expect((.2, 0., .1))
+        assert node.set(**{name: value}).successful
+        node.drive(.1, **pose)
+>       node.expect((0., 0., 0.))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:198: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546dd9a7310>
+expected = (0.0, 0.0, 0.0)
+
+    def expect(self, expected):
+        assert self.events, 'No Twist output'
+>       assert self.events[-1] == pytest.approx(expected, abs=1e-8)
+E       assert (0.2, 0.0, 0.1) == approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08))
+E        +  where approx((0.0 ± 1.0e-08, 0.0 ± 1.0e-08, 0.0 ± 1.0e-08)) = <function approx at 0x7546e2c8eb90>((0.0, 0.0, 0.0), abs=1e-08)
+E        +    where <function approx at 0x7546e2c8eb90> = pytest.approx
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:124: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-odom_timeout_sec-0.0] _
+
+runtime = <function runtime.<locals>.start at 0x7546e0b7ba30>
+name = 'odom_timeout_sec', value = 0.0
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+        node = runtime()
+        result = node.set(**({'enable_body_to_world': True, name: value}
+                            if name != 'enable_body_to_world' else {name: value}))
+>       assert not result.successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:215: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-cmd_timeout_sec--1.0] _
+
+runtime = <function runtime.<locals>.start at 0x7546d7696560>
+name = 'cmd_timeout_sec', value = -1.0
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+        node = runtime()
+        result = node.set(**({'enable_body_to_world': True, name: value}
+                            if name != 'enable_body_to_world' else {name: value}))
+>       assert not result.successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:215: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_height_deviation--0.01] _
+
+runtime = <function runtime.<locals>.start at 0x7546e062d090>
+name = 'max_height_deviation', value = -0.01
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+        node = runtime()
+        result = node.set(**({'enable_body_to_world': True, name: value}
+                            if name != 'enable_body_to_world' else {name: value}))
+>       assert not result.successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:215: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad--0.01] _
+
+runtime = <function runtime.<locals>.start at 0x7546e0b7ba30>
+name = 'max_tilt_rad', value = -0.01
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+        node = runtime()
+        result = node.set(**({'enable_body_to_world': True, name: value}
+                            if name != 'enable_body_to_world' else {name: value}))
+>       assert not result.successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:215: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-normal_height-nan] _
+
+runtime = <function runtime.<locals>.start at 0x7546d77028c0>
+name = 'normal_height', value = nan
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+        node = runtime()
+        result = node.set(**({'enable_body_to_world': True, name: value}
+                            if name != 'enable_body_to_world' else {name: value}))
+>       assert not result.successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:215: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad-inf] _
+
+runtime = <function runtime.<locals>.start at 0x7546d7702050>
+name = 'max_tilt_rad', value = inf
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+        node = runtime()
+        result = node.set(**({'enable_body_to_world': True, name: value}
+                            if name != 'enable_body_to_world' else {name: value}))
+>       assert not result.successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:215: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-input_topic-/unused/in] _
+
+runtime = <function runtime.<locals>.start at 0x7546d73352d0>
+name = 'input_topic', value = '/unused/in'
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+        node = runtime()
+>       assert not node.set(**{name: value}).successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+E        +    where rcl_interfaces.msg.SetParametersResult(successful=True, reason='') = <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d733a170>>(**{'input_topic': '/unused/in'})
+E        +      where <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d733a170>> = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d733a170>.set
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:227: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-output_topic-/unused/out] _
+
+runtime = <function runtime.<locals>.start at 0x7546d7334a60>
+name = 'output_topic', value = '/unused/out'
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+        node = runtime()
+>       assert not node.set(**{name: value}).successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+E        +    where rcl_interfaces.msg.SetParametersResult(successful=True, reason='') = <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d76aa860>>(**{'output_topic': '/unused/out'})
+E        +      where <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d76aa860>> = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546d76aa860>.set
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:227: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-odom_topic-/unused/odom] _
+
+runtime = <function runtime.<locals>.start at 0x7546d7335fc0>
+name = 'odom_topic', value = '/unused/odom'
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+        node = runtime()
+>       assert not node.set(**{name: value}).successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+E        +    where rcl_interfaces.msg.SetParametersResult(successful=True, reason='') = <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546ddfd17b0>>(**{'odom_topic': '/unused/odom'})
+E        +      where <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546ddfd17b0>> = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546ddfd17b0>.set
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:227: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-enable_posture_monitor-True] _
+
+runtime = <function runtime.<locals>.start at 0x7546d7334af0>
+name = 'enable_posture_monitor', value = True
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+        node = runtime()
+>       assert not node.set(**{name: value}).successful
+E       AssertionError: assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+E        +    where rcl_interfaces.msg.SetParametersResult(successful=True, reason='') = <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546dd9d47c0>>(**{'enable_posture_monitor': True})
+E        +      where <bound method Runtime.set of <test_cmd_vel_runtime_parameters.Runtime object at 0x7546dd9d47c0>> = <test_cmd_vel_runtime_parameters.Runtime object at 0x7546dd9d47c0>.set
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:227: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_rotation_toggle_changes_wire_output[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_odom_timeout_rejects_old_stamp_then_recovers[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_command_timeout_stops_an_existing_command[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-normal_height-0.3-0.134-pose0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_height_deviation-0.005-0.06-pose1]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_tilt_rad-0.005-0.12-pose2]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-odom_timeout_sec-0.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-cmd_timeout_sec--1.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_height_deviation--0.01]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad--0.01]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-normal_height-nan]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad-inf]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-input_topic-/unused/in]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-output_topic-/unused/out]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-odom_topic-/unused/odom]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-enable_posture_monitor-True]
+16 failed, 8 passed, 12 skipped in 13.47s

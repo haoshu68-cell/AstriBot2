@@ -81,6 +81,85 @@ def _prepare_sim_description(context, command):
     return [SetLaunchConfiguration('sim_robot_description', description)]
 
 
+def _camera_bridge_environment(context):
+    profile = LaunchConfiguration('camera_bridge_dds_profile').perform(context)
+    local = IfCondition(LaunchConfiguration('localhost_only')).evaluate(context)
+    if not profile and not local:
+        # LAN mode retains the caller's RMW/network profile. The bounded local
+        # camera transport must not silently remove cross-machine discovery.
+        return {}
+    if not profile:
+        profile = PathJoinSubstitution([
+            FindPackageShare('astribot_s1_gazebo_bringup'), 'config',
+            'camera_bridge_fastdds.xml']).perform(context)
+    return {'RMW_IMPLEMENTATION': 'rmw_fastrtps_cpp',
+            'FASTRTPS_DEFAULT_PROFILES_FILE': profile,
+            'ROS_LOCALHOST_ONLY': '0'}
+
+
+def _local_control_environment(context):
+    if not IfCondition(LaunchConfiguration('localhost_only')).evaluate(context):
+        return []
+    values = {'ROS_LOCALHOST_ONLY': '1', 'IGN_IP': '127.0.0.1', 'GZ_IP': '127.0.0.1'}
+    if IfCondition(LaunchConfiguration('control_loopback_udp')).evaluate(context):
+        values.update(ROS_LOCALHOST_ONLY='0', RMW_IMPLEMENTATION='rmw_fastrtps_cpp',
+            FASTRTPS_DEFAULT_PROFILES_FILE=PathJoinSubstitution([
+                FindPackageShare('astribot_s1_gazebo_bringup'), 'config',
+                'control_loopback_fastdds.xml']).perform(context))
+    return [SetEnvironmentVariable(key, value) for key, value in values.items()]
+
+
+def _camera_bridge_node(context, **kwargs):
+    return [Node(package='ros_gz_bridge', executable='parameter_bridge',
+                 output='screen', additional_env=_camera_bridge_environment(context),
+                 **kwargs)]
+
+
+def _camera_pipeline_environment(context):
+    return [SetEnvironmentVariable(name, value)
+            for name, value in _camera_bridge_environment(context).items()]
+
+
+def _prepare_camera_mounts(context):
+    """Resolve one mount source for URDF, native Gazebo frames and health epoch."""
+    ids = ('head_rgbd', 'torso_rgbd', 'left_wrist_rgbd', 'right_wrist_rgbd',
+           'head_stereo_left', 'head_stereo_right')
+    path = LaunchConfiguration('camera_mounts_profile').perform(context)
+    if path:
+        with open(path, encoding='utf-8') as handle:
+            data = yaml.safe_load(handle)
+        if (data.get('schema') != 'astribot.camera_mounts/1' or
+                data.get('status') not in ('provisional_reference', 'calibrated') or
+                type(data.get('revision')) is not int or data['revision'] <= 1):
+            raise ValueError('Camera mount profile requires schema, status and a new revision > 1')
+        mounts, revision = data['cameras'], data['revision']
+    else:
+        directory = LaunchConfiguration('camera_calibration_dir').perform(context)
+        mounts = {}
+        for camera in ids:
+            profile = (LaunchConfiguration('camera_profile' if camera == 'head_rgbd' else
+                                           'torso_camera_profile').perform(context)
+                       if camera in ('head_rgbd', 'torso_rgbd') else
+                       os.path.join(directory, 'camera_' + camera + '.yaml'))
+            with open(profile, encoding='utf-8') as handle:
+                mounts[camera] = yaml.safe_load(handle)
+        revision = 1
+    parents = {camera: mounts[camera]['parent_frame'] for camera in ids}
+    actions = [SetLaunchConfiguration('camera_mount_revision', str(revision))]
+    # Fixed camera links are lumped into their moving body link by Gazebo.
+    # Resolve the stereo-right calibrated chain instead of inventing a raw frame.
+    for camera in ids:
+        parent, seen = parents[camera], {camera}
+        while parent.endswith('_camera_optical_frame') or parent.endswith('_camera_link'):
+            other = parent.rsplit('_camera_', 1)[0]
+            if other not in parents or other in seen:
+                raise ValueError('Invalid or cyclic camera parent chain: ' + camera)
+            seen.add(other)
+            parent = parents[other]
+        actions.append(SetLaunchConfiguration('camera_native_parent_' + camera, parent))
+    return actions
+
+
 def _prepare_social(context, base_world):
     scenario = LaunchConfiguration('social_scenario').perform(context)
     if not scenario:
@@ -88,12 +167,14 @@ def _prepare_social(context, base_world):
                 SetLaunchConfiguration('social_gui_args', '')]
     from pathlib import Path
     from ament_index_python.packages import get_package_prefix, get_package_share_directory
-    from astribot_s1_social_navigation.scenario import prepare_world, prepare_gui_config
+    from astribot_s1_social_navigation.scenario import prepare_world, prepare_gui_config, load_scenario
     from astribot_logging import log_directory
     base = base_world.perform(context)
     output = Path(log_directory()) / 'social_world.sdf'
+    config = load_scenario(scenario)
+    with_hunav = bool(config['agents']) or config.get('enable_empty_observations', False)
     world = prepare_world(base, scenario, output,
-                          get_package_prefix('hunav_gazebo_fortress_wrapper'),
+                          get_package_prefix('hunav_gazebo_fortress_wrapper') if with_hunav else None,
                           get_package_prefix('astribot_s1_gazebo_bringup'))
     gui_config = prepare_gui_config(scenario, output.with_name('social_gui.config'),
                                    get_package_prefix('astribot_s1_gazebo_bringup'))
@@ -102,13 +183,13 @@ def _prepare_social(context, base_world):
                 get_package_prefix('astribot_s1_gazebo_bringup') + '/lib' + os.pathsep +
                 os.environ.get('IGN_GUI_PLUGIN_PATH', '')),
             SetLaunchConfiguration('social_gui_args', f'--gui-config "{gui_config}" '),
-            IncludeLaunchDescription(PythonLaunchDescriptionSource(
+            *([IncludeLaunchDescription(PythonLaunchDescriptionSource(
                 get_package_share_directory('astribot_s1_gazebo_bringup') + '/launch/hunav_agents.launch.py'),
                 launch_arguments={'scenario': scenario}.items()),
             IncludeLaunchDescription(PythonLaunchDescriptionSource(
                 get_package_share_directory('astribot_s1_social_navigation') + '/launch/observe.launch.py'),
                 launch_arguments={'source': 'hunav_truth', 'use_sim_time': 'true',
-                                  'hunav_input_topic': '/simulation/hunav_actor_states'}.items()),
+                                  'hunav_input_topic': '/simulation/hunav_actor_states'}.items())] if with_hunav else []),
             Node(package='tf2_ros', executable='static_transform_publisher', output='screen',
                  arguments=['--frame-id', 'odom', '--child-frame-id', 'social_sim_world'],
                  parameters=[{'use_sim_time': True}]),
@@ -161,10 +242,40 @@ def generate_launch_description():
                         '(实测 r=0.30 时需要 >20N·m)'),
         DeclareLaunchArgument('spawn_yaw', default_value='0.0', description='出生朝向 yaw (rad)'),
         DeclareLaunchArgument('use_lidar', default_value='true', description='是否挂载双Livox Mid-360激光雷达'),
-        DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部RGB相机'),
+        DeclareLaunchArgument('use_camera', default_value='true', description='是否挂载头部和躯干 RGB-D 相机'),
+        DeclareLaunchArgument('camera_bridge_dds_profile', default_value='',
+            description='空值：本机模式使用有界共享内存和 loopback；LAN 模式继承网络环境。'
+                        '显式路径：覆盖桥接 Fast DDS profile（网络范围由该文件负责）'),
+        DeclareLaunchArgument('camera_mounts_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_mounts_reference_sim.yaml']),
+            description='仿真参考安装位置；空值恢复原始外参映射。临时位置不用于真机标定'),
+        DeclareLaunchArgument('use_wrist_cameras', default_value='false',
+            description='是否额外挂载左右腕部 RGB-D；导航回归默认关闭以保证双源时效'),
+        DeclareLaunchArgument('use_stereo_cameras', default_value='false',
+            description='是否额外挂载头部双目；导航回归默认关闭以保证双源时效'),
         DeclareLaunchArgument('camera_profile', default_value=PathJoinSubstitution([
-            FindPackageShare('astribot_s1_description'), 'config', 'camera_rgbd_transport.yaml']),
-            description='Camera model, intrinsics and mounting profile; simulation provenance required'),
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_head_rgbd_nav_sim.yaml']),
+            description='Head RGB-D profile; navigation simulation defaults to scaled robot intrinsics'),
+        DeclareLaunchArgument('torso_camera_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_torso_rgbd_nav_sim.yaml']),
+            description='Torso RGB-D profile; navigation simulation defaults to scaled robot intrinsics'),
+        DeclareLaunchArgument('camera_calibration_dir', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config']),
+            description='Directory containing the six robot calibration camera profiles'),
+        DeclareLaunchArgument('use_camera_postprocess', default_value='true',
+            description='用真机 K/D 对仿真图像做 OpenCV 畸变重映射并重发布 CameraInfo'),
+        DeclareLaunchArgument('use_camera_pointcloud', default_value='true',
+            description='将头部和躯干 RGB-D 深度图投影为供 Nav2/MoveIt 使用的 PointCloud2'),
+        DeclareLaunchArgument('enable_rgbd_pose_estimator', default_value='false',
+            description='启用 C++ RGB-D 可见表面三维位置观测（朝向未知）'),
+        DeclareLaunchArgument('enable_yolo_detector', default_value='false'),
+        DeclareLaunchArgument('yolo_camera_id', default_value='head_rgbd', choices=['head_rgbd', 'torso_rgbd']),
+        DeclareLaunchArgument('yolo_model_path', default_value=''),
+        DeclareLaunchArgument('yolo_labels_path', default_value=''),
+        DeclareLaunchArgument('yolo_model_revision', default_value=''),
+        DeclareLaunchArgument('yolo_model_layout', default_value='yolov5', choices=['yolov5', 'yolov8']),
+        DeclareLaunchArgument('use_native_camera_distortion', default_value='false',
+            description='使用 Gazebo 原生畸变；与 camera postprocess 同时开启会重复畸变'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='是否使用仿真时钟'),
         DeclareLaunchArgument('use_rviz', default_value='true', description='是否自动打开RViz2'),
         DeclareLaunchArgument(
@@ -209,11 +320,14 @@ def generate_launch_description():
                         '默认 true——仿真栈会拉起 25+ 个节点，其中 /cmd_vel 之类是可写的，'
                         '不该暴露在办公网。实测（/proc/net/igmp 逐网卡数多播加入次数）：'
                         'ROS_LOCALHOST_ONLY=1 能真正阻止 DDS 在物理网卡上加入 239.255.0.1；'
-                        '而 Fast DDS 的 interfaceWhiteList XML 无效（只过滤单播 locator）。'
+                        '相机桥接使用禁用 builtin transport 的 Fast DDS loopback profile，'
+                        '同时限制单播与多播接口，避免默认共享内存容量不足。'
                         'Gazebo 的 ign-transport 是独立于 DDS 的第二条通道，'
                         '必须另设 IGN_IP/GZ_IP，否则它照样多播 239.255.0.7。'
                         '需要跨机联调（如另一台机器跑 RViz）时设 false，'
                         '并配合 ASTRIBOT_NET_MODE=lan source env.sh 走网段白名单。'),
+        DeclareLaunchArgument('control_loopback_udp', default_value='false',
+                             description='Use explicit loopback UDP for local control nodes; camera transport is separate'),
     ]
 
     world_name = LaunchConfiguration('world_name')
@@ -224,6 +338,15 @@ def generate_launch_description():
     spawn_yaw = LaunchConfiguration('spawn_yaw')
     use_lidar = LaunchConfiguration('use_lidar')
     use_camera = LaunchConfiguration('use_camera')
+    use_wrist_cameras = LaunchConfiguration('use_wrist_cameras')
+    use_stereo_cameras = LaunchConfiguration('use_stereo_cameras')
+    camera_profile = LaunchConfiguration('camera_profile')
+    torso_camera_profile = LaunchConfiguration('torso_camera_profile')
+    camera_calibration_dir = LaunchConfiguration('camera_calibration_dir')
+    use_camera_postprocess = LaunchConfiguration('use_camera_postprocess')
+    use_camera_pointcloud = LaunchConfiguration('use_camera_pointcloud')
+    enable_rgbd_pose_estimator = LaunchConfiguration('enable_rgbd_pose_estimator')
+    use_native_camera_distortion = LaunchConfiguration('use_native_camera_distortion')
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_rviz = LaunchConfiguration('use_rviz')
     wheel_radius = LaunchConfiguration('wheel_radius')
@@ -237,17 +360,7 @@ def generate_launch_description():
 
     set_ros_domain_id = SetEnvironmentVariable(name='ROS_DOMAIN_ID', value=ros_domain_id)
 
-    set_localhost_env = [
-        SetEnvironmentVariable(
-            name='ROS_LOCALHOST_ONLY', value='1',
-            condition=IfCondition(localhost_only)),
-        SetEnvironmentVariable(
-            name='IGN_IP', value='127.0.0.1',
-            condition=IfCondition(localhost_only)),
-        SetEnvironmentVariable(
-            name='GZ_IP', value='127.0.0.1',
-            condition=IfCondition(localhost_only)),
-    ]
+    set_localhost_env = [OpaqueFunction(function=_local_control_environment)]
 
     pkg_warehouse = FindPackageShare('aws_robomaker_small_warehouse_world')
     pkg_description = FindPackageShare('astribot_s1_description')
@@ -306,7 +419,13 @@ def generate_launch_description():
             'robot_name:=', robot_name, ' ',
             'use_lidar:=', use_lidar, ' ',
             'use_camera:=', use_camera, ' ',
-            'camera_profile:=', LaunchConfiguration('camera_profile'), ' ',
+            'use_wrist_cameras:=', use_wrist_cameras, ' ',
+            'use_stereo_cameras:=', use_stereo_cameras, ' ',
+            'camera_profile:=', camera_profile, ' ',
+            'torso_camera_profile:=', torso_camera_profile, ' ',
+            'camera_calibration_dir:=', camera_calibration_dir, ' ',
+            'camera_mounts_profile:="', LaunchConfiguration('camera_mounts_profile'), '" ',
+            'use_native_camera_distortion:=', use_native_camera_distortion, ' ',
             'controllers_config:=', controllers_yaml, ' ',
             'sim_initial_positions_file:="', LaunchConfiguration('sim_initial_positions_file'), '" ',
             'wheel_radius:=', wheel_radius, ' ',
@@ -393,6 +512,40 @@ def generate_launch_description():
         )
     )
 
+    # Every firmware-calibrated camera has an isolated Gazebo namespace.  The
+    # head RGB-D names remain the historical topics consumed by the transport
+    # node; the other five cameras get explicit names to avoid collisions.
+    camera_topics = {
+        'head_rgbd': ('rgbd', '/camera/color/image_raw', '/camera/depth/image_raw', '/camera/color/camera_info'),
+        'torso_rgbd': ('rgbd', '/camera/torso_rgbd/color/image_raw', '/camera/torso_rgbd/depth/image_raw', '/camera/torso_rgbd/color/camera_info'),
+        'left_wrist_rgbd': ('rgbd', '/camera/left_wrist_rgbd/color/image_raw', '/camera/left_wrist_rgbd/depth/image_raw', '/camera/left_wrist_rgbd/color/camera_info'),
+        'right_wrist_rgbd': ('rgbd', '/camera/right_wrist_rgbd/color/image_raw', '/camera/right_wrist_rgbd/depth/image_raw', '/camera/right_wrist_rgbd/color/camera_info'),
+        'head_stereo_left': ('mono', '/camera/head_stereo_left/image_raw', None, '/camera/head_stereo_left/camera_info'),
+        'head_stereo_right': ('mono', '/camera/head_stereo_right/image_raw', None, '/camera/head_stereo_right/camera_info'),
+    }
+    camera_bridge_args = []
+    camera_remappings = []
+    for camera_id, (kind, image_topic, depth_topic, info_topic) in camera_topics.items():
+        gz_prefix = [TextSubstitution(text='/model/'), robot_name,
+                     TextSubstitution(text=f'/{camera_id}')]
+        if kind == 'rgbd':
+            for suffix, ros_type, ros_topic in (
+                ('/image', 'sensor_msgs/msg/Image', image_topic),
+                ('/depth_image', 'sensor_msgs/msg/Image', depth_topic),
+                ('/camera_info', 'sensor_msgs/msg/CameraInfo', info_topic),
+            ):
+                camera_bridge_args.append(gz_prefix + [TextSubstitution(text=f'{suffix}@{ros_type}[gz.msgs.{"CameraInfo" if ros_type.endswith("CameraInfo") else "Image"}')])
+                camera_remappings.append((gz_prefix + [TextSubstitution(text=suffix)],
+                                          f'/camera/raw/{camera_id}{suffix}'))
+        else:
+            for suffix, ros_type, ros_topic, gz_type in (
+                ('/image_raw', 'sensor_msgs/msg/Image', image_topic, 'Image'),
+                ('/camera_info', 'sensor_msgs/msg/CameraInfo', info_topic, 'CameraInfo'),
+            ):
+                camera_bridge_args.append(gz_prefix + [TextSubstitution(text=f'{suffix}@{ros_type}[gz.msgs.{gz_type}')])
+                camera_remappings.append((gz_prefix + [TextSubstitution(text=suffix)],
+                                          f'/camera/raw/{camera_id}{suffix}'))
+
     bridge_args = [
         '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
         [TextSubstitution(text='/model/'), robot_name,
@@ -405,21 +558,14 @@ def generate_launch_description():
          TextSubstitution(text='/livox_mid360_right/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked')],
         [TextSubstitution(text='/model/'), robot_name,
          TextSubstitution(text='/livox_mid360_imu@sensor_msgs/msg/Imu[gz.msgs.IMU')],
-        [TextSubstitution(text='/model/'), robot_name,
-         TextSubstitution(text='/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image')],
-        [TextSubstitution(text='/model/'), robot_name,
-         TextSubstitution(text='/camera/image@sensor_msgs/msg/Image[gz.msgs.Image')],
-        [TextSubstitution(text='/model/'), robot_name,
-         TextSubstitution(text='/camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image')],
-        [TextSubstitution(text='/model/'), robot_name,
-         TextSubstitution(text='/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo')],
     ]
+    bridge_args.extend(camera_bridge_args)
 
-    ros_gz_bridge = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        output='screen',
+    ros_gz_bridge = OpaqueFunction(function=_camera_bridge_node, kwargs=dict(
         arguments=bridge_args,
+        # A raw RGB-D frame exceeds Fast DDS 2.6's default 512 KiB SHM.
+        # Local XML provides bounded SHM and loopback discovery; LAN mode
+        # retains the caller's environment unless an explicit profile is set.
         remappings=[
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/odometry')], '/odom'),
@@ -431,18 +577,221 @@ def generate_launch_description():
               TextSubstitution(text='/livox_mid360_right/points')], '/livox/lidar_right'),
             ([TextSubstitution(text='/model/'), robot_name,
               TextSubstitution(text='/livox_mid360_imu')], '/livox/imu'),
-            ([TextSubstitution(text='/model/'), robot_name,
-              TextSubstitution(text='/camera/image_raw')], '/image_raw'),
-            ([TextSubstitution(text='/model/'), robot_name,
-              TextSubstitution(text='/camera/image')], '/camera/color/image_raw'),
-            ([TextSubstitution(text='/model/'), robot_name,
-              TextSubstitution(text='/camera/depth_image')], '/camera/depth/image_raw'),
-            ([TextSubstitution(text='/model/'), robot_name,
-              TextSubstitution(text='/camera/camera_info')], '/camera/color/camera_info'),
+            *camera_remappings,
         ],
-    )
+    ))
 
-    def make_sensor_frame_alias(real_link, gz_parent_link, gz_sensor_name):
+    camera_profiles = {
+        'head_rgbd': 'camera_head_rgbd.yaml',
+        'torso_rgbd': 'camera_torso_rgbd.yaml',
+        'left_wrist_rgbd': 'camera_left_wrist_rgbd.yaml',
+        'right_wrist_rgbd': 'camera_right_wrist_rgbd.yaml',
+        'head_stereo_left': 'camera_head_stereo_left.yaml',
+        'head_stereo_right': 'camera_head_stereo_right.yaml',
+    }
+    camera_postprocess_nodes = []
+    camera_postprocess_enabled = PythonExpression([
+        "'", use_camera, "' == 'true' and '", use_camera_postprocess, "' == 'true'"])
+    # Navigation owns the two RGB-D streams only.  Wrist/stereo bridges stay
+    # available when explicitly enabled for manipulation, but their image
+    # remapping must not consume executor threads in the navigation launch.
+    navigation_camera_ids = {'head_rgbd', 'torso_rgbd'}
+    for camera_id, (kind, image_topic, depth_topic, info_topic) in camera_topics.items():
+        if camera_id not in navigation_camera_ids:
+            continue
+        params = {
+            'use_sim_time': use_sim_time,
+            'profile': camera_profile if camera_id == 'head_rgbd' else torso_camera_profile,
+            'input_image': f'/camera/raw/{camera_id}/image' if kind == 'rgbd' else f'/camera/raw/{camera_id}/image_raw',
+            'output_image': image_topic,
+            'input_info': f'/camera/raw/{camera_id}/camera_info',
+            'output_info': info_topic,
+            # The zero-transform Gazebo sensor alias below shares these axes.
+            'output_frame': f'{camera_id}_camera_optical_frame',
+        }
+        if kind == 'rgbd':
+            params.update({
+                'input_depth': f'/camera/raw/{camera_id}/depth_image',
+                'output_depth': depth_topic,
+            })
+        camera_postprocess_nodes.append(Node(
+            # Runtime image/depth remapping is C++ so the two 1280x720 RGB-D
+            # streams do not queue behind Python/OpenCV callbacks.  The
+            # transport package keeps its Python entry point only as a
+            # compatibility fallback for standalone tooling.
+            package='astribot_s1_perception_components',
+            executable='camera_calibration_postprocess',
+            output='screen', parameters=[params],
+            condition=IfCondition(camera_postprocess_enabled)))
+
+    # depth_image_proc is intentionally not assumed to be installed on a clean
+    # machine.  This small C++ node is part of the workspace and keeps the
+    # camera projection dependency reproducible.  Wrist clouds remain private
+    # to manipulation; only head/torso clouds feed navigation and MoveIt.
+    camera_pointcloud_nodes = []
+    camera_filter_nodes = []
+    camera_health_nodes = []
+    camera_detection_gate_nodes = []
+    camera_yolo_nodes = []
+    camera_pose_nodes = []
+    camera_pointcloud_enabled = PythonExpression([
+        "'", use_camera, "' == 'true' and '", use_camera_pointcloud, "' == 'true'"])
+    camera_health_enabled = PythonExpression([
+        "'", use_camera, "' == 'true'"])
+    camera_detection_enabled = PythonExpression([
+        "'", use_camera, "' == 'true' and ('", enable_rgbd_pose_estimator,
+        "' == 'true' or '", LaunchConfiguration('enable_yolo_detector'), "' == 'true')"])
+    camera_pose_enabled = PythonExpression([
+        "'", use_camera, "' == 'true' and '", enable_rgbd_pose_estimator, "' == 'true'"])
+    for camera_id, depth_topic, info_topic in (
+        ('head_rgbd', '/camera/depth/image_raw', '/camera/color/camera_info'),
+        ('torso_rgbd', '/camera/torso_rgbd/depth/image_raw',
+         '/camera/torso_rgbd/color/camera_info'),
+    ):
+        camera_pointcloud_nodes.append(Node(
+            package='astribot_s1_perception_components', executable='rgbd_pointcloud_node',
+            name=f'{camera_id}_pointcloud', output='screen',
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'depth_topic': PythonExpression([
+                    "'", depth_topic, "' if '", use_camera_postprocess,
+                    "' == 'true' else '/camera/raw/", camera_id, "/depth_image'"]),
+                'camera_info_topic': PythonExpression([
+                    "'", info_topic, "' if '", use_camera_postprocess,
+                    "' == 'true' else '/camera/raw/", camera_id, "/camera_info'"]),
+                'output_topic': f'/camera/{camera_id}/points_raw',
+                'camera_id': camera_id,
+                'processing_health_topic': f'/perception/projection_health/{camera_id}',
+                'min_depth': 0.20,
+                'max_depth': 5.0,
+                # Navigation only needs obstacle occupancy, not a dense VLA
+                # image cloud.  Four-pixel decimation keeps the calibrated
+                # projection while reducing each 1280x720 cloud from 230k to
+                # at most 57.6k points before self-filtering.
+                'decimation': 4,
+            }],
+            condition=IfCondition(camera_pointcloud_enabled)))
+        camera_filter_nodes.append(Node(
+            package='astribot_s1_perception_components', executable='pointcloud_slice_scan_node',
+            name=f'{camera_id}_self_filter', output='screen',
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('astribot_s1_perception_components'), 'config',
+                    'pointcloud_slice_scan_params.yaml']),
+                PathJoinSubstitution([
+                    FindPackageShare('astribot_s1_perception_components'), 'config',
+                    'self_filter.yaml']),
+                {
+                    'use_sim_time': use_sim_time,
+                    'input_cloud_topic': f'/camera/{camera_id}/points_raw',
+                    'filtered_cloud_topic': f'/camera/{camera_id}/points',
+                    'output_scan_topic': f'/camera/{camera_id}/scan_unused',
+                    'base_frame': 'astribot_torso_base',
+                    'cloud_pose_frame': 'astribot_torso_base',
+                    'enable_voxel_filter': False,
+                    'enable_outlier_filter': False,
+                    'min_valid_points': 1,
+                    'publish_markers': False,
+                    'invalid_input_policy': 'stop_output',
+                    'input_timeout_sec': 0.5,
+                    'max_cloud_age_sec': 0.5,
+                    'tf_timeout_sec': 0.10,
+                    'tf_total_budget_sec': 0.20,
+                },
+            ],
+            condition=IfCondition(camera_pointcloud_enabled)))
+
+    for camera_id, color_topic, depth_topic, info_topic, frame_id in (
+        ('head_rgbd', '/camera/color/image_raw', '/camera/depth/image_raw',
+         '/camera/color/camera_info', 'head_rgbd_camera_optical_frame'),
+        ('torso_rgbd', '/camera/torso_rgbd/color/image_raw',
+         '/camera/torso_rgbd/depth/image_raw',
+         '/camera/torso_rgbd/color/camera_info', 'torso_rgbd_camera_optical_frame'),
+    ):
+        # Raw mode must use the same bridge topics and native frame throughout.
+        color_topic = PythonExpression(["'", color_topic, "' if '", use_camera_postprocess,
+                                        "' == 'true' else '/camera/raw/", camera_id, "/image'"])
+        depth_topic = PythonExpression(["'", depth_topic, "' if '", use_camera_postprocess,
+                                        "' == 'true' else '/camera/raw/", camera_id, "/depth_image'"])
+        info_topic = PythonExpression(["'", info_topic, "' if '", use_camera_postprocess,
+                                       "' == 'true' else '/camera/raw/", camera_id, "/camera_info'"])
+        parent = LaunchConfiguration('camera_native_parent_' + camera_id)
+        frame_id = PythonExpression(["'", frame_id, "' if '", use_camera_postprocess,
+                                     "' == 'true' else '", robot_name, '/', parent, '/', camera_id, "_sensor'"])
+        camera_yolo_nodes.append(Node(
+            package='astribot_s1_perception_components', executable='yolo_detector_node',
+            name=f'{camera_id}_yolo_detector', output='screen',
+            parameters=[{
+                'use_sim_time': use_sim_time, 'camera_id': camera_id,
+                'color_topic': color_topic,
+                'health_topic': f'/perception/camera_health/{camera_id}',
+                'output_topic': f'/perception/detections/{camera_id}',
+                **{key: ParameterValue(LaunchConfiguration('yolo_' + key), value_type=str)
+                   for key in ('model_path', 'labels_path', 'model_revision', 'model_layout')},
+            }],
+            condition=IfCondition(PythonExpression([
+                "'", use_camera, "' == 'true' and '", LaunchConfiguration('enable_yolo_detector'),
+                "' == 'true' and '", LaunchConfiguration('yolo_camera_id'), "' == '", camera_id, "'"]))))
+        camera_health_nodes.append(Node(
+            package='astribot_s1_perception_components',
+            executable='camera_health_node',
+            name=f'{camera_id}_camera_health',
+            output='screen',
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'camera_id': camera_id,
+                'source_epoch': 'gazebo_camera',
+                'frame_id': frame_id,
+                'color_topic': color_topic,
+                'depth_topic': depth_topic,
+                'info_topic': info_topic,
+                'health_topic': f'/perception/camera_health/{camera_id}',
+                'expected_rate_hz': 10.0,
+                'max_age_sec': 0.25,
+                'max_sync_skew_sec': 0.03,
+                'calibration_revision': ParameterValue(LaunchConfiguration('camera_mount_revision'), value_type=int),
+            }],
+            condition=IfCondition(camera_health_enabled)))
+
+        camera_detection_gate_nodes.append(Node(
+            package='astribot_s1_perception_components',
+            executable='detection_gate_node',
+            name=f'{camera_id}_detection_gate',
+            output='screen',
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'camera_id': camera_id,
+                'input_topic': f'/perception/detections/{camera_id}',
+                'output_topic': f'/perception/valid_detections/{camera_id}',
+                'health_topic': f'/perception/camera_health/{camera_id}',
+                'require_camera_health': True,
+                'min_confidence': 0.25,
+                'max_detection_age_sec': 0.30,
+                'max_health_age_sec': 0.50,
+            }],
+            condition=IfCondition(camera_detection_enabled)))
+
+        camera_pose_nodes.append(Node(
+            package='astribot_s1_perception_components',
+            executable='rgbd_object_pose_node',
+            name=f'{camera_id}_rgbd_object_pose',
+            output='screen',
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'detection_topic': f'/perception/valid_detections/{camera_id}',
+                'depth_topic': depth_topic,
+                'camera_info_topic': info_topic,
+                'health_topic': f'/perception/camera_health/{camera_id}',
+                'output_topic': f'/perception/object_pose/{camera_id}',
+                'require_camera_health': True,
+                'max_depth_age_sec': 0.20,
+                'max_health_age_sec': 0.50,
+                'min_confidence': 0.25,
+                'max_depth_m': 5.0,
+            }],
+            condition=IfCondition(camera_pose_enabled)))
+
+    def make_sensor_frame_alias(real_link, gz_parent_link, gz_sensor_name, enabled):
         return Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -452,18 +801,24 @@ def generate_launch_description():
                 '--yaw', '0', '--pitch', '0', '--roll', '0',
                 '--frame-id', real_link,
                 '--child-frame-id',
-                [robot_name, TextSubstitution(text='/'), TextSubstitution(text=gz_parent_link),
+                [robot_name, TextSubstitution(text='/'),
+                 TextSubstitution(text=gz_parent_link) if isinstance(gz_parent_link, str) else gz_parent_link,
                  TextSubstitution(text='/'), TextSubstitution(text=gz_sensor_name)],
             ],
             parameters=[{'use_sim_time': use_sim_time}],
+            condition=IfCondition(enabled),
         )
 
     livox_left_frame_alias = make_sensor_frame_alias(
-        'livox_mid360_left', 'astribot_torso_base', 'livox_mid360_left_sensor')
+        'livox_mid360_left', 'astribot_torso_base', 'livox_mid360_left_sensor', use_lidar)
     livox_right_frame_alias = make_sensor_frame_alias(
-        'livox_mid360_right', 'astribot_torso_base', 'livox_mid360_right_sensor')
-    camera_frame_alias = make_sensor_frame_alias(
-        'camera_optical_frame', 'astribot_head_link_2', 'astribot_camera')
+        'livox_mid360_right', 'astribot_torso_base', 'livox_mid360_right_sensor', use_lidar)
+    camera_frame_aliases = [make_sensor_frame_alias(
+        camera + '_camera_optical_frame', LaunchConfiguration('camera_native_parent_' + camera),
+        camera + '_sensor', PythonExpression([
+            "'", use_camera, "' == 'true' and '",
+            use_wrist_cameras if 'wrist' in camera else use_stereo_cameras if 'stereo' in camera else use_camera,
+            "' == 'true'"])) for camera in camera_profiles]
 
     rviz_node = Node(
         package='rviz2',
@@ -478,6 +833,7 @@ def generate_launch_description():
         set_ros_domain_id,
         set_gz_resource_path,
         set_ign_resource_path,
+        OpaqueFunction(function=_prepare_camera_mounts),
         OpaqueFunction(function=_prepare_sim_description, kwargs={'command': robot_description_command}),
         OpaqueFunction(function=_prepare_social, args=[default_world_file]),
         gz_sim,
@@ -486,8 +842,18 @@ def generate_launch_description():
         delay_controllers_after_spawn,
         delay_effort_drive_after_controllers,
         ros_gz_bridge,
+        GroupAction([
+            OpaqueFunction(function=_camera_pipeline_environment),
+            *camera_postprocess_nodes,
+            *camera_pointcloud_nodes,
+            *camera_filter_nodes,
+            *camera_health_nodes,
+            *camera_yolo_nodes,
+            *camera_detection_gate_nodes,
+            *camera_pose_nodes,
+        ]),
         livox_left_frame_alias,
         livox_right_frame_alias,
-        camera_frame_alias,
+        *camera_frame_aliases,
         rviz_node,
     ])

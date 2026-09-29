@@ -1,0 +1,27 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+___ test_fixed_polygon_preserves_corner_clearance_and_revokes_bad_hash[cpp] ____
+
+impl = 'cpp'
+tmp_path = PosixPath('/tmp/astribot_protection_retained_polygon_red/test_fixed_polygon_preserves_c1')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_fixed_polygon_preserves_corner_clearance_and_revokes_bad_hash(impl, tmp_path):
+        replay = Replay(impl, 'fixed_v2', tmp_path)
+        try:
+            # This point lies inside a rectangular footprint but outside the diamond
+            # plus clearance. A rectangular substitute would fail this test.
+            replay.warm(command=(0., 0., 0.), obstacle=(.28, .28))
+            assert replay.acks and replay.acks[-1].applied
+            replay.step(command=(0., 0., 0.), obstacle=(.28, .28),
+                        mutate=lambda e: setattr(e, 'installed_geometry_hash', 'bad'))
+>           assert replay.results[-1].hold and replay.results[-1].reason == 'ROBOT_ENVELOPE_UNAVAILABLE'
+E           AssertionError: assert (True and 'INDEPENDENT_SWEEP_RISK' == 'ROBOT_ENVELOPE_UNAVAILABLE'
+E            +  where True = astribot_navigation_msgs.msg.MotionConstraint(stamp=builtin_interfaces.msg.Time(sec=11, nanosec=25000000), epoch=79085... reason='INDEPENDENT_SWEEP_RISK', alignment_required=False, centering_required=False, corridor_tracking_required=False).hold
+E             - ROBOT_ENVELOPE_UNAVAILABLE
+E             + INDEPENDENT_SWEEP_RISK)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_final_protection_protocol.py:277: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_final_protection_protocol.py::test_fixed_polygon_preserves_corner_clearance_and_revokes_bad_hash[cpp]
+1 failed, 1 passed, 20 deselected in 4.03s

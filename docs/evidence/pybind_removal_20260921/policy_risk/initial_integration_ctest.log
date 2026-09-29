@@ -1,0 +1,337 @@
+Internal ctest changing into directory: /tmp/codex_policy_integration_20260921/build
+Test project /tmp/codex_policy_integration_20260921/build
+    Start 1: navigation_math
+1/8 Test #1: navigation_math ..................   Passed    0.00 sec
+    Start 2: cmd_vel_body_to_world_core
+2/8 Test #2: cmd_vel_body_to_world_core .......   Passed    0.00 sec
+    Start 3: fixed_envelope_authority
+3/8 Test #3: fixed_envelope_authority .........   Passed    0.00 sec
+    Start 4: policy_fusion_differential
+4/8 Test #4: policy_fusion_differential .......***Failed   11.55 sec
+.......................................FFF                               [100%]
+=================================== FAILURES ===================================
+____________ test_typed_decision_and_execution_authority_contracts _____________
+
+    def test_typed_decision_and_execution_authority_contracts():
+        d=decision()
+        ctx=dict(version=d['version'],now=stamp(150,'steady'),required_inputs_valid=True,motion_enabled=True,
+                 allowed_planning=['LOCAL'],retreat_enabled=False,baseline_limits=d['limits'])
+        ops=[dict(action='check_contract',type='Decision',value=d),dict(action='check_executable',decision=d,context=ctx)]
+        for changes in [dict(motion='STOP'),dict(motion='HOLD'),dict(motion='RETREAT'),dict(motion='FOLLOW_COMMITTED_PATH'),
+                        dict(planning='LOCAL'),dict(planning='LOCAL',trigger='PATH_RISK'),dict(request_id='unexpected'),
+                        dict(committed_path_revision=1),dict(issued_at=stamp(100)),dict(valid_until=stamp(100,'steady')),
+                        dict(decision_id=''),dict(reason=' '),dict(episode_id='')]:
+            ops.append(dict(action='check_contract',type='Decision',value=d|changes))
+        for changes in [dict(motion_enabled=False),dict(required_inputs_valid=False),dict(now=stamp(99,'steady')),
+                        dict(now=stamp(200,'steady')),dict(version=d['version']|dict(path_revision=2)),
+                        dict(baseline_limits=d['limits']|dict(angular_accel_rad_s2=.4)),dict(now=stamp(150,'steady',1))]:
+            ops.append(dict(action='check_executable',decision=d,context=ctx|changes))
+        planning=d|dict(planning='GLOBAL',trigger='PATH_RISK',request_id='r')
+        retreat=d|dict(motion='RETREAT',committed_path_revision=1)
+        stop=d|dict(motion='STOP',limits=d['limits']|dict(linear_speed_m_s=0.,angular_speed_rad_s=0.))
+        ops += [dict(action='check_executable',decision=planning,context=ctx),dict(action='check_executable',decision=retreat,context=ctx),
+                dict(action='check_executable',decision=stop,context=ctx|dict(required_inputs_valid=False))]
+>       check(ops)
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:358: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:181: in check
+    compare(reference(case), native(case))
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:162: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "check_contract", "type": "Decision", "value": {"decision_id": "d", "episode_id": "e", "ve...its": {"linear_speed_m_s": 0.2, "angular_speed_rad_s": 0.3, "linear_accel_m_s2": 0.4, "angular_accel_rad_s2": 0.5}}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_integration_20260921/build/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_integration_20260921/build/p...>
+stdout = '', stderr = 'unknown action\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_integration_20260921/build/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+__________________ test_prediction_track_and_world_invariants __________________
+
+    def test_prediction_track_and_world_invariants():
+        g=observation(0)['geometry'];p=dict(offset_ns=0,geometry=g)
+        m=dict(velocity=[0.,0.,0.],variance_m2_s2=.01,steps=[[100000000,.1],[200000000,.2]])
+        t=dict(fused_track_id='track',frame_id='odom',stamp=stamp(0),geometry=g,predictions=[],provenance=['a'],prediction_model=m)
+        w=dict(version=decision()['version'],stamp=stamp(0),frame_id='odom',tracks=[t],unassociated=[],observation_seq=0)
+        cases=[('Prediction',p),('Prediction',p|dict(offset_ns=-1)),('PredictionModel',m),('PredictionModel',m|dict(variance_m2_s2=-1)),
+               ('PredictionModel',m|dict(steps=[[0,0.]])),('PredictionModel',m|dict(steps=[[100000000,.2]])),
+               ('PredictionModel',m|dict(steps=[[100000000,.1],[100000000,.1]])),
+               ('TrackedObstacle',t),('TrackedObstacle',t|dict(predictions=[p])),('TrackedObstacle',t|dict(prediction_model=None,predictions=[p,p])),
+               ('TrackedObstacle',t|dict(provenance=[])),('TrackedObstacle',t|dict(provenance=['a','a'])),
+               ('WorldSnapshot',w),('WorldSnapshot',w|dict(tracks=[t,t])),('WorldSnapshot',w|dict(frame_id='map')),
+               ('WorldSnapshot',w|dict(tracks=[t|dict(stamp=stamp(1))])),('WorldSnapshot',w|dict(observation_seq=-1)),
+               ('BearingCone',dict(direction=[2.,0.,0.],half_angle_rad=.2)),('BearingCone',dict(direction=[1.,0.,0.],half_angle_rad=4.)),
+               ('MotionLimits',decision()['limits']|dict(linear_speed_m_s=-1)),('Version',decision()['version']|dict(clock_epoch=-1))]
+>       check([dict(action='check_contract',type=kind,value=v) for kind,v in cases])
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:375: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:181: in check
+    compare(reference(case), native(case))
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:162: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "check_contract", "type": "Prediction", "value": {"offset_ns": 0, "geometry": {"kind": "Me...": "Version", "value": {"goal_id": "g", "path_revision": 1, "map_epoch": 2, "envelope_epoch": 3, "clock_epoch": -1}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_integration_20260921/build/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_integration_20260921/build/p...>
+stdout = '', stderr = 'unknown action\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_integration_20260921/build/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+__________________ test_observation_freshness_all_boundaries ___________________
+
+    def test_observation_freshness_all_boundaries():
+        o=observation(100,valid_until=stamp(200))
+>       check([dict(action='check_fresh',now=stamp(ns),observation=o,max_age_ns=age,future_tolerance_ns=future)
+               for ns,age,future in [(99,100,0),(99,100,1),(100,100,0),(199,99,0),(199,98,0),(200,100,0),(100,-1,0),(100,100,-1)]])
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:380: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:181: in check
+    compare(reference(case), native(case))
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:162: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "check_fresh", "now": {"ns": 99, "clock": "ros", "epoch": 0}, "observation": {"sensor_id":...e": ["a:m"], "velocity_observable": true, "spatial_occupancy": false}, "max_age_ns": 100, "future_tolerance_ns": -1}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_integration_20260921/build/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_integration_20260921/build/p...>
+stdout = '', stderr = 'unknown action\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_integration_20260921/build/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+=========================== short test summary info ============================
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_typed_decision_and_execution_authority_contracts
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_prediction_track_and_world_invariants
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_observation_freshness_all_boundaries
+3 failed, 39 passed in 10.94s
+
+    Start 5: policy_health_differential
+5/8 Test #5: policy_health_differential .......   Passed    1.01 sec
+    Start 6: policy_sweep_differential
+6/8 Test #6: policy_sweep_differential ........   Passed    0.65 sec
+    Start 7: policy_risk_differential
+7/8 Test #7: policy_risk_differential .........   Passed    0.79 sec
+    Start 8: policy_risk_independent_replay
+8/8 Test #8: policy_risk_independent_replay ...   Passed    1.53 sec
+
+88% tests passed, 1 tests failed out of 8
+
+Total Test time (real) =  15.54 sec
+
+The following tests FAILED:
+	  4 - policy_fusion_differential (Failed)
+Errors while running CTest

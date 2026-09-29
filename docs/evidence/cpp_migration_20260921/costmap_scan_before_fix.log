@@ -1,0 +1,75 @@
+...F.F.F                                                                 [100%]
+=================================== FAILURES ===================================
+_______________ test_runtime_marking_parameter_takes_effect[cpp] _______________
+
+scan = <test_costmap_scan_protocol.ScanReplay object at 0x7decb8f19780>
+
+    def test_runtime_marking_parameter_takes_effect(scan):
+        scan.set_range(1.)
+>       scan.expect(scan.scan(1, [math.inf, 2., .5], maximum=2.), 1.)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py:99: in expect
+    self.until(lambda: any(x.header.stamp == message.header.stamp for x in self.events))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_costmap_scan_protocol.ScanReplay object at 0x7decb8f19780>
+condition = <function ScanReplay.expect.<locals>.<lambda> at 0x7decc12760e0>
+timeout = 5
+
+    def until(self, condition, timeout=5):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            assert self.proc.poll() is None, 'adapter exited'
+            self.executor.spin_once(timeout_sec=.01)
+            if condition(): return
+>       raise AssertionError('scan protocol timeout')
+E       AssertionError: scan protocol timeout
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py:77: AssertionError
+____________ test_rejected_scan_does_not_publish_and_recovers[cpp] _____________
+
+scan = <test_costmap_scan_protocol.ScanReplay object at 0x7decb8f5b100>
+
+    def test_rejected_scan_does_not_publish_and_recovers(scan):
+        # A valid later sample acts as a stream barrier after invalid input.
+        scan.scan(1, [math.inf], maximum=5.5)
+        scan.expect(scan.scan(2, [math.inf]), 5.5)
+        assert not any(msg.header.stamp.sec == 1 for msg in scan.events)
+        scan.set_range(-1.)
+        scan.scan(3, [math.inf])
+        # Keep the invalid parameter active until the next valid-range change; use
+        # a bounded delivery window so the callback is not racing the update.
+        end = time.monotonic() + .15
+        scan.until(lambda: time.monotonic() >= end)
+>       assert not any(msg.header.stamp.sec == 3 for msg in scan.events)
+E       assert not True
+E        +  where True = any(<generator object test_rejected_scan_does_not_publish_and_recovers.<locals>.<genexpr> at 0x7decb8fb78b0>)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py:156: AssertionError
+___________ test_invalid_parameter_type_reports_startup_failure[cpp] ___________
+
+impl = 'cpp'
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_invalid_parameter_type_reports_startup_failure(impl):
+        binary = os.environ.get('COSTMAP_SCAN_CPP_BINARY')
+        if not binary: pytest.skip('COSTMAP_SCAN_CPP_BINARY required')
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', MAIN]
+        command += ['--ros-args', '-p', 'scan_topic:=42']
+        env = dict(os.environ, ROS_DOMAIN_ID='110', ROS_LOCALHOST_ONLY='1')
+        env['PYTHONPATH'] = str(POLICY) + os.pathsep + env.get('PYTHONPATH', '')
+        result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=5)
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [FATAL] [1789970392.882544729] [navigation_costmap_scan_adapter]: parameter 'scan_topic' has invalid type: Wrong parameter type, parameter {scan_topic} is of type {string}, setting it to {integer} is not allowed.
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_navigation_cpp_clean_20260921/costmap_scan_cpp', '--ros-args', '-p', 'scan_topic...lid type: Wrong parameter type, parameter {scan_topic} is of type {string}, setting it to {integer} is not allowed.\n").returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py:170: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py::test_runtime_marking_parameter_takes_effect[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py::test_rejected_scan_does_not_publish_and_recovers[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_costmap_scan_protocol.py::test_invalid_parameter_type_reports_startup_failure[cpp]
+3 failed, 5 passed in 16.01s

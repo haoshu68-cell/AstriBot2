@@ -1,0 +1,39 @@
+omni_effort_drive_node:
+  ros__parameters:
+    cmd_vel_topic: /cmd_vel
+    joint_states_topic: /joint_states
+    effort_command_topic: /wheel_effort_controller/commands
+
+    wheel_radius: 0.08
+
+    wheel_coeff_vx: [-0.7071, 0.7071, -0.7071, 0.7071]
+    wheel_coeff_vy: [-0.7071, -0.7071, 0.7071, 0.7071]
+    wheel_coeff_wz: [-0.3060, -0.3060, -0.3024, -0.3024]
+    kinematics_global_sign: 1.0
+
+    pid_kp: 0.4
+    pid_ki: 0.1
+    pid_kd: 0.0
+
+    friction_coulomb_nm: 0.1      # 对齐 wheel_joint_friction
+    friction_viscous_nm_s: 1.0    # 对齐 wheel_joint_damping
+    friction_deadband_rad_s: 0.05
+
+    wheel_effort_limit_nm: 15.0
+    wheel_velocity_limit_rad_s: 40.0
+
+    # User-fixed simulation baseline; never changes the SDK chassis control mode.
+    idle_position_hold: true
+    idle_position_kp: 3.0
+
+    cmd_vel_timeout_sec: 0.5
+    joint_state_timeout_sec: 0.3
+    control_period_sec: 0.01  # 100Hz，对齐astribot_chassis.yaml的frequency:100
+
+    warn_effort_ratio: 0.9
+    tracking_error_error_rad_s: 3.0
+    tracking_error_error_duration_sec: 1.0
+    auto_slowdown_on_tracking_error: false
+    auto_slowdown_scale: 0.5
+
+    log_throttle_sec: 2.0

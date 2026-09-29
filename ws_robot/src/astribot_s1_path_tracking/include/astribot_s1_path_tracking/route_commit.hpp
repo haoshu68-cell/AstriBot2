@@ -5,6 +5,12 @@
 #include "astribot_navigation_msgs/srv/resolve_route.hpp"
 #include "rclcpp/rclcpp.hpp"
 namespace astribot_s1_path_tracking {
+// A workstation BT can assess this recoverable planning result before the
+// parent navigation action becomes terminal. Other trees propagate it normally.
+class ObstructionDeadline : public BT::RuntimeError {
+public:
+  explicit ObstructionDeadline(const std::string & reason):BT::RuntimeError(reason) {}
+};
 // Used only on the BT tick thread. Futures have no authority after reset().
 class RouteCommit {
   using Clock=std::chrono::steady_clock;
@@ -27,7 +33,10 @@ public:
       const double age=(node_->now()-rclcpp::Time(result->evaluated_at,node_->get_clock()->get_clock_type())).seconds();
       if(age>=0 && age<=.15 && now-sent_<=std::chrono::milliseconds(300)) {
         last_good_=now;
-        if(result->disposition==Service::Response::BLOCKED) {throw BT::RuntimeError(result->reason);}
+        if(result->disposition==Service::Response::BLOCKED) {
+          if(result->reason_code==Service::Response::OBSTRUCTION_DEADLINE)throw ObstructionDeadline(result->reason);
+          throw BT::RuntimeError(result->reason);
+        }
         if(result->disposition==Service::Response::COMMIT && !result->path.poses.empty() &&
            result->path.header.frame_id==path.header.frame_id && result->path.poses.back().pose==goal.pose) {
           path=result->path;reference_=path;reason=result->reason;next_=now;

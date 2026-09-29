@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>astribot_s1_navigation_recovery</name>
+  <version>0.1.0</version>
+  <description>Navigation start admission, bounded recovery and alarm before normal route planning.</description>
+  <maintainer email="astribot-dev@astribot.com">astribot-dev</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>astribot_eigen_vendor</depend>
+  <depend>astribot_navigation_msgs</depend>
+  <depend>action_msgs</depend>
+  <depend>astribot_slam_msgs</depend>
+  <depend>astribot_s1_robot_geometry</depend>
+  <depend>astribot_s1_path_tracking</depend>
+  <depend>astribot_bridge_msgs</depend>
+  <depend>nav2_core</depend>
+  <depend>nav2_costmap_2d</depend>
+  <depend>nav2_util</depend>
+  <depend>nav2_behavior_tree</depend>
+  <depend>behaviortree_cpp_v3</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <export><build_type>ament_cmake</build_type><nav2_core plugin="${prefix}/plugins.xml"/></export>
+</package>

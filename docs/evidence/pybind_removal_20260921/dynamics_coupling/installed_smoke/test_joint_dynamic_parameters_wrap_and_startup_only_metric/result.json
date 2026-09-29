@@ -1,0 +1,302 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "half extension",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.575,
+      "observed": {
+        "python": [
+          0.575,
+          -1.15,
+          0.0,
+          0.0,
+          0.0,
+          1.7249999999999999
+        ],
+        "cpp": [
+          0.575,
+          -1.15,
+          0.0,
+          0.0,
+          0.0,
+          1.7249999999999999
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "folded_reference_rad": "[0.6]"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic reference length zip",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "folded_reference_rad": "[]"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "empty reference zip",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "folded_reference_rad": "[3.141592653589793]"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "raw angle difference, no wrap",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "folded_reference_rad": "[0.0]",
+        "extension_full_rad": "2.0",
+        "min_speed_scale": "0.4"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic joint full and minimum",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.7,
+      "observed": {
+        "python": [
+          0.7,
+          -1.4,
+          0.0,
+          0.0,
+          0.0,
+          2.0999999999999996
+        ],
+        "cpp": [
+          0.7,
+          -1.4,
+          0.0,
+          0.0,
+          0.0,
+          2.0999999999999996
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "velocity_full_rad_s": "4.0"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic velocity full",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.85,
+      "observed": {
+        "python": [
+          0.85,
+          -1.7,
+          0.0,
+          0.0,
+          0.0,
+          2.55
+        ],
+        "cpp": [
+          0.85,
+          -1.7,
+          0.0,
+          0.0,
+          0.0,
+          2.55
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "extension_metric": "'horizontal_reach'",
+        "input_topic": "'/unused_input'",
+        "output_topic": "'/unused_output'",
+        "joint_states_topic": "'/unused_joints'"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "metric and topic changes are startup-only",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "log_throttle_sec": "0.0"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic logging parameter accepted",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.4,
+      "observed": {
+        "python": [
+          0.4,
+          -0.8,
+          0.0,
+          0.0,
+          0.0,
+          1.2000000000000002
+        ],
+        "cpp": [
+          0.4,
+          -0.8,
+          0.0,
+          0.0,
+          0.0,
+          1.2000000000000002
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 177623,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_e792aa5b70/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/installed_smoke/test_joint_dynamic_parameters_wrap_and_startup_only_metric/python_params.yaml",
+        "-r",
+        "/coupling_e792aa5b70/input:=/coupling_e792aa5b70/input_remapped",
+        "-r",
+        "/coupling_e792aa5b70/python/output:=/coupling_e792aa5b70/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 177624,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/install/lib/astribot_s1_dynamics_coupling/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_e792aa5b70/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/installed_smoke/test_joint_dynamic_parameters_wrap_and_startup_only_metric/cpp_params.yaml",
+        "-r",
+        "/coupling_e792aa5b70/input:=/coupling_e792aa5b70/input_remapped",
+        "-r",
+        "/coupling_e792aa5b70/cpp/output:=/coupling_e792aa5b70/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 8,
+    "cpp": 8
+  }
+}

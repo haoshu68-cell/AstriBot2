@@ -1,0 +1,28 @@
+{
+  "state": "PASS_SAMPLED_STATIONARY_SLAM_CUDA_LOAD_SUBCASE",
+  "scope": "1800s four RGB-D streams with real Voxel SLAM, activated stationary Nav2, CPU head/torso and CUDA wrist projection, repeated frozen-input GraspNet CUDA; no moving navigation or live grasp acceptance",
+  "capture_duration_s": 1800.000088318,
+  "capture_start_wall": 1790065958.926331,
+  "rtf": 0.9898543958766886,
+  "health_analysis": "camera_03_analysis.json",
+  "depth_receive_max_gap_s": {
+    "torso_rgbd/depth": 0.12403259999996408,
+    "left_wrist_rgbd/depth": 0.15719075699996665,
+    "right_wrist_rgbd/depth": 0.15675344600003882,
+    "head_rgbd/depth": 0.15308100300001115
+  },
+  "depth_receive_over_250ms": {
+    "torso_rgbd/depth": 0,
+    "left_wrist_rgbd/depth": 0,
+    "right_wrist_rgbd/depth": 0,
+    "head_rgbd/depth": 0
+  },
+  "completed_cuda_requests": 889,
+  "cuda_all_completed_succeeded": true,
+  "inference_duration_s": 1800.00953819,
+  "inference_sequence_overlap_with_capture_s": 1776.872884273529,
+  "overlap_definition": "first worker start to final worker completion intersected with camera capture; includes gaps between workers, not GPU busy time",
+  "runtime_manifest": "runs/task_chain_20260922_exclusive/rgbd_metrics_runtime_03.json",
+  "session_log": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_exclusive/navigation_03_metrics_slam/session.log",
+  "full_W1_accepted": false
+}

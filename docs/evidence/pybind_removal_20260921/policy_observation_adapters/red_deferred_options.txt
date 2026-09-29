@@ -1,0 +1,166 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+__________ test_raw_options_defer_vision_conversion_and_unused_fields __________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_raw_options_defer_vision_conversion_and_unused_fields(authority):
+        for options in [dict(max_packet_bytes=None),dict(max_packet_bytes='bad'),dict(max_observations='bad'),
+                        dict(max_points='unused bad value',calibration_epoch=[],position_variance_m2={}),
+                        dict(max_packet_bytes='１_０００',max_observations=' １ '),None,[],{},'',0,False,[1],'text',1]:
+>           check(dict(raw_options=options,operations=[dict(packet=vision()),dict(data='{bad'),dict(packet=vision(observations=[]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:138: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:134: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [], 'last_packet': None, 'ok': False, 'type': 'TypeError'}
+b = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration_epoch':...: 'ros', 'epoch': 4, 'ns': 100}, 'class_probabilities': [['person', 0.6], ['unknown', 0.3]], 'frame_id': 'odom', ...}]}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [], 'last_packet': None, 'ok': False, 'type': 'TypeError'}, {'calls': [['now', 0], ['now', 1], ['tf'... 'ros', 'epoch': 4, 'ns': 100}, 'class_probabilities': [['person', 0.6], ['unknown', 0.3]], 'frame_id': 'odom', ...}]})
+E           assert {'calls', 'la... 'ok', 'type'} == {'calls', 'la...ok', 'result'}
+E             Extra items in the left set:
+E             'type'
+E             Extra items in the right set:
+E             'result'
+E             Full diff:
+E             - {'last_packet', 'result', 'calls', 'ok'}
+E             ?                 ----------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:130: AssertionError
+______________ test_raw_options_sensor_truth_and_python_equality _______________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_raw_options_sensor_truth_and_python_equality(authority):
+        for sensor in [None,False,0,True,1,1.5,'',[],{},['x'],{'a':1,'b':2}]:
+>           check(dict(raw_options=dict(sensor_id=sensor),operations=[dict(packet=vision(sensor_id=sensor,observations=[])),dict(packet=vision(sensor_id=sensor)),dict(packet=vision())]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:347: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:138: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:134: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['now', 2], ['now', 3], ['tf', 'odom', 'sensor', 100], ['steady', 0], ...], 'last_p...3}, 'geometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'ValueError'}
+b = {'calls': [['now', 0], ['now', 1], ['now', 2], ['now', 3], ['tf', 'odom', 'sensor', 100], ['steady', 0], ...], 'last_p...'other', 'epoch': 9, 'ns': 100}, 'class_probabilities': [['person', 0.6], ['unknown', 0.3]], 'frame_id': 'odom', ...}]}
+path = '[2]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[2]', {'calls': [['now', 0], ['now', 1], ['now', 2], ['now', 3], ['tf', 'odom', 'sensor', 100], ['steady', 0], ...],...other', 'epoch': 9, 'ns': 100}, 'class_probabilities': [['person', 0.6], ['unknown', 0.3]], 'frame_id': 'odom', ...}]})
+E           assert {'calls', 'la... 'ok', 'type'} == {'calls', 'la...ok', 'result'}
+E             Extra items in the left set:
+E             'type'
+E             Extra items in the right set:
+E             'result'
+E             Full diff:
+E             - {'last_packet', 'result', 'calls', 'ok'}
+E             ?                 ----------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:130: AssertionError
+__________ test_raw_cloud_options_conversion_order_and_byte_mutation ___________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_raw_cloud_options_conversion_order_and_byte_mutation(authority):
+        p=cloud([(1.,2.,3.)],bigendian=True)
+        for options in [dict(max_points=None),dict(max_points='bad'),dict(sensor_id='lidar',calibration_epoch='bad',position_variance_m2=None),
+                        dict(sensor_id='lidar',calibration_epoch=' １_２ ',position_variance_m2=' .0_1 ',max_points='１'),
+                        dict(sensor_id='lidar',position_variance_m2=None),dict(sensor_id='lidar',max_packet_bytes=None),
+                        dict(sensor_id='lidar',max_observations='bad'),{},None,[],[1],'text',
+                        dict(sensor_id=None),dict(sensor_id=1),dict(sensor_id=False),dict(sensor_id=['x']),dict(sensor_id={'a':1})]:
+>           check(dict(adapter='pointcloud_boxes',raw_options=options,operations=[dict(packet=p),dict(packet=cloud([]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:360: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:138: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:134: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:131: in compare
+    for k in a:compare(a[k],b[k],path+'.'+k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'TypeError', b = 'KeyError', path = '[0].type'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+            assert set(a)==set(b),(path,a,b)
+            for k in a:compare(a[k],b[k],path+'.'+k)
+        elif isinstance(a,list):
+            assert len(a)==len(b),(path,a,b)
+            for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+>       else:assert a==b,(path,a,b)
+E       AssertionError: ('[0].type', 'TypeError', 'KeyError')
+E       assert 'TypeError' == 'KeyError'
+E         - KeyError
+E         + TypeError
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: AssertionError
+____________ test_raw_calibration_update_overrides_bad_prior_option ____________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_raw_calibration_update_overrides_bad_prior_option(authority):
+>       check(dict(adapter='pointcloud_boxes',raw_options=dict(sensor_id='lidar',calibration_epoch='bad'),operations=[dict(packet=cloud([(1.,2.,3.)])),dict(action='calibration',value=9),dict(packet=cloud([(1.,2.,3.)]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:364: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:138: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:134: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:131: in compare
+    for k in a:compare(a[k],b[k],path+'.'+k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'ValueError', b = 'KeyError', path = '[0].type'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+            assert set(a)==set(b),(path,a,b)
+            for k in a:compare(a[k],b[k],path+'.'+k)
+        elif isinstance(a,list):
+            assert len(a)==len(b),(path,a,b)
+            for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+>       else:assert a==b,(path,a,b)
+E       AssertionError: ('[0].type', 'ValueError', 'KeyError')
+E       assert 'ValueError' == 'KeyError'
+E         - KeyError
+E         + ValueError
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_raw_options_defer_vision_conversion_and_unused_fields
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_raw_options_sensor_truth_and_python_equality
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_raw_cloud_options_conversion_order_and_byte_mutation
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_raw_calibration_update_overrides_bad_prior_option
+4 failed, 31 deselected in 0.20s

@@ -1,0 +1,30 @@
+[OUTPUT] 
+Internal ctest changing into directory: /tmp/astribot_pose_core_build/astribot_object_pose_core
+
+[HANDLER_OUTPUT] 
+Test project /tmp/astribot_pose_core_build/astribot_object_pose_core
+
+    Start 17: visible_two_faces
+1/4 Test #17: visible_two_faces ................***Failed    4.40 sec
+visible case total=0.29014 visible=nan normals=0 reason=no_acceptable_pose
+FAIL: fully observed two-face view must register without a total-area threshold
+
+    Start 18: visible_large_rotation
+2/4 Test #18: visible_large_rotation ...........   Passed    4.31 sec
+    Start 19: visible_missing_features
+3/4 Test #19: visible_missing_features .........   Passed    3.26 sec
+    Start 20: invalid_visibility_geometry
+4/4 Test #20: invalid_visibility_geometry ......***Failed    3.91 sec
+FAIL: registered geometry must agree with the CAD cloud
+
+
+50% tests passed, 2 tests failed out of 4
+
+Total Test time (real) =  15.87 sec
+
+The following tests FAILED:
+	 17 - visible_two_faces (Failed)
+	 20 - invalid_visibility_geometry (Failed)
+[ERROR_MESSAGE] 
+Errors while running CTest
+

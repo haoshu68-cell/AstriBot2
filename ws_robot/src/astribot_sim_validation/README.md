@@ -106,7 +106,7 @@ ros2 run astribot_sim_validation transport_fault_acceptance --ros-args \
 
 ## 静止保持对照实验
 
-标准仿真驱动的 `idle_position_hold` 仍默认关闭。隔离搬运实验可在就绪检查之后、派发任务之前显式设置：
+按用户 2026-09-25 要求，标准仿真及主线的 `idle_position_hold` 已固定开启，启动时须读回 true，`idle_position_kp` 保持 3.0。下方仅保留历史对照实验记录，不能作为当前主线启动配方自动执行：
 
 ```bash
 ros2 service call /omni_effort_drive_node/set_parameters rcl_interfaces/srv/SetParameters \

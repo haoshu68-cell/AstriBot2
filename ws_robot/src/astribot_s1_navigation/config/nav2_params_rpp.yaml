@@ -11,8 +11,14 @@ controller_server:
     - precise_goal_checker
     controller_plugins:
     - FollowPath
+    - Departure
+    - WorkstationAlign
+    WorkstationAlign:
+      plugin: astribot_s1_path_tracking::WorkstationAlignmentController
+    Departure:
+      plugin: astribot_s1_navigation_recovery::DepartureController
     progress_checker:
-      plugin: nav2_controller::PoseProgressChecker
+      plugin: astribot_s1_path_tracking::PolicyProgressChecker
       required_movement_radius: 0.01
       required_movement_angle: 0.1
       movement_time_allowance: 20.0
@@ -20,6 +26,8 @@ controller_server:
       plugin: astribot_s1_path_tracking::ArrivalGoalChecker
       xy_goal_tolerance: 0.03
       yaw_goal_tolerance: 0.02617993877991494
+      stopped_linear_velocity: 0.01
+      stopped_angular_velocity: 0.01
     FollowPath:
       plugin: astribot_s1_path_tracking::ArrivalController
       metrics:
@@ -28,7 +36,6 @@ controller_server:
       arrival:
         source: nav2_pose
         capture_radius: 0.3
-        pose_timeout: 0.5
         refine_timeout: 45.0
         total_timeout: 300.0
         progress_timeout: 15.0
@@ -76,6 +83,18 @@ controller_server:
       fallback_xy_tolerance: 0.18
       fallback_yaw_tolerance: 0.2
       approach_enabled: false
+      corner_turn_enabled: true
+      corner_min_angle: 0.61
+      corner_max_angle: 2.75
+      corner_min_segment: 0.25
+      corner_approach_distance: 0.25
+      corner_capture_radius: 0.04
+      corner_lateral_tolerance: 0.15
+      corner_approach_speed: 0.08
+      corner_approach_min_speed: 0.02
+      corner_approach_kp: 0.8
+      corner_terminal_guard: 0.10
+      corner_timeout: 15.0
 smoother_server:
   ros__parameters:
     use_sim_time: true
@@ -92,6 +111,9 @@ planner_server:
     use_sim_time: true
     planner_plugins:
     - GridBased
+    - Departure
+    Departure:
+      plugin: astribot_s1_navigation_recovery::DeparturePlanner
     GridBased:
       plugin: astribot_s1_path_tracking::ExactGoalPlanner
       tolerance: 0.0
@@ -180,6 +202,7 @@ bt_navigator:
       - nav2_drive_on_heading_cancel_bt_node
       - nav2_is_battery_charging_condition_bt_node
       - astribot_path_guard_bt_node
+      - astribot_navigation_recovery_bt_node
     use_sim_time: true
     global_frame: map
     robot_base_frame: astribot_torso_base
@@ -251,16 +274,27 @@ local_costmap:
       footprint_padding: 0.01  # Explicit legacy default; fixed_v2 overrides to zero.
       plugins:
       - obstacle_layer
+      - zone_layer
       - inflation_layer
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         cost_scaling_factor: 3.0
         inflation_radius: 0.65
+      zone_layer:
+        plugin: astribot_navigation_zones::ZoneLayer
+        consumer: local_costmap
       obstacle_layer:
         footprint_clearing_enabled: true  # fixed_v2 disables convex-hull interior clearing.
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true
-        observation_sources: scan
+        # Shared parameters for the opt-in VoxelLayer profile.
+        publish_voxel_map: true
+        origin_z: 0.0
+        z_resolution: 0.15  # 16 native cells cover [0,2.4); source height filters remain unchanged.
+        z_voxels: 16  # Humble VoxelGrid uses 16 height bits, never 32.
+        unknown_threshold: 15
+        mark_threshold: 0
+        observation_sources: scan head_depth torso_depth
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -272,6 +306,32 @@ local_costmap:
           obstacle_max_range: 5.5
           obstacle_min_range: 0.0
           # Seconds between buffered scans: one missed 10 Hz frame plus TF/transport jitter.
+          expected_update_rate: 0.3
+        head_depth:
+          topic: /camera/head_rgbd/points
+          sensor_frame: astribot_torso_base
+          data_type: PointCloud2
+          marking: true
+          clearing: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 2.0
+          obstacle_min_range: 0.20
+          obstacle_max_range: 4.0
+          raytrace_min_range: 0.20
+          raytrace_max_range: 4.5
+          expected_update_rate: 0.3
+        torso_depth:
+          topic: /camera/torso_rgbd/points
+          sensor_frame: astribot_torso_base
+          data_type: PointCloud2
+          marking: true
+          clearing: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.8
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.0
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.5
           expected_update_rate: 0.3
       always_send_full_costmap: true
 global_costmap:
@@ -289,11 +349,21 @@ global_costmap:
       plugins:
       - static_layer
       - obstacle_layer
+      - zone_layer
       - inflation_layer
+      zone_layer:
+        plugin: astribot_navigation_zones::ZoneLayer
+        consumer: global_costmap
       obstacle_layer:
         footprint_clearing_enabled: true  # fixed_v2 disables convex-hull interior clearing.
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true
+        publish_voxel_map: true
+        origin_z: 0.0
+        z_resolution: 0.15  # 16 native cells cover [0,2.4); source height filters remain unchanged.
+        z_voxels: 16  # Humble VoxelGrid uses 16 height bits, never 32.
+        unknown_threshold: 15
+        mark_threshold: 0
         observation_sources: scan
         scan:
           topic: /scan

@@ -1,0 +1,26 @@
+......................F......                                            [100%]
+=================================== FAILURES ===================================
+_ test_fixed_envelope_apply_matching_heartbeat_revoke_and_recover[cpp-runtime_config0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7f5c14987c10>
+
+    @pytest.mark.parametrize('runtime_config',[{'navigation_geometry_mode':'fixed_v2'}],indirect=True)
+    def test_fixed_envelope_apply_matching_heartbeat_revoke_and_recover(runtime):
+        runtime.seed();m=fixed_envelope(runtime,2**64-1);runtime.v2_pub.publish(m);runtime.drain()
+        assert not runtime.acks  # First configuration must wait for processing.
+        assert runtime.tick()['envelope_ready'];runtime.until(lambda:bool(runtime.acks))
+        assert runtime.acks[-1].envelope_epoch==2**64-1 and runtime.acks[-1].installed_geometry_hash==m.installed_geometry_hash
+        count=len(runtime.acks);m.header.stamp=stamp(runtime.ns);m.valid_until=stamp(runtime.ns+500_000_000);m.source_state_sequence+=1
+        runtime.v2_pub.publish(m);runtime.until(lambda:len(runtime.acks)>count)
+        assert len(runtime.outputs)>0 and runtime.outputs[-1]['stamp_ns']==runtime.ns
+        assert runtime.tick()['envelope_ready']
+        count=len(runtime.acks);m.installed_geometry_hash='invalid';runtime.v2_pub.publish(m);runtime.drain()
+>       assert len(runtime.acks)==count
+E       AssertionError: assert 3 == 2
+E        +  where 3 = len([astribot_navigation_msgs.msg.EnvelopeApplyStatus(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=1, ...metry_hash='5f1859c26319e82c0066e22fb98a79d2f88b1e10adc743d108a924b725008456', applied=True, reason='POLYGON_APPLIED')])
+E        +    where [astribot_navigation_msgs.msg.EnvelopeApplyStatus(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=1, ...metry_hash='5f1859c26319e82c0066e22fb98a79d2f88b1e10adc743d108a924b725008456', applied=True, reason='POLYGON_APPLIED')] = <test_policy_observer_ros.Runtime object at 0x7f5c14987c10>.acks
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:283: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_fixed_envelope_apply_matching_heartbeat_revoke_and_recover[cpp-runtime_config0]
+1 failed, 28 passed, 29 deselected in 14.38s

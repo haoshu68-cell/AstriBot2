@@ -1,0 +1,66 @@
+{
+  "scope": "This resumed round only; prior evidence remains in task_chain_20260922",
+  "started": "2026-09-22T09:53:45+08:00",
+  "deadline": "2026-09-22T11:23:45+08:00",
+  "W0": {
+    "state": "prior_pinned_baseline_preserved",
+    "current_manifest": "manifest_final.json"
+  },
+  "W1": {
+    "state": "paused_before_deadline",
+    "passed_current": [
+      "Live verified static map, all three zone consumers, native physical geometry freshness",
+      "Nav2 cancellation/identical-goal lifecycle regression in C++; clean path-tracking build 9/9 test groups",
+      "Bounded original-expiry envelope handling in C++ plus thin transport adapter; no age/clearance gates relaxed",
+      "Two fixed-posture empty-load navigation repeats: motion_05_fixed and motion_07_clean",
+      "motion_07_clean seven gates PASS; minimum whole-body clearance lower bound 0.28737 m",
+      "20 C++ sensor sync cases and19 synthetic ROS timing/clock cases; not physical synchronization"
+    ],
+    "failed_current": [
+      "10Hz complete 600s motion_camera_04_clean capture: four RGB-D sources have STALE health samples",
+      "20Hz full-resolution diagnostic incomplete192s also stale",
+      "navigation_fix2 planner SIGSEGV on configure; clean fix3 starts and drives, exact old-crash cause not independently established"
+    ],
+    "remaining": [
+      "Sustained camera wall freshness under MPPI/SLAM/combined load, with original250ms gate",
+      "Per-role ROI, useful-depth, occlusion and full3D coverage quality",
+      "Stage latency/queue maxima and complete TF/source/restart/GPU fault recovery matrix",
+      "Thirty-minute combined pressure and full C++ task client/unique-provider admission"
+    ],
+    "diagnostic_candidate": {
+      "state": "failed_incomplete",
+      "duration_wall_sec": 142.61188378599945,
+      "clock_advanced_sec": 52.442,
+      "stale_health_samples": {
+        "head": 5,
+        "torso": 4,
+        "left": 9,
+        "right": 9
+      },
+      "failure": "REQUEST_CLOCK_AHEAD response state stamp equaled request after evaluation; bounded client retry corrected,4 isolated tests pass; no full rerun"
+    },
+    "paused_at": "2026-09-22T11:23:06.200526+08:00",
+    "stop_reason": "Stopped owned simulation within90-minute ceiling; remaining budget insufficient for another full600s regression."
+  },
+  "W1_S_sync": {
+    "state": "design_and_cpp_contracts_verified",
+    "design": "docs/SENSOR_HARD_SYNC_DESIGN_20260922.md",
+    "evidence": "sensor_sync_verification.json",
+    "physical_backend_implemented": false,
+    "device_metadata_adapters_implemented": false,
+    "health_world_snapshot_frame_join_implemented": false,
+    "gazebo_exposure_triggered": false,
+    "hardware_tested": false,
+    "pending": "Device models, per-stream external-trigger capability and timing-board protocol; then adapters and same-frame downstream join"
+  },
+  "VLA_real_model": "deferred_by_user",
+  "hardware_acceptance": "deferred_by_user",
+  "W2_through_W7": "pending; not advanced beyond incomplete W1",
+  "W8_full_dynamic_pick_carry_place": "deferred_by_user",
+  "W9_cpp_migration_endurance": "cross-cutting partial migration this round; full deployment/endurance gate pending",
+  "cleanup": {
+    "navigation_07_clean_remaining": [],
+    "navigation_08_lowres_remaining": [],
+    "camera_probes": "all child cleanup remaining lists empty"
+  }
+}

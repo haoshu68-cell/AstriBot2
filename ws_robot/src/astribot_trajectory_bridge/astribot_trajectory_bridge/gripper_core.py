@@ -14,6 +14,7 @@
 映射的一致性由 test_status_code_map 锁住。
 """
 
+import os
 import threading
 
 from astribot_trajectory_bridge.gripper_math import (
@@ -25,6 +26,14 @@ from astribot_trajectory_bridge.gripper_math import (
     opening_fraction_to_cmd,
     validate_grasp_cmd,
 )
+
+if os.environ.get('ASTRIBOT_GRIPPER_NATIVE_CORE', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native
+    except ImportError:  # pragma: no cover - exercised on Python-only overlays
+        _native = None
+else:
+    _native = None
 
 EC_SUCCESS = 'SUCCESS'
 EC_DISABLED_BY_CONFIG = 'DISABLED_BY_CONFIG'
@@ -104,7 +113,7 @@ class StatusEvent:
         return 'StatusEvent(%s, %r)' % (self.code, self.detail)
 
 
-class GripperController:
+class _PythonGripperController:
     """夹爪开合的执行者。
 
     并发策略：**拒绝而不排队**。
@@ -325,3 +334,95 @@ def _default_clock():
 def _noop_sleep(_seconds):
     """默认不真的睡。节点层会注入真实 sleep。"""
     return None
+
+
+class GripperController:
+    """兼容 facade，按显式开关选择 Python oracle 或 C++ 执行核心。
+
+    C++ 核心仍通过注入的 SessionPort/clock/sleep 回调工作，ROS 节点接口和
+    写通路准入不变。默认保持 Python，只有完整的 fake-SDK 故障回放通过后才
+    可以在隔离实例中设置 ``ASTRIBOT_GRIPPER_NATIVE_CORE=1``。
+    """
+
+    def __init__(self, cfg, session, sleep_fn=None, clock_fn=None,
+                 in_simulation=True):
+        self.cfg = cfg
+        self.session = session
+        self._native_impl = None
+        if _native is None:
+            self._impl = _PythonGripperController(
+                cfg, session, sleep_fn=sleep_fn, clock_fn=clock_fn,
+                in_simulation=in_simulation)
+        else:
+            self._native_impl = _native.GripperController(
+                list(cfg.gripper_names), bool(cfg.enable_service),
+                float(cfg.default_duration_sec),
+                float(cfg.default_max_force_n), float(cfg.settle_extra_sec),
+                float(cfg.stream_freq), float(cfg.mid_stream_tolerance),
+                float(cfg.mid_stream_timeout_sec), session,
+                sleep_fn if sleep_fn is not None else _noop_sleep,
+                clock_fn if clock_fn is not None else _default_clock,
+                bool(in_simulation))
+            self._impl = None
+
+    @property
+    def events(self):
+        if self._native_impl is None:
+            return self._impl.events
+        return []
+
+    def drain_events(self):
+        if self._native_impl is None:
+            return self._impl.drain_events()
+        return [StatusEvent(code, detail)
+                for code, detail in self._native_impl.drain_events()]
+
+    def resolve_names(self, name):
+        if self._native_impl is None:
+            return self._impl.resolve_names(name)
+        names, error = self._native_impl.resolve_names('' if not name else str(name))
+        return (None if names is None else list(names), error)
+
+    def resolve_cmd(self, opening_fraction, use_raw_cmd, raw_cmd):
+        if self._native_impl is None:
+            return self._impl.resolve_cmd(opening_fraction, use_raw_cmd, raw_cmd)
+        try:
+            fraction = float(opening_fraction)
+        except (TypeError, ValueError):
+            return (None, 'opening_fraction=%r 不是数值' % (opening_fraction,))
+        try:
+            raw = float(raw_cmd)
+        except (TypeError, ValueError):
+            return (None, 'raw_cmd=%r 不是数值' % (raw_cmd,))
+        cmd, error = self._native_impl.resolve_cmd(
+            fraction, bool(use_raw_cmd), raw)
+        return (None if cmd is None else float(cmd), error)
+
+    def execute(self, name='', opening_fraction=1.0, duration=0.0,
+                use_raw_cmd=False, raw_cmd=0.0, max_force=0.0,
+                write_allowed=True):
+        if self._native_impl is None:
+            return self._impl.execute(
+                name=name, opening_fraction=opening_fraction,
+                duration=duration, use_raw_cmd=use_raw_cmd, raw_cmd=raw_cmd,
+                max_force=max_force, write_allowed=write_allowed)
+        try:
+            fraction = float(opening_fraction)
+        except (TypeError, ValueError):
+            return GripperResult(
+                False, EC_VALUE_OUT_OF_RANGE,
+                'opening_fraction=%r 不是数值' % (opening_fraction,))
+        try:
+            raw = float(raw_cmd)
+        except (TypeError, ValueError):
+            return GripperResult(
+                False, EC_VALUE_OUT_OF_RANGE,
+                'raw_cmd=%r 不是数值' % (raw_cmd,))
+        values = self._native_impl.execute(
+            '' if not name else str(name), fraction, float(duration),
+            bool(use_raw_cmd), raw, float(max_force),
+            bool(write_allowed))
+        return GripperResult(
+            bool(values[0]), str(values[1]), str(values[2]),
+            dispatched_cmd=float(values[3]), dispatched_rad=float(values[4]),
+            actual_cmd=float(values[5]), force_applied=bool(values[6]))

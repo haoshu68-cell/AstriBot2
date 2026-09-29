@@ -1,0 +1,172 @@
+....F..
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=4)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 2]]
+
+First differing element 0:
+[0, 1]
+[0, 2]
+
+- [[0, 1]]
+?      ^
+
++ [[0, 2]]
+?      ^
+
+
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=8)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 4]]
+
+First differing element 0:
+[0, 1]
+[0, 4]
+
+- [[0, 1]]
+?      ^
+
++ [[0, 4]]
+?      ^
+
+
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=16)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 8]]
+
+First differing element 0:
+[0, 1]
+[0, 8]
+
+- [[0, 1]]
+?      ^
+
++ [[0, 8]]
+?      ^
+
+
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=32)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 16]]
+
+First differing element 0:
+[0, 1]
+[0, 16]
+
+- [[0, 1]]
++ [[0, 16]]
+?       +
+
+
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=64)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 32]]
+
+First differing element 0:
+[0, 1]
+[0, 32]
+
+- [[0, 1]]
+?      ^
+
++ [[0, 32]]
+?      ^^
+
+
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=128)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 64]]
+
+First differing element 0:
+[0, 1]
+[0, 64]
+
+- [[0, 1]]
+?      ^
+
++ [[0, 64]]
+?      ^^
+
+
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=256)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 128]]
+
+First differing element 0:
+[0, 1]
+[0, 128]
+
+- [[0, 1]]
++ [[0, 128]]
+?       ++
+
+
+======================================================================
+FAIL: test_fps_left_subtree_for_every_cuda_block_size (__main__.PointOperatorsTest) (threads=512)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 52, in test_fps_left_subtree_for_every_cuda_block_size
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(),
+AssertionError: Lists differ: [[0, 1]] != [[0, 256]]
+
+First differing element 0:
+[0, 1]
+[0, 256]
+
+- [[0, 1]]
+?      ^
+
++ [[0, 256]]
+?      ^^^
+
+
+======================================================================
+FAIL: test_fps_ties_follow_left_subtree_not_lowest_thread (__main__.PointOperatorsTest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/graspnet_test_ops.py", line 43, in test_fps_ties_follow_left_subtree_not_lowest_thread
+    self.assertEqual(ops.furthest_point_sample(points, 2).tolist(), [[0, 256]])
+AssertionError: Lists differ: [[0, 1]] != [[0, 256]]
+
+First differing element 0:
+[0, 1]
+[0, 256]
+
+- [[0, 1]]
+?      ^
+
++ [[0, 256]]
+?      ^^^
+
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.035s
+
+FAILED (failures=9)

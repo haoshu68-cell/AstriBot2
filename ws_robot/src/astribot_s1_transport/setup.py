@@ -15,4 +15,5 @@ setup(name='astribot_s1_transport', version='0.1.0',
           'vla_replay = astribot_s1_transport.vla_replay:main',
           'vla_policy_server = astribot_s1_transport.vla_server:main',
           'camera_observer = astribot_s1_transport.camera_node:main',
+          'camera_calibration_postprocess = astribot_s1_transport.camera_calibration_postprocess:main',
           'transport_task = astribot_s1_transport.ros_backend:main']})

@@ -1,0 +1,145 @@
+--- a/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -135,6 +135,8 @@
+   odom_sub_=create_subscription<nav_msgs::msg::Odometry>("/odom",rclcpp::SensorDataQoS(),[this](nav_msgs::msg::Odometry::SharedPtr m){odom_=*m;odom_received_=wall();});
+   envelope_sub_=create_subscription<Envelope>("/navigation/envelope_v2",10,[this](Envelope::SharedPtr m){envelope_=*m;envelope_received_=wall();++envelope_sequence_;if(owned()&&!hold_confirmed_&&!manipulation_ready(now().nanoseconds(),wall()))stopping(reason_);});
+   guard_sub_=create_subscription<GuardState>("/transport/execution_guard/status",10,[this](GuardState::SharedPtr m){guard_state_=*m;guard_received_=wall();});
++  observed_hold_sub_=create_subscription<Hold>("/navigation/arm_hold_observed",10,[this](Hold::ConstSharedPtr m){
++   observed_hold_=*m;observed_hold_ros_=now().nanoseconds();observed_hold_steady_=wall();});
+   initialize_payload();
+   rcl_interfaces::msg::ParameterDescriptor immutable;immutable.read_only=true;
+   navigation_position_tolerance_=declare_parameter("fixed_station_position_tolerance_m",.002,immutable);
+@@ -452,6 +454,12 @@
+    return;
+   }
+   if(transfer_phase_==TransferPhase::PICK&&hold_confirmed_) {
++   if(hold_first_published_<0){reason_="WAITING_FOR_ARM_HOLD_OBSERVATION";return;}
++   if(steady-hold_observation_started_>=3000*MS)throw std::runtime_error("ARM_HOLD_OBSERVATION_TIMEOUT");
++   if(!observed_hold_ || !hold_.observationMatches(*observed_hold_,hold_first_published_,
++      observed_hold_ros_,observed_hold_steady_,ros,steady)) {
++    reason_="WAITING_FOR_ARM_HOLD_OBSERVATION";return;
++   }
+    const auto *state=payload_consumer_->current(ros,steady);
+    if(!state||!state->observation.full_inventory||state->observation.status!=Observation::ATTACHED||state->observation.objects.size()!=1||state->observation.objects[0].object.id!=payload_object_)throw std::runtime_error("TRANSFER_ATTACHED_BOX_UNCONFIRMED");
+    auto limits=transfer_parent_->get_goal()->navigation_limits;limits.payload_mass_kg=state->observation.objects[0].weight;
+@@ -1091,6 +1099,7 @@
+   auto child_names=names_;
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+   payload_observation_bound_=false;payload_raw_failure_.clear();
++  observed_hold_.reset();hold_first_published_=-1;hold_observation_started_=0;
+   payload_phase_=PayloadPhase::NONE;payload_physical_applied_=false;payload_scene_unresolved_=false;payload_query_pending_=false;
+   if(!full_operation_)known_links_.clear();
+   ++stage_generation_;stage_kind_="ARM";active_controller_="arm_left_controller";
+@@ -1309,6 +1318,11 @@
+   if(!hold_confirmed_)state.hold_confirmed=false;
+ #endif
+   hold_pub_->publish(state);
++#ifdef PLAN_TO_HOLD_EXECUTOR
++  if(transfer_parent_&&transfer_phase_==TransferPhase::PICK&&state.hold_confirmed&&hold_first_published_<0) {
++   hold_first_published_=ns(state.header.stamp);hold_observation_started_=wall();
++  }
++#endif
+   const auto phase=std::to_string(int(authority_->phase()));
+   const auto &reported_reason=stop_at_?stop_reason_:reason_;
+   if(owned()&&parent_active()) {
+@@ -1386,6 +1400,8 @@
+  TransferPhase transfer_phase_=TransferPhase::PICK_PREPARE;
+  rclcpp_action::Server<Transfer>::SharedPtr transfer_server_;std::shared_ptr<TransferParent> transfer_parent_;
+  std::unique_ptr<FixedStationNavigation> navigation_;
++ rclcpp::Subscription<Hold>::SharedPtr observed_hold_sub_;std::optional<Hold> observed_hold_;
++ int64_t observed_hold_ros_=0,observed_hold_steady_=0,hold_first_published_=-1,hold_observation_started_=0;
+  bool navigation_started_=false,navigation_cleanup_revoke_=false,station_bound_=false,station_pending_=false,station_scene_unresolved_=false,station_ready_=false,final_scene_pending_=false;
+  int64_t transfer_started_=0,transfer_budget_=0,station_sent_=0,operation_started_ros_=0,final_checked_at_=0;
+  moveit_msgs::msg::PlanningScene station_before_,station_diff_;
+--- a/ws_robot/src/astribot_s1_transport_native/src/arm_hold.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/arm_hold.cpp
+@@ -148,6 +148,19 @@
+     ns(latest_->valid_until)-now,geometry_deadline_-steady,500*MS-(now-claims_ros_),500*MS-(steady-claims_steady_)});
+   result.lease_s=double(remaining)/1e9;result.hold_confirmed=remaining>0;confirmed_once_=result.hold_confirmed;reason_="HOLD_CONFIRMED";return result;
+ }
++bool ArmHold::observationMatches(const Hold &message,int64_t first_published,int64_t received_ros,
++    int64_t received_steady,int64_t now,int64_t steady) const {
++  if(!active_ || !confirmed_once_ || !message.hold_confirmed ||
++     message.owner_id!=grant_->owner_id || message.hold_id!=id_ ||
++     message.attachment_revision!=latest_->attachment_revision ||
++     message.header.stamp.sec<0 || message.header.stamp.nanosec>=1000000000 ||
++     !std::isfinite(message.lease_s) || message.lease_s<=0 || message.lease_s>.5)return false;
++  const auto source=ns(message.header.stamp);
++  if(source<first_published || source>received_ros || received_ros>now || received_steady>steady)return false;
++  const auto duration=message.lease_s*1e9;
++  return static_cast<double>(now-source)<duration &&
++    static_cast<double>(steady-received_steady)<duration-static_cast<double>(received_ros-source);
++}
+ astribot_navigation_msgs::srv::SetFixedEnvelope::Request ArmHold::request(const std::string &request_id,
+     const astribot_navigation_msgs::msg::RobotEnvelope &limits,int64_t now,int64_t steady) {
+   require(status(now,steady).hold_confirmed,"ARM_HOLD_UNCONFIRMED");require(!request_id.empty(),"REQUEST_ID_REQUIRED");
+--- a/ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/arm_hold.hpp
++++ b/ws_robot/src/astribot_s1_transport_native/include/astribot_s1_transport_native/arm_hold.hpp
+@@ -30,6 +30,10 @@
+   void controllers(const std::vector<controller_manager_msgs::msg::ControllerState> &,int64_t request_at,int64_t request_steady,int64_t now,int64_t steady);
+   void cancel();
+   Hold status(int64_t now,int64_t steady);
++  // A receipt confirms coordinator observation only; the caller still requires
++  // a current local hold and the normal fixed-envelope admission.
++  bool observationMatches(const Hold &,int64_t first_published,int64_t received_ros,
++    int64_t received_steady,int64_t now,int64_t steady) const;
+   astribot_navigation_msgs::srv::SetFixedEnvelope::Request request(const std::string &request_id,
+     const astribot_navigation_msgs::msg::RobotEnvelope &limits,int64_t now,int64_t steady);
+   const std::string &reason() const {return reason_;}
+--- a/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/test/arm_hold_test.cpp
+@@ -1,6 +1,7 @@
+ #include <gtest/gtest.h>
+ #include "astribot_s1_transport_native/arm_hold.hpp"
+ #include <cmath>
++#include <limits>
+ using namespace astribot::transport;
+ namespace {
+ constexpr int64_t T=1000000000,MS=1000000;
+@@ -161,4 +162,45 @@
+   h.controllers(controllers(),T+600*MS,T+600*MS,T+600*MS,T+600*MS);
+   EXPECT_TRUE(h.status(T+600*MS,T+600*MS).hold_confirmed);
+ }
+-}
++TEST_F(Fixture, CoordinatorObservationAcceptsFirstAndLaterFreshPositive) {
++  ready();const auto first=T+600*MS;
++  auto observed=h.status(first,first);const ArmHold &hold=h;
++  EXPECT_TRUE(hold.observationMatches(observed,first,first,first,first,first));
++  observed=h.status(first+40*MS,first+40*MS);
++  EXPECT_TRUE(hold.observationMatches(observed,first,first+50*MS,first+50*MS,first+60*MS,first+60*MS));
++  EXPECT_TRUE(h.status(first+60*MS,first+60*MS).hold_confirmed);
++}
++TEST_F(Fixture, CoordinatorObservationRejectsFalseOldAndMismatchedHold) {
++  ready();const auto first=T+600*MS;const auto valid=h.status(first,first);
++  auto changed=valid;changed.hold_confirmed=false;
++  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
++  changed=valid;changed.owner_id="other";
++  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
++  changed=valid;changed.hold_id="previous";
++  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
++  changed=valid;changed.attachment_revision="previous_payload";
++  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
++  changed=valid;changed.header.stamp=stamp(first-1);
++  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
++  changed=valid;changed.header.stamp=stamp(first+1);
++  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
++  changed=valid;changed.header.stamp.nanosec=1000000000;
++  EXPECT_FALSE(h.observationMatches(changed,first,first,first,first,first));
++  h.cancel();EXPECT_FALSE(h.observationMatches(valid,first,first,first,first,first));
++}
++TEST_F(Fixture, CoordinatorObservationEnforcesSourceAndSteadyLeaseBoundaries) {
++  ready();const auto first=T+600*MS;auto observed=h.status(first,first);observed.lease_s=.1;
++  const auto received=first+20*MS,expires=first+100*MS;
++  EXPECT_TRUE(h.observationMatches(observed,first,received,received,expires-1,expires-1));
++  EXPECT_FALSE(h.observationMatches(observed,first,received,received,expires,expires-1));
++  // A frozen ROS clock cannot extend the source's remaining lease at receipt.
++  EXPECT_TRUE(h.observationMatches(observed,first,received,received,received,expires-1));
++  EXPECT_FALSE(h.observationMatches(observed,first,received,received,received,expires));
++  EXPECT_FALSE(h.observationMatches(observed,first,received,received,received-1,received));
++  EXPECT_FALSE(h.observationMatches(observed,first,received,received,received,received-1));
++  for(const auto lease:{0.,-.1,.500000001,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}) {
++    observed.lease_s=lease;
++    EXPECT_FALSE(h.observationMatches(observed,first,received,received,received,received));
++  }
++}
++}

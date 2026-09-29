@@ -1,0 +1,172 @@
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+_ test_prediction_rows_keep_original_numpy_int64_output_boundary[explicit-9223372036854775808] _
+
+probe = <function probe.<locals>.call at 0x7fab2fc5f0a0>
+offset = 9223372036854775808, representation = 'explicit'
+
+    @pytest.mark.parametrize('offset',[2**63,2**64,10**100])
+    @pytest.mark.parametrize('representation',['explicit','model'])
+    def test_prediction_rows_keep_original_numpy_int64_output_boundary(probe,offset,representation):
+        track=dict(id='large-time',box=box(1.,0.))
+        if representation=='explicit':track['predictions']=[dict(ns=offset,box=box(1.,0.))]
+        else:track['model']=dict(velocity=[0.,0.,0.],variance=0.,steps=[[offset,float(offset)*1e-9]])
+        case=dict(op='rows',tracks=[track])
+        with pytest.raises(OverflowError,match='Python int too large to convert to C long'):
+            prediction_rows(make_world(case))
+>       assert probe(case)=={'error':'Python int too large to convert to C long'}
+E       AssertionError: assert {'rows': [{'l...1.075, 0.1]}]} == {'error': 'Py...rt to C long'}
+E         Left contains 1 more item:
+E         {'rows': [{'lower': [0.925, -0.1],
+E                    'offset_ns': 9223372036854775808,
+E                    'owner': 0,
+E                    'upper': [1.075, 0.1]}]}
+E         Right contains 1 more item:
+E         {'error': 'Python int too large to convert to C long'}...
+E         
+E         ...Full output truncated (11 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:87: AssertionError
+_ test_prediction_rows_keep_original_numpy_int64_output_boundary[explicit-18446744073709551616] _
+
+probe = <function probe.<locals>.call at 0x7fab2fc5f0a0>
+offset = 18446744073709551616, representation = 'explicit'
+
+    @pytest.mark.parametrize('offset',[2**63,2**64,10**100])
+    @pytest.mark.parametrize('representation',['explicit','model'])
+    def test_prediction_rows_keep_original_numpy_int64_output_boundary(probe,offset,representation):
+        track=dict(id='large-time',box=box(1.,0.))
+        if representation=='explicit':track['predictions']=[dict(ns=offset,box=box(1.,0.))]
+        else:track['model']=dict(velocity=[0.,0.,0.],variance=0.,steps=[[offset,float(offset)*1e-9]])
+        case=dict(op='rows',tracks=[track])
+        with pytest.raises(OverflowError,match='Python int too large to convert to C long'):
+            prediction_rows(make_world(case))
+>       assert probe(case)=={'error':'Python int too large to convert to C long'}
+E       AssertionError: assert {'rows': [{'l...1.075, 0.1]}]} == {'error': 'Py...rt to C long'}
+E         Left contains 1 more item:
+E         {'rows': [{'lower': [0.925, -0.1],
+E                    'offset_ns': 18446744073709551616,
+E                    'owner': 0,
+E                    'upper': [1.075, 0.1]}]}
+E         Right contains 1 more item:
+E         {'error': 'Python int too large to convert to C long'}...
+E         
+E         ...Full output truncated (11 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:87: AssertionError
+_ test_prediction_rows_keep_original_numpy_int64_output_boundary[explicit-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+probe = <function probe.<locals>.call at 0x7fab2fc5f0a0>
+offset = 100000000000000000...0000000000000000000, representation = 'explicit'
+
+    @pytest.mark.parametrize('offset',[2**63,2**64,10**100])
+    @pytest.mark.parametrize('representation',['explicit','model'])
+    def test_prediction_rows_keep_original_numpy_int64_output_boundary(probe,offset,representation):
+        track=dict(id='large-time',box=box(1.,0.))
+        if representation=='explicit':track['predictions']=[dict(ns=offset,box=box(1.,0.))]
+        else:track['model']=dict(velocity=[0.,0.,0.],variance=0.,steps=[[offset,float(offset)*1e-9]])
+        case=dict(op='rows',tracks=[track])
+        with pytest.raises(OverflowError,match='Python int too large to convert to C long'):
+            prediction_rows(make_world(case))
+>       assert probe(case)=={'error':'Python int too large to convert to C long'}
+E       AssertionError: assert {'rows': [{'l...1.075, 0.1]}]} == {'error': 'Py...rt to C long'}
+E         Left contains 1 more item:
+E         {'rows': [{'lower': [0.925, -0.1],
+E                    'offset_ns': 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+E                    'owner': 0,
+E                    'upper': [1.075, 0.1]}]}
+E         Right contains 1 more item:
+E         {'error': 'Python int too large to convert to C long'}...
+E         
+E         ...Full output truncated (11 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:87: AssertionError
+_ test_prediction_rows_keep_original_numpy_int64_output_boundary[model-9223372036854775808] _
+
+probe = <function probe.<locals>.call at 0x7fab2fc5f0a0>
+offset = 9223372036854775808, representation = 'model'
+
+    @pytest.mark.parametrize('offset',[2**63,2**64,10**100])
+    @pytest.mark.parametrize('representation',['explicit','model'])
+    def test_prediction_rows_keep_original_numpy_int64_output_boundary(probe,offset,representation):
+        track=dict(id='large-time',box=box(1.,0.))
+        if representation=='explicit':track['predictions']=[dict(ns=offset,box=box(1.,0.))]
+        else:track['model']=dict(velocity=[0.,0.,0.],variance=0.,steps=[[offset,float(offset)*1e-9]])
+        case=dict(op='rows',tracks=[track])
+        with pytest.raises(OverflowError,match='Python int too large to convert to C long'):
+            prediction_rows(make_world(case))
+>       assert probe(case)=={'error':'Python int too large to convert to C long'}
+E       AssertionError: assert {'rows': [{'l...1.075, 0.1]}]} == {'error': 'Py...rt to C long'}
+E         Left contains 1 more item:
+E         {'rows': [{'lower': [0.925, -0.1],
+E                    'offset_ns': 9223372036854775808,
+E                    'owner': 0,
+E                    'upper': [1.075, 0.1]}]}
+E         Right contains 1 more item:
+E         {'error': 'Python int too large to convert to C long'}...
+E         
+E         ...Full output truncated (11 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:87: AssertionError
+_ test_prediction_rows_keep_original_numpy_int64_output_boundary[model-18446744073709551616] _
+
+probe = <function probe.<locals>.call at 0x7fab2fc5f0a0>
+offset = 18446744073709551616, representation = 'model'
+
+    @pytest.mark.parametrize('offset',[2**63,2**64,10**100])
+    @pytest.mark.parametrize('representation',['explicit','model'])
+    def test_prediction_rows_keep_original_numpy_int64_output_boundary(probe,offset,representation):
+        track=dict(id='large-time',box=box(1.,0.))
+        if representation=='explicit':track['predictions']=[dict(ns=offset,box=box(1.,0.))]
+        else:track['model']=dict(velocity=[0.,0.,0.],variance=0.,steps=[[offset,float(offset)*1e-9]])
+        case=dict(op='rows',tracks=[track])
+        with pytest.raises(OverflowError,match='Python int too large to convert to C long'):
+            prediction_rows(make_world(case))
+>       assert probe(case)=={'error':'Python int too large to convert to C long'}
+E       AssertionError: assert {'rows': [{'l...1.075, 0.1]}]} == {'error': 'Py...rt to C long'}
+E         Left contains 1 more item:
+E         {'rows': [{'lower': [0.925, -0.1],
+E                    'offset_ns': 18446744073709551616,
+E                    'owner': 0,
+E                    'upper': [1.075, 0.1]}]}
+E         Right contains 1 more item:
+E         {'error': 'Python int too large to convert to C long'}...
+E         
+E         ...Full output truncated (11 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:87: AssertionError
+_ test_prediction_rows_keep_original_numpy_int64_output_boundary[model-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+probe = <function probe.<locals>.call at 0x7fab2fc5f0a0>
+offset = 100000000000000000...0000000000000000000, representation = 'model'
+
+    @pytest.mark.parametrize('offset',[2**63,2**64,10**100])
+    @pytest.mark.parametrize('representation',['explicit','model'])
+    def test_prediction_rows_keep_original_numpy_int64_output_boundary(probe,offset,representation):
+        track=dict(id='large-time',box=box(1.,0.))
+        if representation=='explicit':track['predictions']=[dict(ns=offset,box=box(1.,0.))]
+        else:track['model']=dict(velocity=[0.,0.,0.],variance=0.,steps=[[offset,float(offset)*1e-9]])
+        case=dict(op='rows',tracks=[track])
+        with pytest.raises(OverflowError,match='Python int too large to convert to C long'):
+            prediction_rows(make_world(case))
+>       assert probe(case)=={'error':'Python int too large to convert to C long'}
+E       AssertionError: assert {'rows': [{'l...1.075, 0.1]}]} == {'error': 'Py...rt to C long'}
+E         Left contains 1 more item:
+E         {'rows': [{'lower': [0.925, -0.1],
+E                    'offset_ns': 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+E                    'owner': 0,
+E                    'upper': [1.075, 0.1]}]}
+E         Right contains 1 more item:
+E         {'error': 'Python int too large to convert to C long'}...
+E         
+E         ...Full output truncated (11 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:87: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_prediction_rows_keep_original_numpy_int64_output_boundary[explicit-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_prediction_rows_keep_original_numpy_int64_output_boundary[explicit-18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_prediction_rows_keep_original_numpy_int64_output_boundary[explicit-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_prediction_rows_keep_original_numpy_int64_output_boundary[model-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_prediction_rows_keep_original_numpy_int64_output_boundary[model-18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_prediction_rows_keep_original_numpy_int64_output_boundary[model-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+6 failed, 20 deselected in 0.13s

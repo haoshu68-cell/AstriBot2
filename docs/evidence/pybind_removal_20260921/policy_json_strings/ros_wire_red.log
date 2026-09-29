@@ -1,0 +1,95 @@
+FFFF.                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\ud800-0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x74881d1fcf70>
+sensor = 'camera\ud800', epoch = 0
+
+    @pytest.mark.parametrize('sensor,epoch',[
+        ('camera\ud800',0),('camera\udfff',0),('camera\u0000\ud800',0),('camera\ud800',2**64),
+    ])
+    def test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks(runtime,sensor,epoch):
+        runtime.vision_pub.publish(String(data=json.dumps(image_packet(runtime,sensor,epoch))));runtime.drain()
+        assert runtime.proc.poll() is None and 'observation rejected:' not in runtime.log_path.read_text()
+        previous=len(runtime.outputs);runtime.ns+=100_000_000;deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:
+            runtime.clock.publish(Clock(clock=stamp(runtime.ns)));runtime.executor.spin_once(timeout_sec=.01)
+>       assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+E       AssertionError: 
+E       assert None not in (None, 0)
+E        +  where None = <bound method Popen.poll of <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>>()
+E        +    where <bound method Popen.poll of <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>> = <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>.poll
+E        +      where <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...> = <test_policy_observer_ros.Runtime object at 0x74881d1fcf70>.proc
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:412: AssertionError
+_ test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\udfff-0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x748816f13430>
+sensor = 'camera\udfff', epoch = 0
+
+    @pytest.mark.parametrize('sensor,epoch',[
+        ('camera\ud800',0),('camera\udfff',0),('camera\u0000\ud800',0),('camera\ud800',2**64),
+    ])
+    def test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks(runtime,sensor,epoch):
+        runtime.vision_pub.publish(String(data=json.dumps(image_packet(runtime,sensor,epoch))));runtime.drain()
+        assert runtime.proc.poll() is None and 'observation rejected:' not in runtime.log_path.read_text()
+        previous=len(runtime.outputs);runtime.ns+=100_000_000;deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:
+            runtime.clock.publish(Clock(clock=stamp(runtime.ns)));runtime.executor.spin_once(timeout_sec=.01)
+>       assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+E       AssertionError: 
+E       assert None not in (None, 0)
+E        +  where None = <bound method Popen.poll of <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>>()
+E        +    where <bound method Popen.poll of <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>> = <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>.poll
+E        +      where <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...> = <test_policy_observer_ros.Runtime object at 0x748816f13430>.proc
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:412: AssertionError
+_ test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\x00\ud800-0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x748816efe440>
+sensor = 'camera\x00\ud800', epoch = 0
+
+    @pytest.mark.parametrize('sensor,epoch',[
+        ('camera\ud800',0),('camera\udfff',0),('camera\u0000\ud800',0),('camera\ud800',2**64),
+    ])
+    def test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks(runtime,sensor,epoch):
+        runtime.vision_pub.publish(String(data=json.dumps(image_packet(runtime,sensor,epoch))));runtime.drain()
+        assert runtime.proc.poll() is None and 'observation rejected:' not in runtime.log_path.read_text()
+        previous=len(runtime.outputs);runtime.ns+=100_000_000;deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:
+            runtime.clock.publish(Clock(clock=stamp(runtime.ns)));runtime.executor.spin_once(timeout_sec=.01)
+>       assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+E       AssertionError: 
+E       assert None not in (None, 0)
+E        +  where None = <bound method Popen.poll of <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>>()
+E        +    where <bound method Popen.poll of <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>> = <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...>.poll
+E        +      where <Popen: returncode: None args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/...> = <test_policy_observer_ros.Runtime object at 0x748816efe440>.proc
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:412: AssertionError
+_ test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\ud800-18446744073709551616] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x748816f13c70>
+sensor = 'camera\ud800', epoch = 18446744073709551616
+
+    @pytest.mark.parametrize('sensor,epoch',[
+        ('camera\ud800',0),('camera\udfff',0),('camera\u0000\ud800',0),('camera\ud800',2**64),
+    ])
+    def test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks(runtime,sensor,epoch):
+        runtime.vision_pub.publish(String(data=json.dumps(image_packet(runtime,sensor,epoch))));runtime.drain()
+        assert runtime.proc.poll() is None and 'observation rejected:' not in runtime.log_path.read_text()
+        previous=len(runtime.outputs);runtime.ns+=100_000_000;deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:
+            runtime.clock.publish(Clock(clock=stamp(runtime.ns)));runtime.executor.spin_once(timeout_sec=.01)
+        assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+        log=runtime.log_path.read_text()
+        if epoch:
+>           assert 'calibration_epoch' in log or 'calibration epoch' in log
+E           assert ('calibration_epoch' in "terminate called after throwing an instance of 'std::out_of_range'\n  what():  ROS unsigned integer out of range\n" or 'calibration epoch' in "terminate called after throwing an instance of 'std::out_of_range'\n  what():  ROS unsigned integer out of range\n")
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:415: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\ud800-0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\udfff-0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\x00\ud800-0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\ud800-18446744073709551616]
+4 failed, 1 passed, 99 deselected in 16.71s

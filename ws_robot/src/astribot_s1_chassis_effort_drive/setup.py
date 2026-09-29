@@ -24,10 +24,4 @@ setup(
         '替代VelocityControl+MecanumDrive双运动学并行架构'
     ),
     license='Apache-2.0',
-    entry_points={
-        'console_scripts': [
-            'omni_effort_drive_node = '
-            'astribot_s1_chassis_effort_drive.omni_effort_drive_node:main',
-        ],
-    },
 )

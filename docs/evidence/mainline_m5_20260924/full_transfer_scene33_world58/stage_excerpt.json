@@ -1,0 +1,4554 @@
+{
+  "scope": "Offline excerpt of closed scene33, no runtime activity",
+  "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene33_world58/full_transfer/result.json",
+  "source_sha256": "f5ef75a6f9139b3aaf962ff499b89a6cbedddf566ec748fe93aeccb6d33e78d4",
+  "identity": {
+    "task_id": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+    "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+    "goal_uuid": "d5cf11a757ed4ec7935ab472561b9dfe",
+    "lease_epoch": [
+      "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    ]
+  },
+  "outcome": {
+    "passed": false,
+    "error": "RuntimeError('RENEW_REJECTED:GEOMETRY_UNCONFIRMED')",
+    "parent_terminal": {
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "cleanup_reason": "",
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "1f8f7ccdf65b58b332e34c1f8321acb9106173f27d900b9e239756fd90ac7855"
+      }
+    },
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "resource_disposition": "RELEASE_CONFIRMED",
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 36,
+      "span_s": 0.7000000000000028,
+      "start_ros_s": 84.8,
+      "end_ros_s": 85.5,
+      "drift_m": 0.0,
+      "rotation_rad": 0.0,
+      "speed_mps": 0.0,
+      "angular_speed_radps": 0.0,
+      "command_max": 0.0,
+      "command_observed": true,
+      "fresh": true
+    }
+  },
+  "journal_events": [
+    {
+      "index": 0,
+      "record": {
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "reserved",
+        "issued_at": 55085000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 1,
+        "reason": "RESERVED",
+        "renewal_sequence": 0,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": false,
+        "valid_until": 57085000000
+      }
+    },
+    {
+      "index": 1,
+      "record": {
+        "details": {
+          "epoch": 40502782664278
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "navigation_revoked",
+        "issued_at": 55085000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 1,
+        "reason": "RESERVED",
+        "renewal_sequence": 0,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": false,
+        "valid_until": 57085000000
+      }
+    },
+    {
+      "index": 2,
+      "record": {
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "before_child_submission",
+        "issued_at": 55137000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 57137000000
+      }
+    },
+    {
+      "index": 3,
+      "record": {
+        "details": {
+          "capture": 55196000000,
+          "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+          "operation": 1,
+          "station_ids": [
+            "transport_box_01_pick_station",
+            "transport_box_01_place_station"
+          ]
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "station_scene_submission",
+        "issued_at": 55137000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 57137000000
+      }
+    },
+    {
+      "index": 4,
+      "record": {
+        "details": {
+          "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+          "operation": 1
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "station_scene_confirmed",
+        "issued_at": 55137000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 57137000000
+      }
+    },
+    {
+      "index": 5,
+      "record": {
+        "details": {
+          "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+          "geometry_sequence": 1067
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "planner_submission",
+        "issued_at": 55137000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 1,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 57137000000
+      }
+    },
+    {
+      "index": 6,
+      "record": {
+        "details": {
+          "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+          "success": true
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "planner_terminal",
+        "issued_at": 78979000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 130,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 80979000000
+      }
+    },
+    {
+      "index": 7,
+      "record": {
+        "details": {
+          "controller": "arm_left_controller"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_submission",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 8,
+      "record": {
+        "details": {
+          "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+          "controller": "arm_left_controller",
+          "joint_names": [
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7"
+          ],
+          "point_count": 400,
+          "sent_digest": "7005cb22571e35431e7b8dff4e7bfdb8b30f3329f91abbfb6ceb952baef15e75",
+          "stage_generation": 1,
+          "stage_id": "PREGRASP",
+          "stage_index": 0,
+          "transaction": ""
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_trajectory_submission",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 9,
+      "record": {
+        "details": {
+          "controller": "arm_right_controller"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_submission",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 10,
+      "record": {
+        "details": {
+          "controller": "gripper_left_controller"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_submission",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 11,
+      "record": {
+        "details": {
+          "controller": "gripper_right_controller"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_submission",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 12,
+      "record": {
+        "details": {
+          "controller": "head_controller"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_submission",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 13,
+      "record": {
+        "details": {
+          "controller": "torso_controller"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_submission",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 14,
+      "record": {
+        "details": {
+          "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+          "controller": "arm_left_controller",
+          "joint_names": [
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7"
+          ],
+          "point_count": 400,
+          "sent_digest": "7005cb22571e35431e7b8dff4e7bfdb8b30f3329f91abbfb6ceb952baef15e75",
+          "stage_generation": 1,
+          "stage_id": "PREGRASP",
+          "stage_index": 0,
+          "transaction": "",
+          "uuid": "6ccc248c4102987d6c7b29595c0b3662"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_response",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 15,
+      "record": {
+        "details": {
+          "controller": "arm_right_controller",
+          "uuid": "ce7e89fc66ac96dc9a5bc5c2a7f79902"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_response",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 16,
+      "record": {
+        "details": {
+          "controller": "gripper_left_controller",
+          "uuid": "5b01b45b17d72973b6d94762331ab8b0"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_response",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 17,
+      "record": {
+        "details": {
+          "controller": "gripper_right_controller",
+          "uuid": "cc1e1e4d6c2d96b987d0695d39d78f1e"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_response",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 18,
+      "record": {
+        "details": {
+          "controller": "head_controller",
+          "uuid": "94d799f1a4cdf1a4a965cc3b39934697"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_response",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 19,
+      "record": {
+        "details": {
+          "controller": "torso_controller",
+          "uuid": "23a4d6412ee4b3a63da10d63e818b11b"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_response",
+        "issued_at": 79163000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 131,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 81163000000
+      }
+    },
+    {
+      "index": 20,
+      "record": {
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "stop_requested",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 21,
+      "record": {
+        "details": {
+          "epoch": 40502782664278
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "navigation_revoked",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 22,
+      "record": {
+        "details": {
+          "controller": "arm_left_controller",
+          "result_code": 5,
+          "success": false,
+          "uuid": "6ccc248c4102987d6c7b29595c0b3662"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_terminal",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 23,
+      "record": {
+        "details": {
+          "controller": "arm_right_controller",
+          "result_code": 5,
+          "success": false,
+          "uuid": "ce7e89fc66ac96dc9a5bc5c2a7f79902"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_terminal",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 24,
+      "record": {
+        "details": {
+          "controller": "gripper_left_controller",
+          "result_code": 5,
+          "success": false,
+          "uuid": "5b01b45b17d72973b6d94762331ab8b0"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_terminal",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 25,
+      "record": {
+        "details": {
+          "controller": "gripper_right_controller",
+          "result_code": 5,
+          "success": false,
+          "uuid": "cc1e1e4d6c2d96b987d0695d39d78f1e"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_terminal",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 26,
+      "record": {
+        "details": {
+          "controller": "head_controller",
+          "result_code": 5,
+          "success": false,
+          "uuid": "94d799f1a4cdf1a4a965cc3b39934697"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_terminal",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 27,
+      "record": {
+        "details": {
+          "controller": "torso_controller",
+          "result_code": 5,
+          "success": false,
+          "uuid": "23a4d6412ee4b3a63da10d63e818b11b"
+        },
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "child_terminal",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 28,
+      "record": {
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "result_release_pending",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 4,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 85047000000
+      }
+    },
+    {
+      "index": 29,
+      "record": {
+        "epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+        "event": "resource_handoff_committed",
+        "issued_at": 83047000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "phase": 0,
+        "reason": "RELEASED",
+        "renewal_sequence": 152,
+        "request": "77d29755a141416b9382c74e33e9102c",
+        "requests": [
+          [
+            "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+            "77d29755a141416b9382c74e33e9102c"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": false,
+        "valid_until": 85047000000
+      }
+    }
+  ],
+  "feedback_transitions": [
+    {
+      "index": 0,
+      "record": {
+        "wall": 40562.189134659,
+        "ros_s": 55.13,
+        "goal_id": "d5cf11a757ed4ec7935ab472561b9dfe",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "RESERVED",
+          "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+          "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+          "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 1,
+      "record": {
+        "wall": 40562.209839105,
+        "ros_s": 55.154,
+        "goal_id": "d5cf11a757ed4ec7935ab472561b9dfe",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+          "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+          "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+          "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 4,
+      "record": {
+        "wall": 40562.360810653,
+        "ros_s": 55.291000000000004,
+        "goal_id": "d5cf11a757ed4ec7935ab472561b9dfe",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "PLANNING_COMPLETE_OPERATION",
+          "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+          "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+          "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 523,
+      "record": {
+        "wall": 40588.309744548,
+        "ros_s": 79.19500000000001,
+        "goal_id": "d5cf11a757ed4ec7935ab472561b9dfe",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+          "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+          "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 525,
+      "record": {
+        "wall": 40588.410187257,
+        "ros_s": 79.29100000000001,
+        "goal_id": "d5cf11a757ed4ec7935ab472561b9dfe",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+          "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+          "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+          "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 609,
+      "record": {
+        "wall": 40592.625421523,
+        "ros_s": 83.185,
+        "goal_id": "d5cf11a757ed4ec7935ab472561b9dfe",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "GEOMETRY_UNCONFIRMED",
+          "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+          "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188",
+          "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    }
+  ],
+  "renew_events": [
+    {
+      "wall": 40562.189439837,
+      "ros_s": 55.134,
+      "kind": "request",
+      "sequence": 1,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40562.192431705,
+      "ros_s": 55.137,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40562.389736824,
+      "ros_s": 55.316,
+      "kind": "request",
+      "sequence": 2,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40562.390371271,
+      "ros_s": 55.316,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40562.590967662,
+      "ros_s": 55.475,
+      "kind": "request",
+      "sequence": 3,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40562.591649829,
+      "ros_s": 55.475,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40562.791330295,
+      "ros_s": 55.663000000000004,
+      "kind": "request",
+      "sequence": 4,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40562.791943485,
+      "ros_s": 55.665000000000006,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40562.991396523,
+      "ros_s": 55.856,
+      "kind": "request",
+      "sequence": 5,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40562.992028393,
+      "ros_s": 55.856,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40563.191546244,
+      "ros_s": 56.037000000000006,
+      "kind": "request",
+      "sequence": 6,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40563.192036908,
+      "ros_s": 56.037000000000006,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40563.392022954,
+      "ros_s": 56.213,
+      "kind": "request",
+      "sequence": 7,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40563.392378503,
+      "ros_s": 56.213,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40563.592581936,
+      "ros_s": 56.404,
+      "kind": "request",
+      "sequence": 8,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40563.593081741,
+      "ros_s": 56.404,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40563.793239114,
+      "ros_s": 56.59,
+      "kind": "request",
+      "sequence": 9,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40563.795717537,
+      "ros_s": 56.592000000000006,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40563.993707954,
+      "ros_s": 56.769000000000005,
+      "kind": "request",
+      "sequence": 10,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40563.994291439,
+      "ros_s": 56.769000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40564.193736576,
+      "ros_s": 56.951,
+      "kind": "request",
+      "sequence": 11,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40564.196403985,
+      "ros_s": 56.954,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40564.393996842,
+      "ros_s": 57.131,
+      "kind": "request",
+      "sequence": 12,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40564.394545934,
+      "ros_s": 57.131,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40564.594009913,
+      "ros_s": 57.312000000000005,
+      "kind": "request",
+      "sequence": 13,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40564.594344484,
+      "ros_s": 57.312000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40564.794933095,
+      "ros_s": 57.499,
+      "kind": "request",
+      "sequence": 14,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40564.795265723,
+      "ros_s": 57.499,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40564.994968529,
+      "ros_s": 57.684000000000005,
+      "kind": "request",
+      "sequence": 15,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40564.995675973,
+      "ros_s": 57.68600000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40565.195766306,
+      "ros_s": 57.86900000000001,
+      "kind": "request",
+      "sequence": 16,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40565.199493588,
+      "ros_s": 57.870000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40565.397874706,
+      "ros_s": 58.050000000000004,
+      "kind": "request",
+      "sequence": 17,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40565.398359327,
+      "ros_s": 58.050000000000004,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40565.598056055,
+      "ros_s": 58.237,
+      "kind": "request",
+      "sequence": 18,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40565.598513488,
+      "ros_s": 58.23800000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40565.798716877,
+      "ros_s": 58.428000000000004,
+      "kind": "request",
+      "sequence": 19,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40565.799206334,
+      "ros_s": 58.428000000000004,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40566.000488783,
+      "ros_s": 58.618,
+      "kind": "request",
+      "sequence": 20,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40566.001206749,
+      "ros_s": 58.620000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40566.201322591,
+      "ros_s": 58.81,
+      "kind": "request",
+      "sequence": 21,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40566.20361123,
+      "ros_s": 58.81100000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40566.401667887,
+      "ros_s": 58.996,
+      "kind": "request",
+      "sequence": 22,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40566.402093833,
+      "ros_s": 58.996,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40566.601793019,
+      "ros_s": 59.18000000000001,
+      "kind": "request",
+      "sequence": 23,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40566.603469387,
+      "ros_s": 59.18300000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40566.80206128,
+      "ros_s": 59.37200000000001,
+      "kind": "request",
+      "sequence": 24,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40566.802526298,
+      "ros_s": 59.37200000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40567.004147813,
+      "ros_s": 59.56,
+      "kind": "request",
+      "sequence": 25,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40567.004978655,
+      "ros_s": 59.562000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40567.204244834,
+      "ros_s": 59.75000000000001,
+      "kind": "request",
+      "sequence": 26,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40567.20714452,
+      "ros_s": 59.75000000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40567.405010421,
+      "ros_s": 59.92700000000001,
+      "kind": "request",
+      "sequence": 27,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40567.405615954,
+      "ros_s": 59.929,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40567.606925385,
+      "ros_s": 60.118,
+      "kind": "request",
+      "sequence": 28,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40567.610061679,
+      "ros_s": 60.121,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40567.808892791,
+      "ros_s": 60.309000000000005,
+      "kind": "request",
+      "sequence": 29,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40567.811435617,
+      "ros_s": 60.31100000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40568.008997303,
+      "ros_s": 60.502,
+      "kind": "request",
+      "sequence": 30,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40568.010150517,
+      "ros_s": 60.502,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40568.209239568,
+      "ros_s": 60.690000000000005,
+      "kind": "request",
+      "sequence": 31,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40568.210459026,
+      "ros_s": 60.69200000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40568.409539326,
+      "ros_s": 60.870000000000005,
+      "kind": "request",
+      "sequence": 32,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40568.410758389,
+      "ros_s": 60.87500000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40568.610167004,
+      "ros_s": 61.057,
+      "kind": "request",
+      "sequence": 33,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40568.611856605,
+      "ros_s": 61.06,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40568.810781866,
+      "ros_s": 61.24,
+      "kind": "request",
+      "sequence": 34,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40568.815540361,
+      "ros_s": 61.24400000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40569.011060496,
+      "ros_s": 61.429,
+      "kind": "request",
+      "sequence": 35,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40569.011642904,
+      "ros_s": 61.429,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40569.211211888,
+      "ros_s": 61.615,
+      "kind": "request",
+      "sequence": 36,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40569.211959338,
+      "ros_s": 61.617000000000004,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40569.411403582,
+      "ros_s": 61.807,
+      "kind": "request",
+      "sequence": 37,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40569.412455555,
+      "ros_s": 61.80800000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40569.611997386,
+      "ros_s": 61.98500000000001,
+      "kind": "request",
+      "sequence": 38,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40569.612480611,
+      "ros_s": 61.98500000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40569.812145289,
+      "ros_s": 62.160000000000004,
+      "kind": "request",
+      "sequence": 39,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40569.813205834,
+      "ros_s": 62.164,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40570.012177813,
+      "ros_s": 62.343,
+      "kind": "request",
+      "sequence": 40,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40570.015779627,
+      "ros_s": 62.346000000000004,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40570.213200636,
+      "ros_s": 62.527,
+      "kind": "request",
+      "sequence": 41,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40570.213522749,
+      "ros_s": 62.527,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40570.413975319,
+      "ros_s": 62.697,
+      "kind": "request",
+      "sequence": 42,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40570.414462174,
+      "ros_s": 62.697,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40570.614192594,
+      "ros_s": 62.871,
+      "kind": "request",
+      "sequence": 43,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40570.616185095,
+      "ros_s": 62.874,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40570.814197819,
+      "ros_s": 63.06,
+      "kind": "request",
+      "sequence": 44,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40570.815223202,
+      "ros_s": 63.062000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40571.014890497,
+      "ros_s": 63.25000000000001,
+      "kind": "request",
+      "sequence": 45,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40571.018559975,
+      "ros_s": 63.251000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40571.215122738,
+      "ros_s": 63.43900000000001,
+      "kind": "request",
+      "sequence": 46,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40571.215859371,
+      "ros_s": 63.43900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40571.415610039,
+      "ros_s": 63.63100000000001,
+      "kind": "request",
+      "sequence": 47,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40571.418343095,
+      "ros_s": 63.633,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40571.616800109,
+      "ros_s": 63.815000000000005,
+      "kind": "request",
+      "sequence": 48,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40571.617403449,
+      "ros_s": 63.815000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40571.817683813,
+      "ros_s": 63.998000000000005,
+      "kind": "request",
+      "sequence": 49,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40571.81817929,
+      "ros_s": 63.998000000000005,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40572.01846614,
+      "ros_s": 64.177,
+      "kind": "request",
+      "sequence": 50,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40572.018846976,
+      "ros_s": 64.177,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40572.221425353,
+      "ros_s": 64.35900000000001,
+      "kind": "request",
+      "sequence": 51,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40572.222082555,
+      "ros_s": 64.35900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40572.422333115,
+      "ros_s": 64.547,
+      "kind": "request",
+      "sequence": 52,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40572.422747935,
+      "ros_s": 64.547,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40572.628900308,
+      "ros_s": 64.702,
+      "kind": "request",
+      "sequence": 53,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40572.634563025,
+      "ros_s": 64.745,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40572.830405023,
+      "ros_s": 64.929,
+      "kind": "request",
+      "sequence": 54,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40572.830961251,
+      "ros_s": 64.929,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40573.030980178,
+      "ros_s": 65.12,
+      "kind": "request",
+      "sequence": 55,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40573.03296725,
+      "ros_s": 65.12100000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40573.231036037,
+      "ros_s": 65.3,
+      "kind": "request",
+      "sequence": 56,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40573.234212043,
+      "ros_s": 65.302,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40573.431209783,
+      "ros_s": 65.48400000000001,
+      "kind": "request",
+      "sequence": 57,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40573.431759432,
+      "ros_s": 65.48400000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40573.631401837,
+      "ros_s": 65.664,
+      "kind": "request",
+      "sequence": 58,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40573.631965969,
+      "ros_s": 65.665,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40573.831444997,
+      "ros_s": 65.855,
+      "kind": "request",
+      "sequence": 59,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40573.832094952,
+      "ros_s": 65.85600000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40574.031750493,
+      "ros_s": 66.042,
+      "kind": "request",
+      "sequence": 60,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40574.032329415,
+      "ros_s": 66.043,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40574.232092252,
+      "ros_s": 66.224,
+      "kind": "request",
+      "sequence": 61,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40574.232545794,
+      "ros_s": 66.224,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40574.432143988,
+      "ros_s": 66.41000000000001,
+      "kind": "request",
+      "sequence": 62,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40574.434390191,
+      "ros_s": 66.41300000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40574.63251833,
+      "ros_s": 66.583,
+      "kind": "request",
+      "sequence": 63,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40574.634440777,
+      "ros_s": 66.58500000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40574.832902918,
+      "ros_s": 66.76100000000001,
+      "kind": "request",
+      "sequence": 64,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40574.833555637,
+      "ros_s": 66.76400000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40575.033223216,
+      "ros_s": 66.953,
+      "kind": "request",
+      "sequence": 65,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40575.03471258,
+      "ros_s": 66.95400000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40575.233747359,
+      "ros_s": 67.13900000000001,
+      "kind": "request",
+      "sequence": 66,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40575.23405805,
+      "ros_s": 67.13900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40575.434860938,
+      "ros_s": 67.32900000000001,
+      "kind": "request",
+      "sequence": 67,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40575.435572606,
+      "ros_s": 67.33,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40575.63664414,
+      "ros_s": 67.50800000000001,
+      "kind": "request",
+      "sequence": 68,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40575.637284841,
+      "ros_s": 67.50800000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40575.837100926,
+      "ros_s": 67.69200000000001,
+      "kind": "request",
+      "sequence": 69,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40575.839820916,
+      "ros_s": 67.694,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40576.03865522,
+      "ros_s": 67.87,
+      "kind": "request",
+      "sequence": 70,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40576.039279443,
+      "ros_s": 67.87,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40576.238771451,
+      "ros_s": 68.053,
+      "kind": "request",
+      "sequence": 71,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40576.239205923,
+      "ros_s": 68.053,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40576.439398061,
+      "ros_s": 68.242,
+      "kind": "request",
+      "sequence": 72,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40576.440097619,
+      "ros_s": 68.242,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40576.640722071,
+      "ros_s": 68.426,
+      "kind": "request",
+      "sequence": 73,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40576.641277154,
+      "ros_s": 68.426,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40576.840891547,
+      "ros_s": 68.62,
+      "kind": "request",
+      "sequence": 74,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40576.841240464,
+      "ros_s": 68.62,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40577.041786162,
+      "ros_s": 68.809,
+      "kind": "request",
+      "sequence": 75,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40577.042356339,
+      "ros_s": 68.809,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40577.242451141,
+      "ros_s": 68.99900000000001,
+      "kind": "request",
+      "sequence": 76,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40577.242869966,
+      "ros_s": 68.99900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40577.442722678,
+      "ros_s": 69.179,
+      "kind": "request",
+      "sequence": 77,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40577.44319179,
+      "ros_s": 69.179,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40577.643246365,
+      "ros_s": 69.36500000000001,
+      "kind": "request",
+      "sequence": 78,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40577.643759511,
+      "ros_s": 69.36500000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40577.843370985,
+      "ros_s": 69.558,
+      "kind": "request",
+      "sequence": 79,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40577.843775053,
+      "ros_s": 69.558,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40578.043547365,
+      "ros_s": 69.747,
+      "kind": "request",
+      "sequence": 80,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40578.043914254,
+      "ros_s": 69.747,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40578.244404454,
+      "ros_s": 69.926,
+      "kind": "request",
+      "sequence": 81,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40578.24517208,
+      "ros_s": 69.927,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40578.444440787,
+      "ros_s": 70.114,
+      "kind": "request",
+      "sequence": 82,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40578.445113811,
+      "ros_s": 70.11500000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40578.644969595,
+      "ros_s": 70.29700000000001,
+      "kind": "request",
+      "sequence": 83,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40578.645261582,
+      "ros_s": 70.29700000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40578.846650369,
+      "ros_s": 70.479,
+      "kind": "request",
+      "sequence": 84,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40578.847419975,
+      "ros_s": 70.48,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40579.048308549,
+      "ros_s": 70.667,
+      "kind": "request",
+      "sequence": 85,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40579.04904245,
+      "ros_s": 70.66900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40579.249075141,
+      "ros_s": 70.825,
+      "kind": "request",
+      "sequence": 86,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40579.249790711,
+      "ros_s": 70.82600000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40579.44968876,
+      "ros_s": 71.00800000000001,
+      "kind": "request",
+      "sequence": 87,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40579.450196079,
+      "ros_s": 71.00800000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40579.649733583,
+      "ros_s": 71.18900000000001,
+      "kind": "request",
+      "sequence": 88,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40579.650124062,
+      "ros_s": 71.18900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40579.849852815,
+      "ros_s": 71.37,
+      "kind": "request",
+      "sequence": 89,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40579.850918287,
+      "ros_s": 71.372,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40580.050012794,
+      "ros_s": 71.557,
+      "kind": "request",
+      "sequence": 90,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40580.050531966,
+      "ros_s": 71.557,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40580.250562816,
+      "ros_s": 71.73,
+      "kind": "request",
+      "sequence": 91,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40580.253968645,
+      "ros_s": 71.73100000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40580.451532131,
+      "ros_s": 71.914,
+      "kind": "request",
+      "sequence": 92,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40580.452142495,
+      "ros_s": 71.915,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40580.651959562,
+      "ros_s": 72.10000000000001,
+      "kind": "request",
+      "sequence": 93,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40580.65241272,
+      "ros_s": 72.10000000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40580.853147023,
+      "ros_s": 72.287,
+      "kind": "request",
+      "sequence": 94,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40580.853453192,
+      "ros_s": 72.287,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40581.053524107,
+      "ros_s": 72.47,
+      "kind": "request",
+      "sequence": 95,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40581.054135143,
+      "ros_s": 72.473,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40581.25651937,
+      "ros_s": 72.659,
+      "kind": "request",
+      "sequence": 96,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40581.257105101,
+      "ros_s": 72.659,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40581.456653484,
+      "ros_s": 72.85000000000001,
+      "kind": "request",
+      "sequence": 97,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40581.459418852,
+      "ros_s": 72.854,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40581.657008997,
+      "ros_s": 73.03,
+      "kind": "request",
+      "sequence": 98,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40581.658370719,
+      "ros_s": 73.033,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40581.857244344,
+      "ros_s": 73.22,
+      "kind": "request",
+      "sequence": 99,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40581.861810289,
+      "ros_s": 73.22200000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40582.057760993,
+      "ros_s": 73.399,
+      "kind": "request",
+      "sequence": 100,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40582.058232753,
+      "ros_s": 73.399,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40582.258888944,
+      "ros_s": 73.59100000000001,
+      "kind": "request",
+      "sequence": 101,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40582.260639026,
+      "ros_s": 73.592,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40582.459554811,
+      "ros_s": 73.77900000000001,
+      "kind": "request",
+      "sequence": 102,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40582.461638512,
+      "ros_s": 73.78,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40582.659958353,
+      "ros_s": 73.96900000000001,
+      "kind": "request",
+      "sequence": 103,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40582.661064119,
+      "ros_s": 73.96900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40582.860065045,
+      "ros_s": 74.15700000000001,
+      "kind": "request",
+      "sequence": 104,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40582.860746424,
+      "ros_s": 74.158,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40583.060296268,
+      "ros_s": 74.34700000000001,
+      "kind": "request",
+      "sequence": 105,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40583.061051794,
+      "ros_s": 74.348,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40583.260447642,
+      "ros_s": 74.528,
+      "kind": "request",
+      "sequence": 106,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40583.261267559,
+      "ros_s": 74.53,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40583.460741295,
+      "ros_s": 74.711,
+      "kind": "request",
+      "sequence": 107,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40583.462118046,
+      "ros_s": 74.714,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40583.660818449,
+      "ros_s": 74.893,
+      "kind": "request",
+      "sequence": 108,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40583.66148696,
+      "ros_s": 74.893,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40583.860869245,
+      "ros_s": 75.07600000000001,
+      "kind": "request",
+      "sequence": 109,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40583.861651819,
+      "ros_s": 75.07900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40584.063473265,
+      "ros_s": 75.263,
+      "kind": "request",
+      "sequence": 110,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40584.064623116,
+      "ros_s": 75.266,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40584.263821205,
+      "ros_s": 75.452,
+      "kind": "request",
+      "sequence": 111,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40584.264389124,
+      "ros_s": 75.452,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40584.463897603,
+      "ros_s": 75.638,
+      "kind": "request",
+      "sequence": 112,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40584.464467875,
+      "ros_s": 75.638,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40584.664259707,
+      "ros_s": 75.82300000000001,
+      "kind": "request",
+      "sequence": 113,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40584.665103139,
+      "ros_s": 75.825,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40584.86446015,
+      "ros_s": 76.00800000000001,
+      "kind": "request",
+      "sequence": 114,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40584.865161483,
+      "ros_s": 76.009,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40585.065082018,
+      "ros_s": 76.19,
+      "kind": "request",
+      "sequence": 115,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40585.065398892,
+      "ros_s": 76.19,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40585.26516019,
+      "ros_s": 76.38000000000001,
+      "kind": "request",
+      "sequence": 116,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40585.265835936,
+      "ros_s": 76.38300000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40585.46520213,
+      "ros_s": 76.571,
+      "kind": "request",
+      "sequence": 117,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40585.466356081,
+      "ros_s": 76.57300000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40585.666148155,
+      "ros_s": 76.76,
+      "kind": "request",
+      "sequence": 118,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40585.668778705,
+      "ros_s": 76.76100000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40585.866435852,
+      "ros_s": 76.949,
+      "kind": "request",
+      "sequence": 119,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40585.866906959,
+      "ros_s": 76.949,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40586.066812726,
+      "ros_s": 77.13900000000001,
+      "kind": "request",
+      "sequence": 120,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40586.067273712,
+      "ros_s": 77.13900000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40586.267302875,
+      "ros_s": 77.327,
+      "kind": "request",
+      "sequence": 121,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40586.267816361,
+      "ros_s": 77.327,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40586.467629197,
+      "ros_s": 77.515,
+      "kind": "request",
+      "sequence": 122,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40586.468185712,
+      "ros_s": 77.515,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40586.668209049,
+      "ros_s": 77.70400000000001,
+      "kind": "request",
+      "sequence": 123,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40586.668730809,
+      "ros_s": 77.70400000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40586.869232227,
+      "ros_s": 77.89,
+      "kind": "request",
+      "sequence": 124,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40586.871601939,
+      "ros_s": 77.89200000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40587.070035743,
+      "ros_s": 78.072,
+      "kind": "request",
+      "sequence": 125,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40587.070498641,
+      "ros_s": 78.072,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40587.270158908,
+      "ros_s": 78.253,
+      "kind": "request",
+      "sequence": 126,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40587.270530572,
+      "ros_s": 78.253,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40587.470851413,
+      "ros_s": 78.432,
+      "kind": "request",
+      "sequence": 127,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40587.471394758,
+      "ros_s": 78.432,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40587.671324685,
+      "ros_s": 78.61500000000001,
+      "kind": "request",
+      "sequence": 128,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40587.672561612,
+      "ros_s": 78.617,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40587.871441806,
+      "ros_s": 78.805,
+      "kind": "request",
+      "sequence": 129,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40587.871990269,
+      "ros_s": 78.80600000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40588.071650275,
+      "ros_s": 78.979,
+      "kind": "request",
+      "sequence": 130,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40588.072122158,
+      "ros_s": 78.979,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40588.271886276,
+      "ros_s": 79.16000000000001,
+      "kind": "request",
+      "sequence": 131,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40588.27704076,
+      "ros_s": 79.16300000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40588.472429399,
+      "ros_s": 79.35000000000001,
+      "kind": "request",
+      "sequence": 132,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40588.475181095,
+      "ros_s": 79.35000000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40588.672651552,
+      "ros_s": 79.525,
+      "kind": "request",
+      "sequence": 133,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40588.673126297,
+      "ros_s": 79.525,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40588.873356768,
+      "ros_s": 79.71300000000001,
+      "kind": "request",
+      "sequence": 134,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40588.873931672,
+      "ros_s": 79.71300000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40589.074019907,
+      "ros_s": 79.903,
+      "kind": "request",
+      "sequence": 135,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40589.074520765,
+      "ros_s": 79.903,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40589.274055501,
+      "ros_s": 80.081,
+      "kind": "request",
+      "sequence": 136,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40589.276201562,
+      "ros_s": 80.08200000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40589.474670338,
+      "ros_s": 80.266,
+      "kind": "request",
+      "sequence": 137,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40589.475313396,
+      "ros_s": 80.268,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40589.674978339,
+      "ros_s": 80.455,
+      "kind": "request",
+      "sequence": 138,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40589.675282374,
+      "ros_s": 80.455,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40589.875495371,
+      "ros_s": 80.64,
+      "kind": "request",
+      "sequence": 139,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40589.87646581,
+      "ros_s": 80.64,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40590.076072641,
+      "ros_s": 80.824,
+      "kind": "request",
+      "sequence": 140,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40590.076541424,
+      "ros_s": 80.825,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40590.276387864,
+      "ros_s": 81.013,
+      "kind": "request",
+      "sequence": 141,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40590.276697482,
+      "ros_s": 81.013,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40590.476610371,
+      "ros_s": 81.2,
+      "kind": "request",
+      "sequence": 142,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40590.477086799,
+      "ros_s": 81.2,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40590.677122182,
+      "ros_s": 81.381,
+      "kind": "request",
+      "sequence": 143,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40590.678023622,
+      "ros_s": 81.38300000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40590.877721953,
+      "ros_s": 81.56800000000001,
+      "kind": "request",
+      "sequence": 144,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40590.878176104,
+      "ros_s": 81.56800000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40591.077898229,
+      "ros_s": 81.753,
+      "kind": "request",
+      "sequence": 145,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40591.078371731,
+      "ros_s": 81.753,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40591.278404029,
+      "ros_s": 81.936,
+      "kind": "request",
+      "sequence": 146,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40591.278719695,
+      "ros_s": 81.936,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40591.478578847,
+      "ros_s": 82.125,
+      "kind": "request",
+      "sequence": 147,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40591.478916244,
+      "ros_s": 82.125,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40591.679590494,
+      "ros_s": 82.31,
+      "kind": "request",
+      "sequence": 148,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40591.681742911,
+      "ros_s": 82.311,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40591.88039919,
+      "ros_s": 82.498,
+      "kind": "request",
+      "sequence": 149,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40591.880682813,
+      "ros_s": 82.498,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40592.08058267,
+      "ros_s": 82.68100000000001,
+      "kind": "request",
+      "sequence": 150,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40592.082813738,
+      "ros_s": 82.685,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40592.280674078,
+      "ros_s": 82.861,
+      "kind": "request",
+      "sequence": 151,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40592.282897457,
+      "ros_s": 82.86500000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40592.481636429,
+      "ros_s": 83.04700000000001,
+      "kind": "request",
+      "sequence": 152,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40592.481920612,
+      "ros_s": 83.04700000000001,
+      "kind": "response",
+      "accepted": true,
+      "reason": "RENEWED"
+    },
+    {
+      "wall": 40592.68229327,
+      "ros_s": 83.23700000000001,
+      "kind": "request",
+      "sequence": 153,
+      "lease": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "resource_epoch": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    },
+    {
+      "wall": 40592.682605989,
+      "ros_s": 83.23700000000001,
+      "kind": "response",
+      "accepted": false,
+      "reason": "GEOMETRY_UNCONFIRMED"
+    }
+  ],
+  "events": [
+    {
+      "service": "/robot_envelope_coordinator/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "service": "/task_trajectory_executor/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "service": "/transport_mtc_planner/get_parameters",
+      "attempt": 1,
+      "result": "response"
+    },
+    {
+      "kind": "parent_submission",
+      "wall": 40562.133708869,
+      "ros_s": 55.012,
+      "goal": {
+        "task_id": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+        "request_id": "77d29755a141416b9382c74e33e9102c",
+        "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+        "object_id": "transport_box_01",
+        "pick_pre_target": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "gazebo_world"
+          },
+          "pose": {
+            "position": {
+              "x": 0.1,
+              "y": 0.7,
+              "z": 1.225
+            },
+            "orientation": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5,
+              "w": 0.5
+            }
+          }
+        },
+        "pick_target": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "gazebo_world"
+          },
+          "pose": {
+            "position": {
+              "x": 0.1,
+              "y": 0.7,
+              "z": 1.195
+            },
+            "orientation": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5,
+              "w": 0.5
+            }
+          }
+        },
+        "pick_exit_targets": [
+          {
+            "header": {
+              "stamp": {
+                "sec": 0,
+                "nanosec": 0
+              },
+              "frame_id": "gazebo_world"
+            },
+            "pose": {
+              "position": {
+                "x": 0.1,
+                "y": 0.7,
+                "z": 1.2550000000000001
+              },
+              "orientation": {
+                "x": 0.5,
+                "y": 0.5,
+                "z": 0.5,
+                "w": 0.5
+              }
+            }
+          }
+        ],
+        "place_pre_target": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "gazebo_world"
+          },
+          "pose": {
+            "position": {
+              "x": 1.15,
+              "y": 0.72,
+              "z": 1.2249999999999999
+            },
+            "orientation": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5,
+              "w": 0.5
+            }
+          }
+        },
+        "place_target": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "gazebo_world"
+          },
+          "pose": {
+            "position": {
+              "x": 1.15,
+              "y": 0.72,
+              "z": 1.1949999999999998
+            },
+            "orientation": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 0.5,
+              "w": 0.5
+            }
+          }
+        },
+        "place_exit_targets": [
+          {
+            "header": {
+              "stamp": {
+                "sec": 0,
+                "nanosec": 0
+              },
+              "frame_id": "gazebo_world"
+            },
+            "pose": {
+              "position": {
+                "x": 1.144457792105735,
+                "y": 0.6401922063225856,
+                "z": 1.2249999999999999
+              },
+              "orientation": {
+                "x": 0.5,
+                "y": 0.5,
+                "z": 0.5,
+                "w": 0.5
+              }
+            }
+          },
+          {
+            "header": {
+              "stamp": {
+                "sec": 0,
+                "nanosec": 0
+              },
+              "frame_id": "gazebo_world"
+            },
+            "pose": {
+              "position": {
+                "x": 1.143072240132169,
+                "y": 0.620240257903232,
+                "z": 1.2249999999999999
+              },
+              "orientation": {
+                "x": 0.5,
+                "y": 0.5,
+                "z": 0.5,
+                "w": 0.5
+              }
+            }
+          },
+          {
+            "header": {
+              "stamp": {
+                "sec": 0,
+                "nanosec": 0
+              },
+              "frame_id": "gazebo_world"
+            },
+            "pose": {
+              "position": {
+                "x": 1.1458433440793012,
+                "y": 0.6601441547419392,
+                "z": 1.2249999999999999
+              },
+              "orientation": {
+                "x": 0.5,
+                "y": 0.5,
+                "z": 0.5,
+                "w": 0.5
+              }
+            }
+          }
+        ],
+        "navigation_target": {
+          "header": {
+            "stamp": {
+              "sec": 0,
+              "nanosec": 0
+            },
+            "frame_id": "map"
+          },
+          "pose": {
+            "position": {
+              "x": 1.1,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "orientation": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+              "w": 1.0
+            }
+          }
+        },
+        "stations": [
+          {
+            "header": {
+              "stamp": {
+                "sec": 0,
+                "nanosec": 0
+              },
+              "frame_id": "gazebo_world"
+            },
+            "pose": {
+              "position": {
+                "x": 0.1,
+                "y": 0.7,
+                "z": 0.5175
+              },
+              "orientation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+              }
+            },
+            "id": "transport_box_01_pick_station",
+            "type": {
+              "key": "",
+              "db": ""
+            },
+            "primitives": [
+              {
+                "type": 1,
+                "dimensions": [
+                  0.1,
+                  0.1,
+                  1.035
+                ],
+                "polygon": {
+                  "points": []
+                }
+              }
+            ],
+            "primitive_poses": [
+              {
+                "position": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "orientation": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                  "w": 1.0
+                }
+              }
+            ],
+            "meshes": [],
+            "mesh_poses": [],
+            "planes": [],
+            "plane_poses": [],
+            "subframe_names": [],
+            "subframe_poses": [],
+            "operation": "\u0000"
+          },
+          {
+            "header": {
+              "stamp": {
+                "sec": 0,
+                "nanosec": 0
+              },
+              "frame_id": "gazebo_world"
+            },
+            "pose": {
+              "position": {
+                "x": 1.15,
+                "y": 0.72,
+                "z": 0.5175
+              },
+              "orientation": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0,
+                "w": 1.0
+              }
+            },
+            "id": "transport_box_01_place_station",
+            "type": {
+              "key": "",
+              "db": ""
+            },
+            "primitives": [
+              {
+                "type": 1,
+                "dimensions": [
+                  0.1,
+                  0.1,
+                  1.035
+                ],
+                "polygon": {
+                  "points": []
+                }
+              }
+            ],
+            "primitive_poses": [
+              {
+                "position": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "orientation": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0,
+                  "w": 1.0
+                }
+              }
+            ],
+            "meshes": [],
+            "mesh_poses": [],
+            "planes": [],
+            "plane_poses": [],
+            "subframe_names": [],
+            "subframe_poses": [],
+            "operation": "\u0000"
+          }
+        ],
+        "touch_links": [
+          "astribot_arm_left_link_7",
+          "astribot_gripper_left_base",
+          "astribot_gripper_left_Link_L11",
+          "astribot_gripper_left_Link_L2",
+          "astribot_gripper_left_Link_R11",
+          "astribot_gripper_left_Link_R2"
+        ],
+        "grasp_width_m": 0.06,
+        "navigation_limits": {
+          "stamp": {
+            "sec": 0,
+            "nanosec": 0
+          },
+          "epoch": 0,
+          "lease_s": 0.3,
+          "frame_id": "astribot_torso_base",
+          "posture_id": "transport_compact",
+          "transport_ready": true,
+          "half_length_m": 0.31,
+          "half_width_m": 0.31,
+          "height_m": 1.63,
+          "payload_mass_kg": 0.2,
+          "max_speed_m_s": 0.35,
+          "max_angular_speed_rad_s": 1.5,
+          "max_acceleration_m_s2": 0.5,
+          "brake_deceleration_m_s2": 0.5,
+          "reason": "fixed_station_transfer"
+        },
+        "timeout_s": 540.0
+      },
+      "goal_uuid": "d5cf11a757ed4ec7935ab472561b9dfe",
+      "remaining_steady_s": 536.7799158449998
+    },
+    {
+      "kind": "cancel_requested",
+      "wall": 40592.982671847,
+      "ros_s": 83.515,
+      "goal_uuid": "d5cf11a757ed4ec7935ab472561b9dfe",
+      "identity": [
+        "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+      ]
+    },
+    {
+      "kind": "cancel_response",
+      "wall": 40592.983458922,
+      "ros_s": 83.515,
+      "response": {
+        "return_code": 0,
+        "goals_canceling": [
+          {
+            "goal_id": {
+              "uuid": [
+                213,
+                207,
+                17,
+                167,
+                87,
+                237,
+                78,
+                199,
+                147,
+                90,
+                180,
+                114,
+                86,
+                27,
+                157,
+                254
+              ]
+            },
+            "stamp": {
+              "sec": 55,
+              "nanosec": 106000000
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "parent_terminal",
+      "wall": 40594.327286056,
+      "ros_s": 84.79100000000001,
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "cleanup_reason": "",
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "1f8f7ccdf65b58b332e34c1f8321acb9106173f27d900b9e239756fd90ac7855"
+      }
+    }
+  ],
+  "record_counts": {
+    "identity_parameters": 3,
+    "observer_discovery_first_nodes": 1,
+    "observer_discovery_nodes": 1,
+    "action_discovery_servers": 1,
+    "native_navigation_client": 1,
+    "executor_journal": 30,
+    "cleanup_errors": 0,
+    "lease_epoch": 2,
+    "feedback_records": 643,
+    "typed_hold_records": 704,
+    "geometry_records": 362,
+    "payload_records": 2594,
+    "jtc_records": 8925,
+    "navigation_execution_records": 0,
+    "nav_status_records": 0,
+    "navigation_goal_uuids": 0,
+    "events": 7,
+    "envelopes": 0,
+    "acks": 0,
+    "commands": 4,
+    "motion": 1610,
+    "renew_events": 306,
+    "constraints": 1750,
+    "gc_events": 29,
+    "slow_spins": 1
+  }
+}

@@ -1,0 +1,48 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___________________ test_numeric_string_conversion_semantics ___________________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_numeric_string_conversion_semantics(authority):
+        ops=[]
+        for value in [' 1_0e-3 ','.001','1.','+.01','0x1p-1','nan(payload)','Inf','-Infinity','\u3000٠.١\u3000','١_٢e-٣','1__0','_1','1_', '.', '']:
+            p=vision();p['observations'][0]['position_variance_m2']=value;ops.append(dict(packet=p))
+        for value in ['\u3000١_٢\u3000','１２３','+','1__0']:
+            ops.append(dict(packet=vision(calibration_epoch=value)))
+>       check(dict(operations=ops),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:305: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:137: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:133: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration_epoch':...: 'ros', 'epoch': 4, 'ns': 100}, 'class_probabilities': [['person', 0.6], ['unknown', 0.3]], 'frame_id': 'odom', ...}]}
+b = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100]], 'last_packet': {'calibration_epoch': 7, 'frame_id':...3}, 'geometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'ValueError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration...}, 'geometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'ValueError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'ok', 'calls', 'type', 'last_packet'}
+E             ?                --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:129: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_numeric_string_conversion_semantics
+1 failed, 28 deselected in 0.12s

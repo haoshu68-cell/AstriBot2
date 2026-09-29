@@ -1,0 +1,31 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___ test_latched_exact_forwarding_late_subscriber_and_no_reverse[False-cpp] ____
+
+impl = 'cpp', remap = False
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('remap', [False, True])
+    def test_latched_exact_forwarding_late_subscriber_and_no_reverse(impl, remap):
+        relay = Relay(impl, 'latched_remap_' + str(remap), remap=remap, start=False)
+        try:
+            first = relay.message(1)
+            relay.publisher.publish(first)
+            relay.start()
+            relay.until(lambda: len(relay.messages) > 0)
+>           assert signature(relay.messages[-1][1]) == signature(first)
+E           AssertionError: assert ('non_default...33333, 5, ...) == ('non_default...33333, 5, ...)
+E             At index 6 diff: 3 != 2
+E             Full diff:
+E               (
+E                'non_default_map',
+E                1,
+E                123456789,
+E                -2,...
+E             
+E             ...Full output truncated (11 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:209: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py::test_latched_exact_forwarding_late_subscriber_and_no_reverse[False-cpp]
+1 failed, 43 deselected in 0.49s

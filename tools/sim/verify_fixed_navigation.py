@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Owned simulation validation of formal fixed envelope during Nav2 motion."""
 import math
-import statistics
 
 class OwnedHoldLease:
     """Bind renewal to feedback for this Action UUID, never global status alone."""
@@ -30,34 +29,60 @@ def transform_goal(target, transform):
     x,y,yaw=transform;c=math.cos(yaw);s=math.sin(yaw)
     return [x+c*target[0]-s*target[1],y+s*target[0]+c*target[1],math.remainder(target[2]+yaw,2*math.pi)]
 
-def measured_stop(rows, after_ros_s, now_wall, now_ros_s):
-    tail = [r for r in rows if r['t'] >= rows[-1]['t']-.7-1e-8] if rows else []
-    keys = ('t', 'wall', 'x', 'y', 'yaw', 'vx', 'vy', 'wz', 'cmd_vx', 'cmd_vy', 'cmd_wz', 'cmd_wall')
-    valid = (len(tail) >= 12 and all(r['frame']=='odom' and all(math.isfinite(r[k]) for k in keys) for r in tail)
-             and all(0 < b['t']-a['t'] <= .12 for a,b in zip(tail, tail[1:])))
-    if not valid:
-        return {'passed': False, 'reason': 'INCOMPLETE_OR_INVALID_SOURCE'}
-    span = tail[-1]['t']-tail[0]['t']
-    yaw = [tail[0]['yaw']]
-    for a,b in zip(tail, tail[1:]):
-        yaw.append(yaw[-1]+math.remainder(b['yaw']-a['yaw'], 2*math.pi))
-    drift = max(math.hypot(r['x']-tail[0]['x'],r['y']-tail[0]['y']) for r in tail)
-    rotation = max(abs(v-yaw[0]) for v in yaw)
-    tmean = statistics.mean(r['t'] for r in tail)
-    variance = sum((r['t']-tmean)**2 for r in tail)
-    slopes = [sum((r['t']-tmean)*r[k] for r in tail)/variance for k in ('x','y')]
-    speed = max(math.hypot(r['vx'],r['vy']) for r in tail)
-    wz = max(abs(r['wz']) for r in tail)
-    cmd = max(max(abs(r[k]) for k in ('cmd_vx','cmd_vy','cmd_wz')) for r in tail)
-    fresh = (math.isfinite(now_ros_s) and 0 <= now_ros_s-tail[-1]['t'] < .3 and
-             0 <= now_wall-tail[-1]['wall'] < .3 and
-             all(0 <= r['wall']-r['cmd_wall'] < .3 for r in tail))
-    passed = (span >= .6 and tail[0]['t'] > after_ros_s and fresh and
-              speed <= .01 and wz <= .02 and cmd <= 1e-6 and
-              drift <= .005 and rotation <= .01 and math.hypot(*slopes) <= .01)
-    return dict(passed=passed, samples=len(tail), span_s=span, start_ros_s=tail[0]['t'],
-                end_ros_s=tail[-1]['t'], drift_m=drift, rotation_rad=rotation,
-                speed_mps=speed, angular_speed_radps=wz, command_max=cmd, fresh=fresh)
+def slam_pose_sample(msg, wall, command):
+    """Read the SLAM chassis pose directly; never substitute odometry or TF."""
+    p=msg.pose.pose.position; q=msg.pose.pose.orientation
+    if msg.header.frame_id!='map' or not all(math.isfinite(v) for v in (p.x,p.y,p.z,q.x,q.y,q.z,q.w)):
+        raise RuntimeError('INVALID_SLAM_POSE')
+    if abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.01:
+        raise RuntimeError('INVALID_SLAM_ORIENTATION')
+    c=command or {}
+    return dict(t=msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9,wall=wall,
+                x=p.x,y=p.y,yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+                frame='map',pose_source='/slam/pose',command_observed=bool(c),
+                cmd_vx=c.get('vx',math.nan),cmd_vy=c.get('vy',math.nan),
+                cmd_wz=c.get('wz',math.nan),cmd_wall=c.get('wall',-math.inf))
+
+
+def measured_stop(rows, after_wall, now_wall, *,
+                  event_driven_command=False, idle_command_silence=False):
+    # Distinct SLAM observations received after the request prove a pose window.
+    # No odometry twist, differentiated speed, or local ROS age gates participate.
+    samples=[r for r in rows if after_wall < r['wall'] <= now_wall]
+    if len(samples)<2:
+        return {'passed':False,'reason':'SLAM_POSE_WINDOW_INCOMPLETE'}
+    # Include the last observation at/before the 0.6 s window boundary. SLAM
+    # runs at LiDAR cadence, so do not impose the former 50 Hz odometry count.
+    first=0
+    for i,r in enumerate(samples[:-1]):
+        if r['wall']<=samples[-1]['wall']-.6+1e-8:first=i
+    tail=samples[first:]
+    keys=('t','wall','x','y','yaw')
+    command_keys=('cmd_vx','cmd_vy','cmd_wz','cmd_wall')
+    observed=[r for r in tail if not event_driven_command or r.get('command_observed') is not False]
+    valid=(all(r['frame']=='map' and r['pose_source']=='/slam/pose' and
+               all(math.isfinite(r[k]) for k in keys) for r in tail)
+           and all(all(math.isfinite(r[k]) for k in command_keys) for r in observed)
+           and (len(observed)==len(tail) or event_driven_command and idle_command_silence)
+           and all(b['t']>a['t'] and b['wall']>a['wall'] for a,b in zip(tail,tail[1:])))
+    if not valid:return {'passed':False,'reason':'INCOMPLETE_OR_INVALID_SLAM_POSE_SOURCE'}
+    span=tail[-1]['wall']-tail[0]['wall']
+    # Signed angular increments cancel reversing jitter; position relative to
+    # the first sample is exactly the sum of signed position increments.
+    # Bound the running net deviation, never the sum of absolute increments.
+    yaw=[tail[0]['yaw']]
+    for a,b in zip(tail,tail[1:]):yaw.append(yaw[-1]+math.remainder(b['yaw']-a['yaw'],2*math.pi))
+    drift=max(math.hypot(r['x']-tail[0]['x'],r['y']-tail[0]['y']) for r in tail)
+    rotation=max(abs(v-yaw[0]) for v in yaw)
+    cmd=max((max(abs(r[k]) for k in ('cmd_vx','cmd_vy','cmd_wz')) for r in observed),default=None)
+    command_valid=all(0<=r['wall']-r['cmd_wall'] and
+                      (r['cmd_wall']<=now_wall if event_driven_command else r['wall']-r['cmd_wall']<.3)
+                      for r in observed)
+    return dict(passed=span>=.6-1e-8 and command_valid and (cmd is None or cmd<=1e-6) and
+                drift<=.005 and rotation<=.01,samples=len(tail),span_s=span,
+                start_ros_s=tail[0]['t'],end_ros_s=tail[-1]['t'],drift_m=drift,rotation_rad=rotation,
+                pose_source='/slam/pose',frame='map',command_max=cmd,
+                command_observed=bool(observed),command_valid=command_valid)
 
 
 def main():
@@ -79,7 +104,8 @@ def main():
     from rclpy.time import Time
     from tf2_ros import Buffer, TransformListener
     from geometry_msgs.msg import Twist, PoseStamped
-    from nav_msgs.msg import Odometry, Path as RosPath
+    from nav_msgs.msg import Path as RosPath
+    from geometry_msgs.msg import PoseWithCovarianceStamped
     from sensor_msgs.msg import LaserScan
     from action_msgs.msg import GoalStatusArray
     from unique_identifier_msgs.msg import UUID
@@ -132,7 +158,7 @@ def main():
     latest={}; receipts={}; motion=[]; commands=[]; events=[]; envelopes=[]; acks=[]; scenarios=[]; plans=[]; phases=[]; diagnostics=[]; diagnostic_at={}
     active_goals={}; execution_active=set(); execution_events=[]; seen_nav_ids=set(); own_nav_ids=set(); pending_nav=None; pending_hold=None; pending_nav_id=None; pending_hold_id=None
     nav_admission_uncertain=False;hold_admission_uncertain=False
-    consumers={'global_costmap','local_costmap','planner','controller','policy','protection'}
+    consumers={'global_costmap','local_costmap','planner','controller','policy'}
     hold_goal=hold_result=nav_goal=nav_result=None;hold_binding=None
     renew_enabled=False; renew_sequence=0; renew_pending=None; renew_last=0.; suspended=None
     cleanup_mode=False;cleanup_health_errors=[];graph_ready=False;graph_last=0.
@@ -150,16 +176,12 @@ def main():
     def command(msg):
         row=dict(wall=time.monotonic(),ros_s=ros(),vx=msg.linear.x,vy=msg.linear.y,wz=msg.angular.z)
         commands.append(row);receive('command',row)
-    def odometry(msg):
+    def slam_pose(msg):
         t=stamp(msg.header.stamp)
-        if motion and t<=motion[-1]['t']:
-            if t<motion[-1]['t']: latest['clock_error']='ODOMETRY_CLOCK_ROLLBACK'
-            return
-        q=msg.pose.pose.orientation;p=msg.pose.pose.position;v=msg.twist.twist;c=latest.get('command',{})
-        row=dict(t=t,wall=time.monotonic(),x=p.x,y=p.y,yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
-                 vx=v.linear.x,vy=v.linear.y,wz=v.angular.z,frame=msg.header.frame_id,
-                 cmd_vx=c.get('vx',math.nan),cmd_vy=c.get('vy',math.nan),cmd_wz=c.get('wz',math.nan),cmd_wall=c.get('wall',-math.inf))
-        motion.append(row);receive('odom',row)
+        if motion and t<=motion[-1]['t']:return
+        value=slam_pose_sample(msg,time.monotonic(),latest.get('command'))
+        motion.append(value);receive('slam_pose',value)
+
     def envelope(msg):
         receive('envelope',msg)
         envelopes.append(dict(wall=time.monotonic(),ros_s=ros(),stamp=stamp(msg.header.stamp),until=stamp(msg.valid_until),epoch=msg.epoch,
@@ -169,7 +191,7 @@ def main():
         acks.append(dict(wall=time.monotonic(),ros_s=ros(),stamp=stamp(msg.header.stamp),consumer=msg.consumer_id,
                          session=msg.coordinator_session_id,epoch=msg.envelope_epoch,hash=msg.installed_geometry_hash,
                          applied=msg.applied,reason=msg.reason))
-    node.create_subscription(Odometry,'/odom',odometry,qos_profile_sensor_data)
+    node.create_subscription(PoseWithCovarianceStamped,'/slam/pose',slam_pose,qos_profile_sensor_data)
     node.create_subscription(Twist,'/cmd_vel',command,qos_profile_sensor_data)
     node.create_subscription(RobotGeometryState,'/navigation/geometry_state',lambda m:receive('geometry',m),10)
     node.create_subscription(ArmHoldStatus,'/navigation/arm_hold',lambda m:receive('hold',m),10)
@@ -245,7 +267,7 @@ def main():
         matched={}
         for a in acks:
             if (a['session'],a['epoch'],a['hash'])==(e.coordinator_session_id,e.epoch,e.installed_geometry_hash): matched[a['consumer']]=a
-        return {name for name,a in matched.items() if a['applied'] and 0<=ros()-a['stamp']<.5 and 0<=time.monotonic()-a['wall']<.5}==consumers
+        return {name for name,a in matched.items() if name in consumers and a['applied'] and 0<=ros()-a['stamp']<.5 and 0<=time.monotonic()-a['wall']<.5}==consumers
     def spin(predicate,timeout,reason,monitor_motion=False):
         nonlocal renew_pending,renew_last,renew_sequence,renew_enabled,graph_last
         deadline=time.monotonic()+timeout
@@ -255,7 +277,7 @@ def main():
                 graph_last=time.monotonic()
                 if not check_navigation_graph():raise RuntimeError('NAVIGATION_GRAPH_CHANGED')
             if latest.get('clock_error') and (not cleanup_mode or monitor_motion): raise RuntimeError(latest['clock_error'])
-            if monitor_motion and (not fresh('odom') or not 0<=ros()-latest['odom']['t']<.3): raise RuntimeError('MOTION_FEEDBACK_STALE')
+            if monitor_motion and 'slam_pose' not in latest: raise RuntimeError('SLAM_POSE_UNAVAILABLE')
             if monitor_motion and foreign_navigation(): raise RuntimeError('FOREIGN_NAVIGATION_APPEARED')
             if predicate(): break
             if time.monotonic()>deadline: raise RuntimeError(reason+': '+str(envelopes[-1] if envelopes else latest.get('executor')))
@@ -276,8 +298,8 @@ def main():
         spin(lambda:time.monotonic()>=deadline,seconds+1,'OBSERVE')
     def stop(after,timeout=15):
         if latest.get('clock_error'):raise RuntimeError(latest['clock_error'])
-        spin(lambda:measured_stop(motion,after,time.monotonic(),ros())['passed'],timeout,'ACTUAL_STOP_TIMEOUT',True)
-        return measured_stop(motion,after,time.monotonic(),ros())
+        spin(lambda:measured_stop(motion,after,time.monotonic())['passed'],timeout,'ACTUAL_STOP_TIMEOUT',True)
+        return measured_stop(motion,after,time.monotonic())
     def hold_feedback(message):
         nonlocal renew_enabled
         if hold_binding is not None:
@@ -309,7 +331,7 @@ def main():
         request=SetFixedEnvelope.Request(request_id='n4_fixed_'+uuid.uuid4().hex,hold_id=latest['hold'].hold_id,geometry_sequence=latest['geometry'].sequence,limits=limits)
         future=fixed.call_async(request);spin(future.done,3,'FIXED_REQUEST');response=future.result()
         if not response.accepted: raise RuntimeError('FIXED_REJECTED:'+response.reason)
-        spin(lambda:positive(response.epoch),15,'SIX_CONSUMERS_NOT_APPLIED')
+        spin(lambda:positive(response.epoch),15,'FIVE_GEOMETRY_CONSUMERS_NOT_APPLIED')
         event('formal_admission',epoch=response.epoch,hold_id=request.hold_id,request_id=request.request_id)
         return response.epoch
     def start_nav(target):
@@ -319,13 +341,7 @@ def main():
         if foreign_navigation():raise RuntimeError('OTHER_NAVIGATION_ACTIVE_NO_PREEMPTION')
         if not check_navigation_graph():raise RuntimeError('NAVIGATION_GRAPH_INCOMPLETE')
         if nav_goal is not None or pending_nav is not None:raise RuntimeError('OWN_NAVIGATION_NOT_TERMINAL')
-        spin(lambda:tf_buffer.can_transform('map','odom',Time()),5,'GOAL_FRAME_TF_UNAVAILABLE')
-        transform=tf_buffer.lookup_transform('map','odom',Time())
-        tf_stamp=stamp(transform.header.stamp)
-        if tf_stamp and not 0<=ros()-tf_stamp<.3:raise RuntimeError('GOAL_FRAME_TF_STALE')
-        q=transform.transform.rotation;t=transform.transform.translation
-        if abs(q.x)>.001 or abs(q.y)>.001:raise RuntimeError('NONPLANAR_GOAL_FRAME')
-        mapped=transform_goal(target,[t.x,t.y,math.atan2(2*q.w*q.z,1-2*q.z*q.z)])
+        mapped=target  # Targets and SLAM chassis observations already share map.
         pose=PoseStamped();pose.header.frame_id='map';pose.header.stamp=node.get_clock().now().to_msg()
         pose.pose.position.x=mapped[0];pose.pose.position.y=mapped[1];pose.pose.orientation.z=math.sin(mapped[2]/2);pose.pose.orientation.w=math.cos(mapped[2]/2)
         pending_nav_id=uuid.uuid4();own_nav_ids.add(pending_nav_id.hex)
@@ -335,7 +351,7 @@ def main():
         if not nav_goal.accepted: raise RuntimeError('NAV_REJECTED')
         nav_result=nav_goal.get_result_async()
         spin(lambda:pending_nav_id.hex in seen_nav_ids,3,'OWN_GOAL_STATUS_UNOBSERVED',True)
-        event('nav_started',target_odom=target,target_map=mapped)
+        event('nav_started',target_map=mapped,pose_source='/slam/pose')
     def cancel_nav():
         nonlocal nav_goal,nav_result,pending_nav,nav_admission_uncertain
         if pending_nav is not None:
@@ -352,8 +368,8 @@ def main():
     def finish_nav(target):
         spin(nav_result.done,180,'NAV_RESULT_TIMEOUT',True)
         if nav_result.result().status!=4: raise RuntimeError('NAV_NOT_SUCCEEDED:'+str(nav_result.result().status))
-        observed=stop(ros())
-        p=latest['odom'];position=math.hypot(p['x']-target[0],p['y']-target[1]);angle=abs(math.remainder(p['yaw']-target[2],2*math.pi))
+        observed=stop(time.monotonic())
+        p=latest['slam_pose'];position=math.hypot(p['x']-target[0],p['y']-target[1]);angle=abs(math.remainder(p['yaw']-target[2],2*math.pi))
         if position>.002 or angle>math.radians(.1): raise RuntimeError('ARRIVAL_OUT_OF_TOLERANCE:'+str((position,angle)))
         event('arrival',target=target,error_m=position,error_deg=math.degrees(angle),stop=observed)
         cancel_nav();return dict(position_m=position,angle_deg=math.degrees(angle),stop=observed)
@@ -400,13 +416,13 @@ def main():
         if suspended is not None:
             signal.pidfd_send_signal(suspended['fd'],signal.SIGCONT);os.close(suspended['fd']);suspended=None;event('planner_resumed')
     try:
-        spin(lambda:hold_action.server_is_ready() and navigate.server_is_ready() and renew.service_is_ready() and fixed.service_is_ready() and fresh('odom') and fresh('command') and geometry_ready(),30,'ENTRY_UNAVAILABLE')
+        spin(lambda:hold_action.server_is_ready() and navigate.server_is_ready() and renew.service_is_ready() and fixed.service_is_ready() and ('slam_pose' in latest) and fresh('command') and geometry_ready(),30,'ENTRY_UNAVAILABLE')
         duration(2.)
         spin(lambda:navigation_entry_observed(active_goals,verified_cold_start) and check_navigation_graph(),5,'NAVIGATION_IDLE_UNOBSERVED')
         if foreign_navigation():raise RuntimeError('OTHER_NAVIGATION_ACTIVE_AT_ENTRY')
         graph_ready=True
         report['cold_start_receipt']=receipt if verified_cold_start else None
-        initial_stop=stop(ros());origin=latest['odom'].copy();yaw=origin['yaw']
+        initial_stop=stop(time.monotonic());origin=latest['slam_pose'].copy();yaw=origin['yaw']
         outward=[origin['x']+.8*math.cos(yaw),origin['y']+.8*math.sin(yaw),yaw]
         home=[origin['x'],origin['y'],yaw+math.pi/2]
         report.update(origin=origin,targets=[outward,home],initial_stop=initial_stop)
@@ -415,15 +431,15 @@ def main():
             start_nav(target);arrival=finish_nav(target);scenarios.append(dict(name=name,passed=True,epoch=epoch,arrival=arrival))
         for mode in (('hold_cancel','consumer_pause') if args.scenario=='all' else (() if args.scenario=='return_90' else (args.scenario,))):
             if not positive(epoch):raise RuntimeError('LOST_BEFORE_MOTION')
-            start=latest['odom'].copy();start_nav(outward)
-            spin(lambda:nav_result.done() or (math.hypot(latest['odom']['vx'],latest['odom']['vy'])>.04 and math.hypot(latest['odom']['x']-start['x'],latest['odom']['y']-start['y'])>.025),60,'MOTION_NOT_OBSERVED',True)
+            start=latest['slam_pose'].copy();start_nav(outward)
+            spin(lambda:nav_result.done() or (math.hypot(latest['slam_pose']['x']-start['x'],latest['slam_pose']['y']-start['y'])>.025),60,'MOTION_NOT_OBSERVED',True)
             if nav_result.done():raise RuntimeError('NAV_TERMINATED_BEFORE_INJECTION')
-            trigger_ros=ros();trigger_pose=latest['odom'].copy();begin=len(envelopes)
+            trigger_ros=ros();trigger_pose=latest['slam_pose'].copy();begin=len(envelopes)
             event('fault_trigger',mode=mode,epoch=epoch,pose=trigger_pose)
             if mode=='hold_cancel':release_hold()
             else:pause_planner()
             spin(lambda:any(e['epoch']==epoch and not e['allowed'] for e in envelopes[begin:]),5,'AUTHORITY_NOT_REVOKED',True)
-            observed=stop(trigger_ros);stopped=latest['odom'].copy()
+            observed=stop(time.monotonic());stopped=latest['slam_pose'].copy()
             bad=[e for e in envelopes[begin:] if e['epoch']==epoch and not e['allowed']]
             if mode=='consumer_pause':
                 if not any(e['reason'].startswith('WAITING_FOR:') and 'planner' in e['reason'] for e in bad):raise RuntimeError('WRONG_REVOCATION_SOURCE')
@@ -454,7 +470,7 @@ def main():
                 if name=='cancel_navigation':navigation_terminal=True
             except BaseException as error:cleanup_errors.append(name+': '+repr(error))
         try:
-            report['cleanup_stop']=stop(ros());stopped=True
+            report['cleanup_stop']=stop(time.monotonic());stopped=True
         except BaseException as error:cleanup_errors.append('actual_stop: '+repr(error))
         if stopped and navigation_terminal:
             try:release_hold()

@@ -1,0 +1,22 @@
+F.........................F.                                             [100%]
+=================================== FAILURES ===================================
+_______________ test_camera_profiles_are_installed_and_complete ________________
+ws_robot/src/astribot_s1_description/test/test_camera_profiles.py:20: in test_camera_profiles_are_installed_and_complete
+    assert profile.is_file(), f"missing installed camera profile: {profile}"
+E   AssertionError: missing installed camera profile: /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_description/share/astribot_s1_description/config/camera_head_rgbd.yaml
+E   assert False
+E    +  where False = <bound method Path.is_file of PosixPath('/home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_description/share/astribot_s1_description/config/camera_head_rgbd.yaml')>()
+E    +    where <bound method Path.is_file of PosixPath('/home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_description/share/astribot_s1_description/config/camera_head_rgbd.yaml')> = PosixPath('/home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_description/share/astribot_s1_description/config/camera_head_rgbd.yaml').is_file
+___ test_simulation_mimics_are_registered_without_independent_commands[True] ___
+ws_robot/src/astribot_s1_description/test/test_gripper_mimic_interfaces.py:19: in test_simulation_mimics_are_registered_without_independent_commands
+    mimic = joint.find('mimic'); interface = hardware[joint.attrib['name']]
+E   KeyError: 'astribot_gripper_left_joint_L11'
+=============================== warnings summary ===============================
+../../../../opt/ros/humble/local/lib/python3.10/dist-packages/xacro/__init__.py:115
+  Warning: private variables, such as '_ConstructUnits__ConstructUnitsValue', will be normal attributes in 3.11
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_description/test/test_camera_profiles.py::test_camera_profiles_are_installed_and_complete
+FAILED ws_robot/src/astribot_s1_description/test/test_gripper_mimic_interfaces.py::test_simulation_mimics_are_registered_without_independent_commands[True]
+2 failed, 26 passed, 1 warning in 0.42s

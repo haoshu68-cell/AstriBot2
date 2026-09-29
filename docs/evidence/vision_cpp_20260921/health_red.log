@@ -1,0 +1,42 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 5 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 5 tests from HealthContract
+[ RUN      ] HealthContract.ValidAlignedStreams
+[       OK ] HealthContract.ValidAlignedStreams (70 ms)
+[ RUN      ] HealthContract.RejectsInvalidIntrinsics
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:43: Failure
+Value of: health->valid
+  Actual: true
+Expected: false
+[  FAILED  ] HealthContract.RejectsInvalidIntrinsics (66 ms)
+[ RUN      ] HealthContract.RejectsMalformedDepth
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:44: Failure
+Value of: health->valid
+  Actual: true
+Expected: false
+[  FAILED  ] HealthContract.RejectsMalformedDepth (67 ms)
+[ RUN      ] HealthContract.RejectsUnknownCalibration
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:45: Failure
+Value of: health->valid
+  Actual: true
+Expected: false
+[  FAILED  ] HealthContract.RejectsUnknownCalibration (66 ms)
+[ RUN      ] HealthContract.PausedClockDoesNotKeepCameraHealthy
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:51: Failure
+Value of: health->valid
+  Actual: true
+Expected: false
+[  FAILED  ] HealthContract.PausedClockDoesNotKeepCameraHealthy (369 ms)
+[----------] 5 tests from HealthContract (639 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 1 test suite ran. (644 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 4 tests, listed below:
+[  FAILED  ] HealthContract.RejectsInvalidIntrinsics
+[  FAILED  ] HealthContract.RejectsMalformedDepth
+[  FAILED  ] HealthContract.RejectsUnknownCalibration
+[  FAILED  ] HealthContract.PausedClockDoesNotKeepCameraHealthy
+
+ 4 FAILED TESTS

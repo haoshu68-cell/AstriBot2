@@ -1,0 +1,86 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 10 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 10 tests from CloudContract
+[ RUN      ] CloudContract.ConvertsMillimeters
+[       OK ] CloudContract.ConvertsMillimeters (115 ms)
+[ RUN      ] CloudContract.MatchesDepthBeforeInfo
+[WARN] [1790002563.603307521] [rgbd_pointcloud]: waiting for valid CameraInfo on /cloud_test/info
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:39: Failure
+Value of: cloud
+  Actual: false
+Expected: true
+[  FAILED  ] CloudContract.MatchesDepthBeforeInfo (111 ms)
+[ RUN      ] CloudContract.RejectsDifferentStamp
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:40: Failure
+Expected equality of these values:
+  count
+    Which is: 1
+  0
+[  FAILED  ] CloudContract.RejectsDifferentStamp (111 ms)
+[ RUN      ] CloudContract.RejectsOldPair
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:41: Failure
+Expected equality of these values:
+  count
+    Which is: 1
+  0
+[  FAILED  ] CloudContract.RejectsOldPair (112 ms)
+[ RUN      ] CloudContract.RejectsWrongFrame
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:42: Failure
+Expected equality of these values:
+  count
+    Which is: 1
+  0
+[  FAILED  ] CloudContract.RejectsWrongFrame (112 ms)
+[ RUN      ] CloudContract.RejectsWrongDimensions
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:43: Failure
+Expected equality of these values:
+  count
+    Which is: 1
+  0
+[  FAILED  ] CloudContract.RejectsWrongDimensions (112 ms)
+[ RUN      ] CloudContract.RejectsInvalidStride
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:44: Failure
+Expected equality of these values:
+  count
+    Which is: 1
+  0
+[  FAILED  ] CloudContract.RejectsInvalidStride (112 ms)
+[ RUN      ] CloudContract.RejectsNonfiniteIntrinsics
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:45: Failure
+Expected equality of these values:
+  count
+    Which is: 1
+  0
+[  FAILED  ] CloudContract.RejectsNonfiniteIntrinsics (113 ms)
+[ RUN      ] CloudContract.RejectsUnsupportedEncoding
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:46: Failure
+Expected equality of these values:
+  count
+    Which is: 1
+  0
+[  FAILED  ] CloudContract.RejectsUnsupportedEncoding (113 ms)
+[ RUN      ] CloudContract.RejectsDuplicatePair
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp:47: Failure
+Expected equality of these values:
+  count
+    Which is: 2
+  1
+[  FAILED  ] CloudContract.RejectsDuplicatePair (157 ms)
+[----------] 10 tests from CloudContract (1168 ms total)
+
+[----------] Global test environment tear-down
+[==========] 10 tests from 1 test suite ran. (1173 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 9 tests, listed below:
+[  FAILED  ] CloudContract.MatchesDepthBeforeInfo
+[  FAILED  ] CloudContract.RejectsDifferentStamp
+[  FAILED  ] CloudContract.RejectsOldPair
+[  FAILED  ] CloudContract.RejectsWrongFrame
+[  FAILED  ] CloudContract.RejectsWrongDimensions
+[  FAILED  ] CloudContract.RejectsInvalidStride
+[  FAILED  ] CloudContract.RejectsNonfiniteIntrinsics
+[  FAILED  ] CloudContract.RejectsUnsupportedEncoding
+[  FAILED  ] CloudContract.RejectsDuplicatePair
+
+ 9 FAILED TESTS

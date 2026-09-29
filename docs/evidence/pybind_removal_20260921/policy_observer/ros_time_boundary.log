@@ -1,0 +1,40 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_health_expiry_outside_ros_time_does_not_publish_wrapped_seconds[python] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x75867d31db70>
+
+    def test_health_expiry_outside_ros_time_does_not_publish_wrapped_seconds(runtime):
+        previous=len(runtime.outputs)
+        runtime.ns=(2**31-1)*10**9+900_000_000
+        runtime.clock.publish(Clock(clock=stamp(runtime.ns)))
+        deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:runtime.executor.spin_once(timeout_sec=.01)
+        assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+>       assert len(runtime.outputs)==previous
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len([{'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}, {'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}])
+E        +    where [{'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}, {'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}] = <test_policy_observer_ros.Runtime object at 0x75867d31db70>.outputs
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:341: AssertionError
+__ test_health_expiry_outside_ros_time_does_not_publish_wrapped_seconds[cpp] ___
+
+runtime = <test_policy_observer_ros.Runtime object at 0x75867704b940>
+
+    def test_health_expiry_outside_ros_time_does_not_publish_wrapped_seconds(runtime):
+        previous=len(runtime.outputs)
+        runtime.ns=(2**31-1)*10**9+900_000_000
+        runtime.clock.publish(Clock(clock=stamp(runtime.ns)))
+        deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:runtime.executor.spin_once(timeout_sec=.01)
+        assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+>       assert len(runtime.outputs)==previous
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len([{'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}, {'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}])
+E        +    where [{'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}, {'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}] = <test_policy_observer_ros.Runtime object at 0x75867704b940>.outputs
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:341: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_health_expiry_outside_ros_time_does_not_publish_wrapped_seconds[python]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_health_expiry_outside_ros_time_does_not_publish_wrapped_seconds[cpp]
+2 failed, 66 deselected in 0.68s

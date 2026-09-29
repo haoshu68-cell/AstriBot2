@@ -6,6 +6,10 @@ diagnostics_recorder:
     min_free_bytes: 1073741824
     topic_stale_sec: 3.0
     topics:
+      - /navigation_zones/constraints
+      - /navigation_zones/status
+      - /navigation_zones/events
+      - /operator/zone_markers
       - /clock
       - /tf
       - /tf_static
@@ -53,6 +57,10 @@ diagnostics_recorder:
       - /exploration_coordinator_node/command_events
     # Explicit allowlist; missing names are recorded as unavailable, never replaced by defaults.
     parameters:
+      - /navigation_zones:required_consumers
+      - /navigation_zones:storage_root
+      - /mapping_session:require_navigation_zones
+      - /exploration_coordinator_node:require_navigation_zones
       - /exploration_coordinator_node:require_fixed_envelope
       - /transport_mtc_planner:max_velocity_scaling
       - /transport_mtc_planner:max_acceleration_scaling
@@ -120,7 +128,6 @@ diagnostics_recorder:
       - /controller_server:precise_goal_checker.xy_goal_tolerance
       - /controller_server:precise_goal_checker.yaw_goal_tolerance
       - /controller_server:FollowPath.plugin
-      - /controller_server:FollowPath.arrival.pose_timeout
       - /controller_server:FollowPath.arrival.refine_timeout
       - /controller_server:FollowPath.arrival.total_timeout
       - /controller_server:FollowPath.arrival.progress_timeout

@@ -1,0 +1,53 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_constructor_argument_expansion_and_error_order ______________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_constructor_argument_expansion_and_error_order(authority):
+        image=dict(kind='image_box',measurement_id='i',image_size_px=[640,480,1.],box_xyxy_px=[2.,40.,50.],geometry_quality=.5,provenance=['i'])
+        ops=[dict(packet=vision(observations=[image])),dict(packet=vision(observations=[image],frame_id=42))]
+        image_bad=image|dict(image_size_px=[0,'bad'],box_xyxy_px=[1.,2.,3.,4.])
+        ops.append(dict(packet=vision(observations=[image_bad])))
+        for changes in [dict(sensor_id=' ',observations=[vision()['observations'][0]|dict(measurement_id=42)]),
+                        dict(observations=[vision()['observations'][0]|dict(geometry_quality=2.,provenance=[42])]),
+                        dict(observations=[vision()['observations'][0]|dict(provenance=['x','x',42])])]:
+            ops.append(dict(packet=vision(**changes)))
+        cone=dict(kind='bearing_cone',measurement_id='b',direction=[2.,0.,0.],half_angle_rad=True,geometry_quality=1.,provenance=['b'])
+        ops.append(dict(packet=vision(observations=[cone])))
+>       check(dict(operations=ops),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:282: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:137: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:133: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...': 7, 'capture_stamp': {'clock': 'ros', 'epoch': 4, 'ns': 100}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...age_size_px': [640, 480, 1.0], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'TypeError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor...ge_size_px': [640, 480, 1.0], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'TypeError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'last_packet', 'type', 'calls', 'ok'}
+E             ?                 --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:129: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_constructor_argument_expansion_and_error_order
+1 failed, 25 deselected in 0.10s

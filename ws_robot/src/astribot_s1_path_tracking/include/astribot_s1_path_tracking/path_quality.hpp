@@ -12,6 +12,26 @@ struct PathQuality {double curvature{0}, curvature_rate{0};};
 inline double pathDistance(const geometry_msgs::msg::PoseStamped & a,
   const geometry_msgs::msg::PoseStamped & b)
 {return std::hypot(a.pose.position.x-b.pose.position.x, a.pose.position.y-b.pose.position.y);}
+// Grid-centre starts must not introduce a backward seam after an exact via point.
+// The caller must still validate the modified path's complete footprint sweep.
+inline void anchorGridPathStart(nav_msgs::msg::Path & path,
+  const geometry_msgs::msg::PoseStamped & start, double resolution)
+{
+  if (path.poses.empty() || path.header.frame_id!=start.header.frame_id ||
+      !std::isfinite(resolution) || resolution<=0.) {
+    throw std::invalid_argument("invalid grid start frame, path or resolution");
+  }
+  const double error=pathDistance(path.poses.front(),start);
+  if (!std::isfinite(error) || error>std::sqrt(2.)*resolution) {
+    throw std::invalid_argument("planner returned a substitute start");
+  }
+  if (path.poses.size()==1U) {path.poses.push_back(path.poses.back());}
+  // Preserve the planned travel heading: candidate takeover checks use it to
+  // validate rotation from the measured heading before translation begins.
+  path.poses.front().pose.position.x=start.pose.position.x;
+  path.poses.front().pose.position.y=start.pose.position.y;
+  path.poses.front().header=path.header;
+}
 inline nav_msgs::msg::Path resamplePath(const nav_msgs::msg::Path & path, double step = 0.10)
 {
   if (!std::isfinite(step) || step <= 0 || path.poses.size()>100000) {throw std::invalid_argument("invalid path sampling input");}

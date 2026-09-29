@@ -1,0 +1,138 @@
+[
+  {
+    "case": "test_health_expiry_outside_ros0",
+    "files": {
+      "policy_731099081d.log": "ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py\nTraceback (most recent call last):\n  File \"<string>\", line 10, in <module>\n  File \"/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py\", line 389, in main\n    try:executor.spin()\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py\", line 323, in spin\n    self.spin_once()\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py\", line 863, in spin_once\n    self._spin_once_impl(timeout_sec)\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py\", line 860, in _spin_once_impl\n    future.result()\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py\", line 109, in result\n    raise self.exception()\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py\", line 272, in _execute_coroutine_step\n    result = coro.send(None)\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py\", line 488, in handler\n    await call_coroutine(entity, arg)\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py\", line 396, in _execute_timer\n    await await_or_execute(tmr.callback)\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py\", line 110, in await_or_execute\n    return callback(*args)\n  File \"/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py\", line 340, in tick\n    h.valid_until=Time(nanoseconds=source.valid_until.ns).to_msg();h.calibration_epoch=source.calibration_epoch\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/time.py\", line 141, in to_msg\n    return builtin_interfaces.msg.Time(sec=seconds, nanosec=nanoseconds)\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/builtin_interfaces/msg/_time.py\", line 76, in __init__\n    self.sec = kwargs.get('sec', int())\n  File \"/opt/ros/humble/local/lib/python3.10/dist-packages/builtin_interfaces/msg/_time.py\", line 130, in sec\n    assert value >= -2147483648 and value < 2147483648, \\\nAssertionError: The 'sec' field must be an integer in [-2147483648, 2147483647]\nThe following exception was never retrieved: cannot use Destroyable because destruction was requested\n",
+      "policy_731099081d.outputs.json": [
+        {
+          "stamp_ns": 1100000000,
+          "epoch": 0,
+          "observation_only": true,
+          "inputs_valid": false,
+          "scan_count": 0,
+          "vision_count": 0,
+          "errors": 0,
+          "last_error": "",
+          "scan_age_s": null,
+          "odom_age_s": null,
+          "required_sensors_valid": false,
+          "envelope_ready": false,
+          "envelope_reason": "NO_ENVELOPE",
+          "envelope_age_s": null,
+          "tracks": 0,
+          "unassociated": 0,
+          "path_revision": 0,
+          "predicted_tracks": 0,
+          "processing_wall_s": 0.00030528000024787616,
+          "blocking_tracks": [],
+          "geometry_backend": "cpp",
+          "processing_cpu_s": 0.00030087300000000006,
+          "processing_stages_s": {
+            "scan": 1.207999957841821e-06,
+            "snapshot": 2.2639000235358253e-05,
+            "risk": 2.0299921743571758e-07
+          },
+          "risk": null
+        },
+        {
+          "stamp_ns": 1100000000,
+          "epoch": 0,
+          "observation_only": true,
+          "inputs_valid": false,
+          "scan_count": 0,
+          "vision_count": 0,
+          "errors": 0,
+          "last_error": "",
+          "scan_age_s": null,
+          "odom_age_s": null,
+          "required_sensors_valid": false,
+          "envelope_ready": false,
+          "envelope_reason": "NO_ENVELOPE",
+          "envelope_age_s": null,
+          "tracks": 0,
+          "unassociated": 0,
+          "path_revision": 0,
+          "predicted_tracks": 0,
+          "processing_wall_s": 0.00013678899995284155,
+          "blocking_tracks": [],
+          "geometry_backend": "cpp",
+          "processing_cpu_s": 0.00013685900000000003,
+          "processing_stages_s": {
+            "scan": 7.809994713170454e-07,
+            "snapshot": 1.1640999218798243e-05,
+            "risk": 1.5300065570045263e-07
+          },
+          "risk": null
+        }
+      ]
+    }
+  },
+  {
+    "case": "test_health_expiry_outside_ros1",
+    "files": {
+      "policy_59ff6c9d82.log": "terminate called without an active exception\n",
+      "policy_59ff6c9d82.outputs.json": [
+        {
+          "blocking_tracks": [],
+          "envelope_age_s": null,
+          "envelope_ready": false,
+          "envelope_reason": "NO_ENVELOPE",
+          "epoch": 0,
+          "errors": 0,
+          "geometry_backend": "cpp",
+          "inputs_valid": false,
+          "last_error": "",
+          "observation_only": true,
+          "odom_age_s": null,
+          "path_revision": 0,
+          "predicted_tracks": 0,
+          "processing_cpu_s": 0.0001819879999999975,
+          "processing_stages_s": {
+            "risk": 4.399953468237072e-08,
+            "scan": 2.0999868866056204e-07,
+            "snapshot": 8.158998753060587e-06
+          },
+          "processing_wall_s": 0.00018264500067743938,
+          "required_sensors_valid": false,
+          "risk": null,
+          "scan_age_s": null,
+          "scan_count": 0,
+          "stamp_ns": 1100000000,
+          "tracks": 0,
+          "unassociated": 0,
+          "vision_count": 0
+        },
+        {
+          "blocking_tracks": [],
+          "envelope_age_s": null,
+          "envelope_ready": false,
+          "envelope_reason": "NO_ENVELOPE",
+          "epoch": 0,
+          "errors": 0,
+          "geometry_backend": "cpp",
+          "inputs_valid": false,
+          "last_error": "",
+          "observation_only": true,
+          "odom_age_s": null,
+          "path_revision": 0,
+          "predicted_tracks": 0,
+          "processing_cpu_s": 4.9539e-05,
+          "processing_stages_s": {
+            "risk": 2.900014806073159e-08,
+            "scan": 2.2000676835887134e-08,
+            "snapshot": 2.3280008463189006e-06
+          },
+          "processing_wall_s": 4.8472000344190747e-05,
+          "required_sensors_valid": false,
+          "risk": null,
+          "scan_age_s": null,
+          "scan_count": 0,
+          "stamp_ns": 1100000000,
+          "tracks": 0,
+          "unassociated": 0,
+          "vision_count": 0
+        }
+      ]
+    }
+  }
+]

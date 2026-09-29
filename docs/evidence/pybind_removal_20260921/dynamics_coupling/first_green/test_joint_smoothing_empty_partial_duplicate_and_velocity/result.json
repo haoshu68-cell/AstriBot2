@@ -1,0 +1,266 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "no joint input degraded",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.3,
+      "observed": {
+        "python": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ],
+        "cpp": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ]
+      }
+    },
+    {
+      "case": "first EMA full activity",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.7875,
+      "observed": {
+        "python": [
+          0.7875,
+          -1.575,
+          0.0,
+          0.0,
+          0.0,
+          2.3625
+        ],
+        "cpp": [
+          0.7875,
+          -1.575,
+          0.0,
+          0.0,
+          0.0,
+          2.3625
+        ]
+      }
+    },
+    {
+      "case": "second EMA full activity",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.628125,
+      "observed": {
+        "python": [
+          0.6281249999999999,
+          -1.2562499999999999,
+          0.0,
+          0.0,
+          0.0,
+          1.884375
+        ],
+        "cpp": [
+          0.6281249999999999,
+          -1.2562499999999999,
+          0.0,
+          0.0,
+          0.0,
+          1.884375
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "scale_smoothing_alpha": "1.0"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "empty legacy joint input is zero activity",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "velocity dimension independently full",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "case": "malformed velocity length discards all velocities",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "duplicate last wins",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "unknown names skipped",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "position zip truncates",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 138009,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_c995cc732b/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/first_green/test_joint_smoothing_empty_partial_duplicate_and_velocity/python_params.yaml",
+        "-r",
+        "/coupling_c995cc732b/input:=/coupling_c995cc732b/input_remapped",
+        "-r",
+        "/coupling_c995cc732b/python/output:=/coupling_c995cc732b/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 138010,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_c995cc732b/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/first_green/test_joint_smoothing_empty_partial_duplicate_and_velocity/cpp_params.yaml",
+        "-r",
+        "/coupling_c995cc732b/input:=/coupling_c995cc732b/input_remapped",
+        "-r",
+        "/coupling_c995cc732b/cpp/output:=/coupling_c995cc732b/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 9,
+    "cpp": 9
+  }
+}

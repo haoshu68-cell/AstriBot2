@@ -1,0 +1,31 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_final_prediction_preserves_zero_velocity_signed_center_and_uncertainty __
+
+probe = <function probe.<locals>.call at 0x76d2ec1003a0>
+
+    def test_final_prediction_preserves_zero_velocity_signed_center_and_uncertainty(probe):
+        tracks=[dict(id='zero',box=box(-0.,-0.),model=dict(velocity=[0.,0.,0.],variance=.1,steps=[[10**9,1.]])),
+            dict(id='moving',box=box(2.,3.,.02),model=dict(velocity=[.2,-.3,.1],variance=.3,steps=[[10**9,1.]])),
+            dict(id='empty',box=box(-0.,1.),model=dict(velocity=[0.,0.,0.],variance=.1,steps=[])),
+            dict(id='explicit',box=box(1.,2.),predictions=[dict(ns=10**9,box=box(5.,-2.))])]
+        d=dict(op='meta',tracks=tracks);w=make_world(d);got=probe(d)
+        assert 'error' not in got,got
+        for t,out in zip(w.tracks,got['meta']):
+            final=final_prediction(t)
+            assert out['has_predictions']==has_predictions(t)
+            assert out['prediction_count']==prediction_count(t)
+            expected=[final.center_m.x,final.center_m.y,final.center_m.z]
+            assert out['center']==expected
+>           assert [math.copysign(1,x) for x in out['center']]==[math.copysign(1,x) for x in expected]
+E           assert [1.0, 1.0, 1.0] == [-1.0, -1.0, 1.0]
+E             At index 0 diff: 1.0 != -1.0
+E             Full diff:
+E             - [-1.0, -1.0, 1.0]
+E             ?  -     -
+E             + [1.0, 1.0, 1.0]
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:142: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_final_prediction_preserves_zero_velocity_signed_center_and_uncertainty
+1 failed, 15 deselected in 0.08s

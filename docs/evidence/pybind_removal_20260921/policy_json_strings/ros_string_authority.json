@@ -1,0 +1,59 @@
+[
+  {
+    "value": "x\u0000y",
+    "health": {
+      "received_sensor": "x",
+      "wire_sensor_length_including_nul": 2,
+      "wire_sensor_bytes": "7800"
+    },
+    "tf": {
+      "error": "ValueError",
+      "message": "embedded null character"
+    }
+  },
+  {
+    "value": "x\ud800",
+    "health": {
+      "error": "UnicodeEncodeError",
+      "message": "'utf-8' codec can't encode character '\\ud800' in position 1: surrogates not allowed"
+    },
+    "tf": {
+      "error": "UnicodeEncodeError",
+      "message": "'utf-8' codec can't encode character '\\ud800' in position 1: surrogates not allowed"
+    }
+  },
+  {
+    "value": "x\u0000\ud800",
+    "health": {
+      "error": "UnicodeEncodeError",
+      "message": "'utf-8' codec can't encode character '\\ud800' in position 2: surrogates not allowed"
+    },
+    "tf": {
+      "error": "UnicodeEncodeError",
+      "message": "'utf-8' codec can't encode character '\\ud800' in position 2: surrogates not allowed"
+    }
+  },
+  {
+    "value": "x\udfff",
+    "health": {
+      "error": "UnicodeEncodeError",
+      "message": "'utf-8' codec can't encode character '\\udfff' in position 1: surrogates not allowed"
+    },
+    "tf": {
+      "error": "UnicodeEncodeError",
+      "message": "'utf-8' codec can't encode character '\\udfff' in position 1: surrogates not allowed"
+    }
+  },
+  {
+    "value": "x\ud800\udc00",
+    "health": {
+      "received_sensor": "x\ud800\udc00",
+      "wire_sensor_length_including_nul": 6,
+      "wire_sensor_bytes": "78f090808000"
+    },
+    "tf": {
+      "error": "LookupException",
+      "message": "\"odom\" passed to lookupTransform argument target_frame does not exist. "
+    }
+  }
+]

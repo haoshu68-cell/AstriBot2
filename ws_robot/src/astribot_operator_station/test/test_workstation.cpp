@@ -5,6 +5,19 @@
 #include <QMessageBox>
 #include <QTimer>
 using namespace astribot_operator_station;
+TEST(Workstation, StartupWithoutBackendKeepsControlDisabled) {
+ int argc=1;char name[]="workstation_startup_test";char * argv[]={name,nullptr};QApplication app(argc,argv);rclcpp::init(0,nullptr);
+ {
+  WorkstationPanel panel;
+  const auto until=std::chrono::steady_clock::now()+std::chrono::milliseconds(700);
+  while(std::chrono::steady_clock::now()<until){app.processEvents();std::this_thread::sleep_for(std::chrono::milliseconds(10));}
+  ASSERT_EQ(panel.findChildren<QPushButton *>("start_navigation").size(),1);
+  for(auto b:panel.findChildren<QPushButton *>())EXPECT_NE(b->text(),QString::fromUtf8("按列表循环导航"));
+  for(auto b:panel.findChildren<QPushButton *>())
+   if(b->text().startsWith("申请控制权")||b->text().startsWith("导航到选中")||b->text().startsWith("开始仿真搬运"))EXPECT_FALSE(b->isEnabled());
+ }
+ rclcpp::shutdown();
+}
 TEST(ReplayPolicy, ClosedAllowlistRejectsMotionAndSpoofedTypes) {
  EXPECT_TRUE(replay_allowed("/tf","tf2_msgs/msg/TFMessage"));
  EXPECT_TRUE(replay_allowed("/map","nav_msgs/msg/OccupancyGrid"));
@@ -44,6 +57,11 @@ TEST(Workstation, LeaseRequiredAndRestartInvalidatesControl) {
  ASSERT_TRUE(spin([&]{return panel.findChild<QTableWidget *>()->rowCount()==1;}));
  QTimer::singleShot(20,[]{for(auto w:QApplication::topLevelWidgets())if(auto box=qobject_cast<QMessageBox *>(w))box->button(QMessageBox::Yes)->click();});
  button("导航到选中")->click();ASSERT_TRUE(spin([&]{return nav==1;}));
+ state["map_catalog"]={{"quality","VALID"},{"value",{{"boot_id","catalog"},{"revision",1},{"active_map",{{"map_id","lab"},{"version","v1"}}},{"active_scene",nullptr},{"scene_ready",true},{"state","READY"},{"motion_blocked",false},{"idle_evidence",true},{"transaction",nullptr},{"stations",Json::object()},{"maps",{{"lab",{{"map_id","lab"},{"floor",1},{"version","v1"}}}}},{"devices",Json::object()},{"scenes",Json::object()}}}};
+ ASSERT_TRUE(spin([&]{return panel.findChild<QPushButton *>("pick_pose")->isEnabled()&&panel.findChild<QTableWidget *>("route_points")->rowCount()==0;}));
+ panel.findChild<QPushButton *>("pick_pose")->click();points->publish(p);
+ ASSERT_TRUE(spin([&]{return panel.findChild<QLabel *>("device_coordinates")->text().startsWith("设备：X 2.000 m");}));
+ EXPECT_EQ(panel.findChild<QTableWidget *>("route_points")->rowCount(),0);
  state["boot_id"]="boot2";state["control_state"]="OBSERVER";
  EXPECT_TRUE(spin([&]{return !button("导航到选中")->isEnabled()&&button("申请控制权")->isEnabled();}));
  panel.resize(900,1100);panel.show();app.processEvents();EXPECT_TRUE(panel.grab().save("/tmp/astribot_workstation.png"));

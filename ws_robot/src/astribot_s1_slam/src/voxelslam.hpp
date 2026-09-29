@@ -5,6 +5,7 @@
 #include "voxel_map.hpp"
 #include "feature_point.hpp"
 #include "robot_self_filter.hpp"
+#include "initial_map_pose.hpp"
 #include "loop_refine.hpp"
 #include <mutex>
 #include <Eigen/Eigenvalues>
@@ -197,6 +198,9 @@ Eigen::Vector3d g_t_imu_chassis = Eigen::Vector3d::Zero();
 // when no chassis extrinsic is configured.
 Eigen::Matrix3d g_R_chassis_imu = Eigen::Matrix3d::Identity();
 Eigen::Vector3d g_t_chassis_imu = Eigen::Vector3d::Zero();
+// Explicit registration only for a new map whose initial chassis pose is
+// independently known. Loaded maps obtain their registration from matching.
+std::optional<Eigen::Isometry3d> g_initial_map_chassis;
 
 // Fixed lidar_back->lidar_front extrinsic (p_front = g_R_back_front * p_back +
 // g_t_back_front), loaded in the VOXEL_SLAM constructor from

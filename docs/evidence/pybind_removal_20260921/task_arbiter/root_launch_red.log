@@ -1,0 +1,18 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________________ test_task_arbiter_has_one_native_owner_entry _________________
+
+    def test_task_arbiter_has_one_native_owner_entry():
+        module, nodes, _ = load()
+        module.generate_launch_description()
+        owners = [node for node in nodes if node['executable'] in ('task_arbiter', 'task_arbiter_cpp')]
+        assert len(owners) == 1
+>       assert owners[0]['package'] == 'astribot_s1_task_arbiter_native'
+E       AssertionError: assert 'astribot_s1_...gation_policy' == 'astribot_s1_...rbiter_native'
+E         - astribot_s1_task_arbiter_native
+E         + astribot_s1_navigation_policy
+
+ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py:65: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py::test_task_arbiter_has_one_native_owner_entry
+1 failed in 0.10s

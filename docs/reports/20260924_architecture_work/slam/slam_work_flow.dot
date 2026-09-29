@@ -1,0 +1,26 @@
+digraph slam_work {
+graph [bgcolor="#181818",rankdir=TB,pad=.45,nodesep=.4,ranksep=.36,splines=true,fontname="Noto Sans CJK SC",fontcolor="#eeeeee",fontsize=25,labelloc=t,label="引入 SLAM 后的工作推进主线
+ "];
+node [shape=box,style="rounded,filled",fillcolor="#333333",color="#565656",penwidth=1.3,fontname="Noto Sans CJK SC",fontcolor="#eeeeee",margin=".27,.20",fontsize=17];
+edge [color="#c3c3c3",penwidth=1.4,arrowsize=.8];
+n0 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>01  统一 SLAM 接入</B></FONT></TD></TR><TR><TD>仿真 / 真机共用 Voxel-SLAM；PC2 + IMU 标准输入</TD></TR><TR><TD>补仿真 IMU；合并双雷达输入；删除重复转换与旧中间链</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">成果：共用启动与接口；不等于真机已验收</FONT></TD></TR></TABLE>>];
+n1 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>02  理顺坐标与机器人回波</B></FONT></TD></TR><TR><TD>统一 map / odom / 底盘关系；输出 /slam/pose</TD></TR><TR><TD>估计前机身自滤；拒绝陈旧 TF；保留源时间与协方差</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">成果：定位、地图、导航使用一致坐标语义</FONT></TD></TR></TABLE>>];
+n0 -> n1;
+n2 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>03  打通 SLAM → 导航地图</B></FONT></TD></TR><TR><TD>关键帧 / 回环修正 → 概率栅格 → /map</TD></TR><TR><TD>统一 /map_scan_filtered → 一次切片 → /scan_from_cloud</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">成果：处理迟到位姿与关键帧；减少重复切片与地图转发</FONT></TD></TR></TABLE>>];
+n1 -> n2;
+n3 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>04  建图 → 保存 → 冷启动载图</B></FONT></TD></TR><TR><TD>最终优化 → 文件完整性 / SHA256 → 原子 manifest</TD></TR><TR><TD>关键帧、轨迹、PGM / YAML 成套保存；重建载图描述子</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">仿真：建图 / 冷载图 / 复测各 3/3；保存 44 个关键帧</FONT></TD></TR></TABLE>>];
+n2 -> n3;
+n4 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>05  探索 → 停稳 → 会话收尾</B></FONT></TD></TR><TR><TD>C++ mapping_session：等导航终态 → 确认停稳 → finish</TD></TR><TR><TD>区分暂停、取消保存、自然完成；重复取消不重复存图</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">仿真：r25 静止取消存图通过；运动中取消仍待验收</FONT></TD></TR></TABLE>>];
+n3 -> n4;
+n5 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>06  地图变为可管理的资产</B></FONT></TD></TR><TR><TD>地图导入 / 不可变版本 / 工位 → 受管 Voxel 加载</TD></TR><TR><TD>定位 + TF + 双 costmap 就绪后提交；失败进入恢复态</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">实现 / 隔离测试已有；真实两地图切换仍未验收</FONT></TD></TR></TABLE>>];
+n4 -> n5;
+n6 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>07  虚拟墙与禁区绑定 SLAM</B></FONT></TD></TR><TR><TD>绑定建图会话 / 地图版本；随存图归档并在载图后复核</TD></TR><TR><TD>双 costmap / 保护确认；补非探索 mapping 的会话上下文</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">仿真：两次冷启动各 120 s，上下文同版本确认通过（静止）</FONT></TD></TR></TABLE>>];
+n5 -> n6;
+n7 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLPADDING="4"><TR><TD><FONT POINT-SIZE="21"><B>08  工程化与稳定性补齐</B></FONT></TD></TR><TR><TD>按估计 / 栅格 / 消息分包；统一 Eigen / GTSAM</TD></TR><TR><TD>日志、会话隔离、C++ TF / 地图中继、SLAM 并发负载诊断</TD></TR><TR><TD><FONT POINT-SIZE="14" COLOR="#c9bd9e">分项构建 / 隔离 / 限定负载验证；保留超时和 STALE 失败</FONT></TD></TR></TABLE>>];
+n6 -> n7;
+todo [label="下一步：尚未闭合的验收
+运动中暂停 / 取消存图 · 自然探索完成 · 两地图真实切换
+SLAM 退化后的坐标连续性 / 重定位 · 长时运行 · 真机标定与验收",style="rounded,filled,dashed",color="#d5b575",fillcolor="#342f27",fontcolor="#ead5aa"];n7 -> todo [style=dashed,color="#d5b575"];
+note [shape=plain,fillcolor="#181818",fontsize=13,fontcolor="#9d9d9d",label="按工作推进与依赖归纳，不代表运行时调用顺序或全部任务通过
+依据 2026-09-18 至 09-24 已有记录；图中数值仅适用于注明的场景"];todo -> note [style=invis];
+}

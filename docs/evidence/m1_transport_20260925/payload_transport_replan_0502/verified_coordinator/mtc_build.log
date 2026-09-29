@@ -1,0 +1,47 @@
+Consolidate compiler generated dependencies of target transport_scene_signature
+Consolidate compiler generated dependencies of target execution_guard
+[ 10%] Built target transport_scene_signature
+[ 13%] Building CXX object CMakeFiles/execution_guard.dir/src/execution_guard.cpp.o
+Consolidate compiler generated dependencies of target gtest_main
+[ 20%] Built target gtest_main
+Consolidate compiler generated dependencies of target gtest
+[ 27%] Built target gtest
+Consolidate compiler generated dependencies of target execution_guard_test
+[ 34%] Built target execution_guard_test
+Consolidate compiler generated dependencies of target joint_margin_test
+[ 41%] Built target joint_margin_test
+Consolidate compiler generated dependencies of target transport_scene_core
+[ 48%] Built target transport_scene_core
+Consolidate compiler generated dependencies of target mtc_planner
+[ 51%] Building CXX object CMakeFiles/mtc_planner.dir/src/mtc_planner.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp: In member function ‘void Planner::run(const std::shared_ptr<rclcpp_action::ServerGoalHandle<astribot_transport_msgs::action::PlanManipulation> >&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  145 |     {std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};}
+      |                                                                                                                ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:145:112: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+  366 |       std::lock_guard<std::mutex> guard(mutex_);cached_context_.clear();cached_stages_.clear();cached_payload_={};
+      |                                                                                                                 ^
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: note: in C++11 and above a default constructor can be explicit
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: warning: converting to ‘moveit_msgs::msg::PlanningScene’ {aka ‘moveit_msgs::msg::PlanningScene_<std::allocator<void> >’} from initializer list would use explicit constructor ‘moveit_msgs::msg::PlanningScene_<ContainerAllocator>::PlanningScene_(rosidl_runtime_cpp::MessageInitialization) [with ContainerAllocator = std::allocator<void>]’
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/mtc_planner.cpp:366:113: note: in C++11 and above a default constructor can be explicit
+[ 55%] Linking CXX executable execution_guard
+[ 55%] Built target execution_guard
+Consolidate compiler generated dependencies of target trajectory_time_scaling_test
+[ 62%] Built target trajectory_time_scaling_test
+Consolidate compiler generated dependencies of target canonical_scene_test
+[ 68%] Built target canonical_scene_test
+[ 72%] Building CXX object CMakeFiles/mtc_planner.dir/src/payload_transition.cpp.o
+Consolidate compiler generated dependencies of target payload_transition_test
+[ 75%] Building CXX object CMakeFiles/payload_transition_test.dir/test/payload_transition_test.cpp.o
+[ 79%] Linking CXX executable mtc_planner
+[ 79%] Built target mtc_planner
+Consolidate compiler generated dependencies of target _transport_scene_native
+[ 86%] Built target _transport_scene_native
+[ 89%] Building CXX object CMakeFiles/payload_transition_test.dir/src/payload_transition.cpp.o
+Consolidate compiler generated dependencies of target canonical_octomap_test
+[ 96%] Built target canonical_octomap_test
+[100%] Linking CXX executable payload_transition_test
+[100%] Built target payload_transition_test

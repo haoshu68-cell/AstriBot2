@@ -37,7 +37,7 @@ int main() {
     for(int i=0;i<=100;++i) {
       const double t=1.+i*.02;
       const double error=final_error+std::max(0.,1.-i*.04)*.002;
-      settling.observe(t,t,{error},.6,.3,.001,.2*yaw_tolerance,true);
+      settling.observe(t,t,{error},.6,.001,.2*yaw_tolerance,true);
       if(i<25)check(!settling.evidence().stopped,"braking transient never certifies stopped");
     }
     check(settling.evidence().stopped,"fresh stationary window is obtained");

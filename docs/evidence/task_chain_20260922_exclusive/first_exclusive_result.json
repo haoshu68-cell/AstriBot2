@@ -1,0 +1,249 @@
+{
+  "state": "PASS_600S_SAMPLED_EXCLUSIVE_LOAD_SUBCASE",
+  "scope": "static-map localization, actual two-goal fixed-posture motion, four raw RGB-D streams, asynchronous CPU head/torso + CUDA wrists, real GraspNet CUDA frozen-input compute pressure; not full W1/SLAM/hardware",
+  "duration_wall_sec": 600.0000139490003,
+  "rtf": 0.6862933173781572,
+  "health_samples": {
+    "head_rgbd": {
+      "OK": 12000
+    },
+    "head_stereo_left": {},
+    "head_stereo_right": {},
+    "torso_rgbd": {
+      "OK": 12000
+    },
+    "left_wrist_rgbd": {
+      "OK": 23141
+    },
+    "right_wrist_rgbd": {
+      "OK": 23135
+    }
+  },
+  "depth_timing": {
+    "head_rgbd/depth": {
+      "capture_to_observer_ros_age_sec": {
+        "samples": 8236,
+        "min": 0.001,
+        "max": 0.012,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.001
+      },
+      "capture_interval_sec": {
+        "samples": 8235,
+        "min": 0.05,
+        "max": 0.05,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.05
+      },
+      "receive_interval_wall_sec": {
+        "samples": 8235,
+        "min": 0.06238432899772306,
+        "max": 0.20457113500015112,
+        "p50": 0.0714197469969804,
+        "p95": 0.0825070112983667,
+        "p99": 0.10938282203853299
+      },
+      "receive_gaps_over_250ms": 0,
+      "nonpositive_intervals": 0
+    },
+    "torso_rgbd/depth": {
+      "capture_to_observer_ros_age_sec": {
+        "samples": 8235,
+        "min": 0.001,
+        "max": 0.001,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.001
+      },
+      "capture_interval_sec": {
+        "samples": 8234,
+        "min": 0.05,
+        "max": 0.05,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.05
+      },
+      "receive_interval_wall_sec": {
+        "samples": 8234,
+        "min": 0.06288312700053211,
+        "max": 0.20246237399987876,
+        "p50": 0.07120406050125894,
+        "p95": 0.08270615075143722,
+        "p99": 0.10810724269849746
+      },
+      "receive_gaps_over_250ms": 0,
+      "nonpositive_intervals": 0
+    },
+    "left_wrist_rgbd/depth": {
+      "capture_to_observer_ros_age_sec": {
+        "samples": 8235,
+        "min": 0.001,
+        "max": 0.001,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.001
+      },
+      "capture_interval_sec": {
+        "samples": 8234,
+        "min": 0.05,
+        "max": 0.05,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.05
+      },
+      "receive_interval_wall_sec": {
+        "samples": 8234,
+        "min": 0.0626043070005835,
+        "max": 0.20712951899986365,
+        "p50": 0.07139745399945241,
+        "p95": 0.08222071204963866,
+        "p99": 0.10853863437205294
+      },
+      "receive_gaps_over_250ms": 0,
+      "nonpositive_intervals": 0
+    },
+    "right_wrist_rgbd/depth": {
+      "capture_to_observer_ros_age_sec": {
+        "samples": 8235,
+        "min": 0.001,
+        "max": 0.001,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.001
+      },
+      "capture_interval_sec": {
+        "samples": 8234,
+        "min": 0.05,
+        "max": 0.05,
+        "p50": 0.05,
+        "p95": 0.05,
+        "p99": 0.05
+      },
+      "receive_interval_wall_sec": {
+        "samples": 8234,
+        "min": 0.06254765199992107,
+        "max": 0.20610499800022808,
+        "p50": 0.07142777250010113,
+        "p95": 0.08241315639988897,
+        "p99": 0.10799621492016742
+      },
+      "receive_gaps_over_250ms": 0,
+      "nonpositive_intervals": 0
+    }
+  },
+  "completed_cuda_inferences": 247,
+  "inference_duration_sec": 500.021658665999,
+  "inference_overlap_start_wall": 1790063428.3727622,
+  "capture_start_wall": 1790063372.753677,
+  "motion_verdict": "PASS",
+  "clearance_lower_bound_m": 0.287199686086,
+  "stage_metrics": {
+    "samples": 889,
+    "follow_samples": 514,
+    "measured_motion": {
+      "time_basis": "odometry_header",
+      "unique_samples": 889,
+      "acceleration_m_s2": {
+        "n": 513,
+        "rms": 0.020132546400578624,
+        "p95": 0.051644467347000685,
+        "max": 0.09046860862163383
+      },
+      "angular_acceleration_rad_s2": {
+        "n": 513,
+        "rms": 0.008996497696616453,
+        "p95": 0.016904580206747132,
+        "max": 0.04889361690630785
+      },
+      "jerk_m_s3": {
+        "n": 512,
+        "rms": 0.03287559422531759,
+        "p95": 0.0623297004845146,
+        "max": 0.26450069910524915
+      }
+    },
+    "policy_hold_events": 0,
+    "policy_hold_s_by_reason": {},
+    "heading_convergence": {
+      "first_stable_5deg_s": 0.0,
+      "longest_over_15deg_s": 0.0
+    },
+    "cross_track_m": {
+      "n": 514,
+      "rms": 0.009882985693441471,
+      "p95": 0.022839269411918186,
+      "max": 0.023514450719431503
+    },
+    "straight_cross_track_m": {
+      "n": 514,
+      "rms": 0.009882985693441471,
+      "p95": 0.022839269411918186,
+      "max": 0.023514450719431503
+    },
+    "front_heading_error_deg": {
+      "n": 514,
+      "rms": 0.5367237658478717,
+      "p95": 1.1166389245716946,
+      "max": 1.2855666672488164
+    },
+    "straight_heading_error_deg": {
+      "n": 514,
+      "rms": 0.5367237658478717,
+      "p95": 1.1166389245716946,
+      "max": 1.2855666672488164
+    },
+    "acceleration_m_s2": {
+      "n": 513,
+      "rms": 0.020143985514895033,
+      "p95": 0.051644467347000685,
+      "max": 0.09046860862163383
+    },
+    "angular_acceleration_rad_s2": {
+      "n": 513,
+      "rms": 0.009090435988512715,
+      "p95": 0.01707169625812676,
+      "max": 0.04889361690630785
+    },
+    "jerk_m_s3": {
+      "n": 512,
+      "rms": 0.036766399618409225,
+      "p95": 0.07133276291487689,
+      "max": 0.26450069910524915
+    },
+    "follow_spin_s": 0.0,
+    "heading_over_30deg_s": 0.0,
+    "travel_heading_over_30deg_s": 0.0,
+    "travel_heading_error_deg": {
+      "n": 514,
+      "rms": 0.5367237658478717,
+      "p95": 1.1166389245716946,
+      "max": 1.2855666672488164
+    },
+    "backtracking_m": 0.0,
+    "cross_track_sign_changes_2cm": 0,
+    "follow_rotation_rad": 0.154320015601662,
+    "longest_follow_stall_s": 0.7399999999999949,
+    "trajectory_curvature_1_m": {
+      "n": 20,
+      "rms": 0.3873582395082415,
+      "p95": 0.7721414718403627,
+      "max": 0.8472718716708125
+    },
+    "trajectory_curvature_rate_1_m2": {
+      "n": 19,
+      "rms": 4.055246118621432,
+      "p95": 8.462123162668004,
+      "max": 8.462123162668004
+    },
+    "phase_coverage": 0.9988751406074241
+  },
+  "artifacts": {
+    "session": "runs/task_chain_20260922_exclusive/navigation_01/session.json",
+    "log": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_exclusive/navigation_01/session.log",
+    "renderer": "runs/task_chain_20260922_exclusive/renderer_runtime_01.json",
+    "ownership": "runs/task_chain_20260922_exclusive/ownership_samples.jsonl"
+  },
+  "cleanup": []
+}

@@ -26,6 +26,11 @@ TEST(MapManager, TransferVerificationTimeoutRecoveryAndNoVelocity){
  EXPECT_TRUE(call("confirm","map_transfer_confirm",{{"transaction_id","switch"}}).accepted);spin(2800);EXPECT_EQ(loads,1);EXPECT_EQ(status.at("state"),"RECOVERY_REQUIRED");EXPECT_TRUE(status.at("active_map").is_null());
  valid=true;EXPECT_TRUE(call("recover","map_recover",{{"transaction_id","switch"}}).accepted);spin(1500);EXPECT_EQ(loads,2);EXPECT_EQ(status.at("transaction").at("state"),"COMMITTED");EXPECT_EQ(status.at("active_map").at("version"),map.at("version"));
  valid=false;spin(200);EXPECT_TRUE(status.at("motion_blocked"));EXPECT_EQ(status.at("active_map").at("version"),map.at("version"));valid=true;spin(200);
+ Json scene={{"scene_id","echo_lab"},{"name","echo"},{"type","echo"},{"map_id","floor1"},{"map_version",map.at("version")},{"expected_scene_version",0},{"devices",Json::array()}};
+ EXPECT_TRUE(call("scene","scene_put",scene).accepted);
+ const int before=loads;auto selected=call("load-scene","scene_load",{{"scene_id","echo_lab"},{"scene_version",1},{"manual_transfer",false}});EXPECT_TRUE(selected.accepted)<<selected.message;
+ EXPECT_EQ(loads,before);EXPECT_EQ(status.at("active_scene").at("scene_id"),"echo_lab");EXPECT_TRUE(status.at("scene_ready"));
+ control=false;spin(200);scene["expected_scene_version"]=1;EXPECT_FALSE(call("observer-edit","scene_put",scene).accepted);control=true;spin(200);
  EXPECT_TRUE(call("switch2","map_switch_begin",{{"map_id","floor1"},{"map_version",map.at("version")},{"manual_transfer",false}}).accepted);control=false;spin(300);EXPECT_EQ(status.at("state"),"RECOVERY_REQUIRED");EXPECT_TRUE(status.at("motion_blocked"));
  EXPECT_EQ(node->count_publishers("/cmd_vel"),0u);
  exec.remove_node(manager);exec.remove_node(node);manager.reset();node.reset();rclcpp::shutdown();fs::remove_all(root);

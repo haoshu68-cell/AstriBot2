@@ -1,0 +1,51 @@
+...............F                                                         [100%]
+=================================== FAILURES ===================================
+___________ test_signal_shutdown_while_waiting_for_first_map[python] ___________
+
+impl = 'python'
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_signal_shutdown_while_waiting_for_first_map(impl):
+        relay = Relay(impl, 'shutdown_no_map')
+        try:
+            relay.ready()
+        finally:
+>           relay.close()
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:294: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_map_relay.Relay object at 0x7168df9b0610>, expected = 0
+
+    def close(self, expected=0):
+        code = None
+        if self.p:
+            if self.p.poll() is None:
+                self.p.send_signal(signal.SIGINT)
+            try:
+                code = self.p.wait(timeout=3.)
+            except subprocess.TimeoutExpired:
+                self.p.kill()
+                self.p.wait()
+                raise AssertionError('Owned relay required SIGKILL')
+            finally:
+                self.handle.close()
+                self.details['returncode'] = self.p.returncode
+                self.details['samples'] = len(self.messages)
+                (self.path / 'result.json').write_text(json.dumps(self.details, indent=2) + '\n')
+        for executor, node, context in zip(self.executors, self.nodes, self.contexts):
+            executor.shutdown()
+            node.destroy_node()
+            context.try_shutdown()
+        if expected is not None:
+>           assert code == expected, (code, (self.path / 'node.log').read_text())
+E           AssertionError: (-2, '[WARN] [1789983439.343768201] [rcl.logging_rosout]: Publisher already registered for provided node name. If this... File "/usr/lib/python3.10/posixpath.py", line 428, in _joinrealpath
+E                 st = os.lstat(newpath)
+E             KeyboardInterrupt
+E             ')
+E           assert -2 == 0
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:185: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py::test_signal_shutdown_while_waiting_for_first_map[python]
+1 failed, 15 passed, 16 deselected in 11.80s

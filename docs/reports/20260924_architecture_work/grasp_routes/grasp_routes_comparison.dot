@@ -1,0 +1,73 @@
+digraph routes {
+graph [bgcolor="#181818",pad=.45,rankdir=TB,newrank=true,nodesep=.52,ranksep=.52,splines=true,fontname="Noto Sans CJK SC",fontcolor="#eeeeee",fontsize=25,labelloc=t];
+node [shape=box,style="rounded,filled",fillcolor="#333333",color="#555555",penwidth=1.3,fontname="Noto Sans CJK SC",fontcolor="#eeeeee",fontsize=18,margin=".24,.15"];
+edge [color="#bfc2c5",penwidth=1.3,arrowsize=.8,fontname="Noto Sans CJK SC",fontcolor="#aaaaaa",fontsize=12];
+label="夹爪抓取的两条技术路线
+ ";
+
+camera [label="RGB / Depth / CameraInfo
+采集时刻 TF / 标定版本"];
+target [label="目标选择 / ROI / 实例 mask
+测试夹具已有；通用实例链待完善"];
+{rank=same;camera;target;}
+snapshot [label="C++ 同步、配对与输入检查
+相机 / 处理健康 · 源时间 · frame · 版本"];
+camera -> snapshot; target -> snapshot;
+
+subgraph cluster_a {
+label="路线 A｜点云 → GraspNet → 夹爪候选";fontcolor="#dfdfdf";fontsize=20;color="#4b4b4b";style=rounded;margin=22;
+a1 [label="目标分割点云 PointCloud2
+保留同次采集上下文"];
+a2 [label="ComputeGrasps
+LibTorch C++ / GraspNet worker"];
+a3 [label="夹爪 6D 候选 + 开口宽度 + 排序分
+分数不是抓取成功概率"];
+a4 [label="候选选择与实际夹爪 TCP 适配
+检查开口 / 接近方向 / 坐标约定
+到 MTC 的整链接线待验收",style="rounded,filled,dashed",color="#d0ad6d",fillcolor="#342f27",fontcolor="#ecd5ab"];
+a1 -> a2 -> a3;
+a3 -> a4 [style=dashed,color="#d0ad6d"];
+}
+
+subgraph cluster_b {
+label="路线 B｜物体 6D 位姿 → CAD 抓取模板";fontcolor="#dfdfdf";fontsize=20;color="#4b4b4b";style=rounded;margin=22;
+b1 [label="目标 RGB-D / mask 或分割点云
+注册 CAD · 模型版本 · 实例身份"];
+b2 [label="物体 6D 位姿估计
+现有：C++ PPF / ICP
+拟接入：FoundationPose C++（待验收）"];
+b3 [label="物体姿态 T_camera_object
+几何一致性 / 可观测性 / 对称歧义检查"];
+b4 [label="物体系抓取模板 → TCP 目标
+T_base_tcp = T_base_object × T_object_tcp
+模板选择与消费接线待贯通",style="rounded,filled,dashed",color="#d0ad6d",fillcolor="#342f27",fontcolor="#ecd5ab"];
+b1 -> b2 -> b3;
+b3 -> b4 [style=dashed,color="#d0ad6d"];
+}
+
+snapshot -> a1;snapshot -> b1;
+{rank=same;a1;b1;} {rank=same;a2;b2;} {rank=same;a3;b3;} {rank=same;a4;b4;}
+
+scene [label="完整场景障碍 / 机器人当前状态
+PlanningScene 更新与读回确认"];
+merge [label="任务拥有的规划输入
+候选 + 场景 + 采集时刻 TF + 对象 / 版本一致性",style="rounded,filled,dashed",color="#d0ad6d",fillcolor="#342f27",fontcolor="#ecd5ab"];
+mtc [label="MTC / MoveIt
+IK · 整机与夹爪碰撞 · 限位 · 接近 / 退出轨迹"];
+execute [label="既有任务与执行保护链
+资源归属 · 底盘 Hold · 执行守卫 · 取消终态"];
+controller [label="机械臂轨迹执行 → 夹爪闭合
+控制器结果与实际关节反馈"];
+confirm [label="抓取结果确认 → 抬升 / 后续任务
+仿真附着证据；真机抓持与滑落检测另验"];
+scene -> merge;
+merge -> mtc [style=dashed,color="#d0ad6d",label="两种模型输出到执行的完整链仍待验收"];
+mtc -> execute -> controller -> confirm;
+note [label="共同底线：感知结果不是运动许可；夹爪闭合不等于已经抓牢
+灰色：已有模块 / 接口关系；金色虚线：候选接线或待贯通验收
+已有普通演示采用运动学附着，不能替代真实接触抓取验收",shape=plain,fillcolor="#181818",fontcolor="#c4b38e",fontsize=14];
+confirm -> note [style=invis];
+
+a4 -> merge [style=dashed,color="#d0ad6d"];b4 -> merge [style=dashed,color="#d0ad6d"];
+snapshot -> scene [label="保留完整障碍，不能只留目标",constraint=false];
+}

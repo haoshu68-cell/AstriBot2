@@ -1,0 +1,90 @@
+--- a/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -35,6 +35,8 @@
+ #include <control_msgs/action/follow_joint_trajectory.hpp>
+ #include <controller_manager_msgs/srv/list_controllers.hpp>
+ #include <std_msgs/msg/string.hpp>
++#include <algorithm>
++#include <cctype>
+ #include <fstream>
+ #include <filesystem>
+ #include <cmath>
+@@ -180,7 +182,7 @@
+    [this](const auto handle){
+     transfer_parent_=handle;full_operation_=true;operation_generation_=1;
+     const auto &goal=*handle->get_goal();input_.task_id=goal.task_id;input_.request_id=goal.request_id;
+-    input_.object_id=goal.object_id;input_.operation="PICK";input_.context_id=goal.context_id+":op:1:PICK";
++    input_.object_id=goal.object_id;input_.operation="PICK";input_.context_id=goal.context_id+"_op_1_PICK";
+     input_.touch_links=goal.touch_links;input_.grasp_width_m=goal.grasp_width_m;
+     transfer_started_=wall();transfer_budget_=int64_t(goal.timeout_s*1000000000.);
+     transfer_phase_=TransferPhase::PICK_PREPARE;navigation_started_=false;navigation_cleanup_revoke_=false;station_pending_=false;station_scene_unresolved_=false;station_ready_=false;final_scene_pending_=false;
+@@ -277,6 +279,9 @@
+  void validate_transfer_goal(const Transfer::Goal &goal) {
+   if(!payload_client_||goal.context_id.empty()||!std::isfinite(goal.timeout_s)||goal.timeout_s<=0||goal.timeout_s>540||
+      goal.stations.size()!=2||goal.stations[0].id==goal.stations[1].id||goal.navigation_target.header.frame_id!="map")throw std::runtime_error("FIXED_STATION_GOAL_INVALID");
++  // ResourceAuthority accepts at most 128 characters; the PLACE suffix uses 11.
++  if(goal.context_id.size()>117||!std::all_of(goal.context_id.begin(),goal.context_id.end(),[](unsigned char c){return std::isalnum(c)||c=='_'||c=='-'||c=='.';}))
++   throw std::runtime_error("FIXED_STATION_CONTEXT_INVALID");
+   auto pose=[](const geometry_msgs::msg::PoseStamped &target){
+    if(target.header.frame_id!="gazebo_world")throw std::runtime_error("STATION_TARGET_FRAME_INVALID");
+    (void)fixed_station_target_in_base(target.pose,Eigen::Isometry3d::Identity());
+@@ -361,7 +366,7 @@
+  }
+  void continue_place(int64_t ros,int64_t steady) {
+   check_payload_raw();
+-  const std::string context=transfer_parent_->get_goal()->context_id+":op:2:PLACE";
++  const std::string context=transfer_parent_->get_goal()->context_id+"_op_2_PLACE";
+   if(!navigation_->status().cleanup_complete||!children_->all_terminal()||!hold_.status(ros,steady).hold_confirmed||!manipulation_ready(ros,steady))throw std::runtime_error("PLACE_CONTINUATION_NOT_STATIONARY");
+   if(!authority_->continue_from_hold(authority_->lease_id(),authority_->epoch(),context,1,true,true,ros,steady))throw std::runtime_error("PLACE_CONTINUATION_NOT_COMMITTED:"+authority_->reason());
+   ++operation_generation_;++stage_generation_;input_.operation="PLACE";input_.context_id=context;
+@@ -413,7 +418,7 @@
+     if(!authority_->complete(lease,authority_->epoch(),true,true,true,ros,steady))throw std::runtime_error("TRANSFER_COMPLETION_NOT_COMMITTED:"+authority_->reason());
+     transfer_phase_=TransferPhase::COMPLETE;reason_="TRANSFER_COMPLETE";
+     auto feedback=std::make_shared<Transfer::Feedback>();feedback->phase="COMPLETE";feedback->reason=reason_;feedback->lease_id=lease;
+-    feedback->resource_epoch=authority_->epoch();feedback->context_id=input().context_id;feedback->object_id=input().object_id;feedback->navigation_goal_uuid=navigation_->status().nav_goal_uuid;
++    feedback->resource_epoch=authority_->epoch();feedback->context_id=transfer_parent_->get_goal()->context_id;feedback->object_id=input().object_id;feedback->navigation_goal_uuid=navigation_->status().nav_goal_uuid;
+     transfer_parent_->publish_feedback(feedback);transfer_parent_->succeed(transfer_result(true,true));transfer_parent_.reset();hold_.cancel();hold_confirmed_=false;
+    }catch(const std::exception &error){stopping(error.what());}
+   });
+@@ -433,7 +438,7 @@
+    const auto *state=payload_consumer_->current(ros,steady);
+    if(!state||!state->observation.full_inventory||state->observation.status!=Observation::ATTACHED||state->observation.objects.size()!=1||state->observation.objects[0].object.id!=payload_object_)throw std::runtime_error("TRANSFER_ATTACHED_BOX_UNCONFIRMED");
+    auto limits=transfer_parent_->get_goal()->navigation_limits;limits.payload_mass_kg=state->observation.objects[0].weight;
+-   FixedStationNavigation::Request request;request.task_id=input().task_id;request.context_id=transfer_parent_->get_goal()->context_id+":NAV";
++   FixedStationNavigation::Request request;request.task_id=input().task_id;request.context_id=transfer_parent_->get_goal()->context_id+"_NAV";
+    request.lease_id=authority_->lease_id();request.resource_epoch=authority_->epoch();request.reference_geometry=*geometry_;
+    request.fixed=hold_.request(request.context_id,limits,ros,steady);request.navigation_target=transfer_parent_->get_goal()->navigation_target;
+    request.robot_base_frame=payload_base_;request.position_tolerance_m=navigation_position_tolerance_;request.yaw_tolerance_rad=navigation_yaw_tolerance_;
+@@ -1217,7 +1222,7 @@
+    publish(full_parent_,std::make_shared<FullAction::Feedback>());
+    if(transfer_parent_) {
+     auto feedback=std::make_shared<Transfer::Feedback>();feedback->phase=transfer_phase_name();feedback->reason=reported_reason;
+-    feedback->lease_id=authority_->lease_id();feedback->resource_epoch=authority_->epoch();feedback->context_id=input().context_id;
++    feedback->lease_id=authority_->lease_id();feedback->resource_epoch=authority_->epoch();feedback->context_id=transfer_parent_->get_goal()->context_id;
+     feedback->object_id=input().object_id;feedback->stage_id=stage_id_;feedback->hold_id=hold_id_;feedback->hold_confirmed=state.hold_confirmed;
+     if(navigation_)feedback->navigation_goal_uuid=navigation_->status().nav_goal_uuid;
+     transfer_parent_->publish_feedback(feedback);
+--- a/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/test/resource_authority_test.cpp
+@@ -81,7 +81,11 @@
+ TEST_F(AuthorityFixture, ContinueOperationPreservesLeaseAndDoesNotRenewIt) {
+  ASSERT_TRUE(acquire().accepted);a.submitted(T,T);a.holding(T+MS,T+MS);
+  const auto original=*a.grant(T+MS,T+MS);
+- ASSERT_TRUE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+2*MS,T+2*MS));
++ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,"transfer:op:2:PLACE",1,true,true,T+2*MS,T+2*MS));
++ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,std::string(118,'a')+"_op_2_PLACE",1,true,true,T+2*MS,T+2*MS));
++ EXPECT_EQ(a.phase(),ResourcePhase::HOLDING);
++ const auto context=std::string(117,'a')+"_op_2_PLACE";
++ ASSERT_TRUE(a.continue_from_hold(original.lease_id,original.epoch,context,1,true,true,T+2*MS,T+2*MS));
+  EXPECT_EQ(a.phase(),ResourcePhase::RESERVED);
+  const auto continued=*a.grant(T+2*MS,T+2*MS);
+  EXPECT_EQ(continued.owner_id,original.owner_id);EXPECT_EQ(continued.lease_id,original.lease_id);
+@@ -89,7 +93,7 @@
+  EXPECT_EQ(records.back()["event"],"operation_continuation_committed");
+  EXPECT_TRUE(records.back()["side_effects"].get<bool>());
+  a.submitted(T+3*MS,T+3*MS);a.holding(T+4*MS,T+4*MS);
+- EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+5*MS,T+5*MS));
++ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,context,1,true,true,T+5*MS,T+5*MS));
+  EXPECT_EQ(a.phase(),ResourcePhase::HOLDING);
+ }
+ TEST_F(AuthorityFixture, ContinueRequiresCurrentIdentityHoldAndBothEvidenceBoundaries) {

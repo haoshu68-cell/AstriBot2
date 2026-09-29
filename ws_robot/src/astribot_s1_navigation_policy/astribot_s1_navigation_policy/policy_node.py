@@ -9,10 +9,12 @@ from rclpy.executors import MultiThreadedExecutor
 from std_msgs.msg import String, Bool
 from rclpy.qos import QoSProfile, DurabilityPolicy
 from astribot_navigation_msgs.msg import MotionConstraint, PathRisk, NavigationPolicyStatus, CorridorAlignment
+from astribot_navigation_msgs.srv import ResolveRoute, GetRecoveryObstacles
+from geometry_msgs.msg import Polygon, Point32
 from .observer_node import PolicyObserver
 from .execution_context import to_wire
 from .sensor_health import movement_directions
-from .behavior import YieldPolicy, requires_stop
+from .behavior import Selection, YieldPolicy, requires_stop
 from .risk import evaluate_risk
 from .path_evidence import PathEvidence, assess_path, path_identity
 
@@ -37,13 +39,14 @@ class PolicyNode(PolicyObserver):
         self.constraint=self.create_publisher(MotionConstraint,'/navigation_policy/proposed_constraint',10)
         self.state=self.create_publisher(String,'/navigation_policy/state',10)
         self.typed_state=self.create_publisher(NavigationPolicyStatus,'/navigation/policy_status',10)
+        self.last_world=None
+        self.recovery_obstacles_service=self.create_service(GetRecoveryObstacles,
+            '/navigation_policy/recovery_obstacles',self.recovery_obstacles,
+            callback_group=self.processing_group)
         self.coordinator=None
-        self.start_maneuver=None
         if stage in ('p3','p4','p5'):
             from .route_coordinator import RouteCoordinator
-            from .start_maneuver_adapter import StartManeuverAdapter
             self.coordinator=RouteCoordinator(self)
-            self.start_maneuver=StartManeuverAdapter(self)
         self.corridor=None
         if stage in ('p4','p5'):
             from .corridor_adapter import CorridorAdapter
@@ -55,11 +58,45 @@ class PolicyNode(PolicyObserver):
         self.social=None
         if social_stage=='h2':
             if stage!='p2':raise ValueError('H2 uses P2 waiting without route replacement')
+            from .route_coordinator import RouteCoordinator
             from .social_adapter import SocialAdapter
+            self.coordinator=RouteCoordinator(self,candidate_enabled=False)
             self.social=SocialAdapter(self)
 
+    def recovery_obstacles(self,request,response):
+        # This callback shares the observer processing group. The C++ recovery
+        # planner receives the same immutable world that produced policy risk.
+        from .world_geometry import prediction_rows
+        import numpy as np
+        world=self.last_world
+        if (world is None or not self.last_inputs_valid or
+            self.last_evaluation_epoch!=self.epoch):
+            response.reason='RECOVERY_POLICY_INPUT_UNAVAILABLE';return response
+        if world.unassociated:
+            response.reason='RECOVERY_NONMETRIC_OBSTACLES';return response
+        rows=prediction_rows(world,include_current=True,swept=True)
+        lower=np.full((len(world.tracks),2),np.inf)
+        upper=np.full((len(world.tracks),2),-np.inf)
+        np.minimum.at(lower,rows.owners,rows.lower)
+        np.maximum.at(upper,rows.owners,rows.upper)
+        response.header.frame_id=world.frame_id
+        response.header.stamp=rclpy.time.Time(nanoseconds=world.stamp.ns).to_msg()
+        for lo,hi in zip(lower,upper):
+            # Polygon uses float32: round outwards when serializing bounds.
+            lo=np.nextafter(lo.astype(np.float32),np.float32(-np.inf))
+            hi=np.nextafter(hi.astype(np.float32),np.float32(np.inf))
+            response.obstacles.append(Polygon(points=[Point32(x=float(x),y=float(y))
+                for x,y in ((lo[0],lo[1]),(hi[0],lo[1]),(hi[0],hi[1]),(lo[0],hi[1]))]))
+        response.valid=True;response.reason='POLICY_WORLD_SNAPSHOT'
+        return response
+
     def path_risk(self,msg):
+        if self.coordinator is not None and self.coordinator.workstation_alignment:return
         self.path_blocked=msg.data
+
+    def retire_path_risk(self):
+        self.path_blocked=False;self.path_evidence=None;self.report_order=None
+        with self.path_report_lock:self.pending_path_report=None
 
     def process_plan(self):
         pending=self.pending_plan
@@ -70,17 +107,20 @@ class PolicyNode(PolicyObserver):
             except ValueError:self.path=();self.active_path_key=None
 
     def path_report(self,msg):
-        with self.path_report_lock:self.pending_path_report=(msg,time.monotonic())
+        with self.path_report_lock:
+            if self.pending_path_report is not None:
+                old=self.pending_path_report[0]
+                if (msg.stamp.sec,msg.stamp.nanosec)<(old.stamp.sec,old.stamp.nanosec):return
+            self.pending_path_report=(msg,time.monotonic())
 
     def process_path_report(self):
         with self.path_report_lock:
             pending=self.pending_path_report;self.pending_path_report=None
         if pending is None:return
+        if self.coordinator is not None and self.coordinator.workstation_alignment:return
         msg,received=pending
         now=self.stamp()
         stamp_ns=msg.stamp.sec*10**9+msg.stamp.nanosec
-        if not 0<=now.ns-stamp_ns<=int(self.profile.path_risk_timeout_s*1e9):
-            return
         try:key=path_identity(msg.checked_path)
         except ValueError:return
         if self.report_order is not None and self.report_order[0]==now.epoch and stamp_ns<self.report_order[1]:
@@ -144,51 +184,71 @@ class PolicyNode(PolicyObserver):
         coverage_health=self.health_registry.health(now)
         coverage_ok=self.health_registry.allows_motion(now,robot.vx,robot.vy,robot.wz) if robot else False
         valid=valid and coverage_ok
-        slow_original=False
-        if (valid and path_risk.status=='CLEAR' and risk is not None and
-            risk.blocked and not risk.immediate and not risk.uncertain):
-            slow_risk=evaluate_risk(self.last_world,robot,self.path,self.profile,
-                                    speed_limit=self.profile.narrow_speed_m_s)
-            if not requires_stop(slow_risk,self.profile):
-                risk=slow_risk;slow_original=True
-        selection=self.selector.select(risk,valid,seconds)
-        if slow_original and selection.motion!='HOLD':
-            selection=replace(selection,motion='SLOW',speed=self.profile.narrow_speed_m_s,
-                              reason='ORIGINAL_PATH_SLOW_SAFE')
-        if not coverage_ok:selection=replace(selection,motion='HOLD',speed=0.,reason='REQUIRED_COVERAGE_UNAVAILABLE')
-        if self.social is not None:
-            selection=self.social.apply(selection,valid,now)
-        start_active=False
-        start_evaluation=time.monotonic()
-        if self.start_maneuver:
-            selection,start_active=self.start_maneuver.advance(selection,valid)
-        start_done=time.monotonic()
-        passage=self.corridor.advance(selection,valid,seconds) if self.corridor and not start_active else None
-        corridor_done=time.monotonic()
-        if passage is not None and passage.state!='NORMAL':
-            selection=passage.selection
-            # A constrained passage owns waiting; no candidate may turn inside it.
-            self.coordinator.cancel()
-            if passage.failure:self.coordinator.failure=passage.failure
-        elif start_active:
-            self.coordinator.cancel()
-            self.coordinator.blocked_since=None
-        elif self.coordinator is not None:
-            selection=self.coordinator.advance(selection,risk,valid)
+        workstation_alignment=bool(self.coordinator and self.coordinator.workstation_alignment)
+        if workstation_alignment:
+            # The committed controller owns layered collision prediction. Keep
+            # the observation capability gate; retire only the old path risk.
+            valid=self.last_inputs_valid and self.last_evaluation_epoch==now.epoch and coverage_ok
+            selection=Selection('CONTINUE',self.profile.max_speed_m_s,'WORKSTATION_ALIGNMENT') if valid else Selection('HOLD',0.,'WORKSTATION_INPUT_UNAVAILABLE')
+            slow_original=False;passage=None;corridor_start=corridor_done=time.monotonic()
+        else:
+            slow_original=False
+            if (valid and path_risk.status=='CLEAR' and risk is not None and
+                risk.blocked and not risk.immediate and not risk.uncertain):
+                slow_risk=evaluate_risk(self.last_world,robot,self.path,self.profile,
+                                        speed_limit=self.profile.narrow_speed_m_s)
+                if not requires_stop(slow_risk,self.profile):
+                    risk=slow_risk;slow_original=True
+            selection=self.selector.select(risk,valid,time.monotonic())
+            if slow_original and selection.motion!='HOLD':
+                selection=replace(selection,motion='SLOW',speed=self.profile.narrow_speed_m_s,
+                                  reason='ORIGINAL_PATH_SLOW_SAFE')
+            if not coverage_ok:selection=replace(selection,motion='HOLD',speed=0.,reason='REQUIRED_COVERAGE_UNAVAILABLE')
+            if self.social is not None:
+                context=self.coordinator.social_context()
+                social=self.social.apply(selection,valid,now,context)
+                selection=social.selection
+                self.coordinator.record_social_result(context,social.failure)
+            corridor_start=time.monotonic()
+            passage=self.corridor.advance(selection,valid,time.monotonic()) if self.corridor else None
+            corridor_done=time.monotonic()
+            if passage is not None and passage.state!='NORMAL':
+                selection=passage.selection
+                # A constrained passage owns waiting; no candidate may turn inside it.
+                self.coordinator.cancel()
+                if passage.failure:
+                    self.coordinator.failure=passage.failure
+                    self.coordinator.failure_code=ResolveRoute.Response.NONE
+            elif self.coordinator is not None:
+                selection=self.coordinator.advance(selection,risk,valid)
         if passage is not None and passage.tracking_heading is not None:
             self.publish_alignment(passage.tracking_heading,tracking=True)
         elif passage is not None and (passage.alignment_heading is not None or passage.centering_target is not None):
             self.publish_alignment(passage.alignment_heading,passage.centering_target)
         else:self.alignment_anchor=None
-        msg=MotionConstraint();msg.stamp=self.get_clock().now().to_msg()
-        self.sequence+=1;msg.epoch=self.boot+now.epoch;msg.sequence=self.sequence;msg.lease_s=self.profile.constraint_lease_s
+        # This is the policy heartbeat. The upstream navigation-constraint node
+        # owns current sensor freshness and collision admission; do not recycle
+        # a scan deadline here. It never writes chassis velocity commands.
+        publication=self.stamp()
+        msg=MotionConstraint();msg.stamp=rclpy.time.Time(nanoseconds=publication.ns).to_msg()
+        self.sequence+=1;msg.epoch=self.boot+publication.epoch;msg.sequence=self.sequence;msg.lease_s=self.profile.constraint_lease_s
         msg.hold=selection.motion=='HOLD';msg.max_linear_speed=selection.speed
         msg.max_angular_speed=0. if msg.hold else min(self.profile.max_angular_speed_rad_s, passage.angular_cap if passage else float('inf'))
         msg.alignment_required=bool(passage and passage.alignment_heading is not None)
         msg.centering_required=bool(passage and passage.centering_target is not None)
         msg.corridor_tracking_required=bool(passage and passage.tracking_heading is not None)
+        msg.workstation_alignment=workstation_alignment
         msg.planning=selection.planning;msg.reason=selection.reason
+        timing={}
+        if self.scan_timing is not None:
+            timing['scan_timing_constraint']={'publish_started':{
+                'ros_ns':self.get_clock().now().nanoseconds,'steady_ns':time.monotonic_ns()},
+                'world_stamp_ns':self.last_world.stamp.ns,'world_version':asdict(self.last_world.version)}
         self.constraint.publish(msg)
+        if self.scan_timing is not None:
+            timing['scan_timing_constraint']['publish_finished']={
+                'ros_ns':self.get_clock().now().nanoseconds,'steady_ns':time.monotonic_ns()}
+            timing['scan_timing_constraint']['successful']=self.scan_timing.snapshot()['successful']
         status=NavigationPolicyStatus();status.stamp=msg.stamp
         to_wire(self.last_world.version,status.version)
         status.motion=selection.motion;status.reason=selection.reason;status.inputs_valid=valid
@@ -208,19 +268,18 @@ class PolicyNode(PolicyObserver):
             processing_cpu_s=time.thread_time()-processing_cpu_start,
             processing_stages_s={'observation':observer_done-processing_start,
                                  'route_mailbox':route_done-observer_done,
-                                 'start_maneuver':start_done-start_evaluation,
-                                 'corridor':corridor_done-start_done,
+                                 'corridor':corridor_done-corridor_start,
                                  'arbitration':time.monotonic()-route_done},
             corridor_state=passage.state if passage else 'DISABLED',
             corridor_id=passage.corridor_id if passage else '',
             corridor_permit=list(passage.permit) if passage else [],
             corridor_evidence=self.corridor.evidence if self.corridor else {},
             corridor_error=self.corridor.last_error if self.corridor else '',
-            path_risk_status=path_risk.status,path_distance_m=path_risk.distance_m,
+            workstation_alignment=workstation_alignment,
+            path_risk_status='RETIRED_FOR_WORKSTATION' if workstation_alignment else path_risk.status,path_distance_m=path_risk.distance_m,
             original_path_admission='SLOW_EXECUTABLE' if slow_original else 'STANDARD',
-            start_maneuver=self.start_maneuver.status if self.start_maneuver else {},
             candidate_audit=self.coordinator.audit[-12:] if self.coordinator else [],
-            candidate_safety_evidence=self.coordinator.safety_evidence[-12:] if self.coordinator else []))))
+            candidate_safety_evidence=self.coordinator.safety_evidence[-12:] if self.coordinator else [],**timing))))
 
 def main():
     rclpy.init();node=PolicyNode()

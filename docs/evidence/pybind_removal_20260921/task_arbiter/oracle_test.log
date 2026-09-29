@@ -1,0 +1,114 @@
+.........F....F.FF                                                       [100%]
+=================================== FAILURES ===================================
+_____________ test_replace_busy_and_delayed_terminal[python-False] _____________
+
+runtime = <test_arbiter_protocol.Runtime object at 0x762120f81d20>
+equal = False
+
+    @pytest.mark.parametrize('equal', [False, True])
+    def test_replace_busy_and_delayed_terminal(runtime, equal):
+        r = runtime; old = r.backends['pose']; new = r.backends['poses']
+        first = r.send('operator' if equal else 'route')
+>       wait(lambda: old.handles)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:291: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function test_replace_busy_and_delayed_terminal.<locals>.<lambda> at 0x762120feda20>
+timeout = 5.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+_________________________ test_executor_reject[python] _________________________
+
+runtime = <test_arbiter_protocol.Runtime object at 0x762120fbf8e0>
+
+    def test_executor_reject(runtime):
+        r = runtime; r.backends['pose'].accept = False
+        h = r.send(); assert h.accepted
+        assert r.result(h).status == GoalStatus.STATUS_ABORTED
+>       assert r.states(h) == [('ACCEPTED', '', 0), ('FAILED', 'EXECUTOR_REJECTED', 0)]
+E       AssertionError: assert [('ACCEPTED',...VAILABLE', 0)] == [('ACCEPTED',...REJECTED', 0)]
+E         At index 1 diff: ('FAILED', 'EXECUTOR_UNAVAILABLE', 0) != ('FAILED', 'EXECUTOR_REJECTED', 0)
+E         Full diff:
+E         - [('ACCEPTED', '', 0), ('FAILED', 'EXECUTOR_REJECTED', 0)]
+E         ?                                            ^ ------
+E         + [('ACCEPTED', '', 0), ('FAILED', 'EXECUTOR_UNAVAILABLE', 0)]
+E         ?                                            ^^^^^^^^^^
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:349: AssertionError
+___________ test_unavailable_recovery_and_wall_timeout[True-python] ____________
+
+impl = 'python', recover = True
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_test/test_unavailable_recovery_and_1')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('recover', [False, True])
+    def test_unavailable_recovery_and_wall_timeout(impl, recover, tmp_path):
+        r = Runtime(impl, tmp_path, timeout=.7, backend=False, sim=True)
+        try:
+            started = time.monotonic(); h = r.send()
+            if recover:
+>               b = r.add_backend('pose'); wait(lambda: b.handles)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:359: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function test_unavailable_recovery_and_wall_timeout.<locals>.<lambda> at 0x762120fee560>
+timeout = 5.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+_________________ test_parameter_snapshot_consumption[python] __________________
+
+impl = 'python'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_test/test_parameter_snapshot_consum0')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_parameter_snapshot_consumption(impl, tmp_path):
+        r = Runtime(impl, tmp_path, timeout=.35, backend=False)
+        try:
+            r.set_timeout(3.0)
+>           start = time.monotonic(); h = r.send(); r.result(h)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:375: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:185: in result
+    wait(handle.result_future.done)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <bound method Future.done of <rclpy.task.Future object at 0x762120f12920>>
+timeout = 5.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_replace_busy_and_delayed_terminal[python-False]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_executor_reject[python]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_unavailable_recovery_and_wall_timeout[True-python]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_parameter_snapshot_consumption[python]
+4 failed, 14 passed, 18 deselected in 26.42s

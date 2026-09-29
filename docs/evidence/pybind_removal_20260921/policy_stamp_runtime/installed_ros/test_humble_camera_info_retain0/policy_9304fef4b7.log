@@ -1,0 +1,17 @@
+ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py
+[WARN] [1789999480.843658531] [policy_9304fef4b7]: observation rejected: 'depth'
+[WARN] [1789999480.911071388] [policy_9304fef4b7]: INVALID_INPUT: camera.coefficient
+[WARN] [1789999481.075752734] [policy_9304fef4b7]: observation rejected: 'depth'
+[WARN] [1789999481.158602487] [policy_9304fef4b7]: INVALID_INPUT: camera.coefficient
+[WARN] [1789999481.322386805] [policy_9304fef4b7]: observation rejected: 'depth'
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py", line 391, in main
+    finally:executor.shutdown();node.destroy_node();rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241

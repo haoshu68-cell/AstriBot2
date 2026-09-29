@@ -1,0 +1,85 @@
+{
+  "scope": "sampled health inside whole action windows (including arrival); not FOLLOW-only or independent frame drops. After-goals starts 2 simulation seconds after final arrival.",
+  "windows": [
+    {
+      "label": "entry_action_window",
+      "start": {
+        "ros_s": 348.30100000000004,
+        "nearest_observation_wall_error_s": 0.00018835067749023438
+      },
+      "end": {
+        "ros_s": 394.954,
+        "nearest_observation_wall_error_s": 0.0034339427947998047
+      }
+    },
+    {
+      "label": "passage_action_window",
+      "start": {
+        "ros_s": 399.26000000000005,
+        "nearest_observation_wall_error_s": 0.00569915771484375
+      },
+      "end": {
+        "ros_s": 468.206,
+        "nearest_observation_wall_error_s": 0.0016808509826660156
+      }
+    }
+  ],
+  "samples": {
+    "right_wrist_rgbd": {
+      "entry_action_window": {
+        "health_samples": 2884,
+        "invalid_samples": 0
+      },
+      "passage_action_window": {
+        "health_samples": 6597,
+        "invalid_samples": 1197
+      },
+      "after_goals": {
+        "health_samples": 11996,
+        "invalid_samples": 3708
+      }
+    },
+    "left_wrist_rgbd": {
+      "entry_action_window": {
+        "health_samples": 2886,
+        "invalid_samples": 2
+      },
+      "passage_action_window": {
+        "health_samples": 6593,
+        "invalid_samples": 1185
+      },
+      "after_goals": {
+        "health_samples": 12011,
+        "invalid_samples": 3725
+      }
+    },
+    "head_rgbd": {
+      "entry_action_window": {
+        "health_samples": 1498,
+        "invalid_samples": 0
+      },
+      "passage_action_window": {
+        "health_samples": 3427,
+        "invalid_samples": 634
+      },
+      "after_goals": {
+        "health_samples": 6235,
+        "invalid_samples": 1954
+      }
+    },
+    "torso_rgbd": {
+      "entry_action_window": {
+        "health_samples": 1499,
+        "invalid_samples": 1
+      },
+      "passage_action_window": {
+        "health_samples": 3426,
+        "invalid_samples": 622
+      },
+      "after_goals": {
+        "health_samples": 6235,
+        "invalid_samples": 1934
+      }
+    }
+  }
+}

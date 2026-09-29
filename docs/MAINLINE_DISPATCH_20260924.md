@@ -1,5 +1,28 @@
 # 主线统一调度记录 — 2026-09-24
 
+## 当前恢复（2026-09-25 06:01）
+
+用户明确继续主线、固定已验配置、不扩大矩阵。按任务编排/C++/仿真归属技能执行。本轮仅定位scene38的附着前场景重验变化：M1独占执行器失败快照诊断，root独占构建/唯一仿真，M5只读冻结配置和实际录屏验收。idle_position_hold=true、kp3、已授权仿真angular profile、2.5倍轨迹时间、原场景及相机基线冻结。
+
+该场景一致性问题首次观察05:56，检查点06:56；原payload路径问题00:26及05:02→06:02计时/失败保留，不借此次诊断重置。scene34证明新实际附件后缀已接纳、LIFT成功，但TRANSPORT因原底盘位移限制取消，后续NAV/PLACE未验。scene38三抓取阶段已确认，未实际附着。先取得本次比较双方快照中的真实差异再修正，不以猜测改变碰撞或时效语义。分层地图方案保留，主线验收前不施工其扩展。
+
+成功标准仍为当前导航仓库同一父Action完成PICK→有载NAV→PLACE→权威EMPTY及独立Scene→终态、实测停稳、资源释放、可解码录像。单个诊断/阶段通过不得替代此验收。
+
+- 06:09–06:11：scene39完整PICK已成立：PREGRASP、GRASP_APPROACH、GRASP_CONFIRM、实际ATTACH确认、LIFT及TRANSPORT_POSTURE均完成；新后缀实际采用。随后代码在确认Hold的tick中先发送导航包络请求，末尾才发布正向Hold；实际104.508s为false、104.543s为true、104.562s又为false，SetFixedEnvelope返回ARM_HOLD_UNCONFIRMED。journal issued_at是租约快照而非事件独立时刻，不据其计算交接延迟；未发送Nav目标。父任务cancel/resources_released=true、独立停稳通过、stack stopped/remaining[]。scene38场景变化本轮未复现，按用户“偶现问题暂过”留档不再分析，不记修复。只定位正常PICK→NAV交接发布/服务顺序，起点06:09/检查点07:09；不重置任何旧问题计时。固定配置不变，分层地图等扩展继续冻结。
+
+## 恢复检查点（2026-09-25 05:02:36–06:02:36）
+
+- 按用户继续主线与既定建议顺序恢复 `MTC-PAYLOAD-REMAINING-PATH-01`；原 00:26:36–01:26:36 失败及累计排查保留。本轮恢复检查点 06:02:36，不以子任务或窗口重置问题计时。
+- 仅修复实际附件导致原 TRANSPORT_POSTURE 碰撞：保持 LIFT 和原目标，使用实际保守附件重规划此单段，显式回传剩余两阶段；执行器在独立 Scene 读回和原准入通过后原子接纳。10 秒服务、30 秒附件事务、120 秒计划寿命及碰撞/速度门槛不变。
+- M1 负责 MTC 服务及定向测试；root 负责执行器、接口、独立构建和唯一仿真；M5 负责返回/接纳/实际 FJT 下发轨迹指纹与原视频验收；协作代理仅补 native 原子接纳和指纹单元测试。其他矩阵冻结。
+- 05:18 完成独立构建及 6 组 62 项 C++ 定向检查；M5 轨迹交接 17 项、原几何 7 项离线检查通过。初次 native 测试误加载旧动态库的失败日志保留，正确安装路径下复测通过。05:21 放行唯一 scene32/domain59，普通单箱 PICK → NAV → PLACE → EMPTY/Scene/停稳/释放及可解码录像尚待结果。新消息、MTC、native 均使用独立候选安装，不覆盖旧运行依赖。
+
+- 05:54：按用户最新指示固定 idle_position_hold=true，源码默认值、私有配置覆盖及实际读回一致；kp仍3.0，已写入AGENTS长期规则。用户另授权本轮仿真角位移0.05rad/非导航角速度0.10rad/s，原平移/线速度及碰撞、时效、到位、最终停稳门槛不变；默认配置不启用放宽profile，非仿真拒绝。MTC/新native/底盘独立构建通过，guard1组、native4组、底盘2组CTest通过。scene38/domain53唯一图形仿真已启动，Gazebo/只读RViz均可见，真实底盘binary和参数读回已证；完整PICK→NAV→PLACE待验，不作为原严格条件验收。原06:02:36检查点不重置。
+
+- 05:56：scene38实际读回idle=true/kp3、executor/guard relaxed=true；执行至GRASP_CONFIRM后MTC_SCENE_CHANGED_DURING_REVALIDATION，未到实际载荷后缀接纳/NAV/PLACE。父任务canceled/resources_released=true，36样本/0.7s独立零速零漂移停稳成立；stack stopped、remaining[]。配置固定要求已完成实际验证，主线仍未通过；M1仅只读核scene变化触发点，M5复核阶段与视频。
+
+## 原始调度记录
+
 用户已授权本窗口统一调度现有或新任务，并按主线逐项施工验证。依据 [主线审查](MAINLINE_AND_EXTENSION_REVIEW_20260924.md)，本记录只管理主线交付，不扩展到 VLA、FoundationPose 新后端、装配或真机。
 
 总调度：`01a0c405-627f-7742-b500-e057726ed2e7`（设计机器人搬运仿真流程）。本轮开始 2026-09-24 09:50 +08。每个问题单独记录原始起点，排查 1 小时未解决则有界收尾并转独立项，不能换窗口重置。

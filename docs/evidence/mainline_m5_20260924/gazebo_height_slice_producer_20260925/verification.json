@@ -1,0 +1,92 @@
+{
+  "recorded_at": "2026-09-25T07:21:33.103632+08:00",
+  "status": "IMPLEMENTED_WITH_PRIVATE_CPP_AND_OFFLINE_GEOMETRY_CHECKS",
+  "scope": "Independent /height_maps producer for ThreePhase START_ALIGN/GOAL_ALIGN rotation checks; no Nav2/map/scan/MPPI changes.",
+  "workspace": "/home/yjh/WorkSpace/astribot_sdk_ros2",
+  "source_sha256": {
+    "ws_robot/src/astribot_s1_gazebo_bringup/src/height_slice_map.cpp": "c5dfde1f1250c73a6049ca8bb6a764c45609c9f5a6c85c651b59d0d2654cb820",
+    "ws_robot/src/astribot_s1_gazebo_bringup/src/height_slice_shapes.cpp": "f13dcab8c27c94a86aad1b424ddd9710160538f02a9b264fd279d95d73d416bb",
+    "ws_robot/src/astribot_s1_gazebo_bringup/include/astribot_s1_gazebo_bringup/height_slice_geometry.hpp": "313588744329914bd803eb84f5b5659f0ae757c44baa510dfa1708dececcaee6",
+    "ws_robot/src/astribot_s1_gazebo_bringup/include/astribot_s1_gazebo_bringup/height_slice_shapes.hpp": "3ff6142cdbb04cf23bae55b9bc7d6d83e11166949b08a789f62fe73e5f7ae98a",
+    "ws_robot/src/astribot_s1_gazebo_bringup/test/height_slice_geometry_test.cpp": "90a8923954dcd2e298ce702e9189f886ea2b597e8fea7557c598437603767738",
+    "ws_robot/src/astribot_s1_gazebo_bringup/CMakeLists.txt": "228785c9004ad45b7c5e4d53ce950d3c6ac672c432fc993aa015701b75208c79",
+    "ws_robot/src/astribot_s1_gazebo_bringup/package.xml": "affd2044d9cdc4926c82dc38e92779af47763707fd31907aa803598c1559091a"
+  },
+  "shared_profile_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_mapping/config/height_slices.yaml",
+  "profile_revision_raw_bytes_sha256": "7babdd70d5f42b1420fbc9ac7f4e2ad44989f18015884c2a58c671eeecce7aae",
+  "plugin_library": "libastribot_height_slice_map.so",
+  "plugin_name": "astribot::HeightSliceMap",
+  "attachment": "world",
+  "required_sdf_tags": [
+    "profile_file",
+    "world_name",
+    "robot_model",
+    "frame_id",
+    "map_from_world",
+    "ground_z",
+    "ground_reference",
+    "known_xy_bounds"
+  ],
+  "tag_formats": {
+    "map_from_world": "x y z roll pitch yaw, explicit required transform",
+    "known_xy_bounds": "xmin ymin xmax ymax in map frame",
+    "ground_z": "finite ground height in map frame"
+  },
+  "contract": {
+    "valid_evidence_kind": "gazebo_collision_geometry",
+    "invalid_evidence_kind": "gazebo_collision_geometry_invalid",
+    "check_period_steady_s": 0.5,
+    "capture_stamp": "actual checked PostUpdate info.simTime",
+    "same_sim_time_or_paused_renews": false,
+    "free": "cells completely inside explicitly known XY rectangle after complete environment collision capture",
+    "unknown": "outside known rectangle, its straddling cells, outer grid border, or invalidated previous bundle",
+    "geometry": "BOX and loaded actual MESH triangle surfaces; slab clipping plus closed-component interiors",
+    "unsupported_geometry": "explicit exception and invalidation; no silent omission",
+    "robot_exclusion": "ParentEntity ancestry matching robot_model",
+    "payload_exclusion": "read_execution attached=true and parent_model=robot_model, current capture and no transition/error",
+    "refresh": "full collision roster/geometry/pose/ownership checked; changed revision rebuilds full bundle, unchanged data reused only after recheck",
+    "point_counts": "zero: geometry producer has no sampled point-cloud input"
+  },
+  "checks": {
+    "plugin_syntax": "g++ C++17 -Wall -Wextra -Wpedantic -Werror -fsyntax-only exit 0",
+    "geometry_cpp": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0
+    },
+    "shape_conversion": "BOX 12 faces; real Wall/Ground/ShelfD units, node transforms, URI and scale/pose; explicit unsupported/missing failures",
+    "warehouse_models": {
+      "count": 13,
+      "triangles": 1224,
+      "all_five_layers_completed": true,
+      "wall_center_free_all_layers": true,
+      "single_run_elapsed_ms": 43.6516,
+      "performance_baseline": false,
+      "frame": "model local plus actual link/collision pose",
+      "ground_z_fixture": 0.0,
+      "world_coverage_acceptance": false
+    }
+  },
+  "execution_phase_source": {
+    "writer": "kinematic_payload.cpp:66-94 writes current info.simTime capture in PreUpdate",
+    "framework": "/usr/include/ignition/gazebo6/gz/sim/System.hh:49-74 specifies shared simTime across PreUpdate/Update/PostUpdate",
+    "runtime_plugin_order_verified": false
+  },
+  "limitations": [
+    "No shared colcon build or plugin load performed here; root owns these.",
+    "No ROS/DDS/runtime freshness, actual world-map identity, ground calibration, payload transition, robot motion or alignment acceptance here.",
+    "Only BOX/MESH needed by current scene supported; other geometry fails explicitly.",
+    "Open/nonmanifold mesh components contribute actual surfaces only; exact-coordinate welding does not repair gaps.",
+    "Closed connected components use parity interiors by union; nested independent shells are conservatively occupied.",
+    "True known XY domain and ground/world-map transform must be supplied and validated by the session owner."
+  ],
+  "artifact_sha256": {
+    "geometry_tests.xml": "c680cd853b90a434290531a41ecbf55164bfd62dd16d1b89ef032a27a94612a9",
+    "shapes_probe.cpp": "3bf1daac90b0e1ed106318ba5ecf063b05b07a5460e76355818dc491cbf2d35e",
+    "shapes_probe.log": "e09f8f2f9d632e71a2bdfeea462a9520c13641eb3147fdc999e68e5d81cec031",
+    "warehouse_meshes_probe.cpp": "a25d85e5a0e3c3dfa9f8f02afc4cfbe66b699af63caa9244363ac0ed285481c1",
+    "warehouse_meshes_probe.log": "4baa7f5c7615ca11abefe963ed83b7b96c7aa93194ccbe9c01eee0484c8e72cf",
+    "plugin_syntax.log": "9fa3b6ead7afc298499f30c5b70014c78b6686a8269611537606fa5a7c02b6a2",
+    "plugin_syntax_command.json": "e68bce0ca7688ee12e2cc442ffe28d47358cc93a954dd4b7bc1fa0d63943c16d"
+  }
+}

@@ -1,0 +1,22 @@
+c++ -std=c++17 -O2 -Wall -Wextra -Wpedantic -Iws_robot/src/astribot_s1_navigation_policy_native/include ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp ws_robot/src/astribot_s1_navigation_policy_native/src/policy_health.cpp ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp ws_robot/src/astribot_s1_navigation_policy_native/test/policy_health_probe.cpp -o /tmp/codex_policy_health_20260921/build/policy_health_probe
+ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp: In constructor ‘astribot::navigation::policy::WorldSnapshot::WorldSnapshot(astribot::navigation::policy::Version, astribot::navigation::policy::Stamp, std::string, std::vector<astribot::navigation::policy::TrackedObstacle>, std::vector<astribot::navigation::policy::Observation>, std::vector<astribot::navigation::policy::SensorHealth>, int64_t)’:
+ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp:195:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  195 |   for(const auto& t:tracks)ids.insert(t.fused_track_id);require(ids.size()==tracks.size(),"world.duplicate_tracks");ids.clear();
+      |   ^~~
+ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp:195:57: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  195 |   for(const auto& t:tracks)ids.insert(t.fused_track_id);require(ids.size()==tracks.size(),"world.duplicate_tracks");ids.clear();
+      |                                                         ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp:196:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  196 |   for(const auto& sensor:sensors)ids.insert(sensor.sensor_id);require(ids.size()==sensors.size(),"world.duplicate_sensors");
+      |   ^~~
+ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp:196:63: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  196 |   for(const auto& sensor:sensors)ids.insert(sensor.sensor_id);require(ids.size()==sensors.size(),"world.duplicate_sensors");
+      |                                                               ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp: In function ‘std::vector<double> astribot::navigation::scan_coverage(const std::vector<double>&, double, double, double, double, double)’:
+ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp:303:69: warning: suggest parentheses around ‘&&’ within ‘||’ [-Wparentheses]
+  303 |         (std::isfinite(ranges[index]) && range_min <= ranges[index] &&
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+  304 |              ranges[index] <= range_max || ranges[index] == INFINITY);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~                              
+
+exit=0

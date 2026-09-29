@@ -1,0 +1,33 @@
+digraph camera_integration {
+ graph [bgcolor="#181818",rankdir=TB,newrank=true,pad=.45,nodesep=.45,ranksep=.5,splines=true,fontname="Noto Sans CJK SC",fontcolor="#eeeeee",fontsize=26,labelloc=t,label="摄像头传感器集成 · 工作框架\n "];
+ node [shape=box,style="rounded,filled",fillcolor="#333333",color="#555555",penwidth=1.3,fontname="Noto Sans CJK SC",fontcolor="#eeeeee",fontsize=18,margin=".22,.16"];
+ edge [color="#c0c0c0",penwidth=1.35,arrowsize=.8,fontname="Noto Sans CJK SC",fontcolor="#aaaaaa",fontsize=12];
+ params [label="① 标定与坐标管理\n真机参数只读归档 · JSON / YAML / URDF 比对\n原始标定与仿真参考安装分开管理"];
+ model [label="② 相机物理模型一致性\n外壳 / 支架 / optical TF / 碰撞体\nGazebo 与 MoveIt 共用安装；关采集不删模型"];
+ {rank=same;params;model;}
+ sensors [label="③ 六路仿真采集与统一启动\n头 / 腹 / 左右腕 RGB-D + 头双目左右图像\n桥接话题 · 分辨率 / 帧率 · CameraInfo"];
+ params -> sensors;model -> sensors;
+ transfer [label="④ 传输、配对与输入检查\n修复传输容量与异步到达误判 · 有界缓存\n采集时间 / frame / 内参 / 标定版本检查"];
+ sensors -> transfer;
+ post [label="可选图像 / 深度后处理\nC++ 重映射与 CameraInfo 输出\n共同基线关闭；真实镜头效果未完整验收",fontsize=16];
+ sensors -> post;
+ cloud [label="⑤ RGB-D 点云与计算调度\nC++ 深度反投影 · 无效值 / 深度范围处理\nCPU / CUDA 可选 · 最新待处理项 · 独立 worker"];
+ wrist [label="⑥ 腕部相机任务会话\n申请 / 续租 / 释放 · 所有者与期限\n拒绝旧帧；属于数据消费门控",fontsize=17];
+ transfer -> cloud;transfer -> wrist;
+ {rank=same;cloud;wrist;}
+ health [label="⑦ 健康检查与故障恢复\nCameraHealth：原始流；ProjectionHealth：处理结果\n超时 / 版本失配撤销；恢复要求新版本、新采集帧"];
+ cloud -> health;wrist -> health;
+ transfer -> health [label="原始流健康",constraint=false];
+ nav [label="⑧ 导航与避障接入\n头 / 腹深度障碍 → 代价地图\n启用深度避障时，末级保护检查两类健康"];
+ grasp [label="⑨ 识别与机械臂感知接入\n检测 / 三维位置 / GraspNet / 已知 CAD 6D\n采集 TF、工位范围与对象版本绑定"];
+ health -> nav;health -> grasp;
+ {rank=same;nav;grasp;}
+ evidence [label="代表性验证记录\n六路 16 个原始话题短窗口有数据；24 个 MoveIt 姿态碰撞检查通过\n1800 s 静止 SLAM + 相机 + 推理负载及处理进程恢复有通过记录\n不同场景 / 安装的结果分别保留，不合并为整链通过",fontsize=16,fillcolor="#292929"];
+ nav -> evidence [style=invis];grasp -> evidence [style=invis];
+ infra [label="贯穿各层的工程工作\n统一启动基线 · 日志与分段时延 · 会话隔离 · 源码 / 安装版本\nC++ 同步证据监控已实现；真实硬触发尚未接设备",fontsize=16,fillcolor="#242424"];
+ evidence -> infra [style=invis];
+ pending [label="仍待完成的验收\n真机物理标定 · 双目校正与深度 · 真实曝光硬同步\n运动 / 遮挡 / 载荷下的覆盖 · 模型驱动完整抓放",style="rounded,filled,dashed",fillcolor="#342f27",color="#d3b373",fontcolor="#ecd5a5"];
+ infra -> pending [style=dashed,color="#d3b373"];
+ note [label="工作成果与能力关系示意，非完整运行时节点图\n灰色为已有实现 / 接入工作；金色虚线为待验收；不等于所有模块同时上线",shape=plain,fillcolor="#181818",fontcolor="#aaaaaa",fontsize=13];
+ pending -> note [style=invis];
+}

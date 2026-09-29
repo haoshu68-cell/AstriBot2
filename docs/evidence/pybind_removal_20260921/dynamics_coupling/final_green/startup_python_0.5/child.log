@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py", line 413, in <module>
+    oracle_main()
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py", line 25, in oracle_main
+    main(args=sys.argv[2:])
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/reference/astribot_s1_dynamics_coupling/arm_chassis_speed_coupling_node.py", line 323, in main
+    node = ArmChassisSpeedCouplingNode()
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/reference/astribot_s1_dynamics_coupling/arm_chassis_speed_coupling_node.py", line 85, in __init__
+    self.declare_parameter('reach_tf_timeout_sec', 0.5)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/node.py", line 367, in declare_parameter
+    return self.declare_parameters('', [args], ignore_override)[0]
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/node.py", line 493, in declare_parameters
+    self._set_parameters(
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/node.py", line 738, in _set_parameters
+    raise InvalidParameterTypeException(
+rclpy.exceptions.InvalidParameterTypeException: Trying to set parameter 'reach_tf_timeout_sec' to '0.5' of type 'STRING', expecting type 'DOUBLE'

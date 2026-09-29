@@ -1,0 +1,89 @@
+{
+  "model_sha256": "5acc1ff77600a6e1b8a5a814b363956c9e12bf74abf89d85b94ba6f66cfd1b7c",
+  "worker_sha256": "fc2f892928634524c3de0f34e2dac62d741640dcc597e3b120327881e278012c",
+  "results": [
+    {
+      "case": "original",
+      "device": "cuda",
+      "input_sha256": "5f633ee8312293e76adf61d7a4d5227f451d1e68301ad10f14675818ec209120",
+      "cpp_output_sha256": "a60c320aac81a0ab58a8c419f36aeff05ed63420930c750f628d943081fd0095",
+      "eager_output_sha256": "a60c320aac81a0ab58a8c419f36aeff05ed63420930c750f628d943081fd0095",
+      "candidates": 331,
+      "cpp_eager_max_abs_error": 0.0,
+      "worker_report": {
+        "backend": "libtorch_cpp",
+        "input_points": 513688,
+        "sampled_points": 20000,
+        "candidates": 331,
+        "load_ms": 249.463,
+        "inference_ms": 631.472,
+        "collision_checked": false,
+        "provenance": {
+          "source_url": "https://github.com/graspnet/graspnet-baseline",
+          "source_commit": "280c215129f759ed8649cb4e89fc5dfee55f4f80",
+          "checkpoint_sha256": "60680087c61cba2b6791614fef1519071e294f6dcaf99b3f581bb95f7c51a868",
+          "checkpoint_epoch": 18,
+          "checkpoint_source": "pinned HF mirror; direct official Drive quota exceeded",
+          "publisher_signature_verified": false,
+          "checkpoint_keys_loaded_strict": 162,
+          "torch_version": "2.5.1+cu124",
+          "export_device": "cuda",
+          "numpy_version": "1.21.5",
+          "source_license_sha256": "acdeaedbed2d5b38b1fdacba406db53743d06a05f4220126bee91a548241f09b",
+          "operators": "scripted_torch_compatibility_v2",
+          "fps_ties": "pinned CUDA left-subtree reduction; bit-reversed lane rank then lane-local index",
+          "operators_sha256": "89d9ed6e48dcdb73f10747db3450e9c4361cae7077cb8a7901f6665511cd07a1",
+          "original_cuda_extension_bitwise_parity_verified": false,
+          "sample_points": 20000,
+          "sampling": "torch CPU generator seed 0: randperm or randint existing points",
+          "input": "1x20000x3 float32, camera optical XYZ metres",
+          "output": "Nx17 upstream pred_decode; no collision or NMS filter"
+        }
+      }
+    },
+    {
+      "case": "changed",
+      "device": "cuda",
+      "input_sha256": "260ada82ccada2991d7c889816397d41b703a0ccf4839b2debadd97b2b7898ac",
+      "cpp_output_sha256": "ad5e1ee907821cafff76817ae103559727169d252c850d257d136fb2afc63fb6",
+      "eager_output_sha256": "ad5e1ee907821cafff76817ae103559727169d252c850d257d136fb2afc63fb6",
+      "candidates": 331,
+      "cpp_eager_max_abs_error": 0.0,
+      "worker_report": {
+        "backend": "libtorch_cpp",
+        "input_points": 513688,
+        "sampled_points": 20000,
+        "candidates": 331,
+        "load_ms": 188.795,
+        "inference_ms": 632.471,
+        "collision_checked": false,
+        "provenance": {
+          "source_url": "https://github.com/graspnet/graspnet-baseline",
+          "source_commit": "280c215129f759ed8649cb4e89fc5dfee55f4f80",
+          "checkpoint_sha256": "60680087c61cba2b6791614fef1519071e294f6dcaf99b3f581bb95f7c51a868",
+          "checkpoint_epoch": 18,
+          "checkpoint_source": "pinned HF mirror; direct official Drive quota exceeded",
+          "publisher_signature_verified": false,
+          "checkpoint_keys_loaded_strict": 162,
+          "torch_version": "2.5.1+cu124",
+          "export_device": "cuda",
+          "numpy_version": "1.21.5",
+          "source_license_sha256": "acdeaedbed2d5b38b1fdacba406db53743d06a05f4220126bee91a548241f09b",
+          "operators": "scripted_torch_compatibility_v2",
+          "fps_ties": "pinned CUDA left-subtree reduction; bit-reversed lane rank then lane-local index",
+          "operators_sha256": "89d9ed6e48dcdb73f10747db3450e9c4361cae7077cb8a7901f6665511cd07a1",
+          "original_cuda_extension_bitwise_parity_verified": false,
+          "sample_points": 20000,
+          "sampling": "torch CPU generator seed 0: randperm or randint existing points",
+          "input": "1x20000x3 float32, camera optical XYZ metres",
+          "output": "Nx17 upstream pred_decode; no collision or NMS filter"
+        }
+      }
+    }
+  ],
+  "tolerances": {
+    "rtol": 2e-05,
+    "atol": 2e-06
+  },
+  "passed": true
+}

@@ -1,0 +1,37 @@
+Start testing: Sep 21 17:04 CST
+----------------------------------------------------------
+1/2 Testing: dynamics_core_differential
+1/2 Test: dynamics_core_differential
+Command: "/usr/bin/cmake" "-E" "env" "DYNAMICS_CORE_PROBE=/tmp/codex_dynamics_coupling_20260921/build/dynamics_core_probe" "/usr/bin/python3" "-m" "pytest" "-q" "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_core.py"
+Directory: /tmp/codex_dynamics_coupling_20260921/build
+"dynamics_core_differential" start time: Sep 21 17:04 CST
+Output:
+----------------------------------------------------------
+.                                                                        [100%]
+1 passed in 0.07s
+<end of output>
+Test time =   0.55 sec
+----------------------------------------------------------
+Test Passed.
+"dynamics_core_differential" end time: Sep 21 17:04 CST
+"dynamics_core_differential" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/2 Testing: dynamics_ros_differential
+2/2 Test: dynamics_ros_differential
+Command: "/usr/bin/cmake" "-E" "env" "DYNAMICS_CPP=/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node" "DYNAMICS_DOMAIN=140" "ROS_DOMAIN_ID=140" "ROS_LOCALHOST_ONLY=1" "/usr/bin/python3" "-m" "pytest" "-q" "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py"
+Directory: /tmp/codex_dynamics_coupling_20260921/build
+"dynamics_ros_differential" start time: Sep 21 17:04 CST
+Output:
+----------------------------------------------------------
+..............................                                           [100%]
+30 passed in 24.45s
+<end of output>
+Test time =  25.05 sec
+----------------------------------------------------------
+Test Passed.
+"dynamics_ros_differential" end time: Sep 21 17:04 CST
+"dynamics_ros_differential" time elapsed: 00:00:25
+----------------------------------------------------------
+
+End testing: Sep 21 17:04 CST

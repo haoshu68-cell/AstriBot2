@@ -1,0 +1,152 @@
+{
+  "scope": "Fresh normal install and ordinary source import discovery, not shared deployment",
+  "work": "/tmp/codex_reference_retirement_20260921/packaging",
+  "geometry_prefix": "/tmp/codex_reference_retirement_20260921/install",
+  "install_records": [
+    {
+      "package": "astribot_s1_chassis_effort_drive",
+      "command": [
+        "/usr/bin/python3",
+        "setup.py",
+        "egg_info",
+        "--egg-base",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_chassis_effort_drive/egg",
+        "build",
+        "--build-base",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_chassis_effort_drive/build",
+        "install",
+        "--prefix",
+        "/tmp/codex_reference_retirement_20260921/packaging/install",
+        "--single-version-externally-managed",
+        "--record",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_chassis_effort_drive/installed_files.txt"
+      ]
+    },
+    {
+      "package": "astribot_s1_navigation",
+      "command": [
+        "/usr/bin/python3",
+        "setup.py",
+        "egg_info",
+        "--egg-base",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_navigation/egg",
+        "build",
+        "--build-base",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_navigation/build",
+        "install",
+        "--prefix",
+        "/tmp/codex_reference_retirement_20260921/packaging/install",
+        "--single-version-externally-managed",
+        "--record",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_navigation/installed_files.txt"
+      ]
+    },
+    {
+      "package": "astribot_s1_navigation_policy",
+      "command": [
+        "/usr/bin/python3",
+        "setup.py",
+        "egg_info",
+        "--egg-base",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_navigation_policy/egg",
+        "build",
+        "--build-base",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_navigation_policy/build",
+        "install",
+        "--prefix",
+        "/tmp/codex_reference_retirement_20260921/packaging/install",
+        "--single-version-externally-managed",
+        "--record",
+        "/tmp/codex_reference_retirement_20260921/packaging/astribot_s1_navigation_policy/installed_files.txt"
+      ]
+    }
+  ],
+  "observations": {
+    "fresh_install": [
+      {
+        "package": "astribot_s1_chassis_effort_drive",
+        "loaded_file": "/tmp/codex_reference_retirement_20260921/packaging/install/lib/python3.10/site-packages/astribot_s1_chassis_effort_drive/__init__.py",
+        "missing_modules": [
+          "omni_effort_drive_node"
+        ]
+      },
+      {
+        "package": "astribot_s1_navigation",
+        "loaded_file": "/tmp/codex_reference_retirement_20260921/packaging/install/lib/python3.10/site-packages/astribot_s1_navigation/__init__.py",
+        "missing_modules": [
+          "arm_reach_metric",
+          "arm_speed_limiter_node",
+          "cmd_vel_body_to_world_node",
+          "posture_monitor_policy"
+        ]
+      },
+      {
+        "package": "astribot_s1_navigation_policy",
+        "loaded_file": "/tmp/codex_reference_retirement_20260921/packaging/install/lib/python3.10/site-packages/astribot_s1_navigation_policy/__init__.py",
+        "missing_modules": [
+          "cmd_vel_math",
+          "costmap_scan_node",
+          "envelope_node",
+          "fixed_envelope",
+          "fixed_envelope_node",
+          "protection_node",
+          "control_time",
+          "scan_occupancy"
+        ]
+      },
+      {
+        "package": "astribot_s1_robot_geometry",
+        "loaded_file": "/tmp/codex_reference_retirement_20260921/install/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/__init__.py",
+        "missing_modules": [
+          "model",
+          "node",
+          "projection_contract",
+          "state"
+        ]
+      }
+    ],
+    "production_source": [
+      {
+        "package": "astribot_s1_chassis_effort_drive",
+        "loaded_file": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_chassis_effort_drive/astribot_s1_chassis_effort_drive/__init__.py",
+        "missing_modules": [
+          "omni_effort_drive_node"
+        ]
+      },
+      {
+        "package": "astribot_s1_navigation",
+        "loaded_file": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation/astribot_s1_navigation/__init__.py",
+        "missing_modules": [
+          "arm_reach_metric",
+          "arm_speed_limiter_node",
+          "cmd_vel_body_to_world_node",
+          "posture_monitor_policy"
+        ]
+      },
+      {
+        "package": "astribot_s1_navigation_policy",
+        "loaded_file": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/__init__.py",
+        "missing_modules": [
+          "cmd_vel_math",
+          "costmap_scan_node",
+          "envelope_node",
+          "fixed_envelope",
+          "fixed_envelope_node",
+          "protection_node",
+          "control_time",
+          "scan_occupancy"
+        ]
+      },
+      {
+        "package": "astribot_s1_robot_geometry",
+        "loaded_file": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_robot_geometry/astribot_s1_robot_geometry/__init__.py",
+        "missing_modules": [
+          "model",
+          "node",
+          "projection_contract",
+          "state"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______ test_horizon_rounding_and_zero_speed_keep_python_evaluation_order _______
+
+    def test_horizon_rounding_and_zero_speed_keep_python_evaluation_order():
+        rng=random.Random(822);ops=[];now=0.
+        for _ in range(1000):
+            p=dict(BASE,max_speed_m_s=rng.choice([0.,rng.random()]),reaction_time_s=rng.random()*3,brake_deceleration_m_s2=.01+rng.random(),linear_stop_delay_s=rng.random())
+            horizon=p['reaction_time_s']+((p['max_speed_m_s']/p['brake_deceleration_m_s2']+p['linear_stop_delay_s']) if p['max_speed_m_s']>0 else 0.)
+            for conflict in (math.nextafter(horizon+.5,-math.inf),horizon+.5,math.nextafter(horizon+.5,math.inf)):
+                now+=1.;ops.append(operation(now,risk(blocked=True,conflict_time_s=conflict),profile=p))
+>       check(ops)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_behavior.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+operations = [{'now': 1.0, 'profile': {'angular_brake_deceleration_rad_s2': 3.2, 'brake_deceleration_m_s2': 0.7381587529824892, 'cl... {'blocked': True, 'conflict_time_s': 2.3723124760553835, 'immediate': False, 'uncertain': False}, 'valid': True}, ...]
+profile = None
+
+    def check(operations,profile=None):
+        p=types.SimpleNamespace(**(BASE if profile is None else profile));selector=oracle.YieldPolicy(p);expected=[]
+        for op in operations:
+            for k,v in op.get('profile',{}).items():setattr(p,k,v)
+            try:value=dataclasses.asdict(selector.select(None if op['risk'] is None else types.SimpleNamespace(**op['risk']),op['valid'],op['now']))
+            except Exception as e:value=dict(error=str(e))
+            value['state']={k:getattr(selector,k) for k in ('blocked_at','clear_at','last_time','held','episode','in_episode')};expected.append(encoded(value))
+        probe=Path(os.environ['POLICY_BEHAVIOR_PROBE']);result=subprocess.run([str(probe)],input=json.dumps(encoded(dict(profile=BASE if profile is None else profile,operations=operations)))+'\n',text=True,capture_output=True,check=True)
+>       actual=json.loads(result.stdout);assert actual==expected
+E       AssertionError: assert [{'episode': ...D', ...}, ...] == [{'episode': ...N', ...}, ...]
+E         At index 5 diff: {'episode': 1, 'motion': 'HOLD', 'planning': 0, 'reason': 'YIELD', 'speed': 0.0, 'state': {'blocked_at': 1.0, 'clear_at': None, 'episode': 1, 'held': True, 'in_episode': True, 'last_time': 6.0}} != {'motion': 'HOLD', 'speed': 0.0, 'reason': 'CLEAR_CONFIRMATION', 'planning': 0, 'episode': 1, 'state': {'blocked_at': 1.0, 'clear_at': 6.0, 'last_time': 6.0, 'held': True, 'episode': 1, 'in_episode': True}}
+E         Full diff:
+E           [
+E            {'episode': 1,
+E             'motion': 'HOLD',
+E             'planning': 0,
+E             'reason': 'YIELD',...
+E         
+E         ...Full output truncated (43530 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_behavior.py:38: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_behavior.py::test_horizon_rounding_and_zero_speed_keep_python_evaluation_order
+1 failed, 6 deselected in 11.26s

@@ -1,0 +1,44 @@
+............................................FF........                   [100%]
+=================================== FAILURES ===================================
+_________________ test_ros_clock_and_transient_status[python] __________________
+
+impl = 'python'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/protocol_v2/test_ros_clock_and_transient_s0')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_ros_clock_and_transient_status(impl, tmp_path):
+        r = Runtime(impl, tmp_path, sim=True)
+        try:
+            wait(lambda: r.clock.get_subscription_count() == 1)
+            clock = Clock(); clock.clock.sec = 100
+            r.clock.publish(clock); time.sleep(.05)
+            h = r.send(); wait(lambda: r.backends['pose'].handles)
+            wait(lambda: len(r.states(h)) >= 2)
+>           assert all(e.stamp.sec == 100 for e in r.events)
+E           assert False
+E            +  where False = all(<generator object test_ros_clock_and_transient_status.<locals>.<genexpr> at 0x74b2fe35a110>)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:456: AssertionError
+___________________ test_ros_clock_and_transient_status[cpp] ___________________
+
+impl = 'cpp'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/protocol_v2/test_ros_clock_and_transient_s1')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_ros_clock_and_transient_status(impl, tmp_path):
+        r = Runtime(impl, tmp_path, sim=True)
+        try:
+            wait(lambda: r.clock.get_subscription_count() == 1)
+            clock = Clock(); clock.clock.sec = 100
+            r.clock.publish(clock); time.sleep(.05)
+            h = r.send(); wait(lambda: r.backends['pose'].handles)
+            wait(lambda: len(r.states(h)) >= 2)
+>           assert all(e.stamp.sec == 100 for e in r.events)
+E           assert False
+E            +  where False = all(<generator object test_ros_clock_and_transient_status.<locals>.<genexpr> at 0x74b304123a00>)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:456: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_ros_clock_and_transient_status[python]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_ros_clock_and_transient_status[cpp]
+2 failed, 52 passed in 26.36s

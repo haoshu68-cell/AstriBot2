@@ -1,0 +1,43 @@
+{
+  "schema": "astribot.grasp_pose_delivery/1",
+  "scope": "simulation inference only; known CAD pose; HSV validation mask",
+  "implementation": "implemented",
+  "overall_acceptance": "partial",
+  "hardware_tested": false,
+  "vla_tested": false,
+  "arm_execution_tested": false,
+  "live_clear_grasp_success": [
+    20,
+    20
+  ],
+  "live_clear_pose_success": [
+    10,
+    10
+  ],
+  "live_pose_independent_accuracy_pass": [
+    5,
+    5
+  ],
+  "live_far_pose_success": [
+    3,
+    3
+  ],
+  "live_occluded_safe_rejection": [
+    3,
+    3
+  ],
+  "fault_and_recovery_checks": [
+    12,
+    12
+  ],
+  "offline_pose_accepted_scenes": [
+    2,
+    7
+  ],
+  "remaining": [
+    "head camera mesh self-occlusion",
+    "five stored views insufficient visible geometry or normal diversity",
+    "YOLO segmentation integration/world ledger/MTC and physical execution not validated"
+  ],
+  "report": "../../GRASP_POSE_SIMULATION_20260921.md"
+}

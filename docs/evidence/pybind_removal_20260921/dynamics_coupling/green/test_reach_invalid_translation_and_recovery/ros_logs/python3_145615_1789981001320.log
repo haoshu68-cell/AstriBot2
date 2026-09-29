@@ -1,0 +1,5 @@
+[INFO] [1789981001.351765557] [coupling_3d9e3f6da2.python.arm_chassis_speed_coupling_node]: arm_chassis_speed_coupling_node 已启动：订阅 /coupling_3d9e3f6da2/input(车体真正要下发的world系Twist) + /coupling_3d9e3f6da2/joints(双臂关节状态)，展开度量=水平伸展 0.420~0.886m(相对 coupling_3d9e3f6da2_base，监控1个连杆)，运动速率满量程2.00rad/s，算连续0~1.0限速系数(下限0.15)，平滑后缩放，发到 /coupling_3d9e3f6da2/python/output。/joint_states 超过0.5s未更新自动降级到固定0.30限速。
+[WARN] [1789981001.499224634] [coupling_3d9e3f6da2.python.arm_chassis_speed_coupling_node]: 监控连杆的 TF 不完整或无效(coupling_3d9e3f6da2_invalid(LookupException))，伸展维度按满量程保护；TF 树建立后会自动恢复，此告警只打一次。
+[INFO] [1789981001.499511663] [coupling_3d9e3f6da2.python.arm_chassis_speed_coupling_node]: 机械臂活跃度=1.00(展开1.00/速率0.00) → 限速系数=0.15
+[ERROR] [1789981001.811927497] [coupling_3d9e3f6da2.python.arm_chassis_speed_coupling_node]: 解析/joint_states出错，保持上一次限速系数不变：reach 区间非法(full=0.42 <= folded=0.42)
+[WARN] [1789981001.953511853] [coupling_3d9e3f6da2.python.arm_chassis_speed_coupling_node]: /joint_states 已 1.00s 未更新(超过阈值0.50s)，降级到固定限速 0.30

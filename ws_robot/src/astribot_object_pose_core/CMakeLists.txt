@@ -1,0 +1,51 @@
+cmake_minimum_required(VERSION 3.16)
+project(astribot_object_pose_core VERSION 0.1.0)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(ament_cmake REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core flann surface_matching)
+
+add_library(registration SHARED src/registration.cpp)
+set_target_properties(registration PROPERTIES OUTPUT_NAME astribot_object_pose_registration)
+add_library(${PROJECT_NAME}::registration ALIAS registration)
+target_include_directories(registration PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include> ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(registration PUBLIC ${OpenCV_LIBS})
+target_compile_options(registration PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(object_pose_register src/register_cli.cpp)
+set_target_properties(object_pose_register PROPERTIES INSTALL_RPATH "$ORIGIN/..")
+target_link_libraries(object_pose_register registration)
+target_compile_options(object_pose_register PRIVATE -Wall -Wextra -Wpedantic)
+
+if(BUILD_TESTING)
+  enable_testing()
+  add_executable(registration_tests tests/registration_tests.cpp)
+  target_link_libraries(registration_tests registration)
+  add_executable(square_prism_cli_tests tests/square_prism_cli_test.cpp)
+  target_link_libraries(square_prism_cli_tests registration)
+  foreach(test_case group wrong_geometry cad_mismatch cli)
+    add_test(NAME square_prism_${test_case} COMMAND square_prism_cli_tests ${test_case})
+  endforeach()
+  foreach(test_case large_rotation noisy_partial multi_depth camera_xyz empty sparse nan plane wrong_model undeclared_symmetry declared_symmetry ambiguous_partial continuous_symmetry invalid_options invalid_normals invalid_symmetry visible_two_faces visible_large_rotation visible_missing_features invalid_visibility_geometry visible_single_direction visible_ambiguous_view)
+    add_test(NAME ${test_case} COMMAND registration_tests ${test_case})
+    set_tests_properties(${test_case} PROPERTIES TIMEOUT 120)
+  endforeach()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_test(NAME cli_contract COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_test.py $<TARGET_FILE:object_pose_register>
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/asymmetric_union.xyz
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/asymmetric_union.visibility.json)
+  set_tests_properties(cli_contract PROPERTIES TIMEOUT 130)
+endif()
+
+install(TARGETS registration EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
+install(DIRECTORY include/ DESTINATION include)
+install(TARGETS object_pose_register RUNTIME DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY models DESTINATION share/${PROJECT_NAME})
+install(FILES README.md DESTINATION share/${PROJECT_NAME})
+install(PROGRAMS tools/generate_reference_cad.py DESTINATION share/${PROJECT_NAME}/tools)
+ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
+ament_export_dependencies(OpenCV)
+ament_package()

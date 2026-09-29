@@ -1,0 +1,42 @@
+[0.258s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_map_manager' is in: /tmp/astribot_zones_install/astribot_map_manager, /tmp/astribot_scenes_install/astribot_map_manager, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_map_manager
+	'astribot_route_executor' is in: /tmp/astribot_zones_install/astribot_route_executor, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_route_executor
+	'astribot_operator_backend' is in: /tmp/astribot_zones_install/astribot_operator_backend, /tmp/astribot_scenes_install/astribot_operator_backend, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_backend
+	'astribot_s1_exploration' is in: /tmp/astribot_zones_install/astribot_s1_exploration, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_exploration
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_map_manager astribot_operator_backend astribot_route_executor astribot_s1_exploration
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_navigation_zones
+--- stderr: astribot_navigation_zones
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/test_ros.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/../src/zone_server.cpp: In member function ‘void astribot_navigation_zones::ZoneServer::selectContext()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/../src/zone_server.cpp:29:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   29 |  if(!fresh("map"))return;const auto &map=observed_.at("map").data;
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/../src/zone_server.cpp:29:26: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   29 |  if(!fresh("map"))return;const auto &map=observed_.at("map").data;
+      |                          ^~~~~
+---
+Finished <<< astribot_navigation_zones [21.0s]
+Starting >>> astribot_s1_exploration
+Starting >>> astribot_route_executor
+Finished <<< astribot_route_executor [20.8s]
+Starting >>> astribot_s1_navigation_policy_native
+Finished <<< astribot_s1_navigation_policy_native [0.17s]
+Starting >>> astribot_s1_task_arbiter_native
+Finished <<< astribot_s1_task_arbiter_native [0.09s]
+[Processing: astribot_s1_exploration]
+Finished <<< astribot_s1_exploration [1min 4s]
+Starting >>> astribot_map_manager
+Finished <<< astribot_map_manager [0.12s]
+Starting >>> astribot_operator_backend
+Finished <<< astribot_operator_backend [0.11s]
+Starting >>> astribot_operator_station
+Finished <<< astribot_operator_station [0.20s]
+
+Summary: 8 packages finished [1min 26s]
+  1 package had stderr output: astribot_navigation_zones

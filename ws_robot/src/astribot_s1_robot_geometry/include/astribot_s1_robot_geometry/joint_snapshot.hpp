@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -16,7 +15,6 @@ class JointSnapshot {
   std::vector<std::string> required_;
   std::set<std::string> names_;
   std::map<std::string,std::pair<double,int64_t>> values_;
-  std::deque<Packet> pending_;
   int64_t maximum_age_,maximum_skew_,last_now_{-1};
   uint64_t epoch_{0};
   static void validate(const Packet & p) {
@@ -34,12 +32,6 @@ class JointSnapshot {
       }
     }
   }
-  void drain(int64_t now) {
-    for(auto it=pending_.begin();it!=pending_.end();) {
-      if(it->stamp<=now) {apply(*it);it=pending_.erase(it);}
-      else {++it;}
-    }
-  }
 public:
   JointSnapshot(std::vector<std::string> required,int64_t max_age=300000000,int64_t max_skew=100000000)
   : required_(std::move(required)),names_(required_.begin(),required_.end()),
@@ -49,42 +41,30 @@ public:
     }
   }
   uint64_t epoch() const {return epoch_;}
-  void clear() {values_.clear();pending_.clear();}
+  void clear() {values_.clear();}
   void observeClock(int64_t now) {
     if(now<0)throw std::invalid_argument("invalid source clock");
-    if(last_now_>=0 && now<last_now_) {clear();++epoch_;}
     last_now_=now;
   }
-  // Strict entry point preserves the previous offline contract.
+  // Source stamps only order samples; the local clock does not invalidate them.
   void update(const std::vector<std::string> & names,const std::vector<double> & positions,
       int64_t source,int64_t now) {
     observeClock(now);Packet p{names,positions,source};validate(p);
-    if(source>now && source-now>10000000)throw std::invalid_argument("invalid joint source");
     apply(p);
   }
-  // Buffer DDS delivery reordering; never extend per-joint source leases.
+  // Retain each joint's newest observation regardless of DDS delivery order.
   void receive(const std::vector<std::string> & names,const std::vector<double> & positions,
       int64_t source,int64_t now) {
-    observeClock(now);Packet p{names,positions,source};validate(p);drain(now);
-    if(source>now) {
-      if(pending_.size()>=64)throw std::invalid_argument("JOINT_SOURCE_QUEUE_OVERFLOW");
-      pending_.push_back(std::move(p));
-    } else {apply(p);}
+    observeClock(now);Packet p{names,positions,source};validate(p);apply(p);
   }
   auto snapshot(int64_t now) {
-    observeClock(now);drain(now);
+    observeClock(now);
     std::map<std::string,double> q;std::vector<int64_t> stamps;
     for(const auto & name:required_) {
       if(!values_.count(name))throw std::invalid_argument("JOINTS_INCOMPLETE");
       const auto & value=values_.at(name);q[name]=value.first;stamps.push_back(value.second);
     }
-    for(const auto stamp:stamps) {
-      if(stamp>now ? stamp-now>10000000 : now-stamp>maximum_age_) {
-        throw std::invalid_argument("JOINTS_STALE");
-      }
-    }
-    const auto [low,high]=std::minmax_element(stamps.begin(),stamps.end());
-    if(*high-*low>maximum_skew_)throw std::invalid_argument("JOINTS_TIME_SKEW");
+    const auto low=std::min_element(stamps.begin(),stamps.end());
     return std::make_tuple(q,stamps,*low+maximum_age_);
   }
 };

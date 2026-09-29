@@ -1,0 +1,116 @@
+Start testing: Sep 21 16:01 CST
+----------------------------------------------------------
+1/7 Testing: chassis_math
+1/7 Test: chassis_math
+Command: "/tmp/codex_arm_parameters_20260921/build/chassis_math_test"
+Directory: /tmp/codex_arm_parameters_20260921/build
+"chassis_math" start time: Sep 21 16:01 CST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"chassis_math" end time: Sep 21 16:01 CST
+"chassis_math" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/7 Testing: runtime_contract
+2/7 Test: runtime_contract
+Command: "/tmp/codex_arm_parameters_20260921/build/runtime_contract_test"
+Directory: /tmp/codex_arm_parameters_20260921/build
+"runtime_contract" start time: Sep 21 16:01 CST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"runtime_contract" end time: Sep 21 16:01 CST
+"runtime_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/7 Testing: runtime_config
+3/7 Test: runtime_config
+Command: "/tmp/codex_arm_parameters_20260921/build/runtime_config_test"
+Directory: /tmp/codex_arm_parameters_20260921/build
+"runtime_config" start time: Sep 21 16:01 CST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"runtime_config" end time: Sep 21 16:01 CST
+"runtime_config" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/7 Testing: chassis_standalone_replay
+4/7 Test: chassis_standalone_replay
+Command: "/usr/bin/cmake" "-E" "env" "PYTHONPATH=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/../astribot_trajectory_bridge" "ASTRIBOT_CHASSIS_PROBE=/tmp/codex_arm_parameters_20260921/build/chassis_core_probe" "/usr/bin/python3" "-m" "pytest" "-q" "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/test/test_chassis_standalone.py"
+Directory: /tmp/codex_arm_parameters_20260921/build
+"chassis_standalone_replay" start time: Sep 21 16:01 CST
+Output:
+----------------------------------------------------------
+.......                                                                  [100%]
+7 passed in 0.07s
+<end of output>
+Test time =   0.50 sec
+----------------------------------------------------------
+Test Passed.
+"chassis_standalone_replay" end time: Sep 21 16:02 CST
+"chassis_standalone_replay" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/7 Testing: arm_standalone_replay
+5/7 Test: arm_standalone_replay
+Command: "/usr/bin/cmake" "-E" "env" "PYTHONPATH=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/../astribot_trajectory_bridge" "ASTRIBOT_ARM_PROBE=/tmp/codex_arm_parameters_20260921/build/arm_core_probe" "/usr/bin/python3" "-m" "pytest" "-q" "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_standalone.py"
+Directory: /tmp/codex_arm_parameters_20260921/build
+"arm_standalone_replay" start time: Sep 21 16:02 CST
+Output:
+----------------------------------------------------------
+........                                                                 [100%]
+8 passed in 0.03s
+<end of output>
+Test time =   0.48 sec
+----------------------------------------------------------
+Test Passed.
+"arm_standalone_replay" end time: Sep 21 16:02 CST
+"arm_standalone_replay" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/7 Testing: gripper_standalone_replay
+6/7 Test: gripper_standalone_replay
+Command: "/usr/bin/cmake" "-E" "env" "PYTHONPATH=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/../astribot_trajectory_bridge" "ASTRIBOT_GRIPPER_PROBE=/tmp/codex_arm_parameters_20260921/build/gripper_core_probe" "/usr/bin/python3" "-m" "pytest" "-q" "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/test/test_gripper_standalone.py"
+Directory: /tmp/codex_arm_parameters_20260921/build
+"gripper_standalone_replay" start time: Sep 21 16:02 CST
+Output:
+----------------------------------------------------------
+..............                                                           [100%]
+14 passed in 0.04s
+<end of output>
+Test time =   0.51 sec
+----------------------------------------------------------
+Test Passed.
+"gripper_standalone_replay" end time: Sep 21 16:02 CST
+"gripper_standalone_replay" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/7 Testing: arm_dynamic_parameters
+7/7 Test: arm_dynamic_parameters
+Command: "/usr/bin/cmake" "-E" "env" "ASTRIBOT_ARM_LIMITER_CPP=/tmp/codex_arm_parameters_20260921/build/arm_speed_limiter_cpp" "ASTRIBOT_ARM_PARAMETER_DOMAIN=118" "ROS_DOMAIN_ID=118" "ROS_LOCALHOST_ONLY=1" "/usr/bin/python3" "-m" "pytest" "-q" "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py"
+Directory: /tmp/codex_arm_parameters_20260921/build
+"arm_dynamic_parameters" start time: Sep 21 16:02 CST
+Output:
+----------------------------------------------------------
+..............                                                           [100%]
+14 passed in 20.99s
+<end of output>
+Test time =  21.72 sec
+----------------------------------------------------------
+Test Passed.
+"arm_dynamic_parameters" end time: Sep 21 16:02 CST
+"arm_dynamic_parameters" time elapsed: 00:00:21
+----------------------------------------------------------
+
+End testing: Sep 21 16:02 CST

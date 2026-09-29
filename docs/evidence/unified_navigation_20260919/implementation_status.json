@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-09-19T22:51:48.104843+08:00",
+  "updated": "2026-09-21T10:20:00+08:00",
   "current_step": "I0.1",
   "status": "I0_multiscene_fixture_and_baseline_validation",
   "stage_acceptance": "NOT_PASSED",
@@ -23,7 +23,11 @@
     "R02 fixed_v2 P4/P5 protocol recorder with existing arm hold and corridor execution",
     "Independent full-body physics swept bounds for wall clearance",
     "Legacy P4/P5 separate corridor fixture with normal spawn origin; live test pending",
-    "Read-only multi-batch per-goal summary with duplicate exclusion"
+    "Read-only multi-batch per-goal summary with duplicate exclusion",
+    "Opt-in standard-angle corner tracking with approach, in-place heading alignment, replan progress retention and timeout guards",
+    "Corner detector effective arc windows for short planner bevel samples and obtuse/acute/right-turn unit fixtures",
+    "Description-package install excludes generated colcon directories so camera assets install deterministically",
+    "Installed camera profile completeness test for head/torso RGB-D simulation inputs"
   ],
   "verified": [
     {
@@ -190,6 +194,34 @@
       "case": "legacy corridor fixture preparation",
       "detail": "Two launch packages built; 10 geometry/permit/missing-evidence oracle checks passed. No live legacy movement yet.",
       "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/legacy_fixture_checks.json"
+    },
+    {
+      "kind": "build_and_ctest",
+      "result": "PASS",
+      "case": "standard-angle corner tracking candidate",
+      "detail": "Candidate overlay build; 5/5 CTest passed, including straight/right/acute/obtuse/beveled/smooth/U-turn detector cases and terminal-corner guard compilation. No hardware touched.",
+      "file": "/tmp/astribot_corner_nav_build_20260920b/build/astribot_s1_path_tracking/Testing/Temporary/LastTest.log"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "INFRA_FAILURE",
+      "case": "standard-angle corner L route",
+      "detail": "Corner parameters loaded in the candidate controller, but the isolated run did not reach CORNER_APPROACH: first attempt lacked the installed torso RGB-D profile; corrected lidar-only attempt lacked the requested scan topic. The earlier proper candidate run also timed out on stale camera/costmap inputs before a corner phase. No corner acceptance claimed.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/corner_turn_v5_l_20260920/s01_l_off_1/result.json"
+    },
+    {
+      "kind": "build_and_xacro",
+      "result": "PASS",
+      "case": "camera profile installation repair",
+      "detail": "Rebuilt astribot_s1_description after excluding urdf build/install/log artifacts; 2/2 package tests passed and xacro generated a URDF with head and torso RGB-D camera links from the current install tree.",
+      "file": "/tmp/astribot_description_build_20260921c/astribot_s1_description/Testing/Temporary/LastTest.log"
+    },
+    {
+      "kind": "fresh_gazebo_candidate",
+      "result": "INFRA_FAILURE",
+      "case": "camera install startup probe",
+      "detail": "Current install tree loaded camera_head_rgbd.yaml and camera_torso_rgbd.yaml and published both camera links; probe later stopped because /map_scan_filtered had no upstream point cloud, so /scan_from_cloud was unavailable. No missing camera profile remained.",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/camera_install_probe_20260921/stack/session.log"
     }
   ],
   "blocked_run": {
@@ -208,7 +240,8 @@
     "Finish I0 acceptance including legacy/fixed_v2 separate valid configurations; I1-I6 remain unopened",
     "S01 continuous L/U and 90-degree goal A/B; initial-heading +/-90 fixtures prepared; straight single-pair pass, L/U variants and all repeats pending",
     "Validate explicit source_hold_budget_v2 in fresh paused-person/goal-occupied simulations; offline 13 checks pass, original fixed-deadline failure preserved",
-    "Resolve legacy planner/admission mismatch: grid joins and gentle bows exceed 0.05 rad corridor limit; grid-aligned diagnostic fixtures prepared, not run"
+    "Resolve legacy planner/admission mismatch: grid joins and gentle bows exceed 0.05 rad corridor limit; grid-aligned diagnostic fixtures prepared, not run",
+    "Repeat isolated standard-angle L/acute/obtuse and replan scenarios with the repaired camera install and sensor freshness; include terminal-corner GoalChecker boundary and visual evidence"
   ],
   "next_stage_open": false,
   "boundary": "Historical replay, fresh simulation, and hardware evidence remain separate; no new behavior stage is accepted.",
@@ -225,7 +258,7 @@
     "frozen_install": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/frozen_h2",
     "process_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/first_isolation_process_audit.json"
   },
-  "active_regression": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/integer_status_core_1",
+  "active_regression": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/occupied_oracle_fix_2",
   "baseline_failures": [
     {
       "case": "H2-01",
@@ -313,7 +346,7 @@
     "runtime": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/runtime_policy_confirmation_v1",
     "boundary": "Separate owned probe instance; concurrent host-load interval recorded, no shared writable installs"
   },
-  "updated_at": "2026-09-19T22:32:48+0800",
+  "updated_at": "2026-09-20 15:34:51+08:00",
   "pause_stop_evidence_v2": {
     "status": "two_fresh_scenarios_passed; repetitions incomplete",
     "checks": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/pause_stop_v2_offline_checks_3.json",
@@ -516,5 +549,97 @@
     "simulation": "pending",
     "scope": "measurement only; integer ns instead of mixed multiply/divide conversion; original 300ms source and 2s wall budgets unchanged",
     "old_evidence": "isolated_core_2 interrupted by owner, missing phases are not retroactively filled"
+  },
+  "latest_status_review": {
+    "reviewed_at": "2026-09-20T15:34:51+08:00",
+    "stage": "I0.1",
+    "stage_acceptance": "NOT_PASSED",
+    "public_batch": {
+      "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/integer_status_core_1",
+      "jobs": 18,
+      "completed_pass": 17,
+      "h2_07_repeat3": "INVALID_FIXTURE",
+      "batch_status": "blocked_on_regression"
+    },
+    "oracle_fix": {
+      "offline_replay": "PASS",
+      "negative_checks": 16,
+      "fresh_retry_1": "INFRA_FAILURE_ACTION_RESPONSE_TIMEOUT",
+      "fresh_retry_2": "INFRA_FAILURE_MEASUREMENT_TIMEOUT_NO_COMPLETE_RESULT",
+      "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/occupied_oracle_fix_2"
+    },
+    "a_b_quality_gate": {
+      "control_regression": true,
+      "reason": "fresh original-baseline three-pair A/B passed after replacing one measurement-timeout sample with a bounded retry; prior historical regression remains recorded",
+      "comparison": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/empty_ab_baseline_20260920/empty_comparison.json",
+      "measurement_timeout_retry": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/empty_ab_baseline_retry_20260920/h2_empty_h2_2"
+    },
+    "next_stage_open": false,
+    "hardware": "not_operated",
+    "updated_at": "2026-09-20 17:05:00+08:00"
+  },
+  "latest_h2_07_recheck": {
+    "functional_acceptance": true,
+    "valid_rounds": 3,
+    "rounds": [
+      {
+        "round": 1,
+        "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/h2_goal_occupied_recheck_20260920_headless69/h2_goal_occupied_h2_1",
+        "verdict": "PASS",
+        "measurement_warning": "invalid_samples=681"
+      },
+      {
+        "round": 2,
+        "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/h2_goal_occupied_recheck_20260920_headless70_egl/h2_goal_occupied_h2_2",
+        "verdict": "PASS",
+        "measurement_warning": null
+      },
+      {
+        "round": 3,
+        "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/h2_goal_occupied_recheck_20260920_headless71_egl/h2_goal_occupied_h2_3",
+        "verdict": "PASS",
+        "measurement_warning": null
+      }
+    ],
+    "visual_review": "PENDING",
+    "visual_attempt": {
+      "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/h2_goal_occupied_visual_20260920",
+      "verdict": "INFRA_FAILURE",
+      "reason": "Xvfb :168 terminated; Gazebo/RViz could not connect to display; no navigation motion evidence"
+    },
+    "egl_probe": {
+      "verdict": "PASS_EGL_AND_PHYSICS",
+      "file": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/display/egl_probe_nvidia_vendor_20260920/result.json",
+      "scope": "offscreen Gazebo physics probe only"
+    },
+    "source_changes": "run_regression.py headless/skip-visual flags and NVIDIA EGL environment only; controller and physics parameters unchanged",
+    "metric_update": {
+      "name": "lateral_error_m",
+      "definition": "signed path-normal component on nearest finite segment; cross_track_m retained for historical reports",
+      "offline_recomputed": "/tmp/empty_comparison_lateral_20260920.json",
+      "control_regression_after_metric_fix": false
+    },
+    "rejected_runtime_candidate": {
+      "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/half_turn_v1_smoke2_20260920",
+      "change": "fixed half-turn start rotation direction",
+      "build": "PASS; 4 CTest PASS",
+      "functional_result": "H2-00 off/h2 episodes PASS; A/B return lateral_normal_p95 still failed",
+      "status": "REVERTED",
+      "reason": "not consistently better than baseline; no runtime source change retained"
+    }
+  },
+  "latest_h2_ab_baseline": {
+    "status": "FUNCTIONAL_PASS_WITH_RETRY",
+    "valid_pairs": 3,
+    "initial_batch": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/empty_ab_baseline_20260920",
+    "retry_batch": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/empty_ab_baseline_retry_20260920",
+    "comparison": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/empty_ab_baseline_20260920/empty_comparison.json",
+    "first_failed_sample": {
+      "reason": "measurement unavailable for 2s; cancel run",
+      "classification": "measurement_infrastructure",
+      "directory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_isolated_20260919/I0.1/empty_ab_baseline_20260920/h2_empty_h2_2"
+    },
+    "alignment_diagnostic": "compare_empty_baseline.start_alignment",
+    "next_stage_open": false
   }
 }

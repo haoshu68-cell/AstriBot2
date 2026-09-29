@@ -1,0 +1,105 @@
+#include "astribot_s1_transport_native/payload_scene.hpp"
+#include "astribot_s1_transport_native/scene_binding.hpp"
+#include <astribot_s1_payload_state/kinematic_geometry.hpp>
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+namespace astribot::transport {
+namespace {
+const std::set<std::string> links={"astribot_arm_left_tcp_link","astribot_arm_right_tcp_link"};
+void require(bool okay,const char *why){if(!okay)throw std::runtime_error(why);}
+void remove_target(moveit_msgs::msg::PlanningScene &scene,const std::string &id) {
+ auto &world=scene.world.collision_objects;world.erase(std::remove_if(world.begin(),world.end(),[&](const auto&o){return o.id==id;}),world.end());
+ auto &attached=scene.robot_state.attached_collision_objects;attached.erase(std::remove_if(attached.begin(),attached.end(),[&](const auto&o){return o.object.id==id;}),attached.end());
+}
+}
+bool payload_registered_box_size_matches(const shape_msgs::msg::SolidPrimitive &box,
+ const std::vector<double> &nominal) {
+ if(box.dimensions.size()!=3)return false;
+ double radius2=0.;for(double dimension:nominal)radius2+=dimension*dimension;
+ // Match observed_payload() in astribot_s1_gazebo_bringup/src/payload_geometry.cpp:
+ // margin = .005 + .01 * (primitive-origin distance + nominal radius).
+ // This registered BOX has an identity primitive pose, hence zero distance.
+ const double margin=astribot::payload::kinematic_payload_margin(std::sqrt(radius2)/2.,0.);
+ bool nominal_match=true,conservative_match=true;
+ for(size_t i=0;i<3;++i) {
+  const double dimension=box.dimensions[i];
+  if(!std::isfinite(dimension))return false;
+  nominal_match=nominal_match&&std::abs(dimension-nominal[i])<=1e-9;
+  conservative_match=conservative_match&&std::abs(dimension-(nominal[i]+2.*margin))<=1e-9;
+ }
+ return nominal_match||conservative_match;
+}
+void require_payload_observation_bound(const astribot::payload::Observation &expected,
+ const astribot::payload::Observation &latest) {
+ require(latest.source_epoch==expected.source_epoch&&latest.clock_epoch==expected.clock_epoch,"PAYLOAD_RAW_CONTEXT_CHANGED");
+ require(latest.revision==expected.revision,"PAYLOAD_RAW_REVISION_CHANGED");
+ require(latest.full_inventory&&(latest.status==latest.EMPTY||latest.status==latest.ATTACHED),"PAYLOAD_RAW_UNCONFIRMED");
+ require(latest.status==expected.status,"PAYLOAD_RAW_STATUS_CHANGED");
+ try {require(astribot::payload::canonical(latest.objects,links)==astribot::payload::canonical(expected.objects,links),"PAYLOAD_RAW_OBJECT_CHANGED");}
+ catch(const std::exception &error){throw std::runtime_error(std::string("PAYLOAD_RAW_INVALID:")+error.what());}
+}
+bool payload_revision_ready(const astribot::payload::State &state,
+ const astribot::payload::Observation &expected,const std::string &ledger_epoch) {
+ require(state.ledger_epoch==ledger_epoch&&state.observation.source_epoch==expected.source_epoch&&
+   state.observation.clock_epoch==expected.clock_epoch&&state.observation.revision<=expected.revision,
+   "PAYLOAD_RECONCILIATION_CONTEXT_CHANGED");
+ return state.observation.revision==expected.revision;
+}
+moveit_msgs::msg::PlanningScene payload_scene_diff(const moveit_msgs::msg::PlanningScene &before,
+ const astribot::payload::Observation &physical,const std::string &id,bool attach,
+ const geometry_msgs::msg::Pose &pose,const std::string &base,const std::set<std::string> &known_links) {
+ require(!before.is_diff&&!before.robot_state.is_diff&&physical.full_inventory&&
+   (physical.status==physical.EMPTY||physical.status==physical.ATTACHED),"PAYLOAD_COMPLETE_SCENE_AND_INVENTORY_REQUIRED");
+ require(base=="astribot_torso_base","PAYLOAD_CANONICAL_BASE_REQUIRED");
+ (void)bind_scene(before,known_links);
+ (void)astribot::payload::canonical(physical.objects,links);
+ require((physical.status==physical.EMPTY)==physical.objects.empty(),"PAYLOAD_INVENTORY_STATUS_CONFLICT");
+ auto other_before=before.robot_state.attached_collision_objects,other_after=physical.objects;
+ auto erase=[&](auto &objects){objects.erase(std::remove_if(objects.begin(),objects.end(),[&](const auto&o){return o.object.id==id;}),objects.end());};
+ erase(other_before);erase(other_after);
+ require(astribot::payload::scene_matches(other_after,other_before,links),"PAYLOAD_OTHER_ATTACHMENT_CHANGED");
+ moveit_msgs::msg::PlanningScene diff;diff.is_diff=true;diff.robot_state.is_diff=true;
+ if(attach) {
+  auto body=std::find_if(physical.objects.begin(),physical.objects.end(),[&](const auto&o){return o.object.id==id;});
+  require(body!=physical.objects.end()&&body->link_name=="astribot_arm_left_tcp_link","PAYLOAD_TARGET_ATTACHMENT_MISSING");
+  require(std::count_if(before.world.collision_objects.begin(),before.world.collision_objects.end(),[&](const auto&o){return o.id==id;})==1,"PAYLOAD_WORLD_OBJECT_MISSING");
+  // MoveIt attaches first and removes the same world ID automatically. A
+  // second world REMOVE reports failure after the attachment already applied.
+  diff.robot_state.attached_collision_objects={*body};
+ }else {
+  require(std::none_of(physical.objects.begin(),physical.objects.end(),[&](const auto&o){return o.object.id==id;}),"PAYLOAD_DETACH_NOT_OBSERVED");
+  const auto &objects=before.robot_state.attached_collision_objects;
+  auto body=std::find_if(objects.begin(),objects.end(),[&](const auto&o){return o.object.id==id;});
+  require(body!=objects.end(),"PAYLOAD_PREVIOUS_ATTACHMENT_MISSING");
+  auto placed=body->object;placed.header.frame_id=base;placed.header.stamp=builtin_interfaces::msg::Time();placed.pose=pose;placed.operation=placed.ADD;
+  diff.world.collision_objects={placed};moveit_msgs::msg::AttachedCollisionObject removed;
+  removed.link_name=body->link_name;removed.object.id=id;removed.object.operation=removed.object.REMOVE;
+  diff.robot_state.attached_collision_objects={removed};
+ }
+ return diff;
+}
+void validate_payload_scene(const moveit_msgs::msg::PlanningScene &before,
+ const moveit_msgs::msg::PlanningScene &after,const astribot::payload::Observation &physical,
+ const std::string &id,bool attach,const geometry_msgs::msg::Pose &pose,const std::string &base,const std::set<std::string> &known_links) {
+ require(!after.is_diff&&!after.robot_state.is_diff,"PAYLOAD_FULL_READBACK_REQUIRED");
+ const auto diff=payload_scene_diff(before,physical,id,attach,pose,base,known_links);
+ (void)bind_scene(after,known_links);
+ auto old_other=before,new_other=after;remove_target(old_other,id);remove_target(new_other,id);
+ require(bind_scene(old_other,known_links).first==bind_scene(new_other,known_links).first,"PAYLOAD_UNRELATED_SCENE_CHANGED");
+ require(astribot::payload::scene_matches(physical.objects,after.robot_state.attached_collision_objects,links),"PAYLOAD_PHYSICAL_SCENE_MISMATCH");
+ auto body=std::find_if(after.world.collision_objects.begin(),after.world.collision_objects.end(),[&](const auto&o){return o.id==id;});
+ if(attach)require(body==after.world.collision_objects.end(),"PAYLOAD_WORLD_OBJECT_NOT_REMOVED");
+ else {
+  require(body!=after.world.collision_objects.end(),"PAYLOAD_PLACED_OBJECT_MISSING");
+  auto expected=diff.world.collision_objects.front(),actual=*body;actual.header.stamp=expected.header.stamp;
+  // Round-tripping a pose through MoveIt may normalize a quaternion. Reuse the
+  // ledger's 1e-12 pose tolerance instead of widening dimensions or geometry.
+  moveit_msgs::msg::AttachedCollisionObject e,a;e.link_name=a.link_name="astribot_arm_left_tcp_link";
+  e.touch_links=a.touch_links={e.link_name};
+  e.object=expected;a.object=actual;e.object.header.frame_id=a.object.header.frame_id=e.link_name;
+  require(actual.header.frame_id==base&&actual.type==expected.type&&actual.subframe_names==expected.subframe_names&&
+    actual.subframe_poses==expected.subframe_poses&&astribot::payload::scene_matches({e},{a},links),"PAYLOAD_PLACEMENT_SCENE_MISMATCH");
+ }
+}
+}

@@ -1,0 +1,55 @@
+Read-only observer transaction review, 2026-09-21
+No node initialization, ROS graph operations, source edits, or shared install writes.
+
+Reviewed source snapshots:
+- policy_observer_node.cpp initial f85799999c79ddb4ff50186eece9783b8f2ba04375f1db3449de74f73db8b97d
+- policy_observer_node.cpp after root concurrent fixes d4814ad3f572545cf6ee54c4bef5f40d9c90e41b091403a2d084bf86d75861eb
+- policy_observer_node.hpp 3de2cfeb64b4f64e98df96e0e4b453c0ff32a0100c7d88cd0c6e67a73edf6b35
+- frozen observer_node.py 1e6dff0fbc60f843d88f87f98ed56b332391f765398f0362585d17c0b2e8289b
+- frozen observation_adapters.py 2585066e21070b4cfd102741d360e52d54b0403363b77848324052f538e25505
+
+1. Confirmed wrapped ROS expiry (root fixed during review)
+   A legal capture 2147483647999999999 ns + 500000000 ns timeout gives
+   2147483648499999999 ns expiry. Original rclpy Time.to_msg raises AssertionError.
+   rclcpp Time conversion emitted sec=-2147483648,nanosec=499999999.
+   Repro: time_probe.cpp; no ROS initialization.
+   Current root wire_time includes explicit legal-seconds bounds and task uses task_wire.
+
+2. Eager coverage option conversion changes error timing and accepted input
+   Native Source constructor loops JSON values into array<double,2> before callbacks.
+   Original VisionAdapter constructor stores options unchanged; accept_observations
+   constructs coverage inside its caught transaction before fusion.ingest.
+   Repro: parameter_probe.cpp plus frozen VisionAdapter.
+   - coverage [[0]]: native startup exception; Python startup succeeds, packet callback IndexError.
+   - coverage null: native empty coverage and later proceeds; Python callback TypeError before ingestion.
+   - coverage {"front":[0,0.5]}: native accepts one cone; Python iterates string keys and rejects.
+   Similar startup validation occurs for depth_unit_m / unused adapter options rather than their
+   original relevant callbacks. Full parameter-shape/error-phase parity remains incomplete.
+
+3. CameraInfo calibration increment has signed overflow at the native domain end
+   Seed CameraCalibrationRegistry with epoch INT64_MAX; changed valid CameraInfo
+   candidate evaluates epoch+1 before constructor validation.
+   Repro calibration_epoch_probe.cpp linked to current UBSan core objects:
+   runtime error: signed integer overflow: 9223372036854775807 + 1 cannot be represented.
+   Python advances to 2**63 (outside declared native calibration domain). Guard before addition
+   and retain old registry/options; do not claim arbitrary-Python-integer parity.
+
+No further concrete mismatch found in mailbox swap, confirmation-only ACK behavior,
+source/receipt/clock use, accepted envelope epoch/version update, invalid-V2 revocation,
+bounds reset, or ordinary calibration initial/idempotent/change/error ordering.
+This is source review plus isolated reproductions, not concurrency/transport acceptance.
+
+4. Actual Humble CameraInfo coefficient type changes acceptance (parent discovered)
+   Offline independent confirmation using installed sensor_msgs.msg.CameraInfo:
+   m.k is numpy.ndarray; tuple(m.k) has numpy.float64 elements. m.d yields builtins.float.
+   Frozen contracts finite() requires exact builtins int/float, so valid CameraInfo
+   width640/height480/K=[500,0,320,0,500,240,0,0,1] rejects INVALID_INPUT:camera.coefficient.
+   An explicit tuple(float(v) for v in m.k) accepts. Native generated double arrays
+   therefore change required-camera readiness if accepted without reproducing this
+   source-adapter rejection. Parent intends to retain original behavior in migration.
+   Repro camera_info_python_probe.py / camera_info_python.txt; no ROS init/node.
+   Generated CameraInfo source SHA256:
+   6a96dcca6e00f0a86c9fca05f9c00d2c6736cdf791379d9a1767b40f0b27ea19
+   Frozen contracts SHA256:
+   6a55bc374c1ae146d33e13ad7d7a0bb98514007cbf8816cb1ad09c1015d019b5
+   Prior label/dimension/epoch errors must retain precedence over coefficient type.

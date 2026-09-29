@@ -1,0 +1,17 @@
+..F                                                                      [100%]
+=================================== FAILURES ===================================
+_______ test_oracle_cannot_hide_accidentally_restored_production_module ________
+
+    def test_oracle_cannot_hide_accidentally_restored_production_module():
+        rows = {
+            'ws_robot/src/old_pkg/old_pkg/node.py': {'module': 'old_pkg.node', 'category': 'candidate'},
+            'ws_robot/src/native_pkg/test/reference/old_pkg/node.py':
+                {'module': 'old_pkg.node', 'category': 'cpp_validation_reference'},
+        }
+>       indexed = INVENTORY.index_modules(rows)
+E       AttributeError: module 'inventory_reference_alias' has no attribute 'index_modules'
+
+tools/migration/test/test_inventory_reference_alias.py:35: AttributeError
+=========================== short test summary info ============================
+FAILED tools/migration/test/test_inventory_reference_alias.py::test_oracle_cannot_hide_accidentally_restored_production_module
+1 failed, 2 passed in 0.03s

@@ -1,0 +1,193 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "initial full scale",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "invalid_typed_batch": {
+        "reach_tf_timeout_sec": "1",
+        "degraded_scale": ".77"
+      },
+      "rejected_by_both": true
+    },
+    {
+      "case": "rejected atomic batch preserves scale",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "invalid_typed_batch": {
+        "min_speed_scale": "True",
+        "degraded_scale": ".77"
+      },
+      "rejected_by_both": true
+    },
+    {
+      "case": "rejected atomic batch preserves scale",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "invalid_typed_batch": {
+        "scale_smoothing_alpha": "'0.5'",
+        "degraded_scale": ".77"
+      },
+      "rejected_by_both": true
+    },
+    {
+      "case": "rejected atomic batch preserves scale",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "invalid_typed_batch": {
+        "folded_reference_rad": "[0, 0]",
+        "degraded_scale": ".77"
+      },
+      "rejected_by_both": true
+    },
+    {
+      "case": "rejected atomic batch preserves scale",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 169248,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_c1f6e34d5c/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/final_green/test_typed_atomic_updates_reject_without_partial_change/python_params.yaml",
+        "-r",
+        "/coupling_c1f6e34d5c/input:=/coupling_c1f6e34d5c/input_remapped",
+        "-r",
+        "/coupling_c1f6e34d5c/python/output:=/coupling_c1f6e34d5c/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 169249,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_c1f6e34d5c/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/final_green/test_typed_atomic_updates_reject_without_partial_change/cpp_params.yaml",
+        "-r",
+        "/coupling_c1f6e34d5c/input:=/coupling_c1f6e34d5c/input_remapped",
+        "-r",
+        "/coupling_c1f6e34d5c/cpp/output:=/coupling_c1f6e34d5c/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 5,
+    "cpp": 5
+  }
+}

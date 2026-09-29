@@ -1,0 +1,92 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+__________ test_invalid_startup_reports_failure[odom_timeout_sec-0.0] __________
+
+name = 'odom_timeout_sec', value = '0.0'
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', '0.0'), ('cmd_timeout_sec', '-1.0'),
+        ('odom_timeout_sec', '.nan'), ('cmd_timeout_sec', '.inf'),
+    ])
+    def test_invalid_startup_reports_failure(name, value):
+        binary = os.environ.get('CMD_VEL_CPP_BINARY')
+        if not binary: pytest.skip('CMD_VEL_CPP_BINARY is required')
+        result = subprocess.run([binary, '--ros-args', '-r', '__node:=invalid_cmd_parameters',
+            '-p', f'{name}:={value}'], env=dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1'),
+            text=True, capture_output=True, timeout=5.)
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [FATAL] [1789977555.305298982] [cmd_vel_body_to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp', '--ros-args', '-r...to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative\n').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:246: AssertionError
+__________ test_invalid_startup_reports_failure[cmd_timeout_sec--1.0] __________
+
+name = 'cmd_timeout_sec', value = '-1.0'
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', '0.0'), ('cmd_timeout_sec', '-1.0'),
+        ('odom_timeout_sec', '.nan'), ('cmd_timeout_sec', '.inf'),
+    ])
+    def test_invalid_startup_reports_failure(name, value):
+        binary = os.environ.get('CMD_VEL_CPP_BINARY')
+        if not binary: pytest.skip('CMD_VEL_CPP_BINARY is required')
+        result = subprocess.run([binary, '--ros-args', '-r', '__node:=invalid_cmd_parameters',
+            '-p', f'{name}:={value}'], env=dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1'),
+            text=True, capture_output=True, timeout=5.)
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [FATAL] [1789977555.456955651] [cmd_vel_body_to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp', '--ros-args', '-r...to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative\n').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:246: AssertionError
+_________ test_invalid_startup_reports_failure[odom_timeout_sec-.nan] __________
+
+name = 'odom_timeout_sec', value = '.nan'
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', '0.0'), ('cmd_timeout_sec', '-1.0'),
+        ('odom_timeout_sec', '.nan'), ('cmd_timeout_sec', '.inf'),
+    ])
+    def test_invalid_startup_reports_failure(name, value):
+        binary = os.environ.get('CMD_VEL_CPP_BINARY')
+        if not binary: pytest.skip('CMD_VEL_CPP_BINARY is required')
+        result = subprocess.run([binary, '--ros-args', '-r', '__node:=invalid_cmd_parameters',
+            '-p', f'{name}:={value}'], env=dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1'),
+            text=True, capture_output=True, timeout=5.)
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [FATAL] [1789977555.573153451] [cmd_vel_body_to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp', '--ros-args', '-r...to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative\n').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:246: AssertionError
+__________ test_invalid_startup_reports_failure[cmd_timeout_sec-.inf] __________
+
+name = 'cmd_timeout_sec', value = '.inf'
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', '0.0'), ('cmd_timeout_sec', '-1.0'),
+        ('odom_timeout_sec', '.nan'), ('cmd_timeout_sec', '.inf'),
+    ])
+    def test_invalid_startup_reports_failure(name, value):
+        binary = os.environ.get('CMD_VEL_CPP_BINARY')
+        if not binary: pytest.skip('CMD_VEL_CPP_BINARY is required')
+        result = subprocess.run([binary, '--ros-args', '-r', '__node:=invalid_cmd_parameters',
+            '-p', f'{name}:={value}'], env=dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1'),
+            text=True, capture_output=True, timeout=5.)
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [FATAL] [1789977555.690661225] [cmd_vel_body_to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp', '--ros-args', '-r...to_world_node]: body-to-world settings must be finite; timeouts must be positive and posture tolerances nonnegative\n').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:246: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_startup_reports_failure[odom_timeout_sec-0.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_startup_reports_failure[cmd_timeout_sec--1.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_startup_reports_failure[odom_timeout_sec-.nan]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_startup_reports_failure[cmd_timeout_sec-.inf]
+4 failed, 38 deselected in 0.62s

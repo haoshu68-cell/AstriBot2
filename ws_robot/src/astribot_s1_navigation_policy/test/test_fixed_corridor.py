@@ -55,6 +55,45 @@ class CorridorTests(unittest.TestCase):
         self.p.footprint_xy=np.array([[-.32,-.32],[.32,-.32],[.32,.6],[-.32,.6]])
         self.assertIn('INSUFFICIENT_WIDTH',self.evaluate().selection.reason)
 
+    def test_rear_arm_must_leave_before_exit_turn(self):
+        self.p.footprint_xy=np.array([[-1.,-.32],[.32,-.32],[.32,.32],[-1.,.32]])
+        self.assertFalse(self.policy.route_fits(self.c,((-1.5,0.),(3.1,0.),(3.1,1.))))
+        self.assertTrue(self.policy.route_fits(self.c,((-1.5,0.),(4.2,0.),(4.2,1.))))
+
+    def test_impossible_arm_turn_reports_route_failure_without_waiting(self):
+        self.p.footprint_xy=np.array([[-1.,-.32],[.32,-.32],[.32,.32],[-1.,.32]])
+        self.r.x=-1.5
+        result=self.evaluate(((-1.5,0.),(3.1,0.),(3.1,1.)))
+        self.assertEqual(result.selection.motion,'HOLD')
+        self.assertEqual(result.failure,'CORRIDOR_ROUTE_TURN_UNREACHABLE')
+
+    def test_turn_sweep_not_just_endpoint_postures(self):
+        self.p.footprint_xy=np.array([[-1.,-.32],[.32,-.32],[.32,.32],[-1.,.32]])
+        margin=self.policy.margin(self.c)
+        # The rear corner extends farther at an intermediate rotation than
+        # at either the incoming or outgoing heading.
+        turn_x=3.+margin+1.02
+        self.assertFalse(self.policy.route_fits(self.c,((-1.5,0.),(turn_x,0.),(turn_x,-1.))))
+
+    def test_front_arm_alignment_finishes_before_entry(self):
+        self.p.footprint_xy=np.array([[-.32,-.32],[1.,-.32],[1.,.32],[-.32,.32]])
+        self.assertFalse(self.policy.route_fits(self.c,((-.5,-1.),(-.5,0.),(4.,0.))))
+        self.assertTrue(self.policy.route_fits(self.c,((-1.5,-1.),(-1.5,0.),(4.,0.))))
+
+    def test_repeated_corner_endpoint_keeps_arm_clearance(self):
+        self.p.footprint_xy=np.array([[-1.,-.32],[.32,-.32],[.32,.32],[-1.,.32]])
+        self.assertFalse(self.policy.route_fits(self.c,((-1.5,0.),(3.5,0.),(3.5,0.),(3.5,1.))))
+
+    def test_remote_turn_and_small_tracking_bend_still_allowed(self):
+        self.assertTrue(self.policy.route_fits(self.c,((-2.,-2.),(-2.,0.),(4.,0.),(4.,1.))))
+        wide=Corridor('wide',(0.,0.),(3.,0.),1.3,('unused_label',),.01,.01)
+        self.assertTrue(self.policy.route_fits(wide,((-1.,0.),(1.,.005),(4.,0.))))
+
+    def test_diagonal_remote_turn_is_not_a_swept_box_collision(self):
+        self.p.footprint_xy=np.array([[-.32,-.32],[1.,-.32],[1.,.32],[-.32,.32]])
+        self.assertTrue(self.policy.route_fits(self.c,
+            ((-1.5,0.),(4.5,0.),(4.5,-1.3),(3.95,-1.3),(3.95,-1.2))))
+
 class AdapterEntryTests(unittest.TestCase):
     """Execute the production advance body without starting ROS nodes."""
     def setUp(self):

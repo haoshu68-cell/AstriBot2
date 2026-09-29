@@ -1,0 +1,29 @@
+usage: verify_kinematic_inventory.py [-h] --owner OWNER --output OUTPUT
+                                     --session SESSION [--source SOURCE]
+                                     --plugin-directory PLUGIN_DIRECTORY
+                                     --world-reference WORLD_REFERENCE
+                                     [--resume-registry RESUME_REGISTRY]
+                                     [--prepare-only]
+
+Owned simulation kinematic-inventory fault checks. Never sends motion goals.
+Mutations: four explicitly registered kinematic fixtures, a temporary unknown
+model and PlanningScene attachment, and a bounded world pause. On success the
+registered fixtures remain detached for subsequent inventory checks. On
+failure detach is attempted, with cleanup failures preserved separately.
+Hardware and other sessions are rejected by exact supervisor identity +
+environment checks.
+
+options:
+  -h, --help            show this help message and exit
+  --owner OWNER
+  --output OUTPUT
+  --session SESSION
+  --source SOURCE
+  --plugin-directory PLUGIN_DIRECTORY
+  --world-reference WORLD_REFERENCE
+  --resume-registry RESUME_REGISTRY
+                        Reuse this owned session registry after a failed
+                        matrix; no second source is loaded
+  --prepare-only        Create the same four A1 fixtures with all execution
+                        plugins and verify explicit detached EMPTY; no fault
+                        injection or attachment commands on success

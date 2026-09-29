@@ -1,0 +1,30 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____________ test_signal_shutdown_while_waiting_for_first_map[cpp] _____________
+
+impl = 'cpp'
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_signal_shutdown_while_waiting_for_first_map(impl):
+>       relay = Relay(impl, 'shutdown_no_map')
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:91: in __init__
+    self.start()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_map_relay.Relay object at 0x7af2c1cbdcf0>
+
+    def start(self):
+>       assert self.impl != 'cpp' or BINARY.is_file(), 'Native map relay is not implemented/built'
+E       AssertionError: Native map relay is not implemented/built
+E       assert ('cpp' != 'cpp' or False)
+E        +  where 'cpp' = <test_map_relay.Relay object at 0x7af2c1cbdcf0>.impl
+E        +  and   False = <bound method Path.is_file of PosixPath('/missing/map_domain_relay')>()
+E        +    where <bound method Path.is_file of PosixPath('/missing/map_domain_relay')> = PosixPath('/missing/map_domain_relay').is_file
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:94: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py::test_signal_shutdown_while_waiting_for_first_map[cpp]
+1 failed, 31 deselected in 0.21s

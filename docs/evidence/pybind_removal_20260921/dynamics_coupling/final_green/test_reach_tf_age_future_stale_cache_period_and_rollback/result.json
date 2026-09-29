@@ -1,0 +1,229 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "fresh TF",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "cached reach before period",
+      "clock_ns": 10050000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "exact period boundary refresh",
+      "clock_ns": 10100000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "reach_update_period_sec": "0.0"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "TF age exactly timeout valid",
+      "clock_ns": 10600000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "TF one nanosecond stale fails closed",
+      "clock_ns": 10600000001,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "reach_tf_timeout_sec": "1.0"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic TF timeout",
+      "clock_ns": 10600000001,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "future TF after clock rollback fails closed",
+      "clock_ns": 9900000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 168788,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_d98655bda6/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/final_green/test_reach_tf_age_future_stale_cache_period_and_rollback/python_params.yaml",
+        "-r",
+        "/coupling_d98655bda6/input:=/coupling_d98655bda6/input_remapped",
+        "-r",
+        "/coupling_d98655bda6/python/output:=/coupling_d98655bda6/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 168789,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_d98655bda6/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/final_green/test_reach_tf_age_future_stale_cache_period_and_rollback/cpp_params.yaml",
+        "-r",
+        "/coupling_d98655bda6/input:=/coupling_d98655bda6/input_remapped",
+        "-r",
+        "/coupling_d98655bda6/cpp/output:=/coupling_d98655bda6/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 7,
+    "cpp": 7
+  }
+}

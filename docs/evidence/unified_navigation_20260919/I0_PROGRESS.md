@@ -226,3 +226,51 @@ P5 入口精调曾在 yaw 0.116220° 处低响应：源时间 67–75.5 s 的最
 现在只对 phase/protection 测量时效使用整数纳秒，并保存 phase 接收时戳及龄期；原 300 ms 源时效及 2 s 墙钟预算不变。真实生产 freshness 函数的 28 个边界检查通过，含同刻、1 ns、过期前 1 ns、恰好过期、回跳和大时戳。旧 `isolated_core_2` 主动中断，所属进程已回收，保留 INFRA_FAILURE；不算导航失败或完整通过。
 
 `runtime_integer_status_v1` 冻结后重新启动相同 18 例矩阵。先前取消用例独立原始 odom/执行器判定的六次功能结果仍保留，但旧 FOLLOW 抽样不能替代修复后质量 A/B 验收。本项不改变运行时控制、策略租约或到位阈值。
+
+## I0.1 最新状态复核（2026-09-20）
+
+公共批次 `integer_status_core_1` 共 18 个作业，17 个完成判据通过；`H2-07` 第三轮仍因占用目标冲突/恢复判据在旧批次中记为 `INVALID_FIXTURE`，不能算作 H2-07 三轮通过。根目录判据已修正为识别 `goal_occupied`、`PREDICTED_CONFLICT`、`YIELD` 等早期冲突证据；离线回放及 16 项负例检查通过。修正后的两次冷启动复测分别因 action/service 响应超时、测量超时而记为 `INFRA_FAILURE`，没有形成可验收的完整新一轮，原始证据保留。
+
+同批次空场 A/B 的身份、规划、到位和大部分跟踪指标通过，但 H2 返回段横向误差 P95 相对 off 基线超出声明容差，`control_regression=false`。因此这不是单纯的测试脚本误报，需先定位该真实质量回归并完成重复 A/B。
+
+当前阶段仍为 **I0.1，NOT_PASSED**；I0.2 以及 I1–I6 均未开放。当前只保留离线/仿真证据，未操作真机。
+
+## H2-07 复测与独立显示（2026-09-20）
+
+目标占用场景已完成三轮有效功能复测：三轮均覆盖目标实际占用、暂停/恢复、保持期间零指令、停稳预算和占用期间禁止继续运动；到位误差均满足当前仿真精度档位。第一轮存在 `invalid_samples=681` 的测量间隙告警，后两轮无无效样本，因此该轮只作为功能证据保留，不能当作无告警测量质量证据。三轮合并记录见 `I0.1/h2_goal_occupied_recheck_summary_20260920.json`。
+
+为缩短后续闭环回归墙钟，新增验证器 `--headless --skip-visual` 路径，并显式选择 NVIDIA EGL vendor manifest；它只改变 GUI/离屏渲染环境，不改变控制器、物理参数、源时间新鲜度或停车保护。独立轻量 Gazebo probe 已得到 `PASS_EGL_AND_PHYSICS`，证明 RTX 4090 的无窗口 EGL 与物理步进可用，但不等同于完整导航栈已获得同等加速。独立 Gazebo/RViz 视觉补证因 Xvfb `:168` 在启动后退出而失败，归类为显示基础设施失败；当前 H2-07 阶段仍为视觉复核待补，不能据此开放 I0.1。
+
+同一批次中发现空场 A/B 的 H2 返回段误差确有边界敏感性：180° 起步对齐时，初始 yaw 微小符号会选择相反旋转方向；正向旋转的全路径有限段距离把起步纵向越界计入 `cross_track_m`，造成约 4.4 cm 的 P95，而路径法向分量约 1.9 cm。该现象同时涉及真实起步漂移和指标端点定义，不能直接改阈值放行；下一步先在保留原 `cross_track_m` 的前提下补充法向误差指标，再做三对全新 off/H2 回归，并检查 180° 边界及测量间隙异常。
+
+新增的 `lateral_error_m` 只用于 A/B 质量门：它是最近有限路径段的法向分量，保留 `cross_track_m` 的历史有限段距离定义，避免端点纵向残差冒充横向误差。离线复算已覆盖旧三对记录；H2 返回法向 P95 仍高于 off 中位数，说明不能把问题归咎于指标定义后放行。
+
+曾制作 `half_turn_v1` 候选，试图在接近 180° 时固定起步旋转方向。独立构建和 4 项 CTest 通过，但空场 H2 复测中回程法向误差仍约 2.1 cm，未稳定优于基线；该运行时改动已撤回，不进入当前候选。结论是底盘旋转漂移不能用单一固定方向硬编码，需后续用起步漂移建模或更严格的成对初始状态设计处理。候选运行和失败原因保留在 `I0.1/half_turn_v1_smoke2_20260920/`。
+
+最新原基线空场 A/B 三对复测已完成。独立域 91 的一轮 H2 在首目标前发生连续 2 s 测量不可用，按保护逻辑取消并单独保留；补采域 92 的同一轮通过。将有效的 off 三轮与 H2 三轮重新配对后，`empty_comparison.json` 的到位、事件触发、完整控制器证据、法向横向误差、航向 P95 和实际 jerk 均通过，`control_regression=true`。这只说明当前原基线 A/B 不再复现上一批的质量回归，不能抹去测量缺口，也不能替代其它 R01/R03/S01/P4/P5 的重复与视觉证据。
+
+半转诊断已加入比较工具：每个有 `ALIGN_START` 的目标额外记录起止位姿、旋转指令符号、对齐位移及进入 FOLLOW 时的法向误差。现有数据表明 H2 三轮均正向旋转、起步位移约 3.5–3.6 cm；off 三轮受起始微小 yaw 符号影响而正负交替。该字段只增加归因证据，不改变运行时控制或质量门定义。
+
+## 标准角点跟踪候选（2026-09-20）
+
+针对直角、锐角和钝角等离散转角，路径跟踪器新增一个显式的三相位候选流程：
+
+1. 对路径按弧长在顶点两侧取有效窗口，检测方向变化在 35°～157.6° 且两侧有效长度至少 0.25 m 的角点。这样可以识别规划器在顶点附近插入的短斜接采样，同时过滤平滑曲率段和接近 180° 的掉头恢复段。
+2. 进入角点前 0.25 m 的 `CORNER_APPROACH`，沿入射方向低速接近，角速度强制为零；距离角点 4 cm 内且平移速度停稳后，才进入 `ALIGN_CORNER`。
+3. 使用现有带余转预测的原地旋转逻辑对齐出射段方向，满足航向和角速度停稳条件后恢复 `FOLLOW`。重规划按角点几何位置保留进度，定位跳变越过角点会记录并跳过；角点接近/对齐各受 15 s 超时保护。
+
+候选源码见 [align_math.hpp](../../../../ws_robot/src/astribot_s1_path_tracking/include/astribot_s1_path_tracking/align_math.hpp)、[align_math.cpp](../../../../ws_robot/src/astribot_s1_path_tracking/src/align_math.cpp) 和 [three_phase_controller.cpp](../../../../ws_robot/src/astribot_s1_path_tracking/src/three_phase_controller.cpp)，参数在 MPPI/RPP 导航配置中显式开启。单元测试覆盖直线、锐角、直角、钝角、短斜接、平滑四分之一圆、U 形掉头、重复点和投影侧向距离；候选环境下 5/5 CTest 通过。
+
+当前尚无角点闭环通过证据。基线 `corner_turn_v1_l_20260920` 的连续 L 路径在角点关闭时通过，说明既有跟踪未被改变；角点开启的 `corner_turn_v5_l_20260920` 已加载参数，但在进入控制相位前因 RGB-D 点云/局部代价图输入长期不新鲜导致控制器回调超时，未产生 `CORNER_APPROACH` 或 `ALIGN_CORNER`，按 `INFRA_FAILURE` 保留。后续应先修复候选仿真输入安装和传感器就绪，再做 L、锐角、钝角、连续重规划及角点靠近终点的回归。
+
+角点靠近终点时存在 Nav2 GoalChecker 先于控制器结束 action 的边界：若角点落在终点位置容差内，不能保证本插件获得 `ALIGN_CORNER` tick。候选实现增加 `corner_terminal_guard`，在剩余路径不足“接近距离 + max(终点位置容差, 保护距离)”时显式跳过该角点并交给终点姿态精调；测试路线仍应留出足够余量，不能把被跳过的末端角点算作标准角点闭环通过。
+
+## 相机配置安装修复（2026-09-21）
+
+角点仿真启动失败的相机报错不是参数内容错误，而是安装树过期：源码已有 `camera_head_rgbd_nav_sim.yaml` 和 `camera_torso_rgbd_nav_sim.yaml`，但旧 `astribot_s1_description` 安装产物是在这些文件加入前生成的。重新构建时又暴露出 `urdf/` 下残留 colcon `build/install/log` 目录，原有 `install(DIRECTORY urdf ...)` 会重复安装其中的 `latest_build`，使描述包整体安装失败。
+
+已修正描述包安装规则，排除这些生成目录，并增加 `camera_profiles_installed` 安装完整性测试。当前工作区已重建 `astribot_s1_description`，安装树已包含头部/躯干仿真相机 profile；两个安装测试通过，使用当前安装树的 xacro 也成功生成含头部和躯干相机 link 的 URDF。证据：`/tmp/astribot_description_build_20260921c/astribot_s1_description/Testing/Temporary/LastTest.log` 和 `/tmp/astribot_s1_camera_urdf_current_20260921.xml`。
+
+这修复的是资源安装和启动阻塞，不代表 RGB-D 传输、点云时效或局部代价图闭环已经验收；角点运行仍需在完整候选传感器栈就绪后重跑。
+
+独立启动探针 `I0.1/camera_install_probe_20260921` 已确认 xacro 正常加载当前安装树中的头部/躯干 profile，日志明确记录 `camera_head_rgbd.yaml` 和 `camera_torso_rgbd.yaml` 已加载，且机器人状态发布器包含两个 RGB-D camera link。该探针最终仍因 `/map_scan_filtered` 没有上游点云而未达到 `/scan_from_cloud` 就绪；这属于点云/扫描链路问题，已与相机配置缺失分离记录。

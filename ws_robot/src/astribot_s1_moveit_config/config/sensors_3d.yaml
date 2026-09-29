@@ -1,0 +1,32 @@
+# RGB-D occupancy inputs for MoveIt PlanningScene.
+# The base frame is used deliberately: during arm planning the mobile base is
+# assumed stationary. Navigation remains the owner of the rolling costmap.
+octomap_frame: astribot_torso_base
+octomap_resolution: 0.05
+max_safe_path_cost: 0.0
+
+sensors:
+  - head_rgbd
+  - torso_rgbd
+
+head_rgbd:
+  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+  point_cloud_topic: /camera/head_rgbd/points
+  point_cloud_frame: astribot_torso_base
+  max_range: 4.0
+  point_subsample: 1
+  padding_offset: 0.02
+  padding_scale: 1.0
+  max_update_rate: 10.0
+  filtered_cloud_topic: /moveit/filtered_head_rgbd_points
+
+torso_rgbd:
+  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+  point_cloud_topic: /camera/torso_rgbd/points
+  point_cloud_frame: astribot_torso_base
+  max_range: 3.0
+  point_subsample: 1
+  padding_offset: 0.02
+  padding_scale: 1.0
+  max_update_rate: 10.0
+  filtered_cloud_topic: /moveit/filtered_torso_rgbd_points

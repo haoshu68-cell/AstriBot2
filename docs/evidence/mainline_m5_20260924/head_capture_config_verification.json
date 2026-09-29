@@ -1,0 +1,220 @@
+{
+  "schema": "astribot.m5.head_capture_config_verification/1",
+  "verified_at_utc": "2026-09-24T04:40:19.609426+00:00",
+  "scope": "Offline handoff and nine-topic configuration validation only; no runtime recording, ROS graph query, Gazebo, GPU or model execution",
+  "input_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/CAPTURE_HANDOFF.md": "6535f35fc35582b5a31626308635847d84e8af174d4a944fae3d3140b15f83d8",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_raw_qos.yaml": "675bec8238906e561eff8cc3061160c400ffbfae3bd32d60577264659aab21f1",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_metadata_topics.json": "ced7ea40d3eacaa58e75f18377aeeb0edb2d0eaded307ed3ca06147f8e4a6c54"
+  },
+  "ros_initialized": false,
+  "ros_commands_executed": false,
+  "tests": [
+    {
+      "name": "installed_humble_convert_yaml_to_qos_profile",
+      "passed": true,
+      "parser": "ros2bag.api.convert_yaml_to_qos_profile",
+      "profiles": 9
+    },
+    {
+      "name": "nine_topic_set_and_types_match_document_and_contract",
+      "passed": true,
+      "topic_count": 9,
+      "document_topic_count": 9
+    },
+    {
+      "name": "metadata_kinds_qos_required",
+      "passed": true
+    },
+    {
+      "name": "rosbag_requested_qos_matches_table_including_latched_tf_static",
+      "passed": true
+    },
+    {
+      "name": "document_bash_syntax_block_1",
+      "passed": true,
+      "command": [
+        "bash",
+        "-n"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "block_sha256": "53ba41d2ae9e3e6ae768d1abb0f19721fed0adf0d0841d698c6d530bcfd5f7f8"
+    },
+    {
+      "name": "document_bash_syntax_block_2",
+      "passed": true,
+      "command": [
+        "bash",
+        "-n"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "block_sha256": "79d5f8a09b12543c2882b9fde261a3370c50de32260458aced353303e48738a2"
+    },
+    {
+      "name": "document_bash_syntax_block_3",
+      "passed": true,
+      "command": [
+        "bash",
+        "-n"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "block_sha256": "eba3e4ea205aa755ff1619338423b2c87f756b7eeed8a1f74b7fb4b5f3738a8d"
+    },
+    {
+      "name": "document_bash_syntax_block_4",
+      "passed": true,
+      "command": [
+        "bash",
+        "-n"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "block_sha256": "a2fc84b30d5b522aadcd0f2821fac95576e25050e049802d597af0a536a82472"
+    },
+    {
+      "name": "document_bash_syntax_block_5",
+      "passed": true,
+      "command": [
+        "bash",
+        "-n"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "block_sha256": "20c0517976630ef7c9b7214c275dd0ad916ab3b834c3449cda5014ce31ad1f47"
+    },
+    {
+      "name": "raw_recipe_exact_nine_topics_and_three_second_limit",
+      "passed": true,
+      "raw_record_process_window_sec": 3,
+      "sigint_cleanup_allowance_sec": 10,
+      "maximum_timeout_process_window_approx_sec": 13,
+      "bag_use_sim_time": false,
+      "listed_topics": [
+        "/camera/raw/head_rgbd/image",
+        "/camera/raw/head_rgbd/depth_image",
+        "/camera/raw/head_rgbd/camera_info",
+        "/manipulation/single_box/head_rgbd/points",
+        "/perception/camera_health/head_rgbd",
+        "/perception/projection_health/single_box/head_rgbd",
+        "/tf",
+        "/tf_static",
+        "/clock"
+      ]
+    },
+    {
+      "name": "head_metadata_recipe_twenty_seconds_only",
+      "passed": true
+    },
+    {
+      "name": "observer_check_config_nine_topics",
+      "passed": true,
+      "command": [
+        "/usr/bin/python3",
+        "-B",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observer.py",
+        "--topic-config",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/mainline_m5_20260924/head_metadata_topics.json",
+        "--check-config"
+      ],
+      "returncode": 0,
+      "stdout": "{\"topics\": 9, \"ros_initialized\": false}\n",
+      "stderr": ""
+    },
+    {
+      "name": "three_handoff_inputs_unchanged_during_verification",
+      "passed": true
+    },
+    {
+      "name": "qos_parser_ros_init_guard",
+      "passed": true,
+      "blocked_init_attempts": 0,
+      "guarded_entrypoints": [
+        "rclpy.init",
+        "rclpy.context.Context.init"
+      ]
+    }
+  ],
+  "parsed_rosbag_qos": {
+    "/camera/raw/head_rgbd/image": {
+      "history": "KEEP_LAST",
+      "depth": 10,
+      "reliability": "BEST_EFFORT",
+      "durability": "VOLATILE"
+    },
+    "/camera/raw/head_rgbd/depth_image": {
+      "history": "KEEP_LAST",
+      "depth": 10,
+      "reliability": "BEST_EFFORT",
+      "durability": "VOLATILE"
+    },
+    "/camera/raw/head_rgbd/camera_info": {
+      "history": "KEEP_LAST",
+      "depth": 10,
+      "reliability": "BEST_EFFORT",
+      "durability": "VOLATILE"
+    },
+    "/manipulation/single_box/head_rgbd/points": {
+      "history": "KEEP_LAST",
+      "depth": 10,
+      "reliability": "BEST_EFFORT",
+      "durability": "VOLATILE"
+    },
+    "/perception/camera_health/head_rgbd": {
+      "history": "KEEP_LAST",
+      "depth": 10,
+      "reliability": "RELIABLE",
+      "durability": "TRANSIENT_LOCAL"
+    },
+    "/perception/projection_health/single_box/head_rgbd": {
+      "history": "KEEP_LAST",
+      "depth": 10,
+      "reliability": "RELIABLE",
+      "durability": "TRANSIENT_LOCAL"
+    },
+    "/tf": {
+      "history": "KEEP_LAST",
+      "depth": 100,
+      "reliability": "BEST_EFFORT",
+      "durability": "VOLATILE"
+    },
+    "/tf_static": {
+      "history": "KEEP_LAST",
+      "depth": 100,
+      "reliability": "RELIABLE",
+      "durability": "TRANSIENT_LOCAL"
+    },
+    "/clock": {
+      "history": "KEEP_LAST",
+      "depth": 100,
+      "reliability": "BEST_EFFORT",
+      "durability": "VOLATILE"
+    }
+  },
+  "verification_environment": {
+    "python": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+    "python_executable": "/usr/bin/python3",
+    "base_setup": "/opt/ros/humble/setup.bash",
+    "package_versions": [
+      "ros-humble-ros2bag 0.15.16-1jammy.20260726.134553",
+      "ros-humble-rosbag2-storage-default-plugins 0.15.16-1jammy.20260726.122936",
+      "ros-humble-rosbag2-transport 0.15.16-1jammy.20260726.131107"
+    ]
+  },
+  "verification_source_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observer.py": "ebd13508c21d76d136af22376eac1f4f7f1a906121e5f0cabcc28f11ac11d2a1",
+    "/opt/ros/humble/lib/python3.10/site-packages/ros2bag/api/__init__.py": "3e00d971961b4a6ed3b9eb63235b8bbf4519b87a47325b69115875afcf2d73b4",
+    "/opt/ros/humble/lib/python3.10/site-packages/ros2bag/verb/record.py": "e60f8d4860bb260e532a3c93485d1ab2199d791fd6659d2dd046d1095bed3ea5"
+  },
+  "limitations": [
+    "Publisher identities, actual offered QoS and live subscriptions are NOT_MEASURED.",
+    "Raw bag payload receipt, exact synchronized tuples, TF coverage and runtime model/motion acceptance are NOT_MEASURED.",
+    "Raw recording process is limited to three seconds before SIGINT; up to ten additional seconds are allowed for exit/flush.",
+    "Metadata observer sensor/latched history depths differ from rosbag override depths; topic/type and reliability/durability semantics are checked, not identical callback timing.",
+    "No shell block from the handoff was executed; only bash -n syntax checking was performed.",
+    "Observer --check-config returns before ROS imports/initialization; its reported ros_initialized value was checked."
+  ],
+  "passed": true
+}

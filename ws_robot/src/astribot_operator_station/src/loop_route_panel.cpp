@@ -11,6 +11,9 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QSaveFile>
+#include <QDir>
+#include <QFileInfo>
+#include <QStandardPaths>
 #include <QUuid>
 #include <cmath>
 #include <atomic>
@@ -18,6 +21,24 @@
 namespace astribot_operator_station {
 using Json=nlohmann::json;
 static constexpr double degrees=180./3.14159265358979323846;
+namespace {
+QString chooseRouteFile(QWidget * parent, bool save) {
+ const auto root=QDir::current().filePath("routes");
+ const auto initial=QDir(root).filePath("route.json");
+ auto path=save
+   ? QFileDialog::getSaveFileName(parent,"保存路线",initial,"JSON (*.json);;所有文件 (*)")
+   : QFileDialog::getOpenFileName(parent,"加载路线",root,"JSON (*.json);;所有文件 (*)");
+ if(path.isEmpty())return {};
+ QFileInfo info(path);
+ if(save) {
+   if(info.exists()&&info.isDir())path=QDir(info.absoluteFilePath()).filePath("route.json");
+   else if(info.suffix().compare("json",Qt::CaseInsensitive)!=0)path+=".json";
+   info=QFileInfo(path);
+   if(!QDir().mkpath(info.absolutePath()))throw std::runtime_error("无法创建路线目录: "+info.absolutePath().toStdString());
+ }
+ return QFileInfo(path).absoluteFilePath();
+}
+}
 LoopRoutePanel::LoopRoutePanel(QWidget * parent):rviz_common::Panel(parent) {
  auto layout=new QVBoxLayout(this);
  auto help=new QLabel("点击“地图连续选点”，在地图上按下并拖动设置朝向，松开添加。\n按列表顺序 1→2→…→1 循环；失败/抢占停止。关闭面板不取消路线。");
@@ -191,17 +212,17 @@ void LoopRoutePanel::updateStatus(const QString & text) {
  }catch(const std::exception & e){emit report(QString("无效路线状态: ")+e.what());}
 }
 void LoopRoutePanel::routeFile(bool save) {
- const auto file=save?QFileDialog::getSaveFileName(this,"保存路线",{},"JSON (*.json)"):QFileDialog::getOpenFileName(this,"加载路线",{},"JSON (*.json)");
- if(file.isEmpty())return;
+ QString file;
  try{
+   file=chooseRouteFile(this,save);if(file.isEmpty())return;
    if(save){auto req=draft();Json points=Json::array();for(const auto & p:req->waypoints)points.push_back({p.pose.position.x,p.pose.position.y,2*std::atan2(p.pose.orientation.z,p.pose.orientation.w)});
      Json j={{"version",1},{"frame",frame_->text().trimmed().toStdString()},{"dwell_sec",req->dwell_sec},{"points_xy_yaw_rad",points}};
-     QSaveFile out(file);if(!out.open(QIODevice::WriteOnly)||out.write(QByteArray::fromStdString(j.dump(2)))<0||!out.commit())throw std::runtime_error("保存失败");
+     QSaveFile out(file);const auto data=QByteArray::fromStdString(j.dump(2));if(!out.open(QIODevice::WriteOnly))throw std::runtime_error("路线文件无法打开: "+out.errorString().toStdString());if(out.write(data)!=data.size())throw std::runtime_error("路线文件写入不完整: "+out.errorString().toStdString());if(!out.commit())throw std::runtime_error("路线文件提交失败: "+out.errorString().toStdString());emit report("路线已保存: "+file);
    }else{QFile in(file);if(!in.open(QIODevice::ReadOnly)||in.size()>1024*1024)throw std::runtime_error("文件不可读或超过 1 MiB");auto j=Json::parse(in.readAll().toStdString());
      auto points=j.at("points_xy_yaw_rad");auto frame=j.at("frame").get<std::string>();double dwell=j.at("dwell_sec");
      if(j.at("version")!=1||!points.is_array()||points.size()>200||frame.empty()||frame.front()=='/'||!std::isfinite(dwell)||dwell<0||dwell>3600)throw std::runtime_error("路线格式非法");
      for(const auto & p:points){if(!p.is_array()||p.size()!=3)throw std::runtime_error("坐标格式非法");for(const auto & v:p)if(!std::isfinite(v.get<double>()))throw std::runtime_error("坐标非法");}
-     table_->setRowCount(0);frame_->setText(QString::fromStdString(frame));dwell_->setValue(dwell);for(const auto & p:points)addPoint(p[0],p[1],p[2]);preview();
+     table_->setRowCount(0);frame_->setText(QString::fromStdString(frame));dwell_->setValue(dwell);for(const auto & p:points)addPoint(p[0],p[1],p[2]);preview();emit report("路线已加载: "+file);
    }
  }catch(const std::exception & e){emit report(e.what());}
 }

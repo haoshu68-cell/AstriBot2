@@ -1,0 +1,79 @@
+Internal ctest changing into directory: /tmp/vision_cpp_manip/build/astribot_s1_manipulation
+Test project /tmp/vision_cpp_manip/build/astribot_s1_manipulation
+    Start 1: grasp_candidate_gate_test
+1/1 Test #1: grasp_candidate_gate_test ........***Failed    0.17 sec
+-- run_test.py: invoking following command in '/tmp/vision_cpp_manip/build/astribot_s1_manipulation':
+ - /tmp/vision_cpp_manip/build/astribot_s1_manipulation/grasp_candidate_gate_test --gtest_output=xml:/tmp/vision_cpp_manip/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 10 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 3 tests from GraspPose
+[ RUN      ] GraspPose.RejectsNonUnitQuaternion
+[       OK ] GraspPose.RejectsNonUnitQuaternion (0 ms)
+[ RUN      ] GraspPose.RejectsOverflowQuaternion
+[       OK ] GraspPose.RejectsOverflowQuaternion (0 ms)
+[ RUN      ] GraspPose.AcceptsUnitQuaternion
+[       OK ] GraspPose.AcceptsUnitQuaternion (0 ms)
+[----------] 3 tests from GraspPose (0 ms total)
+
+[----------] 1 test from GraspGate
+[ RUN      ] GraspGate.MissingContextMustNotPass
+[INFO] [1789970483.201156404] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[WARN] [1789970483.202216855] [grasp_candidate_gate]: No grasp candidate passed the safety gate: VALIDATION_CONTEXT_MISSING
+[       OK ] GraspGate.MissingContextMustNotPass (18 ms)
+[----------] 1 test from GraspGate (18 ms total)
+
+[----------] 6 tests from ConfiguredGraspGate
+[ RUN      ] ConfiguredGraspGate.ScreensMatchingCandidateWithoutExecutionPermission
+unknown file: Failure
+C++ exception with description "failed to create guard condition: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/guard_condition.c:67" thrown in the test fixture's constructor.
+[  FAILED  ] ConfiguredGraspGate.ScreensMatchingCandidateWithoutExecutionPermission (0 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsSceneMismatch
+unknown file: Failure
+C++ exception with description "failed to create guard condition: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/guard_condition.c:67" thrown in the test fixture's constructor.
+[  FAILED  ] ConfiguredGraspGate.RejectsSceneMismatch (0 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsEnvelopeMismatch
+unknown file: Failure
+C++ exception with description "failed to create guard condition: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/guard_condition.c:67" thrown in the test fixture's constructor.
+[  FAILED  ] ConfiguredGraspGate.RejectsEnvelopeMismatch (0 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsUncheckedCollision
+unknown file: Failure
+C++ exception with description "failed to create guard condition: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/guard_condition.c:67" thrown in the test fixture's constructor.
+[  FAILED  ] ConfiguredGraspGate.RejectsUncheckedCollision (0 ms)
+[ RUN      ] ConfiguredGraspGate.RejectsArrayFrameMismatch
+unknown file: Failure
+C++ exception with description "failed to create guard condition: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/guard_condition.c:67" thrown in the test fixture's constructor.
+[  FAILED  ] ConfiguredGraspGate.RejectsArrayFrameMismatch (0 ms)
+[ RUN      ] ConfiguredGraspGate.PinnedContextCannotPretendToUpdate
+unknown file: Failure
+C++ exception with description "failed to create guard condition: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/guard_condition.c:67" thrown in the test fixture's constructor.
+[  FAILED  ] ConfiguredGraspGate.PinnedContextCannotPretendToUpdate (0 ms)
+[----------] 6 tests from ConfiguredGraspGate (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 10 tests from 3 test suites ran. (18 ms total)
+[  PASSED  ] 4 tests.
+[  FAILED  ] 6 tests, listed below:
+[  FAILED  ] ConfiguredGraspGate.ScreensMatchingCandidateWithoutExecutionPermission
+[  FAILED  ] ConfiguredGraspGate.RejectsSceneMismatch
+[  FAILED  ] ConfiguredGraspGate.RejectsEnvelopeMismatch
+[  FAILED  ] ConfiguredGraspGate.RejectsUncheckedCollision
+[  FAILED  ] ConfiguredGraspGate.RejectsArrayFrameMismatch
+[  FAILED  ] ConfiguredGraspGate.PinnedContextCannotPretendToUpdate
+
+ 6 FAILED TESTS
+-- run_test.py: return code 1
+-- run_test.py: inject classname prefix into gtest result file '/tmp/vision_cpp_manip/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml'
+-- run_test.py: verify result file '/tmp/vision_cpp_manip/build/astribot_s1_manipulation/test_results/astribot_s1_manipulation/grasp_candidate_gate_test.gtest.xml'
+
+
+0% tests passed, 1 tests failed out of 1
+
+Label Time Summary:
+gtest    =   0.17 sec*proc (1 test)
+
+Total Test time (real) =   0.17 sec
+
+The following tests FAILED:
+	  1 - grasp_candidate_gate_test (Failed)
+Errors while running CTest

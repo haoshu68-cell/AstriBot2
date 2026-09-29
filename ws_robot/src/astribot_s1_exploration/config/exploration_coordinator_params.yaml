@@ -1,6 +1,7 @@
 # 架构约束：仅提交任务目标；禁用独立 FollowPath、自举及脱困速度输出。
 /**:
   ros__parameters:
+    require_navigation_zones: true
 
     map_topic: "/map"                        # 统一栅格输出，transient_local QoS；仅用于前沿搜索
     map_transient_local: true

@@ -1,0 +1,110 @@
+{
+  "scope": "Offline execution of production success-path block using synthetic journal only; NOT ROS, simulation, controller execution, or hardware acceptance",
+  "verifier_sha256": "40e36820d4398e62d22c27f0426a9f3fea2db3f070e8cdf1955d259a0a393eb9",
+  "syntax_parse": true,
+  "all_existing_code_unchanged": true,
+  "cases": [
+    {
+      "name": "complete_pick_place",
+      "expected_error": null,
+      "observed_error": null,
+      "passed": true
+    },
+    {
+      "name": "pick_no_replan",
+      "expected_error": null,
+      "observed_error": null,
+      "passed": true
+    },
+    {
+      "name": "missing_adoption",
+      "expected_error": "TRAJECTORY_SUFFIX_ADOPTION_REQUIRED:PICK",
+      "observed_error": "TRAJECTORY_SUFFIX_ADOPTION_REQUIRED:PICK",
+      "passed": true
+    },
+    {
+      "name": "duplicate_adoption",
+      "expected_error": "TRAJECTORY_SUFFIX_ADOPTION_REQUIRED:PICK",
+      "observed_error": "TRAJECTORY_SUFFIX_ADOPTION_REQUIRED:PICK",
+      "passed": true
+    },
+    {
+      "name": "wrong_context",
+      "expected_error": "TRAJECTORY_SUFFIX_BINDING_MISMATCH:PICK",
+      "observed_error": "TRAJECTORY_SUFFIX_BINDING_MISMATCH:PICK",
+      "passed": true
+    },
+    {
+      "name": "returned_adopted_mismatch",
+      "expected_error": "TRAJECTORY_SUFFIX_CONTENT_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_SUFFIX_CONTENT_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "sent_digest_mismatch",
+      "expected_error": "TRAJECTORY_SENT_CONTENT_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_SENT_CONTENT_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "point_count_mismatch",
+      "expected_error": "TRAJECTORY_SENT_CONTENT_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_SENT_CONTENT_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "joint_order_mismatch",
+      "expected_error": "TRAJECTORY_SENT_CONTENT_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_SENT_CONTENT_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "wrong_transaction",
+      "expected_error": "TRAJECTORY_ACTIVE_SUBMISSION_REQUIRED:PICK:LIFT",
+      "observed_error": "TRAJECTORY_ACTIVE_SUBMISSION_REQUIRED:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "response_generation_mismatch",
+      "expected_error": "TRAJECTORY_RESPONSE_BINDING_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_RESPONSE_BINDING_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "terminal_wrong_uuid",
+      "expected_error": "TRAJECTORY_COMPLETION_REQUIRED:PICK:LIFT",
+      "observed_error": "TRAJECTORY_COMPLETION_REQUIRED:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "terminal_failed",
+      "expected_error": "TRAJECTORY_COMPLETION_BINDING_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_COMPLETION_BINDING_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "stage_wrong_uuid",
+      "expected_error": "TRAJECTORY_COMPLETION_BINDING_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_COMPLETION_BINDING_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "terminal_before_response",
+      "expected_error": "TRAJECTORY_COMPLETION_BINDING_MISMATCH:PICK:LIFT",
+      "observed_error": "TRAJECTORY_COMPLETION_BINDING_MISMATCH:PICK:LIFT",
+      "passed": true
+    },
+    {
+      "name": "missing_place_stage",
+      "expected_error": "TRAJECTORY_SUFFIX_BINDING_MISMATCH:PLACE",
+      "observed_error": "TRAJECTORY_SUFFIX_BINDING_MISMATCH:PLACE",
+      "passed": true
+    },
+    {
+      "name": "place_replanned",
+      "expected_error": "TRAJECTORY_SUFFIX_BINDING_MISMATCH:PLACE",
+      "observed_error": "TRAJECTORY_SUFFIX_BINDING_MISMATCH:PLACE",
+      "passed": true
+    }
+  ]
+}

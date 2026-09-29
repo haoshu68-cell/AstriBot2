@@ -1,0 +1,2090 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                                          [100%]
+=================================== FAILURES ===================================
+_ test_json_integer_calibration_epoch_preserved_in_metric_and_image[9223372036854775808] _
+
+epoch = 9223372036854775808
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_calibration_epoch_preserved_in_metric_and_image(epoch):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=640, image_height_px=480,
+                     xmin_px=0., ymin_px=0., xmax_px=1., ymax_px=1.)
+        observations = [observation(0, 'metric', calibration_epoch=epoch),
+                        dict(observation(0, 'image', sensor='cam', source=None, calibration_epoch=epoch), geometry=image)]
+>       check([update(0, observations), snapshot(1), snapshot(500000002)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:526: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}, {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_calibration_epoch_preserved_in_metric_and_image[18446744073709551615] _
+
+epoch = 18446744073709551615
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_calibration_epoch_preserved_in_metric_and_image(epoch):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=640, image_height_px=480,
+                     xmin_px=0., ymin_px=0., xmax_px=1., ymax_px=1.)
+        observations = [observation(0, 'metric', calibration_epoch=epoch),
+                        dict(observation(0, 'image', sensor='cam', source=None, calibration_epoch=epoch), geometry=image)]
+>       check([update(0, observations), snapshot(1), snapshot(500000002)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:526: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}, {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_calibration_epoch_preserved_in_metric_and_image[18446744073709551616] _
+
+epoch = 18446744073709551616
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_calibration_epoch_preserved_in_metric_and_image(epoch):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=640, image_height_px=480,
+                     xmin_px=0., ymin_px=0., xmax_px=1., ymax_px=1.)
+        observations = [observation(0, 'metric', calibration_epoch=epoch),
+                        dict(observation(0, 'image', sensor='cam', source=None, calibration_epoch=epoch), geometry=image)]
+>       check([update(0, observations), snapshot(1), snapshot(500000002)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:526: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}, {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_calibration_epoch_preserved_in_metric_and_image[18446744073709551617] _
+
+epoch = 18446744073709551617
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_calibration_epoch_preserved_in_metric_and_image(epoch):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=640, image_height_px=480,
+                     xmin_px=0., ymin_px=0., xmax_px=1., ymax_px=1.)
+        observations = [observation(0, 'metric', calibration_epoch=epoch),
+                        dict(observation(0, 'image', sensor='cam', source=None, calibration_epoch=epoch), geometry=image)]
+>       check([update(0, observations), snapshot(1), snapshot(500000002)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:526: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}, {'code': 'INVALID_INPUT', 'field': 'calibration_epoch', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_calibration_epoch_preserved_in_metric_and_image[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+epoch = 100000000000000000...0000000000000000000
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_calibration_epoch_preserved_in_metric_and_image(epoch):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=640, image_height_px=480,
+                     xmin_px=0., ymin_px=0., xmax_px=1., ymax_px=1.)
+        observations = [observation(0, 'metric', calibration_epoch=epoch),
+                        dict(observation(0, 'image', sensor='cam', source=None, calibration_epoch=epoch), geometry=image)]
+>       check([update(0, observations), snapshot(1), snapshot(500000002)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:526: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "update", "now": {"ns": 0, "clock": "ros", "epoch": 0}, "observations": [{"sensor_id": "a"...{"ns": 1, "clock": "ros", "epoch": 0}}, {"action": "snapshot", "now": {"ns": 500000002, "clock": "ros", "epoch": 0}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+______ test_json_integer_image_dimensions_preserved[9223372036854775808] _______
+
+width = 9223372036854775808
+
+    @pytest.mark.parametrize('width', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_image_dimensions_preserved(width):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=width+1,
+                     xmin_px=-0.0, ymin_px=0, xmax_px=1, ymax_px=1.0)
+>       check([update(0, [dict(observation(0, source=None), geometry=image)]), snapshot(1)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:533: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+______ test_json_integer_image_dimensions_preserved[18446744073709551615] ______
+
+width = 18446744073709551615
+
+    @pytest.mark.parametrize('width', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_image_dimensions_preserved(width):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=width+1,
+                     xmin_px=-0.0, ymin_px=0, xmax_px=1, ymax_px=1.0)
+>       check([update(0, [dict(observation(0, source=None), geometry=image)]), snapshot(1)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:533: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+______ test_json_integer_image_dimensions_preserved[18446744073709551616] ______
+
+width = 18446744073709551616
+
+    @pytest.mark.parametrize('width', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_image_dimensions_preserved(width):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=width+1,
+                     xmin_px=-0.0, ymin_px=0, xmax_px=1, ymax_px=1.0)
+>       check([update(0, [dict(observation(0, source=None), geometry=image)]), snapshot(1)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:533: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'frame_id': 'odom', 'observation_seq': 1, 'sensors': [], 'stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_image_dimensions_preserved[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+width = 100000000000000000...0000000000000000000
+
+    @pytest.mark.parametrize('width', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_image_dimensions_preserved(width):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=width+1,
+                     xmin_px=-0.0, ymin_px=0, xmax_px=1, ymax_px=1.0)
+>       check([update(0, [dict(observation(0, source=None), geometry=image)]), snapshot(1)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:533: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "update", "now": {"ns": 0, "clock": "ros", "epoch": 0}, "observations": [{"sensor_id": "a"...servable": true, "spatial_occupancy": false}]}, {"action": "snapshot", "now": {"ns": 1, "clock": "ros", "epoch": 0}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_json_integer_exact_image_pixel_boundaries[18446744073709551615-0-1.8446744073709552e+19-image.box.x] _
+
+width = 18446744073709551615, xmin = 0, xmax = 1.8446744073709552e+19
+expected = 'image.box.x'
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+        actual = native(case)
+>       compare(expected_result, actual)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'image.box.x', b = 'image.width', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'image.box.x', 'image.width')
+E       assert 'image.box.x' == 'image.width'
+E         - image.width
+E         + image.box.x
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_ test_json_integer_exact_image_pixel_boundaries[18446744073709551616-0-1.8446744073709552e+19-None] _
+
+width = 18446744073709551616, xmin = 0, xmax = 1.8446744073709552e+19
+expected = None
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+        actual = native(case)
+>       compare(expected_result, actual)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class_probabilities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class...lities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_exact_image_pixel_boundaries[18446744073709551615-0-18446744073709551615-None] _
+
+width = 18446744073709551615, xmin = 0, xmax = 18446744073709551615
+expected = None
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+        actual = native(case)
+>       compare(expected_result, actual)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class_probabilities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class...lities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-0-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-xmax_px] _
+
+width = 100000000000000000...0000000000000000000, xmin = 0
+xmax = 100000000000000000...0000000000000000000, expected = 'xmax_px'
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+>       actual = native(case)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:557: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "validate", "type": "Observation", "value": {"sensor_id": "a", "measurement_id": "m", "sou...probabilities": [["unknown", 0.5]], "provenance": ["a:m"], "velocity_observable": true, "spatial_occupancy": false}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-0-179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497791-None] _
+
+width = 100000000000000000...0000000000000000000, xmin = 0
+xmax = 179769313486231580...2880177904174497791, expected = None
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+>       actual = native(case)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:557: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "validate", "type": "Observation", "value": {"sensor_id": "a", "measurement_id": "m", "sou...probabilities": [["unknown", 0.5]], "provenance": ["a:m"], "velocity_observable": true, "spatial_occupancy": false}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-0-179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792-xmax_px] _
+
+width = 100000000000000000...0000000000000000000, xmin = 0
+xmax = 179769313486231580...2880177904174497792, expected = 'xmax_px'
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+>       actual = native(case)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:557: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "validate", "type": "Observation", "value": {"sensor_id": "a", "measurement_id": "m", "sou...probabilities": [["unknown", 0.5]], "provenance": ["a:m"], "velocity_observable": true, "spatial_occupancy": false}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000--179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792-1-xmin_px] _
+
+width = 100000000000000000...0000000000000000000
+xmin = -17976931348623158...2880177904174497792, xmax = 1, expected = 'xmin_px'
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+>       actual = native(case)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:557: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "validate", "type": "Observation", "value": {"sensor_id": "a", "measurement_id": "m", "sou...probabilities": [["unknown", 0.5]], "provenance": ["a:m"], "velocity_observable": true, "spatial_occupancy": false}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000--1-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-xmin_px] _
+
+width = 100000000000000000...0000000000000000000, xmin = -1
+xmax = 100000000000000000...0000000000000000000, expected = 'xmin_px'
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+>       actual = native(case)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:557: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "validate", "type": "Observation", "value": {"sensor_id": "a", "measurement_id": "m", "sou...probabilities": [["unknown", 0.5]], "provenance": ["a:m"], "velocity_observable": true, "spatial_occupancy": false}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_json_integer_exact_image_pixel_boundaries[18446744073709551616-1.8446744073709552e+19-18446744073709551617-image.box.x] _
+
+width = 18446744073709551616, xmin = 1.8446744073709552e+19
+xmax = 18446744073709551617, expected = 'image.box.x'
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+        actual = native(case)
+>       compare(expected_result, actual)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'image.box.x', b = 'image.width', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'image.box.x', 'image.width')
+E       assert 'image.box.x' == 'image.width'
+E         - image.width
+E         + image.box.x
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_ test_json_integer_exact_image_pixel_boundaries[18446744073709551617-1.8446744073709552e+19-18446744073709551617-None] _
+
+width = 18446744073709551617, xmin = 1.8446744073709552e+19
+xmax = 18446744073709551617, expected = None
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+        actual = native(case)
+>       compare(expected_result, actual)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class_probabilities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class...lities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_exact_image_pixel_boundaries[0-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-image.width] _
+
+width = 0, xmin = 100000000000000000...0000000000000000000
+xmax = 100000000000000000...0000000000000000000, expected = 'image.width'
+
+    @pytest.mark.parametrize('width,xmin,xmax,expected', [
+        (2**64-1, 0, float(2**64), 'image.box.x'),
+        (2**64, 0, float(2**64), None),
+        (2**64-1, 0, 2**64-1, None),
+        (10**399, 0, 10**398, 'xmax_px'),
+        (10**399, 0, (1<<1024)-(1<<970)-1, None),
+        (10**399, 0, (1<<1024)-(1<<970), 'xmax_px'),
+        (10**399, -((1<<1024)-(1<<970)), 1, 'xmin_px'),
+        (10**399, -1, 10**398, 'xmin_px'),
+        (2**64, float(2**64), 2**64+1, 'image.box.x'),
+        (2**64+1, float(2**64), 2**64+1, None),
+        (0, 10**398, 10**399, 'image.width'),
+    ])
+    def test_json_integer_exact_image_pixel_boundaries(width, xmin, xmax, expected):
+        image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=10,
+                     xmin_px=xmin, ymin_px=0., xmax_px=xmax, ymax_px=1.)
+        case = dict(operations=[dict(action='validate', type='Observation', value=dict(observation(0), geometry=image))])
+        expected_result = reference(case)
+        assert expected_result[0]['ok'] is (expected is None)
+        if expected is not None:
+            assert expected_result[0]['field'] == expected
+>       actual = native(case)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:557: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "validate", "type": "Observation", "value": {"sensor_id": "a", "measurement_id": "m", "sou...probabilities": [["unknown", 0.5]], "provenance": ["a:m"], "velocity_observable": true, "spatial_occupancy": false}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+___________ test_json_integer_image_random_exact_integer_float_edges ___________
+
+    def test_json_integer_image_random_exact_integer_float_edges():
+        rng = random.Random(921640)
+        ops = []
+        for _ in range(500):
+            exponent = rng.randrange(0, 1024)
+            edge = math.ldexp(rng.uniform(1., 1.999), exponent)
+            if not math.isfinite(edge):
+                continue
+            floor = int(edge)
+            width = floor + rng.choice([-1, 0, 1])
+            xmax = rng.choice([edge, floor, floor+1])
+            image = dict(kind='ImageBox', camera_id='cam', image_width_px=width, image_height_px=2,
+                         xmin_px=rng.choice([0., edge, max(0, floor-1)]), ymin_px=0., xmax_px=xmax, ymax_px=1.)
+            ops.append(dict(action='validate', type='Observation', value=dict(observation(0), geometry=image)))
+>       check(ops)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:579: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class_probabilities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class...lities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'field', 'ok'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_json_integer_health_epoch_order_expiry_and_clock_reset[9223372036854775808] _
+
+epoch = 9223372036854775808
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_health_epoch_order_expiry_and_clock_reset(epoch):
+>       run(dict(ops=[record(100, calibration=epoch), query(100),
+                      record(101, calibration=epoch-1), query(101),
+                      record(100, calibration=epoch+1), query(101),
+                      record(102, calibration=epoch+1), query(202), query(203),
+                      record(0, epoch=1, calibration=0), query(0, epoch=1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:378: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': True}
+actual = {'error': 'INVALID_INPUT: calibration_epoch'}, path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_json_integer_health_epoch_order_expiry_and_clock_reset[18446744073709551615] _
+
+epoch = 18446744073709551615
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_health_epoch_order_expiry_and_clock_reset(epoch):
+>       run(dict(ops=[record(100, calibration=epoch), query(100),
+                      record(101, calibration=epoch-1), query(101),
+                      record(100, calibration=epoch+1), query(101),
+                      record(102, calibration=epoch+1), query(202), query(203),
+                      record(0, epoch=1, calibration=0), query(0, epoch=1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:378: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': True}
+actual = {'error': 'INVALID_INPUT: calibration_epoch'}, path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_json_integer_health_epoch_order_expiry_and_clock_reset[18446744073709551616] _
+
+epoch = 18446744073709551616
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_health_epoch_order_expiry_and_clock_reset(epoch):
+>       run(dict(ops=[record(100, calibration=epoch), query(100),
+                      record(101, calibration=epoch-1), query(101),
+                      record(100, calibration=epoch+1), query(101),
+                      record(102, calibration=epoch+1), query(202), query(203),
+                      record(0, epoch=1, calibration=0), query(0, epoch=1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:378: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': True}
+actual = {'error': 'INVALID_INPUT: calibration_epoch'}, path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_json_integer_health_epoch_order_expiry_and_clock_reset[18446744073709551617] _
+
+epoch = 18446744073709551617
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_health_epoch_order_expiry_and_clock_reset(epoch):
+>       run(dict(ops=[record(100, calibration=epoch), query(100),
+                      record(101, calibration=epoch-1), query(101),
+                      record(100, calibration=epoch+1), query(101),
+                      record(102, calibration=epoch+1), query(202), query(203),
+                      record(0, epoch=1, calibration=0), query(0, epoch=1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:378: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': True}
+actual = {'error': 'INVALID_INPUT: calibration_epoch'}, path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_json_integer_health_epoch_order_expiry_and_clock_reset[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+epoch = 100000000000000000...0000000000000000000
+
+    @pytest.mark.parametrize('epoch', [2**63, 2**64-1, 2**64, 2**64+1, 10**399])
+    def test_json_integer_health_epoch_order_expiry_and_clock_reset(epoch):
+>       run(dict(ops=[record(100, calibration=epoch), query(100),
+                      record(101, calibration=epoch-1), query(101),
+                      record(100, calibration=epoch+1), query(101),
+                      record(102, calibration=epoch+1), query(202), query(203),
+                      record(0, epoch=1, calibration=0), query(0, epoch=1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:378: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:141: in run
+    completed = subprocess.run([binary], input=json.dumps(case) + '\n', capture_output=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"ops": [{"op": "record", "sensor": "scan", "capture": {"ns": 100, "clock": "ros", "epoch": 0}, "now": {"ns": 100, "c...53589793}], "depth": true, "calibration_epoch": 0}, {"op": "health", "now": {"ns": 0, "clock": "ros", "epoch": 1}}]}\n'
+capture_output = True, timeout = 15, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_health_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_health_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_json_integer_camera_dimensions_epoch_and_registration[9223372036854775808] _
+
+dimension = 9223372036854775808
+
+    @pytest.mark.parametrize('dimension', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_camera_dimensions_epoch_and_registration(dimension):
+        c = calibration(image_width_px=dimension, image_height_px=dimension+1, calibration_epoch=dimension)
+        changed = dict(c, image_width_px=dimension+1)
+>       run(dict(ops=[dict(op='calibrate', calibration=c), dict(op='calibrate', calibration=c),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibrate', calibration=changed),
+                      dict(op='calibrate', calibration=dict(changed, calibration_epoch=dimension+1)),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibration', camera_id='front', epoch=dimension+1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:389: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': None}, actual = {'error': 'INVALID_INPUT: image_width_px'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_json_integer_camera_dimensions_epoch_and_registration[18446744073709551615] _
+
+dimension = 18446744073709551615
+
+    @pytest.mark.parametrize('dimension', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_camera_dimensions_epoch_and_registration(dimension):
+        c = calibration(image_width_px=dimension, image_height_px=dimension+1, calibration_epoch=dimension)
+        changed = dict(c, image_width_px=dimension+1)
+>       run(dict(ops=[dict(op='calibrate', calibration=c), dict(op='calibrate', calibration=c),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibrate', calibration=changed),
+                      dict(op='calibrate', calibration=dict(changed, calibration_epoch=dimension+1)),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibration', camera_id='front', epoch=dimension+1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:389: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': None}, actual = {'error': 'INVALID_INPUT: image_width_px'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_json_integer_camera_dimensions_epoch_and_registration[18446744073709551616] _
+
+dimension = 18446744073709551616
+
+    @pytest.mark.parametrize('dimension', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_camera_dimensions_epoch_and_registration(dimension):
+        c = calibration(image_width_px=dimension, image_height_px=dimension+1, calibration_epoch=dimension)
+        changed = dict(c, image_width_px=dimension+1)
+>       run(dict(ops=[dict(op='calibrate', calibration=c), dict(op='calibrate', calibration=c),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibrate', calibration=changed),
+                      dict(op='calibrate', calibration=dict(changed, calibration_epoch=dimension+1)),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibration', camera_id='front', epoch=dimension+1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:389: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': None}, actual = {'error': 'INVALID_INPUT: image_width_px'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_json_integer_camera_dimensions_epoch_and_registration[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+dimension = 100000000000000000...0000000000000000000
+
+    @pytest.mark.parametrize('dimension', [2**63, 2**64-1, 2**64, 10**399])
+    def test_json_integer_camera_dimensions_epoch_and_registration(dimension):
+        c = calibration(image_width_px=dimension, image_height_px=dimension+1, calibration_epoch=dimension)
+        changed = dict(c, image_width_px=dimension+1)
+>       run(dict(ops=[dict(op='calibrate', calibration=c), dict(op='calibrate', calibration=c),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibrate', calibration=changed),
+                      dict(op='calibrate', calibration=dict(changed, calibration_epoch=dimension+1)),
+                      dict(op='calibration', camera_id='front', epoch=dimension),
+                      dict(op='calibration', camera_id='front', epoch=dimension+1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:389: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:141: in run
+    completed = subprocess.run([binary], input=json.dumps(case) + '\n', capture_output=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"ops": [{"op": "calibrate", "calibration": {"camera_id": "front", "optical_frame": "front_optical", "calibration_epo...00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001}]}\n'
+capture_output = True, timeout = 15, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_health_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_health_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+______ test_json_integer_health_negative_epoch_error_and_no_state_change _______
+
+    def test_json_integer_health_negative_epoch_error_and_no_state_change():
+        huge = 10**399
+>       run(dict(ops=[record(0, calibration=-huge), query(0),
+                      record(1, calibration=huge), query(1),
+                      record(2, calibration=-huge), query(2)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:399: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:141: in run
+    completed = subprocess.run([binary], input=json.dumps(case) + '\n', capture_output=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"ops": [{"op": "record", "sensor": "scan", "capture": {"ns": 0, "clock": "ros", "epoch": 0}, "now": {"ns": 0, "clock...0000000000000000000000000000000000000000000000000}, {"op": "health", "now": {"ns": 2, "clock": "ros", "epoch": 0}}]}\n'
+capture_output = True, timeout = 15, check = True
+popenargs = (['/tmp/codex_policy_wire_width_20260921/release/policy_health_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_wire_width_20260921/release/...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '-100000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_wire_width_20260921/release/policy_health_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_calibration_epoch_preserved_in_metric_and_image[9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_calibration_epoch_preserved_in_metric_and_image[18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_calibration_epoch_preserved_in_metric_and_image[18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_calibration_epoch_preserved_in_metric_and_image[18446744073709551617]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_calibration_epoch_preserved_in_metric_and_image[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_image_dimensions_preserved[9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_image_dimensions_preserved[18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_image_dimensions_preserved[18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_image_dimensions_preserved[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[18446744073709551615-0-1.8446744073709552e+19-image.box.x]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[18446744073709551616-0-1.8446744073709552e+19-None]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[18446744073709551615-0-18446744073709551615-None]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-0-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-xmax_px]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-0-179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497791-None]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-0-179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792-xmax_px]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000--179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792-1-xmin_px]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000--1-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-xmin_px]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[18446744073709551616-1.8446744073709552e+19-18446744073709551617-image.box.x]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[18446744073709551617-1.8446744073709552e+19-18446744073709551617-None]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_exact_image_pixel_boundaries[0-100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-image.width]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_json_integer_image_random_exact_integer_float_edges
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_health_epoch_order_expiry_and_clock_reset[9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_health_epoch_order_expiry_and_clock_reset[18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_health_epoch_order_expiry_and_clock_reset[18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_health_epoch_order_expiry_and_clock_reset[18446744073709551617]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_health_epoch_order_expiry_and_clock_reset[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_camera_dimensions_epoch_and_registration[9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_camera_dimensions_epoch_and_registration[18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_camera_dimensions_epoch_and_registration[18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_camera_dimensions_epoch_and_registration[1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_json_integer_health_negative_epoch_error_and_no_state_change
+31 failed, 114 deselected in 0.93s

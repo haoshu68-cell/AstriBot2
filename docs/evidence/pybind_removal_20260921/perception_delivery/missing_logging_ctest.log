@@ -1,0 +1,538 @@
+Internal ctest changing into directory: /tmp/codex_map_relay_20260921/build
+Test project /tmp/codex_map_relay_20260921/build
+    Start 1: map_odom_core_smoke
+1/4 Test #1: map_odom_core_smoke ..............   Passed    0.00 sec
+    Start 2: map_odom_core_differential
+2/4 Test #2: map_odom_core_differential .......   Passed    0.57 sec
+    Start 3: map_odom_ros_differential
+3/4 Test #3: map_odom_ros_differential ........***Failed   50.15 sec
+..........................F.F.F.F.F.F.................F.........         [100%]
+=================================== FAILURES ===================================
+____ test_fatal_startup_or_first_tick[slam_world_frame-different-2-python] _____
+
+impl = 'python', name = 'slam_world_frame', value = 'different', code = 2
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_fatal_startup_or_first_ti0')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('name,value,code',[
+        ('slam_world_frame','different',2),('publish_rate','0.0',2),('publish_rate','-1.0',2),
+        ('publish_rate','.nan',2),('jump_report_m','0.0',2),('jump_report_m','.nan',2),
+        ('publish_rate','20',1),('publish_rate','true',1),('publish_rate','"20.0"',1),
+        ('report_period_sec','.inf',1),('tf_timeout_sec','.nan',1),('tf_timeout_sec','.inf',1),
+    ])
+    def test_fatal_startup_or_first_tick(impl,name,value,code,tmp_path):
+        args=command(impl)+['--ros-args','-p',f'{name}:={value}']
+        env=environment(160);env['ASTRIBOT_LOG_DIR']=str(tmp_path/'python_logging')
+        result=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=5.)
+        (tmp_path/'fatal.log').write_bytes(result.stdout)
+>       assert result.returncode==code,result.stdout.decode(errors='replace')
+E       AssertionError: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py
+E         Traceback (most recent call last):
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 226, in main
+E             node = MapOdomTfNode()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 66, in __init__
+E             raise DecompositionError('SLAM 必须直接使用 map_frame；不支持恒等别名补偿')
+E         astribot_s1_perception.map_odom_decompose.DecompositionError: SLAM 必须直接使用 map_frame；不支持恒等别名补偿
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 58, in get_package_prefix
+E             content, package_prefix = get_resource('packages', package_name)
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/resources.py", line 86, in get_resource
+E             raise LookupError(
+E         LookupError: Could not find the resource 'astribot_logging' of type 'packages'
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 229, in main
+E             get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1506, in error
+E             self._log(ERROR, msg, args, **kwargs)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1624, in _log
+E             self.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1634, in handle
+E             self.callHandlers(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1696, in callHandlers
+E             hdlr.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 968, in handle
+E             self.emit(record)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 82, in emit
+E             backend = _native()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 53, in _native
+E             path = Path(get_package_prefix('astribot_logging')) / 'lib/astribot_logging/libastribot_spdlog.so'
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 60, in get_package_prefix
+E             raise PackageNotFoundError(
+E         ament_index_python.packages.PackageNotFoundError: "package 'astribot_logging' not found, searching: ['/opt/ros/humble']"
+E         
+E       assert 1 == 2
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '-c', "import sys; from astribot_s1_perception import map_odom_tf_node as m...ex_python.packages.PackageNotFoundError: "package \'astribot_logging\' not found, searching: [\'/opt/ros/humble\']"\n').returncode
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:288: AssertionError
+_________ test_fatal_startup_or_first_tick[publish_rate-0.0-2-python] __________
+
+impl = 'python', name = 'publish_rate', value = '0.0', code = 2
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_fatal_startup_or_first_ti2')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('name,value,code',[
+        ('slam_world_frame','different',2),('publish_rate','0.0',2),('publish_rate','-1.0',2),
+        ('publish_rate','.nan',2),('jump_report_m','0.0',2),('jump_report_m','.nan',2),
+        ('publish_rate','20',1),('publish_rate','true',1),('publish_rate','"20.0"',1),
+        ('report_period_sec','.inf',1),('tf_timeout_sec','.nan',1),('tf_timeout_sec','.inf',1),
+    ])
+    def test_fatal_startup_or_first_tick(impl,name,value,code,tmp_path):
+        args=command(impl)+['--ros-args','-p',f'{name}:={value}']
+        env=environment(160);env['ASTRIBOT_LOG_DIR']=str(tmp_path/'python_logging')
+        result=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=5.)
+        (tmp_path/'fatal.log').write_bytes(result.stdout)
+>       assert result.returncode==code,result.stdout.decode(errors='replace')
+E       AssertionError: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py
+E         Traceback (most recent call last):
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 226, in main
+E             node = MapOdomTfNode()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 70, in __init__
+E             raise DecompositionError(f'publish_rate={rate} 必须为正')
+E         astribot_s1_perception.map_odom_decompose.DecompositionError: publish_rate=0.0 必须为正
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 58, in get_package_prefix
+E             content, package_prefix = get_resource('packages', package_name)
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/resources.py", line 86, in get_resource
+E             raise LookupError(
+E         LookupError: Could not find the resource 'astribot_logging' of type 'packages'
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 229, in main
+E             get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1506, in error
+E             self._log(ERROR, msg, args, **kwargs)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1624, in _log
+E             self.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1634, in handle
+E             self.callHandlers(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1696, in callHandlers
+E             hdlr.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 968, in handle
+E             self.emit(record)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 82, in emit
+E             backend = _native()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 53, in _native
+E             path = Path(get_package_prefix('astribot_logging')) / 'lib/astribot_logging/libastribot_spdlog.so'
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 60, in get_package_prefix
+E             raise PackageNotFoundError(
+E         ament_index_python.packages.PackageNotFoundError: "package 'astribot_logging' not found, searching: ['/opt/ros/humble']"
+E         
+E       assert 1 == 2
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '-c', "import sys; from astribot_s1_perception import map_odom_tf_node as m...ex_python.packages.PackageNotFoundError: "package \'astribot_logging\' not found, searching: [\'/opt/ros/humble\']"\n').returncode
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:288: AssertionError
+_________ test_fatal_startup_or_first_tick[publish_rate--1.0-2-python] _________
+
+impl = 'python', name = 'publish_rate', value = '-1.0', code = 2
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_fatal_startup_or_first_ti4')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('name,value,code',[
+        ('slam_world_frame','different',2),('publish_rate','0.0',2),('publish_rate','-1.0',2),
+        ('publish_rate','.nan',2),('jump_report_m','0.0',2),('jump_report_m','.nan',2),
+        ('publish_rate','20',1),('publish_rate','true',1),('publish_rate','"20.0"',1),
+        ('report_period_sec','.inf',1),('tf_timeout_sec','.nan',1),('tf_timeout_sec','.inf',1),
+    ])
+    def test_fatal_startup_or_first_tick(impl,name,value,code,tmp_path):
+        args=command(impl)+['--ros-args','-p',f'{name}:={value}']
+        env=environment(160);env['ASTRIBOT_LOG_DIR']=str(tmp_path/'python_logging')
+        result=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=5.)
+        (tmp_path/'fatal.log').write_bytes(result.stdout)
+>       assert result.returncode==code,result.stdout.decode(errors='replace')
+E       AssertionError: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py
+E         Traceback (most recent call last):
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 226, in main
+E             node = MapOdomTfNode()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 70, in __init__
+E             raise DecompositionError(f'publish_rate={rate} 必须为正')
+E         astribot_s1_perception.map_odom_decompose.DecompositionError: publish_rate=-1.0 必须为正
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 58, in get_package_prefix
+E             content, package_prefix = get_resource('packages', package_name)
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/resources.py", line 86, in get_resource
+E             raise LookupError(
+E         LookupError: Could not find the resource 'astribot_logging' of type 'packages'
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 229, in main
+E             get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1506, in error
+E             self._log(ERROR, msg, args, **kwargs)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1624, in _log
+E             self.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1634, in handle
+E             self.callHandlers(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1696, in callHandlers
+E             hdlr.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 968, in handle
+E             self.emit(record)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 82, in emit
+E             backend = _native()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 53, in _native
+E             path = Path(get_package_prefix('astribot_logging')) / 'lib/astribot_logging/libastribot_spdlog.so'
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 60, in get_package_prefix
+E             raise PackageNotFoundError(
+E         ament_index_python.packages.PackageNotFoundError: "package 'astribot_logging' not found, searching: ['/opt/ros/humble']"
+E         
+E       assert 1 == 2
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '-c', "import sys; from astribot_s1_perception import map_odom_tf_node as m...ex_python.packages.PackageNotFoundError: "package \'astribot_logging\' not found, searching: [\'/opt/ros/humble\']"\n').returncode
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:288: AssertionError
+_________ test_fatal_startup_or_first_tick[publish_rate-.nan-2-python] _________
+
+impl = 'python', name = 'publish_rate', value = '.nan', code = 2
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_fatal_startup_or_first_ti6')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('name,value,code',[
+        ('slam_world_frame','different',2),('publish_rate','0.0',2),('publish_rate','-1.0',2),
+        ('publish_rate','.nan',2),('jump_report_m','0.0',2),('jump_report_m','.nan',2),
+        ('publish_rate','20',1),('publish_rate','true',1),('publish_rate','"20.0"',1),
+        ('report_period_sec','.inf',1),('tf_timeout_sec','.nan',1),('tf_timeout_sec','.inf',1),
+    ])
+    def test_fatal_startup_or_first_tick(impl,name,value,code,tmp_path):
+        args=command(impl)+['--ros-args','-p',f'{name}:={value}']
+        env=environment(160);env['ASTRIBOT_LOG_DIR']=str(tmp_path/'python_logging')
+        result=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=5.)
+        (tmp_path/'fatal.log').write_bytes(result.stdout)
+>       assert result.returncode==code,result.stdout.decode(errors='replace')
+E       AssertionError: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py
+E         Traceback (most recent call last):
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 226, in main
+E             node = MapOdomTfNode()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 70, in __init__
+E             raise DecompositionError(f'publish_rate={rate} 必须为正')
+E         astribot_s1_perception.map_odom_decompose.DecompositionError: publish_rate=nan 必须为正
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 58, in get_package_prefix
+E             content, package_prefix = get_resource('packages', package_name)
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/resources.py", line 86, in get_resource
+E             raise LookupError(
+E         LookupError: Could not find the resource 'astribot_logging' of type 'packages'
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 229, in main
+E             get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1506, in error
+E             self._log(ERROR, msg, args, **kwargs)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1624, in _log
+E             self.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1634, in handle
+E             self.callHandlers(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1696, in callHandlers
+E             hdlr.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 968, in handle
+E             self.emit(record)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 82, in emit
+E             backend = _native()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 53, in _native
+E             path = Path(get_package_prefix('astribot_logging')) / 'lib/astribot_logging/libastribot_spdlog.so'
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 60, in get_package_prefix
+E             raise PackageNotFoundError(
+E         ament_index_python.packages.PackageNotFoundError: "package 'astribot_logging' not found, searching: ['/opt/ros/humble']"
+E         
+E       assert 1 == 2
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '-c', "import sys; from astribot_s1_perception import map_odom_tf_node as m...ex_python.packages.PackageNotFoundError: "package \'astribot_logging\' not found, searching: [\'/opt/ros/humble\']"\n').returncode
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:288: AssertionError
+_________ test_fatal_startup_or_first_tick[jump_report_m-0.0-2-python] _________
+
+impl = 'python', name = 'jump_report_m', value = '0.0', code = 2
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_fatal_startup_or_first_ti8')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('name,value,code',[
+        ('slam_world_frame','different',2),('publish_rate','0.0',2),('publish_rate','-1.0',2),
+        ('publish_rate','.nan',2),('jump_report_m','0.0',2),('jump_report_m','.nan',2),
+        ('publish_rate','20',1),('publish_rate','true',1),('publish_rate','"20.0"',1),
+        ('report_period_sec','.inf',1),('tf_timeout_sec','.nan',1),('tf_timeout_sec','.inf',1),
+    ])
+    def test_fatal_startup_or_first_tick(impl,name,value,code,tmp_path):
+        args=command(impl)+['--ros-args','-p',f'{name}:={value}']
+        env=environment(160);env['ASTRIBOT_LOG_DIR']=str(tmp_path/'python_logging')
+        result=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=5.)
+        (tmp_path/'fatal.log').write_bytes(result.stdout)
+>       assert result.returncode==code,result.stdout.decode(errors='replace')
+E       AssertionError: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py
+E         Traceback (most recent call last):
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 226, in main
+E             node = MapOdomTfNode()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 72, in __init__
+E             self.decomposer = MapOdomDecomposer(
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_decompose.py", line 184, in __init__
+E             raise DecompositionError(
+E         astribot_s1_perception.map_odom_decompose.DecompositionError: jump_report_m=0.0 必须为正；置 0 会把每次更新都报成跳变，日志刷满、真跳变被埋掉
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 58, in get_package_prefix
+E             content, package_prefix = get_resource('packages', package_name)
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/resources.py", line 86, in get_resource
+E             raise LookupError(
+E         LookupError: Could not find the resource 'astribot_logging' of type 'packages'
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 229, in main
+E             get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1506, in error
+E             self._log(ERROR, msg, args, **kwargs)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1624, in _log
+E             self.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1634, in handle
+E             self.callHandlers(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1696, in callHandlers
+E             hdlr.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 968, in handle
+E             self.emit(record)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 82, in emit
+E             backend = _native()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 53, in _native
+E             path = Path(get_package_prefix('astribot_logging')) / 'lib/astribot_logging/libastribot_spdlog.so'
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 60, in get_package_prefix
+E             raise PackageNotFoundError(
+E         ament_index_python.packages.PackageNotFoundError: "package 'astribot_logging' not found, searching: ['/opt/ros/humble']"
+E         
+E       assert 1 == 2
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '-c', "import sys; from astribot_s1_perception import map_odom_tf_node as m...ex_python.packages.PackageNotFoundError: "package \'astribot_logging\' not found, searching: [\'/opt/ros/humble\']"\n').returncode
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:288: AssertionError
+________ test_fatal_startup_or_first_tick[jump_report_m-.nan-2-python] _________
+
+impl = 'python', name = 'jump_report_m', value = '.nan', code = 2
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_fatal_startup_or_first_ti10')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('name,value,code',[
+        ('slam_world_frame','different',2),('publish_rate','0.0',2),('publish_rate','-1.0',2),
+        ('publish_rate','.nan',2),('jump_report_m','0.0',2),('jump_report_m','.nan',2),
+        ('publish_rate','20',1),('publish_rate','true',1),('publish_rate','"20.0"',1),
+        ('report_period_sec','.inf',1),('tf_timeout_sec','.nan',1),('tf_timeout_sec','.inf',1),
+    ])
+    def test_fatal_startup_or_first_tick(impl,name,value,code,tmp_path):
+        args=command(impl)+['--ros-args','-p',f'{name}:={value}']
+        env=environment(160);env['ASTRIBOT_LOG_DIR']=str(tmp_path/'python_logging')
+        result=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=5.)
+        (tmp_path/'fatal.log').write_bytes(result.stdout)
+>       assert result.returncode==code,result.stdout.decode(errors='replace')
+E       AssertionError: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py
+E         Traceback (most recent call last):
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 226, in main
+E             node = MapOdomTfNode()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 72, in __init__
+E             self.decomposer = MapOdomDecomposer(
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_decompose.py", line 184, in __init__
+E             raise DecompositionError(
+E         astribot_s1_perception.map_odom_decompose.DecompositionError: jump_report_m=nan 必须为正；置 0 会把每次更新都报成跳变，日志刷满、真跳变被埋掉
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 58, in get_package_prefix
+E             content, package_prefix = get_resource('packages', package_name)
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/resources.py", line 86, in get_resource
+E             raise LookupError(
+E         LookupError: Could not find the resource 'astribot_logging' of type 'packages'
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 229, in main
+E             get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1506, in error
+E             self._log(ERROR, msg, args, **kwargs)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1624, in _log
+E             self.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1634, in handle
+E             self.callHandlers(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1696, in callHandlers
+E             hdlr.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 968, in handle
+E             self.emit(record)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 82, in emit
+E             backend = _native()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 53, in _native
+E             path = Path(get_package_prefix('astribot_logging')) / 'lib/astribot_logging/libastribot_spdlog.so'
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 60, in get_package_prefix
+E             raise PackageNotFoundError(
+E         ament_index_python.packages.PackageNotFoundError: "package 'astribot_logging' not found, searching: ['/opt/ros/humble']"
+E         
+E       assert 1 == 2
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '-c', "import sys; from astribot_s1_perception import map_odom_tf_node as m...ex_python.packages.PackageNotFoundError: "package \'astribot_logging\' not found, searching: [\'/opt/ros/humble\']"\n').returncode
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:288: AssertionError
+____________ test_finite_input_arithmetic_overflow_exit_two[python] ____________
+
+impl = 'python'
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_finite_input_arithmetic_o0')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    def test_finite_input_arithmetic_overflow_exit_two(impl,tmp_path):
+        r=Runtime(impl,tmp_path)
+        r.expected_exit=2
+        try:
+            r.pump(.35,slam={'x':1.7e308,'y':1.7e308,'yaw':.7},
+                   odom={'x':1.7e308,'y':1.7e308,'yaw':.7})
+            r.until(lambda:r.proc.poll() is not None,alive=False)
+>           assert r.proc.returncode==2
+E           AssertionError: assert 1 == 2
+E            +  where 1 = <Popen: returncode: 1 args: ['/usr/bin/python3', '-c', "import sys; from ast...>.returncode
+E            +    where <Popen: returncode: 1 args: ['/usr/bin/python3', '-c', "import sys; from ast...> = <test_map_odom_ros.Runtime object at 0x7d06a7157e50>.proc
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:353: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+impl = 'python'
+tmp_path = PosixPath('/tmp/codex_map_relay_20260921/build/map_odom_ros_pytest/test_finite_input_arithmetic_o0')
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    def test_finite_input_arithmetic_overflow_exit_two(impl,tmp_path):
+        r=Runtime(impl,tmp_path)
+        r.expected_exit=2
+        try:
+            r.pump(.35,slam={'x':1.7e308,'y':1.7e308,'yaw':.7},
+                   odom={'x':1.7e308,'y':1.7e308,'yaw':.7})
+            r.until(lambda:r.proc.poll() is not None,alive=False)
+            assert r.proc.returncode==2
+>       finally:r.close()
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:354: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_map_odom_ros.Runtime object at 0x7d06a7157e50>
+
+    def close(self):
+        if getattr(self,'proc',None) is not None:
+            self.proc.send_signal(signal.SIGINT)
+            try:self.proc.wait(3.)
+            except subprocess.TimeoutExpired:
+                self.proc.kill();self.proc.wait(2.)
+                self.expected_exit='must_not_require_sigkill'
+        self.executor.shutdown();self.node.destroy_node();self.context.try_shutdown()
+        if getattr(self,'log',None):self.log.close()
+        if getattr(self,'log_path',None):self.directory.joinpath(self.name+'.json').write_text(json.dumps(self.samples,indent=2))
+>       assert self.proc.returncode==self.expected_exit, self.log_path.read_text()
+E       AssertionError: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py
+E         [INFO] [1789985212.195384522] [mapodom_040bb9b5d5]: map_odom_tf 启动：
+E           SLAM 侧  map → aft_mapped
+E           我们这侧  odom → astribot_torso_base
+E           发出      map → odom  (20Hz)
+E           ⚠️ 前提（决策给定，本节点无法验证）：aft_mapped 与 astribot_torso_base 指同一个物理点。
+E              不成立时地图与机器人会系统性偏移一个常量，症状像"定位有固定误差"。
+E         Traceback (most recent call last):
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 227, in main
+E             rclpy.spin(node)
+E           File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+E             executor.spin_once()
+E           File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+E             self._spin_once_impl(timeout_sec)
+E           File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 805, in _spin_once_impl
+E             raise handler.exception()
+E           File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 272, in _execute_coroutine_step
+E             result = coro.send(None)
+E           File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+E             await call_coroutine(entity, arg)
+E           File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 396, in _execute_timer
+E             await await_or_execute(tmr.callback)
+E           File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+E             return callback(*args)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 116, in _tick
+E             map_to_odom, jumped, jump_m = self.decomposer.update(slam, odom)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_decompose.py", line 194, in update
+E             result = map_to_base.compose(odom_to_base.inverse())
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_decompose.py", line 81, in inverse
+E             return Pose2D(
+E           File "<string>", line 6, in __init__
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_decompose.py", line 73, in __post_init__
+E             raise DecompositionError(
+E         astribot_s1_perception.map_odom_decompose.DecompositionError: Pose2D.x=-inf 不是有限数。NaN/Inf 会让整条 TF 链变成 NaN，而 tf2 不会报错，只是所有 lookupTransform 都失败 —— 症状离根因很远。
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 58, in get_package_prefix
+E             content, package_prefix = get_resource('packages', package_name)
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/resources.py", line 86, in get_resource
+E             raise LookupError(
+E         LookupError: Could not find the resource 'astribot_logging' of type 'packages'
+E         
+E         During handling of the above exception, another exception occurred:
+E         
+E         Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_tf_node.py", line 229, in main
+E             get_logger('astribot.map_odom_tf_node').error(f'[map_odom_tf] 参数被拒绝：{exc}')
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1506, in error
+E             self._log(ERROR, msg, args, **kwargs)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1624, in _log
+E             self.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1634, in handle
+E             self.callHandlers(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 1696, in callHandlers
+E             hdlr.handle(record)
+E           File "/usr/lib/python3.10/logging/__init__.py", line 968, in handle
+E             self.emit(record)
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 82, in emit
+E             backend = _native()
+E           File "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_logging/astribot_logging/__init__.py", line 53, in _native
+E             path = Path(get_package_prefix('astribot_logging')) / 'lib/astribot_logging/libastribot_spdlog.so'
+E           File "/opt/ros/humble/lib/python3.10/site-packages/ament_index_python/packages.py", line 60, in get_package_prefix
+E             raise PackageNotFoundError(
+E         ament_index_python.packages.PackageNotFoundError: "package 'astribot_logging' not found, searching: ['/opt/ros/humble']"
+E         
+E       assert 1 == 2
+E        +  where 1 = <Popen: returncode: 1 args: ['/usr/bin/python3', '-c', "import sys; from ast...>.returncode
+E        +    where <Popen: returncode: 1 args: ['/usr/bin/python3', '-c', "import sys; from ast...> = <test_map_odom_ros.Runtime object at 0x7d06a7157e50>.proc
+E        +  and   2 = <test_map_odom_ros.Runtime object at 0x7d06a7157e50>.expected_exit
+
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py:139: AssertionError
+=========================== short test summary info ============================
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py::test_fatal_startup_or_first_tick[slam_world_frame-different-2-python]
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py::test_fatal_startup_or_first_tick[publish_rate-0.0-2-python]
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py::test_fatal_startup_or_first_tick[publish_rate--1.0-2-python]
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py::test_fatal_startup_or_first_tick[publish_rate-.nan-2-python]
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py::test_fatal_startup_or_first_tick[jump_report_m-0.0-2-python]
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py::test_fatal_startup_or_first_tick[jump_report_m-.nan-2-python]
+FAILED ../../../home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_native/test/test_map_odom_ros.py::test_finite_input_arithmetic_overflow_exit_two[python]
+7 failed, 57 passed in 49.50s
+
+    Start 4: map_relay_protocol
+4/4 Test #4: map_relay_protocol ...............   Passed   26.94 sec
+
+75% tests passed, 1 tests failed out of 4
+
+Total Test time (real) =  77.67 sec
+
+The following tests FAILED:
+	  3 - map_odom_ros_differential (Failed)
+Errors while running CTest

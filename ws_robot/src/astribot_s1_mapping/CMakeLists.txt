@@ -12,6 +12,8 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -24,8 +26,8 @@ find_package(nlohmann_json REQUIRED)
 
 add_executable(height_slice_map_node src/height_slice_map_node.cpp)
 target_include_directories(height_slice_map_node PRIVATE include ${PCL_INCLUDE_DIRS})
-target_link_libraries(height_slice_map_node ${PCL_LIBRARIES} OpenSSL::Crypto nlohmann_json::nlohmann_json)
-ament_target_dependencies(height_slice_map_node rclcpp nav_msgs astribot_slam_msgs)
+target_link_libraries(height_slice_map_node ${PCL_LIBRARIES} OpenSSL::Crypto nlohmann_json::nlohmann_json yaml-cpp)
+ament_target_dependencies(height_slice_map_node rclcpp ament_index_cpp nav_msgs astribot_slam_msgs)
 
 add_executable(nav_prob_grid_node src/nav_prob_grid_node.cpp)
 

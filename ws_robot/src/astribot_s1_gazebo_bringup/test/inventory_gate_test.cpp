@@ -2,6 +2,7 @@
 #include "astribot_s1_gazebo_bringup/inventory_gate.hpp"
 using namespace astribot::simulation;
 InventorySnapshot clean() {InventorySnapshot s;s.world_present=true;s.robot_count=1;s.world_metadata=true;s.background_matches=true;s.robot_structure_matches=true;
+  s.world_entity=1;
   s.models.push_back({2,true,true});s.models.push_back({3,false,true});
   s.plugins.push_back({1,"ignition::gazebo::systems::Physics","ignition-gazebo-physics-system"});return s;}
 TEST(EmptyInventory, RequiresWorldRobotAndWorldPluginMetadata) {
@@ -27,10 +28,51 @@ TEST(EmptyInventory, PluginNameAndLibraryMustBothMatch) {
   s.plugins[0].filename="custom-physics-system.so";EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
   s=clean();s.plugins[0].name="custom::Physics";EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
 }
+TEST(EmptyInventory, ReadOnlyContactEvidenceRequiresKnownPairAndRegisteredBackground) {
+  auto s=clean();
+  s.plugins.push_back({1,"astribot::ContactEvidence","/opt/astribot/lib/libastribot_contact_evidence.so"});
+  EXPECT_EQ(empty_inventory_reason(s),"EMPTY_INVENTORY_OBSERVED");
+  s.background_matches=false;
+  EXPECT_EQ(empty_inventory_reason(s),"BACKGROUND_MANIFEST_MISMATCH");
+  s.background_matches=true;s.plugins.back().filename="libcustom_contact_evidence.so";
+  EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
+  s.plugins.back().filename="libastribot_contact_evidence.so";s.plugins.back().name="custom::ContactEvidence";
+  EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
+  s.plugins.back().name="astribot::ContactEvidence";
+  s.plugins.push_back({1,"custom::Attachment","libcustom_attachment.so"});
+  EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
+}
 TEST(EmptyInventory, WholeSnapshotBoundedAndInvalidEntitiesRejected) {
   auto s=clean();s.models.resize(4097);EXPECT_EQ(empty_inventory_reason(s),"INVENTORY_LIMIT_EXCEEDED");
   s=clean();s.plugins.resize(257);EXPECT_EQ(empty_inventory_reason(s),"INVENTORY_LIMIT_EXCEEDED");
   s=clean();s.models.push_back(s.models.back());EXPECT_EQ(empty_inventory_reason(s),"DUPLICATE_MODEL_ID");
+}
+TEST(EmptyInventory, HeightSliceMapRequiresExactIdentityOnCurrentWorld) {
+  auto s=clean();
+  s.plugins.push_back({1,"astribot::HeightSliceMap","/opt/astribot/lib/libastribot_height_slice_map.so"});
+  EXPECT_EQ(empty_inventory_reason(s),"EMPTY_INVENTORY_OBSERVED");
+  s.plugins.back().filename="libastribot_height_slice_map.so";
+  EXPECT_EQ(empty_inventory_reason(s),"EMPTY_INVENTORY_OBSERVED");
+  for(const auto entity:{0u,2u,3u,4u,99u}) {
+    s.plugins.back().entity=entity;
+    EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN")<<entity;
+  }
+  s.plugins.back().entity=1;s.world_entity=0;
+  EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
+  s.plugins.back().entity=0;
+  EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
+  s.plugins.back().entity=1;
+  s.world_entity=1;s.plugins.back().name="custom::HeightSliceMap";
+  EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
+  s.plugins.back().name="astribot::HeightSliceMap";
+  for(const auto *filename:{"libcustom_height_slice_map.so","libastribot_height_slice_map.so.invalid",
+                           "libastribot_height_slice_map.so/other.so"}) {
+    s.plugins.back().filename=filename;
+    EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN")<<filename;
+  }
+  s.plugins.back().filename="libastribot_height_slice_map.so";
+  s.plugins.push_back({1,"custom::Attachment","libcustom_attachment.so"});
+  EXPECT_EQ(empty_inventory_reason(s),"UNSUPPORTED_SYSTEM_PLUGIN");
 }
 TEST(EmptyInventory, RevisionChangesAcrossUnknownAndBackAndClockReset) {
   InventoryVersion v;auto a=v.sample(100,"empty"),b=v.sample(200,"empty"),c=v.sample(300,"unknown"),d=v.sample(400,"empty");

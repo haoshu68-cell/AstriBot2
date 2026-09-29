@@ -1,0 +1,22 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 3 tests from GraspPose
+[ RUN      ] GraspPose.RejectsNonUnitQuaternion
+[       OK ] GraspPose.RejectsNonUnitQuaternion (0 ms)
+[ RUN      ] GraspPose.RejectsOverflowQuaternion
+[       OK ] GraspPose.RejectsOverflowQuaternion (0 ms)
+[ RUN      ] GraspPose.AcceptsUnitQuaternion
+[       OK ] GraspPose.AcceptsUnitQuaternion (0 ms)
+[----------] 3 tests from GraspPose (0 ms total)
+
+[----------] 1 test from GraspGate
+[ RUN      ] GraspGate.MissingContextMustNotPass
+[INFO] [1789969846.177576629] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+[WARN] [1789969846.179096647] [grasp_candidate_gate]: No grasp candidate passed the safety gate: VALIDATION_CONTEXT_MISSING
+[       OK ] GraspGate.MissingContextMustNotPass (16 ms)
+[----------] 1 test from GraspGate (16 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 2 test suites ran. (16 ms total)
+[  PASSED  ] 4 tests.

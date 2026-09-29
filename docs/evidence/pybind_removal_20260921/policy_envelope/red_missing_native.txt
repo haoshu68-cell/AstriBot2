@@ -1,0 +1,30 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______________ test_legacy_boundaries_source_receipt_and_clock ________________
+
+    def test_legacy_boundaries_source_receipt_and_clock():
+        ops = [query(), accept()]
+        ops += [query(n) for n in (999_999_999, 1_000_000_000, 1_499_999_999, 1_500_000_000, 1_500_000_001)]
+        ops += [query(epoch=1), query(clock='steady'), accept(legacy(ns=900_000_000), ns=1_000_000_000), query(1_400_000_000), query(1_400_000_001)]
+>       run(ops)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_envelope.py:172: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+ops = [{'now': {'clock': 'ros', 'epoch': 0, 'ns': 1000000000}, 'op': 'ready'}, {'message': {'brake_deceleration_m_s2': 0.5, ...ch': 0, 'ns': 1499999999}, 'op': 'ready'}, {'now': {'clock': 'ros', 'epoch': 0, 'ns': 1500000000}, 'op': 'ready'}, ...]
+fixed_mode = False
+
+    def run(ops, fixed_mode=False):
+        case = dict(fixed=fixed_mode, profile_path=str(REFERENCE / 'simulation.json'), ops=ops)
+        binary = os.environ.get('POLICY_ENVELOPE_PROBE')
+>       assert binary and Path(binary).is_file(), 'native policy envelope probe has not been implemented/built'
+E       AssertionError: native policy envelope probe has not been implemented/built
+E       assert ('/tmp/codex_policy_envelope_20260921/policy_envelope_probe' and False)
+E        +  where False = <bound method Path.is_file of PosixPath('/tmp/codex_policy_envelope_20260921/policy_envelope_probe')>()
+E        +    where <bound method Path.is_file of PosixPath('/tmp/codex_policy_envelope_20260921/policy_envelope_probe')> = PosixPath('/tmp/codex_policy_envelope_20260921/policy_envelope_probe').is_file
+E        +      where PosixPath('/tmp/codex_policy_envelope_20260921/policy_envelope_probe') = Path('/tmp/codex_policy_envelope_20260921/policy_envelope_probe')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_envelope.py:144: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_envelope.py::test_legacy_boundaries_source_receipt_and_clock
+1 failed, 84 deselected in 0.11s

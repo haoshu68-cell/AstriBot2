@@ -15,6 +15,13 @@ MecanumDrive 轮子仅视觉转动"两套独立运动学并行架构。
 对外 `/cmd_vel`、`/odom`、`/joint_states` 接口不变，Nav2/巡游/臂-底盘耦合等
 上层节点零改动。
 
+生产 launch 唯一启动 `astribot_s1_chassis_effort_drive_native/omni_effort_drive_cpp`。
+轮径、话题、参数文件及自动重启设置沿用原接口；仓储 launch 仍在控制器加载进程
+退出后、`enable_effort_drive` 开启时启动驱动。`node_impl` 与
+`effort_drive_node_impl` 实现选择参数、旧 Python console entry 已移除。
+Python 模块仅保留为可导入的离线和独立消息回放参考实现，不提供 `main` 或
+`python -m` 启动入口；验证脚本自行构造参考节点。
+
 ## 必须先标定，不能直接信任默认值
 
 - **逆解符号方案**（`config/omni_effort_drive_params.yaml` 里的

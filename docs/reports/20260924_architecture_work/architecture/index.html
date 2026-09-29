@@ -1,0 +1,748 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Astribot 当前架构图</title><style>*{box-sizing:border-box}body{margin:0;background:#181818;color:#ededed;font:16px/1.65 system-ui,"Noto Sans CJK SC",sans-serif}main{max-width:1600px;margin:auto;padding:30px}h1{font-size:29px;margin-bottom:8px}h2{font-size:22px}.sub{color:#aaa;margin-bottom:24px}nav,.toolbar{display:flex;gap:10px;flex-wrap:wrap}button,a{font:inherit;color:#eee;background:#333;border:1px solid #555;border-radius:9px;padding:9px 15px;text-decoration:none;cursor:pointer}nav button.active{border-color:#ddd;background:#484848}.view{display:none}.view.active{display:block}.toolbar{font-size:13px;margin-bottom:20px}.canvas{overflow:auto;border:1px solid #333;border-radius:14px;background:#181818;padding:12px}.canvas svg{display:block;width:100%;height:auto;max-height:none}footer{color:#aaa;margin-top:24px;font-size:14px}.legend{margin:15px 0;color:#bdbdbd}.gold{color:#e2bd76}.notes{padding:14px 18px;border-left:2px solid #a28b61;background:#24221e;color:#d2c4aa;font-size:14px}@media(max-width:700px){main{padding:14px}.canvas{padding:0}h1{font-size:23px}}
+</style></head><body><main><h1>当前软件架构 · 模块与链路视图</h1><div class="sub">沿用 2026-09-24 14:08（北京时间）汇报快照 · 参考样式：深色背景 / 圆角模块 / 有向连线</div><nav><button class="active" onclick="select('01_overview',this)">整机软件架构总览</button><button class="" onclick="select('02_navigation',this)">导航、避障与底盘执行链</button><button class="" onclick="select('03_manipulation',this)">相机感知、机械臂规划与搬运链</button></nav><p class="legend">灰色实线：已有实现或接口关系　<span class="gold">金色虚线：候选接线 / 待贯通或待验收</span></p><div class="notes">图示为软件职责与接口关系。实际启动的模块、安装版本和保护 profile 需分别核对；源码存在不代表真机或完整任务链验收通过。</div><section id="01_overview" class="view active"><h2>整机软件架构总览</h2><div class="toolbar"><button onclick="zoom(.15)">放大</button><button onclick="zoom(-.15)">缩小</button><button onclick="resetZoom()">适应宽度</button><a href="01_overview.svg" download>下载 SVG</a><a href="01_overview.png" download>下载 PNG</a><a href="01_overview.dot" download>可编辑源文件</a></div><div class="canvas"><svg role="img" aria-label="整机软件架构总览" width="1871pt" height="2233pt"
+ viewBox="0.00 0.00 997.80 1190.80" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1.88 1.88) rotate(0) translate(32.4 1158.4)">
+<title>architecture</title>
+<polygon fill="#181818" stroke="transparent" points="-32.4,32.4 -32.4,-1158.4 965.4,-1158.4 965.4,32.4 -32.4,32.4"/>
+<text text-anchor="middle" x="466.5" y="-1102" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee">整机软件架构总览</text>
+<text text-anchor="middle" x="466.5" y="-1074" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee"> </text>
+<!-- operator -->
+<g id="node1" class="node">
+<title>operator</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M317.5,-1062C317.5,-1062 136.5,-1062 136.5,-1062 130.5,-1062 124.5,-1056 124.5,-1050 124.5,-1050 124.5,-1012 124.5,-1012 124.5,-1006 130.5,-1000 136.5,-1000 136.5,-1000 317.5,-1000 317.5,-1000 323.5,-1000 329.5,-1006 329.5,-1012 329.5,-1012 329.5,-1050 329.5,-1050 329.5,-1056 323.5,-1062 317.5,-1062"/>
+<text text-anchor="middle" x="227" y="-1036.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">操作台 / 人工目标</text>
+<text text-anchor="middle" x="227" y="-1016.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">路线 / 探索 / 搬运请求</text>
+</g>
+<!-- navarb -->
+<g id="node5" class="node">
+<title>navarb</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M294,-868C294,-868 12,-868 12,-868 6,-868 0,-862 0,-856 0,-856 0,-818 0,-818 0,-812 6,-806 12,-806 12,-806 294,-806 294,-806 300,-806 306,-812 306,-818 306,-818 306,-856 306,-856 306,-862 300,-868 294,-868"/>
+<text text-anchor="middle" x="153" y="-842.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">导航任务仲裁</text>
+<text text-anchor="middle" x="153" y="-822.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">TaskArbiter · 导航 Action 所有权</text>
+</g>
+<!-- operator&#45;&gt;navarb -->
+<g id="edge1" class="edge">
+<title>operator&#45;&gt;navarb</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M215.44,-1000C202.5,-966.42 181.51,-911.97 167.48,-875.58"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="170.09,-874.56 164.6,-868.11 164.87,-876.58 170.09,-874.56"/>
+</g>
+<!-- transport -->
+<g id="node6" class="node">
+<title>transport</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M597.5,-868C597.5,-868 402.5,-868 402.5,-868 396.5,-868 390.5,-862 390.5,-856 390.5,-856 390.5,-818 390.5,-818 390.5,-812 396.5,-806 402.5,-806 402.5,-806 597.5,-806 597.5,-806 603.5,-806 609.5,-812 609.5,-818 609.5,-818 609.5,-856 609.5,-856 609.5,-862 603.5,-868 597.5,-868"/>
+<text text-anchor="middle" x="500" y="-842.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">搬运任务与资源协调</text>
+<text text-anchor="middle" x="500" y="-822.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">阶段 / 租约 / 取消 / 恢复</text>
+</g>
+<!-- operator&#45;&gt;transport -->
+<g id="edge2" class="edge">
+<title>operator&#45;&gt;transport</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M269.66,-1000C318.6,-965.58 398.73,-909.22 450.41,-872.88"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="452.26,-875 457.19,-868.11 449.04,-870.42 452.26,-875"/>
+</g>
+<!-- sensors -->
+<g id="node2" class="node">
+<title>sensors</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M670.5,-1062C670.5,-1062 389.5,-1062 389.5,-1062 383.5,-1062 377.5,-1056 377.5,-1050 377.5,-1050 377.5,-1012 377.5,-1012 377.5,-1006 383.5,-1000 389.5,-1000 389.5,-1000 670.5,-1000 670.5,-1000 676.5,-1000 682.5,-1006 682.5,-1012 682.5,-1012 682.5,-1050 682.5,-1050 682.5,-1056 676.5,-1062 670.5,-1062"/>
+<text text-anchor="middle" x="530" y="-1036.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">激光 / IMU / 关节反馈</text>
+<text text-anchor="middle" x="530" y="-1016.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">六相机 RGB / Depth / CameraInfo</text>
+</g>
+<!-- perception -->
+<g id="node4" class="node">
+<title>perception</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M889.5,-953C889.5,-953 666.5,-953 666.5,-953 660.5,-953 654.5,-947 654.5,-941 654.5,-941 654.5,-903 654.5,-903 654.5,-897 660.5,-891 666.5,-891 666.5,-891 889.5,-891 889.5,-891 895.5,-891 901.5,-897 901.5,-903 901.5,-903 901.5,-941 901.5,-941 901.5,-947 895.5,-953 889.5,-953"/>
+<text text-anchor="middle" x="778" y="-927.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">感知与定位</text>
+<text text-anchor="middle" x="778" y="-907.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">Voxel&#45;SLAM / 自滤 / RGB&#45;D</text>
+</g>
+<!-- sensors&#45;&gt;perception -->
+<g id="edge3" class="edge">
+<title>sensors&#45;&gt;perception</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M599.74,-999.91C631.18,-986.35 668.4,-970.29 700.69,-956.36"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="702.12,-958.79 708.35,-953.05 699.9,-953.65 702.12,-958.79"/>
+</g>
+<!-- calib -->
+<g id="node3" class="node">
+<title>calib</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M907,-1062C907,-1062 731,-1062 731,-1062 725,-1062 719,-1056 719,-1050 719,-1050 719,-1012 719,-1012 719,-1006 725,-1000 731,-1000 731,-1000 907,-1000 907,-1000 913,-1000 919,-1006 919,-1012 919,-1012 919,-1050 919,-1050 919,-1056 913,-1062 907,-1062"/>
+<text text-anchor="middle" x="819" y="-1036.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">URDF / TF / 相机标定</text>
+<text text-anchor="middle" x="819" y="-1016.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">地图与场景配置</text>
+</g>
+<!-- calib&#45;&gt;perception -->
+<g id="edge4" class="edge">
+<title>calib&#45;&gt;perception</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M807.47,-999.91C802.84,-987.83 797.45,-973.77 792.56,-960.99"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="795.06,-959.7 789.59,-953.24 789.83,-961.71 795.06,-959.7"/>
+</g>
+<!-- world -->
+<g id="node7" class="node">
+<title>world</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M638.5,-783C638.5,-783 493.5,-783 493.5,-783 487.5,-783 481.5,-777 481.5,-771 481.5,-771 481.5,-733 481.5,-733 481.5,-727 487.5,-721 493.5,-721 493.5,-721 638.5,-721 638.5,-721 644.5,-721 650.5,-727 650.5,-733 650.5,-733 650.5,-771 650.5,-771 650.5,-777 644.5,-783 638.5,-783"/>
+<text text-anchor="middle" x="566" y="-757.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">地图 / 障碍 / 区域</text>
+<text text-anchor="middle" x="566" y="-737.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">时效 / 坐标 / 健康</text>
+</g>
+<!-- perception&#45;&gt;world -->
+<g id="edge5" class="edge">
+<title>perception&#45;&gt;world</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M740.1,-890.96C703.73,-862.15 648.82,-818.63 610.42,-788.2"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="611.94,-785.83 603.93,-783.06 608.46,-790.22 611.94,-785.83"/>
+</g>
+<!-- scene -->
+<g id="node8" class="node">
+<title>scene</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M921,-783C921,-783 699,-783 699,-783 693,-783 687,-777 687,-771 687,-771 687,-733 687,-733 687,-727 693,-721 699,-721 699,-721 921,-721 921,-721 927,-721 933,-727 933,-733 933,-733 933,-771 933,-771 933,-777 927,-783 921,-783"/>
+<text text-anchor="middle" x="810" y="-757.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">物体观测 / PlanningScene</text>
+<text text-anchor="middle" x="810" y="-737.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">对象身份与场景版本</text>
+</g>
+<!-- perception&#45;&gt;scene -->
+<g id="edge6" class="edge">
+<title>perception&#45;&gt;scene</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M783.72,-890.96C789.03,-863.1 796.95,-821.5 802.71,-791.26"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="805.53,-791.44 804.27,-783.06 800.03,-790.39 805.53,-791.44"/>
+</g>
+<!-- nav -->
+<g id="node9" class="node">
+<title>nav</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M317,-674C317,-674 143,-674 143,-674 137,-674 131,-668 131,-662 131,-662 131,-624 131,-624 131,-618 137,-612 143,-612 143,-612 317,-612 317,-612 323,-612 329,-618 329,-624 329,-624 329,-662 329,-662 329,-668 323,-674 317,-674"/>
+<text text-anchor="middle" x="230" y="-648.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">Nav2 / BT / 路由策略</text>
+<text text-anchor="middle" x="230" y="-628.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">路径规划与提交</text>
+</g>
+<!-- navarb&#45;&gt;nav -->
+<g id="edge7" class="edge">
+<title>navarb&#45;&gt;nav</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M165.03,-806C178.5,-772.42 200.34,-717.97 214.93,-681.58"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="217.55,-682.57 217.93,-674.11 212.35,-680.49 217.55,-682.57"/>
+</g>
+<!-- transport&#45;&gt;navarb -->
+<g id="edge15" class="edge">
+<title>transport&#45;&gt;navarb</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M390.3,-837C366.19,-837 340.18,-837 314.53,-837"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="314.21,-834.2 306.21,-837 314.21,-839.8 314.21,-834.2"/>
+<text text-anchor="middle" x="348.25" y="-843.4" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">导航请求</text>
+</g>
+<!-- mtc -->
+<g id="node10" class="node">
+<title>mtc</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M669,-674C669,-674 453,-674 453,-674 447,-674 441,-668 441,-662 441,-662 441,-624 441,-624 441,-618 447,-612 453,-612 453,-612 669,-612 669,-612 675,-612 681,-618 681,-624 681,-624 681,-662 681,-662 681,-668 675,-674 669,-674"/>
+<text text-anchor="middle" x="561" y="-648.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">MoveIt / MTC</text>
+<text text-anchor="middle" x="561" y="-628.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">IK / 分阶段规划 / 碰撞校验</text>
+</g>
+<!-- transport&#45;&gt;mtc -->
+<g id="edge10" class="edge">
+<title>transport&#45;&gt;mtc</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M474.27,-805.74C469.63,-798.69 465.49,-790.92 463,-783 454.73,-756.71 450.95,-745.78 463,-721 471,-704.55 484.4,-690.56 498.77,-679.21"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="500.73,-681.24 505.42,-674.18 497.35,-676.77 500.73,-681.24"/>
+</g>
+<!-- world&#45;&gt;nav -->
+<g id="edge8" class="edge">
+<title>world&#45;&gt;nav</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M481.21,-724C435.91,-709.57 379.81,-691.71 332.12,-676.52"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="332.71,-673.77 324.24,-674.01 331.01,-679.11 332.71,-673.77"/>
+</g>
+<!-- scene&#45;&gt;mtc -->
+<g id="edge9" class="edge">
+<title>scene&#45;&gt;mtc</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M739.98,-720.91C708.42,-707.35 671.04,-691.29 638.62,-677.36"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="639.38,-674.64 630.93,-674.05 637.17,-679.78 639.38,-674.64"/>
+</g>
+<!-- track -->
+<g id="node11" class="node">
+<title>track</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M313.5,-553C313.5,-553 146.5,-553 146.5,-553 140.5,-553 134.5,-547 134.5,-541 134.5,-541 134.5,-503 134.5,-503 134.5,-497 140.5,-491 146.5,-491 146.5,-491 313.5,-491 313.5,-491 319.5,-491 325.5,-497 325.5,-503 325.5,-503 325.5,-541 325.5,-541 325.5,-547 319.5,-553 313.5,-553"/>
+<text text-anchor="middle" x="230" y="-527.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">路径跟踪 / 到位停稳</text>
+<text text-anchor="middle" x="230" y="-507.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">速度平滑 / 双臂耦合</text>
+</g>
+<!-- nav&#45;&gt;track -->
+<g id="edge11" class="edge">
+<title>nav&#45;&gt;track</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M230,-611.97C230,-596.61 230,-577.74 230,-561.34"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="232.8,-561.02 230,-553.02 227.2,-561.02 232.8,-561.02"/>
+</g>
+<!-- armexec -->
+<g id="node12" class="node">
+<title>armexec</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M655.5,-553C655.5,-553 466.5,-553 466.5,-553 460.5,-553 454.5,-547 454.5,-541 454.5,-541 454.5,-503 454.5,-503 454.5,-497 460.5,-491 466.5,-491 466.5,-491 655.5,-491 655.5,-491 661.5,-491 667.5,-497 667.5,-503 667.5,-503 667.5,-541 667.5,-541 667.5,-547 661.5,-553 655.5,-553"/>
+<text text-anchor="middle" x="561" y="-527.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">机械臂任务执行与保持</text>
+<text text-anchor="middle" x="561" y="-507.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">执行守卫 / 终态确认</text>
+</g>
+<!-- mtc&#45;&gt;armexec -->
+<g id="edge12" class="edge">
+<title>mtc&#45;&gt;armexec</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M561,-611.97C561,-596.61 561,-577.74 561,-561.34"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="563.8,-561.02 561,-553.02 558.2,-561.02 563.8,-561.02"/>
+<text text-anchor="middle" x="615.5" y="-579.4" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">经任务拥有的执行器</text>
+</g>
+<!-- protect -->
+<g id="node14" class="node">
+<title>protect</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M498.5,-335C498.5,-335 207.5,-335 207.5,-335 201.5,-335 195.5,-329 195.5,-323 195.5,-323 195.5,-285 195.5,-285 195.5,-279 201.5,-273 207.5,-273 207.5,-273 498.5,-273 498.5,-273 504.5,-273 510.5,-279 510.5,-285 510.5,-285 510.5,-323 510.5,-323 510.5,-329 504.5,-335 498.5,-335"/>
+<text text-anchor="middle" x="353" y="-309.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">底盘末级执行保护</text>
+<text text-anchor="middle" x="353" y="-289.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">FinalProtection（按 profile 启用）</text>
+</g>
+<!-- track&#45;&gt;protect -->
+<g id="edge16" class="edge">
+<title>track&#45;&gt;protect</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M232.97,-490.83C236.99,-461.27 246.23,-415.84 267,-382 276.54,-366.45 290.18,-352.22 303.79,-340.34"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="305.73,-342.36 310.02,-335.05 302.11,-338.09 305.73,-342.36"/>
+</g>
+<!-- envelope -->
+<g id="node13" class="node">
+<title>envelope</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M570.5,-444C570.5,-444 297.5,-444 297.5,-444 291.5,-444 285.5,-438 285.5,-432 285.5,-432 285.5,-394 285.5,-394 285.5,-388 291.5,-382 297.5,-382 297.5,-382 570.5,-382 570.5,-382 576.5,-382 582.5,-388 582.5,-394 582.5,-394 582.5,-432 582.5,-432 582.5,-438 576.5,-444 570.5,-444"/>
+<text text-anchor="middle" x="434" y="-418.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">附着物 / 质量账本</text>
+<text text-anchor="middle" x="434" y="-398.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">整机几何 / 固定包络 / 同版本 ACK</text>
+</g>
+<!-- armexec&#45;&gt;envelope -->
+<g id="edge13" class="edge">
+<title>armexec&#45;&gt;envelope</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M525.29,-490.91C510,-478.03 492.04,-462.9 476.11,-449.48"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="477.81,-447.25 469.89,-444.24 474.2,-451.53 477.81,-447.25"/>
+</g>
+<!-- arm -->
+<g id="node16" class="node">
+<title>arm</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M757.5,-226C757.5,-226 518.5,-226 518.5,-226 512.5,-226 506.5,-220 506.5,-214 506.5,-214 506.5,-176 506.5,-176 506.5,-170 512.5,-164 518.5,-164 518.5,-164 757.5,-164 757.5,-164 763.5,-164 769.5,-170 769.5,-176 769.5,-176 769.5,-214 769.5,-214 769.5,-220 763.5,-226 757.5,-226"/>
+<text text-anchor="middle" x="638" y="-200.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">机械臂 / 夹爪执行适配</text>
+<text text-anchor="middle" x="638" y="-180.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">MoveIt 执行 / JTC / SDK 桥接</text>
+</g>
+<!-- armexec&#45;&gt;arm -->
+<g id="edge19" class="edge">
+<title>armexec&#45;&gt;arm</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M579.07,-490.86C586.62,-477.02 594.83,-460.12 600,-444 623.08,-372.05 632.33,-283.74 635.89,-234.28"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="638.7,-234.27 636.46,-226.09 633.12,-233.88 638.7,-234.27"/>
+</g>
+<!-- envelope&#45;&gt;nav -->
+<g id="edge14" class="edge">
+<title>envelope&#45;&gt;nav</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M582.55,-443.87C628.74,-456.36 671.22,-472.35 685,-491 688.99,-496.4 693.88,-575.21 679,-589 658.06,-608.42 451.35,-608.53 423,-612 395.12,-615.42 365.08,-619.76 337.2,-624.08"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="336.48,-621.36 329.01,-625.35 337.34,-626.89 336.48,-621.36"/>
+<text text-anchor="middle" x="732.5" y="-518.9" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">运输准入与约束</text>
+</g>
+<!-- envelope&#45;&gt;protect -->
+<g id="edge17" class="edge">
+<title>envelope&#45;&gt;protect</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M411.22,-381.91C401.82,-369.49 390.83,-354.97 380.94,-341.91"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="382.95,-339.92 375.89,-335.24 378.48,-343.3 382.95,-339.92"/>
+</g>
+<!-- base -->
+<g id="node15" class="node">
+<title>base</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M458.5,-226C458.5,-226 247.5,-226 247.5,-226 241.5,-226 235.5,-220 235.5,-214 235.5,-214 235.5,-176 235.5,-176 235.5,-170 241.5,-164 247.5,-164 247.5,-164 458.5,-164 458.5,-164 464.5,-164 470.5,-170 470.5,-176 470.5,-176 470.5,-214 470.5,-214 470.5,-220 464.5,-226 458.5,-226"/>
+<text text-anchor="middle" x="353" y="-200.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">底盘执行适配</text>
+<text text-anchor="middle" x="353" y="-180.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">Gazebo effort / 厂家 SDK</text>
+</g>
+<!-- protect&#45;&gt;base -->
+<g id="edge18" class="edge">
+<title>protect&#45;&gt;base</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M353,-272.91C353,-260.94 353,-247.03 353,-234.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="355.8,-234.24 353,-226.24 350.2,-234.24 355.8,-234.24"/>
+</g>
+<!-- infra -->
+<g id="node17" class="node">
+<title>infra</title>
+<path fill="#242424" stroke="#555555" stroke-width="1.3" d="M737,-117C737,-117 253,-117 253,-117 247,-117 241,-111 241,-105 241,-105 241,-89 241,-89 241,-83 247,-77 253,-77 253,-77 737,-77 737,-77 743,-77 749,-83 749,-89 749,-89 749,-105 749,-105 749,-111 743,-117 737,-117"/>
+<text text-anchor="middle" x="495" y="-93.2" font-family="Noto Sans CJK SC" font-size="16.00" fill="#f3f3f3">共同基础：统一日志 / bag / 事件与参数 / 会话隔离 / 安装版本与部署</text>
+</g>
+<!-- base&#45;&gt;infra -->
+<!-- arm&#45;&gt;infra -->
+<!-- note -->
+<g id="node18" class="node">
+<title>note</title>
+<path fill="#181818" stroke="transparent" stroke-width="1.3" d="M718,-30C718,-30 272,-30 272,-30 267,-30 262,-25 262,-20 262,-20 262,-10 262,-10 262,-5 267,0 272,0 272,0 718,0 718,0 723,0 728,-5 728,-10 728,-10 728,-20 728,-20 728,-25 723,-30 718,-30"/>
+<text text-anchor="middle" x="495" y="-18.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#d8bc87">已有模块关系 ≠ 全部同时上线；搬运资源协调未强制覆盖所有旧客户端</text>
+<text text-anchor="middle" x="495" y="-3.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#d8bc87">普通搬运已有完整演示，正式 C++ / fixed_v2 全链仍待验收；真机另行验收</text>
+</g>
+<!-- infra&#45;&gt;note -->
+</g>
+</svg>
+</div></section><section id="02_navigation" class="view "><h2>导航、避障与底盘执行链</h2><div class="toolbar"><button onclick="zoom(.15)">放大</button><button onclick="zoom(-.15)">缩小</button><button onclick="resetZoom()">适应宽度</button><a href="02_navigation.svg" download>下载 SVG</a><a href="02_navigation.png" download>下载 PNG</a><a href="02_navigation.dot" download>可编辑源文件</a></div><div class="canvas"><svg role="img" aria-label="导航、避障与底盘执行链" width="1598pt" height="2297pt"
+ viewBox="0.00 0.00 852.30 1224.80" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1.88 1.88) rotate(0) translate(32.4 1192.4)">
+<title>architecture</title>
+<polygon fill="#181818" stroke="transparent" points="-32.4,32.4 -32.4,-1192.4 819.9,-1192.4 819.9,32.4 -32.4,32.4"/>
+<text text-anchor="middle" x="393.75" y="-1136" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee">导航、避障与底盘执行链</text>
+<text text-anchor="middle" x="393.75" y="-1108" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee"> </text>
+<!-- lidar -->
+<g id="node1" class="node">
+<title>lidar</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M545,-1096C545,-1096 418,-1096 418,-1096 412,-1096 406,-1090 406,-1084 406,-1084 406,-1046 406,-1046 406,-1040 412,-1034 418,-1034 418,-1034 545,-1034 545,-1034 551,-1034 557,-1040 557,-1046 557,-1046 557,-1084 557,-1084 557,-1090 551,-1096 545,-1096"/>
+<text text-anchor="middle" x="481.5" y="-1070.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">激光点云 / IMU</text>
+<text text-anchor="middle" x="481.5" y="-1050.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">关节与里程计</text>
+</g>
+<!-- slam -->
+<g id="node4" class="node">
+<title>slam</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M533,-987C533,-987 368,-987 368,-987 362,-987 356,-981 356,-975 356,-975 356,-937 356,-937 356,-931 362,-925 368,-925 368,-925 533,-925 533,-925 539,-925 545,-931 545,-937 545,-937 545,-975 545,-975 545,-981 539,-987 533,-987"/>
+<text text-anchor="middle" x="450.5" y="-961.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">Voxel&#45;SLAM</text>
+<text text-anchor="middle" x="450.5" y="-941.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">定位 / map→odom</text>
+</g>
+<!-- lidar&#45;&gt;slam -->
+<g id="edge1" class="edge">
+<title>lidar&#45;&gt;slam</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M472.78,-1033.91C469.28,-1021.83 465.21,-1007.77 461.51,-994.99"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="464.18,-994.14 459.26,-987.24 458.8,-995.7 464.18,-994.14"/>
+</g>
+<!-- filter -->
+<g id="node5" class="node">
+<title>filter</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M760,-987C760,-987 593,-987 593,-987 587,-987 581,-981 581,-975 581,-975 581,-937 581,-937 581,-931 587,-925 593,-925 593,-925 760,-925 760,-925 766,-925 772,-931 772,-937 772,-937 772,-975 772,-975 772,-981 766,-987 760,-987"/>
+<text text-anchor="middle" x="676.5" y="-961.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">点云自滤 / 切片扫描</text>
+<text text-anchor="middle" x="676.5" y="-941.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">深度障碍投影</text>
+</g>
+<!-- lidar&#45;&gt;filter -->
+<g id="edge2" class="edge">
+<title>lidar&#45;&gt;filter</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M536.34,-1033.91C560.64,-1020.58 589.34,-1004.83 614.42,-991.06"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="616.07,-993.35 621.74,-987.05 613.38,-988.44 616.07,-993.35"/>
+</g>
+<!-- rgbd -->
+<g id="node2" class="node">
+<title>rgbd</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M775.5,-1096C775.5,-1096 605.5,-1096 605.5,-1096 599.5,-1096 593.5,-1090 593.5,-1084 593.5,-1084 593.5,-1046 593.5,-1046 593.5,-1040 599.5,-1034 605.5,-1034 605.5,-1034 775.5,-1034 775.5,-1034 781.5,-1034 787.5,-1040 787.5,-1046 787.5,-1046 787.5,-1084 787.5,-1084 787.5,-1090 781.5,-1096 775.5,-1096"/>
+<text text-anchor="middle" x="690.5" y="-1070.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">头部 / 腹部 RGB&#45;D</text>
+<text text-anchor="middle" x="690.5" y="-1050.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">原始健康 + 投影健康</text>
+</g>
+<!-- rgbd&#45;&gt;filter -->
+<g id="edge3" class="edge">
+<title>rgbd&#45;&gt;filter</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M686.56,-1033.91C685,-1021.94 683.18,-1008.03 681.52,-995.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="684.27,-994.8 680.46,-987.24 678.72,-995.53 684.27,-994.8"/>
+</g>
+<!-- request -->
+<g id="node3" class="node">
+<title>request</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M358,-1096C358,-1096 177,-1096 177,-1096 171,-1096 165,-1090 165,-1084 165,-1084 165,-1046 165,-1046 165,-1040 171,-1034 177,-1034 177,-1034 358,-1034 358,-1034 364,-1034 370,-1040 370,-1046 370,-1046 370,-1084 370,-1084 370,-1090 364,-1096 358,-1096"/>
+<text text-anchor="middle" x="267.5" y="-1070.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">人工目标 / 路线 / 探索</text>
+<text text-anchor="middle" x="267.5" y="-1050.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">搬运任务导航请求</text>
+</g>
+<!-- arb -->
+<g id="node6" class="node">
+<title>arb</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M385,-902C385,-902 150,-902 150,-902 144,-902 138,-896 138,-890 138,-890 138,-852 138,-852 138,-846 144,-840 150,-840 150,-840 385,-840 385,-840 391,-840 397,-846 397,-852 397,-852 397,-890 397,-890 397,-896 391,-902 385,-902"/>
+<text text-anchor="middle" x="267.5" y="-876.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">TaskArbiter</text>
+<text text-anchor="middle" x="267.5" y="-856.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">优先级 / 取消交接 / 唯一目标</text>
+</g>
+<!-- request&#45;&gt;arb -->
+<g id="edge4" class="edge">
+<title>request&#45;&gt;arb</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M267.5,-1034C267.5,-1000.7 267.5,-946.88 267.5,-910.5"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="270.3,-910.11 267.5,-902.11 264.7,-910.11 270.3,-910.11"/>
+</g>
+<!-- map -->
+<g id="node7" class="node">
+<title>map</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M541,-817C541,-817 360,-817 360,-817 354,-817 348,-811 348,-805 348,-805 348,-767 348,-767 348,-761 354,-755 360,-755 360,-755 541,-755 541,-755 547,-755 553,-761 553,-767 553,-767 553,-805 553,-805 553,-811 547,-817 541,-817"/>
+<text text-anchor="middle" x="450.5" y="-791.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">地图 / 区域 / 禁行约束</text>
+<text text-anchor="middle" x="450.5" y="-771.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">全局与局部 costmap</text>
+</g>
+<!-- slam&#45;&gt;map -->
+<g id="edge5" class="edge">
+<title>slam&#45;&gt;map</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M450.5,-924.96C450.5,-897.1 450.5,-855.5 450.5,-825.26"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="453.3,-825.06 450.5,-817.06 447.7,-825.06 453.3,-825.06"/>
+</g>
+<!-- filter&#45;&gt;map -->
+<g id="edge6" class="edge">
+<title>filter&#45;&gt;map</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M636.1,-924.96C597.25,-896.09 538.55,-852.45 497.6,-822.01"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="499.03,-819.58 490.93,-817.06 495.68,-824.08 499.03,-819.58"/>
+</g>
+<!-- planner -->
+<g id="node10" class="node">
+<title>planner</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M377,-696C377,-696 160,-696 160,-696 154,-696 148,-690 148,-684 148,-684 148,-646 148,-646 148,-640 154,-634 160,-634 160,-634 377,-634 377,-634 383,-634 389,-640 389,-646 389,-646 389,-684 389,-684 389,-690 383,-696 377,-696"/>
+<text text-anchor="middle" x="268.5" y="-670.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">Nav2 BT / 路由策略</text>
+<text text-anchor="middle" x="268.5" y="-650.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">规划 / 候选复核 / 路径提交</text>
+</g>
+<!-- arb&#45;&gt;planner -->
+<g id="edge8" class="edge">
+<title>arb&#45;&gt;planner</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M267.65,-839.9C267.82,-803.89 268.12,-743.56 268.31,-704.27"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="271.11,-704.24 268.35,-696.22 265.51,-704.21 271.11,-704.24"/>
+</g>
+<!-- map&#45;&gt;planner -->
+<g id="edge9" class="edge">
+<title>map&#45;&gt;planner</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M404.57,-754.97C379.25,-738.41 347.69,-717.78 321.34,-700.55"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="322.64,-698.05 314.41,-696.02 319.58,-702.74 322.64,-698.05"/>
+</g>
+<!-- geometry -->
+<g id="node8" class="node">
+<title>geometry</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M200.5,-987C200.5,-987 12.5,-987 12.5,-987 6.5,-987 0.5,-981 0.5,-975 0.5,-975 0.5,-937 0.5,-937 0.5,-931 6.5,-925 12.5,-925 12.5,-925 200.5,-925 200.5,-925 206.5,-925 212.5,-931 212.5,-937 212.5,-937 212.5,-975 212.5,-975 212.5,-981 206.5,-987 200.5,-987"/>
+<text text-anchor="middle" x="106.5" y="-961.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">实测关节 + 附着物账本</text>
+<text text-anchor="middle" x="106.5" y="-941.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">整机几何 / 固定包络</text>
+</g>
+<!-- confirm -->
+<g id="node9" class="node">
+<title>confirm</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M201,-817C201,-817 12,-817 12,-817 6,-817 0,-811 0,-805 0,-805 0,-767 0,-767 0,-761 6,-755 12,-755 12,-755 201,-755 201,-755 207,-755 213,-761 213,-767 213,-767 213,-805 213,-805 213,-811 207,-817 201,-817"/>
+<text text-anchor="middle" x="106.5" y="-791.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">停稳与 ArmHold</text>
+<text text-anchor="middle" x="106.5" y="-771.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">包络消费者同版本确认</text>
+</g>
+<!-- geometry&#45;&gt;confirm -->
+<g id="edge7" class="edge">
+<title>geometry&#45;&gt;confirm</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M106.5,-924.96C106.5,-897.1 106.5,-855.5 106.5,-825.26"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="109.3,-825.06 106.5,-817.06 103.7,-825.06 109.3,-825.06"/>
+</g>
+<!-- confirm&#45;&gt;planner -->
+<g id="edge10" class="edge">
+<title>confirm&#45;&gt;planner</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M124.28,-754.78C132.59,-742.52 143.35,-728.94 155.5,-719 164.07,-711.99 173.72,-705.67 183.68,-700.04"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="185.3,-702.35 190.98,-696.06 182.61,-697.43 185.3,-702.35"/>
+<text text-anchor="middle" x="198" y="-722.4" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">准入与足迹约束</text>
+</g>
+<!-- final -->
+<g id="node13" class="node">
+<title>final</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M409.5,-357C409.5,-357 127.5,-357 127.5,-357 121.5,-357 115.5,-351 115.5,-345 115.5,-345 115.5,-307 115.5,-307 115.5,-301 121.5,-295 127.5,-295 127.5,-295 409.5,-295 409.5,-295 415.5,-295 421.5,-301 421.5,-307 421.5,-307 421.5,-345 421.5,-345 421.5,-351 415.5,-357 409.5,-357"/>
+<text text-anchor="middle" x="268.5" y="-331.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">FinalProtection</text>
+<text text-anchor="middle" x="268.5" y="-311.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">输入时效 / 扫掠 / 包络 / 区域 / 许可</text>
+</g>
+<!-- confirm&#45;&gt;final -->
+<g id="edge14" class="edge">
+<title>confirm&#45;&gt;final</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M213.14,-780.82C278.39,-772.41 358.33,-750.58 406.5,-696 489.12,-602.38 457.66,-516.45 383.5,-416 368.01,-395.02 346.29,-376.47 325.89,-361.82"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="327.48,-359.51 319.33,-357.2 324.26,-364.09 327.48,-359.51"/>
+</g>
+<!-- tracker -->
+<g id="node11" class="node">
+<title>tracker</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M395,-587C395,-587 142,-587 142,-587 136,-587 130,-581 130,-575 130,-575 130,-537 130,-537 130,-531 136,-525 142,-525 142,-525 395,-525 395,-525 401,-525 407,-531 407,-537 407,-537 407,-575 407,-575 407,-581 401,-587 395,-587"/>
+<text text-anchor="middle" x="268.5" y="-561.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">Arrival / ThreePhase</text>
+<text text-anchor="middle" x="268.5" y="-541.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">路径跟踪 / 终点精调 / 停稳确认</text>
+</g>
+<!-- planner&#45;&gt;tracker -->
+<g id="edge11" class="edge">
+<title>planner&#45;&gt;tracker</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M268.5,-633.91C268.5,-621.94 268.5,-608.03 268.5,-595.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="271.3,-595.24 268.5,-587.24 265.7,-595.24 271.3,-595.24"/>
+</g>
+<!-- smooth -->
+<g id="node12" class="node">
+<title>smooth</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M354,-478C354,-478 183,-478 183,-478 177,-478 171,-472 171,-466 171,-466 171,-428 171,-428 171,-422 177,-416 183,-416 183,-416 354,-416 354,-416 360,-416 366,-422 366,-428 366,-428 366,-466 366,-466 366,-472 360,-478 354,-478"/>
+<text text-anchor="middle" x="268.5" y="-452.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">速度平滑 / 坐标转换</text>
+<text text-anchor="middle" x="268.5" y="-432.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">双臂姿态与运动约束</text>
+</g>
+<!-- tracker&#45;&gt;smooth -->
+<g id="edge12" class="edge">
+<title>tracker&#45;&gt;smooth</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M268.5,-524.91C268.5,-512.94 268.5,-499.03 268.5,-486.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="271.3,-486.24 268.5,-478.24 265.7,-486.24 271.3,-486.24"/>
+</g>
+<!-- smooth&#45;&gt;final -->
+<g id="edge13" class="edge">
+<title>smooth&#45;&gt;final</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M268.5,-415.97C268.5,-400.61 268.5,-381.74 268.5,-365.34"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="271.3,-365.02 268.5,-357.02 265.7,-365.02 271.3,-365.02"/>
+<text text-anchor="middle" x="293" y="-383.4" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">策略启用</text>
+</g>
+<!-- base -->
+<g id="node14" class="node">
+<title>base</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M364,-248C364,-248 173,-248 173,-248 167,-248 161,-242 161,-236 161,-236 161,-198 161,-198 161,-192 167,-186 173,-186 173,-186 364,-186 364,-186 370,-186 376,-192 376,-198 376,-198 376,-236 376,-236 376,-242 370,-248 364,-248"/>
+<text text-anchor="middle" x="268.5" y="-222.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">底盘执行适配</text>
+<text text-anchor="middle" x="268.5" y="-202.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">仿真 effort 或真机 SDK</text>
+</g>
+<!-- smooth&#45;&gt;base -->
+<g id="edge16" class="edge">
+<title>smooth&#45;&gt;base</title>
+<path fill="none" stroke="#909090" stroke-width="1.35" d="M366.31,-417.14C394.91,-403.65 422.92,-384.32 439.5,-357 453.8,-333.44 454.46,-318.14 439.5,-295 426.1,-274.27 405.65,-259.07 383.49,-247.94"/>
+<polygon fill="#909090" stroke="#909090" stroke-width="1.35" points="384.67,-245.4 376.24,-244.46 382.25,-250.45 384.67,-245.4"/>
+<text text-anchor="middle" x="503.5" y="-322.9" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">策略 off 的既有接线</text>
+</g>
+<!-- final&#45;&gt;base -->
+<g id="edge15" class="edge">
+<title>final&#45;&gt;base</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M268.5,-294.91C268.5,-282.94 268.5,-269.03 268.5,-256.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="271.3,-256.24 268.5,-248.24 265.7,-256.24 271.3,-256.24"/>
+</g>
+<!-- feedback -->
+<g id="node15" class="node">
+<title>feedback</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M390,-139C390,-139 147,-139 147,-139 141,-139 135,-133 135,-127 135,-127 135,-89 135,-89 135,-83 141,-77 147,-77 147,-77 390,-77 390,-77 396,-77 402,-83 402,-89 402,-89 402,-127 402,-127 402,-133 396,-139 390,-139"/>
+<text text-anchor="middle" x="268.5" y="-113.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">实际位姿 / 速度 / 执行状态</text>
+<text text-anchor="middle" x="268.5" y="-93.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">反馈至定位、跟踪与任务结果</text>
+</g>
+<!-- base&#45;&gt;feedback -->
+<g id="edge17" class="edge">
+<title>base&#45;&gt;feedback</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M268.5,-185.91C268.5,-173.94 268.5,-160.03 268.5,-147.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="271.3,-147.24 268.5,-139.24 265.7,-147.24 271.3,-147.24"/>
+</g>
+<!-- note -->
+<g id="node16" class="node">
+<title>note</title>
+<path fill="#181818" stroke="transparent" stroke-width="1.3" d="M489.5,-30C489.5,-30 47.5,-30 47.5,-30 42.5,-30 37.5,-25 37.5,-20 37.5,-20 37.5,-10 37.5,-10 37.5,-5 42.5,0 47.5,0 47.5,0 489.5,0 489.5,0 494.5,0 499.5,-5 499.5,-10 499.5,-10 499.5,-20 499.5,-20 499.5,-25 494.5,-30 489.5,-30"/>
+<text text-anchor="middle" x="268.5" y="-18.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#d8bc87">控制出口按启动 profile 核对；感知和候选规划不直接发布底盘命令</text>
+<text text-anchor="middle" x="268.5" y="-3.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#d8bc87">固定包络限定场景已有验证，非 home / 偏载 / 狭窄通道完整矩阵仍待验收</text>
+</g>
+<!-- feedback&#45;&gt;note -->
+</g>
+</svg>
+</div></section><section id="03_manipulation" class="view "><h2>相机感知、机械臂规划与搬运链</h2><div class="toolbar"><button onclick="zoom(.15)">放大</button><button onclick="zoom(-.15)">缩小</button><button onclick="resetZoom()">适应宽度</button><a href="03_manipulation.svg" download>下载 SVG</a><a href="03_manipulation.png" download>下载 PNG</a><a href="03_manipulation.dot" download>可编辑源文件</a></div><div class="canvas"><svg role="img" aria-label="相机感知、机械臂规划与搬运链" width="1734pt" height="2803pt"
+ viewBox="0.00 0.00 924.80 1494.80" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1.88 1.88) rotate(0) translate(32.4 1462.4)">
+<title>architecture</title>
+<polygon fill="#181818" stroke="transparent" points="-32.4,32.4 -32.4,-1462.4 892.4,-1462.4 892.4,32.4 -32.4,32.4"/>
+<text text-anchor="middle" x="430" y="-1406" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee">相机感知、机械臂规划与搬运链</text>
+<text text-anchor="middle" x="430" y="-1378" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee"> </text>
+<!-- image -->
+<g id="node1" class="node">
+<title>image</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M540.5,-1366C540.5,-1366 317.5,-1366 317.5,-1366 311.5,-1366 305.5,-1360 305.5,-1354 305.5,-1354 305.5,-1316 305.5,-1316 305.5,-1310 311.5,-1304 317.5,-1304 317.5,-1304 540.5,-1304 540.5,-1304 546.5,-1304 552.5,-1310 552.5,-1316 552.5,-1316 552.5,-1354 552.5,-1354 552.5,-1360 546.5,-1366 540.5,-1366"/>
+<text text-anchor="middle" x="429" y="-1340.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">RGB / Depth / CameraInfo</text>
+<text text-anchor="middle" x="429" y="-1320.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">采集时刻 TF / 标定版本</text>
+</g>
+<!-- sync -->
+<g id="node4" class="node">
+<title>sync</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M671.5,-1257C671.5,-1257 454.5,-1257 454.5,-1257 448.5,-1257 442.5,-1251 442.5,-1245 442.5,-1245 442.5,-1207 442.5,-1207 442.5,-1201 448.5,-1195 454.5,-1195 454.5,-1195 671.5,-1195 671.5,-1195 677.5,-1195 683.5,-1201 683.5,-1207 683.5,-1207 683.5,-1245 683.5,-1245 683.5,-1251 677.5,-1257 671.5,-1257"/>
+<text text-anchor="middle" x="563" y="-1231.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">C++ 同步与对齐快照</text>
+<text text-anchor="middle" x="563" y="-1211.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">原始健康 / 投影健康 / 时效</text>
+</g>
+<!-- image&#45;&gt;sync -->
+<g id="edge1" class="edge">
+<title>image&#45;&gt;sync</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M466.68,-1303.91C482.81,-1291.03 501.76,-1275.9 518.57,-1262.48"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="520.63,-1264.42 525.14,-1257.24 517.14,-1260.04 520.63,-1264.42"/>
+</g>
+<!-- mask -->
+<g id="node2" class="node">
+<title>mask</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M775.5,-1366C775.5,-1366 600.5,-1366 600.5,-1366 594.5,-1366 588.5,-1360 588.5,-1354 588.5,-1354 588.5,-1316 588.5,-1316 588.5,-1310 594.5,-1304 600.5,-1304 600.5,-1304 775.5,-1304 775.5,-1304 781.5,-1304 787.5,-1310 787.5,-1316 787.5,-1316 787.5,-1354 787.5,-1354 787.5,-1360 781.5,-1366 775.5,-1366"/>
+<text text-anchor="middle" x="688" y="-1340.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">检测 / 实例分割 / ROI</text>
+<text text-anchor="middle" x="688" y="-1320.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">当前来源按场景配置</text>
+</g>
+<!-- mask&#45;&gt;sync -->
+<g id="edge2" class="edge">
+<title>mask&#45;&gt;sync</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M652.85,-1303.91C637.8,-1291.03 620.13,-1275.9 604.45,-1262.48"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="606.22,-1260.31 598.32,-1257.24 602.58,-1264.56 606.22,-1260.31"/>
+</g>
+<!-- cad -->
+<g id="node3" class="node">
+<title>cad</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M247,-1366C247,-1366 77,-1366 77,-1366 71,-1366 65,-1360 65,-1354 65,-1354 65,-1316 65,-1316 65,-1310 71,-1304 77,-1304 77,-1304 247,-1304 247,-1304 253,-1304 259,-1310 259,-1316 259,-1316 259,-1354 259,-1354 259,-1360 253,-1366 247,-1366"/>
+<text text-anchor="middle" x="162" y="-1340.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">注册 CAD / 模型版本</text>
+<text text-anchor="middle" x="162" y="-1320.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">物体坐标与尺度</text>
+</g>
+<!-- pose -->
+<g id="node7" class="node">
+<title>pose</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M198,-1148C198,-1148 12,-1148 12,-1148 6,-1148 0,-1142 0,-1136 0,-1136 0,-1098 0,-1098 0,-1092 6,-1086 12,-1086 12,-1086 198,-1086 198,-1086 204,-1086 210,-1092 210,-1098 210,-1098 210,-1136 210,-1136 210,-1142 204,-1148 198,-1148"/>
+<text text-anchor="middle" x="105" y="-1122.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">现有已知 CAD 6D 服务</text>
+<text text-anchor="middle" x="105" y="-1102.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">物体位姿候选</text>
+</g>
+<!-- cad&#45;&gt;pose -->
+<g id="edge6" class="edge">
+<title>cad&#45;&gt;pose</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M154.07,-1303.97C143.87,-1265.31 126.14,-1198.11 115.01,-1155.95"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="117.7,-1155.15 112.95,-1148.13 112.28,-1156.58 117.7,-1155.15"/>
+</g>
+<!-- fp -->
+<g id="node8" class="node">
+<title>fp</title>
+<path fill="#342f27" stroke="#d5af69" stroke-width="1.3" stroke-dasharray="5,2" d="M534,-1148C534,-1148 258,-1148 258,-1148 252,-1148 246,-1142 246,-1136 246,-1136 246,-1098 246,-1098 246,-1092 252,-1086 258,-1086 258,-1086 534,-1086 534,-1086 540,-1086 546,-1092 546,-1098 546,-1098 546,-1136 546,-1136 546,-1142 540,-1148 534,-1148"/>
+<text text-anchor="middle" x="396" y="-1122.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#efd49e">FoundationPose C++ 后端</text>
+<text text-anchor="middle" x="396" y="-1102.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#efd49e">依赖准备；推理 / tracking 待验收</text>
+</g>
+<!-- cad&#45;&gt;fp -->
+<g id="edge8" class="edge">
+<title>cad&#45;&gt;fp</title>
+<path fill="none" stroke="#d5af69" stroke-width="1.35" stroke-dasharray="5,2" d="M194.54,-1303.97C237.2,-1264.58 311.95,-1195.58 357.42,-1153.61"/>
+<polygon fill="#d5af69" stroke="#d5af69" stroke-width="1.35" points="359.38,-1155.61 363.36,-1148.13 355.59,-1151.5 359.38,-1155.61"/>
+</g>
+<!-- fixture -->
+<g id="node5" class="node">
+<title>fixture</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M634.5,-1063C634.5,-1063 467.5,-1063 467.5,-1063 461.5,-1063 455.5,-1057 455.5,-1051 455.5,-1051 455.5,-1013 455.5,-1013 455.5,-1007 461.5,-1001 467.5,-1001 467.5,-1001 634.5,-1001 634.5,-1001 640.5,-1001 646.5,-1007 646.5,-1013 646.5,-1013 646.5,-1051 646.5,-1051 646.5,-1057 640.5,-1063 634.5,-1063"/>
+<text text-anchor="middle" x="551" y="-1037.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">普通演示目标定位</text>
+<text text-anchor="middle" x="551" y="-1017.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">场景颜色 / 几何观测</text>
+</g>
+<!-- sync&#45;&gt;fixture -->
+<g id="edge3" class="edge">
+<title>sync&#45;&gt;fixture</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M565.42,-1194.78C567.17,-1166.54 568.5,-1123.26 564,-1086 563.4,-1081.06 562.5,-1075.92 561.45,-1070.87"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="564.18,-1070.23 559.7,-1063.04 558.72,-1071.46 564.18,-1070.23"/>
+</g>
+<!-- grasp -->
+<g id="node6" class="node">
+<title>grasp</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M811,-893C811,-893 649,-893 649,-893 643,-893 637,-887 637,-881 637,-881 637,-843 637,-843 637,-837 643,-831 649,-831 649,-831 811,-831 811,-831 817,-831 823,-837 823,-843 823,-843 823,-881 823,-881 823,-887 817,-893 811,-893"/>
+<text text-anchor="middle" x="730" y="-867.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">GraspNet C++ 服务</text>
+<text text-anchor="middle" x="730" y="-847.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">抓取候选</text>
+</g>
+<!-- sync&#45;&gt;grasp -->
+<g id="edge4" class="edge">
+<title>sync&#45;&gt;grasp</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M584.84,-1194.89C607.04,-1163.26 641.29,-1111.47 664,-1063 689.38,-1008.83 709.27,-942.22 720.33,-901.19"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="723.07,-901.79 722.42,-893.34 717.66,-900.35 723.07,-901.79"/>
+</g>
+<!-- sync&#45;&gt;pose -->
+<g id="edge5" class="edge">
+<title>sync&#45;&gt;pose</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M442.35,-1197.68C378.57,-1183.13 298.99,-1164.82 228,-1148 224.75,-1147.23 221.46,-1146.45 218.13,-1145.65"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="218.75,-1142.92 210.32,-1143.79 217.45,-1148.37 218.75,-1142.92"/>
+</g>
+<!-- sync&#45;&gt;fp -->
+<g id="edge7" class="edge">
+<title>sync&#45;&gt;fp</title>
+<path fill="none" stroke="#d5af69" stroke-width="1.35" stroke-dasharray="5,2" d="M516.04,-1194.91C495.41,-1181.69 471.07,-1166.1 449.72,-1152.42"/>
+<polygon fill="#d5af69" stroke="#d5af69" stroke-width="1.35" points="451.15,-1150.01 442.9,-1148.05 448.13,-1154.72 451.15,-1150.01"/>
+</g>
+<!-- scene -->
+<g id="node10" class="node">
+<title>scene</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M650.5,-808C650.5,-808 421.5,-808 421.5,-808 415.5,-808 409.5,-802 409.5,-796 409.5,-796 409.5,-758 409.5,-758 409.5,-752 415.5,-746 421.5,-746 421.5,-746 650.5,-746 650.5,-746 656.5,-746 662.5,-752 662.5,-758 662.5,-758 662.5,-796 662.5,-796 662.5,-802 656.5,-808 650.5,-808"/>
+<text text-anchor="middle" x="536" y="-782.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">PlanningScene 适配与读回</text>
+<text text-anchor="middle" x="536" y="-762.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">障碍物 / 附着物 / 场景版本</text>
+</g>
+<!-- fixture&#45;&gt;scene -->
+<g id="edge13" class="edge">
+<title>fixture&#45;&gt;scene</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M549.22,-1000.98C546.49,-954.98 541.28,-867.08 538.28,-816.46"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="541.07,-816.19 537.8,-808.37 535.48,-816.52 541.07,-816.19"/>
+</g>
+<!-- mtc -->
+<g id="node12" class="node">
+<title>mtc</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M664.5,-699C664.5,-699 407.5,-699 407.5,-699 401.5,-699 395.5,-693 395.5,-687 395.5,-687 395.5,-649 395.5,-649 395.5,-643 401.5,-637 407.5,-637 407.5,-637 664.5,-637 664.5,-637 670.5,-637 676.5,-643 676.5,-649 676.5,-649 676.5,-687 676.5,-687 676.5,-693 670.5,-699 664.5,-699"/>
+<text text-anchor="middle" x="536" y="-673.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">MTC / IK / 整机碰撞验证</text>
+<text text-anchor="middle" x="536" y="-653.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">完整分阶段规划 / 剩余轨迹复核</text>
+</g>
+<!-- grasp&#45;&gt;mtc -->
+<g id="edge15" class="edge">
+<title>grasp&#45;&gt;mtc</title>
+<path fill="none" stroke="#d5af69" stroke-width="1.35" stroke-dasharray="5,2" d="M722.84,-830.78C715.59,-805.6 702.21,-770.09 680,-746 663.86,-728.49 642.8,-714.18 621.8,-702.86"/>
+<polygon fill="#d5af69" stroke="#d5af69" stroke-width="1.35" points="623.07,-700.37 614.68,-699.13 620.47,-705.33 623.07,-700.37"/>
+<text text-anchor="middle" x="787.5" y="-773.9" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">模型候选到实际执行待验收</text>
+</g>
+<!-- quality -->
+<g id="node9" class="node">
+<title>quality</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M449.5,-978C449.5,-978 214.5,-978 214.5,-978 208.5,-978 202.5,-972 202.5,-966 202.5,-966 202.5,-928 202.5,-928 202.5,-922 208.5,-916 214.5,-916 214.5,-916 449.5,-916 449.5,-916 455.5,-916 461.5,-922 461.5,-928 461.5,-928 461.5,-966 461.5,-966 461.5,-972 455.5,-978 449.5,-978"/>
+<text text-anchor="middle" x="332" y="-952.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">几何一致性 / 时效 / 版本检查</text>
+<text text-anchor="middle" x="332" y="-932.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">物体观测与场景身份</text>
+</g>
+<!-- pose&#45;&gt;quality -->
+<g id="edge9" class="edge">
+<title>pose&#45;&gt;quality</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M145.58,-1085.96C184.68,-1057.03 243.8,-1013.27 284.94,-982.83"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="286.62,-985.07 291.39,-978.06 283.29,-980.57 286.62,-985.07"/>
+</g>
+<!-- fp&#45;&gt;quality -->
+<g id="edge10" class="edge">
+<title>fp&#45;&gt;quality</title>
+<path fill="none" stroke="#d5af69" stroke-width="1.35" stroke-dasharray="5,2" d="M384.56,-1085.96C373.9,-1057.98 357.96,-1016.14 346.43,-985.88"/>
+<polygon fill="#d5af69" stroke="#d5af69" stroke-width="1.35" points="348.92,-984.54 343.45,-978.06 343.68,-986.53 348.92,-984.54"/>
+</g>
+<!-- quality&#45;&gt;scene -->
+<g id="edge11" class="edge">
+<title>quality&#45;&gt;scene</title>
+<path fill="none" stroke="#d5af69" stroke-width="1.35" stroke-dasharray="5,2" d="M347.98,-915.9C362.76,-890.45 386.83,-854.49 416,-831 424.86,-823.86 434.84,-817.49 445.15,-811.86"/>
+<polygon fill="#d5af69" stroke="#d5af69" stroke-width="1.35" points="446.56,-814.28 452.34,-808.08 443.96,-809.33 446.56,-814.28"/>
+<text text-anchor="middle" x="464.5" y="-858.9" font-family="Noto Sans CJK SC" font-size="12.00" fill="#aaaaaa">正式模型链待贯通</text>
+</g>
+<!-- template -->
+<g id="node11" class="node">
+<title>template</title>
+<path fill="#342f27" stroke="#d5af69" stroke-width="1.3" stroke-dasharray="5,2" d="M361.5,-808C361.5,-808 190.5,-808 190.5,-808 184.5,-808 178.5,-802 178.5,-796 178.5,-796 178.5,-758 178.5,-758 178.5,-752 184.5,-746 190.5,-746 190.5,-746 361.5,-746 361.5,-746 367.5,-746 373.5,-752 373.5,-758 373.5,-758 373.5,-796 373.5,-796 373.5,-802 367.5,-808 361.5,-808"/>
+<text text-anchor="middle" x="276" y="-782.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#efd49e">物体坐标系抓取模板</text>
+<text text-anchor="middle" x="276" y="-762.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#efd49e">待贯通 / 验收</text>
+</g>
+<!-- quality&#45;&gt;template -->
+<g id="edge12" class="edge">
+<title>quality&#45;&gt;template</title>
+<path fill="none" stroke="#d5af69" stroke-width="1.35" stroke-dasharray="5,2" d="M321.99,-915.96C312.66,-887.98 298.71,-846.14 288.63,-815.88"/>
+<polygon fill="#d5af69" stroke="#d5af69" stroke-width="1.35" points="291.21,-814.76 286.02,-808.06 285.89,-816.53 291.21,-814.76"/>
+</g>
+<!-- scene&#45;&gt;mtc -->
+<g id="edge14" class="edge">
+<title>scene&#45;&gt;mtc</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M536,-745.91C536,-733.94 536,-720.03 536,-707.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="538.8,-707.24 536,-699.24 533.2,-707.24 538.8,-707.24"/>
+</g>
+<!-- template&#45;&gt;mtc -->
+<g id="edge16" class="edge">
+<title>template&#45;&gt;mtc</title>
+<path fill="none" stroke="#d5af69" stroke-width="1.35" stroke-dasharray="5,2" d="M349.12,-745.91C382.21,-732.29 421.43,-716.15 455.38,-702.18"/>
+<polygon fill="#d5af69" stroke="#d5af69" stroke-width="1.35" points="456.65,-704.68 462.98,-699.05 454.52,-699.5 456.65,-704.68"/>
+</g>
+<!-- exec -->
+<g id="node13" class="node">
+<title>exec</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M647,-590C647,-590 425,-590 425,-590 419,-590 413,-584 413,-578 413,-578 413,-540 413,-540 413,-534 419,-528 425,-528 425,-528 647,-528 647,-528 653,-528 659,-534 659,-540 659,-540 659,-578 659,-578 659,-584 653,-590 647,-590"/>
+<text text-anchor="middle" x="536" y="-564.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">任务拥有的操作执行器</text>
+<text text-anchor="middle" x="536" y="-544.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">执行守卫 / Hold / 取消终态</text>
+</g>
+<!-- mtc&#45;&gt;exec -->
+<g id="edge17" class="edge">
+<title>mtc&#45;&gt;exec</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M536,-636.91C536,-624.94 536,-611.03 536,-598.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="538.8,-598.24 536,-590.24 533.2,-598.24 538.8,-598.24"/>
+</g>
+<!-- ledger -->
+<g id="node14" class="node">
+<title>ledger</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M646.5,-481C646.5,-481 425.5,-481 425.5,-481 419.5,-481 413.5,-475 413.5,-469 413.5,-469 413.5,-431 413.5,-431 413.5,-425 419.5,-419 425.5,-419 425.5,-419 646.5,-419 646.5,-419 652.5,-419 658.5,-425 658.5,-431 658.5,-431 658.5,-469 658.5,-469 658.5,-475 652.5,-481 646.5,-481"/>
+<text text-anchor="middle" x="536" y="-455.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">抓取 / 释放观察与账本确认</text>
+<text text-anchor="middle" x="536" y="-435.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">附着状态 / 质量 / 单调版本</text>
+</g>
+<!-- exec&#45;&gt;ledger -->
+<g id="edge18" class="edge">
+<title>exec&#45;&gt;ledger</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M536,-527.91C536,-515.94 536,-502.03 536,-489.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="538.8,-489.24 536,-481.24 533.2,-489.24 538.8,-489.24"/>
+</g>
+<!-- env -->
+<g id="node15" class="node">
+<title>env</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M656,-372C656,-372 416,-372 416,-372 410,-372 404,-366 404,-360 404,-360 404,-322 404,-322 404,-316 410,-310 416,-310 416,-310 656,-310 656,-310 662,-310 668,-316 668,-322 668,-322 668,-360 668,-360 668,-366 662,-372 656,-372"/>
+<text text-anchor="middle" x="536" y="-346.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">运输姿态 / 实测整机包络</text>
+<text text-anchor="middle" x="536" y="-326.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">消费者同版本 ACK / 导航准入</text>
+</g>
+<!-- ledger&#45;&gt;env -->
+<g id="edge19" class="edge">
+<title>ledger&#45;&gt;env</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M536,-418.91C536,-406.94 536,-393.03 536,-380.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="538.8,-380.24 536,-372.24 533.2,-380.24 538.8,-380.24"/>
+</g>
+<!-- nav -->
+<g id="node16" class="node">
+<title>nav</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M652,-263C652,-263 420,-263 420,-263 414,-263 408,-257 408,-251 408,-251 408,-213 408,-213 408,-207 414,-201 420,-201 420,-201 652,-201 652,-201 658,-201 664,-207 664,-213 664,-213 664,-251 664,-251 664,-257 658,-263 652,-263"/>
+<text text-anchor="middle" x="536" y="-237.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">既有导航仲裁与执行保护链</text>
+<text text-anchor="middle" x="536" y="-217.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">到站保持 → 放置规划与执行</text>
+</g>
+<!-- env&#45;&gt;nav -->
+<g id="edge20" class="edge">
+<title>env&#45;&gt;nav</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M536,-309.91C536,-297.94 536,-284.03 536,-271.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="538.8,-271.24 536,-263.24 533.2,-271.24 538.8,-271.24"/>
+</g>
+<!-- result -->
+<g id="node17" class="node">
+<title>result</title>
+<path fill="#333333" stroke="#555555" stroke-width="1.3" d="M662.5,-154C662.5,-154 409.5,-154 409.5,-154 403.5,-154 397.5,-148 397.5,-142 397.5,-142 397.5,-104 397.5,-104 397.5,-98 403.5,-92 409.5,-92 409.5,-92 662.5,-92 662.5,-92 668.5,-92 674.5,-98 674.5,-104 674.5,-104 674.5,-142 674.5,-142 674.5,-148 668.5,-154 662.5,-154"/>
+<text text-anchor="middle" x="536" y="-128.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">独立放置确认 / 退臂 / 空载保持</text>
+<text text-anchor="middle" x="536" y="-108.6" font-family="Noto Sans CJK SC" font-size="18.00" fill="#f3f3f3">任务结果与资源释放</text>
+</g>
+<!-- nav&#45;&gt;result -->
+<g id="edge21" class="edge">
+<title>nav&#45;&gt;result</title>
+<path fill="none" stroke="#bfc2c5" stroke-width="1.35" d="M536,-200.91C536,-188.94 536,-175.03 536,-162.35"/>
+<polygon fill="#bfc2c5" stroke="#bfc2c5" stroke-width="1.35" points="538.8,-162.24 536,-154.24 533.2,-162.24 538.8,-162.24"/>
+</g>
+<!-- note -->
+<g id="node18" class="node">
+<title>note</title>
+<path fill="#181818" stroke="transparent" stroke-width="1.3" d="M766.5,-45C766.5,-45 305.5,-45 305.5,-45 299.5,-45 293.5,-39 293.5,-33 293.5,-33 293.5,-12 293.5,-12 293.5,-6 299.5,0 305.5,0 305.5,0 766.5,0 766.5,0 772.5,0 778.5,-6 778.5,-12 778.5,-12 778.5,-33 778.5,-33 778.5,-39 772.5,-45 766.5,-45"/>
+<text text-anchor="middle" x="536" y="-33.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#d8bc87">灰色实线：已有实现或普通演示接线，不代表全链验收</text>
+<text text-anchor="middle" x="536" y="-18.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#d8bc87">金色虚线：候选接线 / 待贯通或待验收；FoundationPose 不等于现有 6D 服务</text>
+<text text-anchor="middle" x="536" y="-3.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#d8bc87">普通演示采用运动学附着；正式原生全阶段执行及真实接触抓取仍待验收</text>
+</g>
+<!-- result&#45;&gt;note -->
+</g>
+</svg>
+</div></section><footer>依据：<a href="../REPORT.md">阶段汇报</a> <a href="../index.html">原可视化汇报</a> <a href="../../../FOUNDATIONPOSE_P0_PROGRESS_20260923.md">FoundationPose 进展</a><p>保留导航与机械臂的独立控制权；记录状态、健康和版本的模块不额外获得设备命令权限。</p></footer></main><script>let scale=1;function select(id,b){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));resetZoom()}function zoom(delta){scale=Math.min(2.8,Math.max(.55,scale+delta));document.querySelector('.view.active svg').style.width=(scale*100)+'%'}function resetZoom(){scale=1;document.querySelector('.view.active svg').style.width='100%'}</script></body></html>

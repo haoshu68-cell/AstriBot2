@@ -1,0 +1,69 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 14 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 14 tests from HealthContract
+[ RUN      ] HealthContract.ValidAlignedStreams
+[       OK ] HealthContract.ValidAlignedStreams (71 ms)
+[ RUN      ] HealthContract.RejectsInvalidIntrinsics
+[       OK ] HealthContract.RejectsInvalidIntrinsics (68 ms)
+[ RUN      ] HealthContract.RejectsMalformedDepth
+[       OK ] HealthContract.RejectsMalformedDepth (68 ms)
+[ RUN      ] HealthContract.RejectsUnknownCalibration
+[       OK ] HealthContract.RejectsUnknownCalibration (69 ms)
+[ RUN      ] HealthContract.PausedClockDoesNotKeepCameraHealthy
+[       OK ] HealthContract.PausedClockDoesNotKeepCameraHealthy (369 ms)
+[ RUN      ] HealthContract.SameRevisionCannotChangeIntrinsics
+[       OK ] HealthContract.SameRevisionCannotChangeIntrinsics (102 ms)
+[ RUN      ] HealthContract.InFlightRgbDoesNotInvalidateLastMatchedSnapshot
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:64: Failure
+Value of: health->valid
+  Actual: false
+Expected: true
+CAMERA_SYNC_SKEW
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:66: Failure
+Expected equality of these values:
+  health->sync_skew_sec
+    Which is: 0.101246368
+  0.0
+    Which is: 0
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:68: Failure
+Value of: health->valid
+  Actual: false
+Expected: true
+CAMERA_SYNC_SKEW
+[  FAILED  ] HealthContract.InFlightRgbDoesNotInvalidateLastMatchedSnapshot (185 ms)
+[ RUN      ] HealthContract.DelayedDepthMatchesBufferedRgbAndInfo
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:85: Failure
+Value of: health->valid
+  Actual: false
+Expected: true
+CAMERA_SYNC_SKEW
+[  FAILED  ] HealthContract.DelayedDepthMatchesBufferedRgbAndInfo (276 ms)
+[ RUN      ] HealthContract.UnmatchedNewFramesCannotRenewSnapshotLifetime
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:99: Failure
+Expected equality of these values:
+  health->reason_code
+    Which is: "CAMERA_SYNC_SKEW"
+  "CAMERA_STALE"
+[  FAILED  ] HealthContract.UnmatchedNewFramesCannotRenewSnapshotLifetime (395 ms)
+[ RUN      ] HealthContract.PersistentSkewWithoutMatchedFramesIsRejected
+[       OK ] HealthContract.PersistentSkewWithoutMatchedFramesIsRejected (67 ms)
+[ RUN      ] HealthContract.MalformedDepthCannotHideBehindMatchedSnapshot
+[       OK ] HealthContract.MalformedDepthCannotHideBehindMatchedSnapshot (89 ms)
+[ RUN      ] HealthContract.FrameMismatchCannotHideBehindMatchedSnapshot
+[       OK ] HealthContract.FrameMismatchCannotHideBehindMatchedSnapshot (89 ms)
+[ RUN      ] HealthContract.RealLowRateRemainsRejected
+[       OK ] HealthContract.RealLowRateRemainsRejected (239 ms)
+[ RUN      ] HealthContract.ClockRollbackInvalidatesMatchedSnapshotAndChangesEpoch
+[       OK ] HealthContract.ClockRollbackInvalidatesMatchedSnapshotAndChangesEpoch (88 ms)
+[----------] 14 tests from HealthContract (2176 ms total)
+
+[----------] Global test environment tear-down
+[==========] 14 tests from 1 test suite ran. (2179 ms total)
+[  PASSED  ] 11 tests.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] HealthContract.InFlightRgbDoesNotInvalidateLastMatchedSnapshot
+[  FAILED  ] HealthContract.DelayedDepthMatchesBufferedRgbAndInfo
+[  FAILED  ] HealthContract.UnmatchedNewFramesCannotRenewSnapshotLifetime
+
+ 3 FAILED TESTS

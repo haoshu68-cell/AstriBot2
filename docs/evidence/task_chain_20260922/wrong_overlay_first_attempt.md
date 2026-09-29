@@ -1,0 +1,1 @@
+The attempted wrong-overlay scenario inherited the correct prefixes, and the gate correctly passed. This is not a negative test. The owned simulator is stopped; the next fixture explicitly prepends an old package prefix after setup. No conclusion of guard failure or successful negative verification is drawn.

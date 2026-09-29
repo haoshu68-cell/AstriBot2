@@ -35,6 +35,15 @@
 """
 
 import math
+import os
+
+if os.environ.get('ASTRIBOT_BRIDGE_NATIVE_KERNELS', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native
+    except ImportError:  # pragma: no cover
+        _native = None
+else:
+    _native = None
 
 
 class ArmConfigError(ValueError):
@@ -191,9 +200,18 @@ def interpolate_trajectory(times, positions, velocities, t, mode=INTERP_CUBIC):
     s = (t - times[lo]) / seg_dt
 
     out = []
-    use_cubic = (mode == INTERP_CUBIC and velocities is not None
-                 and len(velocities) == len(positions)
-                 and velocities[lo] and velocities[hi])
+    use_cubic = bool(mode == INTERP_CUBIC and velocities is not None
+                     and len(velocities) == len(positions)
+                     and velocities[lo] and velocities[hi])
+    native_safe = (_native is not None and
+                   all(len(row) == len(positions[0]) for row in positions) and
+                   (not use_cubic or all(len(row) == len(positions[0])
+                                         for row in velocities)))
+    if native_safe:
+        return list(_native.interpolate_trajectory(
+            list(times), [list(row) for row in positions],
+            [list(row) for row in velocities] if use_cubic else [],
+            t, use_cubic))
     for j in range(len(positions[lo])):
         if use_cubic:
             out.append(_cubic_hermite(positions[lo][j], velocities[lo][j],
@@ -209,6 +227,8 @@ def max_abs_error(a, b):
     """两个关节向量的最大逐元素绝对差。"""
     if len(a) != len(b):
         raise ArmConfigError('维度不符：%d vs %d' % (len(a), len(b)))
+    if _native is not None:
+        return _native.max_abs_error(list(a), list(b))
     worst = 0.0
     for x, y in zip(a, b):
         worst = max(worst, abs(x - y))

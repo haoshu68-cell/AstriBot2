@@ -1,3 +1,4 @@
+#include "astribot_map_manager/storage_path.hpp"
 #include "astribot_map_manager/voxel_activation.hpp"
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/parameter_client.hpp>
@@ -90,7 +91,7 @@ protected:
  }
 public:
  explicit VoxelSessionAdapter(const rclcpp::NodeOptions & options=rclcpp::NodeOptions()):Node("map_session_adapter",options){
- std::random_device random;boot_=std::to_string(random())+"-"+std::to_string(random());robot_=declare_parameter("robot_id","astribot");profile_=declare_parameter("profile","");assets_=declare_parameter("asset_root","/tmp/astribot_map_catalog/assets");runtime_=declare_parameter("runtime_root","/tmp/astribot_voxel_activation");map_topic_=declare_parameter("map_topic","/map");base_=declare_parameter("robot_base_frame","astribot_torso_base");odom_frame_=declare_parameter("odom_frame","odom");
+ std::random_device random;boot_=std::to_string(random())+"-"+std::to_string(random());robot_=declare_parameter("robot_id","astribot");profile_=declare_parameter("profile","");assets_=catalogAssetRoot(declare_parameter("asset_root",std::string()));runtime_=declare_parameter("runtime_root","/tmp/astribot_voxel_activation");map_topic_=declare_parameter("map_topic","/map");base_=declare_parameter("robot_base_frame","astribot_torso_base");odom_frame_=declare_parameter("odom_frame","odom");
  enabled_=declare_parameter("allow_navigation_reconfigure",false)&&(profile_=="sim"||profile_=="hardware");args_=declare_parameter<std::vector<std::string>>("launch_arguments",std::vector<std::string>{});
  const std::set<std::string> allowed={"lidar_topic","lidar_topic_back","imu_topic","point_notime","imu_extrinsic_tran","back_extrinsic_tran","back_extrinsic_rota"};std::set<std::string> provided;
  for(const auto & arg:args_){auto pos=arg.find(":=");auto key=arg.substr(0,pos);if(pos==std::string::npos||!allowed.count(key)||!provided.insert(key).second||arg.substr(pos+2).empty())throw std::runtime_error("Invalid deployment arguments");}

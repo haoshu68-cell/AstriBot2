@@ -30,6 +30,10 @@ public:
   void controllers(const std::vector<controller_manager_msgs::msg::ControllerState> &,int64_t request_at,int64_t request_steady,int64_t now,int64_t steady);
   void cancel();
   Hold status(int64_t now,int64_t steady);
+  // A receipt confirms coordinator observation only; the caller still requires
+  // a current local hold and the normal fixed-envelope admission.
+  bool observationMatches(const Hold &,int64_t first_published,int64_t received_ros,
+    int64_t received_steady,int64_t now,int64_t steady) const;
   astribot_navigation_msgs::srv::SetFixedEnvelope::Request request(const std::string &request_id,
     const astribot_navigation_msgs::msg::RobotEnvelope &limits,int64_t now,int64_t steady);
   const std::string &reason() const {return reason_;}
@@ -41,7 +45,7 @@ private:
   std::set<std::string> used_ids_;
   std::deque<Sample> samples_;
   std::string id_,reason_="NO_HOLD";
-  int64_t after_=0,last_ros_=-1,last_steady_=-1,geometry_deadline_=-1,claims_ros_=-1,claims_steady_=-1;
+  int64_t after_=0,last_ros_=-1,last_steady_=-1,claims_ros_=-1,claims_steady_=-1;
   std::set<std::string> claims_;
   bool active_=false,confirmed_once_=false;
 };

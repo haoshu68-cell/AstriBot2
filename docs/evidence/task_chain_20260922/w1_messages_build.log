@@ -1,0 +1,14 @@
+[0.258s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_humble/opt/ros/humble' in the environment variable AMENT_PREFIX_PATH doesn't contain any 'local_setup.*' files.
+[0.293s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_perception_msgs' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/ros_ws/install/astribot_perception_msgs, /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_perception_msgs
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_perception_msgs
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_perception_msgs
+Finished <<< astribot_perception_msgs [5.90s]
+
+Summary: 1 package finished [6.13s]

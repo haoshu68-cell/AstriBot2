@@ -1,0 +1,324 @@
+{
+  "visibility_model_sha256": "a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+  "schema_version": 1,
+  "estimator_cli_sha256": "4f6f7b1e9dec0b7ecd6b1b2ec3314d4c5f1611ee0ee014059599a387bea9d2f9",
+  "estimator_library_sha256": "2eab393e88e7541252a833e7daeb06002a37019c523c500ae3c912938b3453e2",
+  "fixed_thresholds": {
+    "translation_m": 0.02,
+    "rotation_deg": 10
+  },
+  "object_symmetry": "none declared; asymmetric CAD",
+  "truth_passed_to_estimator": false,
+  "scene_source": "actual raw Gazebo RGB-D, HSV validation mask; not YOLO",
+  "results": [
+    {
+      "scene": "near",
+      "elapsed_wall_sec": 1.6666136260000712,
+      "exit_code": 0,
+      "scene_sha256": "755cd4c61d79e9315e0faeaba212417c24c5363229a808d4099dc7d6c7b8d5ff",
+      "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429",
+      "translation_error_m": 0.0013753139226561956,
+      "rotation_error_deg": 0.667484894805122,
+      "accepted": true,
+      "schema": "astribot.object_pose/1",
+      "method": "known_cad_ppf_icp",
+      "success": true,
+      "reason": "ok",
+      "camera_from_object": [
+        [
+          -0.53720630775,
+          -0.709862834345,
+          0.455526222439,
+          -0.0209993939688
+        ],
+        [
+          -0.33646758467,
+          -0.31488146013,
+          -0.887490411516,
+          -0.100941231953
+        ],
+        [
+          0.773433221022,
+          -0.630035254952,
+          -0.0696895267436,
+          0.700198583438
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "coverage": 0.287141905396,
+      "model_coverage": 0.287141905396,
+      "total_model_coverage": 0.287141905396,
+      "visible_model_coverage": 0.997627520759,
+      "visible_model_points": 843,
+      "observable_normal_directions": 2,
+      "scene_coverage": 0.995541685243,
+      "rmse_m": 0.00238712728651,
+      "ambiguous": false,
+      "symmetry_equivalent": false,
+      "candidate_count": 30
+    },
+    {
+      "scene": "tilted",
+      "elapsed_wall_sec": 1.5165243829997053,
+      "exit_code": 2,
+      "scene_sha256": "528096f8c5cfd5308e2ee75c179f5fcb7fa65d0179618e635c990613db3f0fab",
+      "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429",
+      "translation_error_m": null,
+      "rotation_error_deg": null,
+      "accepted": false,
+      "schema": "astribot.object_pose/1",
+      "method": "known_cad_ppf_icp",
+      "success": false,
+      "reason": "no_acceptable_pose",
+      "camera_from_object": null,
+      "coverage": 0.118587608261,
+      "model_coverage": 0.118587608261,
+      "total_model_coverage": 0.118587608261,
+      "visible_model_coverage": 0.334272300469,
+      "visible_model_points": 1065,
+      "observable_normal_directions": 1,
+      "scene_coverage": 0.633231240429,
+      "rmse_m": 0.00275803523265,
+      "ambiguous": false,
+      "symmetry_equivalent": false,
+      "candidate_count": 32
+    },
+    {
+      "scene": "yawed",
+      "elapsed_wall_sec": 1.7166462410004897,
+      "exit_code": 0,
+      "scene_sha256": "09ab57c1b7aa6c5b212adf1ec02b3ee055d4cc82beaceeff57f59fb27743ad1f",
+      "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429",
+      "translation_error_m": 0.0016369093007118968,
+      "rotation_error_deg": 0.20211039455073715,
+      "accepted": true,
+      "schema": "astribot.object_pose/1",
+      "method": "known_cad_ppf_icp",
+      "success": true,
+      "reason": "ok",
+      "camera_from_object": [
+        [
+          -0.77080123975,
+          0.358269001283,
+          -0.526791013136,
+          -0.0213712709402
+        ],
+        [
+          0.338791698468,
+          -0.469755180277,
+          -0.815199518923,
+          -0.100734936459
+        ],
+        [
+          -0.539523524835,
+          -0.806829221907,
+          0.240709311884,
+          0.849813491515
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "coverage": 0.48001332445,
+      "model_coverage": 0.48001332445,
+      "total_model_coverage": 0.48001332445,
+      "visible_model_coverage": 0.972935461485,
+      "visible_model_points": 1441,
+      "observable_normal_directions": 3,
+      "scene_coverage": 0.991739438282,
+      "rmse_m": 0.00240714016371,
+      "ambiguous": false,
+      "symmetry_equivalent": false,
+      "candidate_count": 29
+    },
+    {
+      "scene": "far",
+      "elapsed_wall_sec": 1.5162082950000695,
+      "exit_code": 0,
+      "scene_sha256": "6f7a1a349776032de68d4d4806ed2ff03b0da3b15e1966ce49abe28b71e8972e",
+      "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429",
+      "translation_error_m": 0.0023304601323005506,
+      "rotation_error_deg": 0.2054171236184485,
+      "accepted": true,
+      "schema": "astribot.object_pose/1",
+      "method": "known_cad_ppf_icp",
+      "success": true,
+      "reason": "ok",
+      "camera_from_object": [
+        [
+          -0.708274649461,
+          -0.660113558129,
+          0.250194147224,
+          0.0182459737011
+        ],
+        [
+          -0.5029682953,
+          0.223188675918,
+          -0.834990843582,
+          -0.10154378098
+        ],
+        [
+          0.49534827632,
+          -0.717242570765,
+          -0.490095072235,
+          1.1503926573
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "coverage": 0.39273817455,
+      "model_coverage": 0.39273817455,
+      "total_model_coverage": 0.39273817455,
+      "visible_model_coverage": 0.904098994586,
+      "visible_model_points": 1293,
+      "observable_normal_directions": 3,
+      "scene_coverage": 1,
+      "rmse_m": 0.00239142899797,
+      "ambiguous": false,
+      "symmetry_equivalent": false,
+      "candidate_count": 30
+    },
+    {
+      "scene": "occluded",
+      "elapsed_wall_sec": 1.3659724629997072,
+      "exit_code": 0,
+      "scene_sha256": "dea107c613ad5654c6868c5cd7c7980e1e39245c684ed5166ae99cb0dbd02ceb",
+      "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429",
+      "translation_error_m": 0.0014696491042817796,
+      "rotation_error_deg": 0.3727334500194473,
+      "accepted": true,
+      "schema": "astribot.object_pose/1",
+      "method": "known_cad_ppf_icp",
+      "success": true,
+      "reason": "ok",
+      "camera_from_object": [
+        [
+          -0.53880663808,
+          -0.69930986629,
+          0.4697372858,
+          -0.000978531986709
+        ],
+        [
+          -0.346586345508,
+          -0.324210172133,
+          -0.88020774218,
+          -0.101102563931
+        ],
+        [
+          0.767831564778,
+          -0.63706630361,
+          -0.0676846580566,
+          0.720319192946
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "coverage": 0.233844103931,
+      "model_coverage": 0.233844103931,
+      "total_model_coverage": 0.233844103931,
+      "visible_model_coverage": 0.811387900356,
+      "visible_model_points": 843,
+      "observable_normal_directions": 2,
+      "scene_coverage": 0.998621165115,
+      "rmse_m": 0.00237262431094,
+      "ambiguous": false,
+      "symmetry_equivalent": false,
+      "candidate_count": 24
+    },
+    {
+      "scene": "close",
+      "elapsed_wall_sec": 1.4163638690006337,
+      "exit_code": 2,
+      "scene_sha256": "78934724f0137b183a12056e2f9a70b41d975b6e7ef7098d6308a120f282d78e",
+      "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429",
+      "translation_error_m": null,
+      "rotation_error_deg": null,
+      "accepted": false,
+      "schema": "astribot.object_pose/1",
+      "method": "known_cad_ppf_icp",
+      "success": false,
+      "reason": "insufficient_normal_diversity",
+      "camera_from_object": null,
+      "coverage": 0.156229180546,
+      "model_coverage": 0.156229180546,
+      "total_model_coverage": 0.156229180546,
+      "visible_model_coverage": 0.805841924399,
+      "visible_model_points": 582,
+      "observable_normal_directions": 1,
+      "scene_coverage": 0.748979128857,
+      "rmse_m": 0.00242055807381,
+      "ambiguous": false,
+      "symmetry_equivalent": false,
+      "candidate_count": 27
+    },
+    {
+      "scene": "clear",
+      "elapsed_wall_sec": 1.566541734000566,
+      "exit_code": 0,
+      "scene_sha256": "666449ba657dffbb722fb50c34fc166dfa2484af2c443b9af4fb7d922b7e9daf",
+      "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429",
+      "translation_error_m": 0.001983664989467258,
+      "rotation_error_deg": 0.29721771599773067,
+      "accepted": true,
+      "schema": "astribot.object_pose/1",
+      "method": "known_cad_ppf_icp",
+      "success": true,
+      "reason": "ok",
+      "camera_from_object": [
+        [
+          0.893275422791,
+          -0.0406045560207,
+          0.447672077605,
+          -0.00150985993046
+        ],
+        [
+          0.168644318101,
+          -0.892892026301,
+          -0.417496015957,
+          -0.0762883954355
+        ],
+        [
+          0.41667506886,
+          0.448436282429,
+          -0.790750774639,
+          1.00019975237
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ]
+      ],
+      "coverage": 0.436042638241,
+      "model_coverage": 0.436042638241,
+      "total_model_coverage": 0.436042638241,
+      "visible_model_coverage": 0.905726256983,
+      "visible_model_points": 1432,
+      "observable_normal_directions": 3,
+      "scene_coverage": 0.999662618084,
+      "rmse_m": 0.00238381420904,
+      "ambiguous": false,
+      "symmetry_equivalent": false,
+      "candidate_count": 32
+    }
+  ],
+  "accepted_count": 5,
+  "total_count": 7
+}

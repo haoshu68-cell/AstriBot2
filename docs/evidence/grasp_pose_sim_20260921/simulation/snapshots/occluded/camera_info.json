@@ -1,0 +1,150 @@
+{
+  "camera_id": "torso_rgbd",
+  "source_epoch": "gazebo_camera",
+  "calibration_revision": 1,
+  "camera_health_at_capture": {
+    "header": {
+      "stamp": {
+        "sec": 535,
+        "nanosec": 36000000
+      },
+      "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+    },
+    "camera_id": "torso_rgbd",
+    "source_epoch": "gazebo_camera",
+    "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+    "state": "OK",
+    "reason_code": "CAMERA_READY",
+    "age_sec": 0.036000000000000004,
+    "frequency_hz": 10.0,
+    "max_interval_sec": 0.9,
+    "sync_skew_sec": 0.0,
+    "drop_count": 0,
+    "sequence": 10817,
+    "calibration_revision": 1,
+    "capture_stamp": {
+      "sec": 535,
+      "nanosec": 0
+    },
+    "valid_until": {
+      "sec": 535,
+      "nanosec": 250000000
+    },
+    "valid": true
+  },
+  "camera_health_samples": 34,
+  "capture_age_at_end_sec": 0.062,
+  "schema_version": 1,
+  "capture_stamp_ns": 535000000000,
+  "source": "actual Gazebo rendered raw RGB-D",
+  "camera": "torso_rgbd",
+  "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+  "width": 640,
+  "height": 360,
+  "K": [
+    345.69400008261766,
+    0.0,
+    320.0,
+    0.0,
+    345.6940000826176,
+    180.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "D": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "P": [
+    345.69400008261766,
+    0.0,
+    320.0,
+    0.0,
+    0.0,
+    345.6940000826176,
+    180.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+  ],
+  "R": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion_model": "plumb_bob",
+  "encoding": {
+    "rgb": "rgb8",
+    "depth": "32FC1"
+  },
+  "exact_sync_stamps": {
+    "rgb": 535000000000,
+    "depth": 535000000000,
+    "info": 535000000000
+  },
+  "base_from_camera": {
+    "parent": "astribot_torso_base",
+    "child": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+    "stamp_ns": 535000000000,
+    "translation": [
+      0.06775267,
+      0.0013319,
+      -0.08793599
+    ],
+    "quaternion_xyzw": [
+      0.5228022198415829,
+      -0.5171252100084806,
+      0.49117375308026623,
+      -0.4669129473332732
+    ]
+  },
+  "odom_from_camera": {
+    "parent": "odom",
+    "child": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+    "stamp_ns": 535000000000,
+    "translation": [
+      0.06712204413999387,
+      0.0012503441594749537,
+      0.05112674267780687
+    ],
+    "quaternion_xyzw": [
+      0.516045826741438,
+      -0.5077702335755301,
+      0.49841098164064,
+      -0.47691989681435093
+    ]
+  },
+  "target_mask_pixels": 1186,
+  "scene_points": 1186,
+  "segmentation": "HSV magenta color + finite rendered depth; validation fixture; not YOLO",
+  "normal_method": "organized depth central differences; toward camera; depth-edge rejection",
+  "truth_used_for_segmentation_or_projection": false,
+  "stream_counts": {
+    "rgb": 38,
+    "depth": 36,
+    "info": 50
+  },
+  "stream_sim_hz": {
+    "rgb": 7.708333333333334,
+    "depth": 7.291666666666667,
+    "info": 10.0
+  },
+  "clock": {
+    "count": 5002,
+    "first_ns": 530061000000,
+    "last_ns": 535062000000
+  },
+  "wall_observation_seconds": 5.032606646999966
+}

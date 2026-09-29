@@ -1,0 +1,1179 @@
+FFFFFFFF..FFFFF......FFFFFFFFF                                           [100%]
+=================================== FAILURES ===================================
+_ test_unbounded_stamp_expiry_and_epoch_preserve_health_state[9223372036854775758-0] _
+
+capture = 9223372036854775758, epoch = 0
+
+    @pytest.mark.parametrize('capture,epoch', [(2**63-50, 0), (2**63, 2**64), (10**100, 10**80)])
+    def test_unbounded_stamp_expiry_and_epoch_preserve_health_state(capture, epoch):
+>       result = run(dict(ops=[record(capture, epoch=epoch), query(capture+100, epoch),
+                              query(capture+101, epoch), query(capture-1, epoch),
+                              query(capture, epoch+1), query(capture, epoch)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': True}
+actual = {'error': 'health.valid_until outside native nanosecond range'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_unbounded_stamp_expiry_and_epoch_preserve_health_state[9223372036854775808-18446744073709551616] _
+
+capture = 9223372036854775808, epoch = 18446744073709551616
+
+    @pytest.mark.parametrize('capture,epoch', [(2**63-50, 0), (2**63, 2**64), (10**100, 10**80)])
+    def test_unbounded_stamp_expiry_and_epoch_preserve_health_state(capture, epoch):
+>       result = run(dict(ops=[record(capture, epoch=epoch), query(capture+100, epoch),
+                              query(capture+101, epoch), query(capture-1, epoch),
+                              query(capture, epoch+1), query(capture, epoch)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': True}
+actual = {'error': '[json.exception.type_error.302] type must be number, but is binary'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_unbounded_stamp_expiry_and_epoch_preserve_health_state[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-100000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+capture = 100000000000000000...0000000000000000000
+epoch = 100000000000000000...0000000000000000000
+
+    @pytest.mark.parametrize('capture,epoch', [(2**63-50, 0), (2**63, 2**64), (10**100, 10**80)])
+    def test_unbounded_stamp_expiry_and_epoch_preserve_health_state(capture, epoch):
+>       result = run(dict(ops=[record(capture, epoch=epoch), query(capture+100, epoch),
+                              query(capture+101, epoch), query(capture-1, epoch),
+                              query(capture, epoch+1), query(capture, epoch)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': True}
+actual = {'error': '[json.exception.type_error.302] type must be number, but is binary'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_ test_finite_large_timeout_is_consumed_by_health_query_not_constructor[10000000000.0] _
+
+timeout = 10000000000.0
+
+    @pytest.mark.parametrize('timeout', [1e10, 1e100, -1e10])
+    def test_finite_large_timeout_is_consumed_by_health_query_not_constructor(timeout):
+        now = 10**30
+>       result = run(dict(timeout=timeout, ops=[query(now)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:141: in run
+    completed = subprocess.run([binary], input=json.dumps(case) + '\n', capture_output=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"timeout": 10000000000.0, "ops": [{"op": "health", "now": {"ns": 1000000000000000000000000000000, "clock": "ros", "epoch": 0}}]}\n'
+capture_output = True, timeout = 15, check = True
+popenargs = (['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_health_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>
+stdout = '', stderr = 'timeout_s outside native nanosecond range\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_health_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_finite_large_timeout_is_consumed_by_health_query_not_constructor[1e+100] _
+
+timeout = 1e+100
+
+    @pytest.mark.parametrize('timeout', [1e10, 1e100, -1e10])
+    def test_finite_large_timeout_is_consumed_by_health_query_not_constructor(timeout):
+        now = 10**30
+>       result = run(dict(timeout=timeout, ops=[query(now)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:141: in run
+    completed = subprocess.run([binary], input=json.dumps(case) + '\n', capture_output=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"timeout": 1e+100, "ops": [{"op": "health", "now": {"ns": 1000000000000000000000000000000, "clock": "ros", "epoch": 0}}]}\n'
+capture_output = True, timeout = 15, check = True
+popenargs = (['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_health_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>
+stdout = '', stderr = 'timeout_s outside native nanosecond range\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_health_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_finite_large_timeout_is_consumed_by_health_query_not_constructor[-10000000000.0] _
+
+timeout = -10000000000.0
+
+    @pytest.mark.parametrize('timeout', [1e10, 1e100, -1e10])
+    def test_finite_large_timeout_is_consumed_by_health_query_not_constructor(timeout):
+        now = 10**30
+>       result = run(dict(timeout=timeout, ops=[query(now)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:141: in run
+    completed = subprocess.run([binary], input=json.dumps(case) + '\n', capture_output=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"timeout": -10000000000.0, "ops": [{"op": "health", "now": {"ns": 1000000000000000000000000000000, "clock": "ros", "epoch": 0}}]}\n'
+capture_output = True, timeout = 15, check = True
+popenargs = (['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_health_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>
+stdout = '', stderr = 'timeout_s outside native nanosecond range\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_health_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_stamp_integer_domain_preserves_original_contract[9223372036854775808-0] _
+
+ns = 9223372036854775808, epoch = 0
+
+    @pytest.mark.parametrize('ns,epoch', [(2**63, 0), (10**100, 10**80), (-2**63-1, 0), (0, -2**80)])
+    def test_stamp_integer_domain_preserves_original_contract(ns, epoch):
+>       check([dict(action='validate', type='Stamp', value=stamp(ns, epoch=epoch))])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:201: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'clock': 'ros', 'epoch': 0, 'ns': 9223372036854775808}}
+b = {'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'clock': 'ros', 'epoch': 0, 'ns': 9223372036854775808}}, {'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'ok', 'code', 'field'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_stamp_integer_domain_preserves_original_contract[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-100000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+ns = 100000000000000000...0000000000000000000
+epoch = 100000000000000000...0000000000000000000
+
+    @pytest.mark.parametrize('ns,epoch', [(2**63, 0), (10**100, 10**80), (-2**63-1, 0), (0, -2**80)])
+    def test_stamp_integer_domain_preserves_original_contract(ns, epoch):
+>       check([dict(action='validate', type='Stamp', value=stamp(ns, epoch=epoch))])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:201: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'clock': 'ros', 'epoch': 100000000000000000...0000000000000000000, 'ns': 100000000000000000...0000000000000000000}}
+b = {'code': 'INVALID_INPUT', 'field': 'stamp.epoch', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'clock': 'ros', 'epoch': 100000000000000000...0000000000000000000, 'ns': 100000000000000000...0000000000000000000}}, {'code': 'INVALID_INPUT', 'field': 'stamp.epoch', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'ok', 'code', 'field'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_large_capture_keeps_metric_snapshot_age_and_state[9223372036854775807] __
+
+capture = 9223372036854775807
+
+    @pytest.mark.parametrize('capture', [2**63-1, 2**64, 10**100])
+    def test_large_capture_keeps_metric_snapshot_age_and_state(capture):
+        # Subtract before converting: 100 ns must remain visible even when
+        # float(capture+100)==float(capture).
+        item = observation(capture, geometry=dict(velocity_m_s=[.5, .1, 0.]))
+>       check([update(capture, [item]), snapshot(capture+100), snapshot(capture+500000000),
+               dict(action='clear', now=stamp(capture+2_000_000_000), flags=[True]),
+               snapshot(capture+2_000_000_000)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'metric.velocity_and_covariance', b = 'stamp.ns', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'metric.velocity_and_covariance', 'stamp.ns')
+E       assert 'metric.veloc...nd_covariance' == 'stamp.ns'
+E         - stamp.ns
+E         + metric.velocity_and_covariance
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_ test_large_capture_keeps_metric_snapshot_age_and_state[18446744073709551616] _
+
+capture = 18446744073709551616
+
+    @pytest.mark.parametrize('capture', [2**63-1, 2**64, 10**100])
+    def test_large_capture_keeps_metric_snapshot_age_and_state(capture):
+        # Subtract before converting: 100 ns must remain visible even when
+        # float(capture+100)==float(capture).
+        item = observation(capture, geometry=dict(velocity_m_s=[.5, .1, 0.]))
+>       check([update(capture, [item]), snapshot(capture+100), snapshot(capture+500000000),
+               dict(action='clear', now=stamp(capture+2_000_000_000), flags=[True]),
+               snapshot(capture+2_000_000_000)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'metric.velocity_and_covariance', b = 'stamp.ns', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'metric.velocity_and_covariance', 'stamp.ns')
+E       assert 'metric.veloc...nd_covariance' == 'stamp.ns'
+E         - stamp.ns
+E         + metric.velocity_and_covariance
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_ test_large_capture_keeps_metric_snapshot_age_and_state[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+capture = 100000000000000000...0000000000000000000
+
+    @pytest.mark.parametrize('capture', [2**63-1, 2**64, 10**100])
+    def test_large_capture_keeps_metric_snapshot_age_and_state(capture):
+        # Subtract before converting: 100 ns must remain visible even when
+        # float(capture+100)==float(capture).
+        item = observation(capture, geometry=dict(velocity_m_s=[.5, .1, 0.]))
+>       check([update(capture, [item]), snapshot(capture+100), snapshot(capture+500000000),
+               dict(action='clear', now=stamp(capture+2_000_000_000), flags=[True]),
+               snapshot(capture+2_000_000_000)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'metric.velocity_and_covariance', b = 'stamp.ns', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'metric.velocity_and_covariance', 'stamp.ns')
+E       assert 'metric.veloc...nd_covariance' == 'stamp.ns'
+E         - stamp.ns
+E         + metric.velocity_and_covariance
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_ test_large_finite_timeout_does_not_add_profile_constructor_rejection[10000000000.0] _
+
+timeout = 10000000000.0
+
+    @pytest.mark.parametrize('timeout', [1e10, 1e100])
+    def test_large_finite_timeout_does_not_add_profile_constructor_rejection(timeout):
+>       check([update(100, []), snapshot(100)], profile={'sensor_timeout_s': timeout})
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:216: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "update", "now": {"ns": 100, "clock": "ros", "epoch": 0}, "observations": []}, {"action": "snapshot", "now": {"ns": 100, "clock": "ros", "epoch": 0}}], "profile": {"sensor_timeout_s": 10000000000.0}}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>
+stdout = '', stderr = 'INVALID_INPUT: fusion.time_range\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_large_finite_timeout_does_not_add_profile_constructor_rejection[1e+100] _
+
+timeout = 1e+100
+
+    @pytest.mark.parametrize('timeout', [1e10, 1e100])
+    def test_large_finite_timeout_does_not_add_profile_constructor_rejection(timeout):
+>       check([update(100, []), snapshot(100)], profile={'sensor_timeout_s': timeout})
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:216: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:170: in native
+    r = subprocess.run([str(PROBE)], input=json.dumps(case), text=True, capture_output=True, check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"action": "update", "now": {"ns": 100, "clock": "ros", "epoch": 0}, "observations": []}, {"action": "snapshot", "now": {"ns": 100, "clock": "ros", "epoch": 0}}], "profile": {"sensor_timeout_s": 1e+100}}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_fusion_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>
+stdout = '', stderr = 'INVALID_INPUT: fusion.time_range\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_fusion_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5-9223372036354775808] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = 9223372036354775808, timeout = 0.5
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...tamp': {'clock': 'ros', 'epoch': 4, 'ns': 9223372036354775808}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             ?       --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5-9223372036854775808] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = 9223372036854775808, timeout = 0.5
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...tamp': {'clock': 'ros', 'epoch': 4, 'ns': 9223372036854775808}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             ?       --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = 100000000000000000...0000000000000000000, timeout = 0.5
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...', 'epoch': 4, 'ns': 100000000000000000...0000000000000000000}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             ?       --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5--9223372036854775809] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = -9223372036854775809, timeout = 0.5
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1]], 'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'last_packet': {'calibration_epoch':...0.0], 'geometry_quality': 1.0, 'image_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, ...}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1]], 'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'last_packet': {'calibration...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'co... 'ok', 'type'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             + {'ok', 'last_packet', 'field', 'calls', 'code', 'type'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0-9223372036354775808] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = 9223372036354775808, timeout = 10000000000.0
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...tamp': {'clock': 'ros', 'epoch': 4, 'ns': 9223372036354775808}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             ?       --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0-9223372036854775808] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = 9223372036854775808, timeout = 10000000000.0
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...tamp': {'clock': 'ros', 'epoch': 4, 'ns': 9223372036854775808}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             ?       --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = 100000000000000000...0000000000000000000, timeout = 10000000000.0
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...', 'epoch': 4, 'ns': 100000000000000000...0000000000000000000}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             ?       --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_ test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0--9223372036854775809] _
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+capture = -9223372036854775809, timeout = 10000000000.0
+
+    @pytest.mark.parametrize('capture', [2**63-500_000_000, 2**63, 10**100, -2**63-1])
+    @pytest.mark.parametrize('timeout', [.5, 1e10])
+    def test_image_stamp_and_expiry_keep_unbounded_integer_domain(authority,capture,timeout):
+        item=dict(kind='image_box',measurement_id='image',image_size_px=[100,100],
+                  box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['image'])
+>       check(dict(timeout=timeout,operations=[dict(packet=vision(stamp_ns=capture,observations=[item]))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1]], 'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'last_packet': {'calibration_epoch':...0.0], 'geometry_quality': 1.0, 'image_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, ...}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...mage_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1]], 'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'last_packet': {'calibration...age_size_px': [100, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'co... 'ok', 'type'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'ok', 'type', 'last_packet', 'calls'}
+E             + {'ok', 'last_packet', 'field', 'calls', 'code', 'type'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+_____ test_large_stamp_clock_epoch_and_steady_receipt_are_not_wire_fields ______
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_large_stamp_clock_epoch_and_steady_receipt_are_not_wire_fields(authority):
+        item=dict(kind='bearing_cone',measurement_id='bearing',direction=[1.,0.,0.],
+                  half_angle_rad=.2,geometry_quality=1.,provenance=['bearing'])
+        times=[dict(ns=10**90,clock='ros',epoch=10**80)]*2
+>       check(dict(now=times,steady=[10**100],operations=[dict(packet=vision(stamp_ns=10**90,observations=[item])),dict(action='metadata')]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:175: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:148: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:144: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'obse...0000000000000, 'ns': 100000000000000000...0000000000000000000}, 'class_probabilities': [], 'frame_id': 'sensor', ...}]}
+b = {'calls': [['now', 0]], 'last_packet': None, 'ok': False, 'type': 'RuntimeError', ...}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['steady', 0]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor..., 'frame_id': 'sensor', ...}]}, {'calls': [['now', 0]], 'last_packet': None, 'ok': False, 'type': 'RuntimeError', ...})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'unexpected'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             'unexpected'
+E             Full diff:
+E             - {'ok', 'last_packet', 'calls', 'type', 'unexpected'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:140: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_unbounded_stamp_expiry_and_epoch_preserve_health_state[9223372036854775758-0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_unbounded_stamp_expiry_and_epoch_preserve_health_state[9223372036854775808-18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_unbounded_stamp_expiry_and_epoch_preserve_health_state[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-100000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_finite_large_timeout_is_consumed_by_health_query_not_constructor[10000000000.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_finite_large_timeout_is_consumed_by_health_query_not_constructor[1e+100]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_finite_large_timeout_is_consumed_by_health_query_not_constructor[-10000000000.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_stamp_integer_domain_preserves_original_contract[9223372036854775808-0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_stamp_integer_domain_preserves_original_contract[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-100000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_large_capture_keeps_metric_snapshot_age_and_state[9223372036854775807]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_large_capture_keeps_metric_snapshot_age_and_state[18446744073709551616]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_large_capture_keeps_metric_snapshot_age_and_state[10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_large_finite_timeout_does_not_add_profile_constructor_rejection[10000000000.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_large_finite_timeout_does_not_add_profile_constructor_rejection[1e+100]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5-9223372036354775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[0.5--9223372036854775809]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0-9223372036354775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_image_stamp_and_expiry_keep_unbounded_integer_domain[10000000000.0--9223372036854775809]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_large_stamp_clock_epoch_and_steady_receipt_are_not_wire_fields
+22 failed, 8 passed, 186 deselected in 0.66s

@@ -1,0 +1,231 @@
+{
+  "passed": false,
+  "error": "RuntimeError('RENEW_REJECTED:FIXED_ENVELOPE_REJECTED:ARM_HOLD_UNCONFIRMED')",
+  "parent_terminal": {
+    "status": 5,
+    "result": {
+      "success": false,
+      "resources_released": true,
+      "reason": "FIXED_ENVELOPE_REJECTED:ARM_HOLD_UNCONFIRMED",
+      "cleanup_reason": "",
+      "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+      "navigation_goal_uuid": "",
+      "final_attachment_revision": "e5d86b3b0c9e4f1a05046bef929464ee1a50adf6f04ad6deda0c2b3bcf5b5c3d"
+    }
+  },
+  "cleanup_complete": true,
+  "cleanup_stop": {
+    "passed": true,
+    "samples": 36,
+    "span_s": 0.7000000000000028,
+    "start_ros_s": 105.32,
+    "end_ros_s": 106.02,
+    "drift_m": 0.00019296782490904697,
+    "rotation_rad": 0.0004377618624662313,
+    "speed_mps": 0.00043310780281616854,
+    "angular_speed_radps": 0.0007872742344261496,
+    "command_max": 0.0,
+    "command_observed": true,
+    "fresh": true
+  },
+  "resource_disposition": "RELEASE_CONFIRMED",
+  "base_motion_conditions": {
+    "relaxed": true,
+    "acceptance_scope": "relaxed_simulation_not_original_precision_acceptance",
+    "original_limits": {
+      "rotation_rad": 0.02,
+      "angular_speed_radps": 0.03
+    },
+    "active_limits": {
+      "rotation_rad": 0.05,
+      "angular_speed_radps": 0.1
+    },
+    "non_navigation_linear_speed_limit_mps": 0.02,
+    "nonzero_command_threshold": 1e-06,
+    "final_stop_thresholds_unchanged": true,
+    "readback": {
+      "task_trajectory_executor": [
+        {
+          "type": 1,
+          "bool_value": true,
+          "integer_value": 0,
+          "double_value": 0.0,
+          "string_value": "",
+          "byte_array_value": [],
+          "bool_array_value": [],
+          "integer_array_value": [],
+          "double_array_value": [],
+          "string_array_value": []
+        }
+      ],
+      "manipulation_execution_guard": [
+        {
+          "type": 1,
+          "bool_value": true,
+          "integer_value": 0,
+          "double_value": 0.0,
+          "string_value": "",
+          "byte_array_value": [],
+          "bool_array_value": [],
+          "integer_array_value": [],
+          "double_array_value": [],
+          "string_array_value": []
+        }
+      ]
+    }
+  },
+  "source": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene39_world52",
+  "stages": [
+    {
+      "issued_at": 76001000000,
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:047b1a46422a948e30058f4ca1d63884;arm_right_controller:c5b32eb86bace98e4e71d449491c9a6d;gripper_left_controller:dee973ee577a62b1f1dacee4333e199c;gripper_right_controller:a4a30b7fef84440136bf22f78c116703;head_controller:65e2b6a2b2b425102a585de5ffd9d115;mtc:a800146fb385f474bc882b9b0df535f0;torso_controller:0bfe04bfae42d4fcc3a098d7e7d5e083;",
+        "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+        "index": 0,
+        "stage_id": "PREGRASP"
+      },
+      "reason": "EXECUTING"
+    },
+    {
+      "issued_at": 80057000000,
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:418e6e16e75e87ca3361ddba346ba082;arm_right_controller:ba8cef5906c759859adf56954fba2be2;gripper_left_controller:facc842d78a591d54b7b07cc74af53c4;gripper_right_controller:9199cb7759558bcabad21454252fbe87;head_controller:a6025ca1175c8fc36b324772d4eedb9c;torso_controller:8738d7321f75ce702485f3115250b279;",
+        "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+        "index": 1,
+        "stage_id": "GRASP_APPROACH"
+      },
+      "reason": "EXECUTING"
+    },
+    {
+      "issued_at": 85365000000,
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:b4431085a9576dc3b02c377dd3142f67;arm_right_controller:971ec3cfb0b01fc62f93afee6cd883a2;gripper_left_controller:613191d8eaea5300154a7a950d2fd83a;gripper_right_controller:560cebfb388cb98fe97a47cb74268e88;head_controller:3f6d975c5e802d986ce6c26859791ad8;torso_controller:9ace964b52a71aa6776f1730525fe3a9;",
+        "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+        "index": 2,
+        "stage_id": "GRASP_CONFIRM"
+      },
+      "reason": "EXECUTING"
+    },
+    {
+      "issued_at": 88946000000,
+      "event": "payload_suffix_adopted",
+      "details": {
+        "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+        "stages": [
+          {
+            "adopted_digest": "cfbc2fc3f440d42d6e740704e77ef98d1c55f7cd95561ab8a7c184427c4eb2c2",
+            "joint_names": [
+              "astribot_arm_left_joint_1",
+              "astribot_arm_left_joint_2",
+              "astribot_arm_left_joint_3",
+              "astribot_arm_left_joint_4",
+              "astribot_arm_left_joint_5",
+              "astribot_arm_left_joint_6",
+              "astribot_arm_left_joint_7"
+            ],
+            "point_count": 7,
+            "returned_digest": "cfbc2fc3f440d42d6e740704e77ef98d1c55f7cd95561ab8a7c184427c4eb2c2",
+            "stage_id": "LIFT",
+            "stage_index": 4
+          },
+          {
+            "adopted_digest": "52a8a43ce24512145c0a52ed6c133b0bfd298835f01c750578d265f5d1f2c6bd",
+            "joint_names": [
+              "astribot_arm_left_joint_1",
+              "astribot_arm_left_joint_2",
+              "astribot_arm_left_joint_3",
+              "astribot_arm_left_joint_4",
+              "astribot_arm_left_joint_5",
+              "astribot_arm_left_joint_6",
+              "astribot_arm_left_joint_7"
+            ],
+            "point_count": 654,
+            "returned_digest": "52a8a43ce24512145c0a52ed6c133b0bfd298835f01c750578d265f5d1f2c6bd",
+            "stage_id": "TRANSPORT_POSTURE",
+            "stage_index": 5
+          }
+        ],
+        "start_index": 4,
+        "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3",
+        "transport_replanned": true
+      },
+      "reason": "EXECUTING"
+    },
+    {
+      "issued_at": 88946000000,
+      "event": "payload_transaction_confirmed",
+      "details": {
+        "attachment_revision": "e5d86b3b0c9e4f1a05046bef929464ee1a50adf6f04ad6deda0c2b3bcf5b5c3d",
+        "command_id": 1,
+        "geometry_sequence": 1549,
+        "stage": "ATTACH_CONFIRM",
+        "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3"
+      },
+      "reason": "EXECUTING"
+    },
+    {
+      "issued_at": 91257000000,
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:d98337b1a503959dbe4872a22fe5ac00;arm_right_controller:fefc1112df2be507419798ef3711a588;gripper_left_controller:df942f9423f90277140e42ced52d4c0b;gripper_right_controller:bcdc59aadf494cfbd92794128520cf29;head_controller:f5310f35b8f4ac33ce35827025cff80a;torso_controller:86363702288bbfbf5043512c9d7dbf46;",
+        "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+        "index": 4,
+        "stage_id": "LIFT"
+      },
+      "reason": "EXECUTING"
+    },
+    {
+      "issued_at": 104477000000,
+      "event": "stage_confirmed",
+      "details": {
+        "children": "arm_left_controller:7e598e3261d51a34152e84103e1a2c27;arm_right_controller:6610e81c9cd2515ec728fca3d5b8e260;gripper_left_controller:359c1f713c177da4990322816dfa4c22;gripper_right_controller:7147fa80d6c611fa5dd411a3d2c82585;head_controller:a01f02d9a6fa6a342da2f7d4d0cbcd96;torso_controller:19bbfd941fda0f0bab41cdacc2d3fafa;",
+        "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+        "index": 5,
+        "stage_id": "TRANSPORT_POSTURE"
+      },
+      "reason": "EXECUTING"
+    },
+    {
+      "issued_at": 104477000000,
+      "event": "hold_confirmed",
+      "details": {},
+      "reason": "HOLDING"
+    },
+    {
+      "issued_at": 104477000000,
+      "event": "navigation_leg_submission",
+      "details": {
+        "context": "91547133c27444fa9350bff9eb654993_NAV",
+        "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5"
+      },
+      "reason": "HOLDING"
+    },
+    {
+      "issued_at": 104477000000,
+      "event": "stop_requested",
+      "details": {},
+      "reason": "FIXED_ENVELOPE_REJECTED:ARM_HOLD_UNCONFIRMED"
+    }
+  ],
+  "first_positive_hold": {
+    "wall": 43242.486302674,
+    "ros_s": 104.54400000000001,
+    "message": {
+      "header": {
+        "stamp": {
+          "sec": 104,
+          "nanosec": 543000000
+        },
+        "frame_id": ""
+      },
+      "owner_id": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+      "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5",
+      "lease_s": 0.100527895,
+      "hold_confirmed": true,
+      "attachment_revision": "e5d86b3b0c9e4f1a05046bef929464ee1a50adf6f04ad6deda0c2b3bcf5b5c3d"
+    }
+  }
+}

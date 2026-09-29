@@ -1,0 +1,3 @@
+[WARN] [1789981453.839384388] [coupling_0ed88c04d2.python.arm_chassis_speed_coupling_node]: extension_metric=joint_deviation：这是已被实测证伪的旧度量(与真实水平伸展反相关，详见 arm_reach_metric.py 头部)，只应用于 A/B 回归对比或临时回退，不要长期这么跑。
+[INFO] [1789981453.839608349] [coupling_0ed88c04d2.python.arm_chassis_speed_coupling_node]: arm_chassis_speed_coupling_node 已启动：订阅 /coupling_0ed88c04d2/input(车体真正要下发的world系Twist) + /coupling_0ed88c04d2/joints(双臂关节状态)，展开度量=关节偏差 满量程1.20rad(旧度量，已证伪)，运动速率满量程2.00rad/s，算连续0~1.0限速系数(下限0.15)，平滑后缩放，发到 /coupling_0ed88c04d2/python/output。/joint_states 超过0.5s未更新自动降级到固定0.30限速。
+[INFO] [1789981453.898299227] [coupling_0ed88c04d2.python.arm_chassis_speed_coupling_node]: 机械臂活跃度=1.00(展开1.00/速率0.00) → 限速系数=0.15

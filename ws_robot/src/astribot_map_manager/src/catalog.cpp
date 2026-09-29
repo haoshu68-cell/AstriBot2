@@ -42,6 +42,7 @@ void validateDock(const Json & map,const Json & p){
 }
 std::string now(){return std::to_string(std::chrono::system_clock::now().time_since_epoch().count());}
 }
+void Catalog::validateNavigationPose(const Json & map,const Json & p){pose(p);validateDock(map,p);}
 std::string Catalog::hash(const fs::path & file){
  std::ifstream in(file,std::ios::binary);require(bool(in),"ASSET.READ_FAILED");
  auto ctx=std::unique_ptr<EVP_MD_CTX,decltype(&EVP_MD_CTX_free)>(EVP_MD_CTX_new(),EVP_MD_CTX_free);
@@ -59,6 +60,8 @@ Catalog::Catalog(fs::path root,fs::path imports):root_(fs::absolute(root)),impor
  if(fs::exists(root_/"catalog.json"))data_=read(root_/"catalog.json");
  else data_={{"schema_version",1},{"revision",0},{"maps",Json::object()},{"stations",Json::object()},{"active_map",nullptr},{"transaction",nullptr},{"commands",Json::object()},{"history",Json::array()}};
  require(data_.at("schema_version")==1&&data_.at("maps").is_object()&&data_.at("commands").is_object(),"STORE.INVALID_SCHEMA");
+ for(auto key:{"devices","scenes"})if(!data_.contains(key))data_[key]=Json::object();
+ if(!data_.contains("active_scene"))data_["active_scene"]=nullptr;
  if(blocked(data_.at("transaction"))){auto next=data_;next["transaction"]["state"]="RECOVERY_REQUIRED";next["transaction"]["reason_code"]="RECOVERY.PROCESS_RESTART";commit(next);}
  }catch(...){flock(lock_,LOCK_UN);close(lock_);lock_=-1;throw;}
 }
@@ -96,7 +99,7 @@ Json Catalog::importMap(const Json & p){
  syncDirectory(final.parent_path());syncDirectory(root_/"assets");
  require(hash(final/"manifest.json")==version,"ASSET.HASH_MISMATCH");
  for(auto it=hashes.begin();it!=hashes.end();++it)require(hash(final/it.key())==it.value(),"ASSET.HASH_MISMATCH");
- Json result={{"map_id",id},{"version",version},{"floor",p.at("floor").get<int>()},{"name",p.value("name",id)},{"directory",final.string()},{"map_yaml",yaml_name},{"outcome",outcome},{"sha256",hashes}};
+ Json result={{"map_id",id},{"version",version},{"floor",p.at("floor").get<int>()},{"name",p.value("name",id)},{"directory",final.string()},{"source_directory",directory.string()},{"map_yaml",yaml_name},{"outcome",outcome},{"sha256",hashes}};
  require(result.at("name").get<std::string>().size()<=128,"MAP.INVALID_NAME");return result;
  }catch(...){fs::remove_all(stage);throw;}
 }
@@ -110,7 +113,9 @@ Json Catalog::command(const std::string & id,const std::string & op,const Json &
  if(commands.contains(id)){require(commands.at(id).at("signature")==signature,"REQUEST.CONFLICT");return commands.at(id).at("result");}
  require(commands.size()<4096,"STORE.CAPACITY");require(p.at("expected_revision")==data_.at("revision"),"STATE.REVISION_MISMATCH");
  Json next=data_,result;
- if(op=="map_import"){
+ if(op=="device_put"||op=="scene_put"||op=="scene_load"){
+ result=sceneCommand(next,id,op,p,actor);
+ }else if(op=="map_import"){
  require(!blocked(data_.at("transaction")),"MAP.TRANSACTION_ACTIVE");require(data_.at("maps").size()<32,"STORE.CAPACITY");auto map=importMap(p);auto key=map.at("map_id").get<std::string>();
  require(!data_.at("maps").contains(key)||data_.at("maps").at(key)==map,"MAP.IMMUTABLE_ID");next["maps"][key]=map;result=map;
  }else if(op=="station_put"){
@@ -135,7 +140,7 @@ Json Catalog::command(const std::string & id,const std::string & op,const Json &
 void Catalog::transition(const std::string & tx,const std::string & state,const std::string & reason){
  auto next=data_;auto & t=next.at("transaction");require(!t.is_null()&&t.at("transaction_id")==tx,"MAP.TRANSACTION_MISMATCH");
  auto from=t.at("state").get<std::string>();require((state=="LOADING"&&from=="LOAD_INTENT")||(state=="COMMITTED"&&from=="LOADING")||(state=="RECOVERY_REQUIRED"&&blocked(t)),"MAP.INVALID_TRANSITION");
- t["state"]=state;t["reason_code"]=reason;t["updated_at"]=now();if(state=="COMMITTED")next["active_map"]=t.at("target");
+ t["state"]=state;t["reason_code"]=reason;t["updated_at"]=now();if(state=="COMMITTED"){next["active_map"]=t.at("target");next["active_scene"]=t.value("scene_target",Json());}
  next["history"].push_back({{"transaction_id",tx},{"state",state},{"reason_code",reason},{"at",now()}});commit(next);
 }
 }

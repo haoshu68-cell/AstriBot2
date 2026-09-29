@@ -1,0 +1,49 @@
+Mutation: now.ns > valid_until -> now.ns >= valid_until (temporary copy only)
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_acquisition_expiry_equality_and_ordering _________________
+
+    def test_acquisition_expiry_equality_and_ordering():
+>       result = run(dict(ops=[record(100, 140), query(199), query(200), query(201), query(99),
+                              record(100, 200), record(99, 150), record(101, 201), query(201)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:141: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:127: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:123: in compare_values
+    compare_values(expected[key], actual[key], path + '/' + key)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:127: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:123: in compare_values
+    compare_values(expected[key], actual[key], path + '/' + key)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = 'VALID', actual = 'STALE', path = '/2/value/0/health'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+            assert set(expected) == set(actual), path
+            for key in expected:
+                compare_values(expected[key], actual[key], path + '/' + key)
+        elif isinstance(expected, list):
+            assert len(expected) == len(actual), path
+            for index, (left, right) in enumerate(zip(expected, actual)):
+                compare_values(left, right, f'{path}/{index}')
+        elif isinstance(expected, float):
+            assert actual == pytest.approx(expected, abs=2e-14, rel=2e-14), path
+        else:
+>           assert actual == expected, f'{path}: {actual!r} != {expected!r}'
+E           AssertionError: /2/value/0/health: 'STALE' != 'VALID'
+E           assert 'STALE' == 'VALID'
+E             - VALID
+E             + STALE
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:131: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_acquisition_expiry_equality_and_ordering
+1 failed, 38 deselected in 0.06s
+
+expected_red_exit=1

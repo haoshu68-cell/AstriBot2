@@ -1,0 +1,111 @@
+{
+  "scope": "read-only static-map/zones/physical-geometry admission, no action sent",
+  "session": "runs/task_chain_20260922_resume/navigation_02/session.json",
+  "counts": {
+    "/map_manager/status": 63,
+    "/navigation_zones/constraints": 33,
+    "/navigation_zones/status": 32,
+    "/social_sim/state": 79
+  },
+  "checks": {
+    "fresh_received": true,
+    "static_map_verified": true,
+    "zones_ack_ready": true,
+    "zones_constraints_valid": true,
+    "physical_geometry": true,
+    "physical_geometry_ros_fresh": true
+  },
+  "passed": true,
+  "latest": {
+    "/map_manager/status": {
+      "active_map": {
+        "map_id": "simulation_static_map",
+        "map_yaml": "/home/yjh/WorkSpace/astribot_sdk_ros2/maps/warehouse_baseline.yaml",
+        "read_only": true,
+        "source": "simulation_static_map",
+        "source_directory": "/home/yjh/WorkSpace/astribot_sdk_ros2/maps",
+        "version": "e15a6c688e520c459497f8ce08e49d7cf71f51ef42357339a9df04de585838b9-93b59573c236e845d12c27bc7f3a190dfbb8378de8db460f36dd7fdf71792d36"
+      },
+      "active_map_ready": true,
+      "active_scene": null,
+      "boot_id": "3360469287-3576074213",
+      "devices": {},
+      "idle_evidence": false,
+      "maps": {},
+      "motion_blocked": false,
+      "revision": 0,
+      "robot_id": "astribot",
+      "scene_ready": false,
+      "scenes": {},
+      "schema_version": 1,
+      "state": "READY",
+      "stations": {},
+      "stop_evidence": true,
+      "storage_root": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_resume/navigation_02/map_catalog",
+      "switch_available": false,
+      "transaction": null
+    },
+    "/navigation_zones/constraints": {
+      "boot_id": "2222056136-4041773155",
+      "context_id": "map:simulation_static_map:e15a6c688e520c459497f8ce08e49d7cf71f51ef42357339a9df04de585838b9-93b59573c236e845d12c27bc7f3a190dfbb8378de8db460f36dd7fdf71792d36",
+      "frame": "map",
+      "regions": [],
+      "revision": 0,
+      "schema_version": 1,
+      "sequence": 154,
+      "stamp": 23.201,
+      "valid": true
+    },
+    "/navigation_zones/status": {
+      "applied": {
+        "global_costmap": true,
+        "local_costmap": true,
+        "protection": true
+      },
+      "boot_id": "2222056136-4041773155",
+      "can_edit": false,
+      "context_id": "map:simulation_static_map:e15a6c688e520c459497f8ce08e49d7cf71f51ef42357339a9df04de585838b9-93b59573c236e845d12c27bc7f3a190dfbb8378de8db460f36dd7fdf71792d36",
+      "ready": true,
+      "reason_code": "ZONES.READY",
+      "regions": [],
+      "review_required": false,
+      "revision": 0,
+      "robot_id": "astribot",
+      "schema_version": 1,
+      "source_context": "",
+      "stamp": 23.076,
+      "storage_root": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_resume/navigation_02/map_catalog/navigation_zones",
+      "token": "2222056136-4041773155:map:simulation_static_map:e15a6c688e520c459497f8ce08e49d7cf71f51ef42357339a9df04de585838b9-93b59573c236e845d12c27bc7f3a190dfbb8378de8db460f36dd7fdf71792d36:0"
+    },
+    "/social_sim/state": {
+      "stamp_ns": 23190000000,
+      "epoch": 0,
+      "geometry_valid": true,
+      "unsupported_geometry_count": 0,
+      "robot_collision_count": 51,
+      "physics_samples": 23190,
+      "lidar_masked_actor_visuals": 0,
+      "lidar_masked_sensors": 2,
+      "conservative_overlap_steps": 0,
+      "clearance_lower_bound_m": 1000000000,
+      "robot_swept_bounds": [
+        [
+          -0.306604453778,
+          -0.478344994736,
+          0.0342238902392
+        ],
+        [
+          0.306603712529,
+          0.478340710429,
+          1.74687386906
+        ]
+      ],
+      "robot": [
+        -2.50487943661e-07,
+        -3.10726792344e-06,
+        1.98407357161e-05
+      ],
+      "people": []
+    }
+  }
+}

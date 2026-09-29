@@ -4,6 +4,7 @@
 #define ASTRIBOT_S1_PATH_TRACKING__ALIGN_MATH_HPP_
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace astribot_s1_path_tracking
@@ -26,12 +27,22 @@ bool isSameGoal(const PlanarPoint & prev_end, const PlanarPoint & cur_end, doubl
 enum class Phase
 {
   kAlignStart,
+  kCornerApproach,
+  kAlignCorner,
   kFollow,
   kAlignGoal,
   kDone,
 };
 
 const char * toString(Phase p);
+
+enum class CornerGeometry {SupportedOrSmooth, ShortApproach, DenseDogleg, Turnaround, TerminalHandoff};
+struct CornerGeometryIssue {
+  CornerGeometry kind{CornerGeometry::SupportedOrSmooth};
+  std::size_t index{0};
+};
+CornerGeometryIssue inspectCornerGeometry(const std::vector<PlanarPoint> & path,
+  double min_segment_m, double min_turn_rad, double max_turn_rad);
 
 /// 把任意角归一化到 (-pi, pi]。
 double normalizeAngle(double a);
@@ -47,6 +58,32 @@ double shortestAngularDiff(double from, double to);
 /// @return 是否估计成功（点数不足或路径退化为单点时返回 false，
 bool pathStartHeading(
   const std::vector<PlanarPoint> & path, double lookahead_m, double & heading);
+
+/// A sharp, standard-angle turn represented by a path vertex.  Curvature
+/// changes distributed over many short segments are intentionally filtered by
+/// the minimum segment and turn thresholds before a corner is returned.
+struct PathCorner
+{
+  PlanarPoint position;
+  double incoming_heading{0.0};
+  double outgoing_heading{0.0};
+  double turn_angle{0.0};
+  double arc_length{0.0};
+  std::size_t index{0U};
+};
+
+/// Detect standard corners in a polyline.  Inputs are required to be finite;
+/// invalid thresholds or degenerate points yield an empty result.  Turns near
+/// a U-turn are excluded because they need a separate recovery policy.
+std::vector<PathCorner> detectStandardCorners(
+  const std::vector<PlanarPoint> & path, double min_segment_m,
+  double min_turn_rad, double max_turn_rad);
+
+/// Arc-length progress of the closest finite path segment and its lateral
+/// distance.  The progress is clamped to [0, path length].
+bool projectPathProgress(
+  const std::vector<PlanarPoint> & path, const PlanarPoint & point,
+  double & progress_m, double & lateral_m);
 
 /// 判断是否需要为「起步对齐」而原地旋转。
 /// 误差小于 min_angle_rad 时不值得转 —— 直接进跟踪段，避免原地抖动。

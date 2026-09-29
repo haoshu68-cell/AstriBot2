@@ -62,10 +62,8 @@ class M5CaptureTest(unittest.TestCase):
         guard_data = {
             'stamp': {'sec': 38, 'nanosec': 639000000},
             'joint_stamp': {'sec': 38, 'nanosec': 610000000},
-            'base_stamp': {'sec': 38, 'nanosec': 620000000},
             'context_id': 'fixture-context', 'active': True, 'healthy': False,
             'reason': 'JOINT_TRACKING_ERROR', 'maximum_joint_error_rad': .051,
-            'base_translation_m': .0002, 'base_rotation_rad': .0004,
         }
         phase_data = {'phase': '5', 'reason': 'EXECUTION_GUARD_UNHEALTHY',
                       'authority_reason': 'RESOURCE_CLOCK_RESET', 'hold_reason': 'HOLD_CANCELED',

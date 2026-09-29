@@ -1,5 +1,6 @@
-# Read-only revalidation of the already-issued remaining path after physical
-# ATTACH_CONFIRM / DETACH_CONFIRM. This does not authorize execution or mutate
+# Revalidation after physical ATTACH_CONFIRM / DETACH_CONFIRM. A colliding PICK
+# TRANSPORT_POSTURE may be replanned against the confirmed actual payload.
+# This does not authorize execution or mutate
 # the global scene. The owner must independently confirm its transaction and
 # full scene readback before acknowledging the transition.
 string context_id
@@ -11,3 +12,7 @@ bool success
 string reason
 string context_id
 string transaction_id
+bool transport_replanned
+# Complete suffix beginning at request.start_index. The owner must explicitly
+# adopt it after independent scene readback; unchanged paths keep original timing.
+astribot_transport_msgs/ManipulationStage[] remaining_stages

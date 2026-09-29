@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/diagnose_transport_skill.py", line 23, in <module>
+    values=call('/'+name+'/get_parameters',GetParameters,GetParameters.Request(names=['robot_description','robot_description_semantic'])).values
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/diagnose_transport_skill.py", line 14, in call
+    if not c.wait_for_service(timeout_sec=20):raise RuntimeError('missing '+topic)
+RuntimeError: missing /mtc_planner/get_parameters

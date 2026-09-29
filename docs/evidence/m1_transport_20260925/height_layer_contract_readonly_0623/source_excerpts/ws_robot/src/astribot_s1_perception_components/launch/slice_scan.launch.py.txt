@@ -1,0 +1,12 @@
+72:     parameters = [self_filter, params_file, {'use_sim_time': use_sim_time}]
+73:     geometry_mode=LaunchConfiguration('navigation_geometry_mode').perform(context)
+74:     if geometry_mode not in ('legacy','fixed_v2'):raise ValueError('invalid navigation_geometry_mode')
+75:     if geometry_mode=='fixed_v2':
+76:         if not use_sim_time:raise ValueError('fixed_v2 height projection awaits hardware validation')
+77:         parameters.append({'slices.overhead.z_max':2.2,'self_filter.attached.enabled':True,
+78:             # Sparse low/high obstacles must survive the navigation projection.
+79:             # SLAM's height ROI and statistical outlier filtering are not
+80:             # evidence that a missing point is free space.
+81:             'enable_outlier_filter':False,
+82:             'slices.low_obstacle.min_points':1,'slices.overhead.min_points':1})
+83:     if overrides:

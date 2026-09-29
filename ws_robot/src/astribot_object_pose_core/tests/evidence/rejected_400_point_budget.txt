@@ -1,0 +1,86 @@
+[OUTPUT] 
+Internal ctest changing into directory: /tmp/astribot_pose_core_build/astribot_object_pose_core
+
+[HANDLER_OUTPUT] 
+Test project /tmp/astribot_pose_core_build/astribot_object_pose_core
+
+      Start 22: visible_ambiguous_view
+      Start 17: visible_two_faces
+ 1/23 Test #22: visible_ambiguous_view ...........   Passed    4.17 sec
+      Start  3: multi_depth
+ 2/23 Test #17: visible_two_faces ................   Passed    6.87 sec
+      Start 11: declared_symmetry
+ 3/23 Test  #3: multi_depth ......................   Passed    6.81 sec
+      Start 19: visible_missing_features
+ 4/23 Test #11: declared_symmetry ................   Passed    6.77 sec
+      Start  9: wrong_model
+ 5/23 Test #19: visible_missing_features .........   Passed    3.53 sec
+      Start 21: visible_single_direction
+ 6/23 Test #21: visible_single_direction .........   Passed    2.01 sec
+      Start  2: noisy_partial
+ 7/23 Test  #9: wrong_model ......................   Passed    5.46 sec
+      Start 18: visible_large_rotation
+ 8/23 Test  #2: noisy_partial ....................   Passed    3.77 sec
+      Start 12: ambiguous_partial
+ 9/23 Test #18: visible_large_rotation ...........***Failed    3.89 sec
+success=0 reason=ambiguous_pose coverage=0.38008,0.781575 rmse=0.00336911 candidates=30
+FAIL: registration rejected: ambiguous_pose
+
+      Start 23: cli_contract
+10/23 Test #12: ambiguous_partial ................***Failed    3.03 sec
+partial_base success=1 reason=ok coverage=0.649234,0.851027 rmse=0.00286146
+candidate 0.649234 0.851027 0.00286146
+candidate 0.61559 0.797517 0.00340603
+candidate 0.614257 0.795805 0.00339161
+candidate 0.614257 0.795805 0.00339161
+candidate 0.447702 0.585616 0.00377793
+candidate 0.391739 0.505993 0.00122217
+candidate 0.391739 0.505993 0.00122303
+candidate 0.378081 0.49786 0.0031575
+candidate 0.38441 0.490154 0.00304736
+candidate 0.375416 0.496147 0.00351678
+candidate 0.377415 0.472175 0.00322324
+candidate 0.352432 0.446918 0.00330202
+candidate 0.347768 0.446062 0.0034465
+candidate 0.343105 0.443065 0.00398767
+candidate 0.307462 0.393408 0.00445927
+candidate 0.265823 0.345462 0.00380301
+candidate 0.162558 0.217466 0.00271671
+FAIL: unseen distinguishing geometry must not claim unique pose
+
+      Start  4: camera_xyz
+11/23 Test #23: cli_contract .....................   Passed    3.44 sec
+      Start  1: large_rotation
+12/23 Test  #4: camera_xyz .......................   Passed    3.71 sec
+      Start 10: undeclared_symmetry
+13/23 Test #10: undeclared_symmetry ..............   Passed    0.01 sec
+      Start 16: invalid_symmetry
+14/23 Test #16: invalid_symmetry .................   Passed    0.01 sec
+      Start 20: invalid_visibility_geometry
+15/23 Test #20: invalid_visibility_geometry ......   Passed    0.01 sec
+      Start 13: continuous_symmetry
+16/23 Test #13: continuous_symmetry ..............   Passed    0.00 sec
+      Start 15: invalid_normals
+17/23 Test #15: invalid_normals ..................   Passed    0.00 sec
+      Start 14: invalid_options
+18/23 Test #14: invalid_options ..................   Passed    0.00 sec
+      Start  5: empty
+19/23 Test  #5: empty ............................   Passed    0.00 sec
+      Start  7: nan
+20/23 Test  #7: nan ..............................   Passed    0.00 sec
+      Start  8: plane
+21/23 Test  #8: plane ............................   Passed    0.00 sec
+      Start  6: sparse
+22/23 Test  #6: sparse ...........................   Passed    0.00 sec
+23/23 Test  #1: large_rotation ...................   Passed    3.43 sec
+
+91% tests passed, 2 tests failed out of 23
+
+Total Test time (real) =  29.86 sec
+
+The following tests FAILED:
+	 12 - ambiguous_partial (Failed)
+	 18 - visible_large_rotation (Failed)
+[ERROR_MESSAGE] 
+Errors while running CTest
+

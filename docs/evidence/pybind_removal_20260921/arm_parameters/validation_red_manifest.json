@@ -1,0 +1,18 @@
+{
+  "stage": "parameter_validation_red_before_guard",
+  "build_type": "Release",
+  "pybind": "OFF",
+  "binary": "/tmp/codex_arm_parameters_20260921/build/arm_speed_limiter_cpp",
+  "binary_sha256": "cbd7b02ef92993d8855e832ad7135edca20dc8d02c4da94cf458bca95a54040c",
+  "cpp_source_sha256": "7e22bff6dc89aa930256d480c54e2e8a2ea1e04d1e1ef8aed002ccda175db1b5",
+  "test_sha256": "10f35eaa89500fdb0d9fb40f70a1291e1f13dc3c6620b00791b72437cbefa2b1",
+  "selected_cases": 8,
+  "passed": 2,
+  "failed": 6,
+  "command": "/usr/bin/python3 -m pytest -q ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py -k \"invalid_atomic_update or valid_atomic_threshold or valid_short_reference\"",
+  "environment": {
+    "ASTRIBOT_ARM_LIMITER_CPP": "/tmp/codex_arm_parameters_20260921/build/arm_speed_limiter_cpp",
+    "ROS_DOMAIN_ID": 118,
+    "ROS_LOCALHOST_ONLY": 1
+  }
+}

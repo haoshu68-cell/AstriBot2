@@ -1,0 +1,22 @@
+Consolidate compiler generated dependencies of target navigation_math
+[ 20%] Building CXX object CMakeFiles/navigation_math.dir/src/navigation_math.cpp.o
+[ 40%] Building CXX object CMakeFiles/navigation_math.dir/src/cmd_vel_body_to_world_core.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp: In function ‘std::vector<double> astribot::navigation::scan_coverage(const std::vector<double>&, double, double, double, double, double)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp:304:69: warning: suggest parentheses around ‘&&’ within ‘||’ [-Wparentheses]
+  304 |         (std::isfinite(ranges[index]) && range_min <= ranges[index] &&
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+  305 |              ranges[index] <= range_max || ranges[index] == INFINITY);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~                              
+[ 60%] Linking CXX static library libnavigation_math.a
+[ 60%] Built target navigation_math
+[ 80%] Building CXX object CMakeFiles/policy_behavior_probe.dir/test/policy_behavior_probe.cpp.o
+[100%] Linking CXX executable policy_behavior_probe
+[100%] Built target policy_behavior_probe
+Consolidate compiler generated dependencies of target navigation_math
+[ 42%] Built target navigation_math
+[ 57%] Building CXX object CMakeFiles/policy_path_evidence.dir/src/policy_path_evidence.cpp.o
+[ 71%] Linking CXX static library libpolicy_path_evidence.a
+[ 71%] Built target policy_path_evidence
+[ 85%] Building CXX object CMakeFiles/policy_path_evidence_probe.dir/test/policy_path_evidence_probe.cpp.o
+[100%] Linking CXX executable policy_path_evidence_probe
+[100%] Built target policy_path_evidence_probe

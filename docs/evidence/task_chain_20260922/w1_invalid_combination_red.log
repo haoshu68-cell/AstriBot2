@@ -1,0 +1,16 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ SixCameras.test_invalid_fixed_geometry_policy_is_rejected_before_spawn ____
+
+self = <test_six_camera_launch_chain.SixCameras testMethod=test_invalid_fixed_geometry_policy_is_rejected_before_spawn>
+
+    def test_invalid_fixed_geometry_policy_is_rejected_before_spawn(self):
+     p=subprocess.run([sys.executable,str(ROOT/'tools/sim_stack_supervisor.py'),'--dry-run',
+       '--navigation-geometry-mode','fixed_v2','--navigation-policy','off'],capture_output=True,text=True)
+>    self.assertEqual(p.returncode,2);self.assertIn('fixed_v2 requires',p.stderr);self.assertFalse(p.stdout.strip())
+E    AssertionError: 0 != 2
+
+tools/vision/test_six_camera_launch_chain.py:14: AssertionError
+=========================== short test summary info ============================
+FAILED tools/vision/test_six_camera_launch_chain.py::SixCameras::test_invalid_fixed_geometry_policy_is_rejected_before_spawn
+1 failed, 2 deselected in 0.11s

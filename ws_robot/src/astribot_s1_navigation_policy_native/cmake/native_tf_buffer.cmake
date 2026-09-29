@@ -1,0 +1,16 @@
+# Experimental GIL-independent TF reception. Disabled in ordinary builds.
+option(ASTRIBOT_BUILD_NATIVE_TF_BUFFER "Build the experimental native TF Python bridge" OFF)
+if(ASTRIBOT_BUILD_NATIVE_TF_BUFFER)
+  find_package(ament_cmake_python REQUIRED)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+  find_package(pybind11 REQUIRED)
+  add_library(native_tf_buffer STATIC src/native_tf_buffer.cpp)
+  target_include_directories(native_tf_buffer PUBLIC include)
+  target_compile_options(native_tf_buffer PRIVATE -Wall -Wextra -Wpedantic)
+  ament_target_dependencies(native_tf_buffer rclcpp geometry_msgs tf2 tf2_ros)
+  pybind11_add_module(_native_tf_buffer src/native_tf_buffer_pybind.cpp)
+  target_link_libraries(_native_tf_buffer PRIVATE native_tf_buffer)
+  ament_get_python_install_dir(PYTHON_INSTALL_DIR)
+  install(TARGETS _native_tf_buffer
+    LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/${PROJECT_NAME}")
+endif()

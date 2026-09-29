@@ -1,0 +1,24 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from Fetch
+[ RUN      ] Fetch.ValidResponse
+[INFO] [1790009231.941017055] [fetch_test]: Received URDF after 1 bounded request(s)
+[       OK ] Fetch.ValidResponse (12 ms)
+[ RUN      ] Fetch.DelayedFirstReplyRetries
+[WARN] [1790009232.005400791] [fetch_test]: URDF request 1 timed out; bounded retry
+[WARN] [1790009232.065564063] [fetch_test]: URDF request 2 timed out; bounded retry
+[WARN] [1790009232.125713067] [fetch_test]: URDF request 3 timed out; bounded retry
+[INFO] [1790009232.126395586] [fetch_test]: Received URDF after 4 bounded request(s)
+[       OK ] Fetch.DelayedFirstReplyRetries (185 ms)
+[ RUN      ] Fetch.MissingServiceBounded
+[ERROR] [1790009232.330359742] [fetch_test]: URDF_STARTUP_DEADLINE: model unavailable; control setup rejected
+[       OK ] Fetch.MissingServiceBounded (204 ms)
+[ RUN      ] Fetch.WrongTypeRejected
+[ERROR] [1790009232.335807434] [fetch_test]: URDF parameter missing, empty or wrong type
+[       OK ] Fetch.WrongTypeRejected (6 ms)
+[----------] 4 tests from Fetch (407 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (408 ms total)
+[  PASSED  ] 4 tests.

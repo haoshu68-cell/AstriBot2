@@ -1,0 +1,11 @@
+--- a/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -334,7 +334,7 @@
+     station_before_=future.get()->scene;
+     if(input().operation=="PICK"&&!station_before_.robot_state.attached_collision_objects.empty())throw std::runtime_error("TRANSFER_INITIAL_SCENE_NOT_EMPTY");
+     station_diff_=fixed_station_scene_diff(station_before_,stations,*world_base,known_links_);
+-    auto convert=[&](const geometry_msgs::msg::PoseStamped &target){auto converted=target;converted.header.frame_id=payload_base_;converted.header.stamp=rclcpp::Time(capture).to_msg();converted.pose=fixed_station_target_in_base(target.pose,*world_base);return converted;};
++    auto convert=[&](const geometry_msgs::msg::PoseStamped &target){auto converted=target;converted.header.frame_id=payload_base_;converted.header.stamp=rclcpp::Time(capture);converted.pose=fixed_station_target_in_base(target.pose,*world_base);return converted;};
+     const bool pick=input().operation=="PICK";
+     input_.pre_target=convert(pick?goal.pick_pre_target:goal.place_pre_target);input_.target=convert(pick?goal.pick_target:goal.place_target);
+     input_.exit_targets.clear();for(const auto &target:pick?goal.pick_exit_targets:goal.place_exit_targets)input_.exit_targets.push_back(convert(target));

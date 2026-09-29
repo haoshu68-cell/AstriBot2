@@ -1,3 +1,9 @@
+from pathlib import Path as _ReferencePath
+import sys as _reference_sys
+_reference_sys.path.insert(0, str(_ReferencePath(__file__).resolve().parents[4] / "tools/migration/python_reference"))
+from reference_bootstrap import enable as _enable_references
+_enable_references()
+
 import copy
 import unittest
 from pathlib import Path

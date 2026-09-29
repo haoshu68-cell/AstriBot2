@@ -1,0 +1,73 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "invalid vertical translation protects despite planar metric",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 177742,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_d20722fbe8/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/installed_smoke/test_qos_and_tf_nonfinite_z/python_params.yaml",
+        "-r",
+        "/coupling_d20722fbe8/input:=/coupling_d20722fbe8/input_remapped",
+        "-r",
+        "/coupling_d20722fbe8/python/output:=/coupling_d20722fbe8/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 177743,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/install/lib/astribot_s1_dynamics_coupling/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_d20722fbe8/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/installed_smoke/test_qos_and_tf_nonfinite_z/cpp_params.yaml",
+        "-r",
+        "/coupling_d20722fbe8/input:=/coupling_d20722fbe8/input_remapped",
+        "-r",
+        "/coupling_d20722fbe8/cpp/output:=/coupling_d20722fbe8/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 1,
+    "cpp": 1
+  }
+}

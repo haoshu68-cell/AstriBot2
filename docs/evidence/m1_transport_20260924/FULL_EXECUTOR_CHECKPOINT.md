@@ -48,3 +48,7 @@ This is a compilable, partially verified development checkpoint, not completion 
 ## Re-entry
 
 Use the reviewed mainline payload_transition overlay for messages and explicitly choose `runs/mainline_20260924/canonical_scene/install/astribot_s1_transport_mtc/share/astribot_s1_transport_mtc/cmake` for the MTC CMake package. Prepend its `lib` after the full candidate build/install libraries. Do not use the same-named old MTC or native libraries from an earlier overlay. Do not remove or reuse persistent resource journals or domain locks. Do not rebuild the frozen `next_install` from this development source.
+
+## Explicit resume, 2026-09-24 12:44 +08:00
+
+The user explicitly resumed all tasks. The original 11:28 integration start and 12:28 pause are retained, not reset. At 12:46 the checkpoint source and installed-ELF hashes were rechecked with no drift. The next work is the missing full PICK/PLACE synthetic protocol, with the actual C++ ledger and an isolated test-only Ignition physical endpoint. Coordinator-assigned domains are 225 PICK, 226 PLACE, 227 delayed ledger, and 228 unexpected revision, with new unique partitions and no journal reuse. Source/fixture preparation is allowed during M2's actual simulation window; builds and synthetic ROS runs wait for the coordinator to release that window. This resume note is not a new validation result.

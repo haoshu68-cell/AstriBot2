@@ -47,8 +47,7 @@
     "planning_takeover": "Simulation admission: stopped <= 2cm/s and 0.03rad/s, start drift <=4cm, no route replacement within 0.6m terminal zone; 0.5s execution context timeout. Hardware thresholds need independent evidence.",
     "narrow_angular_speed": "P4 simulation initial angular cap; requires independent hardware validation",
     "narrow_centering": "Simulation-only entrance correction: <=5cm/s, 1cm release, <=30cm lateral sweep; validate swept envelope and latency on hardware.",
-    "scan_obstacle_padding": "Additional padding outside the measured occupancy cell, separate from acquisition covariance and robot clearance. Simulation paired replay removes the previous hardcoded 4cm per side; hardware retains 4cm pending validation.",
-    "start_maneuver": "Simulation initial reverse-exit limits: x-minus <=5cm/s, <=2m search, moving correction <=0.1rad/s and 1cm/s lateral, no in-place rotation during reverse; 8mm stop approach, 3cm lateral and 0.03rad heading deviation limits. Full turn uses existing continuous sweep, footprint, clearance and acquisition covariance. Hardware rear coverage, braking, localization drift and payload envelope require separate validation before enabling."
+    "scan_obstacle_padding": "Additional padding outside the measured occupancy cell, separate from acquisition covariance and robot clearance. Simulation paired replay removes the previous hardcoded 4cm per side; hardware retains 4cm pending validation."
   },
   "hardware_evidence": {
     "transport_envelope": null,
@@ -89,24 +88,5 @@
   "narrow_centering_speed_m_s": 0.05,
   "narrow_centering_tolerance_m": 0.01,
   "narrow_centering_max_offset_m": 0.3,
-  "scan_obstacle_padding_m": 0.0,
-  "start_maneuver": {
-    "enabled": true,
-    "speed_m_s": 0.05,
-    "max_distance_m": 2.0,
-    "search_step_m": 0.05,
-    "position_tolerance_m": 0.008,
-    "lateral_tolerance_m": 0.03,
-    "heading_tolerance_rad": 0.03,
-    "position_gain": 0.8,
-    "stopped_linear_m_s": 0.01,
-    "stopped_angular_rad_s": 0.02,
-    "timeout_s": 120.0,
-    "progress_timeout_s": 15.0,
-    "lateral_gain": 1.0,
-    "lateral_speed_m_s": 0.01,
-    "heading_gain": 3.0,
-    "angular_damping": 0.5,
-    "angular_speed_rad_s": 0.1
-  }
+  "scan_obstacle_padding_m": 0.0
 }

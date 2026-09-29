@@ -1,0 +1,546 @@
+{
+  "recorded_at": "2026-09-23T01:14:14.689502+08:00",
+  "evidence_class": "offline_native_and_static_launch_only",
+  "gtest_cases": 91,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "suites": [
+    {
+      "component": "payload",
+      "file": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/payload_build/test_results/astribot_s1_payload_state/payload_consumer_test.gtest.xml",
+      "sha256": "7b7c3e71785405460243b32ee79a451189c55db8467ed7d5e76d5a3f04cb0b98",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0,
+      "cases": [
+        {
+          "name": "ConfirmedEmptyIsAvailableAndStrictlyExpires",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "HeartbeatsCannotRenewSameCaptureWhenRosTimeFrozen",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "InvalidStatusRevokesAndReplayCannotRecover",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "FutureSameIdentityDoesNotRevokeOrExtendValidCache",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "SourceWrongOrGeometryDigestWrongCannotAuthorize",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "LedgerRestartRevokesOldAndRetiredEpochCannotReturn",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "ClockRollbackCannotResurrectOldState",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "EmptyArrayWithoutFullConfirmationIsNotEmptyProof",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "RestartUnknownRevokesAndRetiresPreviousLedger",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "SourceEpochCannotChangeInsideSameLedgerRevision",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "NewerTransitionCannotBeOverwrittenByDelayedOldEmpty",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        },
+        {
+          "name": "ExpiredOutOfOrderPacketDoesNotRevokeFreshState",
+          "suite": "astribot_s1_payload_state.Consumer",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "component": "payload",
+      "file": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/payload_build/test_results/astribot_s1_payload_state/payload_state_test.gtest.xml",
+      "sha256": "2b76d670137223912f31f3a119516021d1f6567635648996d3d79ddbbd15f661",
+      "tests": 34,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0,
+      "cases": [
+        {
+          "name": "StartupAndSceneAloneCannotConfirmEmpty",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ExplicitEmptyNeedsReadbackAndDurableRecord",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "MissingInventoryOrWrongSourceCannotClearLoad",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ForeignSessionIsIgnoredWithoutRenewal",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SourceAndSteadyDeadlinesAreStrictAndHeartbeatCannotRenew",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "FrozenRosTimeExpiresOnWallClock",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "RepeatedEvidenceAndScenePollingDoNotRenewCapture",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "EmptyLoadedEmptyNeverReusesVersion",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ContentChangeWithoutSourceRevisionIsRejected",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "DelayedSceneCannotConfirmNewRevision",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SceneMismatchOrDiffCannotConfirm",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ExpiredReadbackCannotConfirmFreshObservation",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SourceRestartNeedsReadbackAndRetiredEpochCannotReturn",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ClockRollbackRequiresNewClockEpoch",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "PendingReleaseCannotPublishEmpty",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "FutureOrExcessivelyLeasedObservationIsNotEvidence",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "DualDistinctPayloadsAcceptedAndDuplicateObjectRejected",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "InvalidDimensionsPoseAndUnknownLinkAreRejected",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "UnsupportedMeshAndEmptyLoadedGeometryAreRejected",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "GeometryOrderDoesNotChangeDigest",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "InvalidPhysicalEvidenceCannotBeHealedBySceneAlone",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ForgedLongLeaseSameCaptureDoesNotRenewWallDeadline",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "MalformedStateCannotBeClearedByIdenticalGoodReplay",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "WorkerQueueAgeIsIncludedInOriginalCaptureLease",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "OverflowFaultCannotBeHealedBySceneReadback",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "NewLedgerStartsWithIdentifiableUnknownState",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "AcceptedFutureSameContextPacketDoesNotRevokeOldEvidence",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "IdenticalCaptureCannotExtendRosValidity",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "FaultRecoveryRequiresNewCaptureNotMerelyNewSequence",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ExpiredOutOfOrderPacketDoesNotRevokeFreshState",
+          "suite": "astribot_s1_payload_state.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "CommitFailureLatchesWithoutGrantingPermission",
+          "suite": "astribot_s1_payload_state.Storage",
+          "skipped": false
+        },
+        {
+          "name": "RestartDoesNotRestoreAuthorization",
+          "suite": "astribot_s1_payload_state.Storage",
+          "skipped": false
+        },
+        {
+          "name": "JournalPersistsAndExclusiveOwnerIsRequired",
+          "suite": "astribot_s1_payload_state.Storage",
+          "skipped": false
+        },
+        {
+          "name": "InvalidJournalPathFailsAtStartup",
+          "suite": "astribot_s1_payload_state.Storage",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "component": "geometry",
+      "file": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/geometry_build/test_results/astribot_s1_robot_geometry/attachment_geometry_test.gtest.xml",
+      "sha256": "fedc2795efc392e812c03db3f2b48799717dee5fd48911adb30c49f6d78bff0d",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0,
+      "cases": [
+        {
+          "name": "MissingConfirmationIsNotAnEmptyBody",
+          "suite": "astribot_s1_robot_geometry.AttachmentGeometry",
+          "skipped": false
+        },
+        {
+          "name": "ExplicitEmptyRetainsVersionAndSourceDeadline",
+          "suite": "astribot_s1_robot_geometry.AttachmentGeometry",
+          "skipped": false
+        },
+        {
+          "name": "OffsetPayloadIsConservativelyIncluded",
+          "suite": "astribot_s1_robot_geometry.AttachmentGeometry",
+          "skipped": false
+        },
+        {
+          "name": "ExpiredOrRevokedInputCannotFinishAsyncGeometry",
+          "suite": "astribot_s1_robot_geometry.AttachmentGeometry",
+          "skipped": false
+        },
+        {
+          "name": "CompletionClampsToTightenedCurrentAttachmentLease",
+          "suite": "astribot_s1_robot_geometry.AttachmentGeometry",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "component": "hold",
+      "file": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/hold_build/test_results/astribot_s1_transport_native/arm_hold_test.gtest.xml",
+      "sha256": "b9ebbc11ad5ae0c3cb706b49731af3b987273071ed998825078b7e4249adecf0",
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0,
+      "cases": [
+        {
+          "name": "ZeroMotionWithoutTaskAuthorityNeverConfirms",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "MissingOrUnfinishedExecutorProofRejected",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SustainedMeasuredSettlingAndClaimsProduceBoundedHold",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SingleFrameOrDuplicateDoesNotProveSettling",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SettlingBudgetIsQuarterOfHoldError",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ClaimLossRevokesAndCannotAutomaticallyRecover",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "DuplicateControllerClaimsAreRejected",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "UnownedJointCannotReceiveHoldAuthorization",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "AttachmentChangeAndReturnCannotReviveOldHold",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "DriftOutsideOriginalReservationRevokes",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "CancelClearsRequestAndHoldCannotReuseId",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SourceAndFrozenClockWallExpiryRevoke",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "FutureSameVersionDoesNotDisplaceCurrentEvidence",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "MalformedJointArraysAndNanCannotConfirm",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "RequestReferencesCurrentGeometryAndSameHold",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "FreshResourceRenewalMaintainsOwnershipButNewOwnerRevokes",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ExpiredHoldCannotReviveWhenTimerDidNotObserveGap",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SameCaptureTightenedLeaseCannotBeIgnored",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ResourceQueueDelayDoesNotRenewWallLease",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "OneSequenceCannotRepresentThreeDifferentCaptures",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ResourceGapDuringSettlingCannotBeHiddenByRenewal",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "FirstControllerResponseAfterSettlingCanCompleteInitialization",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ZeroSequenceRevokesInvalidCapture",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "SameSequenceCannotChangeAttachmentIdentity",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        },
+        {
+          "name": "ClaimsMayRefreshBeforeFirstConfirmationButNotAcrossConfirmedGap",
+          "suite": "astribot_s1_transport_native.Fixture",
+          "skipped": false
+        }
+      ]
+    },
+    {
+      "component": "navigation",
+      "file": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/navigation_build/test_results/astribot_s1_navigation_policy_native/fixed_hold_flow_test.gtest.xml",
+      "sha256": "2ef6c760dbdfff7550211e3bcb79c03b09a0f30827d37481eb522923c8677da3",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0,
+      "cases": [
+        {
+          "name": "MissingControllerAndLocalCostmapStayExplicitlyBlocked",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "CancelThenLateAckCannotRestoreMotion",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "AttachmentChangeBetweenTimerTicksRevokesImmediately",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "SamePolygonOldEpochAckCannotAuthorizeNewRequest",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "NegativeAckAlwaysRemovesCurrentPermission",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "HoldRevocationBetweenTicksRemainsLatched",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "ClockEpochWithResetSequenceInvalidatesOldReservation",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "ConflictingSameSequenceCannotHideAttachmentRevocation",
+          "suite": "astribot_s1_navigation_policy_native.Flow",
+          "skipped": false
+        },
+        {
+          "name": "ConfirmedEmptyVersionReachesAllConsumers",
+          "suite": "astribot_s1_navigation_policy_native.FullChain",
+          "skipped": false
+        },
+        {
+          "name": "DistinctDualLoadsExpandGeometryAndRevokeOldEmptyPermission",
+          "suite": "astribot_s1_navigation_policy_native.FullChain",
+          "skipped": false
+        },
+        {
+          "name": "EmptyLoadedEmptyUsesNewVersionAndLateAcksCannotRestoreOldRequest",
+          "suite": "astribot_s1_navigation_policy_native.FullChain",
+          "skipped": false
+        },
+        {
+          "name": "IncompleteSceneReadbackStopsTheWholeAdmissionChain",
+          "suite": "astribot_s1_navigation_policy_native.FullChain",
+          "skipped": false
+        },
+        {
+          "name": "ExpiredSourceCannotBeRenewedByPublishingTheLedger",
+          "suite": "astribot_s1_navigation_policy_native.FullChain",
+          "skipped": false
+        },
+        {
+          "name": "StableDualLoadRequiresTheSameSixConsumerConfirmations",
+          "suite": "astribot_s1_navigation_policy_native.LoadedChain",
+          "skipped": false
+        },
+        {
+          "name": "LoadedGeometryCannotProposeAnUnknownMassEnvelope",
+          "suite": "astribot_s1_navigation_policy_native.LoadedChain",
+          "skipped": false
+        }
+      ]
+    }
+  ],
+  "native_executables": [
+    "lease_time",
+    "filled_collision",
+    "fusion_snapshot",
+    "geometry_state_core",
+    "fixed_envelope_authority"
+  ],
+  "geometry_differential_pytest_cases": 26,
+  "launch_parameter_pytest_cases": 5,
+  "final_logs": [
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/final_payload_tests.log",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/final_geometry_tests.log",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/final_hold_tests.log",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/chain_tests.log",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline/final_launch_tests.log"
+  ],
+  "not_run": [
+    "ROS protocol tests",
+    "Gazebo",
+    "ROS attachment source and scene service",
+    "real resource/executor/hold publisher",
+    "motion and camera workload matrix",
+    "VLA",
+    "hardware"
+  ],
+  "count_note": "CTest wrapper suites are not added to GTest/native/pytest case counts."
+}

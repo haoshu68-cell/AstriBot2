@@ -1,0 +1,258 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "missing TF fail closed",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "case": "static zero stamp timeless",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.5809217577706323,
+      "observed": {
+        "python": [
+          0.5809217577706323,
+          -1.1618435155412645,
+          0.0,
+          0.0,
+          0.0,
+          1.7427652733118968
+        ],
+        "cpp": [
+          0.5809217577706323,
+          -1.1618435155412645,
+          0.0,
+          0.0,
+          0.0,
+          1.7427652733118968
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "reach_folded_m": "0.5",
+        "reach_full_m": "0.8"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic reach thresholds",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.575,
+      "observed": {
+        "python": [
+          0.575,
+          -1.15,
+          0.0,
+          0.0,
+          0.0,
+          1.7249999999999999
+        ],
+        "cpp": [
+          0.575,
+          -1.15,
+          0.0,
+          0.0,
+          0.0,
+          1.7249999999999999
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "chassis_base_frame": "'coupling_e109a7fd72_offset'"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic base frame gives .45m",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "chassis_base_frame": "'coupling_e109a7fd72_base'",
+        "monitored_links": "['coupling_e109a7fd72_offset']"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic monitored link gives .2m",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "monitored_links": "['coupling_e109a7fd72_offset', 'coupling_e109a7fd72_missing']"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "any missing monitored TF fails closed",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "monitored_links": "[]"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "empty monitored links fail closed",
+      "clock_ns": 10000000000,
+      "expected_scale": 0.15,
+      "observed": {
+        "python": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ],
+        "cpp": [
+          0.15000000000000002,
+          -0.30000000000000004,
+          0.0,
+          0.0,
+          0.0,
+          0.45000000000000007
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 138374,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_e109a7fd72/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/first_green/test_reach_static_tf_dynamic_frame_links_thresholds_and_missing/python_params.yaml",
+        "-r",
+        "/coupling_e109a7fd72/input:=/coupling_e109a7fd72/input_remapped",
+        "-r",
+        "/coupling_e109a7fd72/python/output:=/coupling_e109a7fd72/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 138375,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_e109a7fd72/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/first_green/test_reach_static_tf_dynamic_frame_links_thresholds_and_missing/cpp_params.yaml",
+        "-r",
+        "/coupling_e109a7fd72/input:=/coupling_e109a7fd72/input_remapped",
+        "-r",
+        "/coupling_e109a7fd72/cpp/output:=/coupling_e109a7fd72/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 7,
+    "cpp": 7
+  }
+}

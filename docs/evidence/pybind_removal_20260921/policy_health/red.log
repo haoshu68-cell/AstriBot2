@@ -1,0 +1,23 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_acquisition_expiry_equality_and_ordering _________________
+
+    def test_acquisition_expiry_equality_and_ordering():
+>       result = run(dict(ops=[record(100, 140), query(199), query(200), query(201), query(99),
+                              record(100, 200), record(99, 150), record(101, 201), query(201)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:152: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = {'ops': [{'calibration_epoch': 0, 'capture': {'clock': 'ros', 'epoch': 0, 'ns': 100}, 'coverage': [{'direction': {'x':...rage': [{'direction': {'x': 1.0, 'y': 0.0, 'z': 0.0}, 'half_angle_rad': 3.141592653589793}], 'depth': True, ...}, ...]}
+
+    def run(case):
+        binary = os.environ.get('POLICY_HEALTH_PROBE')
+>       assert binary and Path(binary).is_file(), 'native policy health probe has not been implemented/built'
+E       AssertionError: native policy health probe has not been implemented/built
+E       assert (None)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:137: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_acquisition_expiry_equality_and_ordering
+1 failed, 34 deselected in 0.08s

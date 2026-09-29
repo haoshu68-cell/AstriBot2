@@ -1,0 +1,223 @@
+.FF.FFF                                                                  [100%]
+=================================== FAILURES ===================================
+_ test_wire_uint64_committed_revision[FOLLOW_COMMITTED_PATH-9223372036854775808] _
+
+counter = 9223372036854775808, motion = 'FOLLOW_COMMITTED_PATH'
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    @pytest.mark.parametrize('motion',['FOLLOW_COMMITTED_PATH','RETREAT'])
+    def test_wire_uint64_committed_revision(counter,motion):
+        d=decision();d.update(motion=motion,committed_path_revision=counter)
+        d['version']['path_revision']=counter
+        ctx=dict(version=d['version'],now=stamp(150,'steady'),required_inputs_valid=True,motion_enabled=True,
+                 allowed_planning=['LOCAL'],retreat_enabled=True,baseline_limits=d['limits'])
+>       check([dict(action='check_contract',type='Decision',value=d),dict(action='check_executable',decision=d,context=ctx)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': None}
+b = {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': None}, {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'field'
+E             'code'
+E             Full diff:
+E             - {'field', 'ok', 'code'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_ test_wire_uint64_committed_revision[FOLLOW_COMMITTED_PATH-18446744073709551615] _
+
+counter = 18446744073709551615, motion = 'FOLLOW_COMMITTED_PATH'
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    @pytest.mark.parametrize('motion',['FOLLOW_COMMITTED_PATH','RETREAT'])
+    def test_wire_uint64_committed_revision(counter,motion):
+        d=decision();d.update(motion=motion,committed_path_revision=counter)
+        d['version']['path_revision']=counter
+        ctx=dict(version=d['version'],now=stamp(150,'steady'),required_inputs_valid=True,motion_enabled=True,
+                 allowed_planning=['LOCAL'],retreat_enabled=True,baseline_limits=d['limits'])
+>       check([dict(action='check_contract',type='Decision',value=d),dict(action='check_executable',decision=d,context=ctx)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': None}
+b = {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': None}, {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'field'
+E             'code'
+E             Full diff:
+E             - {'field', 'ok', 'code'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_______ test_wire_uint64_committed_revision[RETREAT-9223372036854775808] _______
+
+counter = 9223372036854775808, motion = 'RETREAT'
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    @pytest.mark.parametrize('motion',['FOLLOW_COMMITTED_PATH','RETREAT'])
+    def test_wire_uint64_committed_revision(counter,motion):
+        d=decision();d.update(motion=motion,committed_path_revision=counter)
+        d['version']['path_revision']=counter
+        ctx=dict(version=d['version'],now=stamp(150,'steady'),required_inputs_valid=True,motion_enabled=True,
+                 allowed_planning=['LOCAL'],retreat_enabled=True,baseline_limits=d['limits'])
+>       check([dict(action='check_contract',type='Decision',value=d),dict(action='check_executable',decision=d,context=ctx)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': None}
+b = {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': None}, {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'field'
+E             'code'
+E             Full diff:
+E             - {'field', 'ok', 'code'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+______ test_wire_uint64_committed_revision[RETREAT-18446744073709551615] _______
+
+counter = 18446744073709551615, motion = 'RETREAT'
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    @pytest.mark.parametrize('motion',['FOLLOW_COMMITTED_PATH','RETREAT'])
+    def test_wire_uint64_committed_revision(counter,motion):
+        d=decision();d.update(motion=motion,committed_path_revision=counter)
+        d['version']['path_revision']=counter
+        ctx=dict(version=d['version'],now=stamp(150,'steady'),required_inputs_valid=True,motion_enabled=True,
+                 allowed_planning=['LOCAL'],retreat_enabled=True,baseline_limits=d['limits'])
+>       check([dict(action='check_contract',type='Decision',value=d),dict(action='check_executable',decision=d,context=ctx)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': None}
+b = {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': None}, {'code': 'INVALID_INPUT', 'field': 'committed_path_revision', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'field'
+E             'code'
+E             Full diff:
+E             - {'field', 'ok', 'code'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+____________ test_wire_negative_committed_does_not_alias_uint64_max ____________
+
+    def test_wire_negative_committed_does_not_alias_uint64_max():
+        d=decision();d.update(motion='FOLLOW_COMMITTED_PATH',committed_path_revision=-1)
+        d['version']['path_revision']=2**64-1
+>       check([dict(action='check_contract',type='Decision',value=d),
+               dict(action='check_contract',type='Decision',value=d|dict(decision_id=''))])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:493: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'code': 'VERSION_MISMATCH', 'field': 'committed_path_revision', 'ok': False}
+b = {'ok': True, 'result': None}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'code': 'VERSION_MISMATCH', 'field': 'committed_path_revision', 'ok': False}, {'ok': True, 'result': None})
+E           assert {'code', 'field', 'ok'} == {'ok', 'result'}
+E             Extra items in the left set:
+E             'field'
+E             'code'
+E             Extra items in the right set:
+E             'result'
+E             Full diff:
+E             - {'ok', 'result'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint64_committed_revision[FOLLOW_COMMITTED_PATH-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint64_committed_revision[FOLLOW_COMMITTED_PATH-18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint64_committed_revision[RETREAT-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint64_committed_revision[RETREAT-18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_negative_committed_does_not_alias_uint64_max
+5 failed, 2 passed, 60 deselected in 0.19s

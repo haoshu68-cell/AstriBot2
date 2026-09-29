@@ -1,0 +1,86 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__ test_moving_classification_uses_original_norm_at_point_one_boundary[False] __
+
+probe = <function probe.<locals>.call at 0x7de113cfc3a0>, parametric = False
+
+    @pytest.mark.parametrize('parametric',[False,True])
+    def test_moving_classification_uses_original_norm_at_point_one_boundary(probe,parametric):
+        dx,dy=.05142229122650155,-.08576565725870038
+        t=dict(id='moving-boundary',box=box(0.,0.))
+        if parametric:t['model']=dict(velocity=[dx,dy,0.],variance=0.,steps=[[10**9,1.]])
+        else:t['predictions']=[dict(ns=10**9,box=box(dx,dy))]
+>       d=data([t]);result=compare(probe,d)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7de113cfc3a0>
+data = {'op': 'risk', 'path': [[0.0, 0.0], [3.0, 0.0]], 'profile': {'angular_brake_deceleration_rad_s2': 1.0, 'brake_deceleration_m_s2': 0.6, 'clearance_margin_m': 0.04, 'half_length_m': 0.5, ...}, 'robot': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], ...}
+
+    def compare(probe,data):
+        w=make_world(data)
+        if data['op']=='rows':
+            try: want=prediction_rows(w,data.get('include_current',False),data.get('swept',False))
+            except ValueError:
+                assert 'error' in probe(data);return
+            got=probe(data);assert 'error' not in got,got
+            rows=got['rows'];assert [r['owner'] for r in rows]==want.owners.tolist()
+            assert [r['offset_ns'] for r in rows]==want.offsets_ns.tolist()
+            np.testing.assert_allclose(np.asarray([r['lower'] for r in rows]).reshape((-1,2)),want.lower,rtol=3e-14,atol=3e-14)
+            np.testing.assert_allclose(np.asarray([r['upper'] for r in rows]).reshape((-1,2)),want.upper,rtol=3e-14,atol=3e-14)
+            return rows
+        try: want=asdict(evaluate_risk(w,RobotState(*data['robot']),tuple(map(tuple,data['path'])),SimpleNamespace(**data['profile']),data.get('speed_limit')))
+        except ValueError:
+            assert 'error' in probe(data);return
+        got=probe(data);assert 'error' not in got,got
+        result=got['risk']
+>       for key in ('blocked','immediate','moving','uncertain'):assert result[key]==want[key],(key,data,want,result)
+E       AssertionError: ('moving', {'op': 'risk', 'path': [[0.0, 0.0], [3.0, 0.0]], 'profile': {'angular_brake_deceleration_rad_s2': 1.0, 'bra...ediate': True, ...}, {'blocked': True, 'clearance_m': -0.450000000001, 'conflict_time_s': 1.0, 'immediate': True, ...})
+E       assert False == True
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:70: AssertionError
+__ test_moving_classification_uses_original_norm_at_point_one_boundary[True] ___
+
+probe = <function probe.<locals>.call at 0x7de113cfc3a0>, parametric = True
+
+    @pytest.mark.parametrize('parametric',[False,True])
+    def test_moving_classification_uses_original_norm_at_point_one_boundary(probe,parametric):
+        dx,dy=.05142229122650155,-.08576565725870038
+        t=dict(id='moving-boundary',box=box(0.,0.))
+        if parametric:t['model']=dict(velocity=[dx,dy,0.],variance=0.,steps=[[10**9,1.]])
+        else:t['predictions']=[dict(ns=10**9,box=box(dx,dy))]
+>       d=data([t]);result=compare(probe,d)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7de113cfc3a0>
+data = {'op': 'risk', 'path': [[0.0, 0.0], [3.0, 0.0]], 'profile': {'angular_brake_deceleration_rad_s2': 1.0, 'brake_deceleration_m_s2': 0.6, 'clearance_margin_m': 0.04, 'half_length_m': 0.5, ...}, 'robot': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], ...}
+
+    def compare(probe,data):
+        w=make_world(data)
+        if data['op']=='rows':
+            try: want=prediction_rows(w,data.get('include_current',False),data.get('swept',False))
+            except ValueError:
+                assert 'error' in probe(data);return
+            got=probe(data);assert 'error' not in got,got
+            rows=got['rows'];assert [r['owner'] for r in rows]==want.owners.tolist()
+            assert [r['offset_ns'] for r in rows]==want.offsets_ns.tolist()
+            np.testing.assert_allclose(np.asarray([r['lower'] for r in rows]).reshape((-1,2)),want.lower,rtol=3e-14,atol=3e-14)
+            np.testing.assert_allclose(np.asarray([r['upper'] for r in rows]).reshape((-1,2)),want.upper,rtol=3e-14,atol=3e-14)
+            return rows
+        try: want=asdict(evaluate_risk(w,RobotState(*data['robot']),tuple(map(tuple,data['path'])),SimpleNamespace(**data['profile']),data.get('speed_limit')))
+        except ValueError:
+            assert 'error' in probe(data);return
+        got=probe(data);assert 'error' not in got,got
+        result=got['risk']
+>       for key in ('blocked','immediate','moving','uncertain'):assert result[key]==want[key],(key,data,want,result)
+E       AssertionError: ('moving', {'op': 'risk', 'path': [[0.0, 0.0], [3.0, 0.0]], 'profile': {'angular_brake_deceleration_rad_s2': 1.0, 'bra...ediate': True, ...}, {'blocked': True, 'clearance_m': -0.450000000001, 'conflict_time_s': 1.0, 'immediate': True, ...})
+E       assert False == True
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:70: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_moving_classification_uses_original_norm_at_point_one_boundary[False]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_moving_classification_uses_original_norm_at_point_one_boundary[True]
+2 failed, 18 deselected in 0.09s

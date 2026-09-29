@@ -1,0 +1,89 @@
+FFFE                                                                     [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_malformed_coverage_rejects_packet_after_startup[cpp-runtime_config2] _
+
+request = <SubRequest 'runtime' for <Function test_malformed_coverage_rejects_packet_after_startup[cpp-runtime_config2]>>
+tmp_path = PosixPath('/tmp/codex_policy_observer_20260921/ros_source_red_fixed_fixture/test_malformed_coverage_reject2')
+runtime_config = {'observation_sources': '[{"adapter": "vision_json", "topic": "/camera_vision", "coverage_body_yaw_half_angle": [[0.0]]}]'}
+
+    @pytest.fixture(params=['python','cpp'])
+    def runtime(request,tmp_path,runtime_config):
+>       instance=Runtime(request.param,tmp_path,runtime_config)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:92: in __init__
+    self.until(lambda:self.scan_pub.get_subscription_count()>0 and self.map_pub.get_subscription_count()>0)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_policy_observer_ros.Runtime object at 0x7807543cf340>
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x78075436a710>
+timeout = 6.0
+
+    def until(self,predicate,timeout=6.):
+        deadline=time.monotonic()+timeout
+        while time.monotonic()<deadline:
+>           assert self.proc.poll() is None,self.log_path.read_text()
+E           AssertionError: policy observer: [json.exception.out_of_range.401] array index 1 is out of range
+E             
+E           assert 1 is None
+E            +  where 1 = <bound method Popen.poll of <Popen: returncode: 1 args: ['/tmp/codex_policy_integration_20260921/build/p...>>()
+E            +    where <bound method Popen.poll of <Popen: returncode: 1 args: ['/tmp/codex_policy_integration_20260921/build/p...>> = <Popen: returncode: 1 args: ['/tmp/codex_policy_integration_20260921/build/p...>.poll
+E            +      where <Popen: returncode: 1 args: ['/tmp/codex_policy_integration_20260921/build/p...> = <test_policy_observer_ros.Runtime object at 0x7807543cf340>.proc
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:99: AssertionError
+=================================== FAILURES ===================================
+_ test_humble_camera_info_retains_original_coefficient_rejection[cpp-runtime_config0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x780759e5d6c0>
+
+    @pytest.mark.parametrize('runtime_config',[{'observation_sources':json.dumps([POINT_CLOUD_SOURCE])}],indirect=True)
+    def test_humble_camera_info_retains_original_coefficient_rejection(runtime):
+        runtime.seed();assert not runtime.tick()['required_sensors_valid']
+        cloud=PointCloud2();cloud.header.frame_id='odom';cloud.header.stamp=stamp(runtime.ns);cloud.width=2;cloud.height=1;cloud.point_step=12;cloud.row_step=24
+        cloud.fields=[PointField(name=n,offset=i*4,datatype=PointField.FLOAT32,count=1) for i,n in enumerate(('x','y','z'))];cloud.data=struct.pack('<ffffff',.7,-.1,.2,.8,.1,.4)
+        runtime.cloud_pub.publish(cloud);runtime.drain();first=runtime.tick();assert first['vision_count']==0 and first['errors']==1
+        info=CameraInfo();info.header.frame_id='optical';info.width=2**32-1;info.height=10;info.k=[1.,0.,0.,0.,1.,0.,0.,0.,1.];info.distortion_model='plumb_bob'
+        runtime.info_pub.publish(info);runtime.drain();runtime.sensors();cloud.header.stamp=stamp(runtime.ns);runtime.cloud_pub.publish(cloud);runtime.drain()
+        # Humble's Python wire type exposes K as numpy.float64 values. The existing
+        # strict coefficient contract rejects them; a migration must not silently
+        # make this required source valid. The separate typed registry tests cover
+        # accepted built-in float coefficients and epoch changes.
+>       value=runtime.tick();assert value['vision_count']==0 and not value['inputs_valid'] and value['errors']==2
+E       assert (1 == 0)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:303: AssertionError
+__ test_malformed_coverage_rejects_packet_after_startup[cpp-runtime_config0] ___
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7807543a2140>
+
+    @pytest.mark.parametrize('runtime_config',[{'observation_sources':json.dumps([dict(adapter='vision_json',topic='/camera_vision',coverage_body_yaw_half_angle=v)])} for v in (None,{'front':[0.,.5]},[[0.]])],indirect=True)
+    def test_malformed_coverage_rejects_packet_after_startup(runtime):
+        pub=runtime.node.create_publisher(String,runtime.topic('camera_vision'),qos_profile_sensor_data)
+        runtime.until(lambda:pub.get_subscription_count()>0)
+        packet=dict(schema_version=1,sensor_id='camera',stamp_ns=runtime.ns,calibration_epoch=0,observations=[])
+        pub.publish(String(data=json.dumps(packet)));runtime.drain();value=runtime.tick()
+>       assert value['vision_count']==0 and value['errors']==1
+E       assert (1 == 0)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:322: AssertionError
+__ test_malformed_coverage_rejects_packet_after_startup[cpp-runtime_config1] ___
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7807543e9de0>
+
+    @pytest.mark.parametrize('runtime_config',[{'observation_sources':json.dumps([dict(adapter='vision_json',topic='/camera_vision',coverage_body_yaw_half_angle=v)])} for v in (None,{'front':[0.,.5]},[[0.]])],indirect=True)
+    def test_malformed_coverage_rejects_packet_after_startup(runtime):
+        pub=runtime.node.create_publisher(String,runtime.topic('camera_vision'),qos_profile_sensor_data)
+        runtime.until(lambda:pub.get_subscription_count()>0)
+        packet=dict(schema_version=1,sensor_id='camera',stamp_ns=runtime.ns,calibration_epoch=0,observations=[])
+        pub.publish(String(data=json.dumps(packet)));runtime.drain();value=runtime.tick()
+>       assert value['vision_count']==0 and value['errors']==1
+E       assert (1 == 0)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:322: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_humble_camera_info_retains_original_coefficient_rejection[cpp-runtime_config0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_malformed_coverage_rejects_packet_after_startup[cpp-runtime_config0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_malformed_coverage_rejects_packet_after_startup[cpp-runtime_config1]
+ERROR ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_malformed_coverage_rejects_packet_after_startup[cpp-runtime_config2]
+3 failed, 62 deselected, 1 error in 1.73s

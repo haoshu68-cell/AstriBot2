@@ -1,0 +1,61 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 16 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 16 tests from ActionContract
+[ RUN      ] ActionContract.DefaultCameraFrameMatchesReferenceAndVersionsRemainUninitialized
+[INFO] [1790002112.802451273] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=disabled pose_models=0
+[       OK ] ActionContract.DefaultCameraFrameMatchesReferenceAndVersionsRemainUninitialized (7 ms)
+[ RUN      ] ActionContract.GraspProposalPreservesSnapshotAndCannotClaimCollision
+[INFO] [1790002112.807005021] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.GraspProposalPreservesSnapshotAndCannotClaimCollision (196 ms)
+[ RUN      ] ActionContract.PoseReturnsFullTransformAndUnknownCovariance
+[INFO] [1790002113.001721014] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.PoseReturnsFullTransformAndUnknownCovariance (194 ms)
+[ RUN      ] ActionContract.RejectsStaleOrWrongContext
+[INFO] [1790002113.195970182] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[WARN] [1790002113.349535919] [manipulation_perception_server]: Goal rejected: INPUT_EXPIRED_OR_FUTURE
+[WARN] [1790002113.359709984] [manipulation_perception_server]: Goal rejected: CONTEXT_REVISION_MISMATCH
+[WARN] [1790002113.369954419] [manipulation_perception_server]: Goal rejected: SNAPSHOT_FRAME_OR_STAMP_MISMATCH
+[       OK ] ActionContract.RejectsStaleOrWrongContext (189 ms)
+[ RUN      ] ActionContract.UnknownModelRejected
+[INFO] [1790002113.385359018] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[WARN] [1790002113.538774197] [manipulation_perception_server]: Goal rejected: MODEL_NOT_REGISTERED
+[       OK ] ActionContract.UnknownModelRejected (169 ms)
+[ RUN      ] ActionContract.MalformedAndNanCannotReturnSuccess
+[INFO] [1790002113.554170487] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.MalformedAndNanCannotReturnSuccess (194 ms)
+[ RUN      ] ActionContract.ExplicitRegistrationRejectionPreserved
+[INFO] [1790002113.748098361] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.ExplicitRegistrationRejectionPreserved (195 ms)
+[ RUN      ] ActionContract.CancelKillsWorkerAndBusyIsRejected
+[INFO] [1790002113.943180720] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.CancelKillsWorkerAndBusyIsRejected (215 ms)
+[ RUN      ] ActionContract.WorkerTimeoutAborts
+[INFO] [1790002114.158386594] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.WorkerTimeoutAborts (256 ms)
+[ RUN      ] ActionContract.EpochChangeDiscardsLateResult
+[INFO] [1790002114.413752613] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.EpochChangeDiscardsLateResult (194 ms)
+[ RUN      ] ActionContract.CameraDropoutDiscardsLateResult
+[INFO] [1790002114.607761352] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.CameraDropoutDiscardsLateResult (595 ms)
+[ RUN      ] ActionContract.ExpiredResultNeverRetimestampsSnapshot
+[INFO] [1790002115.202943373] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.ExpiredResultNeverRetimestampsSnapshot (371 ms)
+[ RUN      ] ActionContract.OfficialRawScoreAboveOneIsNotProbability
+[INFO] [1790002115.574458237] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.OfficialRawScoreAboveOneIsNotProbability (196 ms)
+[ RUN      ] ActionContract.ModelReplacementRejectsInsteadOfClaimingOldRevision
+[INFO] [1790002115.770430942] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.ModelReplacementRejectsInsteadOfClaimingOldRevision (184 ms)
+[ RUN      ] ActionContract.FiltersNonpositiveScoreAndZeroWidthWithoutLosingBatch
+[INFO] [1790002115.954486547] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.FiltersNonpositiveScoreAndZeroWidthWithoutLosingBatch (195 ms)
+[ RUN      ] ActionContract.AllFilteredBatchReturnsNoUsableGrasps
+[INFO] [1790002116.149043231] [manipulation_perception_server]: Inference actions ready; no execution or collision approval. Grasp=enabled pose_models=1
+[       OK ] ActionContract.AllFilteredBatchReturnsNoUsableGrasps (194 ms)
+[----------] 16 tests from ActionContract (3544 ms total)
+
+[----------] Global test environment tear-down
+[==========] 16 tests from 1 test suite ran. (3547 ms total)
+[  PASSED  ] 16 tests.

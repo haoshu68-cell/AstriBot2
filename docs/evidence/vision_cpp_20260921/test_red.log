@@ -1,0 +1,86 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 10 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 10 tests from VisionContract
+[ RUN      ] VisionContract.PositiveAlignedDepth
+[INFO] [1789969181.007523066] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+[       OK ] VisionContract.PositiveAlignedDepth (76 ms)
+[ RUN      ] VisionContract.RejectsFrameMismatch
+[INFO] [1789969181.072276452] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:65: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsFrameMismatch (62 ms)
+[ RUN      ] VisionContract.RejectsUnsynchronisedDepth
+[INFO] [1789969181.134863553] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:66: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsUnsynchronisedDepth (63 ms)
+[ RUN      ] VisionContract.RejectsExpiredHealth
+[INFO] [1789969181.197584542] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:67: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsExpiredHealth (62 ms)
+[ RUN      ] VisionContract.RejectsUnknownCalibration
+[INFO] [1789969181.258323448] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:68: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsUnknownCalibration (61 ms)
+[ RUN      ] VisionContract.RejectsInvalidMaskRatherThanBoxFallback
+[INFO] [1789969181.319820454] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:69: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsInvalidMaskRatherThanBoxFallback (61 ms)
+[ RUN      ] VisionContract.RejectsNaNConfidence
+[INFO] [1789969181.381691252] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:70: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsNaNConfidence (63 ms)
+[ RUN      ] VisionContract.RejectsStaleIntrinsics
+[INFO] [1789969181.443386678] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:71: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsStaleIntrinsics (61 ms)
+[ RUN      ] VisionContract.PreservesCaptureDeadline
+[INFO] [1789969181.506463343] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:72: Failure
+Expected: (rclcpp::Time(observations[0].valid_until).nanoseconds()) <= (rclcpp::Time(health.valid_until).nanoseconds()), actual: 1789969181828523214 vs 1789969181757873918
+[  FAILED  ] VisionContract.PreservesCaptureDeadline (64 ms)
+[ RUN      ] VisionContract.MatchesHistoryRatherThanLatestDepth
+[INFO] [1789969181.568787986] [rgbd_object_pose]: RGB-D object pose estimator: detections=/perception/detections depth=/camera/depth/image_raw output=/perception/object_pose
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:76: Failure
+The difference between observations[0].pose.pose.position.z and 1. is 1, which exceeds 1e-6, where
+observations[0].pose.pose.position.z evaluates to 2,
+1. evaluates to 1, and
+1e-6 evaluates to 9.9999999999999995e-07.
+[  FAILED  ] VisionContract.MatchesHistoryRatherThanLatestDepth (76 ms)
+[----------] 10 tests from VisionContract (649 ms total)
+
+[----------] Global test environment tear-down
+[==========] 10 tests from 1 test suite ran. (660 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 9 tests, listed below:
+[  FAILED  ] VisionContract.RejectsFrameMismatch
+[  FAILED  ] VisionContract.RejectsUnsynchronisedDepth
+[  FAILED  ] VisionContract.RejectsExpiredHealth
+[  FAILED  ] VisionContract.RejectsUnknownCalibration
+[  FAILED  ] VisionContract.RejectsInvalidMaskRatherThanBoxFallback
+[  FAILED  ] VisionContract.RejectsNaNConfidence
+[  FAILED  ] VisionContract.RejectsStaleIntrinsics
+[  FAILED  ] VisionContract.PreservesCaptureDeadline
+[  FAILED  ] VisionContract.MatchesHistoryRatherThanLatestDepth
+
+ 9 FAILED TESTS

@@ -1,0 +1,56 @@
+..FF                                                                     [100%]
+=================================== FAILURES ===================================
+_________ LaunchParameters.test_voxel_invalid_height_contract_rejected _________
+
+self = <test_nonhome_launch.LaunchParameters testMethod=test_voxel_invalid_height_contract_rejected>
+
+    def test_voxel_invalid_height_contract_rejected(self):
+        import copy
+        package=Path(__file__).parents[1]
+        spec=importlib.util.spec_from_file_location('voxel_contract',package/'launch/navigation.launch.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        for profile in ('mppi','rpp'):
+            data=yaml.safe_load((package/f'config/nav2_params_{profile}.yaml').read_text())
+>           module.validate_voxel_layers(data,'nav2_costmap_2d::VoxelLayer')
+E           AttributeError: module 'voxel_contract' has no attribute 'validate_voxel_layers'
+
+ws_robot/src/astribot_s1_navigation/test/test_nonhome_launch.py:109: AttributeError
+___ LaunchParameters.test_voxel_profile_keeps_3d_sources_and_bounds_explicit ___
+
+self = <test_nonhome_launch.LaunchParameters testMethod=test_voxel_profile_keeps_3d_sources_and_bounds_explicit>
+
+    def test_voxel_profile_keeps_3d_sources_and_bounds_explicit(self):
+        package=Path(__file__).parents[1]
+        spec=importlib.util.spec_from_file_location('navigation_launch_voxel_under_test',package/'launch/navigation.launch.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        recorded=[];original=module.RewrittenYaml
+        def capture(*args,**kwargs):
+            kwargs['source_file']=str(package/'config/nav2_params_mppi.yaml')
+            value=original(*args,**kwargs);recorded.append(value);return value
+        module.RewrittenYaml=capture
+        description=module.generate_launch_description();context=LaunchContext()
+        for action in description.entities:
+            if isinstance(action,DeclareLaunchArgument):
+                context.launch_configurations[action.name]=perform_substitutions(context,action.default_value)
+        context.launch_configurations.update({
+            'navigation_policy_stage':'p5',
+            'navigation_geometry_mode':'fixed_v2',
+            'obstacle_layer_plugin':'nav2_costmap_2d::VoxelLayer',
+            'enable_depth_obstacles':'true',
+        })
+        module.generate_launch_description()
+        filename=Path(recorded[0].perform(context));data=yaml.safe_load(filename.read_text());filename.unlink()
+        for name in ('local_costmap','global_costmap'):
+            layer=data[name][name]['ros__parameters']['obstacle_layer']
+            self.assertEqual(layer['plugin'],'nav2_costmap_2d::VoxelLayer')
+            self.assertEqual(layer['observation_sources'],
+                             'scan head_depth torso_depth' if name=='local_costmap' else 'scan')
+            self.assertGreater(layer['z_voxels'],0)
+>           self.assertLessEqual(layer['z_voxels'],16)
+E           AssertionError: 32 not less than or equal to 16
+
+ws_robot/src/astribot_s1_navigation/test/test_nonhome_launch.py:96: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation/test/test_nonhome_launch.py::LaunchParameters::test_voxel_invalid_height_contract_rejected
+FAILED ws_robot/src/astribot_s1_navigation/test/test_nonhome_launch.py::LaunchParameters::test_voxel_profile_keeps_3d_sources_and_bounds_explicit
+2 failed, 2 passed in 0.34s

@@ -20,19 +20,31 @@ import time
 import uuid
 
 
-def setup_sample(motion, command, status, received, now_ros, now_wall):
+def setup_sample(motion, command, status, received, now_ros, now_wall, *,
+                 event_driven_command=False, idle_constraint=None):
     """Verification-only precondition for fixture setup, not a base resource lock."""
-    if not motion or not command or not status or status.get('phase')!='0':return None
-    if any(not 0<=now_wall-received.get(k,float('-inf'))<.3 for k in ('motion','hold_executor','command')):return None
+    if not motion or not status or status.get('phase')!='0':return None
+    sources=('motion','hold_executor','constraint') if event_driven_command else ('motion','hold_executor','command')
+    if any(k not in received for k in sources):return None
+    if event_driven_command:
+        if idle_constraint is None:return None
+        stamp=idle_constraint.stamp.sec+idle_constraint.stamp.nanosec*1e-9
+        lease=idle_constraint.lease_s
+        if (idle_constraint.hold is not True or idle_constraint.max_linear_speed!=0. or
+                idle_constraint.max_angular_speed!=0. or not math.isfinite(lease) or
+                not 0<lease<=.5):return None
+    elif command is None:return None
     at=motion.header.stamp.sec+motion.header.stamp.nanosec*1e-9
-    if motion.header.frame_id!='odom' or not 0<at<=now_ros<at+.3:return None
-    v=motion.twist.twist;p=motion.pose.pose.position;q=motion.pose.pose.orientation
-    command_values=[getattr(getattr(command,field),axis)for field in ('linear','angular')for axis in ('x','y','z')]
-    values=[v.linear.x,v.linear.y,v.angular.z,p.x,p.y,q.x,q.y,q.z,q.w]+command_values
+    if motion.header.frame_id!='map':return None
+    p=motion.pose.pose.position;q=motion.pose.pose.orientation
+    command_values=([getattr(getattr(command,field),axis)for field in ('linear','angular')for axis in ('x','y','z')]
+                    if command is not None else [])
+    values=[p.x,p.y,q.x,q.y,q.z,q.w]+command_values
     if not all(math.isfinite(x)for x in values):return None
     if abs(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w-1.)>.001:return None
-    if math.hypot(v.linear.x,v.linear.y)>=.01 or abs(v.angular.z)>=.02 or max(abs(x)for x in command_values)>=1e-6:return None
-    return dict(stamp=at,wall=now_wall,x=p.x,y=p.y,yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)))
+    if any(abs(x)>=1e-6 for x in command_values):return None
+    return dict(stamp=at,wall=now_wall,x=p.x,y=p.y,yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+                command_observed=command is not None)
 
 
 class PreparationWatchdog:
@@ -42,11 +54,11 @@ class PreparationWatchdog:
 
     def observe(self, sample):
         if sample is None:self.valid=False;return False
-        if (sample['stamp']<self.last['stamp'] or sample['wall']<self.last['wall'] or
+        if sample['stamp']<=self.last['stamp']:return self.valid
+        if (sample['wall']<self.last['wall'] or
                 math.hypot(sample['x']-self.origin['x'],sample['y']-self.origin['y'])>.005 or
                 abs(math.remainder(sample['yaw']-self.origin['yaw'],2*math.pi))>.01):self.valid=False
         if sample['stamp']>self.last['stamp']:self.advanced_wall=sample['wall']
-        if sample['wall']-self.advanced_wall>=.3:self.valid=False
         self.last=sample
         return self.valid
 
@@ -112,8 +124,8 @@ def main():
 
     import rclpy
     from rclpy.parameter import Parameter
-    from geometry_msgs.msg import Twist,Pose
-    from nav_msgs.msg import Odometry
+    from geometry_msgs.msg import Twist,Pose,PoseWithCovarianceStamped
+    from rclpy.qos import qos_profile_sensor_data
     from shape_msgs.msg import SolidPrimitive
     from moveit_msgs.msg import AttachedCollisionObject
     from moveit_msgs.srv import ApplyPlanningScene,GetPlanningScene
@@ -129,6 +141,9 @@ def main():
     reuse=json.loads(a.resume_registry.read_text()) if a.resume_registry else None
     probe=reuse[0]['model'].removesuffix('_box') if reuse else 'inventory_probe_'+uuid.uuid4().hex[:12]
     def record(key,value):
+        if key=='motion' and key in latest:
+            stamp=value.header.stamp;previous=latest[key].header.stamp
+            if (stamp.sec,stamp.nanosec)<=(previous.sec,previous.nanosec):return
         data=message_to_ordereddict(value)
         if key=='diagnostic':data=json.loads(value.data)
         latest[key]=value if key!='diagnostic' else data
@@ -145,7 +160,7 @@ def main():
           node.create_subscription(String,'/payload/simulation_inventory_diagnostics',lambda v:record('diagnostic',v),10),
           node.create_subscription(Twist,'/cmd_vel',lambda v:record('command',v),10)]
     if a.prepare_only:
-        subs += [node.create_subscription(Odometry,'/odom',lambda v:record('motion',v),10),
+        subs += [node.create_subscription(PoseWithCovarianceStamped,'/slam/pose',lambda v:record('motion',v),qos_profile_sensor_data),
                  node.create_subscription(String,'/transport/hold_executor/status',lambda v:record('hold_executor',v),10)]
     apply=node.create_client(ApplyPlanningScene,'/apply_planning_scene')
     scene=node.create_client(GetPlanningScene,'/get_planning_scene')
@@ -198,12 +213,11 @@ def main():
             motion=latest.get('motion');hold=latest.get('hold_executor');command=latest.get('command')
             sample=setup_sample(motion,command,json.loads(hold.data)if hold else None,received,node.get_clock().now().nanoseconds*1e-9,time.monotonic())
             if sample is None:samples=[];continue
-            if samples and sample['stamp']==samples[-1]['stamp']:continue
-            if samples and (not 0<sample['stamp']-samples[-1]['stamp']<=.3 or
-                            math.hypot(sample['x']-samples[0]['x'],sample['y']-samples[0]['y'])>.005 or
+            if samples and sample['stamp']<=samples[-1]['stamp']:continue
+            if samples and (math.hypot(sample['x']-samples[0]['x'],sample['y']-samples[0]['y'])>.005 or
                             abs(math.remainder(sample['yaw']-samples[0]['yaw'],2*math.pi))>.01):samples=[]
             samples.append(sample)
-            if len(samples)>=3 and sample['stamp']-samples[0]['stamp']>=.6 and sample['wall']-samples[0]['wall']>=.6:
+            if len(samples)>=2 and sample['wall']-samples[0]['wall']>=.6:
                 preparation_guard=PreparationWatchdog(sample);return
         raise AssertionError('PREPARATION_REQUIRES_IDLE_HOLD_AND_MEASURED_BASE_STOP')
     def check_preparation(raise_failure=True):

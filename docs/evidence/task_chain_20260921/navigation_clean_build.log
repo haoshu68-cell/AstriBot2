@@ -1,0 +1,77 @@
+[0.330s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_s1_navigation' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_navigation, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_navigation
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_s1_navigation
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_s1_navigation_policy_native
+[0.338s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_operator_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_operator_msgs
+[Processing: astribot_s1_navigation_policy_native]
+[Processing: astribot_s1_navigation_policy_native]
+Finished <<< astribot_s1_navigation_policy_native [1min 7s]
+Starting >>> astribot_s1_navigation
+[67.171s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_autonomy_core
+- astribot_bridge_msgs
+- astribot_eigen_vendor
+- astribot_logging
+- astribot_operator_msgs
+- astribot_perception_msgs
+- astribot_s1_chassis_effort_drive_native
+- astribot_slam_msgs
+- astribot_transport_msgs
+- aws_robomaker_small_warehouse_world
+- astribot_s1_chassis_effort_drive
+- astribot_s1_description
+- astribot_s1_dynamics_coupling
+- astribot_s1_mapping
+- astribot_s1_slam
+- astribot_s1_social_navigation
+- livox_ros_driver2
+- astribot_route_executor
+- astribot_s1_exploration
+- astribot_s1_gazebo_bringup
+- astribot_s1_path_tracking
+- astribot_s1_navigation_policy
+- astribot_s1_perception
+- astribot_map_manager
+- astribot_operator_backend
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_autonomy_core
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_bridge_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_eigen_vendor
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/ros_ws/install/astribot_perception_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_chassis_effort_drive_native
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_slam_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_transport_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/aws_robomaker_small_warehouse_world
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_chassis_effort_drive
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/camera_reference_20260921/ros_ws/install/astribot_s1_description
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_dynamics_coupling
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_mapping
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_slam
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_social_navigation
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/livox_ros_driver2
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_route_executor
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_exploration
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/camera_reference_20260921/ros_ws/install/astribot_s1_gazebo_bringup
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_path_tracking
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_navigation_policy
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_perception
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_map_manager
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_backend
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_autonomy_core astribot_bridge_msgs astribot_eigen_vendor astribot_logging astribot_operator_msgs astribot_perception_msgs astribot_s1_chassis_effort_drive_native astribot_slam_msgs astribot_transport_msgs aws_robomaker_small_warehouse_world astribot_s1_chassis_effort_drive astribot_s1_description astribot_s1_dynamics_coupling astribot_s1_mapping astribot_s1_slam astribot_s1_social_navigation livox_ros_driver2 astribot_route_executor astribot_s1_exploration astribot_s1_gazebo_bringup astribot_s1_path_tracking astribot_s1_navigation_policy astribot_s1_perception astribot_map_manager astribot_operator_backend
+Finished <<< astribot_s1_navigation [0.97s]
+
+Summary: 2 packages finished [1min 8s]

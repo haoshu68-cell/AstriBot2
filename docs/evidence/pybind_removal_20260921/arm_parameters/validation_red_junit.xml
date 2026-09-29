@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="8" time="13.061" timestamp="2026-09-21T16:06:33.436099" hostname="sh-xf2731"><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_invalid_atomic_update_preserves_extended_limit[reach]" time="1.582"><failure message="AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'extended_reach_m': nan}&#10;assert not True&#10; +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee280ed68c0&gt;
+parameter = 'extended_reach_m', invalid_values = [nan, inf, -0.1, 0.0]
+
+    @pytest.mark.parametrize('parameter,invalid_values', (
+        ('extended_reach_m', [float('nan'), float('inf'), -0.1, 0.0]),
+        ('extended_reach_hysteresis_m', [float('nan'), float('inf'), -0.1, 0.64, 0.8]),
+        ('extended_threshold_rad', [float('nan'), float('inf'), -0.1]),
+        ('folded_reference_rad', [[float('nan')], [float('inf')], [float('-inf')]]),
+        ('extended_speed_limit_pct', [float('nan'), float('inf'), -1.0, 0.0, 101.0]),
+        ('reach_tf_timeout_sec', [float('nan'), float('inf'), 0.0, -0.1]),
+    ), ids=('reach', 'hysteresis', 'joint_threshold', 'joint_reference', 'speed_percentage', 'tf_timeout'))
+    def test_reach_invalid_atomic_update_preserves_extended_limit(pair, parameter, invalid_values):
+        pair.expect(50.0, 'initial extended before invalid update')
+        for value in invalid_values:
+            changes = {'extended_speed_limit_pct': 27.0, parameter: value}
+&gt;           pair.reject_cpp_update(**changes)
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee280ed68c0&gt;
+values = {'extended_reach_m': nan, 'extended_speed_limit_pct': 27.0}
+names = ['extended_speed_limit_pct', 'extended_reach_m']
+before_future = &lt;rclpy.task.Future object at 0x7ee27d717190&gt;
+before = [rcl_interfaces.msg.ParameterValue(type=3, bool_value=False, integer_value=0, double_value=50.0, string_value='', byte...ue='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[])]
+parameters = [rcl_interfaces.msg.Parameter(name='extended_speed_limit_pct', value=rcl_interfaces.msg.ParameterValue(type=3, bool_va...e='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[]))]
+future = &lt;rclpy.task.Future object at 0x7ee27d715540&gt;
+result = rcl_interfaces.msg.SetParametersResult(successful=True, reason='')
+@py_assert1 = True
+
+    def reject_cpp_update(self, **values):
+        from rclpy.parameter import Parameter
+        names = list(values)
+        before_future = self.readers['cpp'].call_async(self.get_parameters_service.Request(names=names))
+        self.until(before_future.done, 3.0)
+        before = before_future.result().values
+        parameters = [Parameter(name, value=value).to_parameter_msg() for name, value in values.items()]
+        future = self.clients['cpp'].call_async(self.parameter_service.Request(parameters=parameters))
+        self.until(future.done, 3.0)
+        result = future.result().result
+        # Nonfinite values are represented as strings in the evidence JSON.
+        self.steps.append({'invalid_parameters_repr': {k: repr(v) for k, v in values.items()},
+                           'cpp_accepted': result.successful, 'reason': result.reason})
+&gt;       assert not result.successful, 'C++ accepted unsafe parameter batch: ' + repr(values)
+E       AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'extended_reach_m': nan}
+E       assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:195: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_invalid_atomic_update_preserves_extended_limit[hysteresis]" time="1.401"><failure message="AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'extended_reach_hysteresis_m': nan}&#10;assert not True&#10; +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee27d474d90&gt;
+parameter = 'extended_reach_hysteresis_m'
+invalid_values = [nan, inf, -0.1, 0.64, 0.8]
+
+    @pytest.mark.parametrize('parameter,invalid_values', (
+        ('extended_reach_m', [float('nan'), float('inf'), -0.1, 0.0]),
+        ('extended_reach_hysteresis_m', [float('nan'), float('inf'), -0.1, 0.64, 0.8]),
+        ('extended_threshold_rad', [float('nan'), float('inf'), -0.1]),
+        ('folded_reference_rad', [[float('nan')], [float('inf')], [float('-inf')]]),
+        ('extended_speed_limit_pct', [float('nan'), float('inf'), -1.0, 0.0, 101.0]),
+        ('reach_tf_timeout_sec', [float('nan'), float('inf'), 0.0, -0.1]),
+    ), ids=('reach', 'hysteresis', 'joint_threshold', 'joint_reference', 'speed_percentage', 'tf_timeout'))
+    def test_reach_invalid_atomic_update_preserves_extended_limit(pair, parameter, invalid_values):
+        pair.expect(50.0, 'initial extended before invalid update')
+        for value in invalid_values:
+            changes = {'extended_speed_limit_pct': 27.0, parameter: value}
+&gt;           pair.reject_cpp_update(**changes)
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee27d474d90&gt;
+values = {'extended_reach_hysteresis_m': nan, 'extended_speed_limit_pct': 27.0}
+names = ['extended_speed_limit_pct', 'extended_reach_hysteresis_m']
+before_future = &lt;rclpy.task.Future object at 0x7ee27d471720&gt;
+before = [rcl_interfaces.msg.ParameterValue(type=3, bool_value=False, integer_value=0, double_value=50.0, string_value='', byte...ue='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[])]
+parameters = [rcl_interfaces.msg.Parameter(name='extended_speed_limit_pct', value=rcl_interfaces.msg.ParameterValue(type=3, bool_va...e='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[]))]
+future = &lt;rclpy.task.Future object at 0x7ee27d471e70&gt;
+result = rcl_interfaces.msg.SetParametersResult(successful=True, reason='')
+@py_assert1 = True
+
+    def reject_cpp_update(self, **values):
+        from rclpy.parameter import Parameter
+        names = list(values)
+        before_future = self.readers['cpp'].call_async(self.get_parameters_service.Request(names=names))
+        self.until(before_future.done, 3.0)
+        before = before_future.result().values
+        parameters = [Parameter(name, value=value).to_parameter_msg() for name, value in values.items()]
+        future = self.clients['cpp'].call_async(self.parameter_service.Request(parameters=parameters))
+        self.until(future.done, 3.0)
+        result = future.result().result
+        # Nonfinite values are represented as strings in the evidence JSON.
+        self.steps.append({'invalid_parameters_repr': {k: repr(v) for k, v in values.items()},
+                           'cpp_accepted': result.successful, 'reason': result.reason})
+&gt;       assert not result.successful, 'C++ accepted unsafe parameter batch: ' + repr(values)
+E       AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'extended_reach_hysteresis_m': nan}
+E       assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:195: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_invalid_atomic_update_preserves_extended_limit[joint_threshold]" time="1.409"><failure message="AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'extended_threshold_rad': nan}&#10;assert not True&#10; +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee27d4a43d0&gt;
+parameter = 'extended_threshold_rad', invalid_values = [nan, inf, -0.1]
+
+    @pytest.mark.parametrize('parameter,invalid_values', (
+        ('extended_reach_m', [float('nan'), float('inf'), -0.1, 0.0]),
+        ('extended_reach_hysteresis_m', [float('nan'), float('inf'), -0.1, 0.64, 0.8]),
+        ('extended_threshold_rad', [float('nan'), float('inf'), -0.1]),
+        ('folded_reference_rad', [[float('nan')], [float('inf')], [float('-inf')]]),
+        ('extended_speed_limit_pct', [float('nan'), float('inf'), -1.0, 0.0, 101.0]),
+        ('reach_tf_timeout_sec', [float('nan'), float('inf'), 0.0, -0.1]),
+    ), ids=('reach', 'hysteresis', 'joint_threshold', 'joint_reference', 'speed_percentage', 'tf_timeout'))
+    def test_reach_invalid_atomic_update_preserves_extended_limit(pair, parameter, invalid_values):
+        pair.expect(50.0, 'initial extended before invalid update')
+        for value in invalid_values:
+            changes = {'extended_speed_limit_pct': 27.0, parameter: value}
+&gt;           pair.reject_cpp_update(**changes)
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee27d4a43d0&gt;
+values = {'extended_speed_limit_pct': 27.0, 'extended_threshold_rad': nan}
+names = ['extended_speed_limit_pct', 'extended_threshold_rad']
+before_future = &lt;rclpy.task.Future object at 0x7ee2789c2da0&gt;
+before = [rcl_interfaces.msg.ParameterValue(type=3, bool_value=False, integer_value=0, double_value=50.0, string_value='', byte...ue='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[])]
+parameters = [rcl_interfaces.msg.Parameter(name='extended_speed_limit_pct', value=rcl_interfaces.msg.ParameterValue(type=3, bool_va...e='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[]))]
+future = &lt;rclpy.task.Future object at 0x7ee2789c3e50&gt;
+result = rcl_interfaces.msg.SetParametersResult(successful=True, reason='')
+@py_assert1 = True
+
+    def reject_cpp_update(self, **values):
+        from rclpy.parameter import Parameter
+        names = list(values)
+        before_future = self.readers['cpp'].call_async(self.get_parameters_service.Request(names=names))
+        self.until(before_future.done, 3.0)
+        before = before_future.result().values
+        parameters = [Parameter(name, value=value).to_parameter_msg() for name, value in values.items()]
+        future = self.clients['cpp'].call_async(self.parameter_service.Request(parameters=parameters))
+        self.until(future.done, 3.0)
+        result = future.result().result
+        # Nonfinite values are represented as strings in the evidence JSON.
+        self.steps.append({'invalid_parameters_repr': {k: repr(v) for k, v in values.items()},
+                           'cpp_accepted': result.successful, 'reason': result.reason})
+&gt;       assert not result.successful, 'C++ accepted unsafe parameter batch: ' + repr(values)
+E       AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'extended_threshold_rad': nan}
+E       assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:195: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_invalid_atomic_update_preserves_extended_limit[joint_reference]" time="1.370"><failure message="AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'folded_reference_rad': [nan]}&#10;assert not True&#10; +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee27d358af0&gt;
+parameter = 'folded_reference_rad', invalid_values = [[nan], [inf], [-inf]]
+
+    @pytest.mark.parametrize('parameter,invalid_values', (
+        ('extended_reach_m', [float('nan'), float('inf'), -0.1, 0.0]),
+        ('extended_reach_hysteresis_m', [float('nan'), float('inf'), -0.1, 0.64, 0.8]),
+        ('extended_threshold_rad', [float('nan'), float('inf'), -0.1]),
+        ('folded_reference_rad', [[float('nan')], [float('inf')], [float('-inf')]]),
+        ('extended_speed_limit_pct', [float('nan'), float('inf'), -1.0, 0.0, 101.0]),
+        ('reach_tf_timeout_sec', [float('nan'), float('inf'), 0.0, -0.1]),
+    ), ids=('reach', 'hysteresis', 'joint_threshold', 'joint_reference', 'speed_percentage', 'tf_timeout'))
+    def test_reach_invalid_atomic_update_preserves_extended_limit(pair, parameter, invalid_values):
+        pair.expect(50.0, 'initial extended before invalid update')
+        for value in invalid_values:
+            changes = {'extended_speed_limit_pct': 27.0, parameter: value}
+&gt;           pair.reject_cpp_update(**changes)
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee27d358af0&gt;
+values = {'extended_speed_limit_pct': 27.0, 'folded_reference_rad': [nan]}
+names = ['extended_speed_limit_pct', 'folded_reference_rad']
+before_future = &lt;rclpy.task.Future object at 0x7ee27d35b130&gt;
+before = [rcl_interfaces.msg.ParameterValue(type=3, bool_value=False, integer_value=0, double_value=50.0, string_value='', byte...=[], double_array_value=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], string_array_value=[])]
+parameters = [rcl_interfaces.msg.Parameter(name='extended_speed_limit_pct', value=rcl_interfaces.msg.ParameterValue(type=3, bool_va...', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[nan], string_array_value=[]))]
+future = &lt;rclpy.task.Future object at 0x7ee27d359600&gt;
+result = rcl_interfaces.msg.SetParametersResult(successful=True, reason='')
+@py_assert1 = True
+
+    def reject_cpp_update(self, **values):
+        from rclpy.parameter import Parameter
+        names = list(values)
+        before_future = self.readers['cpp'].call_async(self.get_parameters_service.Request(names=names))
+        self.until(before_future.done, 3.0)
+        before = before_future.result().values
+        parameters = [Parameter(name, value=value).to_parameter_msg() for name, value in values.items()]
+        future = self.clients['cpp'].call_async(self.parameter_service.Request(parameters=parameters))
+        self.until(future.done, 3.0)
+        result = future.result().result
+        # Nonfinite values are represented as strings in the evidence JSON.
+        self.steps.append({'invalid_parameters_repr': {k: repr(v) for k, v in values.items()},
+                           'cpp_accepted': result.successful, 'reason': result.reason})
+&gt;       assert not result.successful, 'C++ accepted unsafe parameter batch: ' + repr(values)
+E       AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'folded_reference_rad': [nan]}
+E       assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:195: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_invalid_atomic_update_preserves_extended_limit[speed_percentage]" time="1.421"><failure message="AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': nan}&#10;assert not True&#10; +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee2789c06d0&gt;
+parameter = 'extended_speed_limit_pct'
+invalid_values = [nan, inf, -1.0, 0.0, 101.0]
+
+    @pytest.mark.parametrize('parameter,invalid_values', (
+        ('extended_reach_m', [float('nan'), float('inf'), -0.1, 0.0]),
+        ('extended_reach_hysteresis_m', [float('nan'), float('inf'), -0.1, 0.64, 0.8]),
+        ('extended_threshold_rad', [float('nan'), float('inf'), -0.1]),
+        ('folded_reference_rad', [[float('nan')], [float('inf')], [float('-inf')]]),
+        ('extended_speed_limit_pct', [float('nan'), float('inf'), -1.0, 0.0, 101.0]),
+        ('reach_tf_timeout_sec', [float('nan'), float('inf'), 0.0, -0.1]),
+    ), ids=('reach', 'hysteresis', 'joint_threshold', 'joint_reference', 'speed_percentage', 'tf_timeout'))
+    def test_reach_invalid_atomic_update_preserves_extended_limit(pair, parameter, invalid_values):
+        pair.expect(50.0, 'initial extended before invalid update')
+        for value in invalid_values:
+            changes = {'extended_speed_limit_pct': 27.0, parameter: value}
+&gt;           pair.reject_cpp_update(**changes)
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee2789c06d0&gt;
+values = {'extended_speed_limit_pct': nan}, names = ['extended_speed_limit_pct']
+before_future = &lt;rclpy.task.Future object at 0x7ee27d4f6950&gt;
+before = [rcl_interfaces.msg.ParameterValue(type=3, bool_value=False, integer_value=0, double_value=50.0, string_value='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[])]
+parameters = [rcl_interfaces.msg.Parameter(name='extended_speed_limit_pct', value=rcl_interfaces.msg.ParameterValue(type=3, bool_va...e='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[]))]
+future = &lt;rclpy.task.Future object at 0x7ee27d4f4250&gt;
+result = rcl_interfaces.msg.SetParametersResult(successful=True, reason='')
+@py_assert1 = True
+
+    def reject_cpp_update(self, **values):
+        from rclpy.parameter import Parameter
+        names = list(values)
+        before_future = self.readers['cpp'].call_async(self.get_parameters_service.Request(names=names))
+        self.until(before_future.done, 3.0)
+        before = before_future.result().values
+        parameters = [Parameter(name, value=value).to_parameter_msg() for name, value in values.items()]
+        future = self.clients['cpp'].call_async(self.parameter_service.Request(parameters=parameters))
+        self.until(future.done, 3.0)
+        result = future.result().result
+        # Nonfinite values are represented as strings in the evidence JSON.
+        self.steps.append({'invalid_parameters_repr': {k: repr(v) for k, v in values.items()},
+                           'cpp_accepted': result.successful, 'reason': result.reason})
+&gt;       assert not result.successful, 'C++ accepted unsafe parameter batch: ' + repr(values)
+E       AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': nan}
+E       assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:195: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_invalid_atomic_update_preserves_extended_limit[tf_timeout]" time="1.396"><failure message="AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'reach_tf_timeout_sec': nan}&#10;assert not True&#10; +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee280eccca0&gt;
+parameter = 'reach_tf_timeout_sec', invalid_values = [nan, inf, 0.0, -0.1]
+
+    @pytest.mark.parametrize('parameter,invalid_values', (
+        ('extended_reach_m', [float('nan'), float('inf'), -0.1, 0.0]),
+        ('extended_reach_hysteresis_m', [float('nan'), float('inf'), -0.1, 0.64, 0.8]),
+        ('extended_threshold_rad', [float('nan'), float('inf'), -0.1]),
+        ('folded_reference_rad', [[float('nan')], [float('inf')], [float('-inf')]]),
+        ('extended_speed_limit_pct', [float('nan'), float('inf'), -1.0, 0.0, 101.0]),
+        ('reach_tf_timeout_sec', [float('nan'), float('inf'), 0.0, -0.1]),
+    ), ids=('reach', 'hysteresis', 'joint_threshold', 'joint_reference', 'speed_percentage', 'tf_timeout'))
+    def test_reach_invalid_atomic_update_preserves_extended_limit(pair, parameter, invalid_values):
+        pair.expect(50.0, 'initial extended before invalid update')
+        for value in invalid_values:
+            changes = {'extended_speed_limit_pct': 27.0, parameter: value}
+&gt;           pair.reject_cpp_update(**changes)
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7ee280eccca0&gt;
+values = {'extended_speed_limit_pct': 27.0, 'reach_tf_timeout_sec': nan}
+names = ['extended_speed_limit_pct', 'reach_tf_timeout_sec']
+before_future = &lt;rclpy.task.Future object at 0x7ee27d3580d0&gt;
+before = [rcl_interfaces.msg.ParameterValue(type=3, bool_value=False, integer_value=0, double_value=50.0, string_value='', byte...ue='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[])]
+parameters = [rcl_interfaces.msg.Parameter(name='extended_speed_limit_pct', value=rcl_interfaces.msg.ParameterValue(type=3, bool_va...e='', byte_array_value=[], bool_array_value=[], integer_array_value=[], double_array_value=[], string_array_value=[]))]
+future = &lt;rclpy.task.Future object at 0x7ee27d3595d0&gt;
+result = rcl_interfaces.msg.SetParametersResult(successful=True, reason='')
+@py_assert1 = True
+
+    def reject_cpp_update(self, **values):
+        from rclpy.parameter import Parameter
+        names = list(values)
+        before_future = self.readers['cpp'].call_async(self.get_parameters_service.Request(names=names))
+        self.until(before_future.done, 3.0)
+        before = before_future.result().values
+        parameters = [Parameter(name, value=value).to_parameter_msg() for name, value in values.items()]
+        future = self.clients['cpp'].call_async(self.parameter_service.Request(parameters=parameters))
+        self.until(future.done, 3.0)
+        result = future.result().result
+        # Nonfinite values are represented as strings in the evidence JSON.
+        self.steps.append({'invalid_parameters_repr': {k: repr(v) for k, v in values.items()},
+                           'cpp_accepted': result.successful, 'reason': result.reason})
+&gt;       assert not result.successful, 'C++ accepted unsafe parameter batch: ' + repr(values)
+E       AssertionError: C++ accepted unsafe parameter batch: {'extended_speed_limit_pct': 27.0, 'reach_tf_timeout_sec': nan}
+E       assert not True
+E        +  where True = rcl_interfaces.msg.SetParametersResult(successful=True, reason='').successful
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:195: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_valid_atomic_threshold_pair_uses_merged_candidate" time="1.747" /><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_joint_valid_short_reference_and_zero_threshold_keep_zip_semantics" time="2.607" /></testsuite></testsuites>

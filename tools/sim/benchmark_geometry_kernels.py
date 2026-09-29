@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """Deterministic offline equivalence/timing; does not assert ROS deadlines."""
+from pathlib import Path as _ReferencePath
+import sys as _reference_sys
+_reference_sys.path.insert(0, str(_ReferencePath(__file__).resolve().parents[2] / "tools/migration/python_reference"))
+from reference_bootstrap import enable as _enable_references
+_enable_references()
+
 import argparse
 import json
 import math

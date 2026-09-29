@@ -24,6 +24,12 @@ template<class Search>
 class ExactGoalPlannerBase : public Search {
   using Search::_costmap;
   using Search::_logger;
+  class StartConnectionBlocked : public nav2_core::PlannerException {
+  public:
+    explicit StartConnectionBlocked(double heading)
+      :nav2_core::PlannerException("START_CONNECTION_BLOCKED"),heading(heading) {}
+    double heading;
+  };
 public:
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent, std::string name,
     std::shared_ptr<tf2_ros::Buffer> tf,
@@ -50,6 +56,7 @@ public:
     max_k_=load("max_curvature",3.0); max_rate_=load("max_curvature_rate",12.0);
     displacement_=load("max_displacement",0.20);
     quality_pub_=rclcpp::create_publisher<std_msgs::msg::String>(node,"path_tracking/path_quality",10);
+    plan_pub_=rclcpp::create_publisher<nav_msgs::msg::Path>(node,"plan",10);
     risk_pub_=rclcpp::create_publisher<astribot_navigation_msgs::msg::PathRisk>(
       node,"navigation_policy/path_risk",rclcpp::QoS(1));
     candidate_service_=node->create_service<astribot_navigation_msgs::srv::PlanCandidate>(
@@ -83,7 +90,7 @@ public:
         risk_pub_->publish(evidence);
       });
   }
-  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);geometry_guard_.cleanup();candidate_service_.reset();valid_service_.reset();risk_pub_.reset();quality_pub_.reset();map_ros_.reset();Search::cleanup();}
+  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);geometry_guard_.cleanup();candidate_service_.reset();valid_service_.reset();risk_pub_.reset();quality_pub_.reset();plan_pub_.reset();map_ros_.reset();Search::cleanup();}
   nav_msgs::msg::Path createPlan(const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) override
   {
@@ -92,16 +99,35 @@ public:
   }
 private:
   nav_msgs::msg::Path plan(const geometry_msgs::msg::PoseStamped & start,
-    const geometry_msgs::msg::PoseStamped & goal,bool diagnostics)
+    const geometry_msgs::msg::PoseStamped & goal,bool diagnostics,bool check_start_connection=false)
   {
     auto emit=[&](const char * action,const PathQuality & before,const PathQuality & after) {
       if(diagnostics) {report(action,before,after);}
+    };
+    const auto connected=[&](nav_msgs::msg::Path output) {
+      if(check_start_connection && geometry_guard_.enabled()) {
+        nav_msgs::msg::Path turn;turn.header=output.header;
+        turn.poses={start,start};
+        turn.poses.back().pose.orientation=output.poses.front().pose.orientation;
+        const int connection=collisionIndex(turn,0);
+        if(connection==-1)
+          throw nav2_core::PlannerException("PATH_CHECK_UNAVAILABLE: start connection unavailable");
+        if(connection>=0)
+          throw StartConnectionBlocked(tf2::getYaw(output.poses.front().pose.orientation));
+      }
+      return output;
     };
     if (!geometry_guard_.ready()) {throw nav2_core::PlannerException("ENVELOPE_V2_NOT_READY");}
     auto path=Search::createPlan(start,goal);
     if (path.poses.empty()) {return path;}
     if (pathDistance(path.poses.back(),goal)>std::sqrt(2.0)*_costmap->getResolution()) {
       throw nav2_core::PlannerException("Requested goal unavailable: planner returned a substitute endpoint");
+    }
+    if constexpr (std::is_same_v<Search,nav2_smac_planner::SmacPlanner2D>) {
+      try {anchorGridPathStart(path,start,_costmap->getResolution());}
+      catch(const std::invalid_argument & error) {
+        throw nav2_core::PlannerException(std::string("PATH_START_UNAVAILABLE: ")+error.what());
+      }
     }
     path.poses.back()=goal;path.poses.back().header=path.header;
     auto before=pathQuality(path);
@@ -114,7 +140,7 @@ private:
     if constexpr (!std::is_same_v<Search,nav2_smac_planner::SmacPlanner2D>) {
       // SE(2) primitive headings and reverse cusps must survive postprocessing.
       if(original_collision!=-2) {throw nav2_core::PlannerException("SE2_SWEEP_UNSAFE");}
-      emit("se2_validated",before,before);return path;
+      emit("se2_validated",before,before);return connected(std::move(path));
     }
     // Grid centres can introduce a lateral bend at an exact aligned endpoint.
     // For fixed V2 or corridor stages, consider the exact straight segment
@@ -147,11 +173,11 @@ private:
         }
         direct.poses.front()=start;direct.poses.back()=goal;
         direct.poses.front().header=direct.poses.back().header=direct.header;
-        if(collisionIndex(direct,0,true)==-2) {emit("aligned_direct_validated",before,pathQuality(direct));return direct;}
+        if(collisionIndex(direct,0,true)==-2) {emit("aligned_direct_validated",before,pathQuality(direct));return connected(std::move(direct));}
       }
     }
     if (acceptableQuality(before,max_k_,max_rate_) && original_collision==-2) {
-      emit("accepted",before,before);return path;
+      emit("accepted",before,before);return connected(std::move(path));
     }
     auto reference=resamplePath(path);auto candidate=reference;
     for (int iteration=1;iteration<=200;++iteration) {
@@ -168,10 +194,15 @@ private:
         a.orientation.x=a.orientation.y=0; a.orientation.z=std::sin(yaw/2);a.orientation.w=std::cos(yaw/2);
       }
       output.poses.front()=path.poses.front();output.poses.back()=path.poses.back();
-      if (collisionIndex(output,0)==-2) {emit("smoothed",before,after);return output;}
+      if (collisionIndex(output,0)==-2) {emit("smoothed",before,after);return connected(std::move(output));}
     }
-    if (collisionIndex(path,0)==-2) {emit("speed_limited",before,before);return path;}
+    if (collisionIndex(path,0)==-2) {emit("speed_limited",before,before);return connected(std::move(path));}
     emit("rejected",before,pathQuality(candidate));
+    // Only a real rejected first connection with a clear remaining path is
+    // recoverable here. Unrelated map, search or downstream failures retain
+    // their ordinary failure semantics.
+    if(check_start_connection && original_collision==0 && collisionIndex(path,1)==-2)
+      throw StartConnectionBlocked(tf2::getYaw(path.poses.front().pose.orientation));
     throw nav2_core::PlannerException(
       "PATH_QUALITY_UNSAFE: candidate footprint touches obstacle, unknown or map boundary; segment="+
       std::to_string(original_collision));
@@ -204,6 +235,19 @@ private:
         res.reason="WORLD_UNAVAILABLE";return;
       }
       const auto frame=map_ros_->getGlobalFrameID();
+      if(req.mode==Candidate::Request::INITIAL) {
+        nav_msgs::msg::Path goal_input;goal_input.header.frame_id=frame;goal_input.poses={req.goal};
+        if(req.goal.header.frame_id!=frame || !validGeometry(goal_input,frame)) {
+          res.reason="INVALID_GOAL";return;
+        }
+        auto output=plan(res.evaluated_start,req.goal,true,true);
+        if(output.poses.empty()) {res.reason="EMPTY_PLAN";return;}
+        const auto quality=pathQuality(output);
+        res.curvature=quality.curvature;res.curvature_rate=quality.curvature_rate;
+        output.header.stamp=res.evaluated_start.header.stamp;
+        res.path=std::move(output);res.geometry_valid=true;res.reason="GEOMETRY_VALID";
+        plan_pub_->publish(res.path);return;
+      }
       if(req.goal.header.frame_id!=frame || !validGeometry(req.reference_path,frame) ||
         !sameGoal(req.reference_path.poses.back(),req.goal)) {
         res.reason="INVALID_REFERENCE_OR_GOAL";return;
@@ -281,6 +325,12 @@ private:
       if(collisionIndex(rotation,0)!=-2) {res.reason="TAKEOVER_ROTATION_COLLISION";return;}
       output.header.stamp=res.evaluated_start.header.stamp;
       res.path=std::move(output);res.geometry_valid=true;res.reason="GEOMETRY_VALID";
+    } catch(const StartConnectionBlocked & error) {
+      res.failure_code=Candidate::Response::START_CONNECTION_BLOCKED;
+      res.required_start_heading=error.heading;res.reason=error.what();
+      RCLCPP_WARN(_logger,"START_CONNECTION_BLOCKED start=(%.9f,%.9f,%.9f) required_heading=%.9f",
+        res.evaluated_start.pose.position.x,res.evaluated_start.pose.position.y,
+        tf2::getYaw(res.evaluated_start.pose.orientation),error.heading);
     } catch(const std::exception & error) {res.reason=std::string("PLANNING_FAILED: ")+error.what();}
   }
   int collisionIndex(const nav_msgs::msg::Path & path,size_t first,bool continuous=false)
@@ -326,6 +376,7 @@ private:
   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> map_ros_;
   rclcpp::Service<nav2_msgs::srv::IsPathValid>::SharedPtr valid_service_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr quality_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr plan_pub_;
   rclcpp::Publisher<astribot_navigation_msgs::msg::PathRisk>::SharedPtr risk_pub_;
 };
 class ExactGoalPlanner : public ExactGoalPlannerBase<nav2_smac_planner::SmacPlanner2D> {};

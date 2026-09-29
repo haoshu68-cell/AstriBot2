@@ -1,0 +1,95 @@
+{
+  "scope": "600 s stationary six-camera warehouse, four RGB-D pipelines plus recorder; short build activity overlaps; sampled health at 20 Hz, not navigation or continuous coverage proof",
+  "cameras": {
+    "head_rgbd": {
+      "states": {
+        "OK": 11958,
+        "STALE": 2
+      },
+      "max_age_sec": 0.2,
+      "p99_age_sec": 0.162,
+      "invalid_events": [
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "gazebo_camera:14246942625067:2113755795",
+          "age_sec": 0.2,
+          "frequency_hz": 10.0,
+          "max_interval_sec": 0.1,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 406.2569846719998,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "header_stamp_ns": 449500000000,
+          "capture_stamp_ns": 449300000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "gazebo_camera:14246942625067:2113755795",
+          "age_sec": 0.2,
+          "frequency_hz": 10.0,
+          "max_interval_sec": 0.1,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 599.007751186,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "header_stamp_ns": 641600000000,
+          "capture_stamp_ns": 641400000000
+        }
+      ]
+    },
+    "torso_rgbd": {
+      "states": {
+        "OK": 11960
+      },
+      "max_age_sec": 0.2,
+      "p99_age_sec": 0.127,
+      "invalid_events": []
+    },
+    "left_wrist_rgbd": {
+      "states": {
+        "OK": 11960
+      },
+      "max_age_sec": 0.2,
+      "p99_age_sec": 0.14100000000000001,
+      "invalid_events": []
+    },
+    "right_wrist_rgbd": {
+      "states": {
+        "OK": 11959,
+        "STALE": 1
+      },
+      "max_age_sec": 0.2,
+      "p99_age_sec": 0.152,
+      "invalid_events": [
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:14294882569479:638957695",
+          "age_sec": 0.2,
+          "frequency_hz": 10.0,
+          "max_interval_sec": 0.1,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 598.998732551001,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_right_link_7/right_wrist_rgbd_sensor",
+          "header_stamp_ns": 641600000000,
+          "capture_stamp_ns": 641400000000
+        }
+      ]
+    },
+    "head_stereo_left": {
+      "states": {},
+      "max_age_sec": null,
+      "p99_age_sec": null,
+      "invalid_events": []
+    },
+    "head_stereo_right": {
+      "states": {},
+      "max_age_sec": null,
+      "p99_age_sec": null,
+      "invalid_events": []
+    }
+  }
+}

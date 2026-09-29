@@ -1,0 +1,465 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="10" time="0.377" timestamp="2026-09-21T16:49:43.592808" hostname="sh-xf2731"><testcase classname="test.test_core" name="test_same_input_core_replay" time="0.027"><failure message="AssertionError: Native core probe is not implemented/built&#10;assert False&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/dynamics_core_probe')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/dynamics_core_probe')&gt; = PosixPath('/missing/dynamics_core_probe').is_file">def test_same_input_core_replay():
+        rng = random.Random(20260921)
+        cases = []
+        for _ in range(2000):
+            folded = rng.uniform(0, 1)
+            full = folded + rng.uniform(.001, 1)
+            reach = rng.uniform(-.5, 3)
+            cases.append((f'reach {reach} {folded} {full}', oracle.reach_activity(reach, folded, full)))
+            x, y = rng.uniform(-2, 2), rng.uniform(-2, 2)
+            cases.append((f'xy {x} {y}', oracle.horizontal_reach(x, y)))
+            activity, minimum = rng.uniform(-1, 2), rng.uniform(0, 1)
+            cases.append((f'scale {activity} {minimum}', oracle.scale_from_activity(activity, minimum)))
+            n, r = rng.randrange(15), rng.randrange(16)
+            values = [rng.uniform(-4, 4) for _ in range(n)]
+            refs = [rng.uniform(-3, 3) for _ in range(r)]
+            names = ['j' + str(i) for i in range(n)]
+            full = rng.choice([0, 1e-6, 1.0001e-6, rng.uniform(.1, 4)])
+            text = f'{full} {n} {r} ' + ' '.join(map(str, values + refs))
+            cases.append(('joint ' + text, oracle.joint_deviation_activity(dict(zip(names, values)), names, refs, full)))
+            cases.append(('velocity ' + text, oracle.velocity_activity(dict(zip(names, values)), names, full)))
+        # Exact thresholds, zip truncation, raw angle difference across +/-pi.
+        for line, expected in [('reach .42 .42 .8865', 0), ('reach .8865 .42 .8865', 1),
+                               ('reach .8 .5 .5', 'error'), ('reach .8 .7 .5', 'error'),
+                               ('joint 1.2 1 1 -3.141592653589793 3.141592653589793', 1),
+                               ('joint 1.2 1 0 3.0', 0), ('velocity 2 0 0', 0)]:
+            cases.append((line, expected))
+        binary = Path(os.environ.get('DYNAMICS_CORE_PROBE', '/missing/dynamics_core_probe'))
+&gt;       assert binary.is_file(), 'Native core probe is not implemented/built'
+E       AssertionError: Native core probe is not implemented/built
+E       assert False
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/dynamics_core_probe')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/dynamics_core_probe')&gt; = PosixPath('/missing/dynamics_core_probe').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_core.py:41: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_joint_smoothing_empty_partial_duplicate_and_velocity" time="0.173"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d76412cdcf0&gt;
+
+    def test_joint_smoothing_empty_partial_duplicate_and_velocity(make_pair):
+&gt;       p = make_pair()
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d76412f6410&gt;
+case = 'test_joint_smoothing_empty_partial_duplicate_and_velocity'
+metric = 'joint_deviation', params = None, implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_joint_dynamic_parameters_wrap_and_startup_only_metric" time="0.008"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d7640e87880&gt;
+
+    def test_joint_dynamic_parameters_wrap_and_startup_only_metric(make_pair):
+&gt;       p = make_pair(params={'scale_smoothing_alpha': 1.})
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:225: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763d62e7d0&gt;
+case = 'test_joint_dynamic_parameters_wrap_and_startup_only_metric'
+metric = 'joint_deviation', params = {'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_clock_timeout_exact_boundary_rollback_and_dynamic_degraded" time="0.004"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d7641176d40&gt;
+
+    def test_clock_timeout_exact_boundary_rollback_and_dynamic_degraded(make_pair):
+&gt;       p = make_pair(params={'scale_smoothing_alpha': 1.})
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:239: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763d6b8f10&gt;
+case = 'test_clock_timeout_exact_boundary_rollback_and_dynamic_degraded'
+metric = 'joint_deviation', params = {'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_reach_static_tf_dynamic_frame_links_thresholds_and_missing" time="0.004"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d7641177400&gt;
+
+    def test_reach_static_tf_dynamic_frame_links_thresholds_and_missing(make_pair):
+&gt;       p = make_pair('horizontal_reach', {'scale_smoothing_alpha': 1., 'reach_update_period_sec': 0.})
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:249: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763d70b070&gt;
+case = 'test_reach_static_tf_dynamic_frame_links_thresholds_and_missing'
+metric = 'horizontal_reach'
+params = {'reach_update_period_sec': 0.0, 'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_reach_tf_age_future_stale_cache_period_and_rollback" time="0.007"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d76411775b0&gt;
+
+    def test_reach_tf_age_future_stale_cache_period_and_rollback(make_pair):
+&gt;       p = make_pair('horizontal_reach', {'scale_smoothing_alpha': 1., 'reach_update_period_sec': .1})
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:266: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763d519e10&gt;
+case = 'test_reach_tf_age_future_stale_cache_period_and_rollback'
+metric = 'horizontal_reach'
+params = {'reach_update_period_sec': 0.1, 'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_reach_invalid_translation_and_recovery" time="0.020"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d7641177b50&gt;
+
+    def test_reach_invalid_translation_and_recovery(make_pair):
+&gt;       p = make_pair('horizontal_reach', {'scale_smoothing_alpha': 1., 'reach_update_period_sec': 0.})
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:283: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763d62ebf0&gt;
+case = 'test_reach_invalid_translation_and_recovery'
+metric = 'horizontal_reach'
+params = {'reach_update_period_sec': 0.0, 'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_startup_metric_fallback[params0]" time="0.005"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d7641177f40&gt;
+params = {'extension_metric': 'invalid'}
+
+    @pytest.mark.parametrize('params', [{'extension_metric': 'invalid'}, {'reach_folded_m': -.1}, {'reach_full_m': .42}])
+    def test_startup_metric_fallback(make_pair, params):
+&gt;       p = make_pair('horizontal_reach', dict(params, scale_smoothing_alpha=1.))
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763d51a380&gt;
+case = 'test_startup_metric_fallback[params0]', metric = 'horizontal_reach'
+params = {'extension_metric': 'invalid', 'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_startup_metric_fallback[params1]" time="0.005"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d7641177e20&gt;
+params = {'reach_folded_m': -0.1}
+
+    @pytest.mark.parametrize('params', [{'extension_metric': 'invalid'}, {'reach_folded_m': -.1}, {'reach_full_m': .42}])
+    def test_startup_metric_fallback(make_pair, params):
+&gt;       p = make_pair('horizontal_reach', dict(params, scale_smoothing_alpha=1.))
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763dde6020&gt;
+case = 'test_startup_metric_fallback[params1]', metric = 'horizontal_reach'
+params = {'reach_folded_m': -0.1, 'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase><testcase classname="test.test_ros" name="test_startup_metric_fallback[params2]" time="0.006"><failure message="AssertionError: Native ROS executable is not implemented/built&#10;assert ('cpp' not in ('python', 'cpp') or False)&#10; +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()&#10; +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file">make_pair = &lt;function make_pair.&lt;locals&gt;.create at 0x7d7641176b00&gt;
+params = {'reach_full_m': 0.42}
+
+    @pytest.mark.parametrize('params', [{'extension_metric': 'invalid'}, {'reach_folded_m': -.1}, {'reach_full_m': .42}])
+    def test_startup_metric_fallback(make_pair, params):
+&gt;       p = make_pair('horizontal_reach', dict(params, scale_smoothing_alpha=1.))
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:199: in create
+    obj = Pair(request.node.name, metric, params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_ros.Pair object at 0x7d763d4de9e0&gt;
+case = 'test_startup_metric_fallback[params2]', metric = 'horizontal_reach'
+params = {'reach_full_m': 0.42, 'scale_smoothing_alpha': 1.0}
+implementations = ('python', 'cpp')
+
+    def __init__(self, case, metric='joint_deviation', params=None, implementations=('python', 'cpp')):
+        import rclpy
+        from geometry_msgs.msg import Twist, TransformStamped
+        from sensor_msgs.msg import JointState
+        from rosgraph_msgs.msg import Clock
+        from rcl_interfaces.srv import SetParametersAtomically
+        from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+        self.rclpy = rclpy
+        self.Twist, self.JointState, self.TransformStamped, self.Clock = Twist, JointState, TransformStamped, Clock
+        self.service = SetParametersAtomically
+        self.prefix = 'coupling_' + uuid.uuid4().hex[:10]
+        self.node = rclpy.create_node(self.prefix)
+        self.output = Path(os.environ.get('DYNAMICS_EVIDENCE', '/tmp/codex_dynamics_coupling_20260921/ros')) / case
+        self.output.mkdir(parents=True, exist_ok=True)
+        self.clock = self.node.create_publisher(Clock, '/clock', 10)
+        self.joint_pub = self.node.create_publisher(JointState, '/' + self.prefix + '/joints', 10)
+        self.cmd_pub = self.node.create_publisher(Twist, '/' + self.prefix + '/input_remapped', 10)
+        self.tf = TransformBroadcaster(self.node)
+        self.static_tf = StaticTransformBroadcaster(self.node)
+        self.processes, self.handles, self.subscriptions, self.steps = [], [], [], []
+        self.values, self.clients = {}, {}
+        self.stamp = 10 * 10**9
+        self.domain = os.environ.get('DYNAMICS_DOMAIN', '140')
+        assert 140 &lt;= int(self.domain) &lt;= 144
+        binary = Path(os.environ.get('DYNAMICS_CPP', '/missing/arm_chassis_speed_coupling_node'))
+&gt;       assert 'cpp' not in implementations or binary.is_file(), 'Native ROS executable is not implemented/built'
+E       AssertionError: Native ROS executable is not implemented/built
+E       assert ('cpp' not in ('python', 'cpp') or False)
+E        +  where False = &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt;()
+E        +    where &lt;bound method Path.is_file of PosixPath('/missing/arm_chassis_speed_coupling_node')&gt; = PosixPath('/missing/arm_chassis_speed_coupling_node').is_file
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:54: AssertionError</failure></testcase></testsuite></testsuites>

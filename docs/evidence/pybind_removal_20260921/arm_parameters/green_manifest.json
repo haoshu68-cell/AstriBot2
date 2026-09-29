@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-09-21T08:03:05.226964+00:00",
+  "build_type": "Release",
+  "pybind": "OFF",
+  "binary": "/tmp/codex_arm_parameters_20260921/build/arm_speed_limiter_cpp",
+  "binary_sha256": "cbd7b02ef92993d8855e832ad7135edca20dc8d02c4da94cf458bca95a54040c",
+  "source_hashes": {
+    "ws_robot/src/astribot_trajectory_bridge_native/src/arm_speed_limiter_node.cpp": "7e22bff6dc89aa930256d480c54e2e8a2ea1e04d1e1ef8aed002ccda175db1b5",
+    "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt": "bace41e3a79254a3cf69903ed3acdb8fac4e863bb30fb756079a4aed4eea5961",
+    "ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py": "91154762c43c48f9743b6edcd50f058a2c6e24ea39330071bfbea85df8127b2a",
+    "ws_robot/src/astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py": "96e5cfd138dda618e9763eb2786e34c150b24210fef0c474f6151318b544aebe",
+    "ws_robot/src/astribot_s1_navigation/astribot_s1_navigation/arm_reach_metric.py": "29f4de3b5265b13b46af3613dd6565efc2174e428a6fd2754ce4645e94aa2201"
+  },
+  "red": {
+    "pytest_cases": 14,
+    "passed": 4,
+    "failed": 10,
+    "expected_failures": "7 cached parameters + updated missing link + 2 startup status cases"
+  },
+  "green": {
+    "ctest_passed": 7,
+    "ctest_failed": 0,
+    "arm_ros_pytest_passed": 14,
+    "arm_ros_pytest_failed": 0,
+    "owned_children_reaped": 24,
+    "normal_exit_code": 0,
+    "invalid_startup_exit_code": 1
+  },
+  "environment": {
+    "ROS_DOMAIN_ID": 118,
+    "ROS_LOCALHOST_ONLY": 1,
+    "underlay": "/opt/ros/humble",
+    "shared_install_modified": false,
+    "shared_install_sourced": false,
+    "gazebo": false,
+    "sdk": false,
+    "hardware": false
+  },
+  "live_cpp_maps_assertions": "No libpython or _chassis_math_native in each owned C++ child maps",
+  "command": "source /opt/ros/humble/setup.bash; ASTRIBOT_ARM_PARAMETER_EVIDENCE=<evidence>/green ctest --test-dir /tmp/codex_arm_parameters_20260921/build --output-on-failure --output-junit <evidence>/green_ctest_junit.xml"
+}

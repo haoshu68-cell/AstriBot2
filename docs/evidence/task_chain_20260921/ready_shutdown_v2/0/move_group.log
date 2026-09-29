@@ -1,0 +1,492 @@
+[INFO] [launch]: All log files can be found below /home/yjh/.ros/log/astribot/2026-09-21-23-23-06-615638-sh-xf2731-407823
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [move_group-1]: process started with pid [407876]
+[move_group-1] Warning: Link 'livox_mid360_left' is not known to URDF. Cannot disable/enable collisons.
+[move_group-1]          at line 594 in ./src/model.cpp
+[move_group-1] Warning: Link 'livox_mid360_right' is not known to URDF. Cannot disable/enable collisons.
+[move_group-1]          at line 594 in ./src/model.cpp
+[move_group-1] Warning: Link 'camera_link' is not known to URDF. Cannot disable/enable collisons.
+[move_group-1]          at line 594 in ./src/model.cpp
+[move_group-1] [INFO] [1790004186.942349303] [moveit_rdf_loader.rdf_loader]: Loaded robot model in 0 seconds
+[move_group-1] [INFO] [1790004186.942375471] [moveit_robot_model.robot_model]: Loading robot model 'astribot_s1'...
+[move_group-1] [WARN] [1790004186.950214830] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004186.958580709] [moveit_robot_model.robot_model]: Link astribot_gripper_left_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004186.963272548] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_L1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004186.965881099] [moveit_robot_model.robot_model]: Link astribot_gripper_right_Link_R1 has visual geometry but no collision geometry. Collision geometry will be left empty. Fix your URDF file by explicitly specifying collision geometry.
+[move_group-1] [WARN] [1790004186.974690700] [kdl_parser]: The root link astribot_torso_base has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[move_group-1] [WARN] [1790004186.974811367] [kdl_parser]: The root link astribot_torso_base has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[move_group-1] [WARN] [1790004186.974863342] [kdl_parser]: The root link astribot_torso_base has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[move_group-1] [INFO] [1790004186.993924911] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Publishing maintained planning scene on 'monitored_planning_scene'
+[move_group-1] [INFO] [1790004186.994058247] [moveit.ros_planning_interface.moveit_cpp]: Listening to 'joint_states' for joint states
+[move_group-1] [INFO] [1790004186.994605850] [moveit_ros.current_state_monitor]: Listening to joint states on topic 'joint_states'
+[move_group-1] [INFO] [1790004186.994860125] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to '/attached_collision_object' for attached collision objects
+[move_group-1] [INFO] [1790004186.994867101] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Starting planning scene monitor
+[move_group-1] [INFO] [1790004186.995025399] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to '/planning_scene'
+[move_group-1] [INFO] [1790004186.995030085] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Starting world geometry update monitor for collision objects, attached objects, octomap updates.
+[move_group-1] [INFO] [1790004186.995194739] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to 'collision_object'
+[move_group-1] [INFO] [1790004186.995405583] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Listening to 'planning_scene_world' for planning scene world geometry
+[move_group-1] [INFO] [1790004187.026137581] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/camera/head_rgbd/points' using message filter with target frame 'astribot_torso_base '
+[move_group-1] [INFO] [1790004187.026524249] [moveit.ros.perception.pointcloud_octomap_updater]: Listening to '/camera/torso_rgbd/points' using message filter with target frame 'astribot_torso_base '
+[move_group-1] [INFO] [1790004187.026531747] [moveit.ros_planning_interface.moveit_cpp]: Loading planning pipeline 'ompl'
+[move_group-1] [INFO] [1790004187.034368262] [astribot_s1_manipulation.ompl_extension]: registered extra OMPL planners: 25 -> 30 total
+[move_group-1] [INFO] [1790004187.034382645] [astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::RRTstar
+[move_group-1] [INFO] [1790004187.034386270] [astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::BITstar
+[move_group-1] [INFO] [1790004187.034388947] [astribot_s1_manipulation.ompl_extension]:   [OK]      geometric::InformedRRTstar
+[move_group-1] [INFO] [1790004187.034393575] [moveit.ros_planning.planning_pipeline]: Using planning interface 'OMPL (with BITstar / InformedRRTstar registered by astribot_s1_manipulation)'
+[move_group-1] [INFO] [1790004187.036976296] [moveit_ros.add_time_optimal_parameterization]: Param 'ompl.path_tolerance' was not set. Using default value: 0.100000
+[move_group-1] [INFO] [1790004187.036984918] [moveit_ros.add_time_optimal_parameterization]: Param 'ompl.resample_dt' was not set. Using default value: 0.100000
+[move_group-1] [INFO] [1790004187.036986826] [moveit_ros.add_time_optimal_parameterization]: Param 'ompl.min_angle_change' was not set. Using default value: 0.001000
+[move_group-1] [INFO] [1790004187.036997906] [moveit_ros.fix_workspace_bounds]: Param 'ompl.default_workspace_bounds' was not set. Using default value: 10.000000
+[move_group-1] [INFO] [1790004187.037004295] [moveit_ros.fix_start_state_bounds]: Param 'ompl.start_state_max_bounds_error' was set to 0.100000
+[move_group-1] [INFO] [1790004187.037006148] [moveit_ros.fix_start_state_bounds]: Param 'ompl.start_state_max_dt' was not set. Using default value: 0.500000
+[move_group-1] [INFO] [1790004187.037010802] [moveit_ros.fix_start_state_collision]: Param 'ompl.start_state_max_dt' was not set. Using default value: 0.500000
+[move_group-1] [INFO] [1790004187.037012443] [moveit_ros.fix_start_state_collision]: Param 'ompl.jiggle_fraction' was not set. Using default value: 0.020000
+[move_group-1] [INFO] [1790004187.037018164] [moveit_ros.fix_start_state_collision]: Param 'ompl.max_sampling_attempts' was not set. Using default value: 100
+[move_group-1] [INFO] [1790004187.037022829] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Add Time Optimal Parameterization'
+[move_group-1] [INFO] [1790004187.037025590] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Resolve constraint frames to robot links'
+[move_group-1] [INFO] [1790004187.037026703] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Workspace Bounds'
+[move_group-1] [INFO] [1790004187.037027866] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Start State Bounds'
+[move_group-1] [INFO] [1790004187.037028984] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Start State In Collision'
+[move_group-1] [INFO] [1790004187.037030159] [moveit.ros_planning.planning_pipeline]: Using planning request adapter 'Fix Start State Path Constraints'
+[move_group-1] [INFO] [1790004187.059230686] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for arm_left_controller
+[move_group-1] [INFO] [1790004187.060283051] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for arm_right_controller
+[move_group-1] [INFO] [1790004187.061256201] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for torso_controller
+[move_group-1] [INFO] [1790004187.062231624] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for gripper_left_controller
+[move_group-1] [INFO] [1790004187.063294333] [moveit.plugins.moveit_simple_controller_manager]: Added FollowJointTrajectory controller for gripper_right_controller
+[move_group-1] [INFO] [1790004187.063400707] [moveit.plugins.moveit_simple_controller_manager]: Returned 5 controllers in list
+[move_group-1] [INFO] [1790004187.063420724] [moveit.plugins.moveit_simple_controller_manager]: Returned 5 controllers in list
+[move_group-1] [INFO] [1790004187.063674283] [moveit_ros.trajectory_execution_manager]: Trajectory execution is not managing controllers
+[move_group-1] [INFO] [1790004187.063680423] [move_group.move_group]: MoveGroup debug mode is ON
+[move_group-1] [INFO] [1790004187.076018402] [move_group.move_group]: 
+[move_group-1] 
+[move_group-1] ********************************************************
+[move_group-1] * MoveGroup using: 
+[move_group-1] *     - ApplyPlanningSceneService
+[move_group-1] *     - ClearOctomapService
+[move_group-1] *     - CartesianPathService
+[move_group-1] *     - ExecuteTrajectoryAction
+[move_group-1] *     - GetPlanningSceneService
+[move_group-1] *     - KinematicsService
+[move_group-1] *     - MoveAction
+[move_group-1] *     - MotionPlanService
+[move_group-1] *     - QueryPlannersService
+[move_group-1] *     - StateValidationService
+[move_group-1] ********************************************************
+[move_group-1] 
+[move_group-1] [INFO] [1790004187.076052415] [moveit_move_group_capabilities_base.move_group_context]: MoveGroup context using planning plugin astribot_s1_manipulation/OmplPlannerExtension
+[move_group-1] [INFO] [1790004187.076059900] [moveit_move_group_capabilities_base.move_group_context]: MoveGroup context initialization complete
+[move_group-1] [96mLoading 'move_group/ApplyPlanningSceneService'...
+[move_group-1] [0m[96mLoading 'move_group/ClearOctomapService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupCartesianPathService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupExecuteTrajectoryAction'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupGetPlanningSceneService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupKinematicsService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupMoveAction'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupPlanService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupQueryPlannersService'...
+[move_group-1] [0m[96mLoading 'move_group/MoveGroupStateValidationService'...
+[move_group-1] [0m[92m
+[move_group-1] You can start planning now!
+[move_group-1] 
+[move_group-1] Warning: Invalid frame ID "astribot_torso_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_torso_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_torso_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_torso_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_torso_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_torso_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_R2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "wheel_LF_Link" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "wheel_LF_Link" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "wheel_LF_Link" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "wheel_LF_Link" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "wheel_LF_Link" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "wheel_LF_Link" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_5" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_left_link_2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_L2" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_head_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_head_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_head_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_head_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_head_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_head_link_1" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_4" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_arm_right_link_3" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_right_Link_L11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] Warning: Invalid frame ID "astribot_gripper_left_Link_R11" passed to canTransform argument source_frame - frame does not exist
+[move_group-1]          at line 95 in ./src/buffer_core.cpp
+[move_group-1] [ERROR] [1790004189.377605722] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 2
+[move_group-1] [ERROR] [1790004189.377624410] [moveit.ros.perception.shape_mask]: Missing transform for shape sphere with handle 38
+[move_group-1] [ERROR] [1790004189.377628506] [moveit.ros.perception.shape_mask]: Missing transform for shape sphere with handle 46
+[move_group-1] [ERROR] [1790004189.377632599] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 8
+[move_group-1] [ERROR] [1790004189.377635466] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 23
+[move_group-1] [ERROR] [1790004189.377638316] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 9
+[move_group-1] [ERROR] [1790004189.377641010] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 24
+[move_group-1] [ERROR] [1790004189.377643611] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 11
+[move_group-1] [ERROR] [1790004189.377646360] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 26
+[move_group-1] [ERROR] [1790004189.377648935] [moveit.ros.perception.shape_mask]: Missing transform for shape sphere with handle 10
+[move_group-1] [ERROR] [1790004189.377651503] [moveit.ros.perception.shape_mask]: Missing transform for shape sphere with handle 25
+[move_group-1] [ERROR] [1790004189.377655265] [moveit.ros.perception.shape_mask]: Missing transform for shape sphere with handle 28
+[move_group-1] [ERROR] [1790004189.377658112] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 36
+[move_group-1] [ERROR] [1790004189.377661290] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 22
+[move_group-1] [ERROR] [1790004189.377664377] [moveit.ros.perception.shape_mask]: Missing transform for shape cylinder with handle 37
+[move_group-1] [ERROR] [1790004189.377667219] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 19
+[move_group-1] [ERROR] [1790004189.377670288] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 34
+[move_group-1] [ERROR] [1790004189.377673696] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 39
+[move_group-1] [ERROR] [1790004189.377676439] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 45
+[move_group-1] [ERROR] [1790004189.377678990] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 41
+[move_group-1] [ERROR] [1790004189.377681809] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 43
+[move_group-1] [ERROR] [1790004189.377684374] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 40
+[move_group-1] [ERROR] [1790004189.377687184] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 44
+[move_group-1] [ERROR] [1790004189.377689767] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 42
+[move_group-1] [ERROR] [1790004189.377692392] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 20
+[move_group-1] [ERROR] [1790004189.377695276] [moveit.ros.perception.shape_mask]: Missing transform for shape box with handle 35
+[move_group-1] [ERROR] [1790004189.377705455] [moveit.ros.perception.shape_mask]: Missing transform for shape mesh with handle 29
+[move_group-1] [ERROR] [1790004189.377708893] [moveit.ros.perception.shape_mask]: Missing transform for shape mesh with handle 17
+[move_group-1] [ERROR] [1790004189.377711733] [moveit.ros.perception.shape_mask]: Missing transform for shape mesh with handle 32
+[move_group-1] [ERROR] [1790004189.377714571] [moveit.ros.perception.shape_mask]: Missing transform for shape mesh with handle 16
+[move_group-1] [ERROR] [1790004189.377721764] [moveit.ros.perception.shape_mask]: Missing transform for shape mesh with handle 33
+[move_group-1] [ERROR] [1790004189.377724660] [moveit.ros.perception.shape_mask]: Missing transform for shape mesh with handle 15
+[move_group-1] [ERROR] [1790004189.377727778] [moveit.ros.perception.shape_mask]: Missing transform for shape mesh with handle 30
+[move_group-1] [WARN] [1790004189.399316394] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.399360082] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.399391857] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.399400714] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.417319674] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.417338403] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.417351206] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.417354593] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.436256869] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.436279385] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.436305914] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.436313951] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.456918726] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.456941371] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.456963142] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.456970768] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.623890536] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.623913837] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.623935721] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.623943447] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.634027343] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.634048170] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.634072547] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.634080381] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.712771106] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.712789699] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.712803494] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.712806881] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.735892170] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.735907262] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.735921821] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.735925010] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.775031905] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.775045938] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.775057269] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.775060604] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.915153508] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.915173740] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.915187161] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.915190476] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.934686796] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.934701919] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.934714679] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.934718047] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [INFO] [1790004189.935703499] [moveit_move_group_default_capabilities.plan_service_capability]: Received new planning service request...
+[move_group-1] [WARN] [1790004189.935748516] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.935758696] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.935779246] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.935786118] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [INFO] [1790004189.936571593] [astribot_s1_manipulation.ompl_extension]: planning request: group='arm_right' planner_id='RRTConnectConfig' allowed_time=5.00s
+[move_group-1] [0mDebug:   Starting goal sampling thread
+[move_group-1] Debug:   Waiting for space information to be set up before the sampling thread can begin computation...
+[move_group-1] [INFO] [1790004189.937185879] [moveit.ompl_planning.model_based_planning_context]: Planner configuration 'arm_right[RRTConnectConfig]' will use planner 'geometric::RRTConnect'. Additional configuration parameters will be set when the planner is constructed.
+[move_group-1] Debug:   The value of parameter 'longest_valid_segment_fraction' is now: '0.01'
+[move_group-1] Debug:   The value of parameter 'range' is now: '0'
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Planner range detected to be 5.352000
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Starting planning with 1 states already in datastructure
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waiting for goal region samples ...
+[move_group-1] Debug:   Beginning sampling thread computation
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waited 0.010075 seconds for the first goal sample.
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Stopped goal sampling thread after 10 sampling attempts
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Created 4 states (2 start + 2 goal)
+[move_group-1] Info:    Solution found in 0.013305 seconds
+[move_group-1] Info:    SimpleSetup: Path simplification took 0.011843 seconds and changed from 3 to 2 states
+[move_group-1] [INFO] [1790004189.965532507] [moveit_move_group_default_capabilities.plan_service_capability]: Received new planning service request...
+[move_group-1] [WARN] [1790004189.965582769] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.965593861] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.965612642] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004189.965619809] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [INFO] [1790004189.966234870] [astribot_s1_manipulation.ompl_extension]: planning request: group='arm_right' planner_id='RRTConnectConfig' allowed_time=5.00s
+[move_group-1] Debug:   Starting goal sampling thread
+[move_group-1] Debug:   Waiting for space information to be set up before the sampling thread can begin computation...
+[move_group-1] Debug:   The value of parameter 'longest_valid_segment_fraction' is now: '0.01'
+[move_group-1] Debug:   The value of parameter 'range' is now: '0'
+[move_group-1] [INFO] [1790004189.966438531] [moveit.ompl_planning.model_based_planning_context]: Planner configuration 'arm_right[RRTConnectConfig]' will use planner 'geometric::RRTConnect'. Additional configuration parameters will be set when the planner is constructed.
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Planner range detected to be 5.352000
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Starting planning with 1 states already in datastructure
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waiting for goal region samples ...
+[move_group-1] Debug:   Beginning sampling thread computation
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waited 0.010062 seconds for the first goal sample.
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Stopped goal sampling thread after 10 sampling attempts
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Created 5 states (2 start + 3 goal)
+[move_group-1] Info:    Solution found in 0.015208 seconds
+[move_group-1] Info:    SimpleSetup: Path simplification took 0.022173 seconds and changed from 4 to 2 states
+[move_group-1] [INFO] [1790004190.006538553] [moveit_move_group_default_capabilities.plan_service_capability]: Received new planning service request...
+[move_group-1] [WARN] [1790004190.006591053] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.006602291] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.006622103] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.006629616] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [INFO] [1790004190.007271495] [astribot_s1_manipulation.ompl_extension]: planning request: group='arm_right' planner_id='RRTConnectConfig' allowed_time=5.00s
+[move_group-1] Debug:   Starting goal sampling thread
+[move_group-1] Debug:   Waiting for space information to be set up before the sampling thread can begin computation...
+[move_group-1] Debug:   The value of parameter 'longest_valid_segment_fraction' is now: '0.01'
+[move_group-1] [INFO] [1790004190.007472092] [moveit.ompl_planning.model_based_planning_context]: Planner configuration 'arm_right[RRTConnectConfig]' will use planner 'geometric::RRTConnect'. Additional configuration parameters will be set when the planner is constructed.
+[move_group-1] Debug:   The value of parameter 'range' is now: '0'
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Planner range detected to be 5.352000
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Starting planning with 1 states already in datastructure
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waiting for goal region samples ...
+[move_group-1] Debug:   Beginning sampling thread computation
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Adding goal state
+[move_group-1] Debug:   Stopped goal sampling thread after 10 sampling attempts
+[move_group-1] Debug:   arm_right/arm_right[RRTConnectConfig]: Waited 0.020098 seconds for the first goal sample.
+[move_group-1] Info:    arm_right/arm_right[RRTConnectConfig]: Created 4 states (2 start + 2 goal)
+[move_group-1] Info:    Solution found in 0.023587 seconds
+[move_group-1] Info:    SimpleSetup: Path simplification took 0.013436 seconds and changed from 3 to 2 states
+[move_group-1] [WARN] [1790004190.109487437] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.109517279] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.109541656] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.109549613] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.125282929] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_left_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.125297792] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_left' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_left' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.125309326] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'astribot_s1/astribot_torso_base/livox_mid360_right_sensor' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[move_group-1] [WARN] [1790004190.125312539] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Unable to transform object from frame 'livox_mid360_right' to planning frame'astribot_torso_base' (Could not find a connection between 'astribot_torso_base' and 'livox_mid360_right' because they are not part of the same tree.Tf has two or more unconnected trees.)
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [move_group-1]: sending signal 'SIGINT' to process[move_group-1]
+[move_group-1] [INFO] [1790004190.188553333] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[move_group-1] [INFO] [1790004190.190822204] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[move_group-1] [INFO] [1790004190.202273668] [moveit.ros_planning_interface.moveit_cpp]: Deleting MoveItCpp
+[move_group-1] [INFO] [1790004190.439445454] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Stopped publishing maintained planning scene.
+[move_group-1] [INFO] [1790004190.440264510] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Stopping world geometry monitor
+[move_group-1] [INFO] [1790004190.441302205] [moveit_ros.planning_scene_monitor.planning_scene_monitor]: Stopping planning scene monitor
+[move_group-1] Warning: class_loader.ClassLoader: SEVERE WARNING!!! Attempting to unload library while objects created by this loader exist in the heap! You should delete your objects before attempting to unload the library or destroying the ClassLoader. The library will NOT be unloaded.
+[move_group-1]          at line 127 in ./src/class_loader.cpp
+[INFO] [move_group-1]: process has finished cleanly [pid 407876]

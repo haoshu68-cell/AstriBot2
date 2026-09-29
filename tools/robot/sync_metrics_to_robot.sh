@@ -16,7 +16,6 @@ echo "==== [1/4] 同步包内文件 ===="
 ITEMS=(
   "$PKG_SRC/astribot_s1_navigation/explore_metrics"
   "$PKG_SRC/astribot_s1_navigation/explore_metrics_recorder_node.py"
-  "$PKG_SRC/astribot_s1_navigation/posture_monitor_policy.py"
   "$PKG_SRC/setup.py"
   "$PKG_SRC/scripts"
   "$PKG_SRC/test"

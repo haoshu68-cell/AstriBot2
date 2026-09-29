@@ -1,0 +1,15 @@
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_native_package_oracle_retains_original_import_identity __________
+
+    def test_native_package_oracle_retains_original_import_identity():
+        path = Path('ws_robot/src/astribot_s1_perception_native/test/reference/astribot_s1_perception/map_odom_decompose.py')
+>       assert INVENTORY.module_name(path) == 'astribot_s1_perception.map_odom_decompose'
+E       AssertionError: assert 'astribot_s1_...dom_decompose' == 'astribot_s1_...dom_decompose'
+E         - astribot_s1_perception.map_odom_decompose
+E         + astribot_s1_perception_native.astribot_s1_perception.map_odom_decompose
+
+tools/migration/test/test_inventory_reference_alias.py:13: AssertionError
+=========================== short test summary info ============================
+FAILED tools/migration/test/test_inventory_reference_alias.py::test_native_package_oracle_retains_original_import_identity
+1 failed, 1 passed in 0.04s

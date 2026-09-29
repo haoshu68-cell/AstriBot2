@@ -1,0 +1,49 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______________ test_bearing_norm_nextafter_admission_boundaries _______________
+
+    def test_bearing_norm_nextafter_admission_boundaries():
+        directions=[[-0.9770489201975666,-0.20631118122899542,0.05303870324268472]]
+        rng=random.Random(1946)
+        for i in range(8000):
+            v=[rng.uniform(-1.,1.) for _ in range(3)];length=math.hypot(*v)
+            scale=rng.choice([1.-1e-6,1.+1e-6]);v=[x/length*scale for x in v]
+            if i%3:
+                k=rng.randrange(3);v[k]=math.nextafter(v[k],rng.choice([-math.inf,math.inf]))
+            directions.append(v)
+>       check([dict(action='check_contract',type='BearingCone',value=dict(direction=v,half_angle_rad=.3)) for v in directions])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:428: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:188: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:182: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': None}
+b = {'code': 'INVALID_INPUT', 'field': 'bearing.unit_direction', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': None}, {'code': 'INVALID_INPUT', 'field': 'bearing.unit_direction', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'ok', 'field'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:178: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_bearing_norm_nextafter_admission_boundaries
+1 failed, 44 deselected in 0.20s

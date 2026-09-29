@@ -1,0 +1,29 @@
+F
+=================================== FAILURES ===================================
+___________________ test_handshake_expiry_and_latched_fault ____________________
+
+    def test_handshake_expiry_and_latched_fault():
+        state,hold,_ = fixture()
+        changed = copy.deepcopy(state); changed.sequence = 2; changed.joints.position = [.004]
+        recovered = copy.deepcopy(state); recovered.sequence = 3
+>       replay(setup_events()+all_acks()+[event('tick'),event('state',changed),event('tick'),
+               event('state',recovered),event('tick'),event('tick',now=NOW-1)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_fixed_envelope_direct.py:127: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+events = [{'message': OrderedDict([('header', OrderedDict([('stamp', OrderedDict([('sec', 10), ('nanosec', 0)])), ('frame_id', ...global_costmap', 'now': 10000000000, 'op': 'ack'}, {'consumer': 'local_costmap', 'now': 10000000000, 'op': 'ack'}, ...]
+
+    def replay(events):
+        binary = Path(os.environ.get('FIXED_ENVELOPE_PROBE','/tmp/astribot_fixed_v2_build/fixed_envelope_probe'))
+>       assert binary.is_file(), 'Build the direct C++ replay executable; bindings cannot satisfy this test'
+E       AssertionError: Build the direct C++ replay executable; bindings cannot satisfy this test
+E       assert False
+E        +  where False = <bound method Path.is_file of PosixPath('/tmp/astribot_fixed_v2_build/fixed_envelope_probe')>()
+E        +    where <bound method Path.is_file of PosixPath('/tmp/astribot_fixed_v2_build/fixed_envelope_probe')> = PosixPath('/tmp/astribot_fixed_v2_build/fixed_envelope_probe').is_file
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_fixed_envelope_direct.py:112: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_fixed_envelope_direct.py::test_handshake_expiry_and_latched_fault
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed in 0.32s

@@ -145,7 +145,7 @@ void PointcloudSliceScanNode::publishAttachmentConfirmation()
   }
 }
 
-bool PointcloudSliceScanNode::resolveAttachedBodies(const rclcpp::Time & stamp,
+bool PointcloudSliceScanNode::resolveAttachedBodies(const rclcpp::Time & /*stamp*/,
   std::vector<AttachedBody> & bodies,std::string & revision)
 {
   if(!attached_filter_enabled_)return true;
@@ -156,9 +156,7 @@ bool PointcloudSliceScanNode::resolveAttachedBodies(const rclcpp::Time & stamp,
   // the first authoritative snapshot; navigation stays held by GeometryState.
   if(!scene)return true;
   const auto source=rclcpp::Time(scene->robot_state.joint_state.header.stamp);
-  const double age=(now()-source).seconds();
-  if(scene->name.empty() || scene->is_diff || scene->robot_state.is_diff ||
-     age<0 || age>.5 || stamp<changed)return false;
+  if(scene->name.empty() || scene->is_diff || scene->robot_state.is_diff)return false;
   const auto budget_start=std::chrono::steady_clock::now();
   try {
     for(const auto & item:scene->robot_state.attached_collision_objects) {
@@ -166,14 +164,11 @@ bool PointcloudSliceScanNode::resolveAttachedBodies(const rclcpp::Time & stamp,
       if(item.link_name.empty() || (!o.header.frame_id.empty() && o.header.frame_id!=item.link_name) ||
          !o.meshes.empty() || !o.planes.empty() || o.primitives.empty() ||
          o.primitives.size()!=o.primitive_poses.size())return false;
-      // The cloud can precede its joint-derived TF by one broadcaster period.
-      // This runs on the cloud worker; the dedicated TF listener keeps filling
-      // the buffer. Bound all attachment lookups by the existing frame budget,
-      // and retain the acquisition time instead of substituting latest TF.
+      // Use the latest available link transform; lookup wait remains bounded.
       const double elapsed=std::chrono::duration<double>(
         std::chrono::steady_clock::now()-budget_start).count();
       const double wait=tfLookupWait(tf_timeout_sec_,tf_total_budget_sec_,elapsed);
-      const auto tf=tf_buffer_->lookupTransform(base_frame_,item.link_name,stamp,tf2::durationFromSec(wait));
+      const auto tf=tf_buffer_->lookupTransform(base_frame_,item.link_name,tf2::TimePointZero,tf2::durationFromSec(wait));
       geometry_msgs::msg::Pose link;link.position.x=tf.transform.translation.x;
       link.position.y=tf.transform.translation.y;link.position.z=tf.transform.translation.z;
       link.orientation=tf.transform.rotation;
@@ -187,12 +182,9 @@ bool PointcloudSliceScanNode::resolveAttachedBodies(const rclcpp::Time & stamp,
     RCLCPP_WARN_THROTTLE(get_logger(),*get_clock(),kLogThrottleMs,"Attached filter unavailable: %s",e.what());
     return false;
   }
-  // Waiting must not turn an expired snapshot or changed attachment into a
-  // successful filter acknowledgement.
+  // A changed attachment cannot receive acknowledgement for the previous geometry.
   {std::lock_guard<std::mutex> lock(attached_mutex_);
     if(!attached_snapshot_ || attached_snapshot_->name!=scene->name)return false;}
-  if((now()-source).seconds()<0 || (now()-source).seconds()>.5 ||
-     (now()-stamp).seconds()>max_cloud_age_sec_)return false;
   revision=scene->name;return true;
 }
 
@@ -572,19 +564,11 @@ void PointcloudSliceScanNode::cloudCallback(
   }
 
   const rclcpp::Time stamp(msg->header.stamp, RCL_ROS_TIME);
-  const double age = (now() - stamp).seconds();
-  if (std::fabs(age) > max_cloud_age_sec_) {
-    invalidateAttachmentConfirmation();
-    dropped_frame_count_.fetch_add(1U);
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), kLogThrottleMs,
-      "点云时间戳偏差 %.3fs 超过上限 %.3fs，丢弃该帧(累计丢弃 %" PRIu64 " 帧)",
-      age, max_cloud_age_sec_, static_cast<uint64_t>(dropped_frame_count_.load()));
-    return;
-  }
 
   {
     std::lock_guard<std::mutex> lock(queue_mutex_);
+    if(msg->header.frame_id==last_cloud_frame_ && stamp.nanoseconds()<=last_cloud_stamp_)return;
+    last_cloud_frame_=msg->header.frame_id;last_cloud_stamp_=stamp.nanoseconds();
     pending_cloud_ = msg;
   }
   queue_cv_.notify_one();
@@ -632,7 +616,7 @@ void PointcloudSliceScanNode::workerLoop()
 
 bool PointcloudSliceScanNode::lookupCloudTransform(
   const std::string & cloud_frame,
-  const rclcpp::Time & stamp,
+  const rclcpp::Time & /*stamp*/,
   geometry_msgs::msg::TransformStamped & out)
 {
   if (!tf_buffer_) {
@@ -640,7 +624,7 @@ bool PointcloudSliceScanNode::lookupCloudTransform(
   }
   try {
     out = tf_buffer_->lookupTransform(
-      cloud_pose_frame_, cloud_frame, stamp,
+      cloud_pose_frame_, cloud_frame, tf2::TimePointZero,
       tf2::durationFromSec(tf_timeout_sec_));
   } catch (const tf2::TransformException & e) {
     RCLCPP_WARN_THROTTLE(
@@ -650,20 +634,11 @@ bool PointcloudSliceScanNode::lookupCloudTransform(
     return false;
   }
 
-  const rclcpp::Time tf_stamp(out.header.stamp, RCL_ROS_TIME);
-  const double delta = std::fabs((tf_stamp - stamp).seconds());
-  if (delta > tf_time_tolerance_sec_) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), kLogThrottleMs,
-      "点云时间戳与 TF 时间戳偏差 %.3fs 超过上限 %.3fs，丢弃该帧",
-      delta, tf_time_tolerance_sec_);
-    return false;
-  }
   return true;
 }
 
 std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
-  const rclcpp::Time & stamp)
+  const rclcpp::Time & /*stamp*/)
 {
   std::vector<FilterCapsule> capsules;
   if (!tf_buffer_) {
@@ -692,7 +667,7 @@ std::vector<FilterCapsule> PointcloudSliceScanNode::resolveSelfFilterCapsules(
       }
       try {
         const geometry_msgs::msg::TransformStamped tf = tf_buffer_->lookupTransform(
-          base_frame_, frame, stamp, tf2::durationFromSec(wait));
+          base_frame_, frame, tf2::TimePointZero, tf2::durationFromSec(wait));
         p[0] = static_cast<float>(tf.transform.translation.x);
         p[1] = static_cast<float>(tf.transform.translation.y);
         p[2] = static_cast<float>(tf.transform.translation.z);

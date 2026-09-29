@@ -1,0 +1,27 @@
+# Root package includes this fragment. An isolated source-header overlay may
+# set POLICY_FUSION_GEOMETRY_INCLUDE to the geometry source include directory.
+find_package(Boost REQUIRED)
+add_library(policy_contracts STATIC src/policy_contracts.cpp)
+target_include_directories(policy_contracts PUBLIC include)
+target_link_libraries(policy_contracts PUBLIC Boost::boost)
+target_compile_features(policy_contracts PUBLIC cxx_std_17)
+target_compile_options(policy_contracts PRIVATE -Wall -Wextra -Wpedantic -ffp-contract=off)
+add_library(policy_fusion STATIC src/policy_fusion.cpp)
+target_link_libraries(policy_fusion PUBLIC policy_contracts)
+target_include_directories(policy_fusion PUBLIC include)
+target_compile_features(policy_fusion PUBLIC cxx_std_17)
+target_compile_options(policy_fusion PRIVATE -Wall -Wextra -Wpedantic -ffp-contract=off)
+if(DEFINED POLICY_FUSION_GEOMETRY_INCLUDE)
+  target_include_directories(policy_fusion PRIVATE "${POLICY_FUSION_GEOMETRY_INCLUDE}")
+else()
+  find_package(astribot_s1_robot_geometry REQUIRED)
+  ament_target_dependencies(policy_fusion PUBLIC astribot_s1_robot_geometry)
+endif()
+if(BUILD_TESTING)
+  add_executable(policy_fusion_probe test/policy_fusion_probe.cpp)
+  target_link_libraries(policy_fusion_probe policy_fusion nlohmann_json::nlohmann_json)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  add_test(NAME policy_fusion_differential COMMAND ${CMAKE_COMMAND} -E env
+    "POLICY_FUSION_PROBE=$<TARGET_FILE:policy_fusion_probe>"
+    ${Python3_EXECUTABLE} -m pytest -q "${CMAKE_CURRENT_SOURCE_DIR}/test/test_policy_fusion.py")
+endif()

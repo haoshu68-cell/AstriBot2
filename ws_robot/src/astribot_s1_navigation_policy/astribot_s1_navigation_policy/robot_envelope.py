@@ -32,14 +32,13 @@ class EnvelopeProfile:
             if any(getattr(envelope,f)!=getattr(self.envelope,f) for f in FIELDS+('posture_id','frame_id')):
                 raise ValueError('geometry and limits require a new envelope epoch')
         ns=envelope.stamp.sec*10**9+envelope.stamp.nanosec
-        if not 0<=now.ns-ns<=int(envelope.lease_s*1e9):return False
+        if self.envelope is not None and envelope.epoch==self.envelope.epoch and ns<self.envelope.stamp.sec*10**9+self.envelope.stamp.nanosec:return False
         self.envelope=envelope;self.received=now
         return True
     def ready(self,now):
         e=self.envelope
         if e is None or not e.transport_ready:return False
-        try:return 0<=now.since(self.received)<=int(e.lease_s*1e9) and 0<=now.ns-(e.stamp.sec*10**9+e.stamp.nanosec)<=int(e.lease_s*1e9)
-        except ValueError:return False
+        return True
     def stopping_distance(self,speed):
         return speed*(self.reaction_time_s+getattr(self,'linear_stop_delay_s',0.))+speed*speed/(2*self.brake_deceleration_m_s2)+self.clearance_margin_m
 
@@ -49,6 +48,7 @@ class FixedEnvelopeProfile(EnvelopeProfile):
     def __init__(self,baseline):
         super().__init__(baseline);self.v2=None;self.footprint_xy=None;self.accepted_identity=None
         self.applied_configuration=None
+        self.last_update=None
     @staticmethod
     def configuration_key(msg):
         # Compare exact geometry as well as its rounded identity hash.
@@ -60,15 +60,19 @@ class FixedEnvelopeProfile(EnvelopeProfile):
             tuple(getattr(msg.limits,f) for f in FIELDS+('epoch','posture_id','frame_id','lease_s')))
     def confirms_applied(self,msg,now):
         applied=self.applied_configuration
-        if applied is None or (now.clock,now.epoch)!=applied[1:3] or now.ns<applied[3]:return False
-        source=msg.header.stamp.sec*10**9+msg.header.stamp.nanosec
-        until=msg.valid_until.sec*10**9+msg.valid_until.nanosec
-        return (0<=now.ns-source<=300_000_000 and now.ns<until<=source+500_000_000 and
+        return (applied is not None and (now.clock,now.epoch)==applied[1:3] and
                 self.configuration_key(msg)==applied[0])
     def accept(self,msg,now):
         from astribot_s1_robot_geometry.polygon import validate, contains, inflate, geometry_hash
         import numpy as np
         def pts(poly):return np.array([(p.x,p.y) for p in poly.points])
+        source=msg.header.stamp.sec*10**9+msg.header.stamp.nanosec
+        context=(msg.coordinator_session_id,msg.epoch,msg.clock_epoch)
+        if self.last_update is not None:
+            previous,stamp=self.last_update
+            if context==previous and source<stamp:return False
+            if context[0]==previous[0] and (context[1]<previous[1] or context[2]<previous[2]):return False
+        self.last_update=(context,source)
         try:
             validate_envelope(msg.limits,self.baseline)
             if msg.header.frame_id!=self.baseline.base_frame or msg.mode!=msg.FIXED_POSTURE:raise ValueError('invalid V2 frame/mode')
@@ -83,7 +87,6 @@ class FixedEnvelopeProfile(EnvelopeProfile):
                 if msg.epoch<self.v2.epoch:return False
                 if msg.epoch==self.v2.epoch and (msg.installed_geometry_hash!=self.v2.installed_geometry_hash or any(getattr(msg.limits,f)!=getattr(self.envelope,f) for f in FIELDS)):raise ValueError('V2 mutated epoch')
             source=msg.header.stamp.sec*10**9+msg.header.stamp.nanosec
-            if not 0<=now.ns-source<=300_000_000:raise ValueError('V2 stale heartbeat')
             self.envelope=msg.limits;self.v2=msg;self.received=now;self.footprint_xy=reserved
             self.accepted_identity=identity
             self.applied_configuration=(self.configuration_key(msg),now.clock,now.epoch,now.ns)
@@ -95,8 +98,7 @@ class FixedEnvelopeProfile(EnvelopeProfile):
     def ready(self,now):
         e=self.v2
         if e is None or not e.navigation_allowed:return False
-        until=e.valid_until.sec*10**9+e.valid_until.nanosec
-        return now.ns<until and super().ready(now)
+        return super().ready(now)
 
 
 def configure_envelope_input(node,baseline,callback,consumer_id,depth=10):
@@ -112,7 +114,7 @@ def configure_envelope_input(node,baseline,callback,consumer_id,depth=10):
     publisher=node.create_publisher(EnvelopeApplyStatus,'/navigation/envelope_applied',10)
     # Keep bounded reception history for the larger V2 polygon stream, even
     # when the policy uses a latest-only mailbox. Applying that mailbox still
-    # checks original heartbeat/source deadlines, never receipt time.
+    # selects the newest source timestamp within the coordinator context.
     node.create_subscription(NavigationEnvelopeV2,'/navigation/envelope_v2',callback,max(10,depth))
     def ack(msg):
         result=EnvelopeApplyStatus();result.header.stamp=node.get_clock().now().to_msg()

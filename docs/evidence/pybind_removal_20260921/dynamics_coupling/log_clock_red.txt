@@ -1,0 +1,31 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+_______ test_stale_warning_uses_wall_clock_during_ros_pause_and_rollback _______
+
+make_pair = <function make_pair.<locals>.create at 0x75a896d7b6d0>
+
+    def test_stale_warning_uses_wall_clock_during_ros_pause_and_rollback(make_pair):
+        p = make_pair(params={'scale_smoothing_alpha': 1.})
+        p.joint([0.])
+        p.set_clock(20_000_000_000)
+        p.expect(.3, 'first stale warning')
+        p.expect(.3, 'immediate duplicate throttled')
+        p.pump(2.05)
+        p.expect(.3, 'paused ROS clock, wall-time warning renews')
+        p.pump(2.05)
+        p.set_clock(19_000_000_000)
+        p.expect(.3, 'backward ROS clock, wall-time warning renews')
+        p.pump(.05)
+        for key, needle in [('python', '/joint_states 已 '), ('cpp', 'Joint state stale (')]:
+            text = (p.output / (key + '.log')).read_text()
+>           assert text.count(needle) == 3, (key, text)
+E           AssertionError: ('cpp', '[WARN] [1789981296.529412379] [coupling_1502829dee.cpp.arm_chassis_speed_coupling_node]: joint_deviation is t...45823] [coupling_1502829dee.cpp.arm_chassis_speed_coupling_node]: Joint state stale (10.000s), using degraded scale
+E             ')
+E           assert 1 == 3
+E            +  where 1 = <built-in method count of str object at 0x64a5c827fb50>('Joint state stale (')
+E            +    where <built-in method count of str object at 0x64a5c827fb50> = '[WARN] [1789981296.529412379] [coupling_1502829dee.cpp.arm_chassis_speed_coupling_node]: joint_deviation is the legac...245823] [coupling_1502829dee.cpp.arm_chassis_speed_coupling_node]: Joint state stale (10.000s), using degraded scale\n'.count
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:362: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py::test_stale_warning_uses_wall_clock_during_ros_pause_and_rollback
+1 failed, 1 passed, 25 deselected in 6.00s

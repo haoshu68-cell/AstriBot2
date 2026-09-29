@@ -91,7 +91,7 @@ def _build_nodes(context, *args, **kwargs):
         Node(
             package='astribot_s1_exploration', executable='mapping_session_node',
             name='mapping_session', output='screen',
-            parameters=[params_file, {'use_sim_time': use_sim_time},
+            parameters=[params_file, {'use_sim_time': use_sim_time, 'require_navigation_zones': True},
                         {k: v for k, v in overrides.items() if k == 'odom_topic'}],
             arguments=['--ros-args', '--log-level', log_level],
         )

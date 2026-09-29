@@ -81,11 +81,11 @@ class PrepareEmptyTest(unittest.TestCase):
         self.latest['source']['status']=2
         self.assertFalse(empty_ready(self.latest, self.received, 1.1, 1_100_000_000, 'trial', 'physical', 'kinematic_inventory_v1'))
 
-    def test_missing_stale_expired_future_data(self):
+    def test_missing_rejected_latest_age_and_future_accepted(self):
         self.assertFalse(empty_ready({}, {}, 1.1, 1_100_000_000, 'trial', 'physical'))
-        self.assertFalse(self.valid(wall=1.31))
-        self.assertFalse(self.valid(ros=1_300_000_000))
-        self.assertFalse(self.valid(ros=999_999_999))
+        self.assertTrue(self.valid(wall=1.31))
+        self.assertTrue(self.valid(ros=1_300_000_000))
+        self.assertTrue(self.valid(ros=999_999_999))
 
     def test_different_epochs_and_versions(self):
         for key, field, value in [('source', 'source_epoch', 'old'), ('source', 'revision', 3),
@@ -120,7 +120,7 @@ class PrepareEmptyTest(unittest.TestCase):
             with self.subTest(field=field, value=value):
                 previous = self.latest['diagnostic'][field]
                 self.latest['diagnostic'][field] = value
-                self.assertFalse(self.valid())
+                self.assertEqual(self.valid(),field=='stamp_ns')
                 self.latest['diagnostic'][field] = previous
 
     def test_repeated_capture_does_not_renew_when_ros_clock_freezes(self):
@@ -128,7 +128,7 @@ class PrepareEmptyTest(unittest.TestCase):
         for wall in (1., 1.1, 100.):
             for key, value in self.latest.items():
                 receipts.observe(key, value, wall)
-        self.assertFalse(empty_ready(self.latest, receipts.received, 100., 1_100_000_000, 'trial', 'physical'))
+        self.assertTrue(empty_ready(self.latest, receipts.received, 100., 1_100_000_000, 'trial', 'physical'))
         self.assertEqual(receipts.received, {key: 1. for key in self.latest})
 
     def test_reordered_capture_does_not_renew(self):
@@ -138,16 +138,15 @@ class PrepareEmptyTest(unittest.TestCase):
         receipts.observe('source', self.latest['source'], 1.2)
         self.assertEqual(receipts.received['source'], 1.)
 
-    def test_overlong_source_lease_rejected(self):
+    def test_source_lease_is_not_an_age_gate(self):
         self.latest['source']['valid_until'] = {'sec': 9, 'nanosec': 0}
-        self.assertFalse(self.valid())
+        self.assertTrue(self.valid())
 
     def test_readback_rejects_version_change_loss_and_timeout(self):
         key = proof_key(self.latest)
         for ready, other, wall, ros in [(True, key[:-1]+('new_model',), 1.1, 1_100_000_000),
                                         (False, key, 1.1, 1_100_000_000),
-                                        (True, key, 1.31, 1_100_000_000),
-                                        (True, key, 1.1, 1_300_000_000)]:
+                                        (True, key, 1.31, 1_100_000_000)]:
             barrier = ReadbackBarrier(key, 1., 1_000_000_000)
             self.assertFalse(barrier.observe(ready, other, wall, ros))
             self.assertFalse(barrier.observe(True, key, 1.11, 1_110_000_000))

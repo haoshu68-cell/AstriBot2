@@ -79,6 +79,7 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
 {
   declareParameters();
   manually_paused_ = declare_parameter("start_paused", false);
+  session_started_ = manually_paused_;
 
   std::string error;
   if (!loadParameters(error)) {
@@ -151,6 +152,8 @@ ExplorationCoordinatorNode::ExplorationCoordinatorNode(const rclcpp::NodeOptions
   }
   rclcpp::SubscriptionOptions sub_opts;
   sub_opts.callback_group = io_cb_group_;
+  require_zones_=declare_parameter("require_navigation_zones",false);
+  if(require_zones_){if(map_frame_!="map")throw std::invalid_argument("Navigation zones require map_frame=map");zones_.init(*this,io_cb_group_);}
   map_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
     map_topic_, map_qos,
     [this](const nav_msgs::msg::OccupancyGrid::ConstSharedPtr msg) {mapCallback(msg);},
@@ -684,7 +687,11 @@ void ExplorationCoordinatorNode::mapCallback(
   snapshot->data = msg->data;
 
   std::lock_guard<std::mutex> lock(map_mutex_);
-  if (!latest_map_ || !sameMapContent(*latest_map_, *snapshot)) {
+  if(require_zones_){
+    const auto &q=msg->info.origin.orientation;
+    if(msg->header.frame_id!=map_frame_||!std::isfinite(q.x)||!std::isfinite(q.y)||!std::isfinite(q.z)||!std::isfinite(q.w)||std::abs(q.x)>1e-6||std::abs(q.y)>1e-6||std::abs(q.z)>1e-6||std::abs(std::abs(q.w)-1.)>1e-6){raw_zone_map_.reset();latest_map_.reset();return;}
+    if(!raw_zone_map_||!sameMapContent(*raw_zone_map_,*snapshot))raw_zone_map_=std::move(snapshot);
+  } else if (!latest_map_ || !sameMapContent(*latest_map_, *snapshot)) {
     latest_map_ = std::move(snapshot);
     ++map_revision_;
   }
@@ -803,6 +810,11 @@ bool ExplorationCoordinatorNode::stackReady(std::string & why)
     why = fixedEnvelopeReadiness(fixed_envelope_.get(), now().nanoseconds(),
       fixed_envelope_sub_->get_publisher_count());
     if (!why.empty()) return false;
+  }
+  if(require_zones_){
+    if(!zones_.ready()){why="ZONES_NOT_READY";return false;}
+    auto snapshot=zones_.constraints.get();std::lock_guard<std::mutex> lock(map_mutex_);
+    if(!snapshot||filtered_zone_token_!=snapshot->token||filtered_zone_source_!=raw_zone_map_){why="ZONES_MAP_PENDING";return false;}
   }
   if (!mapReady(why)) {
     return false;
@@ -926,6 +938,9 @@ void ExplorationCoordinatorNode::resetCycleState()
 void ExplorationCoordinatorNode::transitionTo(ExplorationState next, const std::string & why)
 {
   transition_reason_ = why;
+  if (next == ExplorationState::kGenNextPoint || next == ExplorationState::kNavigating) {
+    session_started_ = true;
+  }
   if (state_ == next) {
     return;                                   // 空转换不刷新计时，避免驻留/冷却计时被反复重置
   }
@@ -942,6 +957,16 @@ void ExplorationCoordinatorNode::transitionTo(ExplorationState next, const std::
   RCLCPP_INFO(get_logger(), "状态 %s -> %s : %s", toString(state_), toString(next), why.c_str());
   state_ = next;
   state_entered_time_ = now();
+}
+
+bool ExplorationCoordinatorNode::refreshZoneMap(){
+  auto snapshot=zones_.constraints.get();if(!snapshot)return false;
+  std::lock_guard<std::mutex> lock(map_mutex_);if(!raw_zone_map_)return false;
+  if(filtered_zone_source_==raw_zone_map_&&filtered_zone_token_==snapshot->token)return true;
+  auto filtered=std::make_shared<GridMap>(*raw_zone_map_);const double radius=filtered->resolution*std::sqrt(2.)/2;
+  for(size_t y=0;y<filtered->height;++y)for(size_t x=0;x<filtered->width;++x)
+    if(astribot_navigation_zones::blocked(snapshot->regions,filtered->origin_x+(x+.5)*filtered->resolution,filtered->origin_y+(y+.5)*filtered->resolution,radius))filtered->data[y*filtered->width+x]=100;
+  filtered_zone_source_=raw_zone_map_;filtered_zone_token_=snapshot->token;latest_map_=std::move(filtered);++map_revision_;return true;
 }
 
 void ExplorationCoordinatorNode::controlTick()
@@ -968,6 +993,16 @@ void ExplorationCoordinatorNode::controlTick()
     }
     publishState();
     return;
+  }
+  if(require_zones_){
+    auto snapshot=zones_.constraints.get();const bool changed=snapshot&&!zone_token_.empty()&&snapshot->token!=zone_token_;
+    if(changed||!zones_.ready()){
+      if(changed||nav_goal_in_flight_.load()||(!zone_token_.empty()&&!manually_paused_)){cancelActiveNavGoal("ZONES_CHANGED_OR_UNAVAILABLE");resetCycleState();manually_paused_=true;transitionTo(ExplorationState::kPaused,"禁区版本变化或未生效，等待人工恢复");}
+      if(snapshot)zone_token_=snapshot->token;
+      progress_detail_="ZONES_WAIT_APPLICATION";refreshZoneMap();publishState();return;
+    }
+    zone_token_=snapshot->token;zones_present_=std::any_of(snapshot->regions.begin(),snapshot->regions.end(),[](const auto&r){return r.enabled;});
+    if(!refreshZoneMap()){progress_detail_="ZONES_WAIT_MAP";publishState();return;}
   }
   if (pending_nav_failure_) {
     if (std::chrono::steady_clock::now() < failure_classification_at_) {return;}
@@ -1161,6 +1196,10 @@ void ExplorationCoordinatorNode::tickGenNextPoint()
           search_params_.free_threshold, search_params_.use_eight_connectivity) ||
           !search_.goalFootprintIsKnownFree(*map,candidate.x,candidate.y,candidate.yaw);
       }), result.candidates.end());
+  }
+  if(zones_present_&&(raw_frontier_cells==0U||reachable_frontiers_==0)){
+    completion_tracker_.reset();progress_detail_="BOUNDARY_LIMITED";manually_paused_=true;
+    transitionTo(ExplorationState::kPaused,"禁区约束下无可探索目标；不宣称整张地图已完成，可结束并保存部分地图");return;
   }
   if (raw_frontier_cells == 0U) {
     std::size_t known = 0U;
@@ -1977,8 +2016,9 @@ nlohmann::json ExplorationCoordinatorNode::operatorStatus()
   const bool in_flight = nav_goal_in_flight_.load();
   const bool paused = state_ == ExplorationState::kPaused || manually_paused_;
   const bool cancel_pending = in_flight && !has_active_goal_;
-  const bool can_pause = !session_ending_ && !manually_paused_;
-  const bool can_resume = !session_ending_ && paused && ready && !in_flight;
+  const bool can_pause = session_started_ && !session_ending_ && !manually_paused_;
+  const bool can_resume = session_started_ && !session_ending_ && paused && ready && !in_flight;
+  const bool can_cancel_save = session_started_ && !session_ending_;
   std::string code = session_ending_ ? "EXPLORATION.ENDING" :
     cancel_pending ? "NAV.CANCEL_UNCONFIRMED" : !ready ? "EXPLORATION.NOT_READY" :
     paused ? (manually_paused_ ? "EXPLORATION.PAUSED" : "EXPLORATION.RETRY_WAIT") : "EXPLORATION.RUNNING";
@@ -1988,13 +2028,15 @@ nlohmann::json ExplorationCoordinatorNode::operatorStatus()
     {"progress",progress_detail_},{"manual_pause",manually_paused_},
     {"session_ending",session_ending_},{"end_reason",session_end_reason_},
     {"goal_in_flight",in_flight},{"cancel_pending",cancel_pending},
-    {"can_pause",can_pause},{"can_resume",can_resume},{"can_cancel_save",!session_ending_},
+    {"can_pause",can_pause},{"can_resume",can_resume},{"can_cancel_save",can_cancel_save},
+    {"session_started",session_started_},
     {"can_start_new_session",false},{"completion_scope","current_map"}};
   // Revision covers command preconditions, not continuously changing diagnostics.
   const auto signature = nlohmann::json({toString(state_),code,ready,manually_paused_,
-    session_ending_,in_flight,can_pause,can_resume}).dump();
+    session_ending_,in_flight,session_started_,can_pause,can_resume,can_cancel_save}).dump();
   if (signature != operator_signature_) {operator_signature_ = signature; ++operator_revision_;}
   status["revision"] = operator_revision_;
+  status["zone_token"]=zone_token_;status["zones_enabled"]=require_zones_;
   status["raw_frontiers"] = raw_frontiers_;
   status["reachable_frontiers"] = reachable_frontiers_;
   status["unknown_cells"] = unresolved_unknown_;
@@ -2008,6 +2050,11 @@ void ExplorationCoordinatorNode::applyOperatorOperation(
   const std::string & operation, std_srvs::srv::Trigger::Response & response)
 {
   if (operation == "cancel_save") {
+    if (!session_started_) {
+      response.success = false;
+      response.message = "当前没有已启动的探索会话，不能取消并保存";
+      return;
+    }
     if (!session_ending_) {
       session_ending_ = true; session_end_reason_ = "CANCELED"; manually_paused_ = true;
       cancelActiveNavGoal("取消探索并保存建图"); resetCycleState();
@@ -2021,10 +2068,12 @@ void ExplorationCoordinatorNode::applyOperatorOperation(
     response.success = false; response.message = "会话已收尾；不能恢复，需创建新的 SLAM 和探索会话"; return;
   }
   if (operation == "pause") {
+    session_started_ = true;
     manually_paused_ = true; cancelActiveNavGoal("人工暂停"); resetCycleState();
     transitionTo(ExplorationState::kPaused, "收到人工暂停请求");
     response.success = true; response.message = "暂停已受理，目标发布已冻结；仍需等待导航终态";
   } else if (operation == "resume") {
+    session_started_ = true;
     manually_paused_ = false; failure_budget_.resetAll(); nav_failure_count_ = 0;
     auto_resume_count_ = 0; resetCycleState();
     transitionTo(ExplorationState::kIdle, "收到人工恢复请求");

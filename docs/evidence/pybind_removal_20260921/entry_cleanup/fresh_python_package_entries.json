@@ -1,0 +1,77 @@
+{
+  "scope": "Fresh isolated installation of Python launch/remaining runtime packages; retired executable registrations absent. Reference import modules are still packaged, not claimed removed. C++ executables installed and inspected separately.",
+  "prefix": "/tmp/codex_cpp_entry_install_20260921/install",
+  "records": [
+    {
+      "package": "astribot_s1_navigation",
+      "command": [
+        "/usr/bin/python3",
+        "setup.py",
+        "egg_info",
+        "--egg-base",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_navigation/egg",
+        "build",
+        "--build-base",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_navigation/build",
+        "install",
+        "--prefix",
+        "/tmp/codex_cpp_entry_install_20260921/install",
+        "--single-version-externally-managed",
+        "--record",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_navigation/installed_files.txt"
+      ],
+      "returncode": 0
+    },
+    {
+      "package": "astribot_s1_navigation_policy",
+      "command": [
+        "/usr/bin/python3",
+        "setup.py",
+        "egg_info",
+        "--egg-base",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_navigation_policy/egg",
+        "build",
+        "--build-base",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_navigation_policy/build",
+        "install",
+        "--prefix",
+        "/tmp/codex_cpp_entry_install_20260921/install",
+        "--single-version-externally-managed",
+        "--record",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_navigation_policy/installed_files.txt"
+      ],
+      "returncode": 0
+    },
+    {
+      "package": "astribot_s1_chassis_effort_drive",
+      "command": [
+        "/usr/bin/python3",
+        "setup.py",
+        "egg_info",
+        "--egg-base",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_chassis_effort_drive/egg",
+        "build",
+        "--build-base",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_chassis_effort_drive/build",
+        "install",
+        "--prefix",
+        "/tmp/codex_cpp_entry_install_20260921/install",
+        "--single-version-externally-managed",
+        "--record",
+        "/tmp/codex_cpp_entry_install_20260921/astribot_s1_chassis_effort_drive/installed_files.txt"
+      ],
+      "returncode": 0
+    }
+  ],
+  "retired_executables_found": [],
+  "entry_point_metadata": [
+    {
+      "path": "lib/python3.10/site-packages/astribot_s1_navigation_policy-0.1.0-py3.10.egg-info/entry_points.txt",
+      "contents": "[console_scripts]\npolicy_controller = astribot_s1_navigation_policy.policy_node:main\npolicy_observer = astribot_s1_navigation_policy.observer_node:main\ntask_arbiter = astribot_s1_navigation_policy.task_arbiter_node:main\n\n"
+    },
+    {
+      "path": "lib/python3.10/site-packages/astribot_s1_navigation-0.1.0-py3.10.egg-info/entry_points.txt",
+      "contents": "[console_scripts]\nexplore_metrics_recorder_node = astribot_s1_navigation.explore_metrics_recorder_node:main\npath_tracking_diagnostics_node = astribot_s1_navigation.path_tracking_diagnostics_node:main\n\n"
+    }
+  ]
+}

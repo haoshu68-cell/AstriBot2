@@ -1,0 +1,45 @@
+145:       if (static_cast<double>(p.z) < cfg.z_min || static_cast<double>(p.z) >= cfg.z_max) {
+146:         continue;
+147:       }
+148:       ++result.per_slice_point_counts[s];
+149: 
+150:       if (!cfg.enabled) {
+151:         continue;
+152:       }
+153:       if (range > cfg.max_range) {
+154:         continue;
+155:       }
+156:       slice_min_range_[s][bucket] = std::min(slice_min_range_[s][bucket], range_f);
+157:       ++slice_hit_count_[s][bucket];
+158:     }
+159:   }
+160: 
+161:   for (std::size_t s = 0; s < slice_count; ++s) {
+162:     const SliceConfig & cfg = params_.slices[s];
+163:     std::vector<float> & per_slice = result.per_slice_ranges[s];
+164:     per_slice.assign(bucket_count_, params_.no_return_value);
+165: 
+166:     if (!cfg.enabled) {
+167:       continue;
+168:     }
+169:     for (std::size_t b = 0; b < bucket_count_; ++b) {
+170:       if (slice_hit_count_[s][b] < cfg.min_points) {
+171:         continue;   // 证据不足，判为噪点
+172:       }
+173:       const float r = slice_min_range_[s][b];
+174:       if (!std::isfinite(r)) {
+175:         continue;
+176:       }
+177:       per_slice[b] = r;
+178:       if (r < result.ranges[b]) {
+179:         result.ranges[b] = r;
+180:       }
+181:     }
+182:   }
+183: 
+184:   for (std::size_t b = 0; b < bucket_count_; ++b) {
+185:     if (result.ranges[b] < params_.no_return_value) {
+186:       ++result.occupied_bucket_count;
+187:     }
+188:   }
+189: }

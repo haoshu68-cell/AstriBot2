@@ -1,0 +1,39 @@
+{
+  "domain": "141",
+  "localhost_only": true,
+  "steps": [
+    {
+      "parameters_repr": {
+        "monitored_links": "['coupling_dc6f105db5_reach', 'coupling_dc6f105db5_reach2', 'coupling_dc6f105db5_reach3', 'coupling_dc6f105db5_reach4']"
+      },
+      "accepted": {
+        "python": true
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 173353,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_dc6f105db5/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/performance/benchmark_07_python/python_params.yaml",
+        "-r",
+        "/coupling_dc6f105db5/input:=/coupling_dc6f105db5/input_remapped",
+        "-r",
+        "/coupling_dc6f105db5/python/output:=/coupling_dc6f105db5/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 1200
+  }
+}

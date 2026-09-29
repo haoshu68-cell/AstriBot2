@@ -1,4 +1,5 @@
 #include "astribot_s1_navigation_policy_native/fixed_envelope_core.hpp"
+#include "astribot_s1_path_tracking/arrival_settling.hpp"
 #include "astribot_s1_navigation_policy_native/policy_profile.hpp"
 #include <array>
 #include <chrono>
@@ -9,7 +10,7 @@
 #include <string>
 #include <vector>
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <nav_msgs/msg/odometry.hpp>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/create_timer.hpp>
 #include <astribot_navigation_msgs/srv/reserve_arm_motion.hpp>
@@ -64,28 +65,44 @@ public:
       footprints_.push_back(create_publisher<geometry_msgs::msg::Polygon>(std::string("/")+name+"/footprint",1));
     state_=create_subscription<FixedEnvelopeCore::State>("/navigation/geometry_state",10,
       [this](FixedEnvelopeCore::State::ConstSharedPtr msg){core_->state(*msg);tick();});
+    hold_observed_=create_publisher<FixedEnvelopeCore::Hold>("/navigation/arm_hold_observed",10);
     hold_=create_subscription<FixedEnvelopeCore::Hold>("/navigation/arm_hold",10,
-      [this](FixedEnvelopeCore::Hold::ConstSharedPtr msg){core_->hold(*msg);tick();});
+      [this](FixedEnvelopeCore::Hold::ConstSharedPtr msg){
+        core_->hold(*msg);tick();
+        // Confirms receipt only; the existing proposal and five ACKs grant navigation.
+        hold_observed_->publish(*msg);
+      });
     applied_=create_subscription<FixedEnvelopeCore::Ack>("/navigation/envelope_applied",20,
       [this](FixedEnvelopeCore::Ack::ConstSharedPtr msg){core_->acknowledge(*msg,now().nanoseconds());tick(false);});
-    odom_=create_subscription<nav_msgs::msg::Odometry>("/odom",rclcpp::SensorDataQoS(),
-      [this](nav_msgs::msg::Odometry::ConstSharedPtr msg){odom_message_=msg;});
+    slam_=create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>("/slam/pose",rclcpp::SensorDataQoS(),
+      [this](geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg){
+        if(msg->header.stamp.sec<0 || msg->header.stamp.nanosec>=1000000000u) {stopped_=false;xy_stop_.reset();yaw_stop_.reset();return;}
+        if(slam_message_ && fixed_stamp_ns(msg->header.stamp)<=fixed_stamp_ns(slam_message_->header.stamp))return;
+        slam_message_=msg;
+        const auto valid=[](const auto &m) {
+          const auto &p=m.pose.pose.position;const auto &q=m.pose.pose.orientation;
+          const double norm=q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w;
+          return m.header.frame_id=="map" && std::isfinite(p.x) && std::isfinite(p.y) &&
+            std::isfinite(p.z) && std::isfinite(norm) && std::abs(norm-1.)<.01;
+        };
+        stopped_=false;
+        if(!valid(*msg)) {xy_stop_.reset();yaw_stop_.reset();return;}
+        const auto &p=msg->pose.pose.position;const auto &q=msg->pose.pose.orientation;
+        const double yaw=std::atan2(2.*(q.w*q.z+q.x*q.y),1.-2.*(q.y*q.y+q.z*q.z));
+        const double received=steady_now()*1e-9,source=fixed_stamp_ns(msg->header.stamp)*1e-9;
+        constexpr double stop_window=.6;
+        xy_stop_.command(true,received);yaw_stop_.command(true,received);
+        xy_stop_.observe(source,received,{p.x,p.y},stop_window,.02,.02*stop_window);
+        yaw_stop_.observe(source,received,{yaw},stop_window,.03,.03*stop_window,true);
+        stopped_=xy_stop_.evidence().stopped&&yaw_stop_.evidence().stopped;
+      });
     propose_=create_service<astribot_navigation_msgs::srv::SetFixedEnvelope>("/navigation/set_fixed_envelope",
       [this](const std::shared_ptr<FixedEnvelopeCore::Request> request,
              std::shared_ptr<astribot_navigation_msgs::srv::SetFixedEnvelope::Response> response) {
         try {
-          const auto at=now().nanoseconds();bool stopped=false;
+          const auto at=now().nanoseconds();
           (void)fixed_stamp(at);
-          if(odom_message_) {
-            const auto age=at-fixed_stamp_ns(odom_message_->header.stamp);const auto& v=odom_message_->twist.twist;
-            stopped=age>=0 && age<=300000000LL && std::hypot(v.linear.x,v.linear.y)<=.02 && std::abs(v.angular.z)<=.03;
-          }
-          if(!stopped)RCLCPP_DEBUG(get_logger(),"fixed posture request stopped check: now=%ld, odom=%ld, vx=%g, vy=%g, wz=%g",
-            at,odom_message_?fixed_stamp_ns(odom_message_->header.stamp):-1,
-            odom_message_?odom_message_->twist.twist.linear.x:0.,
-            odom_message_?odom_message_->twist.twist.linear.y:0.,
-            odom_message_?odom_message_->twist.twist.angular.z:0.);
-          const auto& e=core_->propose(*request,at,stopped);
+          const auto& e=core_->propose(*request,at,stopped_);
           response->accepted=true;response->epoch=e.epoch;response->reason=e.reason;
         } catch(const std::invalid_argument& error) {response->reason=error.what();}
       });
@@ -143,14 +160,18 @@ private:
   std::unique_ptr<astribot::payload::Consumer> payload_consumer_;
   rclcpp::Subscription<astribot::payload::State>::SharedPtr payload_;
   rclcpp::TimerBase::SharedPtr payload_watchdog_;
-  nav_msgs::msg::Odometry::ConstSharedPtr odom_message_;
+  geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr slam_message_;
+  bool stopped_{false};
+  astribot_s1_path_tracking::ArrivalSettling<2> xy_stop_;
+  astribot_s1_path_tracking::ArrivalSettling<1> yaw_stop_;
   rclcpp::Publisher<FixedEnvelopeCore::Envelope>::SharedPtr publisher_;
   rclcpp::Publisher<astribot_navigation_msgs::msg::RobotEnvelope>::SharedPtr legacy_;
   std::vector<rclcpp::Publisher<geometry_msgs::msg::Polygon>::SharedPtr> footprints_;
   rclcpp::Subscription<FixedEnvelopeCore::State>::SharedPtr state_;
   rclcpp::Subscription<FixedEnvelopeCore::Hold>::SharedPtr hold_;
+  rclcpp::Publisher<FixedEnvelopeCore::Hold>::SharedPtr hold_observed_;
   rclcpp::Subscription<FixedEnvelopeCore::Ack>::SharedPtr applied_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr slam_;
   rclcpp::Service<astribot_navigation_msgs::srv::SetFixedEnvelope>::SharedPtr propose_;
   rclcpp::Service<astribot_navigation_msgs::srv::SetRobotEnvelope>::SharedPtr legacy_request_;
   rclcpp::Service<astribot_navigation_msgs::srv::ReserveArmMotion>::SharedPtr reserve_;

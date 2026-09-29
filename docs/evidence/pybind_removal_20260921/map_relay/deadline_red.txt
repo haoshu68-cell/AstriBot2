@@ -1,0 +1,54 @@
+.F                                                                       [100%]
+=================================== FAILURES ===================================
+_____ test_sigint_during_wait_after_deadline_does_not_become_timeout[cpp] ______
+
+impl = 'cpp'
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_sigint_during_wait_after_deadline_does_not_become_timeout(impl):
+        relay = Relay(impl, 'sigint_after_deadline', timeout=.12)
+        try:
+            relay.until(lambda: '地图中继启动' in (relay.path / 'node.log').read_text())
+            # The remote executor is waiting for up to .2s. Interrupt after the
+            # .12s deadline but before it returns: Python skips the timeout branch.
+            time.sleep(.16)
+            assert relay.p.poll() is None, 'Fixture missed the active executor-wait interval'
+        finally:
+>           relay.close()
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:320: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_map_relay.Relay object at 0x720c17e3c430>, expected = 0
+
+    def close(self, expected=0):
+        code = None
+        if self.p:
+            if self.p.poll() is None:
+                self.p.send_signal(signal.SIGINT)
+            try:
+                code = self.p.wait(timeout=3.)
+            except subprocess.TimeoutExpired:
+                self.p.kill()
+                self.p.wait()
+                raise AssertionError('Owned relay required SIGKILL')
+            finally:
+                self.handle.close()
+                self.details['returncode'] = self.p.returncode
+                self.details['samples'] = len(self.messages)
+                (self.path / 'result.json').write_text(json.dumps(self.details, indent=2) + '\n')
+        for executor, node, context in zip(self.executors, self.nodes, self.contexts):
+            executor.shutdown()
+            node.destroy_node()
+            context.try_shutdown()
+        if expected is not None:
+>           assert code == expected, (code, (self.path / 'node.log').read_text())
+E           AssertionError: (1, '[WARN] [1789984494.055331963] [rclcpp]: logging was initialized more than once
+E             [WARN] [1789984494.060312141] [rc..._3267424c6d91]: 0s 内没在 domain 162 上收到 /relay_3267424c6d91/source。检查地图源、网络、ROS_LOCALHOST_ONLY 和 TRANSIENT_LOCAL QoS。
+E             ')
+E           assert 1 == 0
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:197: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py::test_sigint_during_wait_after_deadline_does_not_become_timeout[cpp]
+1 failed, 1 passed, 44 deselected in 1.03s

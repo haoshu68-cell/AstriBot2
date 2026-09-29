@@ -1,5 +1,13 @@
 # C++ 搬运保持授权核心
 
+底盘监测统一读取 `/slam/pose`（`PoseWithCovarianceStamped`，`map` 中的底盘位姿）。PICK/PLACE 执行过程中不再以底盘位姿变化取消任务；MTC guard 只检查关节跟踪误差。初始操作准入与导航交接 helper 共用严格递增采样戳的 SLAM 停稳尾窗，实际接收跨度至少 0.6 秒。相邻 Δx、Δy 和 wrapped Δyaw 按正负累加，每个样本的净位移不得超过 0.005 m、净航向变化不得超过 0.01 rad；不累计绝对增量，曾越界后返回也不能确认该窗口静止。导航交接仍需匹配动作终态及零命令。监测不读取 `/odom`、twist 或底盘 TF，也不计算瞬时差分速度；没有 SLAM 位姿不能确认停稳。
+
+## 实际附件与剩余轨迹交接
+
+完整 `trajectory_executor` 在物理 ATTACH/DETACH 后调用 `RevalidatePayloadTransition`，接收从索引 4 开始的完整两阶段后缀。仅 PICK 的 TRANSPORT_POSTURE 允许按实际附件重新规划；LIFT 和其他未重规划路径必须逐字保持原轨迹及时间。候选在独立完整 Scene 再读回、最新附件账本、停稳、几何与资源确认后原子接纳，之后才确认物理阶段并推进。10 秒重验、30 秒附件事务及原 120 秒计划寿命不延长；取消或接纳失败不得继续执行旧后缀。
+
+资源 journal 的 `payload_suffix_adopted` 保存服务返回和执行器接纳轨迹的 SHA256；`child_trajectory_submission` 从最终实际 FJT Goal 取指纹，`child_response` 将同一不可变元数据绑定到子目标 UUID。仅活动控制器带这些轨迹字段，其余保持控制器沿用原记录。指纹用于核对交接证据，不代表控制器已执行；仍须同 UUID 成功终态与实测阶段完成。完整导航仿真验收状态以当次证据为准。
+
 `arm_hold_core` 是保持授权和资源事务核心。`hold_executor` 将它接到仿真的实际控制器，只接受显式“保持当前实测姿态”任务，不接收任意目标关节位置。运行时使用 C++；Python 只保留旧入口的恢复兼容检查和验证脚本。
 
 ## 实际执行数据流

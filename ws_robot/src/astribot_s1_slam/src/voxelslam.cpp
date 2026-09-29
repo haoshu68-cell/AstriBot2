@@ -534,15 +534,21 @@ public:
     if(n0[2] < 0)
       n1[2] = -1;
     
-    Eigen::Vector3d rotvec = n0.cross(n1);
-    double rnorm = rotvec.norm();
-    rotvec = rotvec / rnorm;
-
-    Eigen::AngleAxisd angaxis(asin(rnorm), rotvec);
-    Eigen::Matrix3d rot = angaxis.matrix();
-    g0 = rot * g0;
-
     Eigen::Vector3d p0 = xs[0].p;
+    Eigen::Matrix3d rot;
+    if(g_initial_map_chassis)
+    {
+      rot = astribot::slam::gravityRotationPreservingYaw(g0, xs[0].R * g_R_imu_chassis);
+      p0 += xs[0].R * g_t_imu_chassis;
+    }
+    else
+    {
+      Eigen::Vector3d rotvec = n0.cross(n1);
+      double rnorm = rotvec.norm();
+      rotvec = rotvec / rnorm;
+      rot = Eigen::AngleAxisd(asin(rnorm), rotvec).matrix();
+    }
+    g0 = rot * g0;
     for(int i=0; i<xs.size(); i++)
     {
       xs[i].p = rot * (xs[i].p - p0) + p0;
@@ -789,6 +795,7 @@ class VOXEL_SLAM
 public:
   pcl::PointCloud<PointType> pcl_path;
   IMUST x_curr, extrin_para;
+  Eigen::Isometry3d map_reset_imu = Eigen::Isometry3d::Identity();
   IMUEKF odom_ekf;
   unordered_map<VOXEL_LOC, OctoTree*> surf_map, surf_map_slide;
   // LRU recency list for surf_map, front=most-recently-used, back=least. Kept
@@ -1067,12 +1074,22 @@ public:
       g_chassis_R_in_lidar_back = R_chassis_lidar * g_R_back_front;
     }
 
-    // Genesis pose: with no chassis extrinsic configured this is R=I, p=0
-    // (identical to prior behavior). With one configured, this anchors the
-    // world frame at the chassis's start pose instead of the IMU's — see
-    // system_reset() and ekf_imu.hpp's gravity init for the matching pieces.
-    x_curr.R = g_R_chassis_imu;
-    x_curr.p = g_t_chassis_imu;
+    vector<double> initial_chassis_pose;
+    declare_and_get<vector<double>>(n, "General.initial_chassis_pose", initial_chassis_pose, vector<double>());
+    g_initial_map_chassis = astribot::slam::initialMapChassisPose(
+      initial_chassis_pose, !n->get_parameter("General.previous_map").as_string().empty());
+    // Initialize the estimator itself, so poses, world clouds and stored
+    // keyframes share the same registration without output-only compensation.
+    map_reset_imu.linear() = g_R_chassis_imu;
+    map_reset_imu.translation() = g_t_chassis_imu;
+    if(g_initial_map_chassis) map_reset_imu = *g_initial_map_chassis * map_reset_imu;
+    x_curr.R = map_reset_imu.linear();
+    x_curr.p = map_reset_imu.translation();
+    LOG_STARTUP(INIT, "map genesis | source:{} chassis_xyz:({:.6f} {:.6f} {:.6f})",
+      g_initial_map_chassis ? "explicit_initial_chassis_pose" : "new_local_map_or_loaded_map",
+      g_initial_map_chassis ? g_initial_map_chassis->translation().x() : 0.,
+      g_initial_map_chassis ? g_initial_map_chassis->translation().y() : 0.,
+      g_initial_map_chassis ? g_initial_map_chassis->translation().z() : 0.);
 
     // Height ROI for the navigation-facing filtered scan (/map_scan_filtered,
     // see pub_localtraj). Assumes flat ground: world z is used directly as
@@ -1641,11 +1658,18 @@ public:
     surf_map_lru.clear();
 
     x_curr.setZero();
-    // Genesis pose, chassis-anchored (identity/no-op without a chassis
-    // extrinsic configured) — matches the constructor's initial genesis, so
-    // every reset re-lands on the same world frame instead of drifting it.
-    x_curr.R = g_R_chassis_imu;
-    x_curr.p = g_R_chassis_imu * Eigen::Vector3d(0, 0, 30) + g_t_chassis_imu;
+    if(g_initial_map_chassis)
+    {
+      // Initial retries reuse the measured genesis. A tracking reset updates
+      // this anchor before calling us, retaining the last solved map pose.
+      x_curr.R = map_reset_imu.linear();
+      x_curr.p = map_reset_imu.translation();
+    }
+    else
+    {
+      x_curr.R = g_R_chassis_imu;
+      x_curr.p = g_R_chassis_imu * Eigen::Vector3d(0, 0, 30) + g_t_chassis_imu;
+    }
     odom_ekf.mean_acc.setZero();
     odom_ekf.init_num = 0;
     odom_ekf.IMU_init(imus);
@@ -2068,6 +2092,11 @@ public:
         {
           LOG_DECISION(EKF, "degrade_cnt exceeded bound | degrade_cnt:{} degrade_bound:{}", degrade_cnt, degrade_bound);
           degrade_cnt = 0;
+          if(g_initial_map_chassis)
+          {
+            map_reset_imu.linear() = x_curr.R;
+            map_reset_imu.translation() = x_curr.p;
+          }
           system_reset(imus, "degrade_bound_exceeded");
           have_prev_pose_check = false;
 

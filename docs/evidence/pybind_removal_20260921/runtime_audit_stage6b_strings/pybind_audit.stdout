@@ -1,0 +1,854 @@
+{
+  "schema": "astribot.pybind-audit/1",
+  "root": "/home/yjh/WorkSpace/astribot_sdk_ros2",
+  "clean": false,
+  "binding_modules": [
+    "_chassis_math_native",
+    "_geometry_native",
+    "_navigation_math_native"
+  ],
+  "source_files_scanned": 1349,
+  "install_roots": [],
+  "counts": {
+    "binding_definition": 3,
+    "binding_include": 13,
+    "build_dependency": 16,
+    "package_dependency": 3,
+    "python_consumer": 81,
+    "vendor_binary": 2
+  },
+  "findings": [
+    {
+      "kind": "vendor_binary",
+      "path": "astribot_sdk/core/common/robotics_library_py/astribot_rclcpp_py_ext_pybind11.cpython-310-x86_64-linux-gnu.so",
+      "line": 1,
+      "symbol": "astribot_rclcpp_py_ext_pybind11.cpython-310-x86_64-linux-gnu.so",
+      "scope": "vendor"
+    },
+    {
+      "kind": "vendor_binary",
+      "path": "astribot_sdk/core/common/robotics_library_py/astribot_rclcpp_py_ext_pybind11.cpython-38-x86_64-linux-gnu.so",
+      "line": 1,
+      "symbol": "astribot_rclcpp_py_ext_pybind11.cpython-38-x86_64-linux-gnu.so",
+      "scope": "vendor"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "astribot_sdk/core/common/robotics_library_py/astribot_rclcpp_py_proxy.py",
+      "line": 7,
+      "symbol": "astribot_rclcpp_py_ext_pybind11",
+      "scope": "vendor"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_dynamics_coupling/test/reference/astribot_s1_dynamics_coupling/arm_reach_metric.py",
+      "line": 31,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation/astribot_s1_navigation/explore_metrics_recorder_node.py",
+      "line": 16,
+      "symbol": "rclpy._rclpy_pybind11",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation/test/benchmark_posture_monitor.py",
+      "line": 13,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation/test/test_posture_monitor_native_differential.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/behavior.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/candidate_variants.py",
+      "line": 9,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/continuous_sweep.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/execution_context.py",
+      "line": 12,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/fusion.py",
+      "line": 11,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/motion_geometry.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/observer_node.py",
+      "line": 32,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/path_evidence.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/planning_session.py",
+      "line": 12,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/risk.py",
+      "line": 14,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/sensor_health.py",
+      "line": 12,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/swept_geometry.py",
+      "line": 9,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt",
+      "line": 6,
+      "symbol": "option(ASTRIBOT_BUILD_PYBIND \"Build the migration-only Python bridge\" ON)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt",
+      "line": 7,
+      "symbol": "if(ASTRIBOT_BUILD_PYBIND)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt",
+      "line": 10,
+      "symbol": "find_package(pybind11 REQUIRED)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt",
+      "line": 42,
+      "symbol": "if(ASTRIBOT_BUILD_PYBIND)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt",
+      "line": 43,
+      "symbol": "pybind11_add_module(_navigation_math_native src/navigation_math_pybind.cpp)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/CMakeLists.txt",
+      "line": 88,
+      "symbol": "if(ASTRIBOT_BUILD_PYBIND)",
+      "scope": "project"
+    },
+    {
+      "kind": "package_dependency",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/package.xml",
+      "line": 1,
+      "symbol": "pybind11-dev",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math_pybind.cpp",
+      "line": 1,
+      "symbol": "pybind11/pybind11.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math_pybind.cpp",
+      "line": 2,
+      "symbol": "pybind11/stl.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_definition",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math_pybind.cpp",
+      "line": 39,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_control_time.py",
+      "line": 13,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_execution_context.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_lateral_variants.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_motion_clearance.py",
+      "line": 13,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_navigation_forecast.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_path_evidence.py",
+      "line": 8,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_planning_session.py",
+      "line": 6,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_scan_occupancy.py",
+      "line": 13,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_sensor_health.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_yield_policy.py",
+      "line": 8,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_behavior/behavior.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_behavior/motion_geometry.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_behavior/path_evidence.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_envelope/polygon.py",
+      "line": 8,
+      "symbol": "_geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_fusion/fusion.py",
+      "line": 11,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_health/sensor_health.py",
+      "line": 12,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/continuous_sweep.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/execution_context.py",
+      "line": 12,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/fusion.py",
+      "line": 11,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/motion_geometry.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py",
+      "line": 32,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/protection.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/risk.py",
+      "line": 14,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/sensor_health.py",
+      "line": 12,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/swept_geometry.py",
+      "line": 9,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_risk/astribot_s1_navigation_policy/continuous_sweep.py",
+      "line": 10,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_risk/astribot_s1_navigation_policy/fusion.py",
+      "line": 11,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_risk/astribot_s1_navigation_policy/motion_geometry.py",
+      "line": 7,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_risk/astribot_s1_navigation_policy/risk.py",
+      "line": 14,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_risk/astribot_s1_navigation_policy/swept_geometry.py",
+      "line": 9,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_risk/astribot_s1_robot_geometry/polygon.py",
+      "line": 8,
+      "symbol": "_geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/test_navigation_math_differential.py",
+      "line": 23,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_navigation_policy_native/test/test_protection_native_differential.py",
+      "line": 6,
+      "symbol": "_navigation_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/CMakeLists.txt",
+      "line": 28,
+      "symbol": "find_package(pybind11 REQUIRED)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/CMakeLists.txt",
+      "line": 31,
+      "symbol": "pybind11_add_module(_geometry_native src/geometry_native.cpp)",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/astribot_s1_robot_geometry/polygon.py",
+      "line": 8,
+      "symbol": "_geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "package_dependency",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/package.xml",
+      "line": 1,
+      "symbol": "pybind11-dev",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/src/geometry_native.cpp",
+      "line": 1,
+      "symbol": "pybind11/numpy.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/src/geometry_native.cpp",
+      "line": 4,
+      "symbol": "pybind11/pybind11.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/src/geometry_native.cpp",
+      "line": 5,
+      "symbol": "pybind11/stl.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_definition",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/src/geometry_native.cpp",
+      "line": 181,
+      "symbol": "_geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/test/benchmark_geometry_state_ab.py",
+      "line": 225,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/test/test_fusion_snapshot.py",
+      "line": 15,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/test/test_native_kernels.py",
+      "line": 5,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/test/test_scan_projection.py",
+      "line": 30,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/test/test_scan_projection.py",
+      "line": 47,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_robot_geometry/test/test_scan_projection.py",
+      "line": 58,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_transport/astribot_s1_transport/source_inbox.py",
+      "line": 3,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_s1_transport/test/test_source_inbox.py",
+      "line": 3,
+      "symbol": "astribot_s1_robot_geometry._geometry_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/arm_bridge_core.py",
+      "line": 35,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/arm_traj_math.py",
+      "line": 42,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/chassis_bridge_core.py",
+      "line": 64,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/chassis_feedback.py",
+      "line": 14,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/chassis_integrator.py",
+      "line": 48,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/chassis_odom_source.py",
+      "line": 37,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/gripper_core.py",
+      "line": 32,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/gripper_math.py",
+      "line": 39,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 15,
+      "symbol": "option(ASTRIBOT_BUILD_PYBIND \"Build the migration-only Python bridge\" ON)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 16,
+      "symbol": "if(ASTRIBOT_BUILD_PYBIND)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 19,
+      "symbol": "find_package(pybind11 REQUIRED)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 43,
+      "symbol": "if(ASTRIBOT_BUILD_PYBIND)",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 44,
+      "symbol": "pybind11_add_module(_chassis_math_native src/chassis_math_pybind.cpp",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 45,
+      "symbol": "src/gripper_controller_pybind.cpp",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 46,
+      "symbol": "src/arm_traj_executor_pybind.cpp",
+      "scope": "project"
+    },
+    {
+      "kind": "build_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt",
+      "line": 47,
+      "symbol": "src/chassis_bridge_core_pybind.cpp)",
+      "scope": "project"
+    },
+    {
+      "kind": "package_dependency",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/package.xml",
+      "line": 1,
+      "symbol": "pybind11-dev",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/arm_traj_executor_pybind.cpp",
+      "line": 2,
+      "symbol": "pybind11/pybind11.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/arm_traj_executor_pybind.cpp",
+      "line": 3,
+      "symbol": "pybind11/stl.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/chassis_bridge_core_pybind.cpp",
+      "line": 2,
+      "symbol": "pybind11/pybind11.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/chassis_bridge_core_pybind.cpp",
+      "line": 3,
+      "symbol": "pybind11/stl.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/chassis_math_pybind.cpp",
+      "line": 1,
+      "symbol": "pybind11/pybind11.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/chassis_math_pybind.cpp",
+      "line": 2,
+      "symbol": "pybind11/stl.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_definition",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/chassis_math_pybind.cpp",
+      "line": 14,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/gripper_controller_pybind.cpp",
+      "line": 2,
+      "symbol": "pybind11/pybind11.h",
+      "scope": "project"
+    },
+    {
+      "kind": "binding_include",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/src/gripper_controller_pybind.cpp",
+      "line": 3,
+      "symbol": "pybind11/stl.h",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/benchmark_arm_core.py",
+      "line": 8,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/benchmark_chassis_core.py",
+      "line": 18,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/benchmark_chassis_math.py",
+      "line": 14,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/benchmark_gripper_core.py",
+      "line": 12,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/benchmark_odom_source.py",
+      "line": 9,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_core_native_faults.py",
+      "line": 4,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_core_replay.py",
+      "line": 5,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_math_differential.py",
+      "line": 15,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_chassis_core_native_faults.py",
+      "line": 15,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_chassis_core_replay.py",
+      "line": 7,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_chassis_math_differential.py",
+      "line": 18,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_gripper_core_differential.py",
+      "line": 13,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    },
+    {
+      "kind": "python_consumer",
+      "path": "ws_robot/src/astribot_trajectory_bridge_native/test/test_waypoint_dispatcher_differential.py",
+      "line": 4,
+      "symbol": "_chassis_math_native",
+      "scope": "project"
+    }
+  ],
+  "limits": [
+    "Static scan of ws_robot/src and astribot_sdk; optional and disabled code counts.",
+    "Historical docs and vendored third_party sources are excluded; their enabled build targets require separate review.",
+    "Opaque binaries are recognized by binding module names only; this cannot prove their internal dependencies.",
+    "No modules are imported and no binaries are executed."
+  ]
+}

@@ -1,0 +1,51 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_exact_norm_association_provenance_and_snapshot_gates ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7e9de864d630>
+
+    def test_exact_norm_association_provenance_and_snapshot_gates(monkeypatch):
+        # The old optional native snapshot's libm thresholds differ here. Match the
+        # default Python decision exactly, retaining the original gate constants.
+        monkeypatch.setattr(F,'_snapshot_tracks_native',None)
+        check([update(0,[observation(0,'first',source=None),observation(0,'second',sensor='b',source=None,
+               center=(.3653736529718966,.34132403037871817,.5))])])
+        check([update(0,[observation(0,'first',source=None),observation(0,'second',sensor='b',source=None,
+               center=(-.035354137271507,.03535654080629834,.5),provenance=['a:first'])])])
+        dx,dy=.041467329541260464,-.11260755117094283
+        positions=[(dx,dy),(-dx,-dy),(dx,dy),(-dx,-dy),(0.,0.)]
+>       check([update(i*100000000,[observation(i*100000000,str(i),center=(x,y,.5))]) for i,(x,y) in enumerate(positions)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:441: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:188: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:182: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:182: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 0.0004, b = 0.01
+path = '[4].result.tracks[0].prediction_model.variance_m2_s2'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+>           assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+E           AssertionError: ('[4].result.tracks[0].prediction_model.variance_m2_s2', 0.0004, 0.01)
+E           assert 0.01 == 0.0004 ± 2.0e-12
+E            +  where 0.0004 ± 2.0e-12 = <function approx at 0x7e9deba62a70>(0.0004, rel=2e-12, abs=2e-12)
+E            +    where <function approx at 0x7e9deba62a70> = pytest.approx
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:175: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_exact_norm_association_provenance_and_snapshot_gates
+1 failed, 45 deselected in 0.10s

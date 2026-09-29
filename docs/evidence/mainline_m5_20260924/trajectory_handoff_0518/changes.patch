@@ -1,0 +1,41 @@
+--- verify_full_transfer.py.before
++++ verify_full_transfer.py.after
+@@ -527,6 +527,38 @@
+         report['final_world_geometry_source']=dict(transactions=world_transactions,source_record_index=source_index,ledger_record_index=ledger_index,source=source,ledger=ledger_record['message'],expected_primitives=expected['primitives'],actual_primitives=obj['primitives'],independent_pre_detach_scene=False)
+         if not obj['header']['frame_id'] or len(obj['primitives'])!=1 or obj['primitives'][0]['type']!=1 or obj['primitives']!=expected['primitives'] or len(obj['primitive_poses'])!=1 or obj['primitive_poses']!=expected['primitive_poses'] or obj['meshes'] or obj['planes']:raise RuntimeError('FINAL_WORLD_TARGET_GEOMETRY_MISMATCH')
+         report['final_full_scene']=final_scene;report['final_ledger']=copy.deepcopy(latest['ledger']);report['final_geometry']=message_dict(latest['geometry']);report['final_source_identity']=final
++        # Prove returned/adopted/sent suffix identity only after the parent succeeds.
++        report['trajectory_handoff']=dict(journal_scope='owner+lease_id+epoch since journal_start',operations=[])
++        accepted_children=set()
++        for operation,physical,names in (('PICK',attached,('LIFT','TRANSPORT_POSTURE')),('PLACE',detached,('RETREAT','STOW'))):
++            context=physical['submission']['context'];transaction=physical['submission']['transaction']
++            adoptions=[(i,r['details']) for i,r in enumerate(world_journal) if r.get('event')=='payload_suffix_adopted' and r['details']['transaction']==transaction]
++            if len(adoptions)!=1:raise RuntimeError('TRAJECTORY_SUFFIX_ADOPTION_REQUIRED:'+operation)
++            adoption_index,adoption=adoptions[0]
++            if not (physical['application_index']<adoption_index<physical['confirmation_index'] and adoption['context']==context and adoption['start_index']==4 and len(adoption['stages'])==2 and type(adoption['transport_replanned']) is bool and (operation=='PICK' or not adoption['transport_replanned'])):raise RuntimeError('TRAJECTORY_SUFFIX_BINDING_MISMATCH:'+operation)
++            proof=dict(operation=operation,context=context,transaction=transaction,adoption_index=adoption_index,adoption=adoption,stages=[])
++            report['trajectory_handoff']['operations'].append(proof)
++            previous_index=physical['confirmation_index'];previous_generation=-1
++            for index,(name,stage) in enumerate(zip(names,adoption['stages']),4):
++                stage_id=stage['stage_id'];digest=stage['returned_digest']
++                if not (stage['stage_index']==index and stage_id.split(':')[0]==name and isinstance(digest,str) and len(digest)==64 and all(c in '0123456789abcdef' for c in digest) and digest==stage['adopted_digest'] and stage['point_count']>0 and stage['joint_names']):raise RuntimeError('TRAJECTORY_SUFFIX_CONTENT_MISMATCH:'+operation+':'+name)
++                sends=[(i,r['details']) for i,r in enumerate(world_journal) if r.get('event')=='child_trajectory_submission' and r['details']['context']==context and r['details']['transaction']==transaction and r['details']['stage_id']==stage_id and r['details']['stage_index']==index and r['details']['controller']=='arm_left_controller']
++                if len(sends)!=1:raise RuntimeError('TRAJECTORY_ACTIVE_SUBMISSION_REQUIRED:'+operation+':'+name)
++                send_index,sent=sends[0]
++                if not (previous_index<send_index and sent['stage_generation']>previous_generation and sent['sent_digest']==digest and sent['point_count']==stage['point_count'] and sent['joint_names']==stage['joint_names']):raise RuntimeError('TRAJECTORY_SENT_CONTENT_MISMATCH:'+operation+':'+name)
++                responses=[(i,r['details']) for i,r in enumerate(world_journal) if r.get('event')=='child_response' and r['details'].get('context')==context and r['details'].get('transaction')==transaction and r['details'].get('stage_id')==stage_id and r['details']['controller']==sent['controller']]
++                if len(responses)!=1:raise RuntimeError('TRAJECTORY_ACTIVE_RESPONSE_REQUIRED:'+operation+':'+name)
++                response_index,response=responses[0];child_uuid=response['uuid'];child=(sent['controller'],child_uuid)
++                if not (send_index<response_index and all(response.get(k)==v for k,v in sent.items()) and isinstance(child_uuid,str) and len(child_uuid)==32 and all(c in '0123456789abcdef' for c in child_uuid) and child not in accepted_children):raise RuntimeError('TRAJECTORY_RESPONSE_BINDING_MISMATCH:'+operation+':'+name)
++                accepted_children.add(child)
++                terminals=[(i,r['details']) for i,r in enumerate(world_journal) if r.get('event')=='child_terminal' and (r['details']['controller'],r['details']['uuid'])==child]
++                confirmations=[(i,r['details']) for i,r in enumerate(world_journal) if r.get('event')=='stage_confirmed' and r['details']['context']==context and r['details']['stage_id']==stage_id and r['details']['index']==index]
++                if len(terminals)!=1 or len(confirmations)!=1:raise RuntimeError('TRAJECTORY_COMPLETION_REQUIRED:'+operation+':'+name)
++                terminal_index,terminal=terminals[0];confirmed_index,confirmed=confirmations[0]
++                if not (response_index<terminal_index<confirmed_index and terminal['success'] is True and terminal['result_code']==4 and confirmed['children'].split(';').count(sent['controller']+':'+child_uuid)==1):raise RuntimeError('TRAJECTORY_COMPLETION_BINDING_MISMATCH:'+operation+':'+name)
++                proof['stages'].append(dict(stage_id=stage_id,stage_index=index,stage_generation=sent['stage_generation'],digest=digest,point_count=sent['point_count'],joint_names=sent['joint_names'],controller=sent['controller'],uuid=child_uuid,send_index=send_index,response_index=response_index,terminal_index=terminal_index,confirmed_index=confirmed_index))
++                previous_index=confirmed_index;previous_generation=sent['stage_generation']
++            if operation=='PICK' and previous_index>=detached['submission_index']:raise RuntimeError('TRAJECTORY_PICK_PLACE_ORDER_MISMATCH')
+         report['final_stop']=stop()
+         if not ready() or source_identity(summary())!=source_identity(final) or not fresh('envelope') or not 0<=ros()-latest['envelope']['stamp']<.3 or latest['envelope']['allowed'] or any(active_nav.values()):raise RuntimeError('FINAL_EMPTY_STOP_DENIAL_LOST')
+         report['final_denied_envelope']=copy.deepcopy(latest['envelope'])

@@ -1,6 +1,7 @@
 """ROS observation adapter; this node has no command or planning publishers."""
 import json
 import math
+import os
 import time
 import threading
 from dataclasses import asdict, replace
@@ -55,7 +56,7 @@ class PolicyObserver(Node):
         self.profile,self.envelope_ack=configure_envelope_input(self,Profile.load(self.get_parameter('profile').value),self.envelope,'policy',1)
         self.profile.require_environment(self.get_parameter('use_sim_time').value)
         self.clock_id='sim' if self.get_parameter('use_sim_time').value else 'ros'
-        self.tf=Buffer();self.listener=TransformListener(self.tf,self)
+        self.configure_tf()
         self.fusion=ConservativeFusion(self.profile)
         self.execution=ExecutionContext()
         self.health_registry=SensorHealthRegistry(self.profile.sensor_timeout_s)
@@ -70,6 +71,10 @@ class PolicyObserver(Node):
         self.last_inputs_valid=False;self.last_evaluation_epoch=0
         self.last_error=''
         self.pending_scans=[]
+        self.scan_timing=None
+        if os.environ.get('ASTRIBOT_SCAN_TIMING_DIAGNOSTICS','').lower() in ('1','true','yes'):
+            from astribot_s1_navigation_policy_native import _navigation_math_native
+            self.scan_timing=_navigation_math_native.ScanTiming()
         self.pending_plan=None
         self.scan_lock=threading.Lock()
         self.odom_lock=threading.Lock()
@@ -104,12 +109,34 @@ class PolicyObserver(Node):
             QoSProfile(depth=10,durability=DurabilityPolicy.TRANSIENT_LOCAL),callback_group=self.processing_group)
         self.create_timer(.1,self.tick,callback_group=self.processing_group)
 
+    def configure_tf(self):
+        # Temporary compatibility seam: reception, cache, queries and thread
+        # ownership are C++; the existing policy uses the same TF interface.
+        self.native_tf=os.environ.get('ASTRIBOT_POLICY_NATIVE_TF','').lower() in ('1','true','yes')
+        if self.native_tf:
+            from astribot_s1_navigation_policy_native._native_tf_buffer import NativeTfBuffer
+            self.tf=NativeTfBuffer(bool(self.get_parameter('use_sim_time').value))
+            self.listener=None
+        else:
+            self.tf=Buffer();self.listener=TransformListener(self.tf,self)
+
+    def destroy_node(self):
+        try:
+            if getattr(self,'native_tf',False) and getattr(self,'tf',None) is not None:self.tf.close()
+        finally:
+            result=super().destroy_node()
+        return result
+
     def envelope(self,msg):
         # Receive heartbeats independently of risk computation; apply at its boundary.
-        with self.envelope_lock:self.pending_envelope=msg
+        with self.envelope_lock:
+            old=self.pending_envelope
+            if old is not None and self.envelope_ack is not None and (old.coordinator_session_id,old.epoch,old.clock_epoch)==(msg.coordinator_session_id,msg.epoch,msg.clock_epoch):
+                if (msg.header.stamp.sec,msg.header.stamp.nanosec)<(old.header.stamp.sec,old.header.stamp.nanosec):return
+            self.pending_envelope=msg
         # A matching configuration was already applied. Confirm its live source
         # without mutating the profile being used by an in-flight decision.
-        # Motion decisions keep their own original source deadlines and leases.
+        # Source timestamps order observations; execution budgets use steady time.
         if self.envelope_ack:
             now=Stamp(self.get_clock().now().nanoseconds,self.clock_id,self.epoch)
             if self.profile.confirms_applied(msg,now):self.envelope_ack(msg)
@@ -126,10 +153,6 @@ class PolicyObserver(Node):
 
     def stamp(self):
         ns=self.get_clock().now().nanoseconds
-        if self.last_time is not None and ns<self.last_time:
-            self.epoch+=1;self.scan_at=None;self.odom_at=None;self.path=();self.robot=None
-            with self.scan_lock:self.pending_scans=[]
-            self.pending_plan=None
         self.last_time=ns
         return Stamp(ns,self.clock_id,self.epoch)
 
@@ -138,6 +161,8 @@ class PolicyObserver(Node):
         values=(p.x,p.y,yaw(q),v.linear.x,v.linear.y,v.angular.z)
         if all(math.isfinite(x) for x in values) and msg.header.frame_id==self.profile.tracking_frame:
             with self.odom_lock:
+                source=msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9
+                if self.odom_at is not None and source<=self.odom_at:return
                 self.robot=RobotState(*values)
                 self.odom_at=msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9
 
@@ -199,37 +224,79 @@ class PolicyObserver(Node):
         return cached
 
     def scan(self,msg):
+        trace=self.scan_timing
+        sequence=None
+        if trace is not None:
+            # Callback entry, not DDS wire receipt; do not call stamp() here.
+            sequence=trace.receive(msg.header.stamp.sec*10**9+msg.header.stamp.nanosec,
+                self.get_clock().now().nanoseconds,time.monotonic_ns(),msg.header.frame_id,self.epoch)
         if not scan_usable(msg.ranges,msg.range_min,msg.range_max,msg.angle_min,msg.angle_increment,
-                           self.profile.scan_min_valid_fraction):return
+                           self.profile.scan_min_valid_fraction):
+            if trace is not None:trace.drop(sequence,'invalid',self.get_clock().now().nanoseconds,time.monotonic_ns())
+            return
         with self.scan_lock:
-            self.pending_scans.append(msg)
+            self.pending_scans.append((msg,sequence) if trace is not None else msg)
+            self.pending_scans.sort(key=lambda entry: ((entry[0] if trace is not None else entry).header.stamp.sec,
+                                                      (entry[0] if trace is not None else entry).header.stamp.nanosec))
+            discarded=self.pending_scans[:-5] if trace is not None else ()
             self.pending_scans=self.pending_scans[-5:]
+        for _,sequence in discarded:
+            trace.drop(sequence,'queue_capacity',self.get_clock().now().nanoseconds,time.monotonic_ns())
 
     def process_scans(self, now):
-        if self.map is None:return
+        trace=self.scan_timing
+        if self.map is None:
+            if trace is not None:
+                with self.scan_lock:waiting=list(self.pending_scans)
+                for _,sequence in waiting:
+                    trace.defer(sequence,'no_map',self.get_clock().now().nanoseconds,time.monotonic_ns())
+            return
         ready=[];pending=[]
         with self.scan_lock:
             batch=self.pending_scans;self.pending_scans=[]
-        for msg in batch:
-            capture=Time.from_msg(msg.header.stamp)
-            age=(now.ns-capture.nanoseconds)*1e-9
-            if age>self.profile.sensor_timeout_s:continue
-            if age>=0 and all(self.tf.can_transform(frame,msg.header.frame_id,capture)
-                            for frame in (self.profile.tracking_frame,'map')):
-                ready.append(msg)
-            else:pending.append(msg)
+        for entry in batch:
+            msg,sequence=entry if trace is not None else (entry,None)
+            source=msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9
+            if self.scan_at is not None and source<=self.scan_at:
+                if trace is not None:trace.drop(sequence,'superseded',self.get_clock().now().nanoseconds,time.monotonic_ns())
+                continue
+            tracking=self.tf.can_transform(self.profile.tracking_frame,msg.header.frame_id,Time())
+            mapped=self.tf.can_transform('map',msg.header.frame_id,Time()) if tracking else False
+            available=tracking and mapped
+            if trace is not None:
+                trace.tf_check(sequence,int(bool(tracking)),int(bool(mapped)) if tracking else -1,
+                    self.get_clock().now().nanoseconds,time.monotonic_ns())
+            if available:ready.append(entry)
+            else:pending.append(entry)
         with self.scan_lock:
-            self.pending_scans=(pending+self.pending_scans)[-5:]
-        if ready:self.process_scan(ready[-1])
+            combined=pending+self.pending_scans
+            combined.sort(key=lambda entry: ((entry[0] if trace is not None else entry).header.stamp.sec,
+                                            (entry[0] if trace is not None else entry).header.stamp.nanosec))
+            discarded=combined[:-5] if trace is not None else ()
+            self.pending_scans=combined[-5:]
+        for _,sequence in discarded:
+            trace.drop(sequence,'queue_capacity',self.get_clock().now().nanoseconds,time.monotonic_ns())
+        if ready:
+            ready.sort(key=lambda entry: ((entry[0] if trace is not None else entry).header.stamp.sec,
+                                         (entry[0] if trace is not None else entry).header.stamp.nanosec))
+            if trace is None:self.process_scan(ready[-1])
+            else:
+                for _,sequence in ready[:-1]:
+                    trace.drop(sequence,'superseded',self.get_clock().now().nanoseconds,time.monotonic_ns())
+                msg,sequence=ready[-1]
+                trace.select(sequence,self.get_clock().now().nanoseconds,time.monotonic_ns())
+                before=self.scan_count
+                self.process_scan(msg)
+                success=self.scan_count>before
+                trace.finish(sequence,success,self.get_clock().now().nanoseconds,time.monotonic_ns(),
+                    '' if success else self.last_error or 'PROCESSING_NOT_COMMITTED')
 
     def process_scan(self,msg):
         try:
             now=self.stamp();capture=Stamp(msg.header.stamp.sec*10**9+msg.header.stamp.nanosec,self.clock_id,self.epoch)
-            if not 0<=now.since(capture)<=self.profile.sensor_timeout_s*1e9:
-                self.last_error=f'scan capture age {now.since(capture)*1e-9:.3f}s exceeds budget'
-                return
-            transform=self.tf.lookup_transform(self.profile.tracking_frame,msg.header.frame_id,Time.from_msg(msg.header.stamp))
-            to_map=self.tf.lookup_transform('map',msg.header.frame_id,Time.from_msg(msg.header.stamp))
+            if self.scan_at is not None and capture.ns*1e-9<=self.scan_at:return
+            transform=self.tf.lookup_transform(self.profile.tracking_frame,msg.header.frame_id,Time())
+            to_map=self.tf.lookup_transform('map',msg.header.frame_id,Time())
             observations=[]
             cell_size=self.profile.scan_occupancy_resolution_m
             def tf_values(tf):
@@ -252,7 +319,7 @@ class PolicyObserver(Node):
                     self.profile.tracking_frame,0,box,1.,(),(f'scan:{capture.ns}:{cell}',),
                     velocity_observable=False,spatial_occupancy=True))
             self.fusion.ingest(tuple(observations),now)
-            inv=self.tf.lookup_transform(msg.header.frame_id,self.profile.tracking_frame,Time.from_msg(msg.header.stamp))
+            inv=self.tf.lookup_transform(msg.header.frame_id,self.profile.tracking_frame,Time())
             def free_many(boxes):
                 t=inv.transform.translation;q=inv.transform.rotation
                 return scan_boxes_free(
@@ -260,7 +327,7 @@ class PolicyObserver(Node):
                     (t.x,t.y,t.z,q.x,q.y,q.z,q.w),msg.ranges,msg.range_min,msg.range_max,
                     msg.angle_min,msg.angle_increment,cell_size)
             self.fusion.clear_observed_free(now,free_many=free_many)
-            body_tf=self.tf.lookup_transform(self.base_frame,msg.header.frame_id,Time.from_msg(msg.header.stamp))
+            body_tf=self.tf.lookup_transform(self.base_frame,msg.header.frame_id,Time())
             coverage=scan_coverage(msg.ranges,msg.range_min,msg.range_max,msg.angle_min,msg.angle_increment,
                                    yaw(body_tf.transform.rotation))
             self.health_registry.record('scan',capture,now,self.base_frame,coverage,True,0)
@@ -295,8 +362,7 @@ class PolicyObserver(Node):
             if adapter.options.get('camera_info_topic'):self.calibrations.calibration(sensor,epoch)
             old=self.health_registry.records.get(sensor)
             if old and (epoch<old.calibration_epoch or (old.stamp.clock,old.stamp.epoch)==(now.clock,now.epoch) and capture.ns<=old.stamp.ns):
-                raise ValueError('duplicate, out-of-order or obsolete calibration')
-            if not 0<=now.since(capture)<=self.profile.sensor_timeout_s*1e9:raise ValueError('expired acquisition')
+                return
             coverage=tuple(BearingCone(Vec3(math.cos(c[0]),math.sin(c[0]),0.),c[1])
                 for c in adapter.options.get('coverage_body_yaw_half_angle',[]))
             depth=bool(observations) and all(isinstance(o.geometry,MetricBox) for o in observations)
@@ -350,8 +416,7 @@ class PolicyObserver(Node):
         self.last_risk=risk
         self.last_world=world;self.last_robot=robot
         seconds=self.get_clock().now().nanoseconds*1e-9
-        fresh=(scan_at is not None and odom_at is not None and self.map is not None and
-               0<=seconds-scan_at<=self.profile.sensor_timeout_s and 0<=seconds-odom_at<=self.profile.sensor_timeout_s)
+        fresh=scan_at is not None and odom_at is not None and self.map is not None
         fresh=fresh and self.health_registry.required_valid(now) and (self.observation_only or self.profile.ready(now))
         self.last_inputs_valid=fresh;self.last_evaluation_epoch=now.epoch
         blocking=[]
@@ -376,6 +441,13 @@ class PolicyObserver(Node):
                 'processing_cpu_s':time.thread_time()-processing_cpu_start,
                 'processing_stages_s':{'scan':scan_elapsed,'snapshot':risk_start-snapshot_start,'risk':risk_elapsed},
                 'risk':{k:number(v) if isinstance(v,float) else v for k,v in asdict(risk).items()} if risk else None}
+        if self.scan_timing is not None:
+            result['scan_timing']=self.scan_timing.snapshot()
+            result['scan_timing']['source_topic']=self.get_parameter('scan_topic').value
+            result['scan_timing']['observation_pre_serialize']={
+                'ros_ns':self.get_clock().now().nanoseconds,'steady_ns':time.monotonic_ns()}
+            result['tf_backend']='cpp' if self.native_tf else 'python'
+            if self.native_tf:result['tf_backend_diagnostics']=self.tf.diagnostics()
         self.publisher.publish(String(data=json.dumps(result,allow_nan=False)))
 
 

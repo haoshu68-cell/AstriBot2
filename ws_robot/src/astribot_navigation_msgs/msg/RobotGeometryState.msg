@@ -15,6 +15,9 @@ geometry_msgs/Polygon physical_footprint
 # Includes model padding and bounded joint hold error, not environmental clearance.
 geometry_msgs/Polygon reserved_footprint
 EnvelopeSlice[] height_slices
+# SHA256 of the shared height_slices.yaml file. Heights above are in header.frame_id.
+string height_profile_revision
+float64 ground_in_base_m
 float64 height_m
 string[] attachment_ids
 string reason

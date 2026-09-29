@@ -5,6 +5,8 @@
 #include <cmath>
 #include <string>
 #include <optional>
+#include <algorithm>
+#include "geometry_msgs/msg/twist.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "astribot_navigation_msgs/msg/motion_constraint.hpp"
 namespace astribot_s1_path_tracking {
@@ -23,18 +25,8 @@ public:
   bool fresh(const rclcpp::Time & now) const {
     std::lock_guard<std::mutex> lock(mutex_); return freshUnlocked(now);
   }
-  // Future-stamped input grants no motion. Allow a bounded zero-command wait
-  // for independently delivered /clock and constraint messages to catch up.
   Status status(const rclcpp::Time & now) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (freshUnlocked(now)) {return Status::Fresh;}
-    if (!seen_) {return Status::Invalid;}
-    const auto wall_now=std::chrono::steady_clock::now();
-    const double age=(now-rclcpp::Time(message_.stamp,now.get_clock_type())).seconds();
-    const double wall_age=std::chrono::duration<double>(wall_now-received_).count();
-    if (!(age<0 && -age<=message_.lease_s && wall_age<=message_.lease_s)) {return Status::Invalid;}
-    if (!clock_wait_started_) {clock_wait_started_=wall_now;}
-    return std::chrono::duration<double>(wall_now-*clock_wait_started_).count()<=message_.lease_s ? Status::WaitForClock : Status::Invalid;
+    std::lock_guard<std::mutex> lock(mutex_);return freshUnlocked(now)?Status::Fresh:Status::Invalid;
   }
   bool waitingForClock(const rclcpp::Time & now) const {return status(now)==Status::WaitForClock;}
   std::string freshnessDetail(const rclcpp::Time & now) const {
@@ -66,20 +58,34 @@ public:
     std::lock_guard<std::mutex> lock(mutex_);
     return freshUnlocked(now) && !message_.hold ? message_.max_linear_speed : 0.;
   }
+  double cornerAngularSpeedLimit(const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return freshUnlocked(now) && !message_.hold && !message_.centering_required &&
+      !message_.alignment_required && !message_.corridor_tracking_required ? message_.max_angular_speed : 0.;
+  }
+  // Apply one coherent constraint snapshot. Scaling the complete planar twist
+  // preserves curvature; callers must recheck a sweep if a forbidden axis changes.
+  bool restrict(geometry_msgs::msg::Twist & command, const rclcpp::Time & now) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const auto before=command;
+    if (!freshUnlocked(now) || message_.hold) {command={};return command!=before;}
+    if (message_.alignment_required) {command.linear.x=command.linear.y=0.;}
+    if (message_.centering_required) {command.angular.z=0.;}
+    const double speed=std::hypot(command.linear.x,command.linear.y);
+    const double angular=std::abs(command.angular.z);
+    const double ratio=std::min({1.,speed>0. ? message_.max_linear_speed/speed : 1.,
+      angular>0. ? message_.max_angular_speed/angular : 1.});
+    command.linear.x*=ratio;command.linear.y*=ratio;command.angular.z*=ratio;
+    return command!=before;
+  }
 private:
   bool freshUnlocked(const rclcpp::Time & now) const {
-    if (!seen_) {return false;}
-    double age=(now-rclcpp::Time(message_.stamp,now.get_clock_type())).seconds();
-    double wall_age=std::chrono::duration<double>(std::chrono::steady_clock::now()-received_).count();
-    const bool valid=age>=0 && age<=message_.lease_s && wall_age<=message_.lease_s;
-    if (valid) {clock_wait_started_.reset();}
-    return valid;
+    (void)now;return seen_;
   }
   mutable std::mutex mutex_;
   Message message_;
   bool seen_{false};
   std::chrono::steady_clock::time_point received_;
-  mutable std::optional<std::chrono::steady_clock::time_point> clock_wait_started_;
 };
 }
 #endif

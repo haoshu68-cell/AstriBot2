@@ -1,0 +1,90 @@
+--- a/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
++++ b/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp
+@@ -29,6 +29,7 @@
+ #include <astribot_navigation_msgs/srv/set_robot_envelope.hpp>
+ #include <moveit_msgs/srv/get_planning_scene.hpp>
+ #include <nav_msgs/msg/odometry.hpp>
++#include <rclcpp/serialization.hpp>
+ #endif
+ #include <astribot_s1_transport_native/action/hold_resources.hpp>
+ #include <astribot_s1_transport_native/srv/renew_hold.hpp>
+@@ -828,10 +829,10 @@
+    }catch(const std::exception&e){stopping(std::string("NAVIGATION_REVOCATION_ERROR:")+e.what());}
+   });revoke_request_=pending.request_id;}catch(const std::exception&e){revoke_pending_=false;stopping(std::string("NAVIGATION_REVOCATION_UNCONFIRMED:")+e.what());}
+  }
+- void query_scene(bool recheck) {
++ void query_scene(bool recheck,std::shared_ptr<const Revalidate::Request> validated_request={}) {
+   auto request=std::make_shared<SceneQuery::Request>();request->components.components=1023;
+   scene_pending_=true;scene_sent_=wall();const auto lease=authority_->lease_id();const auto stage_generation=stage_generation_;
+-  auto pending=scenes_->async_send_request(request,[this,lease,recheck,stage_generation](rclcpp::Client<SceneQuery>::SharedFuture f){
++  auto pending=scenes_->async_send_request(request,[this,lease,recheck,stage_generation,validated_request](rclcpp::Client<SceneQuery>::SharedFuture f){
+    if(!owned()||lease!=authority_->lease_id()||stage_generation!=stage_generation_)return;
+    scene_pending_=false;
+    if(stop_at_)return;
+@@ -841,7 +842,49 @@
+     auto signature=bind_scene(scene,known_links_);
+     if(recheck){
+      if(revalidation_readback_){
+-      if(signature!=revalidation_binding_)throw std::runtime_error("MTC_SCENE_CHANGED_DURING_REVALIDATION");
++      if(signature!=revalidation_binding_) {
++       // Retain the actual service input through this readback; serialize only
++       // on failure. Full scenes exceed the resource journal's record limit.
++       try {
++        const auto observed_ros=now().nanoseconds(),observed_steady=wall();
++        const auto directory=std::filesystem::path(std::getenv("HOME"))/".local/state/astribot/transport"/
++          ("scene_revalidation_"+lease+"_"+std::to_string(observed_steady));
++        std::filesystem::create_directory(directory);
++        const nlohmann::json metadata={
++          {"reason","MTC_SCENE_CHANGED_DURING_REVALIDATION"},{"context",validated_request->context_id},
++          {"lease_id",lease},{"stage_generation",stage_generation},{"start_index",validated_request->start_index},
++          {"stage",plan_->current().stage_id},{"last_executed_stage",stage_id_},
++          {"static_signature_changed",signature.first!=revalidation_binding_.first},
++          {"occupancy_signature_changed",signature.second!=revalidation_binding_.second},
++          {"revalidation_sent_steady_ns",revalidation_sent_},{"readback_sent_steady_ns",scene_sent_},
++          {"observed_ros_ns",observed_ros},{"observed_steady_ns",observed_steady},
++          {"revalidated_joint_stamp_ns",ns(validated_request->scene.robot_state.joint_state.header.stamp)},
++          {"readback_joint_stamp_ns",ns(scene.robot_state.joint_state.header.stamp)},
++          {"revalidated_map_stamp_ns",ns(validated_request->scene.world.octomap.header.stamp)},
++          {"readback_map_stamp_ns",ns(scene.world.octomap.header.stamp)},
++          {"revalidated_octomap_stamp_ns",ns(validated_request->scene.world.octomap.octomap.header.stamp)},
++          {"readback_octomap_stamp_ns",ns(scene.world.octomap.octomap.header.stamp)},
++          {"message_type","moveit_msgs/msg/PlanningScene"},{"serialization_format","cdr"}};
++        RCLCPP_ERROR(get_logger(),"MTC_SCENE_REVALIDATION_DIAGNOSTIC directory=%s metadata=%s",
++          directory.c_str(),metadata.dump().c_str());
++        rclcpp::Serialization<moveit_msgs::msg::PlanningScene> serializer;
++        const std::pair<const char*,const moveit_msgs::msg::PlanningScene*> snapshots[]={
++          {"revalidated_scene.cdr",&validated_request->scene},{"readback_scene.cdr",&scene}};
++        for(const auto &snapshot:snapshots) {
++         rclcpp::SerializedMessage serialized;serializer.serialize_message(snapshot.second,&serialized);
++         const auto &data=serialized.get_rcl_serialized_message();
++         std::ofstream output;output.exceptions(std::ios::failbit|std::ios::badbit);
++         output.open(directory/snapshot.first,std::ios::binary);
++         output.write(reinterpret_cast<const char*>(data.buffer),static_cast<std::streamsize>(data.buffer_length));
++         output.close();
++        }
++        std::ofstream output;output.exceptions(std::ios::failbit|std::ios::badbit);
++        output.open(directory/"metadata.json");output<<metadata.dump(2)<<'\n';output.close();
++       }catch(const std::exception &error) {
++        RCLCPP_ERROR(get_logger(),"MTC_SCENE_CHANGED_DURING_REVALIDATION diagnostic output failed: %s",error.what());
++       }
++       throw std::runtime_error("MTC_SCENE_CHANGED_DURING_REVALIDATION");
++      }
+       scene_binding_=std::move(signature);revalidation_readback_=false;scene_stabilizing_=false;
+       if(!authority_->record("remaining_plan_revalidated",{{"context",input().context_id},{"start_index",plan_->index()}}))throw std::runtime_error(authority_->reason());
+      }else if(signature!=scene_binding_){
+@@ -905,13 +948,13 @@
+   if(!revalidate_client_->service_is_ready())throw std::runtime_error("MTC_REVALIDATION_UNAVAILABLE");
+   auto request=std::make_shared<Revalidate::Request>();request->context_id=input().context_id;request->start_index=plan_->index();request->scene=scene;
+   const auto lease=authority_->lease_id();const auto stage_generation=stage_generation_;revalidation_pending_=true;revalidation_sent_=wall();scene_retry_at_=0;
+-  auto pending=revalidate_client_->async_send_request(request,[this,lease,stage_generation](rclcpp::Client<Revalidate>::SharedFuture f){
++  auto pending=revalidate_client_->async_send_request(request,[this,lease,stage_generation,request](rclcpp::Client<Revalidate>::SharedFuture f){
+    if(!owned()||lease!=authority_->lease_id()||stage_generation!=stage_generation_)return;
+    revalidation_pending_=false;if(stop_at_)return;
+    try{
+     auto result=f.get();
+     if(!result->success||result->context_id!=input().context_id)throw std::runtime_error("MTC_REVALIDATION_REJECTED:"+result->reason);
+-    revalidation_readback_=true;query_scene(true);
++    revalidation_readback_=true;query_scene(true,request);
+    }catch(const std::exception&e){stopping(e.what());}
+   });revalidation_request_=pending.request_id;
+   reason_="REVALIDATING_SAME_REMAINING_PLAN";

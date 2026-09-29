@@ -1,0 +1,51 @@
+........................................................................ [ 60%]
+...........................F.F..................                         [100%]
+=================================== FAILURES ===================================
+_ test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\udfff-0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x77a0e86137f0>
+sensor = 'camera\udfff', epoch = 0
+
+    @pytest.mark.parametrize('sensor,epoch',[
+        ('camera\ud800',0),('camera\udfff',0),('camera\u0000\ud800',0),('camera\ud800',2**64),
+    ])
+    def test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks(runtime,sensor,epoch):
+        runtime.vision_pub.publish(String(data=json.dumps(image_packet(runtime,sensor,epoch))));runtime.drain()
+        assert runtime.proc.poll() is None and 'observation rejected:' not in runtime.log_path.read_text()
+        previous=len(runtime.outputs);runtime.ns+=100_000_000;deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:
+            runtime.clock.publish(Clock(clock=stamp(runtime.ns)));runtime.executor.spin_once(timeout_sec=.01)
+        assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+        log=runtime.log_path.read_text()
+        if epoch:
+            assert 'calibration_epoch' in log or 'ROS unsigned integer out of range' in log
+            assert 'UnicodeEncodeError' not in log
+>       else:assert 'UnicodeEncodeError' in log
+E       AssertionError: assert 'UnicodeEncodeError' in 'terminate called without an active exception\n'
+
+runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:418: AssertionError
+_ test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\ud800-18446744073709551616] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x77a0edb81a50>
+sensor = 'camera\ud800', epoch = 18446744073709551616
+
+    @pytest.mark.parametrize('sensor,epoch',[
+        ('camera\ud800',0),('camera\udfff',0),('camera\u0000\ud800',0),('camera\ud800',2**64),
+    ])
+    def test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks(runtime,sensor,epoch):
+        runtime.vision_pub.publish(String(data=json.dumps(image_packet(runtime,sensor,epoch))));runtime.drain()
+        assert runtime.proc.poll() is None and 'observation rejected:' not in runtime.log_path.read_text()
+        previous=len(runtime.outputs);runtime.ns+=100_000_000;deadline=time.monotonic()+5.
+        while runtime.proc.poll() is None and time.monotonic()<deadline:
+            runtime.clock.publish(Clock(clock=stamp(runtime.ns)));runtime.executor.spin_once(timeout_sec=.01)
+        assert runtime.proc.poll() not in (None,0),runtime.log_path.read_text()
+        log=runtime.log_path.read_text()
+        if epoch:
+>           assert 'calibration_epoch' in log or 'ROS unsigned integer out of range' in log
+E           AssertionError: assert ('calibration_epoch' in 'terminate called without an active exception\n' or 'ROS unsigned integer out of range' in 'terminate called without an active exception\n')
+
+runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:416: AssertionError
+=========================== short test summary info ============================
+FAILED runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\udfff-0]
+FAILED runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_surrogate_sensor_fails_at_health_serialization_after_numeric_checks[cpp-camera\ud800-18446744073709551616]
+2 failed, 118 passed in 66.47s (0:01:06)

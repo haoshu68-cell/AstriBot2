@@ -1,0 +1,32 @@
+[0.291s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_s1_perception_components' is in: /tmp/vision_cpp_build/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_perception_components
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_s1_perception_components
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_s1_perception_components
+[0.296s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_autonomy_core
+- astribot_eigen_vendor
+- astribot_logging
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_autonomy_core
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_eigen_vendor
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_autonomy_core astribot_eigen_vendor astribot_logging
+--- stderr: astribot_s1_perception_components
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:4:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:44:7: warning: ‘CameraHealthNode’ has a field ‘CameraHealthNode::color_’ whose type uses the anonymous namespace [-Wsubobject-linkage]
+   44 | class CameraHealthNode final : public rclcpp::Node {
+      |       ^~~~~~~~~~~~~~~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:44:7: warning: ‘CameraHealthNode’ has a field ‘CameraHealthNode::depth_’ whose type uses the anonymous namespace [-Wsubobject-linkage]
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:44:7: warning: ‘CameraHealthNode’ has a field ‘CameraHealthNode::info_’ whose type uses the anonymous namespace [-Wsubobject-linkage]
+---
+Finished <<< astribot_s1_perception_components [12.5s]
+
+Summary: 1 package finished [12.8s]
+  1 package had stderr output: astribot_s1_perception_components

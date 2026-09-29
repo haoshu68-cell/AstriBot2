@@ -4,6 +4,7 @@
 using namespace astribot_route_executor;
 class RouteTest : public ::testing::Test {
 protected:
+ virtual bool requireZones()const{return false;}
  std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor;
  std::shared_ptr<LoopRouteExecutor> runner;
  rclcpp::Node::SharedPtr fake;
@@ -24,7 +25,7 @@ protected:
    [&](auto){++cancel_calls;return rclcpp_action::CancelResponse::ACCEPT;},
    [&](auto h){goal=h;visited.push_back(h->get_goal()->pose.pose.position.x);});
   rclcpp::NodeOptions options;options.parameter_overrides({rclcpp::Parameter("navigation_action","/test_route/nav"),
-   rclcpp::Parameter("goal_timeout_sec",1.2),rclcpp::Parameter("server_timeout_sec",.5),rclcpp::Parameter("cancel_timeout_sec",.15)});
+   rclcpp::Parameter("require_navigation_zones",requireZones()),rclcpp::Parameter("goal_timeout_sec",1.2),rclcpp::Parameter("server_timeout_sec",.5),rclcpp::Parameter("cancel_timeout_sec",.15)});
   runner=std::make_shared<LoopRouteExecutor>(options);executor->add_node(fake);executor->add_node(runner);
   start=fake->create_client<Start>("/loop_route_executor/start");cancel=fake->create_client<Cancel>("/loop_route_executor/cancel");
   subscription=fake->create_subscription<std_msgs::msg::String>("/loop_route_executor/status",rclcpp::QoS(1).transient_local(),
@@ -152,4 +153,13 @@ TEST_F(RouteTest, StaleBootIsRejectedAndDuplicateTerminalIsNotActive) {
  rclcpp::NodeOptions options;options.parameter_overrides({rclcpp::Parameter("navigation_action","/test_route/nav")});
  runner=std::make_shared<LoopRouteExecutor>(options);executor->add_node(runner);spin(250);
  EXPECT_FALSE(call<Start>(start,req)->accepted);
+}
+
+class ZoneRouteTest:public RouteTest{protected:bool requireZones()const override{return true;}};
+TEST_F(ZoneRouteTest, RevisionChangeDuringDwellNeverDispatchesNextLeg) {
+ EXPECT_FALSE(call<Start>(start,route("missing"))->accepted);
+ auto pub=fake->create_publisher<std_msgs::msg::String>("/navigation_zones/constraints",rclcpp::QoS(1).transient_local());auto ready=fake->create_publisher<std_msgs::msg::String>("/navigation_zones/status",rclcpp::QoS(1).transient_local());uint64_t sequence=0,revision=1;
+ auto timer=fake->create_wall_timer(std::chrono::milliseconds(20),[&]{std_msgs::msg::String m;m.data=Json({{"schema_version",1},{"frame","map"},{"boot_id","b"},{"context_id","mapping:s"},{"revision",revision},{"sequence",++sequence},{"valid",true},{"stamp",fake->now().seconds()},{"regions",Json::array()}}).dump();pub->publish(m);m.data=Json({{"ready",true},{"stamp",fake->now().seconds()},{"token","b:mapping:s:"+std::to_string(revision)}}).dump();ready->publish(m);});
+ spin(150);auto req=route();req->dwell_sec=.5;ASSERT_TRUE(call<Start>(start,req)->accepted);spin(150);ASSERT_TRUE(goal);goal->succeed(std::make_shared<Nav::Result>());goal.reset();spin(80);ASSERT_EQ(status.at("state"),"DWELL");
+ revision=2;spin(700);EXPECT_EQ(status.at("state"),"FAILED");EXPECT_EQ(status.at("reason"),"ZONES_CHANGED_OR_UNAVAILABLE");EXPECT_EQ(visited.size(),1u);
 }

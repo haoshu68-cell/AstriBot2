@@ -1,0 +1,139 @@
+[0.254s] WARNING:colcon.colcon_ros.prefix_path.ament:The path '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/deps/mtc_humble/opt/ros/humble' in the environment variable AMENT_PREFIX_PATH doesn't contain any 'local_setup.*' files.
+[0.294s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_s1_perception_components' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922/w1_session_v4/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922/w1_overlay/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922/w1_session_v2/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260921/ros_ws/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/ros_ws/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_perception_components
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_s1_perception_components
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_s1_perception_components
+[0.305s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_autonomy_core
+- astribot_eigen_vendor
+- astribot_logging
+- astribot_perception_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_autonomy_core
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_eigen_vendor
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922/w1_session_v2/install/astribot_perception_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_autonomy_core astribot_eigen_vendor astribot_logging astribot_perception_msgs
+--- stderr: astribot_s1_perception_components
+In file included from /opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/src/camera_health_node.cpp:15:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/src/camera_health_node.cpp: In member function ‘void CameraHealthNode::publish_health()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/src/camera_health_node.cpp:313:11: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 7 has type ‘long long int’ [-Wformat=]
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  314 |           camera_id_.c_str(),activation_ && activation_->active,
+  315 |           activation_?t-ns(activation_->header.stamp):0,
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      long long int
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/src/camera_health_node.cpp:313:77: note: format string is defined here
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |                                                                           ~~^
+      |                                                                             |
+      |                                                                             long int
+      |                                                                           %lld
+In file included from /opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/src/camera_health_node.cpp:15:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/src/camera_health_node.cpp:313:11: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 8 has type ‘long long int’ [-Wformat=]
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+......
+  316 |           activation_?ns(activation_->valid_until)-t:0,
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      long long int
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/src/camera_health_node.cpp:313:100: note: format string is defined here
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |                                                                                                  ~~^
+      |                                                                                                    |
+      |                                                                                                    long int
+      |                                                                                                  %lld
+In file included from /opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:15,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:5:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp: In member function ‘void CameraHealthNode::publish_health()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:313:11: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 7 has type ‘long long int’ [-Wformat=]
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  314 |           camera_id_.c_str(),activation_ && activation_->active,
+  315 |           activation_?t-ns(activation_->header.stamp):0,
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      long long int
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:5:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:313:77: note: format string is defined here
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |                                                                           ~~^
+      |                                                                             |
+      |                                                                             long int
+      |                                                                           %lld
+In file included from /opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/client.hpp:40,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:24,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategy.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/memory_strategies.hpp:18,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:20,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executor.hpp:37,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp:25,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/executors.hpp:21,
+                 from /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:155,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:15,
+                 from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:5:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:313:11: warning: format ‘%ld’ expects argument of type ‘long int’, but argument 8 has type ‘long long int’ [-Wformat=]
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+......
+  316 |           activation_?ns(activation_->valid_until)-t:0,
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      long long int
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:5:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/../src/camera_health_node.cpp:313:100: note: format string is defined here
+  313 |           "CAMERA_SESSION_UNAVAILABLE camera=%s active=%d status_delta_ns=%ld lease_remaining_ns=%ld wall_status_age=%.6f",
+      |                                                                                                  ~~^
+      |                                                                                                    |
+      |                                                                                                    long int
+      |                                                                                                  %lld
+---
+Finished <<< astribot_s1_perception_components [28.4s]
+
+Summary: 1 package finished [28.6s]
+  1 package had stderr output: astribot_s1_perception_components

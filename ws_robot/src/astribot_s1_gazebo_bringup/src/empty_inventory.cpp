@@ -178,6 +178,7 @@ public:
     if(last_>=0 && capture>=last_ && capture-last_<50000000)return;
     last_=capture;
     simulation::InventorySnapshot snapshot;
+    snapshot.world_entity=world_;
     const auto *world_name=ecm.Component<sim::components::Name>(world_);
     snapshot.world_present=ecm.HasEntity(world_) && world_name && world_name->Data()==world_name_;
     sim::Entity robot=sim::kNullEntity;

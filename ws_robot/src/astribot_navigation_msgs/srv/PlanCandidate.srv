@@ -1,6 +1,7 @@
 uint8 LOCAL=1
 uint8 GLOBAL=2
 uint8 VALIDATE=3
+uint8 INITIAL=4
 uint8 mode
 geometry_msgs/PoseStamped goal
 nav_msgs/Path reference_path
@@ -8,6 +9,11 @@ nav_msgs/Path candidate_path
 float64 rejoin_distance_m
 float64 max_local_deviation_m
 ---
+uint8 NONE=0
+uint8 START_CONNECTION_BLOCKED=1
+uint8 failure_code
+# Only defined for START_CONNECTION_BLOCKED; heading of the actual rejected path.
+float64 required_start_heading
 bool geometry_valid
 nav_msgs/Path path
 geometry_msgs/PoseStamped evaluated_start

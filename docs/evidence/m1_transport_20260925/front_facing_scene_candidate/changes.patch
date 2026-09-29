@@ -1,0 +1,153 @@
+--- /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene39_world52/used_run_full_transfer.py
++++ /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/front_facing_transfer_candidate_20260925/run_full_transfer.py
+@@ -31,9 +31,11 @@
+ parser.add_argument('--domain',type=int,required=True)
+ 
+ options=parser.parse_args();OVERLAY=options.overlay.resolve()
++scenario=read_json(E/'scenario.json')
++spawn_world=scenario['spawn_world_xyyaw']
+ if not options.case.replace('_','').isalnum():raise RuntimeError('invalid case identifier')
+ b=E/options.case;b.mkdir(exist_ok=False)
+-for name in ('run_full_transfer.py','prepare_scene.py','verify_full_transfer.py','verify_full_pick.py','prepare_transfer_goal.py','read_full_executor_parameters.py','scenario.json','observer_topics_transfer.json','head_raw_qos.yaml','transport_skills_candidate.launch.py','record_transport_demo.py'):
++for name in ('run_full_transfer.py','prepare_scene.py','verify_full_transfer.py','verify_full_pick.py','prepare_transfer_goal.py','read_full_executor_parameters.py','scenario.json','sim_initial_transport_ready.yaml','observer_topics_transfer.json','head_raw_qos.yaml','transport_skills_candidate.launch.py','record_transport_demo.py'):
+  (b/('used_'+name)).write_bytes((E/name).read_bytes())
+ (b/'used_overlay.bash').write_bytes(OVERLAY.read_bytes())
+ isolation=SimulationIsolation(options.session,options.domain)
+@@ -58,6 +60,7 @@
+  runner=None
+ try:
+  command=['bash',str(ROOT/'tools/launch_sim_stack.sh'),'--mode','baseline','--instance',isolation.instance,'--ros-domain-id',str(options.domain),'--navigation-geometry-mode','fixed_v2','--navigation-policy','p4','--payload-source-id','gazebo_kinematic_v1','--corridor-file',str(R/'N4_empty_corridors.json'),'--social-policy','off','--nav-transport','udp','--camera-preset',str(ROOT/DEFAULT_RELATIVE_PRESET),'--headless','--no-rviz','--exclusive-performance','--ready-timeout','180','--log-dir',str(b/'stack')]
++ command += ['--spawn-x',str(spawn_world[0]),'--spawn-y',str(spawn_world[1]),'--spawn-yaw',str(spawn_world[2])]
+  if options.show_gui:
+   command.remove('--headless')
+  report['show_gui']=options.show_gui
+--- /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene39_world52/used_prepare_scene.py
++++ /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/front_facing_transfer_candidate_20260925/prepare_scene.py
+@@ -288,6 +288,9 @@
+         before=full_scene();require(not before.robot_state.attached_collision_objects,'PLANNING_SCENE_NOT_EMPTY')
+         profile_path=Path(get_package_share_directory('astribot_s1_description'))/'config/sim_initial_transport_ready.yaml'
+         expected=yaml.safe_load(profile_path.read_text())['initial_positions']
++        scenario=json.loads(Path(__file__).with_name('scenario.json').read_text())
++        for index,name in enumerate(('astribot_head_joint_1','astribot_head_joint_2')):
++            require(expected[name]==scenario['head_pick_joints'][index],'FRONT_HEAD_PROFILE_NOT_INSTALLED:'+name)
+         wait(lambda:'joints' in latest,5.)
+         measured=latest['joints']
+         initial_measurement=check_initial_measurement(md(measured),received['joints'],time.monotonic(),node.get_clock().now().nanoseconds,expected,md(before.robot_state.joint_state))
+--- /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene39_world52/used_prepare_transfer_goal.py
++++ /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/front_facing_transfer_candidate_20260925/prepare_transfer_goal.py
+@@ -82,12 +82,12 @@
+     pick_exit[2,3]+=pick_lift
+     goal.pick_exit_targets=[target(pick_exit,'gazebo_world')]
+     goal.place_target=target(place,'gazebo_world');goal.place_pre_target=target(pre_place,'gazebo_world')
+-    # nav_goal is a configured map goal. Transform it to physical world only
+-    # to choose the existing inward PLACE exit alternatives, never assume map=world.
+-    nav=np.eye(4);nav[0,3],nav[1,3],yaw=config['nav_goal']
+-    nav[:3,:3]=Rotation.from_euler('z',yaw).as_matrix()
++    # This fixture defines the dock in Gazebo world; use the measured frame
++    # registration for the map goal, including a nonzero spawn heading/origin.
++    world_nav=np.eye(4);world_nav[0,3],world_nav[1,3],yaw=config['nav_goal_world']
++    world_nav[:3,:3]=Rotation.from_euler('z',yaw).as_matrix()
++    nav=map_from_world@world_nav
+     goal.navigation_target=target(nav,config['map_frame'])
+-    world_nav=np.linalg.inv(map_from_world)@nav
+     inward=world_nav[:2,3]-place[:2,3];distance=np.linalg.norm(inward)
+     if distance<=.10:raise RuntimeError('INVALID_RETREAT_DIRECTION')
+     for length in (.08,.10,.06):
+@@ -168,6 +168,13 @@
+             raise RuntimeError('ACTUAL_ODOMETRY_BASE_FRAME_MISMATCH_OR_STALE')
+         robots=[v for v in truth['pose'] if v.get('name')=='astribot_s1']
+         if len(robots)!=1:raise RuntimeError('ACTUAL_ROBOT_MODEL_NOT_UNIQUE')
++        robot_world=matrix(robots[0]);expected=config['spawn_world_xyyaw']
++        actual_yaw=math.atan2(robot_world[1,0],robot_world[0,0])
++        position_error=math.hypot(robot_world[0,3]-expected[0],robot_world[1,3]-expected[1])
++        yaw_error=abs(math.remainder(actual_yaw-expected[2],2*math.pi))
++        report['front_facing_start']=dict(expected_world_xyyaw=expected,actual_world_xyyaw=[float(robot_world[0,3]),float(robot_world[1,3]),actual_yaw],position_error_m=position_error,yaw_error_rad=yaw_error)
++        if position_error>.002 or yaw_error>math.radians(.1):
++            raise RuntimeError('FRONT_FACING_START_POSE_MISMATCH')
+         t=md(transform.transform);map_base=matrix(dict(position=t['translation'],orientation=t['rotation']))
+         map_world=map_base@np.linalg.inv(matrix(robots[0]))
+         fields=build_fields(args.fixture.resolve(),fixture,config,map_world)
+--- /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene39_world52/used_scenario.json
++++ /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/front_facing_transfer_candidate_20260925/scenario.json
+@@ -14,11 +14,6 @@
+     1.15,
+     0.72,
+     1.095
+-  ],
+-  "nav_goal": [
+-    1.1,
+-    0.0,
+-    0.0
+   ],
+   "size_xyz": [
+     0.06,
+@@ -57,18 +52,36 @@
+     0.5,
+     0.5
+   ],
+-  "nav_waypoints": [
+-    [
+-      0.45,
+-      0.0,
+-      0.0
+-    ]
+-  ],
+   "retreat_inward_m": 0.08,
+   "scan_topic": "/scan_from_cloud",
+   "simulation_real_time_factor": 1.0,
+   "head_pick_joints": [
+-    1.45,
+-    0.65
+-  ]
++    0.0,
++    0.95
++  ],
++  "spawn_world_xyyaw": [
++    0.1,
++    0.15,
++    1.5707963267948966
++  ],
++  "nav_goal_world": [
++    1.15,
++    0.17,
++    1.5707963267948966
++  ],
++  "station_access_normals_world": {
++    "pick_station": [
++      0.0,
++      -1.0,
++      0.0
++    ],
++    "place_station": [
++      0.0,
++      -1.0,
++      0.0
++    ]
++  },
++  "scenario_id": "front_facing_two_station_transfer_20260925",
++  "idle_position_hold": true,
++  "idle_position_kp": 3.0
+ }
+--- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_description/config/sim_initial_transport_ready.yaml
++++ /home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/front_facing_transfer_candidate_20260925/sim_initial_transport_ready.yaml
+@@ -1,14 +1,14 @@
+-# Simulation fixture only. Historical sources: SRDF arm_left/ready,
+-# transport_skill_planner arm_right/transport_compact, warehouse_transfer head_pick.
+-# Measured together in normal_grasp_video_20260923/task01/pick_mtc_request.json.
+-# This initial condition does not execute or validate the zero-to-READY motion.
++# Front-facing simulation candidate; arms, torso and grippers retain scene39 READY.
++# Head 0.0/0.95 rad aims at the table using unchanged URDF camera geometry.
++# Numerical geometry only; runtime visibility and collision checks are pending.
++# Initial conditions do not execute or validate zero-to-READY motion.
+ initial_positions:
+   astribot_torso_joint_1: 0.0
+   astribot_torso_joint_2: 0.0
+   astribot_torso_joint_3: 0.0
+   astribot_torso_joint_4: 0.0
+-  astribot_head_joint_1: 1.45
+-  astribot_head_joint_2: 0.65
++  astribot_head_joint_1: 0.0
++  astribot_head_joint_2: 0.95
+   astribot_arm_left_joint_1: 0.0
+   astribot_arm_left_joint_2: -0.5
+   astribot_arm_left_joint_3: -0.6

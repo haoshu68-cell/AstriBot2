@@ -239,6 +239,15 @@
   <disable_collisions link1="astribot_arm_right_link_4" link2="astribot_arm_right_link_5" reason="Adjacent"/>
   <disable_collisions link1="astribot_arm_right_link_5" link2="astribot_arm_right_link_6" reason="Adjacent"/>
   <disable_collisions link1="astribot_arm_right_link_6" link2="astribot_arm_right_link_7" reason="Adjacent"/>
+  <!-- Wrist RGB-D bodies are fixed sensor hardware attached to link_7.  Their
+       calibrated mounts overlap the neighbouring link_6 envelope in the
+       compact transport posture; keep the fixed hardware self-collision pairs
+       out of the planning scene while retaining collisions with the other arm,
+       torso, payload and environment. -->
+  <disable_collisions link1="right_wrist_rgbd_camera_link" link2="astribot_arm_right_link_6" reason="Adjacent"/>
+  <disable_collisions link1="right_wrist_rgbd_camera_link" link2="astribot_arm_right_link_7" reason="Adjacent"/>
+  <disable_collisions link1="left_wrist_rgbd_camera_link" link2="astribot_arm_left_link_6" reason="Adjacent"/>
+  <disable_collisions link1="left_wrist_rgbd_camera_link" link2="astribot_arm_left_link_7" reason="Adjacent"/>
   <disable_collisions link1="astribot_torso_base" link2="livox_mid360_left" reason="Adjacent"/>
   <disable_collisions link1="astribot_torso_base" link2="livox_mid360_right" reason="Adjacent"/>
   <disable_collisions link1="astribot_head_link_2" link2="camera_link" reason="Adjacent"/>

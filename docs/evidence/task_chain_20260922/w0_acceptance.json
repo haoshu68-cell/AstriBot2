@@ -1,0 +1,33 @@
+{
+  "status": "PASSED_PINNED_SIMULATION_BASELINE",
+  "completed_at": "2026-09-22T00:52:43.971324+08:00",
+  "checks": {
+    "artifact_and_library_resolution": "PASS",
+    "wrong_overlay_before_spawn": "PASS",
+    "wrong_library_resolution": "PASS",
+    "source_drift_reported": "PASS",
+    "C++_bounded_model_fetch_tests": 4,
+    "camera_health_contract_tests": 14,
+    "perception_action_contract_tests": 16,
+    "successful_cold_starts": 3,
+    "observed_live_retry_then_success": true,
+    "owned_cleanup": "PASS",
+    "clock_pause_and_rewind_invalidation": "PASS",
+    "explicit_cold_recovery_new_epochs": "PASS"
+  },
+  "limitations": [
+    "Gazebo time-only rewind automatic recovery within 15 seconds FAILED; explicit cold restart is required by this baseline",
+    "General ABI compatibility, hardware/execution lifecycle and leak-free behavior not claimed",
+    "Newer two navigation source changes are not included in the pinned installed baseline",
+    "W1-W7 integrated acceptance remains pending"
+  ],
+  "evidence": [
+    "integration_manifest_clean.json",
+    "gz_fetch_behavior_red.log",
+    "gz_fetch_final.xml",
+    "gz_control_loaded_maps.json",
+    "clock_cold_recovery.json",
+    "live_clock_reset.json",
+    "../../../../runs/task_chain_20260922/cold_matrix/summary.json"
+  ]
+}

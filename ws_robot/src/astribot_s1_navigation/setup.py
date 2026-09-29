@@ -29,8 +29,6 @@ setup(
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
-            'cmd_vel_body_to_world_node = astribot_s1_navigation.cmd_vel_body_to_world_node:main',
-            'arm_speed_limiter_node = astribot_s1_navigation.arm_speed_limiter_node:main',
             'path_tracking_diagnostics_node = '
             'astribot_s1_navigation.path_tracking_diagnostics_node:main',
             'explore_metrics_recorder_node = '

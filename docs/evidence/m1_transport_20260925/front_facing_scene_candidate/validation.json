@@ -1,0 +1,279 @@
+{
+  "scope": "offline coordinate/kinematic fixture only; no collision, planning, ROS, Gazebo or hardware acceptance",
+  "source_urdf": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene39_world52/fixtures/robot_state_publisher.urdf",
+  "source_urdf_sha256": "dd446d845424fd2519b0eb000e911cb9bbe542822e9d1488575d1ab762300d2a",
+  "candidate": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/front_facing_transfer_candidate_20260925",
+  "passed": true,
+  "stations": [
+    {
+      "kind": "pick",
+      "dock_world_xyyaw": [
+        0.1,
+        0.15,
+        1.5707963267948966
+      ],
+      "station_center_world": [
+        0.1,
+        0.7,
+        0.5175
+      ],
+      "front_target_m": 0.5499999999999999,
+      "lateral_target_m": 3.3677786976552206e-17,
+      "front_face_distance_m": 0.49999999999999994,
+      "nominal_chassis_gap_m": 0.18999999999999995,
+      "access_normal_world": [
+        0.0,
+        -1.0
+      ]
+    },
+    {
+      "kind": "place",
+      "dock_world_xyyaw": [
+        1.15,
+        0.17,
+        1.5707963267948966
+      ],
+      "station_center_world": [
+        1.15,
+        0.72,
+        0.5175
+      ],
+      "front_target_m": 0.5499999999999999,
+      "lateral_target_m": 3.3677786976552206e-17,
+      "front_face_distance_m": 0.49999999999999994,
+      "nominal_chassis_gap_m": 0.18999999999999995,
+      "access_normal_world": [
+        0.0,
+        -1.0
+      ]
+    }
+  ],
+  "map_registrations": [
+    {
+      "map_from_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "map_navigation_pose": [
+        [
+          2.220446049250313e-16,
+          -1.0,
+          0.0,
+          1.15
+        ],
+        [
+          1.0,
+          2.220446049250313e-16,
+          0.0,
+          0.17
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "world_roundtrip_max_error": 0.0
+    },
+    {
+      "map_from_world": [
+        [
+          2.220446049250313e-16,
+          1.0,
+          0.0,
+          -0.15
+        ],
+        [
+          -1.0,
+          2.220446049250313e-16,
+          -0.0,
+          0.1
+        ],
+        [
+          -0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "map_navigation_pose": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.020000000000000268
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -1.0499999999999998
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "world_roundtrip_max_error": 0.0
+    }
+  ],
+  "height_reference": {
+    "world_base_z_m": 0.12922376160857604,
+    "source": "scene39 same-stamp world pose; new scene must remeasure"
+  },
+  "kinematics": [
+    {
+      "name": "rejected_070_grasp",
+      "target_in_base": [
+        0.7,
+        0.0,
+        1.065776238391424
+      ],
+      "position_error_m": 0.12420042949426216,
+      "orientation_error_rad": 0.018354924978322397,
+      "joint_values": {
+        "astribot_arm_left_joint_1": -1.6585453673095554,
+        "astribot_arm_left_joint_2": 0.39165830843518856,
+        "astribot_arm_left_joint_3": 2.1451758474864873,
+        "astribot_arm_left_joint_4": 0.17394534940674744,
+        "astribot_arm_left_joint_5": -2.5599999998749174,
+        "astribot_arm_left_joint_6": -0.2524899334841737,
+        "astribot_arm_left_joint_7": -1.3890826493622905
+      },
+      "required_limit_margin_rad": 0.0,
+      "minimum_actual_limit_margin_rad": 1.2508261093557849e-10,
+      "scope": "single-seed numerical IK only; no collision, path or measured execution proof"
+    },
+    {
+      "name": "candidate_pregrasp",
+      "target_in_base": [
+        0.55,
+        0.0,
+        1.095776238391424
+      ],
+      "position_error_m": 1.6523906947798675e-13,
+      "orientation_error_rad": 3.186575534744735e-14,
+      "joint_values": {
+        "astribot_arm_left_joint_1": -1.7148135268780584,
+        "astribot_arm_left_joint_2": 0.14958454613747393,
+        "astribot_arm_left_joint_3": 0.5100639978242554,
+        "astribot_arm_left_joint_4": 0.4110954424004413,
+        "astribot_arm_left_joint_5": -0.9702010167090636,
+        "astribot_arm_left_joint_6": -0.4426426682439528,
+        "astribot_arm_left_joint_7": -1.312437457395069
+      },
+      "required_limit_margin_rad": 0.1,
+      "minimum_actual_limit_margin_rad": 0.21756254260493102,
+      "scope": "single-seed numerical IK only; no collision, path or measured execution proof"
+    },
+    {
+      "name": "candidate_grasp",
+      "target_in_base": [
+        0.55,
+        0.0,
+        1.065776238391424
+      ],
+      "position_error_m": 4.153468839855553e-12,
+      "orientation_error_rad": 9.274730475529084e-13,
+      "joint_values": {
+        "astribot_arm_left_joint_1": -1.5887567024209224,
+        "astribot_arm_left_joint_2": 0.17129416575605036,
+        "astribot_arm_left_joint_3": 0.2269489927420193,
+        "astribot_arm_left_joint_4": 0.34303950122478766,
+        "astribot_arm_left_joint_5": -0.6444535547504474,
+        "astribot_arm_left_joint_6": -0.448674724871072,
+        "astribot_arm_left_joint_7": -1.3221471598085535
+      },
+      "required_limit_margin_rad": 0.1,
+      "minimum_actual_limit_margin_rad": 0.20785284019144656,
+      "scope": "single-seed numerical IK only; no collision, path or measured execution proof"
+    },
+    {
+      "name": "candidate_lift",
+      "target_in_base": [
+        0.55,
+        0.0,
+        1.125776238391424
+      ],
+      "position_error_m": 3.909965224396544e-12,
+      "orientation_error_rad": 6.203890949580253e-13,
+      "joint_values": {
+        "astribot_arm_left_joint_1": -1.7093037010645,
+        "astribot_arm_left_joint_2": 0.10530471089660526,
+        "astribot_arm_left_joint_3": 0.26899459453718394,
+        "astribot_arm_left_joint_4": 0.416600705070061,
+        "astribot_arm_left_joint_5": -0.7020539233327983,
+        "astribot_arm_left_joint_6": -0.4773669128981562,
+        "astribot_arm_left_joint_7": -1.3976989472841428
+      },
+      "required_limit_margin_rad": 0.1,
+      "minimum_actual_limit_margin_rad": 0.13230105271585724,
+      "scope": "single-seed numerical IK only; no collision, path or measured execution proof"
+    }
+  ],
+  "head": {
+    "head_pick_joints": [
+      0.0,
+      0.95
+    ],
+    "camera_origin_base": [
+      0.2413851220522527,
+      -8.311345519615277e-07,
+      1.398318020375671
+    ],
+    "box_center_optical": [
+      3.024770287819695e-07,
+      0.0005701133346430742,
+      0.5313522475949413
+    ],
+    "axis_error_rad": 0.001072947745472657,
+    "nominal_center_pixel": [
+      318.2522132088284,
+      179.7047664538669
+    ],
+    "scope": "unchanged URDF optical geometry; image visibility/occlusion not tested"
+  }
+}

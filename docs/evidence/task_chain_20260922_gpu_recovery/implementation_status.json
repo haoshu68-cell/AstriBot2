@@ -1,0 +1,253 @@
+{
+  "scope": "W1 continued; evidence classes remain separate",
+  "full_W1_accepted": false,
+  "timing": {
+    "id": "W1_cuda_process_supervision_and_processing_health",
+    "started": "2026-09-22T22:04:18+08:00",
+    "deadline": "2026-09-22T23:34:18+08:00",
+    "time_limit_sec": 5400,
+    "state": "paused_timeout",
+    "user_rule": "pause if current task remains incomplete after 90 minutes; no split or reset to extend the task",
+    "evidence": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260922_gpu_recovery",
+    "prior_windows": [
+      {
+        "started": "2026-09-22T18:25:36+08:00",
+        "deadline": "2026-09-22T19:55:36+08:00",
+        "reason": "user explicitly requested resetting current task timer"
+      }
+    ],
+    "paused_at": "2026-09-22T23:34:57.030896+08:00",
+    "full_W1_accepted": false,
+    "completed_scope": "CUDA supervision, processing health and consumers, stationary fault/pressure regression, formal mapping context ownership",
+    "remaining_scope": "formal attachment/hold/envelope transaction, original negative ACK reproduction, actual motion/load and TF/source/ROI/3D matrices",
+    "owned_simulation_remaining": []
+  },
+  "tests": {
+    "perception": {
+      "suites": [
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/camera_health_test.gtest.xml",
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/camera_postprocess_frame_test.gtest.xml",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/camera_session_test.gtest.xml",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/depth_projection_test.gtest.xml",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/detection_gate_test.gtest.xml",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/health_epoch_flow_test.gtest.xml",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/latency_metrics_test.gtest.xml",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/projection_health_test.gtest.xml",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/projection_process_test.gtest.xml",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/rgbd_pointcloud_test.gtest.xml",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/vision_contract_test.gtest.xml",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/wrist_session_node_test.gtest.xml",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/yolo_decode_test.gtest.xml",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/cuda_build/test_results/astribot_s1_perception_components/yolo_pipeline_test.gtest.xml",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        }
+      ],
+      "cases": 138,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "inference": {
+      "suites": [
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/consumer_build/test_results/astribot_s1_manipulation_perception/action_contract_test.gtest.xml",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/consumer_build/test_results/astribot_s1_manipulation_perception/inference_contract_test.gtest.xml",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/consumer_build/test_results/astribot_s1_manipulation_perception/worker_process_test.gtest.xml",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        }
+      ],
+      "cases": 37,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "navigation": {
+      "suites": [
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/navigation_build/test_results/astribot_s1_navigation_policy_native/projection_capability_test.gtest.xml",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        },
+        {
+          "file": "runs/task_chain_20260922_gpu_recovery/navigation_build/test_results/astribot_s1_navigation_policy_native/projection_protection_ros_test.gtest.xml",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "disabled": 0,
+          "skipped": 0
+        }
+      ],
+      "cases": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "native_ctest_executables": 2,
+      "initial_protocol_pytest_cases": 22,
+      "final_cpp_protocol_pytest_cases": 11,
+      "selected_ctest_log": "runs/task_chain_20260922_gpu_recovery/navigation_future_selected_green.log",
+      "out_of_scope_ctest_unbuilt_targets": 12
+    },
+    "supervisor_launch_pytest_cases": 5
+  },
+  "completed_scoped_gates": [
+    "bounded persistent CUDA worker lifecycle and result identity",
+    "CPU fallback off/on and recovery requires fresh capture",
+    "projection health epochs and inference consumer contract",
+    "stationary same-warehouse four RGB-D plus real CUDA frozen-input pressure",
+    "navigation final protection processing capability, fault hold and recovery",
+    "future heartbeat ordering fixes in navigation and inference consumers",
+    "formal mapping session ownership, two cold starts and 120s real zone ACK per run"
+  ],
+  "current_gate": "W1 attachment state / arm hold / fixed-envelope transaction; pause required by user 90-minute limit",
+  "open_gates": [
+    "remaining SLAM/MPPI actual-motion/inference workload combinations",
+    "TF loss/source restart and six-camera ROI/3D coverage",
+    "original nonhome navigation envelope negative ACK diagnosis and reproduction",
+    "complete task-owned runtime camera client integration"
+  ],
+  "deferred": [
+    "VLA real model validation",
+    "physical hardware and calibration acceptance",
+    "full dynamic pick/carry/place"
+  ],
+  "artifacts": {
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/RGBD_CUDA_PROCESS_RECOVERY_20260922.md",
+    "raw_runs": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery",
+    "source_manifest": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/final_candidate_manifest.json",
+    "navigation_gate": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260922_gpu_recovery/navigation_projection_gate.json"
+  },
+  "updated_at": "2026-09-22T23:34:57.030896+08:00",
+  "observed_next_blocker": {
+    "geometry_complete": false,
+    "geometry_reason": "ATTACHMENT_STATE_UNAVAILABLE",
+    "arm_hold_publishers": 0,
+    "fixed_envelope_samples_in_5s": 0,
+    "scope": "stationary sensor validation profile; no envelope configuration request or motion goal was sent"
+  },
+  "owned_simulation_remaining": [],
+  "state": "paused_timeout",
+  "latest_offline_continuation": {
+    "at": "2026-09-23T01:15:35.482969+08:00",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/PAYLOAD_STATE_OFFLINE_20260923.md",
+    "status": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260923_payload_offline/implementation_status.json",
+    "full_W1_accepted": false,
+    "note": "Earlier paused-time and simulation evidence retained as history; current offline scope is not stack acceptance."
+  }
+}

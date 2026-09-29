@@ -1,4 +1,10 @@
 # The behavior-tree execution owns this token, including cancellation boundaries.
+uint8 NORMAL=0
+uint8 WORKSTATION_ALIGN=1
+uint8 FINISH=2
+uint8 RECOVER=3
+uint8 RESUME=4
+uint8 mode
 bool allow_detour
 string session_id
 nav_msgs/Path reference_path
@@ -7,7 +13,14 @@ geometry_msgs/PoseStamped goal
 uint8 KEEP=0
 uint8 COMMIT=1
 uint8 BLOCKED=2
+uint8 ALIGNMENT_COMMITTED=3
+uint8 FINISHED=4
+uint8 RECOVERY_COMMITTED=5
+uint8 RESUMED=6
+uint8 NONE=0
+uint8 OBSTRUCTION_DEADLINE=1
 uint8 disposition
+uint8 reason_code
 nav_msgs/Path path
 builtin_interfaces/Time evaluated_at
 string request_id

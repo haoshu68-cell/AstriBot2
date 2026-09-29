@@ -1,0 +1,1126 @@
+FFFFFFFFFFFFssssssssFF.FFFF.ssssFFFF                                     [100%]
+=================================== FAILURES ===================================
+___________ test_runtime_rotation_toggle_changes_wire_output[python] ___________
+
+runtime = <function runtime.<locals>.start at 0x79aad579bd00>
+
+    def test_runtime_rotation_toggle_changes_wire_output(runtime):
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:157: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad3dcb310>
+impl = 'python'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_rotation_toggle_c0')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+____________ test_runtime_rotation_toggle_changes_wire_output[cpp] _____________
+
+runtime = <function runtime.<locals>.start at 0x79aad37d7130>
+
+    def test_runtime_rotation_toggle_changes_wire_output(runtime):
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:157: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad37c5bd0>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_rotation_toggle_c1')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+______ test_runtime_odom_timeout_rejects_old_stamp_then_recovers[python] _______
+
+runtime = <function runtime.<locals>.start at 0x79aad38613f0>
+
+    def test_runtime_odom_timeout_rejects_old_stamp_then_recovers(runtime):
+>       node = runtime(enable_body_to_world=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:169: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad3789c00>
+impl = 'python'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_odom_timeout_reje0')
+parameters = {'enable_body_to_world': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+________ test_runtime_odom_timeout_rejects_old_stamp_then_recovers[cpp] ________
+
+runtime = <function runtime.<locals>.start at 0x79aad37d70a0>
+
+    def test_runtime_odom_timeout_rejects_old_stamp_then_recovers(runtime):
+>       node = runtime(enable_body_to_world=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:169: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad37c77c0>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_odom_timeout_reje1')
+parameters = {'enable_body_to_world': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+________ test_runtime_command_timeout_stops_an_existing_command[python] ________
+
+runtime = <function runtime.<locals>.start at 0x79aad3861cf0>
+
+    def test_runtime_command_timeout_stops_an_existing_command(runtime):
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad3788070>
+impl = 'python'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_command_timeout_s0')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_________ test_runtime_command_timeout_stops_an_existing_command[cpp] __________
+
+runtime = <function runtime.<locals>.start at 0x79aad38623b0>
+
+    def test_runtime_command_timeout_stops_an_existing_command(runtime):
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad37c68c0>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_command_timeout_s1')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[python-normal_height-0.3-0.134-pose0] _
+
+runtime = <function runtime.<locals>.start at 0x79aad38627a0>
+name = 'normal_height', value = 0.3, restore = 0.134, pose = {}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+>       node = runtime(enable_posture_monitor=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad3de0ca0>
+impl = 'python'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_threshold_uses_ex0')
+parameters = {'enable_posture_monitor': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[python-max_height_deviation-0.005-0.06-pose1] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3862cb0>
+name = 'max_height_deviation', value = 0.005, restore = 0.06
+pose = {'z': 0.154}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+>       node = runtime(enable_posture_monitor=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad3788f70>
+impl = 'python'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_threshold_uses_ex1')
+parameters = {'enable_posture_monitor': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[python-max_tilt_rad-0.005-0.12-pose2] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3863370>
+name = 'max_tilt_rad', value = 0.005, restore = 0.12, pose = {'roll': 0.02}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+>       node = runtime(enable_posture_monitor=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad3de3e50>
+impl = 'python'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_threshold_uses_ex2')
+parameters = {'enable_posture_monitor': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-normal_height-0.3-0.134-pose0] _
+
+runtime = <function runtime.<locals>.start at 0x79aad37d6f80>
+name = 'normal_height', value = 0.3, restore = 0.134, pose = {}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+>       node = runtime(enable_posture_monitor=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad560cc10>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_threshold_uses_ex3')
+parameters = {'enable_posture_monitor': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_height_deviation-0.005-0.06-pose1] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3863a30>
+name = 'max_height_deviation', value = 0.005, restore = 0.06
+pose = {'z': 0.154}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+>       node = runtime(enable_posture_monitor=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad3de1750>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_threshold_uses_ex4')
+parameters = {'enable_posture_monitor': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_tilt_rad-0.005-0.12-pose2] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3861d80>
+name = 'max_tilt_rad', value = 0.005, restore = 0.12, pose = {'roll': 0.02}
+
+    @pytest.mark.parametrize('name,value,restore,pose', [
+        ('normal_height', .3, .134, {}),
+        ('max_height_deviation', .005, .06, {'z': .154}),
+        ('max_tilt_rad', .005, .12, {'roll': .02}),
+    ])
+    def test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched(runtime, name, value, restore, pose):
+>       node = runtime(enable_posture_monitor=True)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad378a0e0>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_runtime_threshold_uses_ex5')
+parameters = {'enable_posture_monitor': True}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-odom_timeout_sec-0.0] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3863f40>
+name = 'odom_timeout_sec', value = 0.0
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad36d8d00>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_invalid_atomic_update_rej8')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-cmd_timeout_sec--1.0] _
+
+runtime = <function runtime.<locals>.start at 0x79aad38624d0>
+name = 'cmd_timeout_sec', value = -1.0
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad560ccd0>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_invalid_atomic_update_rej9')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad--0.01] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3860940>
+name = 'max_tilt_rad', value = -0.01
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad37c5f60>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_invalid_atomic_update_rej11')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-normal_height-nan] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3860d30>
+name = 'normal_height', value = nan
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad36712a0>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_invalid_atomic_update_rej12')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad-inf] _
+
+runtime = <function runtime.<locals>.start at 0x79aad3754160>
+name = 'max_tilt_rad', value = inf
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad37c5c60>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_invalid_atomic_update_rej13')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-enable_body_to_world-true] _
+
+runtime = <function runtime.<locals>.start at 0x79aacd2cd480>
+name = 'enable_body_to_world', value = 'true'
+
+    @pytest.mark.parametrize('name,value', [
+        ('odom_timeout_sec', 0.), ('cmd_timeout_sec', -1.),
+        ('max_height_deviation', -0.01), ('max_tilt_rad', -0.01),
+        ('normal_height', math.nan), ('max_tilt_rad', math.inf),
+        ('enable_body_to_world', 'true'), ('odom_timeout_sec', '0.1'),
+    ])
+    def test_invalid_atomic_update_rejects_without_applying_valid_member(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ validation rejects unsafe legacy updates explicitly')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad36d9450>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_invalid_atomic_update_rej14')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-input_topic-/unused/in] _
+
+runtime = <function runtime.<locals>.start at 0x79aacd2cc670>
+name = 'input_topic', value = '/unused/in'
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:228: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad36922c0>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_startup_only_parameters_r4')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-output_topic-/unused/out] _
+
+runtime = <function runtime.<locals>.start at 0x79aacd2cd990>
+name = 'output_topic', value = '/unused/out'
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:228: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aacd353910>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_startup_only_parameters_r5')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-odom_topic-/unused/odom] _
+
+runtime = <function runtime.<locals>.start at 0x79aacd2ce4d0>
+name = 'odom_topic', value = '/unused/odom'
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:228: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aad367b490>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_startup_only_parameters_r6')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+_ test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-enable_posture_monitor-True] _
+
+runtime = <function runtime.<locals>.start at 0x79aacd2ce9e0>
+name = 'enable_posture_monitor', value = True
+
+    @pytest.mark.parametrize('name,value', [
+        ('input_topic', '/unused/in'), ('output_topic', '/unused/out'),
+        ('odom_topic', '/unused/odom'), ('enable_posture_monitor', True),
+    ])
+    def test_startup_only_parameters_reject_instead_of_claiming_an_update(runtime, name, value):
+        if runtime.impl == 'python': pytest.skip('C++ explicitly advertises existing startup-only contract')
+>       node = runtime()
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:228: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:147: in start
+    item = Runtime(request.param, binary, tmp_path, parameters)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_cmd_vel_runtime_parameters.Runtime object at 0x79aacd31e500>
+impl = 'cpp'
+binary = '/tmp/astribot_cpp_entry_audit_20260921/cmd_build/cmd_vel_body_to_world_cpp'
+directory = PosixPath('/tmp/astribot_cpp_entry_audit_20260921/cmd_green_final/test_startup_only_parameters_r7')
+parameters = {}
+
+    def __init__(self, impl, binary, directory, parameters):
+        self.impl = impl
+        self.name = 'cmd_parameter_' + uuid.uuid4().hex[:12]
+        self.context = self.node = self.executor = self.proc = None
+        self.events = []
+        self.log = (directory / (self.name + '.log')).open('w')
+        env = dict(os.environ, ROS_DOMAIN_ID='124', ROS_LOCALHOST_ONLY='1',
+                   ASTRIBOT_NAV_NATIVE_KERNELS='0')
+        env['PYTHONPATH'] = os.pathsep.join([
+            str(ROOT / 'astribot_s1_navigation'),
+            str(ROOT / 'astribot_s1_navigation_policy'), env.get('PYTHONPATH', '')])
+        command = [binary] if impl == 'cpp' else [sys.executable, '-c', REFERENCE]
+        params = dict(input_topic=f'/{self.name}/in', output_topic=f'/{self.name}/out',
+                      odom_topic=f'/{self.name}/odom', enable_posture_monitor=False,
+                      cmd_timeout_sec=1.0)
+        params.update(parameters)
+        command += ['--ros-args', '-r', '__node:=' + self.name]
+        for name, value in params.items():
+            command += ['-p', f'{name}:={str(value).lower() if isinstance(value, bool) else value}']
+        try:
+            self.proc = subprocess.Popen(command, env=env, stdout=self.log, stderr=subprocess.STDOUT)
+            actual_env = (Path('/proc') / str(self.proc.pid) / 'environ').read_bytes().split(b'\0')
+>           assert b'ROS_DOMAIN_ID=124' in actual_env and b'ROS_LOCALHOST_ONLY=1' in actual_env
+E           AssertionError: assert (b'ROS_DOMAIN_ID=124' in [b''])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_rotation_toggle_changes_wire_output[python]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_rotation_toggle_changes_wire_output[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_odom_timeout_rejects_old_stamp_then_recovers[python]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_odom_timeout_rejects_old_stamp_then_recovers[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_command_timeout_stops_an_existing_command[python]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_command_timeout_stops_an_existing_command[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[python-normal_height-0.3-0.134-pose0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[python-max_height_deviation-0.005-0.06-pose1]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[python-max_tilt_rad-0.005-0.12-pose2]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-normal_height-0.3-0.134-pose0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_height_deviation-0.005-0.06-pose1]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_runtime_threshold_uses_existing_samples_and_keeps_stop_latched[cpp-max_tilt_rad-0.005-0.12-pose2]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-odom_timeout_sec-0.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-cmd_timeout_sec--1.0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad--0.01]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-normal_height-nan]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-max_tilt_rad-inf]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_invalid_atomic_update_rejects_without_applying_valid_member[cpp-enable_body_to_world-true]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-input_topic-/unused/in]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-output_topic-/unused/out]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-odom_topic-/unused/odom]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_cmd_vel_runtime_parameters.py::test_startup_only_parameters_reject_instead_of_claiming_an_update[cpp-enable_posture_monitor-True]
+22 failed, 2 passed, 12 skipped in 1.18s

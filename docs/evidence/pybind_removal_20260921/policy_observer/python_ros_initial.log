@@ -1,0 +1,33 @@
+....F..                                                                  [100%]
+=================================== FAILURES ===================================
+_____________ test_clock_rollback_revokes_sources_and_risk[python] _____________
+
+runtime = <test_policy_observer_ros.Runtime object at 0x713c1bebbcd0>
+
+    def test_clock_rollback_revokes_sources_and_risk(runtime):
+        runtime.seed(.6);assert runtime.tick()['inputs_valid']
+>       value=runtime.tick(-800_000_000)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:104: in tick
+    self.until(output);return self.outputs[-1]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_policy_observer_ros.Runtime object at 0x713c1bebbcd0>
+predicate = <function Runtime.tick.<locals>.output at 0x713c1df7f520>
+timeout = 6.0
+
+    def until(self,predicate,timeout=6.):
+        deadline=time.monotonic()+timeout
+        while time.monotonic()<deadline:
+            assert self.proc.poll() is None,self.log_path.read_text()
+            if predicate():return
+            self.executor.spin_once(timeout_sec=.01)
+>       raise AssertionError('observer deadline: '+self.log_path.read_text())
+E       AssertionError: observer deadline: ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:92: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_clock_rollback_revokes_sources_and_risk[python]
+1 failed, 6 passed, 7 deselected in 11.03s

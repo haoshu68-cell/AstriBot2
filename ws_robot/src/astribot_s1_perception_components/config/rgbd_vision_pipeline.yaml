@@ -1,0 +1,45 @@
+# Contract-level configuration for the camera -> detection -> 3D pose -> grasp
+# path. This is a contract reference, not a ROS parameter-file input.
+# C++ YOLO or an external detector publishes Detection2D and cannot command a robot.
+vision_pipeline:
+  camera_ids: [head_rgbd, torso_rgbd]
+  camera_health_topics:
+    head_rgbd: /perception/camera_health/head_rgbd
+    torso_rgbd: /perception/camera_health/torso_rgbd
+  detection_topics:
+    head_rgbd: /perception/detections/head_rgbd
+    torso_rgbd: /perception/detections/torso_rgbd
+  valid_detection_topics:
+    head_rgbd: /perception/valid_detections/head_rgbd
+    torso_rgbd: /perception/valid_detections/torso_rgbd
+  object_pose_topics:
+    head_rgbd: /perception/object_pose/head_rgbd
+    torso_rgbd: /perception/object_pose/torso_rgbd
+  grasp_action: /perception/compute_grasps
+  grasp_candidates_topic: /perception/grasp_candidates
+  accepted_grasps_topic: /manipulation/valid_grasp_candidates
+  detector:
+    contract: astribot_perception_msgs/Detection2D
+    model_name: yolo_dnn_yolov5
+    model_revision: required_local_artifact_revision
+    inference_runtime: opencv_dnn_cpu
+    executable: yolo_detector_node
+    enabled_by_default: false
+    segmentation_supported: false
+  pose:
+    executable: rgbd_object_pose_node
+    position_semantics: visible_surface_centroid
+    orientation_valid: false
+    require_camera_health: true
+    max_detection_age_sec: 0.30
+    max_depth_age_sec: 0.20
+    max_health_age_sec: 0.50
+  grasp:
+    contract: astribot_perception_msgs/action/ComputeGrasps
+    inference_only: true
+    model_service_implemented: false
+    execution_permission: false
+    context_parameters: read_only_required_versions
+    candidate_gate_executable: grasp_candidate_gate_node
+    require_collision_checked: true
+    require_collision_free: true

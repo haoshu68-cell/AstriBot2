@@ -1,0 +1,47 @@
+....................F..                                                  [100%]
+=================================== FAILURES ===================================
+___________ test_json_schema_coercions_nonfinite_and_empty_iterables ___________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_json_schema_coercions_nonfinite_and_empty_iterables(authority):
+        ops=[dict(packet=vision(schema_version=value)) for value in (True,1.,'1',0,None)]
+        ops += [dict(packet=vision(stamp_ns=value,calibration_epoch=' 7 ')) for value in ('1_00',100.9,True,-1)]
+        ops += [dict(packet=vision(observations=value)) for value in ({},'',None)]
+        noframe=vision(observations=[]);del noframe['frame_id'];ops.append(dict(packet=noframe))
+        for token in ('NaN','Infinity','-Infinity','1e999'):
+            body=json.dumps(vision());body=body.replace('0.01',token);ops.append(dict(data=body))
+        ops += [dict(data='\ufeff'+json.dumps(vision())),dict(data='[]'),dict(data='null')]
+>       check(dict(operations=ops),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:237: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:131: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0], ['now', 2], ['now', 3], ...], 'code':... {'person': 0.6, 'unknown': 0.3}, 'geometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, ...}
+b = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0], ['now', 2], ['now', 3], ...], 'last_p...geometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'JSONDecodeError'}
+path = '[16]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[16]', {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0], ['now', 2], ['now', 3], ...]...eometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'JSONDecodeError'})
+E           assert {'calls', 'co... 'ok', 'type'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'last_packet', 'calls', 'ok', 'type'}
+E             + {'code', 'ok', 'field', 'last_packet', 'calls', 'type'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:127: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_json_schema_coercions_nonfinite_and_empty_iterables
+1 failed, 22 passed in 0.30s

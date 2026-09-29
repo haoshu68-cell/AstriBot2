@@ -1,0 +1,9 @@
+# Snapshot of the policy's current metric obstacles and prediction sweep.
+# Polygons already include obstacle uncertainty, but no robot clearance margin.
+# header.stamp is the world evaluation time, not a new capture time for retained
+# obstacles. Retained occupancy follows the policy's observation/clearing rules.
+---
+std_msgs/Header header
+bool valid
+string reason
+geometry_msgs/Polygon[] obstacles

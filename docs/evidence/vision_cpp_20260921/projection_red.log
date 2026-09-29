@@ -1,0 +1,27 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+Note: Google Test filter = *Degenerate*:*Overflow*
+[==========] Running 2 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 2 tests from VisionContract
+[ RUN      ] VisionContract.RejectsDegenerateIntrinsicsWithoutNaNObservation
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:92: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsDegenerateIntrinsicsWithoutNaNObservation (66 ms)
+[ RUN      ] VisionContract.RejectsCovarianceOverflow
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/vision_contract_test.cpp:93: Failure
+Value of: observations.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] VisionContract.RejectsCovarianceOverflow (62 ms)
+[----------] 2 tests from VisionContract (128 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test suite ran. (132 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 2 tests, listed below:
+[  FAILED  ] VisionContract.RejectsDegenerateIntrinsicsWithoutNaNObservation
+[  FAILED  ] VisionContract.RejectsCovarianceOverflow
+
+ 2 FAILED TESTS

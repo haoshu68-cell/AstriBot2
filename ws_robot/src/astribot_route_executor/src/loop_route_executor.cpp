@@ -1,3 +1,4 @@
+#include "astribot_navigation_zones/client.hpp"
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <nav2_msgs/action/navigate_to_pose.hpp>
@@ -31,6 +32,7 @@ class LoopRouteExecutor : public rclcpp::Node {
   Start::Request route_;
   std::unordered_set<std::string> seen_requests_;
   Json points_=Json::array();
+  bool require_zones_{false};astribot_navigation_zones::Gate zones_;std::string zone_token_;
   bool shutting_down_{false}, active_{false}, outstanding_{false}, stopping_{false}, user_cancel_{false};
   size_t index_{0}; uint64_t cycles_{0}, leg_{0};
   double goal_timeout_, server_timeout_, cancel_timeout_;
@@ -41,7 +43,7 @@ class LoopRouteExecutor : public rclcpp::Node {
     msg.data = Json({{"schema_version",1},{"boot_id",boot_},{"route_id",route_id_},
       {"state",state_},{"reason",reason_},{"active",active_},{"index",index_},
       {"completed_cycles",cycles_},{"dwell_sec",route_.dwell_sec},{"waypoints",points_},
-      {"outstanding_goal",outstanding_}}).dump();
+      {"zone_token",zone_token_},{"outstanding_goal",outstanding_}}).dump();
     status_->publish(msg);
   }
   void state(const std::string & value, const std::string & reason) {
@@ -111,6 +113,7 @@ class LoopRouteExecutor : public rclcpp::Node {
   void tick() {
     if(Clock::now()>=heartbeat_) {publish(); heartbeat_=Clock::now()+std::chrono::seconds(1);}
     if(!active_) return;
+    if(require_zones_&&!stopping_){auto snapshot=zones_.constraints.get();if(!zones_.ready()||!snapshot||snapshot->token!=zone_token_){stop("ZONES_CHANGED_OR_UNAVAILABLE",false);return;}}
     if(stopping_) {
       if(outstanding_ && Clock::now()>cancel_deadline_ && state_!="CANCEL_UNCONFIRMED")
         state("CANCEL_UNCONFIRMED",stop_reason_+"; terminal result not received; new routes blocked");
@@ -128,6 +131,7 @@ class LoopRouteExecutor : public rclcpp::Node {
   }
 public:
   explicit LoopRouteExecutor(const rclcpp::NodeOptions & options=rclcpp::NodeOptions()) : Node("loop_route_executor",options) {
+    require_zones_=declare_parameter("require_navigation_zones",false);if(require_zones_)zones_.init(*this);
     goal_timeout_=declare_parameter("goal_timeout_sec",300.0);
     server_timeout_=declare_parameter("server_timeout_sec",10.0);
     cancel_timeout_=declare_parameter("cancel_timeout_sec",10.0);
@@ -148,6 +152,8 @@ public:
       if(seen_requests_.count(req->request_id)) {res->reason="Request ID belongs to a retired route; not restarting it";return;}
       if(seen_requests_.size()>=10000) {res->reason="Request history full; restart an idle executor before new routes";return;}
       if(shutting_down_) {res->reason="Executor shutting down";return;}
+      std::string accepted_zone_token;
+      if(require_zones_){auto snapshot=zones_.constraints.get();if(!zones_.ready()||!snapshot){res->reason="ZONES_NOT_READY";return;}accepted_zone_token=snapshot->token;}
       if(active_) {res->reason="Route active or cancellation unconfirmed";return;}
       if(req->request_id.empty() || req->request_id.size()>128 || req->waypoints.size()<2 ||
         req->waypoints.size()>static_cast<size_t>(max_points_) || !std::isfinite(req->dwell_sec) || req->dwell_sec<0 || req->dwell_sec>3600) {
@@ -164,7 +170,7 @@ public:
         }
         points.push_back({{"frame",frame},{"x",v.x},{"y",v.y},{"yaw",2*std::atan2(q.z,q.w)}});
       }
-      route_=*req;points_=points;request_id_=req->request_id;seen_requests_.insert(request_id_);route_id_=boot_+"/"+request_id_;
+      zone_token_=accepted_zone_token;route_=*req;points_=points;request_id_=req->request_id;seen_requests_.insert(request_id_);route_id_=boot_+"/"+request_id_;
       index_=0;cycles_=0;active_=true;stopping_=false;user_cancel_=false;
       deadline_=Clock::now()+std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(server_timeout_));
       res->accepted=true;res->route_id=route_id_;res->reason="Accepted; loops until canceled or navigation fails";

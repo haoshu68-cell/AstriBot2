@@ -1,0 +1,53 @@
+{
+  "started_at": "2026-09-25T06:31:34.526452+08:00",
+  "scope": [
+    "ws_robot/src/astribot_s1_robot_geometry/include/astribot_s1_robot_geometry/robot_model.hpp",
+    "ws_robot/src/astribot_s1_robot_geometry/test/robot_model_probe.cpp"
+  ],
+  "before": {
+    "ws_robot/src/astribot_s1_robot_geometry/include/astribot_s1_robot_geometry/robot_model.hpp": "1e9a50f23bd92e96e596fb85a89a2b65e90146f5310a92fad5b723a8ce5a7c1c",
+    "ws_robot/src/astribot_s1_robot_geometry/test/robot_model_probe.cpp": "ff9abda7e2986a61996271e93880c7165cdc40ebab077bdc2a9c1f75e1830ffa"
+  },
+  "after": {
+    "ws_robot/src/astribot_s1_robot_geometry/include/astribot_s1_robot_geometry/robot_model.hpp": "c7656b8d38893c66398c0292a3f7ea483e90310438ce9a06318093f176a98ba0",
+    "ws_robot/src/astribot_s1_robot_geometry/test/robot_model_probe.cpp": "0b52853dbce047e9c0d1aa8d50cbc888a47d0e75ad8f355955d63debb38e3a2b",
+    "ws_robot/src/astribot_s1_robot_geometry/test/layered_robot_model_test.cpp": "60613d6733e54c37b32d166528bf2a8ef7131099bdfe16bf25a787988f1e5629",
+    "ws_robot/src/astribot_s1_robot_geometry/test/test_layered_height_profile.py": "33fc31d8080e256d61424f01b11f8eea7892bb85680416df136e33666a5251e7"
+  },
+  "shared_profile": {
+    "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_mapping/config/height_slices.yaml",
+    "sha256": "7babdd70d5f42b1420fbc9ac7f4e2ad44989f18015884c2a58c671eeecce7aae"
+  },
+  "patch_sha256": "9184cfc5c64c18f2ab86a4984e37d5578b987a51ff92448f1083215e4b2c2f60",
+  "completed_at": "2026-09-25T06:40:35.737200+08:00",
+  "status": "OFFLINE_CORE_PASS_RUNTIME_NOT_RUN",
+  "decision": "Replace old uniform 0.25m slices, retain only slices result field; reject absent/empty edges",
+  "binaries": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260925/layered_geometry_core_0700/bin/robot_model_probe": "ad7df17541374dfaf4875b5d6b978266a7b4acc06432b72321e1274c87228c59",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260925/layered_geometry_core_0700/bin/layered_robot_model_test": "0436b184823ad1acde2ebb80f55cb5819e959a433780c875bb90f13c4b8dd933"
+  },
+  "tests": {
+    "gtest.xml": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0,
+      "skipped": 0
+    },
+    "pytest.xml": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "disabled": 0,
+      "skipped": 0
+    }
+  },
+  "not_run": [
+    "ROS build/runtime and shared colcon",
+    "full planning/navigation coupling",
+    "hardware",
+    "performance benchmark",
+    "historical Python differential after replacement (coordinator paused)"
+  ],
+  "compiler": "g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0"
+}

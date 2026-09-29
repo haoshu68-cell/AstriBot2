@@ -1,0 +1,76 @@
+{
+  "phase_sweep": {
+    "python_returncodes": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "cpp_returncodes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "all_recorded_samples_completed": true,
+    "python_exception": "rclpy.shutdown() after SIGINT handler already called rcl_shutdown; child cleanup failure, not normal exit."
+  },
+  "final_phase_sweep": {
+    "python_returncodes": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "cpp_returncodes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "all_recorded_samples_completed": true,
+    "python_exception": "rclpy.shutdown() after SIGINT handler already called rcl_shutdown; child cleanup failure, not normal exit."
+  },
+  "wall_ab": {
+    "child_returncodes": "not recorded by original wall benchmark; do not infer zero",
+    "python_logs_with_duplicate_shutdown_exception": [
+      "g3_empty_python.log",
+      "g3_offset_payload_python.log",
+      "g2_offset_payload_python.log",
+      "g2_empty_python.log",
+      "g1_empty_python.log",
+      "g1_offset_payload_python.log"
+    ],
+    "measurement_driver_returncode": 0,
+    "measurement_runtime_liveness": "spin_for checks child.poll() throughout warmup, measurement, and drain; no early exit exception occurred"
+  },
+  "final_wall_ab": {
+    "child_returncodes": "not recorded by original wall benchmark; do not infer zero",
+    "python_logs_with_duplicate_shutdown_exception": [
+      "g3_empty_python.log",
+      "g3_offset_payload_python.log",
+      "g2_offset_payload_python.log",
+      "g2_empty_python.log",
+      "g1_empty_python.log",
+      "g1_offset_payload_python.log"
+    ],
+    "measurement_driver_returncode": 0,
+    "measurement_runtime_liveness": "spin_for checks child.poll() throughout warmup, measurement, and drain; no early exit exception occurred"
+  }
+}

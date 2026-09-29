@@ -1,0 +1,107 @@
+--- /dev/null
++++ b/ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/base_motion_limits.hpp
+@@ -0,0 +1,23 @@
++#pragma once
++#include <stdexcept>
++
++namespace astribot_s1_transport_mtc {
++struct BaseMotionLimits {
++  double translation_m{.02};
++  double rotation_rad{.02};
++  double linear_speed_m_s{.02};
++  double angular_speed_rad_s{.03};
++};
++
++inline BaseMotionLimits baseMotionLimits(bool relaxed, bool simulated) {
++  if (relaxed && !simulated) {
++    throw std::invalid_argument("SIMULATION_RELAXED_BASE_MOTION_REQUIRES_USE_SIM_TIME");
++  }
++  BaseMotionLimits limits;
++  if (relaxed) {
++    limits.rotation_rad = .05;
++    limits.angular_speed_rad_s = .10;
++  }
++  return limits;
++}
++}
+--- a/ws_robot/src/astribot_s1_transport_mtc/src/execution_guard.cpp
++++ b/ws_robot/src/astribot_s1_transport_mtc/src/execution_guard.cpp
+@@ -1,6 +1,7 @@
+ #include <chrono>
+ #include <functional>
+ #include <rclcpp/rclcpp.hpp>
++#include <rcl_interfaces/msg/parameter_descriptor.hpp>
+ #include <control_msgs/msg/joint_trajectory_controller_state.hpp>
+ #include <astribot_transport_msgs/msg/execution_guard_status.hpp>
+ #include <astribot_transport_msgs/srv/set_execution_guard.hpp>
+@@ -8,6 +9,7 @@
+ #include <tf2_ros/transform_listener.h>
+ #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+ #include "astribot_s1_transport_mtc/execution_guard.hpp"
++#include "astribot_s1_transport_mtc/base_motion_limits.hpp"
+ 
+ namespace {
+ using Status=astribot_transport_msgs::msg::ExecutionGuardStatus;
+@@ -26,6 +28,7 @@
+   geometry_msgs::msg::PoseStamped reference_;
+   std::string base_frame_,fault_;
+   double joint_limit_;
++  astribot_s1_transport_mtc::BaseMotionLimits base_limits_;
+   int64_t armed_ns_{0},previous_ns_{0};
+   std::chrono::steady_clock::time_point armed_wall_,received_wall_;
+   bool observed_{false};
+@@ -75,7 +78,7 @@
+             tf2::Transform current,reference;tf2::fromMsg(tf.transform,current);tf2::fromMsg(reference_.pose,reference);
+             const auto delta=reference.inverse()*current;
+             status_.base_translation_m=delta.getOrigin().length();status_.base_rotation_rad=delta.getRotation().getAngleShortestPath();
+-            if(status_.base_translation_m>.02 || status_.base_rotation_rad>.02)problem="MTC_BASE_MOVED_DURING_EXECUTION";
++            if(status_.base_translation_m>base_limits_.translation_m || status_.base_rotation_rad>base_limits_.rotation_rad)problem="MTC_BASE_MOVED_DURING_EXECUTION";
+           }
+         } catch(const tf2::TransformException&) {if(problem.empty())problem="MANIPULATION_BASE_STATE_STALE";}
+       }
+@@ -92,6 +95,10 @@
+     base_frame_=declare_parameter("base_frame",std::string("astribot_torso_base"));
+     joint_limit_=declare_parameter("maximum_joint_error_rad",.05);
+     if(!std::isfinite(joint_limit_) || joint_limit_<=0. || joint_limit_>.05)throw std::runtime_error("Invalid joint tracking safety bound");
++    rcl_interfaces::msg::ParameterDescriptor simulation_descriptor;
++    simulation_descriptor.read_only=true;
++    const bool relaxed=declare_parameter<bool>("simulation_relaxed_base_motion",false,simulation_descriptor);
++    base_limits_=astribot_s1_transport_mtc::baseMotionLimits(relaxed,get_parameter("use_sim_time").as_bool());
+     publisher_=create_publisher<Status>("/transport/execution_guard/status",10);
+     subscription_=create_subscription<State>("/arm_left_controller/state",10,[this](State::ConstSharedPtr s){state_=s;received_wall_=std::chrono::steady_clock::now();});
+     service_=create_service<Service>("/transport/execution_guard/set",std::bind(&Guard::set,this,std::placeholders::_1,std::placeholders::_2));
+--- a/ws_robot/src/astribot_s1_transport_mtc/CMakeLists.txt
++++ b/ws_robot/src/astribot_s1_transport_mtc/CMakeLists.txt
+@@ -41,6 +41,7 @@
+  ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
+ install(FILES include/astribot_s1_transport_mtc/canonical_octomap.hpp
+  include/astribot_s1_transport_mtc/canonical_scene.hpp
++ include/astribot_s1_transport_mtc/base_motion_limits.hpp
+  DESTINATION include/${PROJECT_NAME})
+ ament_export_targets(transport_scene_signature_targets HAS_LIBRARY_TARGET)
+ ament_export_dependencies(moveit_msgs)
+--- a/ws_robot/src/astribot_s1_transport_mtc/test/execution_guard_test.cpp
++++ b/ws_robot/src/astribot_s1_transport_mtc/test/execution_guard_test.cpp
+@@ -1,9 +1,22 @@
+ #include "astribot_s1_transport_mtc/execution_guard.hpp"
++#include "astribot_s1_transport_mtc/base_motion_limits.hpp"
+ #include <iostream>
+ #include <limits>
+ int main() {
+   using namespace astribot_s1_transport_mtc;
+   int failed=0;auto check=[&](bool ok,const char* message){if(!ok){++failed;std::cerr<<message<<'\n';}};
++  for (const bool simulated : {false,true}) {
++    const auto limits=baseMotionLimits(false,simulated);
++    check(limits.translation_m==.02 && limits.rotation_rad==.02 &&
++      limits.linear_speed_m_s==.02 && limits.angular_speed_rad_s==.03,"default base limits unchanged");
++  }
++  const auto relaxed_limits=baseMotionLimits(true,true);
++  check(relaxed_limits.translation_m==.02 && relaxed_limits.rotation_rad==.05 &&
++    relaxed_limits.linear_speed_m_s==.02 && relaxed_limits.angular_speed_rad_s==.10,"simulation changes only angular limits");
++  bool non_simulation_rejected=false;
++  try { (void)baseMotionLimits(true,false); }
++  catch (const std::invalid_argument&) { non_simulation_rejected=true; }
++  check(non_simulation_rejected,"relaxed base limits rejected without simulated time");
+   double error=0.;
+   check(executionPoseValid(0.,0.,0.,0.,0.,0.,1.),"valid reference pose");
+   check(!executionPoseValid(std::numeric_limits<double>::quiet_NaN(),0.,0.,0.,0.,0.,1.),"nonfinite base rejected");

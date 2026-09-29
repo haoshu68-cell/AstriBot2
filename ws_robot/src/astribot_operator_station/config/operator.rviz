@@ -1,6 +1,16 @@
 Panels:
   - Class: rviz_common/Displays
     Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /RobotModel1
+        - /TF1
+        - /Map1
+        - /Global Costmap1
+        - /Local Costmap1
+    Splitter Ratio: 0.5
+    Tree Height: 700
   - Class: astribot_operator_station/WorkstationPanel
     Name: Astribot Workstation
 Visualization Manager:
@@ -8,37 +18,151 @@ Visualization Manager:
   Global Options:
     Fixed Frame: map
   Displays:
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Virtual Walls and Keepout Zones
+      Enabled: true
+      Topic:
+        Value: /operator/zone_markers
+        Durability Policy: Transient Local
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Scene Equipment
+      Enabled: true
+      Topic:
+        Value: /operator/equipment_markers
+        Durability Policy: Transient Local
+      Value: true
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Name: Grid
+      Plane Cell Count: 30
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Description Topic:
+        Value: /robot_description
+      Enabled: true
+      Name: RobotModel
+      Value: true
+      Visual Enabled: true
+      Collision Enabled: false
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+      Show Names: false
+      Show Axes: true
+      Show Arrows: false
+      Marker Scale: 0.3
+    - Alpha: 1
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 255; 0
+      Enabled: true
+      Name: LaserScan
+      Size (m): 0.05
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /scan_from_cloud
+      Value: true
     - Class: rviz_default_plugins/Map
       Name: Map
       Enabled: true
       Topic:
         Value: /map
         Durability Policy: Transient Local
+      Value: true
+    - Alpha: 0.3
+      Class: rviz_default_plugins/Map
+      Color Scheme: costmap
+      Enabled: true
+      Name: Global Costmap
+      Topic:
+        Value: /global_costmap/costmap
+        Durability Policy: Transient Local
+      Value: true
+    - Alpha: 0.7
+      Class: rviz_default_plugins/Map
+      Color Scheme: costmap
+      Enabled: true
+      Name: Local Costmap
+      Topic:
+        Value: /local_costmap/costmap
+        Durability Policy: Transient Local
+      Value: true
     - Class: rviz_default_plugins/Path
       Name: Navigation Path
       Enabled: true
       Topic:
         Value: /plan
+      Color: 255; 0; 0
+      Value: true
+    - Class: rviz_default_plugins/Path
+      Name: Local Plan
+      Enabled: true
+      Topic:
+        Value: /local_plan
+      Color: 0; 12; 255
+      Value: true
     - Class: rviz_default_plugins/Odometry
       Name: Robot Odometry
       Enabled: true
       Topic:
         Value: /odom
         Reliability Policy: Best Effort
-    - Class: rviz_default_plugins/TF
-      Name: TF
+      Keep: 300
+      Shape:
+        Value: Arrow
+      Value: true
+    - Class: rviz_default_plugins/Polygon
+      Name: Global Footprint
+      Enabled: false
+      Topic:
+        Value: /global_costmap/published_footprint
+      Value: false
+    - Class: rviz_default_plugins/Polygon
+      Name: Local Footprint
       Enabled: true
+      Topic:
+        Value: /local_costmap/published_footprint
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Name: MPPI Trajectories
+      Enabled: true
+      Topic:
+        Value: /trajectories
+        Reliability Policy: Reliable
+        History Policy: Keep Last
+        Depth: 5
+      Value: true
+    - Class: rviz_default_plugins/Path
+      Name: MPPI Transformed Plan
+      Enabled: true
+      Topic:
+        Value: /controller_server/FollowPath/transformed_global_plan
+      Value: true
     - Class: rviz_default_plugins/MarkerArray
       Name: 路线点预览
       Enabled: true
       Topic:
         Value: /operator/route_preview
         Durability Policy: Transient Local
+      Value: true
   Tools:
     - Class: rviz_default_plugins/Interact
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/SetInitialPose
+      Topic:
+        Value: /initialpose
+    - Class: nav2_rviz_plugins/GoalTool
+    - Class: astribot_operator_station/ZonePointTool
     - Class: astribot_operator_station/RoutePointTool
 Window Geometry:
-  Width: 1400
-  Height: 900
+  Width: 1280
+  Height: 720
+  X: 0
+  Y: 0
+  Navigation 2:
+    collapsed: false

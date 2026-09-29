@@ -10,6 +10,12 @@
 
 native 阶段接口为 `/transport/hold_executor/status`、`std_msgs/msg/String`，实际 publisher reliable/transient_local/depth 1、50 ms 周期发布。observer 的 reliable/volatile 订阅能收到后续消息，不请求启动前缓存。
 
+导航约束迁移后，诊断订阅为 `/navigation_policy/constraint_state`、`std_msgs/msg/String`、reliable/volatile/depth 10，以已有 `kind=context` 原样保存；删除已撤销的 `/cmd_vel_policy_input`。新节点 `/navigation_constraint` 只发布前置约束及诊断，不是 `/cmd_vel` 发布者，也不提供 protection envelope ACK；本配置不推断消费者 ACK 集合。新增 `/navigation_policy/arm_speed_limit` 后，M2 私有 transfer 配置和精确话题计数预检须同步为当前 40 + 1；计数再次为 41 不代表清单与历史相同，须核新配置哈希。旧场次 manifest/分析不改，录像工具继续使用已验源码；迁移前哈希快照见 [navigation_constraint_update/before_snapshot.json](navigation_constraint_update/before_snapshot.json)。
+
+约束节点的底盘坐标速度意图来自 `/cmd_vel_nav_body_raw`，实际余速来自 odom；最终 `/cmd_vel` 是当前 body-to-world 唯一路径输出，不能直接解释为底盘坐标意图或约束节点输出。arm_chassis_speed_coupling 已改为上游百分比源，禁止输出 Twist。M5 本轮保存已有最终速度及新增百分比元数据，不新增意图流采集。旧 `tools/vision/verify_navigation_projection_gate.py` 要求末级独占速度输出和非空零 Twist，属于旧故障注入验证；本次不迁移、不运行，旧结果不作为新架构验收。
+
+新增 `/navigation_policy/arm_speed_limit` 类型为 `nav2_msgs/msg/SpeedLimit`，reliable/volatile/depth 10，`kind=context` 保留完整消息和 header 源时间；该专用话题的 `percentage=true`、`0%=HOLD` 契约不同于原生 Nav2 SpeedLimit 的零值“无限制”语义。本场启用耦合时须保存实际发布者/订阅者和样本，再与最终 `/navigation_policy/constraint`、constraint_state 的时间与版本核对；不能只按最近一帧或话题存在断言因果和消费成功。它沿用可选上下文采样规则，缺样本仍报 MISSING，不构成上游能力通过。
+
 在 M2 已确认的实际 overlay 和 session 环境中，沿用 runner 的 `child()` 创建、跟踪该进程；不使用另一个 domain 或仅 source 基础 ROS 的临时环境。下列参数可直接传给现有 `child()`，`--output` 必须尚不存在：
 
 ```bash
@@ -28,7 +34,7 @@ python3 -B /home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observe
 **发 Action 前**，现有 runner 应保存并核对：
 
 1. 同一 observer 的进程身份仍有效；至少已观察 20 秒；没有同名第二节点。manifest 的环境、session 与实际会话一致，清单恰为当前 40 条配置 + 明确 native 阶段；guard required/type/QoS 正确，`phase_source` 正确，无 `error`。
-2. 实际 `/m5_passive_observer` 订阅含全部 41 条及正确类型；保存原始订阅拓扑。保存 guard、native 阶段和本场所用相机的发布者节点、类型、QoS，确认属于本场。manifest 在 ROS 初始化前已经写入，因此存在文件本身不代表订阅建立。
+2. 实际 `/m5_passive_observer` 订阅含全部 41 条及正确类型；保存原始订阅拓扑。保存 guard、native 阶段、constraint_state、arm_speed_limit 和本场所用相机的发布者节点、类型、QoS，确认属于本场；constraint_state 发布者应为 `/navigation_constraint`，不能沿用旧末级节点名。manifest 在 ROS 初始化前已经写入，因此存在文件本身不代表订阅建立。
 3. 原始事件已出现 `/clock`、guard、native 阶段。本场运动相机的 raw 和所用 health/projection 状态也须按本场观测目标单列存在性与当前 epoch；可选话题没有数据应明示，不能包装成全链路完成。文件有缓冲，不能用刚启动时的文件大小替代拓扑。
 4. 将该检查快照保存到 Action 结果，即使其后 Action 失败也保留。保留真实 task/context/phase/clock epoch，不以 issued_at 租约字段充当执行事件时间。
 
@@ -113,7 +119,7 @@ NavigationExecutionStatus 是事件流，不能要求每个周期刷新；latche
 
 **执行顺序尚待 M2/M3 实现，当前不能直接倒序启动**：两个模型 server 参数依赖 probe 先写的 `registration.json`，所以“server ready 再启动现有 probe”还不是可执行流程。总调度正协调“登记→server ready→bag 发现→单次新 capture”的验证门控；本轮不实现登记阶段拆分，也不声称模型已经预热。最终 runner 应在真正模型加载/冷启动完成后，再让 3 秒 head raw 窗口覆盖那一次实际输入 capture T；metadata 应先完成 14 条订阅发现。raw 不必覆盖整个推理输出等待，发现或实际新 capture 耗尽窗口则明确缺证，不自动延长或循环重录。**3 秒 raw 采集预算与原输入 5 秒有效期是不同边界**；不延长原 source TTL、不重盖 stamp、不把旧 capture 重新变为有效。entry/final 快照与全窗口元数据互相补充，不能据此宣称整个窗口一定没有丢失或失效。
 
-它与 41-topic observer 使用相同节点名，**不得两者并行启动**；由 M2 选择本场配置。20 秒只是元数据，不延长原始 bag；若实际模型操作超出 20 秒，明确该窗口覆盖不足，不推成完整模型窗口证明。命令保持：
+它与当前 41-topic observer 使用相同节点名，**不得两者并行启动**；由 M2 选择本场配置。20 秒只是元数据，不延长原始 bag；若实际模型操作超出 20 秒，明确该窗口覆盖不足，不推成完整模型窗口证明。命令保持：
 
 ```bash
 python3 -B /home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observer.py \
@@ -122,7 +128,7 @@ python3 -B /home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/capture_m5_observe
   --seconds 20 --warmup-sec 2
 ```
 
-若本场已运行 41-topic observer，可复用其现有 raw/TF/clock、odom/cmd_vel 元数据；它没有 M3 专用 cloud/ProjectionHealth 及上述 3 个 typed 控制状态订阅，不能冒充完整 14-topic 模型场元数据。独立 observer 回调时间也不等于 bag recorder 或 source 内部消费时间。九头部 raw 3 秒命令与 QoS 不变；新增控制状态只进入 20 秒元数据清单。此前 `head_capture_config_verification.json` 对应旧九话题配置哈希，保留作历史验证，不冒充本次新版验证。
+若本场已运行当前 41-topic observer，可复用其现有 raw/TF/clock、odom/cmd_vel 元数据；它没有 M3 专用 cloud/ProjectionHealth 及上述 3 个 typed 控制状态订阅，不能冒充完整 14-topic 模型场元数据。独立 observer 回调时间也不等于 bag recorder 或 source 内部消费时间。九头部 raw 3 秒命令与 QoS 不变；新增控制状态只进入 20 秒元数据清单。此前 `head_capture_config_verification.json` 对应旧九话题配置哈希，保留作历史验证，不冒充本次新版验证。
 
 **同刻离线核验**：保留 bag 与配置/session/参数/身份/日志/退出码的 SHA256，关联实际 capture T 和 task/context/epoch。RGB、depth、CameraInfo、专用 cloud 需按精确 header stamp/frame 配对，不取最近帧、不重盖时间戳；检查尺寸、布局、无效深度与 NaN 原样保留。health 的 header 是发布/心跳时刻，不能强制冒充采集 T；原样核对 `capture_stamp`、source_epoch、processing_epoch、epoch_first_capture_stamp、valid_until 与 M3 消费契约。TF 必须覆盖 T，若插值应明确记录。只为选中的一个 T 导出原始输入和必要 TF/health/clock 上下文用于复核，不把离线文件重新冒充在线有效输入。raw 文件/图像、ROS 源 stamp、外部接收 steady、source 内部接收 steady 是不同证据层。
 

@@ -1,0 +1,97 @@
+.F.F...F.F..                                                             [100%]
+=================================== FAILURES ===================================
+____________ test_paused_ros_clock_does_not_refresh_heartbeat[cpp] _____________
+
+protocol = <test_envelope_protocol.Protocol object at 0x7b00d9f6d0c0>
+
+    def test_paused_ros_clock_does_not_refresh_heartbeat(protocol):
+        protocol.drain(.15)
+        count = len(protocol.events)
+        protocol.drain(.35)
+>       assert len(protocol.events) == count, 'wall timer refreshed envelope while ROS time was paused'
+E       AssertionError: wall timer refreshed envelope while ROS time was paused
+E       assert 7 == 3
+E        +  where 7 = len([astribot_navigation_msgs.msg.RobotEnvelope(stamp=builtin_interfaces.msg.Time(sec=1, nanosec=0), epoch=75780776227372,...r_speed_rad_s=1.5, max_acceleration_m_s2=0.5, brake_deceleration_m_s2=0.5, reason='POSTURE_OR_FOOTPRINT_PENDING'), ...])
+E        +    where [astribot_navigation_msgs.msg.RobotEnvelope(stamp=builtin_interfaces.msg.Time(sec=1, nanosec=0), epoch=75780776227372,...r_speed_rad_s=1.5, max_acceleration_m_s2=0.5, brake_deceleration_m_s2=0.5, reason='POSTURE_OR_FOOTPRINT_PENDING'), ...] = <test_envelope_protocol.Protocol object at 0x7b00d9f6d0c0>.events
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py:185: AssertionError
+______ test_nonfinite_shape_revokes_previously_acknowledged_costmap[cpp] _______
+
+protocol = <test_envelope_protocol.Protocol object at 0x7b00da02df30>
+
+    def test_nonfinite_shape_revokes_previously_acknowledged_costmap(protocol):
+        protocol.ready()
+        protocol.ack('global', points=[Point32(x=math.nan, y=math.nan, z=0.0) for _ in range(4)])
+        result = protocol.advance()
+>       assert not result.transport_ready, 'NaN footprint retained a previous authorization'
+E       AssertionError: NaN footprint retained a previous authorization
+E       assert not True
+E        +  where True = astribot_navigation_msgs.msg.RobotEnvelope(stamp=builtin_interfaces.msg.Time(sec=1, nanosec=600000000), epoch=75782574..._s=0.35, max_angular_speed_rad_s=1.5, max_acceleration_m_s2=0.5, brake_deceleration_m_s2=0.5, reason='TRANSPORT_READY').transport_ready
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py:192: AssertionError
+___________ test_node_scoped_tf_remap_is_used_for_footprint_ack[cpp] ___________
+
+protocol = <test_envelope_protocol.Protocol object at 0x7b00d4458b20>
+
+    def test_node_scoped_tf_remap_is_used_for_footprint_ack(protocol):
+        protocol.stopped()
+        tf = TransformStamped()
+        tf.header.frame_id = FRAME
+        tf.child_frame_id = 'migration_map'
+        tf.transform.rotation.w = 1.0
+        tf.transform.translation.x = 2.0
+        protocol.tf.publish(TFMessage(transforms=[tf]))
+        protocol.drain(.15)
+        points = [Point32(x=x - 2.0, y=y, z=0.0) for x, y in
+                  ((.31,.31), (-.31,.31), (-.31,-.31), (.31,-.31))]
+        protocol.ack('global', frame='migration_map', points=points)
+        protocol.ack('local', frame='migration_map', points=points)
+>       assert protocol.advance().transport_ready
+E       AssertionError: assert False
+E        +  where False = astribot_navigation_msgs.msg.RobotEnvelope(stamp=builtin_interfaces.msg.Time(sec=1, nanosec=400000000), epoch=75786650...angular_speed_rad_s=1.5, max_acceleration_m_s2=0.5, brake_deceleration_m_s2=0.5, reason='POSTURE_OR_FOOTPRINT_PENDING').transport_ready
+E        +    where astribot_navigation_msgs.msg.RobotEnvelope(stamp=builtin_interfaces.msg.Time(sec=1, nanosec=400000000), epoch=75786650...angular_speed_rad_s=1.5, max_acceleration_m_s2=0.5, brake_deceleration_m_s2=0.5, reason='POSTURE_OR_FOOTPRINT_PENDING') = <bound method Protocol.advance of <test_envelope_protocol.Protocol object at 0x7b00d4458b20>>()
+E        +      where <bound method Protocol.advance of <test_envelope_protocol.Protocol object at 0x7b00d4458b20>> = <test_envelope_protocol.Protocol object at 0x7b00d4458b20>.advance
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py:229: AssertionError
+__________ test_malformed_source_stamp_does_not_exit_node_or_ack[cpp] __________
+
+protocol = <test_envelope_protocol.Protocol object at 0x7b00d450cbe0>
+
+    def test_malformed_source_stamp_does_not_exit_node_or_ack(protocol):
+        protocol.stopped()
+        msg = PolygonStamped()
+        msg.header.frame_id = FRAME
+        # Composite arithmetic looks fresh (1.2s), but sec < 0 is invalid for TF time.
+        msg.header.stamp = Time(sec=-1, nanosec=2_200_000_000)
+        msg.polygon.points = [Point32(x=x, y=y, z=0.0) for x,y in
+                              ((.31,.31), (-.31,.31), (-.31,-.31), (.31,-.31))]
+        protocol.footprints['global'].publish(msg)
+        protocol.drain()
+>       protocol.ack('local')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py:132: in ack
+    self.drain()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_envelope_protocol.Protocol object at 0x7b00d450cbe0>
+duration = 0.07
+
+    def drain(self, duration=.07):
+        end = time.monotonic() + duration
+        while time.monotonic() < end:
+>           assert self.proc.poll() is None, 'candidate process exited during protocol'
+E           AssertionError: candidate process exited during protocol
+E           assert 1 is None
+E            +  where 1 = <bound method Popen.poll of <Popen: returncode: 1 args: ['/tmp/astribot_native_install_20260923_envelope...>>()
+E            +    where <bound method Popen.poll of <Popen: returncode: 1 args: ['/tmp/astribot_native_install_20260923_envelope...>> = <Popen: returncode: 1 args: ['/tmp/astribot_native_install_20260923_envelope...>.poll
+E            +      where <Popen: returncode: 1 args: ['/tmp/astribot_native_install_20260923_envelope...> = <test_envelope_protocol.Protocol object at 0x7b00d450cbe0>.proc
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py:107: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py::test_paused_ros_clock_does_not_refresh_heartbeat[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py::test_nonfinite_shape_revokes_previously_acknowledged_costmap[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py::test_node_scoped_tf_remap_is_used_for_footprint_ack[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_envelope_protocol.py::test_malformed_source_stamp_does_not_exit_node_or_ack[cpp]
+4 failed, 8 passed in 10.76s

@@ -1,0 +1,121 @@
+Internal ctest changing into directory: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/geometry_build
+Test project /home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/geometry_build
+    Start 1: filled_collision
+1/5 Test #1: filled_collision .................   Passed    0.01 sec
+    Start 2: fusion_snapshot
+2/5 Test #2: fusion_snapshot ..................   Passed    0.00 sec
+    Start 3: geometry_state_core
+3/5 Test #3: geometry_state_core ..............   Passed    0.00 sec
+    Start 4: cpp_geometry_differential
+4/5 Test #4: cpp_geometry_differential ........***Failed    0.13 sec
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 703, in import_plugin
+    __import__(importspec)
+ModuleNotFoundError: No module named 'geometry_reference_plugin'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/usr/lib/python3/dist-packages/pytest/__main__.py", line 5, in <module>
+    raise SystemExit(pytest.console_main())
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 185, in console_main
+    code = main()
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 143, in main
+    config = _prepareconfig(args, plugins)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 318, in _prepareconfig
+    config = pluginmanager.hook.pytest_cmdline_parse(
+  File "/usr/lib/python3/dist-packages/pluggy/hooks.py", line 286, in __call__
+    return self._hookexec(self, self.get_hookimpls(), kwargs)
+  File "/usr/lib/python3/dist-packages/pluggy/manager.py", line 92, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File "/usr/lib/python3/dist-packages/pluggy/manager.py", line 83, in <lambda>
+    self._inner_hookexec = lambda hook, methods, kwargs: hook.multicall(
+  File "/usr/lib/python3/dist-packages/pluggy/callers.py", line 203, in _multicall
+    gen.send(outcome)
+  File "/usr/lib/python3/dist-packages/_pytest/helpconfig.py", line 100, in pytest_cmdline_parse
+    config: Config = outcome.get_result()
+  File "/usr/lib/python3/dist-packages/pluggy/callers.py", line 80, in get_result
+    raise ex[1].with_traceback(ex[2])
+  File "/usr/lib/python3/dist-packages/pluggy/callers.py", line 187, in _multicall
+    res = hook_impl.function(*args)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 1003, in pytest_cmdline_parse
+    self.parse(args)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 1283, in parse
+    self._preparse(args, addopts=addopts)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 1168, in _preparse
+    self.pluginmanager.consider_preparse(args, exclude_only=False)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 635, in consider_preparse
+    self.consider_pluginarg(parg)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 660, in consider_pluginarg
+    self.import_plugin(arg, consider_entry_points=True)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 705, in import_plugin
+    raise ImportError(
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 703, in import_plugin
+    __import__(importspec)
+ImportError: Error importing plugin "geometry_reference_plugin": No module named 'geometry_reference_plugin'
+
+    Start 5: geometry_state_cpp_protocol
+5/5 Test #5: geometry_state_cpp_protocol ......***Failed    0.11 sec
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 703, in import_plugin
+    __import__(importspec)
+ModuleNotFoundError: No module named 'geometry_reference_plugin'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/usr/lib/python3/dist-packages/pytest/__main__.py", line 5, in <module>
+    raise SystemExit(pytest.console_main())
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 185, in console_main
+    code = main()
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 143, in main
+    config = _prepareconfig(args, plugins)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 318, in _prepareconfig
+    config = pluginmanager.hook.pytest_cmdline_parse(
+  File "/usr/lib/python3/dist-packages/pluggy/hooks.py", line 286, in __call__
+    return self._hookexec(self, self.get_hookimpls(), kwargs)
+  File "/usr/lib/python3/dist-packages/pluggy/manager.py", line 92, in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+  File "/usr/lib/python3/dist-packages/pluggy/manager.py", line 83, in <lambda>
+    self._inner_hookexec = lambda hook, methods, kwargs: hook.multicall(
+  File "/usr/lib/python3/dist-packages/pluggy/callers.py", line 203, in _multicall
+    gen.send(outcome)
+  File "/usr/lib/python3/dist-packages/_pytest/helpconfig.py", line 100, in pytest_cmdline_parse
+    config: Config = outcome.get_result()
+  File "/usr/lib/python3/dist-packages/pluggy/callers.py", line 80, in get_result
+    raise ex[1].with_traceback(ex[2])
+  File "/usr/lib/python3/dist-packages/pluggy/callers.py", line 187, in _multicall
+    res = hook_impl.function(*args)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 1003, in pytest_cmdline_parse
+    self.parse(args)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 1283, in parse
+    self._preparse(args, addopts=addopts)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 1168, in _preparse
+    self.pluginmanager.consider_preparse(args, exclude_only=False)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 635, in consider_preparse
+    self.consider_pluginarg(parg)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 660, in consider_pluginarg
+    self.import_plugin(arg, consider_entry_points=True)
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 705, in import_plugin
+    raise ImportError(
+  File "/usr/lib/python3/dist-packages/_pytest/config/__init__.py", line 703, in import_plugin
+    __import__(importspec)
+ImportError: Error importing plugin "geometry_reference_plugin": No module named 'geometry_reference_plugin'
+
+
+60% tests passed, 2 tests failed out of 5
+
+Total Test time (real) =   0.24 sec
+
+The following tests FAILED:
+	  4 - cpp_geometry_differential (Failed)
+	  5 - geometry_state_cpp_protocol (Failed)
+Errors while running CTest

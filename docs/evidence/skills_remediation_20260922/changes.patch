@@ -1,0 +1,1533 @@
+--- before/.agents/skills/astribot-architecture-design/SKILL.md
++++ after/.agents/skills/astribot-architecture-design/SKILL.md
+@@ -1,114 +1,34 @@
+ ---
+ name: astribot-architecture-design
+-description: 在本仓库进行整机软件架构设计、架构评审、模块交互梳理、包拆分、接口演进或重构规划时使用。作为架构总入口，按需组合自主系统、双臂任务、世界模型、控制安全、区域任务和验证证据技能，并把建议与当前实现分开。
++description: 在本仓库需要确定整机架构工作范围、选择领域设计技能，或规划跨模块接口演进和重构时使用。已明确领域的局部工作可直接使用对应技能。
+ ---
+ 
+-# AstriBot 架构设计总入口
++# AstriBot 架构设计入口
+ 
+-这是架构工作路由器，不替代具体模块技能。先阅读：
++按本次问题选择一个主技能，再按实际影响补充；表中的补充不是默认必读清单。
++涉及实现或语言选择，统一使用 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)：功能实现优先 C++，只有脚本和启动文件类优先 Python。
+ 
+-- [当前架构参考](../../../docs/manuals/ARCHITECTURE_REFERENCE.md)
+-- [整体架构审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)
+-- [开源架构与 Skills 检索报告](../../../docs/OPEN_SOURCE_ROBOT_SKILLS_REVIEW_20260920.md)
++| 问题 | 主技能 | 何时补充 |
++|---|---|---|
++| 整机职责、控制权和包边界 | [mobile-dual-arm-architecture](../mobile-dual-arm-architecture/SKILL.md) | 比较自动驾驶行业设计时才读 `autonomy-stack-architecture` |
++| 数据流、接口、QoS、依赖和模块实现 | [robot-dataflow-module-design](../robot-dataflow-module-design/SKILL.md) | 影响世界快照时读 `perception-world-model`；改变整机控制权时读整机架构 |
++| 任务接收、去重、准入、排队、取消和恢复 | [robot-task-intake-execution](../robot-task-intake-execution/SKILL.md) | 涉及抓放/运输阶段事务时才读 `robot-task-orchestration` |
++| 抓取、放置、运输和 Nav2/MoveIt/MTC 编排 | [robot-task-orchestration](../robot-task-orchestration/SKILL.md) | 改变外部接收、调度或持久化契约时读任务入口技能 |
++| 感知、SLAM、地图、标定和场景一致性 | [perception-world-model](../perception-world-model/SKILL.md) | 改变执行准入或资源边界时才读相关任务/控制技能 |
++| 控制器、SDK、设备桥和执行保护 | [ros2-control-hardware-safety](../ros2-control-hardware-safety/SKILL.md) | 实际启动/探查/停止栈时读 `ros2-stack-ops` |
++| 区域任务、脱困、报警与恢复预算 | [robot-mission-boundary-safety](../robot-mission-boundary-safety/SKILL.md) | 按涉及的载荷事务、感知或设备保护补充对应技能 |
++| 方案可行性、选型和风险评审 | [robot-design-review](../robot-design-review/SKILL.md) | 论证链有争议时读 `robot-argument-audit`；按领域补充约束 |
++| 前提、证据与结论是否相符 | [robot-argument-audit](../robot-argument-audit/SKILL.md) | 需要设计区分实验时读场景技能 |
++| 多场景、边界、故障注入和恢复验证设计 | [robot-scenario-boundary-validation](../robot-scenario-boundary-validation/SKILL.md) | 记录实际结果或交付证据时读证据技能 |
++| 整理已有日志、指标和验收结论 | [robotics-validation-evidence](../robotics-validation-evidence/SKILL.md) | 仅需重新设计测试时才读场景技能；离线整理不触发栈操作 |
++| 启动、查询、停止 ROS2/Gazebo 栈 | [ros2-stack-ops](../ros2-stack-ops/SKILL.md) | 真实硬件运动另需设备保护及硬件准入 |
+ 
+-## 按问题加载技能
++## 基线与交付粒度
+ 
+-| 问题 | 必须加载 |
+-|---|---|
+-| 方案可行性、选型硬伤、需求匹配、风险或安全论证评审 | [robot-design-review](../robot-design-review/SKILL.md)；涉及具体领域再加载对应技能 |
+-| 前提与结论、隐藏假设、证据外推、报告论证链 | [robot-argument-audit](../robot-argument-audit/SKILL.md) |
+-| 多场景、边界值、故障注入、恢复、负载和重构验收设计 | [robot-scenario-boundary-validation](../robot-scenario-boundary-validation/SKILL.md) + `robotics-validation-evidence` |
+-| 整机分层、包边界、控制权、接口所有者 | `mobile-dual-arm-architecture` + `autonomy-stack-architecture` |
+-| 数据流、模块边界、接口契约、QoS、依赖图、数据生命周期 | `robot-dataflow-module-design` + `mobile-dual-arm-architecture` + `perception-world-model` |
+-| 任务接收、准入、排队、优先级、资源冲突、取消/暂停/恢复、反馈/结果 | `robot-task-intake-execution` + `robot-task-orchestration` |
+-| 感知、SLAM、地图、对象、标定、场景一致性 | `perception-world-model` |
+-| 搬运、抓取、放置、Nav2 与 MoveIt/MTC 内部事务 | `robot-task-orchestration` + `robot-task-intake-execution` |
+-| 控制器、厂家 SDK、设备桥、实时循环、急停 | `ros2-control-hardware-safety` |
+-| 区域任务、探索/覆盖、脱困、报警、回充 | `robot-mission-boundary-safety` |
+-| 任何回归、仿真、真机结论或交付报告 | `robotics-validation-evidence` |
+-| 持续运行算法实现 | `robot-runtime-cpp` |
+-| 启动、探查、清理 ROS2/Gazebo 栈 | `ros2-stack-ops` |
++1. 从 [项目源码入口索引](references/project-map.md) 定位本次涉及的源码、launch、接口和消费者，核对工作区版本及实际安装产物。索引与旧设计文档都是定位材料，不是运行能力证明。
++2. 局部设计提交受影响接口/模块的差异、理由、失败处理和验证入口；已有架构视图直接引用，不要求重画七张图。跨模块或整机边界改变时，按 `mobile-dual-arm-architecture` 维护相应视图。
++3. 写清现状、选择、替代方案、兼容/回退条件、实现与证据范围。按影响检查 launch 依赖、消息/插件兼容、控制写入者、时间/版本、取消与资源交接；不为目录整洁重写已验证控制器。
++4. 用户要求论证或验收设计时，关联需求 R、主张 C、发现 F/危险源 H、场景 SC 与证据 E。只使用能改变决策的字段；局部修改不自动变成全库审计或多角色流程。
+ 
+-## 架构设计工作流
+-
+-### 1. 建立基线
+-
+-先从源码、launch、`package.xml`、消息定义和运行手册确认当前事实。列出：
+-
+-- 已实现的节点、库、Action、Service、Topic、插件和配置；
+-- 每条命令链的唯一写入者和控制权；
+-- 仿真、真机、SDK、控制器和 operator 入口；
+-- 当前证据能证明的范围，以及明确未覆盖的范围。
+-
+-不要用目录名、包数量、节点存在或一份设计文档推断功能已经闭环。
+-
+-### 2. 先画四条边界
+-
+-```text
+-World: 传感器/定位/地图/对象/载荷/标定/时间 -> 可版本化快照
+-Decision: 任务/导航/操作/恢复 -> 意图、候选、约束或 Action goal
+-Execution: 控制器/跟踪器/执行保护 -> 有界命令、取消、停稳确认
+-Device: 底盘/双臂/躯干/夹爪/SDK -> 协议、反馈、模式、硬故障
+-```
+-
+-系统监控、能力状态和人工接管横跨这些边界，但不能删除底层最终保护。任务层可以拥有资源租约和模式，不能绕过执行层写设备接口。
+-
+-### 3. 输出最小架构视图
+-
+-每次设计至少给出：
+-
+-1. **功能视图**：任务、感知、定位、地图、规划、控制、设备、监控。
+-2. **交互视图**：topic/service/action、调用方向、QoS、超时、取消、反馈和唯一所有者。
+-3. **数据视图**：frame、采样/接收时间、时钟域、质量、标定、map/scene/envelope epoch。
+-4. **控制视图**：谁申请、谁规划、谁提交、谁执行、谁取消、谁确认停稳。
+-5. **部署视图**：仿真/真机、进程/组件、生命周期、启动依赖和配置档位。
+-6. **故障视图**：输入过期、定位丢失、局部阻塞、脱困、包络失效、设备失联、一臂失败、人工接管。
+-7. **证据视图**：静态、离线、隔离仿真、整栈仿真和真机验收的可证明命题。
+-
+-### 4. 定义交互契约
+-
+-对每个新增或修改的接口注明：生产者、消费者、消息类型、QoS、frame、时间语义、版本、超时、取消、幂等性、失败码和恢复权限。
+-
+-- 连续状态用有界 Topic；短查询/提交用 Service；长任务、反馈和取消用 Action。
+-- 一个 service/action 只能有一个生产所有者；多个客户端可以调用，但不能出现多个不受控执行端。
+-- 规划结果必须绑定任务/场景/地图/定位/包络/标定上下文；上下文失效时重新校验或丢弃。
+-- 字符串只用于诊断说明，机器状态用强类型接口。
+-
+-### 5. 设计模块内部实现
+-
+-- 纯算法、状态机、资源租约、几何、约束和故障判定优先 C++，保持无 ROS 核心可单测。
+-- ROS 节点负责适配、调度、生命周期、消息转换和执行屏障；回调不做无界阻塞。
+-- Python 用于 launch、薄适配、回放、分析和验证；不在 Python 适配层继续堆长期运行算法。
+-- 仿真与真机共享业务接口，但把时延、反馈质量、错误码、制动和急停差异写进适配层和证据矩阵。
+-
+-### 6. 写清取舍和状态
+-
+-架构记录使用以下字段：
+-
+-```text
+-Problem / Scope / Existing capability
+-Decision / Alternatives / Reason
+-Owners / Interfaces / Versions / Failure semantics
+-Implementation status / Static evidence / Simulation evidence
+-Hardware acceptance / Risks / Revisit trigger
+-```
+-
+-“建议新增”不能写成“当前已有”；“规划成功”不能写成“执行成功”；“仿真通过”不能写成“真机安全通过”。
+-
+-### 7. 检查演进风险
+-
+-变更前检查：反向 launch 依赖、消息包依赖环、插件 ABI、时间和坐标契约、控制写入者、取消屏障、日志关联 ID、旧配置兼容性和回退路径。优先组合/适配/插件，避免为目录整洁重写已验证控制器。
+-
+-### 8. 结束条件
+-
+-架构工作只有在以下信息齐全时才算可审查：模块图、接口表、控制权表、版本/时间契约、故障与恢复表、实现/证据边界、变更清单和下一步验收入口。
+-
+-## 方案评审到验证的接入
+-
+-当用户要求方案论证、多场景验收，或变更跨越任务/世界/执行边界时，按需使用：
+-需求 R → 论证主张 C → 评审发现 F/危险源 H → 场景 SC → 证据 E → 限定范围的结论。
+-论证与硬伤意见先分开记录后核查，共识不自动是真问题，单方严重风险也不丢弃。
+-普通局部修改不强制启动整套多角色评审；默认评审只读被评材料，另有整改授权再实施。
+-场景计划、技能校验、机器人仿真和硬件验收是不同交付物。
+-
+-使用示例、近期实现入口与来源见 [评审技能接入记录](../../../docs/ROBOT_REVIEW_SKILLS_INTEGRATION_20260922.md)。
++架构与技能工作完成不等于机器人功能验收。历史检索/取舍可按需查 [开源来源记录](../../../docs/OPEN_SOURCE_ROBOT_SKILLS_REVIEW_20260920.md) 和 [评审技能接入记录](../../../docs/ROBOT_REVIEW_SKILLS_INTEGRATION_20260922.md)，不默认加载全部来源。
++修改本组技能时，使用 [固定使用题集](references/skill-use-cases.md) 检查受影响行为；格式通过不能替代使用验证。
+--- before/.agents/skills/astribot-architecture-design/references/project-map.md
++++ after/.agents/skills/astribot-architecture-design/references/project-map.md
+@@ -0,0 +1,18 @@
++# 项目源码入口索引
++
++最近核对：2026-09-22；范围是当日工作区可读入口，不证明安装、接线、仿真或硬件验收。使用时按受影响领域核对源码和 launch；目录变更时更新该行，不能由旧文件失踪推断能力消失。
++
++| 领域 | 源码/入口 | 状态与使用边界 |
++|---|---|---|
++| 导航任务仲裁 | [C++ TaskArbiter](../../../../ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp) | 导航 Action 所有权；不代表整机双臂资源协调已实现 |
++| 导航执行保护 | [FinalProtection](../../../../ws_robot/src/astribot_s1_navigation_policy_native/src/final_protection_node.cpp)、[速度转换](../../../../ws_robot/src/astribot_s1_navigation_policy_native/src/cmd_vel_body_to_world_node.cpp) | 原生实现入口；实际 profile、速度接线及保护能力须查所用 launch |
++| 抓放/运输 | [transport](../../../../ws_robot/src/astribot_s1_transport/README.md)、[MTC](../../../../ws_robot/src/astribot_s1_transport_mtc/README.md) | 按 README 定位规划、执行、账本和场景；规划候选/附着假设不证明真实抓持 |
++| GraspNet/物体姿态 | [感知服务](../../../../ws_robot/src/astribot_s1_manipulation_perception/src/manipulation_perception_server.cpp) | 抓取候选、物体 6D、可见中心分开；仍需 IK/碰撞及执行准入 |
++| 地图/虚拟墙/禁区 | [zone server](../../../../ws_robot/src/astribot_navigation_zones/src/zone_server.cpp)、[领域手册](../../../../docs/manuals/VIRTUAL_WALLS_AND_KEEP_OUT.md) | 保存、消费者应用、当前版本准入是不同状态 |
++| 相机/时序 | [sync core](../../../../ws_robot/src/astribot_sensor_sync/include/astribot_sensor_sync/sync_core.hpp)、[同步设计](../../../../docs/SENSOR_HARD_SYNC_DESIGN_20260922.md) | 软件配对/合成边沿与物理曝光证据分开 |
++| 仿真启动/隔离 | [warehouse launch](../../../../ws_robot/src/astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py)、[supervisor](../../../../tools/sim_stack_supervisor.py)、[isolation](../../../../tools/sim_isolation.py) | 可配置 domain；还需 partition、端口、安装链及会话所有权；操作前使用 `ros2-stack-ops` |
++| C++ 迁移/采用基线 | [阶段记录](../../../../docs/CPP_MIGRATION_STAGE_REPORT_20260921.md) | 历史采用/候选决策；不能据报告日期假定当前源码和 install 一致 |
++
++需要更广的背景时查 [架构参考手册](../../../../docs/manuals/ARCHITECTURE_REFERENCE.md) 和有日期的审查文档。手册明确各部分核对范围；历史建议不自动等于当前实现。接口、参数、包数及语言实现都可能变化，现场从受影响源码验证，不在技能中复制固定总包数。
++
++选择用例时读 [场景目录](../../robot-scenario-boundary-validation/references/project-scenarios.md)；它描述应测的命题，不是通过清单。
+--- before/.agents/skills/astribot-architecture-design/references/skill-use-cases.md
++++ after/.agents/skills/astribot-architecture-design/references/skill-use-cases.md
+@@ -0,0 +1,24 @@
++# 技能使用题集
++
++用于修改本组技能后的有限行为验证，不是机器人验收。保留相同题设，评估实际选择、设计和结论，不按标题或固定措辞打分。可只运行受影响题目；不要启动 ROS、操作进程或硬件。给评估者题设及冻结技能，不提供整改结论或其他评估答案。输出记录技能版本、所选主技能/条件补充、实际回答和未决信息。
++
++## 固定题设
++
++1. 我只要设计任务接收去重接口，不涉及抓放，需加载哪些技能、交哪些材料？
++2. 只整理已存在的导航 CSV 为结论，不启动系统，需要什么流程？
++3. 新增区域编辑器、REST 任务网关、持久化服务，另写启动文件和离线验证脚本，分别优先什么语言？
++4. 设计无 ROS 核心、领域接口、ROS 适配、厂家 SDK 适配的编译依赖，并表示运行调用。
++5. 现有 Twist Topic 传送连续速度命令，这种接口应保留吗，谁有权发布？
++6. 请求在准入校验失败；另一请求正常执行成功。分别列状态路径。
++7. 取消后先收到下游 SUCCEEDED，随后收到取消 ACK，实测速度仍非零，存储又失败；资源和任务结果如何处理？
++8. 同机存在 A/B 两个仿真，B 没有 ros2 launch 父进程；还有一个 PID 已经被复用。现在只清理 A，需要哪些目标证据和动作？仅给文字，不执行。
++9. 会话 A：domain=61、partition=sim_a；会话 B：domain=62、partition=sim_b；查询 shell 默认 25，只看到 4 个话题且 /stats 超时，能断言 A 物理不步进吗？
++10. 当前源码 warehouse_sim 声明 ros_domain_id 默认 25 并用 LaunchConfiguration 赋值，supervisor 传入参数 61。怎样隔离与查询？
++11. 架构手册写 19 包并链接不存在的 Python task_arbiter_node.py，但源码树有 C++ task_arbiter_node.cpp，能判断任务仲裁未实现吗？
++12. 记录显示 2 个姿态场景输出、5 个场景按预期拒绝，无实际抓持；能报告 7/7 抓取成功吗？
++
++## 评估方式
++
++比较应触发/不应触发的技能、职责与控制权、状态路径与提交屏障、资料新旧冲突处理及证据分母。评分依据另存于当次验证记录，由评估组织者核对，不随题设提供给答题者。保留原始回答，正确基线不能算作整改后新增能力；单次或少量试评不支持提升率、无遗漏或安全认证结论。
++
++状态/脚本存在并不证明真实运行；本题集禁止以实际停栈或硬件运动作为技能验证方式。后续如果增加可执行辅助工具，其模拟进程表、身份复用与故障测试应单独执行和记录。
+--- before/.agents/skills/autonomy-stack-architecture/SKILL.md
++++ after/.agents/skills/autonomy-stack-architecture/SKILL.md
+@@ -1,17 +1,12 @@
+ ---
+ name: autonomy-stack-architecture
+-description: 在本仓库设计或审查自主系统的感知、定位、地图、规划、决策、控制、车辆/设备接口和系统监控分层时使用。吸收 Autoware/Apollo 的模块化边界，但映射到 ROS2/Nav2/MoveIt/SDK，不把自动驾驶车辆接口直接套成机器人控制器。
++description: 在本仓库需要对照 Autoware/Apollo 等自动驾驶架构，评估自主系统分层和设备接口模式能否借用于轮式双臂机器人时使用。普通项目模块设计直接使用对应领域技能。
+ ---
+ 
+ # 自主系统分层与车辆/设备接口
+ 
+-先阅读：
+-
+-- [当前架构参考](../../../docs/manuals/ARCHITECTURE_REFERENCE.md)
+-- [整体架构审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)
+-- [感知与世界快照](../perception-world-model/SKILL.md)
+-- [控制与硬件安全](../ros2-control-hardware-safety/SKILL.md)
+-- [机器人运行时语言约定](../robot-runtime-cpp/SKILL.md)
++本技能是按需行业对照，不是整机设计的必经入口。仅对受影响领域查 [源码入口索引](../astribot-architecture-design/references/project-map.md)。具体世界快照、设备执行分别由 `perception-world-model`、`ros2-control-hardware-safety` 负责，只有落实到这些领域时再读取。
++涉及实现语言时使用 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)。
+ 
+ ## 采用分层，但保留机器人特有资源
+ 
+@@ -40,7 +35,7 @@
+ - Apollo 的消息驱动模块依赖、Planning/Control/CanBus 分离和 Guardian/安全命令分离，可作为控制权审查的参考。
+ - 两者都是自动驾驶平台；当前项目是 ROS2 Humble 轮式双臂机器人。只吸收职责和接口原则，不复制 Cyber RT、车辆 CAN 语义、HD map 假设或道路场景状态机。
+ 
+-## 当前仓库的映射
++## 领域映射（具体实现以源码索引为准）
+ 
+ | 自主系统层 | 当前项目对应 | 约束 |
+ |---|---|---|
+@@ -53,7 +48,7 @@
+ 
+ ## 内部实现规则
+ 
+-- 纯规划/决策/约束核心优先 C++，ROS2 节点只负责适配、调度和消息转换。
++- 实现语言引用 `robot-runtime-cpp`；领域核心与 ROS 适配、调度和消息转换分开。
+ - 每个层的输入输出定义截止时间、版本、故障码和降级行为；不以空消息、默认参数或“节点存在”表示能力可用。
+ - 需要长时间运行、反馈和取消的动作使用 Action；短的能力查询/提交使用 Service；高频状态使用有界 Topic。
+ - 任何控制模式切换、人工接管、失联停车、重定位或包络变化都必须形成可记录的状态转换。
+@@ -63,4 +58,3 @@
+ - Autoware 分层架构：[Architecture overview](https://docs.autoware.org/pr-803/design/autoware-architecture-v1/)
+ - Autoware 车辆/设备接口：[Vehicle Interface design](https://autowarefoundation.github.io/autoware-documentation/latest/design/autoware-architecture/vehicle/)
+ - Apollo 模块架构：[Apollo software architecture](https://github.com/ApolloAuto/apollo/blob/master/docs/14_Others/Apollo_5.5_Software_Architecture.md)
+-
+--- before/.agents/skills/mobile-dual-arm-architecture/SKILL.md
++++ after/.agents/skills/mobile-dual-arm-architecture/SKILL.md
+@@ -5,12 +5,8 @@
+ 
+ # 轮式双臂整机架构
+ 
+-先阅读：
+-
+-- [当前架构参考](../../../docs/manuals/ARCHITECTURE_REFERENCE.md)
+-- [整体架构审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)
+-- [SLAM 接口分包决策](../../../docs/SLAM_ARCHITECTURE_REVIEW_20260918.md)
+-- [机器人运行时语言约定](../robot-runtime-cpp/SKILL.md)
++先按 [源码入口索引](../astribot-architecture-design/references/project-map.md) 核对受影响领域。语言选择统一遵循 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)。
++只有追溯历史拆分决策时才读 [整机审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md) 或 [SLAM 分包决策](../../../docs/SLAM_ARCHITECTURE_REVIEW_20260918.md)；行业方案对照时才加载 `autonomy-stack-architecture`。
+ 
+ ## 先定控制权，再画模块
+ 
+@@ -29,9 +25,9 @@
+ - 每个 service/action 只能有一个生产所有者。若已有入口能复用，优先增加适配器、策略或插件，不新增平行入口。
+ - 任务、路径、地图、定位、包络、时钟、场景和标定都使用显式版本或 epoch。版本不一致必须让计划失效或重新校验，不能默认“最新消息就是可用”。
+ 
+-## 必须维护的架构视图
++## 按影响维护架构视图
+ 
+-每次架构变更至少给出：
++整机设计使用下列视图检查覆盖；局部变更只更新受影响视图，并引用未变的基线。接口细节交给 `robot-dataflow-module-design`，不重复生成同一套材料。
+ 
+ 1. 功能视图：任务、导航、感知、双臂、运输、保护和诊断的职责。
+ 2. 交互视图：topic/service/action、调用方向、QoS、超时、取消、结果和唯一所有者。
+@@ -45,7 +41,7 @@
+ 
+ - `astribot_navigation_msgs`、`astribot_bridge_msgs`、`astribot_slam_msgs` 按领域保留，不创建万能消息包。
+ - 导航二维 costmap 与 MoveIt 三维 PlanningScene 共享对象身份、时间、坐标和版本，但保留各自空间表示、更新频率和校验器。
+-- 高并发、低延迟、持续运行的算法和执行逻辑优先 C++；Python 负责启动、轻量 ROS 适配、验证和分析。
++- 实现语言由 `robot-runtime-cpp` 统一约定，不因“轻量适配”放宽新功能的语言选择。
+ - 新接口优先用强类型消息/Action/服务承载机器状态；字符串只作诊断和日志说明。
+ - `planning_demo_node.cpp` 这类演示流程不能直接升级为生产整机任务层。拆出任务编排、场景适配、执行适配后再复用现有规划能力。
+ 
+@@ -67,4 +63,3 @@
+ - ROS 2 QoS 兼容性：[Quality of Service](https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+ - Nav2 模块化行为树与任务服务器：[Nav2 architecture](https://docs.nav2.org/)
+ - 可借鉴的双臂移动平台分层：[TIAGo++ robot](https://github.com/pal-robotics/tiago_dual_robot)
+-
+--- before/.agents/skills/perception-world-model/SKILL.md
++++ after/.agents/skills/perception-world-model/SKILL.md
+@@ -5,12 +5,8 @@
+ 
+ # 感知与整机世界快照
+ 
+-先阅读：
+-
+-- [SLAM 架构评审](../../../docs/SLAM_ARCHITECTURE_REVIEW_20260918.md)
+-- [动态避障与窄通道设计](../../../docs/DYNAMIC_AVOIDANCE_AND_NARROW_PASSAGE_DESIGN.md)
+-- [感知与标定操作手册](../../../docs/manuals/HARDWARE_OPERATIONS.md)
+-- [轮式双臂整机架构](../mobile-dual-arm-architecture/SKILL.md)
++先按 [源码入口索引](../astribot-architecture-design/references/project-map.md) 定位本次数据源与消费者。按实际问题补充：SLAM 拆分查 [历史评审](../../../docs/SLAM_ARCHITECTURE_REVIEW_20260918.md)，导航投影查 [动态避障设计](../../../docs/DYNAMIC_AVOIDANCE_AND_NARROW_PASSAGE_DESIGN.md)，真实标定查 [硬件手册](../../../docs/manuals/HARDWARE_OPERATIONS.md)，改变整机控制权才读 `mobile-dual-arm-architecture`。
++世界快照字段在本技能维护；通用模块/通信契约由 `robot-dataflow-module-design` 负责。
+ 
+ ## 数据流与责任
+ 
+@@ -49,7 +45,7 @@
+ 
+ - 传感器流优先使用与发布端匹配的 sensor-data QoS；状态、版本、确认和故障消息使用可靠且有界的 QoS。先检查兼容性，不靠默认 depth=10 猜测。
+ - 高频 callback 只复制/排队有界数据并更新诊断计数；融合、点云切片和几何计算放到可测的 C++ worker 或组件中。
+-- Python 可做组合 launch、参数选择和离线分析；不要在 Python 适配层继续累积长期运行的几何/融合算法。
++- 实现和脚本的语言选择统一遵循 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)，不另设感知薄适配例外。
+ - 记录器不能反向控制机器人；“观测过期”应产生结构化状态，具体停车/降级由任务或保护层决定。
+ 
+ ## 验收边界
+@@ -61,4 +57,3 @@
+ - ROS 2 QoS 配置与兼容性：[Quality of Service](https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+ - Nav2 感知到规划/控制的模块化链路：[Nav2 architecture](https://docs.nav2.org/)
+ - MoveIt PlanningScene 作为操作场景边界：[Planning Scene](https://moveit.picknik.ai/humble/doc/examples/planning_scene/planning_scene_tutorial.html)
+-
+--- before/.agents/skills/robot-dataflow-module-design/SKILL.md
++++ after/.agents/skills/robot-dataflow-module-design/SKILL.md
+@@ -11,20 +11,18 @@
+ [`robot-task-intake-execution`](../robot-task-intake-execution/SKILL.md) 的任务生命周期互补，
+ 不替代它们。
+ 
+-先阅读：
+-
+-- [当前架构参考](../../../docs/manuals/ARCHITECTURE_REFERENCE.md)
+-- [整体架构审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)
+-- [SLAM 架构评审](../../../docs/SLAM_ARCHITECTURE_REVIEW_20260918.md)
+-- [ROS 2 接口类型](https://docs.ros.org/en/humble/Concepts/Basic/Interfaces-Topics-Services-Actions.html)
+-- [ROS 2 QoS](https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)
+-- [Nav2 架构](https://docs.nav2.org/)
+-- [ros2_control 数据与控制边界](https://control.ros.org/humble/doc/getting_started/getting_started.html)
+-
+-## 1. 先画两张图：数据流和控制流
++按变更范围读取：
++
++- 核对当前包、节点或启动入口时查 [项目源码索引](../astribot-architecture-design/references/project-map.md)，再读取受影响源码；历史评审只作为设计背景。
++- 涉及整机执行权、感知有效性或任务生命周期时，分别读取上面对应的技能，不默认加载全部。
++- 需要确认 ROS 接口或 QoS 细节时查 [接口语义](https://docs.ros.org/en/humble/Concepts/Basic/Interfaces-Topics-Services-Actions.html) 与 [QoS](https://docs.ros.org/en/humble/Concepts/Intermediate/About-Quality-of-Service-Settings.html)。
++- 进入实现时遵循 [项目语言约定](../robot-runtime-cpp/SKILL.md)。
++
++## 1. 按影响范围区分数据流和控制权
+ 
+ 数据流回答“事实、意图、命令、反馈和证据经过哪些模块”；控制流回答“谁拥有写入、
+-取消、停稳确认和状态提交权”。二者不能合并成一张只标节点名称的图。
++取消、停稳确认和状态提交权”。二者不能合并成一张只标节点名称的图。局部接口可用
++契约表表达；跨模块架构再画对应视图，不强制每次重画整机。
+ 
+ ```text
+ Sensor / SDK feedback
+@@ -52,34 +50,28 @@
+ | 数据类别 | 推荐接口 | 典型内容 | 当前项目例子 |
+ |---|---|---|---|
+ | 连续观测流 | 有界 Topic | scan、joint、odom、图像、健康采样 | `/scan_from_cloud`、关节与定位反馈 |
++| 连续命令流 | 有界 Topic | 速度、控制目标；携带或在受控入口绑定授权与时效 | 既有 `/cmd_vel` 控制链 |
+ | 版本化快照 | Topic 或有界查询 Service | WorldSnapshot、能力、包络、场景摘要 | 地图/定位/RobotEnvelope 状态 |
+ | 短查询/提交 | Service | 准入检查、配置、包络提交、状态查询 | `SetRobotEnvelope` 类接口 |
+ | 可取消长任务 | Action | 导航、规划、抓取、运输、探索 | Nav2 和 MTC Action |
+ | 任务事件/审计 | 追加事件流或持久化记录 | accepted、preempted、stop confirmed、result | `events.jsonl`、任务状态 |
+ | 诊断/解释 | 结构化状态 + 文本说明 | reason code、source、建议动作 | `health_reason`、失败码 |
+ 
+-- Topic 只提供观测，不隐含执行权；Service 的成功只表示请求被处理，不能自动等价于
+-  物理完成；Action result 必须和 feedback、实测状态分开。
++- Topic 可以承载观测、命令或事件；通信形式本身不授予执行权。连续命令契约必须定义
++  唯一授权 writer、资源/lease epoch、有效期、旧命令拒收、失联/超时 watchdog 及安全动作。
++  原始消息无这些字段时，由受控入口和执行侧维护等价关联；不能假定消息自带租约。
++- 命令只通过既有仲裁、控制器和最终保护链；任务层仍不得直接发布速度、关节或 SDK 命令。
++  观测和诊断订阅者不能因读到命令而获得写入权。
++- Service 成功的含义由契约限定，不能自动等价于物理完成；Action result 必须和 feedback、
++  实测状态分开。
+ - 高频流必须有边界、丢帧/过期计数和消费策略；不能用无限队列掩盖回调阻塞。
+ - 将需要跨模块决策的字符串 JSON 逐步收敛为带版本的强类型消息；文本保留为诊断补充。
+ 
+ ## 3. 模块卡片与责任边界
+ 
+-新增或重构模块前，先写一张模块卡片：
+-
+-```text
+-Module / package / process
+-Purpose and non-goals
+-Owner of state and side effects
+-Inputs: type, source, QoS, frame, time, freshness
+-Outputs: type, consumer, QoS, version, authority
+-Internal state and invariants
+-Lifecycle: configure / activate / deactivate / cleanup / error
+-Resources and execution budget
+-Failure codes, fallback and cancellation behavior
+-Dependencies and forbidden dependencies
+-Static / offline / simulation / hardware evidence
+-```
++新增模块或改变状态/副作用所有权时，按需复制 [模块卡模板](assets/module-card.md)；
++新增或修改跨模块接口时使用 [接口契约模板](assets/interface-contract.md)。对不受影响的字段
++标注“不涉及”及原因，不为局部改动虚构新模块或重写整机设计。
+ 
+ 责任边界至少回答：
+ 
+@@ -163,19 +155,20 @@
+ 
+ ## 6. 依赖图与模块拆分
+ 
+-把依赖分成四类并检查环：
+-
+-1. **数据依赖**：消息/库/配置读取；
+-2. **运行依赖**：launch、生命周期、服务发现、控制器；
+-3. **资源依赖**：底盘、双臂、PlanningScene、地图、包络、日志目录；
+-4. **证据依赖**：哪些测试或运行记录必须先完成。
++每张图先声明箭头含义，不把下列关系混为同一种依赖：
++
++1. **源码/构建依赖**：`依赖者 -> 被依赖的库/接口`；检查头文件、链接、包依赖及禁止环；
++2. **运行时调用**：`调用者 -> 被调用端口/实现`；核心可调用其自身定义的抽象端口；
++3. **消息流**：`生产者 -> 消费者`；标注观测/命令/事件及其契约；
++4. **运行/资源关系**：启动和生命周期先决条件、租约持有者、资源申请/归还者；
++5. **证据先决条件**：哪些检查支持本次主张，哪些运行记录尚未取得。
+ 
+ 模块拆分遵循：
+ 
+ - 按变化原因拆包：设备驱动、领域算法、接口定义、组合启动和验证工具不要因目录方便
+   混在一起；
+-- 依赖方向从 contracts/纯算法指向适配器，不能让核心算法依赖厂家 SDK、ROS 节点或
+-  bringup 脚本；
++- 源码依赖为 `ROS/SDK adapter -> core/contracts`；抽象端口归核心或稳定 contracts 所有。
++  核心不能反向依赖 ROS 节点、厂家 SDK 或 bringup；组合入口负责注入具体适配器；
+ - 一个模块只拥有一种主要副作用；规划模块不能同时成为底盘写入者，日志模块不能成为
+   运动授权者；
+ - 允许多个消费者读取同一数据，但一个写入状态或设备命令只能有明确唯一所有者；
+@@ -185,42 +178,41 @@
+ 
+ ## 7. 模块内实现模板
+ 
+-运行时模块优先采用：
+-
+-```text
+-pure C++ domain core
+-  -> ports / interfaces
+-  -> ROS2 adapter (topics/services/actions/lifecycle)
+-  -> worker / executor with bounded queue
+-  -> backend adapter (Nav2 / MoveIt / SDK / Gazebo)
+-  -> structured state and evidence sink
+-```
++典型结构如下；箭头只表示源码依赖，不表示消息或调用顺序：
++
++```text
++ROS adapter           -> domain core / contracts
++backend adapter       -> core-owned ports / contracts
++backend adapter       -> Nav2 / MoveIt / SDK libraries
++core                  -> stable domain contracts（不依赖 concrete adapters）
++```
++
++组合入口负责装配核心与具体适配器，启动文件负责进程组合。运行时可由
++`core -> 抽象端口 -> 注入的 backend adapter` 发起请求；回调、worker、
++executor 与有界队列属于执行模型，另行标注线程和队列所有者，不当作必经模块链。
+ 
+ - 领域核心保存不变量、状态转移、版本门控、调度比较、几何/约束和故障判定；应能脱离
+   ROS 做单元测试。
+ - ROS 适配层负责消息转换、QoS、生命周期、线程模型、Action 取消和参数快照；不要在
+   callback 中执行无界阻塞。
+ - backend adapter 负责协议、能力差异、反馈质量和错误码；上层不直接拼厂家命令。
+-- Python 用于 launch、薄适配、回放、分析和验证；长期高频运行逻辑逐步迁移到 C++。
++- 实现语言遵循 [项目语言约定](../robot-runtime-cpp/SKILL.md)，适配层不因“薄”而自动获得语言例外。
+ - 事件、指标和日志通过关联 ID 读取状态；它们不能通过订阅控制话题形成第二条控制链。
+ 
+ ## 8. 设计和验证输出
+ 
+ 跨模块主张或接口变更的边界验收使用 [robot-scenario-boundary-validation](../robot-scenario-boundary-validation/SKILL.md)；检查方案中“数据存在→能力成立”的推断时使用 [robot-argument-audit](../robot-argument-audit/SKILL.md)。
+ 
+-每次数据流/模块设计至少交付：
+-
+-1. 数据流图：每条边有生产者、消费者、接口、QoS、频率和失效语义；
+-2. 模块卡片：目标、非目标、所有权、依赖、状态和资源预算；
+-3. 控制权表：申请、规划、提交、执行、取消、停稳确认和状态提交者；
+-4. 数据字典：字段、单位、frame、时间、版本、质量和有效期；
+-5. 依赖图：包、进程、launch、运行时和资源依赖，并标出禁止环；
+-6. 故障流：过期、丢帧、QoS 不兼容、时钟回退、版本失效、后端失联和恢复权限；
+-7. 证据矩阵：静态、离线、隔离仿真、整栈仿真和真机各自证明的命题。
+-
+-验证必须覆盖：消息/版本转换、QoS 兼容性、队列上限、迟到样本、重复事件、模块重启、
+-取消竞争、上下文失效和单一写入者。不能用“Topic 存在”“节点启动”“Action 返回成功”
+-推断数据流已闭环或机器人已经安全执行。
++输出与影响范围对应，复用既有图表并标明本次变化：
++
++- 局部接口变更：受影响接口契约、两端责任、兼容/失败行为及对应验证；
++- 新模块或模块拆分：模块卡、源码依赖与装配关系、状态/资源所有权、线程和故障边界；
++- 跨模块运动链或整机架构：补数据流和控制权视图、上下文字典、依赖/故障传播及证据矩阵。
++
++从实际变更选择验证：消息/版本转换、QoS 兼容性、队列上限、迟到样本、重复事件、重启、
++取消竞争、上下文失效、命令时效/watchdog 和单一写入者。说明未覆盖项及其对结论的影响；
++无需为纯局部改动生成全部视图。不能用“Topic 存在”“节点启动”“Action 返回成功”推断
++数据流已闭环或机器人已经安全执行。
+ 
+ ## 9. 当前项目限制
+ 
+--- before/.agents/skills/robot-dataflow-module-design/assets/interface-contract.md
++++ after/.agents/skills/robot-dataflow-module-design/assets/interface-contract.md
+@@ -0,0 +1,39 @@
++# 接口契约：〈接口名与版本〉
++
++按实际语义填写观测、命令、查询、事件或长任务；“Topic/Service/Action”不替代语义定义。
++不涉及的字段标注原因；契约拟议值与当前源码值分列，不冒充已实现接口。
++
++| 项目 | 拟议契约 | 当前实现 / 依据 |
++|---|---|---|
++| 需求 / 模块卡 / schema 版本 |  |  |
++| 生产者 / 消费者 / 类型与名称 |  |  |
++| 语义类别 / 是否引起运动 |  |  |
++| 状态或副作用所有者 |  |  |
++| 字段 / 单位 / frame / 标定来源 |  |  |
++| 源时间 / 接收时间 / 时钟域 |  |  |
++| source epoch / 地图、场景、包络版本 |  |  |
++| 频率或触发条件 / max age / valid until |  |  |
++| QoS / depth / 丢弃或背压策略 |  |  |
++| 超时 / 重试预算 / 幂等键及作用域 |  |  |
++| 同幂等键不同 payload / 重放处理 |  |  |
++| 错误码 / 失败后状态 / 恢复条件 |  |  |
++| 兼容窗口 / 迁移消费者 / 回滚条件 |  |  |
++
++## 命令与任务接口（仅运动或其他副作用接口填写）
++
++| 项目 | 约束与验证入口 |
++|---|---|
++| 授权 writer / 仲裁入口 / 最终保护者 |  |
++| 资源与 lease epoch / 旧 writer 隔离机制 |  |
++| 消息未携带授权字段时的入口绑定办法 |  |
++| 过期 / 断流 watchdog / 接收方安全动作 |  |
++| 请求已受理 / 执行完成 / 实测确认分别意味着什么 |  |
++| 取消 / 暂停 / 超时 / 迟到结果语义 |  |
++| 结果持久化 / 资源交接 / 重启核对责任 |  |
++
++## 有关双方的验证
++
++| 输入或事件序列 | 生产端预期 | 消费端预期 | 观察点 / 证据类别 | 未覆盖项 |
++|---|---|---|---|---|
++| 正常数据或请求 |  |  |  |  |
++| 与本次变更有关的边界或故障 |  |  |  |  |
+--- before/.agents/skills/robot-dataflow-module-design/assets/module-card.md
++++ after/.agents/skills/robot-dataflow-module-design/assets/module-card.md
+@@ -0,0 +1,33 @@
++# 模块卡：〈模块名〉
++
++只保留本次设计涉及的字段；未确定项写明缺少的输入及验证办法，不能填成当前能力。
++
++| 项目 | 设计或源码依据 |
++|---|---|
++| 需求 / 变更 ID / 实现状态 |  |
++| 包 / 进程 / 组件 / 当前入口 |  |
++| 目标 / 非目标 |  |
++| 状态与副作用的唯一所有者 |  |
++| 输入 / 输出契约链接 |  |
++| 核心不变量 |  |
++| 源码依赖 / 禁止依赖 | 箭头为依赖者 → 被依赖者 |
++| 运行调用 / 装配入口 | 标明抽象端口与注入实现 |
++| 资源读写 / 租约或互斥范围 | 只读与写入分开；列出真实冲突资源 |
++| 生命周期 / 激活与停用条件 |  |
++| 线程 / 回调 / worker / 队列上限 |  |
++| 延迟 / 内存 / 执行时间预算及来源 |  |
++| 超时 / 失联 / 旧 epoch / 重启行为 |  |
++| 取消 / 实测确认 / 状态落盘责任 |  |
++| 迁移兼容 / 回滚边界 |  |
++
++## 状态转换（涉及状态机时）
++
++| 当前状态 | 事件与来源 | 前置条件 / epoch | 下一状态 | 副作用及提交顺序 | 失败分支 |
++|---|---|---|---|---|---|
++|  |  |  |  |  |  |
++
++## 验证与未决项
++
++| 不变量或需求 | 正常 / 边界 / 故障用例 | 预期可观察结果 | 证据类别 / 路径 | 未验证限制 |
++|---|---|---|---|---|
++|  |  |  |  |  |
+--- before/.agents/skills/robot-mission-boundary-safety/SKILL.md
++++ after/.agents/skills/robot-mission-boundary-safety/SKILL.md
+@@ -5,13 +5,7 @@
+ 
+ # 区域任务、脱困与报警安全
+ 
+-先阅读：
+-
+-- [自主系统分层](../autonomy-stack-architecture/SKILL.md)
+-- [感知与世界快照](../perception-world-model/SKILL.md)
+-- [整机任务编排](../robot-task-orchestration/SKILL.md)
+-- [控制与硬件安全](../ros2-control-hardware-safety/SKILL.md)
+-- [机器人验证与证据](../robotics-validation-evidence/SKILL.md)
++先按 [源码入口索引](../astribot-architecture-design/references/project-map.md) 核对本次区域/恢复入口。只加载涉及的领域：观测时效用 `perception-world-model`，携物/释放事务用 `robot-task-orchestration`，设备级停止用 `ros2-control-hardware-safety`，报告已有证据用 `robotics-validation-evidence`。无需为普通报警状态机加载完整整机/行业架构。
+ 
+ ## 把区域和任务边界当作一等数据
+ 
+@@ -43,7 +37,7 @@
+ 
+ - 每个 episode 有最大持续时间、重试次数和总预算；子步骤不能通过重置计时器绕过预算。
+ - 脱困动作先经过完整包络、碰撞、定位和停车空间检查；不能把“反向走一小段”当作天然安全。
+-- 脱困期间底盘、双臂、载荷和包络资源仍由任务层持有；未确认停稳和旧动作终态前不能切换任务。
++- 脱困期间保留受影响的底盘、双臂、载荷和包络资源；未确认安全状态和旧执行隔离前，不向冲突任务重新授予这些资源。无资源冲突的只读工作可以继续。
+ - 任何脱困后要重新获取 WorldSnapshot、路径/场景版本和设备反馈，不能沿用旧候选。
+ - 定位丢失单独建模：先进入安全保持，只有定位质量恢复、重定位结果稳定且版本重新绑定后，才允许有限次数的原地重定位或恢复动作。
+ - 自动脱困不能覆盖“设备被卡住、轮子悬空、传感器堵塞、刷头/关节过流、区域无出口”等不同原因；每类原因有不同恢复动作和人工提示。
+@@ -62,6 +56,7 @@
+ 
+ - `INFO`（状态变化）、`NOTICE`（需要关注）、`WARNING`（任务受阻）、`CRITICAL`（必须停机）分级；相同 episode 按策略去重，状态升级仍必须上报。
+ - 报警清除与恢复权限分开：传感器恢复不等于允许继续运动；硬故障保持锁存直到明确复位。
++- 去重键绑定设备/原因/episode，记录合并时间窗和原始次数；不同故障不因文案相同被吞并。确认、升级、恢复与再次发生独立记事件，进程重启不重置重试预算或清除锁存。`operator_ack` 只表示收到提示，不满足物理故障清除条件。
+ - operator station、日志和机器状态消息可以共享 `alarm_id`，但 UI 不能成为第二个控制器。
+ - 不以“节点仍在”“收到心跳”或“命令发送成功”代替设备已停机、已脱困或物体已安全的证据。
+ - 对“短暂阻塞/定位丢失/无障碍恢复/需人工移机/硬故障”使用不同 `reason_code`；同一故障的重复通知要抑制，但恢复、升级和人工确认必须产生事件。
+@@ -73,7 +68,7 @@
+ - `RobotEnvelope` 与地图区域/局部 costmap/最终保护分别维护，在准入时求交集；包络失效优先进入安全保持，不自动缩小几何放行。
+ - 双臂携物时，脱困默认保持保载姿态并停止底盘；涉及改变臂姿、放置或释放必须回到 `robot-task-orchestration` 的规划和确认事务。
+ - 回充、电池、天气和 RTK/地理围栏目前属于候选能力；没有设备接口和验收证据时标记为 `not implemented`。
+-- 运行时核心优先 C++；区域编辑、REST/MQTT、系统启动和离线分析可以使用薄适配或 Python。
++- 区域编辑、REST/MQTT 服务、恢复和报警实现统一遵循 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)，不设置 Python 薄适配例外。
+ 
+ ## 外部参考
+ 
+--- before/.agents/skills/robot-runtime-cpp/SKILL.md
++++ after/.agents/skills/robot-runtime-cpp/SKILL.md
+@@ -1,12 +1,23 @@
+ ---
+ name: robot-runtime-cpp
+-description: 在本仓库新增或修改机器人运行时模块、控制与感知计算、导航策略、搬运执行或算法适配层时使用。落实运行时优先 C++、Python 主要用于启动和验证分析、现有适配层逐步迁移的约定。
++description: 在本仓库新增或修改功能实现、选择实现语言或迁移现有模块时使用，包括 ROS 节点、算法、任务服务、适配器、UI、持久化，以及脚本和启动文件的语言边界。
+ ---
+ 
+-# 机器人运行时语言与迁移约定
++# 实现语言与迁移约定
+ 
+-- 后续运行时模块优先使用 **C++**，包括持续运行的 ROS 节点、控制与安全检查、几何和碰撞计算、感知处理、规划决策及执行逻辑。
+-- Python 主要用于启动、验证、数据采集与分析脚本。现有 Python 适配层逐步迁移；迁移期间可以保留薄绑定，避免在绑定中继续增加运行时算法。
+-- 按已定位的性能、可靠性问题和模块边界分步迁移，不为统一语言一次性重写整条链路。复用仓库已有 C++ 实现，先明确上下层的控制权和接口所有者。
+-- 每步迁移保持消息、几何版本、采集时刻、取消与故障语义兼容；保留原有安全预算。用边界用例、相同输入回放及隔离仿真验证行为和延迟，不能以放宽碰撞、时效或到位门槛换取验收通过。
+-- 交付时分别说明已实现、已验证和仍待验收的范围。涉及仿真启动、探查或清理时，同时遵守 [ros2-stack-ops](../ros2-stack-ops/SKILL.md)。
++本技能是项目语言选择的统一入口，以用户当前要求为准：**功能实现优先 C++；只有脚本和启动文件类优先 Python。**
++
++| 实现内容 | 默认选择 |
++|---|---|
++| 算法、控制、安全检查、感知、规划、任务状态机和调度 | C++ |
++| ROS 节点/组件、Action/Service、SDK/协议适配、REST/MQTT 功能服务 | C++ |
++| RViz/区域编辑等功能 UI、几何、数据库/账本持久化、故障与报警模块 | C++ |
++| 启动文件、部署/运维辅助脚本、一次性转换、采集、回放、分析和验证脚本 | Python |
++
++按职责分类，不按文件后缀或“薄适配”名称分类：常驻网关、执行器、业务算法和 UI 功能不能因为能写成脚本就默认选 Python。测试核心行为可使用 C++ 单元测试，Python 适合外部验证脚本；声明式配置保持项目已有格式，现有必要的 shell 包装无需为语言统一重写。
++
++现有 Python 实现或第三方绑定可以在兼容迁移阶段保留；记录依赖和迁移边界，不把它扩张成新增 Python 业务模块的默认许可。语言偏好不授权一次性重写所有已有代码。
++
++迁移按已定位的性能、可靠性问题和模块边界分步进行，复用已有 C++ 实现。保持接口、几何/版本、采集时刻、取消、故障、数值边界和资源预算；用相同输入、边界/故障场景及必要的隔离集成验证行为和尾延迟，不能放宽时效、碰撞或到位门槛换取通过。
++
++报告区分建议、实现、离线、仿真和真机证据。实际涉及栈操作才加载 [ros2-stack-ops](../ros2-stack-ops/SKILL.md)，仅选择语言不要求启动环境。
+--- before/.agents/skills/robot-scenario-boundary-validation/SKILL.md
++++ after/.agents/skills/robot-scenario-boundary-validation/SKILL.md
+@@ -40,7 +40,7 @@
+ 
+ ## 恢复与结束
+ 
+-每个故障验证“抑制新命令→请求停止→底层终态→实测停稳/保载→受控重新准入”。实际停不下来、状态未知、仍有载荷时不能自动释放资源、清空账本或继续运动；将资源转交明确安全所有者或保持隔离。
++对影响运动的故障，先抑制受影响的新命令并请求受控停止；记录底层终态、实测停稳/保载和持久化结果，按 [任务状态与事件契约](../robot-task-intake-execution/references/task-transitions.md) 检查重新准入的前置条件，不强制异步反馈按同一顺序到达。未确认停止、载荷状态或旧执行隔离时，不将冲突资源标为空闲；保留隔离或交给明确安全所有者。已确认的携物安全状态可以按新准入转交运输任务，不要求所有任务先松爪。纯只读故障验证不得凭空发停止命令。
+ 恢复后再做正常用例，验证旧 epoch/旧许可/迟到结果不能复活任务，重试预算不被换 task_id 重置。
+ 
+ 涉及启动/探查/故障注入先读 [ros2-stack-ops](../ros2-stack-ops/SKILL.md)；隔离包括 domain、Gazebo partition、端口、锁、build/install、日志与资源所有者，不能只改 ROS_DOMAIN_ID。离线能验证的语义无需启动共享栈。
+--- before/.agents/skills/robot-scenario-boundary-validation/references/project-scenarios.md
++++ after/.agents/skills/robot-scenario-boundary-validation/references/project-scenarios.md
+@@ -2,16 +2,10 @@
+ 
+ 截至 2026-09-22 的源码/文档入口索引，不是验收结果。使用时重新核对实际 launch、安装哈希和参数；历史文档的 Python 入口可能已迁到 C++。以下 SC-* 是场景族，实例化后附工况和序号，每张新卡初始为 NOT_RUN。
+ 
+-## 现有落点
++## 入口与证据
+ 
+-| 领域 | 当前可读入口 | 应检查的证据范围 |
+-|---|---|---|
+-| 导航任务与取消 | [C++ task arbiter](../../../../ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp)、[任务技能](../../robot-task-intake-execution/SKILL.md) | 仲裁协议不等于实测停稳；区域 token、抢占与取消竞争 |
+-| 运输和固定姿态 | [transport README](../../../../ws_robot/src/astribot_s1_transport/README.md)、[非 home 实现](../../../../docs/NONHOME_NAVIGATION_IMPLEMENTATION_20260919.md) | 运动学附着、固定姿态与真实抓持/任意动态操作分开 |
+-| GraspNet / 物体 6D | [服务源码](../../../../ws_robot/src/astribot_s1_manipulation_perception/src/manipulation_perception_server.cpp)、[验证记录](../../../../docs/GRASP_POSE_SIMULATION_20260921.md) | 有 C++ 推理和已知 CAD 姿态实现；候选未碰撞检查，记录不证明闭环抓放 |
+-| 地图和禁区 | [zone server](../../../../ws_robot/src/astribot_navigation_zones/src/zone_server.cpp)、[手册](../../../../docs/manuals/VIRTUAL_WALLS_AND_KEEP_OUT.md) | SAVED_WAIT_APPLICATION 与 ZONES.READY；policy off 不具有同等最终保护 |
+-| 相机与时序 | [同步方案](../../../../docs/SENSOR_HARD_SYNC_DESIGN_20260922.md)、[sync core](../../../../ws_robot/src/astribot_sensor_sync/include/astribot_sensor_sync/sync_core.hpp) | 影子监控/合成边沿不是物理触发、曝光或全负载验收 |
+-| C++ 迁移 | [阶段记录](../../../../docs/CPP_MIGRATION_STAGE_REPORT_20260921.md)、[运行时约定](../../robot-runtime-cpp/SKILL.md) | 源码、候选、当前采用版本、运行 install 分开；正确性与尾延迟独立 |
++当前源码与迁移入口统一在 [项目源码索引](../../astribot-architecture-design/references/project-map.md) 维护；本目录只维护场景及可证明的命题。按领域读实际入口，不默认加载全部模块。
++历史试验可按需查 [姿态记录](../../../../docs/GRASP_POSE_SIMULATION_20260921.md)、[非 home 实现记录](../../../../docs/NONHOME_NAVIGATION_IMPLEMENTATION_20260919.md) 和 [C++ 迁移阶段记录](../../../../docs/CPP_MIGRATION_STAGE_REPORT_20260921.md)。实际 adopted 源码、候选、install、模型/参数与试验输入需再次关联，不能用日期或目录替代核对。
+ 
+ ## 场景族
+ 
+--- before/.agents/skills/robot-task-intake-execution/SKILL.md
++++ after/.agents/skills/robot-task-intake-execution/SKILL.md
+@@ -10,13 +10,12 @@
+ 生命周期和执行监督，后者负责搬运/抓取/放置的阶段事务。它不能把当前导航
+ `TaskArbiter` 写成已经存在的整机任务总线；先以源码和运行入口核对当前能力。
+ 
+-先阅读：
+-
+-- [当前架构参考](../../../docs/manuals/ARCHITECTURE_REFERENCE.md)
+-- [整体架构审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)
+-- [任务与运输 README](../../../ws_robot/src/astribot_s1_transport/README.md)
+-- [Nav2 行为树与架构文档](https://docs.nav2.org/)
+-- [ROS 2 Topics/Services/Actions](https://docs.ros.org/en/humble/Concepts/Basic/Interfaces-Topics-Services-Actions.html)
++按任务范围读取：
++
++- 核对当前入口与能力时查 [项目源码索引](../astribot-architecture-design/references/project-map.md)，再核对实际节点和源码。
++- 涉及抓取、放置或运输阶段时才读取 [搬运事务](../robot-task-orchestration/SKILL.md) 及相关运输 README；普通任务排队无需加载搬运方案。
++- 设计取消、结果提交或重启恢复时读取 [状态转换与事件偏序](references/task-transitions.md)。
++- 进入实现时遵循 [项目语言约定](../robot-runtime-cpp/SKILL.md)。
+ 
+ ## 1. 先区分任务入口与执行入口
+ 
+@@ -28,7 +27,7 @@
+   operator / route / exploration / transport / remote API / scheduler
+     -> Task Gateway（接收、鉴权、规范化、幂等去重）
+     -> Admission & Scheduler（能力、资源、优先级、期限、租约）
+-    -> Task Arbiter / Mission Executor（唯一活动任务、步骤、取消、恢复）
++    -> Task Arbiter / Mission Executor（每项任务的唯一执行者、冲突资源仲裁、取消、恢复）
+     -> child Action adapters（Nav2 / MoveIt-MTC / gripper / head / perception）
+     -> Execution protection（限位、时效、制动、急停、设备桥）
+     -> observed result（反馈、终态、实测停稳、账本提交）
+@@ -57,44 +56,51 @@
+ ```
+ 
+ - `task_id` 标识业务任务；`execution_id` 标识一次执行尝试；重试不能覆盖原事件。
+-- `request_id` 和 `idempotency_key` 用来拒绝重复提交；相同请求在终态后重放应返回
+-  原结果或明确的“已完成/已取消”，不能偷偷再驱动机器人。
++- 为幂等键定义 requester/租户、操作类型和保留期等作用域，并绑定规范化 payload 摘要。
++  同作用域同键同 payload 返回已有任务/结果；同键不同 payload 返回 `IDEMPOTENCY_CONFLICT`。
++  终态后重放不能重新驱动机器人；查询、取消与重试使用各自明确定义的请求语义。
+ - `world_context` 要引用世界快照、定位来源、时间/坐标、标定和能力版本；过期上下文
+   只能重新快照或拒绝，不能靠延长超时继续执行。
+ - 资源集合至少能表达底盘、左臂、右臂、躯干、头部、夹爪、PlanningScene、导航任务、
+   RobotEnvelope 和人工控制权。资源名字要稳定，不能用日志文本代替锁。
+-- 优先级只能在准入与仲裁层生效。高优先级抢占前必须先取消旧任务、等待底层终态或
+-  进入受控暂停，并记录抢占原因；不能直接覆盖执行器的最后命令。
++- 优先级只能在准入与仲裁层生效。抢占要冻结旧任务的新步骤，按取消/暂停协议处置并
++  记录原因；只有冲突资源满足交接条件后才授予新执行者，不能覆盖执行器的最后命令。
+ 
+ ## 3. 生命周期与状态机
+ 
+-采用显式、可持久化的状态；至少覆盖：
+-
+-```text
+-RECEIVED
+-  -> NORMALIZING -> VALIDATING
+-  -> REJECTED
+-  -> QUEUED -> ADMITTED -> RESERVED
+-  -> PREPARING -> EXECUTING
+-  -> PAUSE_REQUESTED -> PAUSED -> RESUMING
+-  -> CANCEL_REQUESTED -> STOPPING -> STOPPED_CONFIRMED
+-  -> SUCCEEDED | FAILED | CANCELED | PREEMPTED | RECOVERY_REQUIRED
+-```
+-
+-- `RECEIVED` 只代表收到了请求；`ADMITTED` 代表通过能力、资源、时效和安全准入。
+-- `RESERVED` 代表租约已建立；未拿到所有必需资源时不能开始会产生运动的步骤。
+-- `CANCEL_REQUESTED`、子 Action 收到 cancel、底层执行停止、实测停稳、资源归还和
+-  任务终态是不同事件，必须按顺序记录。取消 ACK 不等于机器人已停止。
+-- `FAILED` 需要携带稳定的机器可读原因和最后可观测状态；被抢占、用户取消、超时、
+-  输入过期、定位失效、资源冲突和设备故障不能只写成一个字符串。
+-- `PAUSED` 必须说明暂停时保留/释放了哪些资源，以及恢复前要重新验证哪些快照；不
+-  把“节点还活着”当成任务可恢复。
+-- 只有在终态和必要实测确认写入后才能释放租约。若状态不确定，进入
+-  `RECOVERY_REQUIRED`，交给受限恢复或人工核对，禁止自动从中间步骤重放。
++分别建模执行阶段、业务结果和资源处置，避免把它们串成一条必经流程。下面是
++设计骨架，名字可映射到现有接口；不是对当前已实现状态的声明：
++
++```text
++RECEIVED -> NORMALIZING -> VALIDATING
++                         ├─ 校验失败 -> FINALIZING(REJECTED)
++                         └─ 校验通过 -> QUEUED -> ADMITTED -> RESERVED -> PREPARING -> EXECUTING
++QUEUED / ADMITTED         └─ 取消 -> FINALIZING(CANCELED；无下游副作用时)
++EXECUTING                ├─ 子步骤完成 -> 下一步骤 / VERIFYING -> FINALIZING(候选结果)
++                         ├─ 暂停 -> PAUSE_REQUESTED -> PAUSED -> RESUMING -> PREPARING
++                         └─ 取消/抢占 -> CANCEL_REQUESTED -> STOPPING -> VERIFYING -> FINALIZING
++任何已产生副作用的阶段   └─ 故障或物理状态未知 -> RECOVERY_REQUIRED（隔离相关资源）
++FINALIZING               └─ 结果持久化 -> 业务终态；资源交接单独提交并记录
++```
++
++- `ADMITTED` 是本轮准入通过，`RESERVED` 是所需资源已获得；排队后需重新准入，未持有
++  必需资源不得执行副作用。读写资源与依赖决定冲突，不要求整机永远只有一个活动任务。
++- `cancel requested/ACK`、子 Action 终态、实测安全状态、业务结果持久化和资源交接是不同
++  事件。记录源时间、接收时间及关联/epoch；ACK、终态和反馈可能乱序，不强求到达全序。
++- 业务结果区分 `SUCCEEDED/FAILED/CANCELED/PREEMPTED/REJECTED`，包含原因、证据、
++  最后已知物理状态及 `resource_disposition`；结果提交不表示资源已经可用。
++- 结果可先持久化为 `release_pending` 或 `quarantined`。旧执行者已终止或被有效隔离、
++  必要实测确认有效、结果和资源交接可恢复地提交后，才允许冲突资源的新授权。
++  中间阶段/暂停交接使用持久化检查点，不必等待整项任务终态。
++  不能要求“先释放再有结果”同时又要求“先有结果再释放”。
++- 物理状态未知或落盘失败时保留相关资源隔离，允许最终保护继续停止/保载；独立只读
++  或确无资源/依赖冲突的任务按各自准入执行。`RECOVERY_REQUIRED` 不等于空闲或自动重试。
++- 暂停需确认安全状态，明确保留/释放哪些资源以及恢复重验条件。详细转换、竞态和
++  持久化失败规则见 [状态转换与事件偏序](references/task-transitions.md)。
+ 
+ ## 4. 准入与调度顺序
+ 
+-在创建子 Action 之前按以下顺序检查：
++在创建子 Action 之前按以下顺序检查实际能力依赖；与本任务无关的地图、定位或运动检查标明不适用，不阻塞纯去重、只读查询等工作：
+ 
+ 1. 请求格式、来源权限、能力类型和幂等键；
+ 2. 当前模式、设备健康、时间是否推进、定位/地图/场景/标定是否新鲜；
+@@ -140,8 +146,9 @@
+ 
+ 取消和恢复是任务协议的一部分，不是 CLI 的附加按钮：
+ 
+-- 取消先冻结新步骤，再向当前子 Action 发 cancel，等待结果或超时进入受控停止；停止
+-  后读取实际速度/关节/底盘/附着状态，最后决定资源归还和终态。
++- 取消先冻结新步骤，再向当前子 Action 发 cancel，等待结果或超时进入受控停止；持续
++  读取相关速度/关节/附着状态。按同一权威状态机处理取消与成功竞争，先决定并持久化
++  业务结果及资源处置，再完成资源交接；无法确认安全时保留隔离，不用取消 ACK 代替停稳。
+ - 暂停要定义可暂停边界。导航通常在安全停留点暂停；夹持中、附着状态不确定或设备
+   故障时优先保载和人工确认，不自动松爪。
+ - 恢复必须重新获取世界快照、资源租约、地图/场景/包络和能力状态；旧计划和旧上下文
+@@ -165,8 +172,9 @@
+   当成到站或任务成功。
+ - 状态事件和结果落盘时至少写入 `task_id`、`execution_id`、`step_id`、状态、原因、
+   时间/时钟域、资源租约、上下文/epoch、来源和版本。事件追加写，状态快照原子替换。
+-- 进程重启后先恢复为 `UNKNOWN/RECOVERY_REQUIRED` 并核对下游实际状态，不能仅凭最后
+-  一条内存状态继续执行。
++- 重启后对未完成执行、未完成交接或证据已过期的资源进入 `UNKNOWN/RECOVERY_REQUIRED`，
++  核对下游及账本；已持久化结果保持不可重复执行。检查新 execution/lease epoch，拒绝旧
++  结果改变当前状态，不能仅凭最后一条内存状态继续执行。
+ - 对外 API 必须定义版本、超时、取消语义、幂等行为、结果有效期和错误码；不要通过
+   改变字符串文案隐式改变调度语义。
+ 
+@@ -174,12 +182,13 @@
+ 
+ 设计取消/抢占竞争、幂等、租约过期和重启恢复验收时，读取 [多场景与边界验证](../robot-scenario-boundary-validation/SKILL.md) 中的 SC-TASK、SC-LEASE、SC-TRANSPORT 场景族；报告成功前把终态、停稳和资源交接证据分别关联。
+ 
+-- 用无 ROS 的 C++ 核心实现 `TaskEnvelope`、状态机、资源租约、调度比较、重试预算和
+-  事件模型；用 ROS 适配层连接 Action/Service/Topic 和现有后端。
++- 用无 ROS 的核心实现 `TaskEnvelope`、状态机、资源租约、调度比较、重试预算和事件模型；
++  用 ROS 适配层连接 Action/Service/Topic 和现有后端，语言统一遵循 [项目约定](../robot-runtime-cpp/SKILL.md)。
+ - 任务入口、Executor、资源管理器、事件/状态存储和后端适配器分开；不要让一个节点
+   同时拥有接收、规划、底盘控制和设备协议写入权。
+-- 单元测试覆盖重复请求、优先级/抢占、资源冲突、迟到结果、取消竞争、子步骤超时、
+-  进程重启恢复、版本失效和“停止未确认”路径。
++- 对本次修改的协议覆盖正常成功、拒绝、排队取消、同键不同 payload、优先级/抢占、
++  资源冲突、迟到 ACK/结果、取消竞争、超时、重启、落盘失败、旧 epoch 和停止未确认；
++  具体输入与预期见 [协议场景表](references/task-transitions.md#协议验证场景)。
+ - 隔离仿真验证 Action 终态与实测停稳分离、任务状态持久化和恢复边界；整栈仿真验证
+   Nav2/MoveIt/桥接组合；真机只在完成设备/急停/负载/制动准入后验证。
+ - 交付报告必须区分“请求已接收”“任务已准入”“子步骤成功”“整机终态成功”和
+--- before/.agents/skills/robot-task-intake-execution/references/task-transitions.md
++++ after/.agents/skills/robot-task-intake-execution/references/task-transitions.md
+@@ -0,0 +1,107 @@
++# 任务状态转换与事件偏序
++
++用于设计或修改任务取消、终态、资源交接、幂等和重启协议。以下是设计约束与可映射的
++状态名称，不能据此宣称当前导航仲裁器已实现整机任务总线。
++
++## 三类状态分别存储
++
++| 状态轴 | 示例 | 表示什么 |
++|---|---|---|
++| 执行阶段 | QUEUED、PREPARING、EXECUTING、STOPPING、VERIFYING、FINALIZING | 调度器和执行者正在做什么 |
++| 业务结果 | 未决、SUCCEEDED、FAILED、CANCELED、PREEMPTED、REJECTED | 对这次请求的一次持久化裁决 |
++| 资源处置 | HELD、RELEASE_PENDING、RELEASED、QUARANTINED | 哪些读写权限仍不可授予其他任务 |
++
++`RECOVERY_REQUIRED` 表示执行或资源存在未决状态。可以已有持久化的 FAILED 结果并保留
++QUARANTINED 资源；不要为等资源归还无限隐藏业务失败，也不要用业务失败把资源标为空闲。
++结果携带资源处置及其版本，后续交接事件更新处置视图，不能改写原结果来伪造执行成功。
++
++中间阶段或暂停需要提前交接资源时，持久化该阶段/暂停检查点及资源处置，随后应用相同
++交接条件；无需等待整项任务终态，也不能为了交接伪造任务已完成。
++
++## 转换表
++
++事件由任务的单一逻辑权威串行裁决，可采用队列或比较交换；不要求所有来源的消息按全局
++时间排序。表中“持久化结果”包括任务/执行 ID、原因、证据和资源处置；落盘失败走恢复分支。
++
++| 当前状态 | 事件与前置条件 | 下一阶段 / 结果 | 副作用与资源条件 |
++|---|---|---|---|
++| RECEIVED / NORMALIZING | 格式、授权或规范化失败 | FINALIZING / REJECTED | 无子动作；持久化拒绝与理由 |
++| VALIDATING | 准入不通过且不允许排队 | FINALIZING / REJECTED | 不建立运动权限 |
++| VALIDATING | 请求有效，可等待 | QUEUED / 未决 | 排队不持有运动权限 |
++| QUEUED | 到期或用户取消；确认未提交子动作 | FINALIZING / CANCELED 或明确超时结果 | 无需发送虚构 cancel 或等待物理停稳；若有预留则归还对应预留 |
++| QUEUED | 调度选中，能力/上下文仍有效 | ADMITTED -> RESERVED | 原子或有回滚的全资源申请；不能持有一半资源就运动 |
++| RESERVED / PREPARING | 准入与起点复核通过 | EXECUTING | 记录执行 ID、step ID、lease epoch 后提交子动作 |
++| RESERVED / PREPARING | 取消且能证明没有下游副作用 | FINALIZING / CANCELED | 持久化处置后归还预留；若提交结果未知，按已可能执行处理 |
++| EXECUTING | 子步骤成功，步骤证据及账本一致 | 下一步骤或 VERIFYING | 下一步骤重新检查上下文和权限；正常成功不经过暂停或取消 |
++| EXECUTING / PREPARING | 受理取消/抢占，可能已有副作用 | CANCEL_REQUESTED -> STOPPING | 冻结新步骤；向现有 child 发 cancel，超时按最终保护协议受控停止 |
++| 执行中且可暂停 | 受理暂停 | PAUSE_REQUESTED -> PAUSED | 取得暂停安全证据后进入 PAUSED；明确哪些资源保留及哪些可交接 |
++| PAUSED | 恢复请求且资源、健康、上下文复核通过 | RESUMING -> PREPARING | 不重放旧命令；从有证据的检查点重新准备 |
++| VERIFYING / STOPPING | child 终态或旧执行者有效隔离，必要实测/账本检查完成 | FINALIZING / 候选结果 | 无运动步骤可按契约将物理停稳检查标为不适用；运动/保载步骤不能省略 |
++| FINALIZING | 结果及资源处置持久化成功 | 业务终态；资源仍可 RELEASE_PENDING | 按下节提交资源交接；对外结果明确资源状态 |
++| 任意有副作用阶段 | 状态未知、不可确认停止、失联或持久化失败 | RECOVERY_REQUIRED | 禁止新步骤，隔离受影响资源及依赖；最终保护的停止/保载不依赖日志可写 |
++| 已有业务终态 | 同一请求重放或迟到事件 | 保留原结果 | 返回既有结果或更新证据/资源处置视图；不能再执行或覆盖裁决 |
++
++本表保留业务结果的 reason code：超时、用户取消、被抢占、输入失效、定位失效和设备
++故障不能全部折叠为一个“失败”文案。失败也必须标明是否仍可能运动或持有载荷。
++
++## 提交偏序与资源交接
++
++分别记录以下事实，不用一个 `done=true` 代替：
++
++- C：取消被权威状态机受理（取消分支才需要）；A：下游取消回执；
++- T：子执行终态；F：旧执行者被可验证地隔离，无法再向有关资源发有效命令；
++- S：任务所需的实测安全状态及物体/载荷账本已核对，带来源、时效和上下文；
++- R：任务结束时的业务结果，或中间交接时的阶段/暂停检查点，与资源处置已可恢复地持久化；
++- H：资源持有者/epoch 转换已提交，旧权限不能再使用；N：新冲突任务获得运动权限。
++
++必要偏序是 `C -> 冻结新步骤/发 cancel`，以及交接路径的
++`(T 或具备实现证据的 F) + S + R -> H -> N`。A、T、S 的消息可能以任意顺序到达；
++A 不是 T 或 S，单独 S 也不能证明旧执行者不会再次发命令。无子执行或无运动时需依据
++接口契约明确对应检查“不适用”，不能为了凑步骤创建虚假反馈。
++
++R 可记录 `release_pending`，因此不依赖 H；中间交接的 R 不提交整项任务终态。通过受持久化保护的资源状态机提交 H，使用
++持有者及 lease epoch 的比较交换，防止重复释放或释放新任务租约；对外发布可用并授予 N
++前必须能够恢复这一转换。若 H 失败，结果保留、资源仍不可重新授予。若 R 失败，继续
++安全处置并隔离相关资源，不宣称请求已持久化完成。此顺序避免结果与资源互等。
++
++F 是具体隔离能力的证明，例如下游确实拒绝旧 epoch；仅增加一个 epoch 字段、让本地租约
++超时或进程心跳消失都不构成 F。当前后端不支持可靠隔离时必须等待确证终止并核对状态，
++不能以设计字段冒充已有保护能力。实测未知、载荷未知或共享包络不一致时保持相应隔离。
++
++只约束冲突资源及其真实依赖。夹持载荷可能使底盘、包络、场景也相关；但日志查询、只读
++状态请求或已经证明无读写/运动依赖冲突的任务可以按各自准入运行，不要求全系统停摆。
++
++## 取消竞争、幂等及旧事件
++
++- 协议必须固定取消与完成的裁决点。可采用默认策略：业务结果提交先完成则取消返回
++  `TOO_LATE` 并返回原结果；取消已被权威状态机受理则进入取消分支，之后 child 的成功
++  仅作为下游事实，不直接写整机 `SUCCEEDED`。成功候选已在验证中也需参与同一原子裁决。
++  若产品需要“已经完成的不可逆操作以完成为准”，必须明确另一裁决条件和证据，不能由
++  两个 callback 各写终态。操作确实完成但任务已取消时，仍如实提交物体/载荷事实。
++- 对每条事件核对 `task_id / execution_id / step_id / lease_epoch / event_id`。source stamp、
++  receive stamp 与 clock epoch 用于追溯；决定状态的是合法转换与权限，不能只比较时间戳。
++  重复事件无重复副作用；旧 execution/lease epoch 的 ACK 或结果仅保留审计，不更新当前状态。
++- 幂等作用域内同键同规范化 payload 返回现有任务或结果；同键不同 payload 拒绝为
++  `IDEMPOTENCY_CONFLICT`，不覆盖原请求。键到任务的映射要在可能产生外部副作用前持久化；
++  无法落盘则不启动该请求，防止重启后重复执行。保留期结束后的请求策略须明确。
++- 重启时区分已提交结果、进行中任务和未提交交接。已完成请求保持幂等；未决资源进入
++  恢复核对，旧执行尝试不自动重放。取得新执行 epoch 不代表旧后端已停，仍需 T/F 与 S。
++
++## 协议验证场景
++
++| 场景 | 输入或事件序列 | 可观察的正确行为 |
++|---|---|---|
++| 正常成功 | 正常准入、child 成功、有效实测确认 | 直接验证并提交成功，无虚构暂停/取消；结果与资源交接分别可查 |
++| 准入拒绝 | 能力/权限/上下文不满足 | 无 child 请求和运动权限；拒绝原因可回放 |
++| 排队取消 | 尚无资源或下游副作用时取消 | 不向不存在的 child 发 cancel；无意义停稳屏障不阻塞结果 |
++| 取消与成功竞争 | 交换两个事件的接收与处理顺序 | 同一裁决规则得到唯一业务结果；已发生物理事实仍入账 |
++| 终态早于 ACK | T、S、迟到 A；或 A、T、S | 无强制 ACK 到达顺序；不因迟到 A 改写已提交结果或资源状态 |
++| 停止未知 | child 报终态但速度过期、反馈缺失或载荷未知 | 隔离相应资源；不以终态或 ACK 伪造 S；允许无冲突只读请求 |
++| 旧命令仍可能有效 | 本地租约超时但下游尚未停止/不拒绝旧 epoch | 不把超时当 F，不授予冲突运动权限 |
++| 落盘失败 | 分别在幂等绑定、R、H 前后注入失败/崩溃 | 启动前失败无副作用；R/H 未确证时不重新授予；重启无重复执行 |
++| 重启与旧 epoch | 未决任务重启，随后收到旧结果/ACK | 核对真实状态；旧事件不提交当前任务或释放新租约 |
++| 幂等冲突 | 同键同 payload、同键不同 payload、终态后重放 | 分别返回已有任务、明确冲突、原结果；均不重复驱动 |
++| 独立任务 | 某运动资源隔离时提交只读任务或无冲突任务 | 按真实资源/依赖检查；不会把整机所有任务无条件串行化 |
++
++这些是协议验证设计，只有实际执行并保留输入、输出和证据后才可报告测试通过；文档推演
++不能充当仿真或真机的停稳/隔离验证。
+--- before/.agents/skills/robot-task-orchestration/SKILL.md
++++ after/.agents/skills/robot-task-orchestration/SKILL.md
+@@ -5,13 +5,13 @@
+ 
+ # 整机任务与双臂运输事务
+ 
+-先阅读：
++先根据 [项目源码索引](../astribot-architecture-design/references/project-map.md) 核对受影响入口。
++按需读取：
+ 
+-- [整机架构审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)
+-- [MTC 运输架构方案](../../../docs/MTC_TRANSPORT_ARCHITECTURE_PROPOSAL_20260919.md)
+-- [`astribot_s1_transport` README](../../../ws_robot/src/astribot_s1_transport/README.md)
+-- [`astribot_s1_transport_mtc` README](../../../ws_robot/src/astribot_s1_transport_mtc/README.md)
+-- [机器人运行时语言约定](../robot-runtime-cpp/SKILL.md)
++- 改变运输阶段、MTC 规划或已有服务时，读对应的 [`astribot_s1_transport` README](../../../ws_robot/src/astribot_s1_transport/README.md)、[`astribot_s1_transport_mtc` README](../../../ws_robot/src/astribot_s1_transport_mtc/README.md) 及源码。
++- 追溯设计理由时查 [MTC 运输架构方案](../../../docs/MTC_TRANSPORT_ARCHITECTURE_PROPOSAL_20260919.md)，历史方案不替代当前实现。
++- 改变整机取消、结果提交或资源交接时读 [任务事件与转换](../robot-task-intake-execution/references/task-transitions.md)。
++- 进入实现时遵循 [项目语言约定](../robot-runtime-cpp/SKILL.md)。
+ 
+ ## 采用分阶段事务
+ 
+@@ -33,7 +33,13 @@
+ - 资源至少区分底盘、左臂、右臂、躯干、夹爪、PlanningScene、RobotEnvelope 和导航任务。
+ - 任务层申请和归还资源；MTC、MoveIt、Nav2 和设备桥只使用被授予的资源。
+ - 取消请求、取消已受理、底层动作终止、实际停稳和资源归还是不同事件，必须分别记录。
+-- 旧动作没有终态或实测停稳证据时，不启动下一个任务，不自动恢复旧命令。
++- 旧动作终止/有效隔离、必要实测安全确认和可恢复的结果/资源交接未完成时，不授予
++  冲突资源的新运动权限，也不自动恢复旧命令；中间阶段交接用已持久化检查点，不要求
++  整项任务终态。隔离范围覆盖载荷、包络、场景等真实依赖；
++  独立只读或确无资源/依赖冲突的任务不必等待整机所有动作终止。
++- 子 Action 终态、业务结果持久化和资源交接分别记录；业务结果可以标明 `release_pending`
++  或 `quarantined`，不能把业务终态等同于资源空闲。异步 ACK/反馈按关联 ID、epoch 和偏序
++  处理，不能依赖到达顺序。
+ 
+ ## MTC / MoveIt 的正确位置
+ 
+@@ -59,7 +65,7 @@
+ 
+ ## 模块内实现建议
+ 
+-- 任务核心：C++ 无 ROS 状态机/资源租约/事务对象，单独测试状态转移和版本失效。
++- 任务核心：无 ROS 状态机/资源租约/事务对象，单独测试状态转移和版本失效；实现语言遵循上述项目约定。
+ - ROS 适配：Action server/client、MoveIt/MTC、Nav2 和包络服务放在薄适配层；回调只入队，不在高频线程做阻塞规划。
+ - 执行适配：每段轨迹前检查起点、场景、时效和控制器状态；完成后读取反馈并提交确认事件。
+ - 诊断：每个任务/步骤/候选/版本使用同一关联 ID；将计划成功、执行成功、实测停稳和物体确认分开。
+--- before/.agents/skills/robotics-validation-evidence/SKILL.md
++++ after/.agents/skills/robotics-validation-evidence/SKILL.md
+@@ -5,13 +5,7 @@
+ 
+ # 机器人验证与证据分层
+ 
+-先阅读：
+-
+-- [机器人运行时语言约定](../robot-runtime-cpp/SKILL.md)
+-- [ROS2 栈操作安全流程](../ros2-stack-ops/SKILL.md)
+-- [架构与运行手册](../../../docs/manuals/README.md)
+-- [路径跟踪指标](../../../docs/PATH_TRACKING_METRICS.md)
+-- [统一日志说明](../../../docs/LOGGING.md)
++按证据类型取用：导航指标查 [指标口径](../../../docs/PATH_TRACKING_METRICS.md)，会话日志查 [日志说明](../../../docs/LOGGING.md)，实现入口查 [源码索引](../astribot-architecture-design/references/project-map.md)。仅整理已有文件不加载栈操作流程，也不重新构建或运行系统。编写功能/验证脚本时才按 [语言约定](../robot-runtime-cpp/SKILL.md) 选择实现方式。
+ 
+ ## 四层结论不可混写
+ 
+@@ -44,16 +38,16 @@
+ - 到位误差、横向误差、航向误差、停止漂移和跟踪样本使用固定公式和版本；完成时长不能偷偷替代控制质量。
+ - 传感器断流、旧帧、时钟回退、取消未终止、包络版本改变和一臂失败要有独立失败原因，不能只记“任务失败”。
+ 
+-## 验证顺序
++## 按主张选择验证层
+ 
+ 需要制定覆盖方案时先用 [多场景与边界验证](../robot-scenario-boundary-validation/SKILL.md)，把需求/主张/风险关联到场景和证据；仅整理已有运行记录时不必重新规划所有测试。
+ 每个场景分别记录功能结果、安全不变量、性能预算和证据层。预期拒绝只证明该防护；未运行、阻塞、无效实验与被测失败分开，不把重复包装的测试计数相加。
+ 
+-1. 先做依赖、接口唯一所有者、生命周期、参数和构建检查；
+-2. 再用固定输入、边界状态和回放验证纯核心；
+-3. 在隔离仿真验证启动、QoS、TF、控制器、Nav2、MoveIt/MTC、包络和取消屏障；
+-4. 只有仿真证据完整后，按硬件手册逐项做真机小范围验收；
+-5. 对每个未覆盖项标记 `not tested` / `blocked` / `requires hardware`，不填造样本、成功率或“无紧急项”。
++1. 只整理既有证据：核对来源、版本、原始数据和指标；缺项明确保留，不扩大成重跑任务。
++2. 验证实现：按影响做依赖/接口/构建、固定输入、边界或回放检查。
++3. 验证 ROS/仿真集成：选择受影响的启动、QoS、TF、控制器、Nav2、MoveIt/MTC、包络或取消链，在有所有权的隔离环境执行。
++4. 真实运动：完成该运动所需的离线/仿真验证及硬件准入后，按硬件手册做小范围验收。只读设备健康检查、物理标定采集等按实际风险和目的设置前置条件，不以无关全栈仿真完整性阻塞；涉及运动的采集仍需运动准入。
++5. 对未覆盖项标 `not tested` / `blocked` / `requires hardware`；不填造样本、成功率或“无紧急项”。无关层可注明 N/A 及原因。
+ 
+ 涉及 ROS2/Gazebo 进程、话题、发布者、启动或清理时，先遵守 [ros2-stack-ops](../ros2-stack-ops/SKILL.md)，并确认共享栈归属；不能以进程数、发布者数或节点存在宣称系统已就绪。
+ 
+--- before/.agents/skills/ros2-control-hardware-safety/SKILL.md
++++ after/.agents/skills/ros2-control-hardware-safety/SKILL.md
+@@ -5,12 +5,7 @@
+ 
+ # ros2_control 与设备执行安全
+ 
+-先阅读：
+-
+-- [机器人运行时语言约定](../robot-runtime-cpp/SKILL.md)
+-- [ROS2 栈操作安全流程](../ros2-stack-ops/SKILL.md)（需要启动、探查或清理栈时）
+-- [硬件操作手册](../../../docs/manuals/HARDWARE_OPERATIONS.md)
+-- [整机架构审查](../../../docs/WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)
++核对本次设备和命令链入口，必要时使用 [源码索引](../astribot-architecture-design/references/project-map.md)。实现语言统一遵循 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)。实际启动、探查或清理栈才读 [ros2-stack-ops](../ros2-stack-ops/SKILL.md)，真实设备接入或运动读 [硬件手册](../../../docs/manuals/HARDWARE_OPERATIONS.md)；纯接口设计不必加载完整运行流程。
+ 
+ ## 先做执行所有权审计
+ 
+@@ -47,15 +42,14 @@
+ 1. 描述、控制器配置、关节组、校准和限位版本一致；
+ 2. 当前控制器和硬件状态已读取，只有一个合法命令所有者；
+ 3. 起点、反馈新鲜度、动作时效、速度/加速度/制动预算均通过；
+-4. 取消请求已传播并等待底层终态和实测停稳；
++4. 若替换、抢占或取消旧运动，已传播停止请求并确认旧执行不能继续发命令、底层终态和实测安全状态；首次启动则核对无旧命令/有效控制者及当前反馈，不虚构一次取消；
+ 5. 急停、SDK 会话、设备写入准入和最终防护仍有效；
+ 6. 仿真/离线检查结果与真机证据分开报告。
+ 
+-修改持续运行逻辑优先 C++；Python 只做 launch、薄适配和验证。保持相同消息、坐标、采样时刻、取消和故障语义，先以回放/影子计算比较，再切换执行输出。
++语言选择及迁移按 `robot-runtime-cpp`。保持相同消息、坐标、采样时刻、取消和故障语义，先以回放/影子计算比较，再切换执行输出。
+ 
+ ## 外部参考
+ 
+ - Humble ros2_control 架构：[Controller Manager / Resource Manager / Controllers](https://control.ros.org/humble/doc/getting_started/getting_started.html)
+ - Humble Controller Manager 与实时循环：[Controller Manager](https://control.ros.org/humble/doc/ros2_control/controller_manager/doc/userdoc.html)
+ - ros2_control 控制器接口互斥说明：[Universal Robots controller usage](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/blob/main/ur_robot_driver/doc/usage/controllers.rst)
+-
+--- before/.agents/skills/ros2-stack-ops/SKILL.md
++++ after/.agents/skills/ros2-stack-ops/SKILL.md
+@@ -1,318 +1,66 @@
+ ---
+ name: ros2-stack-ops
+-description: 在本仓库启动/清理/探查 ROS2+Gazebo 栈时必须用的安全流程。凡是要 pkill/pgrep 进程、数进程个数、查话题发布者或消息数、判断"栈起来了没"，一律先读这个 skill。它拦的是四类会把结论整个带偏、且我已反复犯过的错误。
++description: 在本仓库启动、停止、清理或在线探查 ROS2/Gazebo 会话时使用。按会话归属核对进程身份、实际查询环境和分层就绪证据，避免干扰其他会话或把缺观测误判为故障；只整理已有日志无需在线操作。
+ ---
+ 
+-# ROS2 栈操作：四条必须照做的规程
++# ROS2/Gazebo 会话操作
+ 
+-涉及运行时代码施工时，同时使用 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)：后续运行时模块优先 C++；Python 主要用于启动、验证和分析脚本，现有适配层逐步迁移。
++先确定操作对象，再判断其状态。用户授权处理一个任务，不等于授权清理同机所有 ROS/Gazebo 进程。只操作本任务已确认拥有的资源；归属未知时保留该资源，继续可独立进行的只读分析或选择空闲隔离身份。
+ 
+-这个 skill 存在的唯一理由：下面四类错误我**每一条都有 memory、每一条仍然又犯了**。
+-memory 是"读到了才想起"，规程是"动手前照着做"。所以这里给的是**可直接执行的脚本**，
+-不是提醒。
++修改实现时遵循唯一语言约定 [robot-runtime-cpp](../robot-runtime-cpp/SKILL.md)。仅整理既有证据时使用 [robotics-validation-evidence](../robotics-validation-evidence/SKILL.md)，不因此启动或重测运行栈。
+ 
+----
++## 1. 会话与身份
+ 
+-## 规程 1 · 绝不把进程名模式写进命令行(`pkill -f` 会杀掉自己)
++操作记录至少关联：会话目录、启动命令、启动句柄/所有者、主机启动身份、PID 与进程启动时间、ROS domain、Gazebo partition/发现端口、实际安装及 overlay、日志路径。字段缺失必须说明，不能从进程名补猜所有权。
+ 
+-**已犯 2 次，最近一次 exit 144。**
++- `latest_sim` 是可变索引，不是活性或归属证据；先解析目标，再读取该会话的 `session.json` 和实际日志。
++- 进程匹配读取可执行文件及参数令牌，避免把工具 shell 中的脚本文本当成栈进程。排除自身及工具 shell 只是避免误匹配，不能证明其余进程归本任务所有。
++- PID 可复用；停止或计数前比较启动身份。直接启动、已脱离父进程的子进程也须有先前捕获的归属证据。单独的 domain、日志前缀、同一用户或同一可执行名都不足以授权停止。
++- 启动前确认隔离身份未冲突；共享性能资源、安装目录或配置仍可能相互影响。构建/覆盖安装需独立路径，不能把 domain 隔离当成文件或性能隔离。
+ 
+-Bash 工具跑的是 `bash -c '<整段脚本>'`，所以**整段脚本的文本就是那个进程的 cmdline**。
+-`pkill -f "rviz2|nav2_|..."` 里的模式串同时存在于我自己 shell 的 cmdline 里 →
+-pkill 把发起清理的 shell 一起杀了。症状极具误导性：命令静默中断、
+-后面要写的日志文件不存在，看起来像"启动失败"。
++## 2. 当前启动与停止入口
+ 
+-`pgrep -f` 同理：数出来的个数里含我自己，`pgrep -fc rviz2` 在 rviz 根本没起时也返回 ≥1。
++使用启动接口前按 [当前入口与限制](references/current-entrypoints.md) 核对所读源码及实际安装版本，不把此表视为永久事实。
+ 
+-### 照做：模式存文件，按 PID 杀，排除自身进程链
++- 统一仿真入口是 [launch_sim_stack.sh](../../../tools/launch_sim_stack.sh) → [sim_stack.launch.py](../../../ws_robot/src/astribot_s1_navigation/launch/sim_stack.launch.py) → [sim_stack_supervisor.py](../../../tools/sim_stack_supervisor.py)。选择明确的 `instance`、`ros_domain_id` 和新日志目录；先检查解析后的启动配置，再在授权范围内启动。shell 的 `export` 不能代替 launch 参数。
++- [warehouse_sim.launch.py](../../../ws_robot/src/astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py) 的 `ros_domain_id` 可配置，默认 25。supervisor 的隔离实例要求非空 `instance` 和 1–101 内且不为 25 的 domain，并生成 partition、发现端口及锁；实际约束以 [sim_isolation.py](../../../tools/sim_isolation.py) 为准。
++- 停止前先停止本会话的任务接收/目标生成，经有归属的业务取消或停止接口处理活动任务，并保留反馈链路，按任务要求确认相关资源停稳；不能以先杀执行进程代替停车。纯仿真故障中反馈无法取得时，记录停车状态未知，仍可回收已确认拥有的仿真进程，但不输出物理停车成功。
++- 停止仿真优先通过本任务保留的、已核实归属的启动句柄通知其 supervisor，让该所有者执行自身退出流程。退出后核对同一会话结果及自有进程身份；不能把“已发停止请求”当成“自有子树已退出”。
++- 若只剩陈旧清单中的 PID，没有启动身份和有效所有者句柄，不按 PID 猜测发送信号。停止入口必须在执行点重新校验对象并防止 PID 复用；离线审查或手工前置检查不能替代这一约束。
++- **不使用** [clean_sim_stack.sh](../../../tools/clean_sim_stack.sh) 作为共享环境的清理入口：当前实现仍按全机名称/路径收集进程并删除全局 DDS 共享内存。旧 `/tmp/rosops/cleanup.sh` 配方也已废弃。不改用另一份模式匹配脚本绕过限制。
++- 不执行全局进程名终止、全局 Fast DDS 共享内存删除或无归属的 daemon 重启。DDS 状态异常先检查会话环境、transport 和发现信息，不能清空其他会话资源来“修复”。
++- 真机停止须另按 [ros2-control-hardware-safety](../ros2-control-hardware-safety/SKILL.md) 核对执行权、停车反馈与设备保护。`robot_task_control.py` 不是仿真通用停栈入口，也不能凭 `--session` 就假定所有 ROS 停车请求已隔离，见参考材料。
+ 
+-一次性建好这两个脚本（`patterns.txt` 里一行一个模式）：
++## 3. 查询环境必须属于目标会话
+ 
+-```bash
+-mkdir -p /tmp/rosops
+-cat > /tmp/rosops/patterns.txt <<'EOF'
+-ign gazebo
+-ruby /usr/bin/ign
+-parameter_bridge
+-ros_gz
+-nav2_
+-controller_server
+-planner_server
+-bt_navigator
+-behavior_server
+-smoother_server
+-waypoint_follower
+-velocity_smoother
+-lifecycle_manager
+-slam_toolbox
+-exploration_coordinator
+-frontier_explorer
+-pointcloud_slice
+-omni_effort_drive
+-arm_chassis_speed
+-cmd_vel_body_to_world
+-robot_state_publisher
+-rviz2
+-controller_manager/spawner
+-explore_metrics_recorder
+-EOF
++从目标会话记录和已确认归属的进程交叉核对；不要从全机第一个 `controller_server`、SLAM 或发布者进程抄环境。
+ 
+-cat > /tmp/rosops/_selfsafe.sh <<'EOF'
+-# 求出自己这条进程链，供调用方排除。被 source，不单独执行。
+-_anc() { local p=$$ out=""; while [ "$p" -gt 1 ]; do out="$out $p";
+-  p=$(ps -o ppid= -p "$p" 2>/dev/null|tr -d ' '); [ -z "$p" ] && break; done; echo "$out"; }
++需要核对的环境包括 `ROS_DOMAIN_ID`、`ROS_LOCALHOST_ONLY`、RMW 与 DDS profile，以及 Gazebo 的 `IGN_PARTITION`/`GZ_PARTITION`、发现端口和 IP。Gazebo transport 与 ROS domain 是不同通道，必须分别对齐。
+ 
+-# 判断一个 PID 是不是"工具 shell"。Codex 每次 Bash 调用都是
+-# `bash -c 'source .../shell-snapshots/snapshot-bash-*.sh; <脚本>'`，
+-# 这类进程的 cmdline 里含有我写的模式字串，会被 pgrep -f 命中，
+-# 但它们**不是栈进程**：杀掉会打断我自己的后台监控，数进去则把
+-# "存活 0" 变成 "存活 3"，两种都会让结论错。
+-# 光排除自身进程链**不够** —— 并发的其它工具 shell（后台 launch、
+-# until 等待循环）不在我的祖先链上。这一条是实跑脚本才暴露出来的。
+-_is_tool_shell() { grep -qa 'shell-snapshots/snapshot-' /proc/"$1"/cmdline 2>/dev/null; }
++supervisor 的 `env.sh` 保存导航查询环境，但当前仅 source 基础安装，不完整重建额外 overlay；需结合本次启动环境核对实际包/库路径。文件由可信目标会话生成且已检查后才可 source。启动早期失败也可能尚未生成 `env.sh`，缺文件不能推出“栈从未运行”。
+ 
+-_pids_for() {                      # $1=模式文件；输出去重、排除自身链与工具 shell
+-  local anc; anc=" $(_anc) "; local out=""
+-  while IFS= read -r pat; do [ -z "$pat" ] && continue
+-    for pid in $(pgrep -f -- "$pat" 2>/dev/null); do
+-      case "$anc" in *" $pid "*) continue;; esac
+-      _is_tool_shell "$pid" && continue
+-      case " $out " in *" $pid "*) ;; *) out="$out $pid";; esac
+-    done
+-  done < "$1"; echo "$out"; }
+-EOF
++即使环境对齐，“无消息”仍可能来自 QoS、命名空间、错误话题、观察窗口或暂停；先区分这些原因，再定位生产端故障。
+ 
+-cat > /tmp/rosops/count.sh <<'EOF'
+-#!/usr/bin/env bash
+-set -uo pipefail; source /tmp/rosops/_selfsafe.sh
+-v="$(_pids_for /tmp/rosops/patterns.txt)"; n=0
+-for p in $v; do n=$((n+1)); printf "  pid=%-8s %s\n" "$p" "$(ps -o args= -p "$p" 2>/dev/null|cut -c1-90)"; done
+-echo "  ---- 存活 $n ----"
+-EOF
++## 4. 分层证据与结论
+ 
+-cat > /tmp/rosops/cleanup.sh <<'EOF'
+-#!/usr/bin/env bash
+-set -uo pipefail; source /tmp/rosops/_selfsafe.sh
+-v="$(_pids_for /tmp/rosops/patterns.txt)"
+-[ -n "${v// /}" ] && kill $v 2>/dev/null; sleep 3
+-v="$(_pids_for /tmp/rosops/patterns.txt)"
+-[ -n "${v// /}" ] && kill -9 $v 2>/dev/null; sleep 1
+-# 三件都要做：清理漏 sem. 前缀时实测还剩几十个；陈旧 daemon 会让话题数 80 掉到 2
+-rm -f /dev/shm/fastrtps_* /dev/shm/sem.fastrtps_* 2>/dev/null
+-(/opt/ros/humble/bin/ros2 daemon stop >/dev/null 2>&1 || true)
+-echo "清理完成。残留 shm: $(ls /dev/shm/ 2>/dev/null | grep -c fastrtps)"
+-bash /tmp/rosops/count.sh
+-EOF
+-chmod +x /tmp/rosops/count.sh /tmp/rosops/cleanup.sh
+-```
++按任务依赖定位，某层未确认时将依赖该层的结论标为未知；可继续采集其他层只读证据，但不能跳过前提宣布全栈就绪。
+ 
+-用法：`bash /tmp/rosops/cleanup.sh` / `bash /tmp/rosops/count.sh`。
++| 层 | 要观察的证据 | 不足以支持结论的单项 |
++|---|---|---|
++| 仿真世界 | 目标 partition 和实际 world 的统计话题；一个观察窗口内时间/iterations 是否推进，paused 状态 | 话题数量、CPU 百分比、一帧 stats 或订阅超时 |
++| ROS 时钟 | 对齐环境下 `/clock` 的连续样本及时间范围；消费者实际 `use_sim_time` | 有发布者、只有一帧、未确认 QoS 时的零帧 |
++| TF | 所需 frame 链、时间戳、龄期和来源，按实际任务检查 `map`/`odom`/机器人 frame | 只存在一条变换、不相关 frame 的查询成功 |
++| 生命周期/接口 | 目标节点所需状态、目标服务/Action 的归属与可用性 | 进程存活或名称相同 |
++| 数据/执行 | 实测接收率、龄期、质量、QoS 兼容与下游实际消费；运动另需反馈 | `pub > 0`、命令已发布或 Action 已接收 |
+ 
+-**禁止**：在任何 Bash 调用里直接写 `pkill -f "…"`、`pgrep -fc <名字>`、
+-或把进程名列在 `for f in ... ; do pgrep` 的循环里。要计数就调 `count.sh`。
++报告至少区分“已观察到持续推进”“已观察到暂停/无推进”“查询对象或观测不足，尚不能判断”。受控暂停不是启动失败；查询超时不是物理一步未走。CPU 和进程/话题数量只作诊断线索，不设历史固定正常值。
+ 
+-清理还必须覆盖 `/opt/ros/humble` 下的二进制（`nav2_*`、`parameter_bridge`）——
+-只按工作空间路径匹配会漏掉它们，留下的僵尸会污染下一轮测量。
++时间不推进会影响依赖 ROS 时间的逻辑，但不能一概断言所有节点时钟为零或所有定时器停摆。定位加载阻塞、QoS、异常退出时按需读 [诊断经验](references/diagnostic-notes.md)，不要用历史表象直接认定根因。
+ 
+----
++## 5. 收尾与证据边界
+ 
+-## 规程 2 · 查询侧 domain 必须先对齐，且要证明而不是假设
++输出操作对象、归属依据、实际环境/安装、观察窗口、执行过的操作、目标会话结果及未确认事项。停止后仅对已捕获身份的自有集合报告退出/残留；不能把全机“同名进程为零”或 `/clock` 无发布者作为清理成功证明。
+ 
+-**已犯 2 次。** 症状：所有话题 `pub=0`、节点一个都看不见，看起来像"系统没起来"。
++“停栈完成”和“机器人已实测停稳”分开报告。发现 SIGINT/SIGTERM、进程死亡或日志中断时先核对操作与异常时间线：可能来自自己、其他所有者或故障，单条信号日志不能判定为外部干扰。
+ 
+-本仓库的 domain 是**被 launch 钉死的**，不是由我的 shell 决定：
+-`warehouse_sim.launch.py` 用 `SetEnvironmentVariable('ROS_DOMAIN_ID', '25')`
+-（有意为之，注释写了理由：避免与同机其它 ROS2 图撞名）。
+-我在 shell 里 `export ROS_DOMAIN_ID=57` **不会**改变它拉起的任何进程。
+-
+-### 照做：从运行中的进程反读，而不是从自己的 shell 猜
+-
+-```bash
+-cat > /tmp/rosops/align_env.sh <<'EOF'
+-#!/usr/bin/env bash
+-# 从一个**运行中的栈进程**反读 DDS 环境，生成查询侧要 source 的文件。
+-# 反读而不是假设：domain 由 launch 决定，我 export 什么都不影响它。
+-set -uo pipefail; source /tmp/rosops/_selfsafe.sh
+-PID=""
+-for cand in controller_server slam_toolbox robot_state_publisher; do
+-  for p in $(pgrep -f -- "$cand" 2>/dev/null); do
+-    case " $(_anc) " in *" $p "*) continue;; esac
+-    PID="$p"; break 2
+-  done
+-done
+-[ -z "$PID" ] && { echo "栈没在跑，无从反读 —— 先启动，或本来就该报'栈没起来'"; exit 2; }
+-echo "# 反读自 pid=$PID ($(ps -o comm= -p $PID))"
+-{ echo 'set +u'
+-  echo 'source /opt/ros/humble/setup.bash'
+-  echo 'source /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/setup.bash'
+-  echo 'set -u'
+-  tr '\0' '\n' < /proc/$PID/environ | grep -E '^(ROS_DOMAIN_ID|ROS_LOCALHOST_ONLY|RMW_IMPLEMENTATION|FASTRTPS_DEFAULT_PROFILES_FILE|IGN_IP|GZ_IP)=' | sed 's/^/export /'
+-  echo 'export DISPLAY=${DISPLAY:-:1}'
+-} > /tmp/rosops/query_env.sh
+-cat /tmp/rosops/query_env.sh | grep '^export' | sed 's/^/  /'
+-EOF
+-chmod +x /tmp/rosops/align_env.sh
+-```
+-
+-流程固定为：**启动栈 → `bash /tmp/rosops/align_env.sh` → 之后每个查询 shell
+-`source /tmp/rosops/query_env.sh`**。
+-
+-只有在这一步做完之后，"话题没有发布者"才可以被当成系统问题。
+-
+----
+-
+-## 规程 3 · "栈起来了没"的判据顺序(每一层用对的工具)
+-
+-**禁止用进程数当判据**（实测 9 个进程全活而 `lifecycle_manager` 报
+-`Aborting bringup`，整套 nav2 从未 activate）。
+-**也禁止用发布者数当判据**（实测 `pub=1` 但 `0Hz`：BEST_EFFORT 发布者 +
+-RELIABLE 订阅者，一帧都收不到、只有一条 WARNING）。
+-
+-按层次逐级判，上一层不过就不要查下一层：
+-
+-| 层 | 判据 | 命令 | 坏掉的样子 |
+-|---|---|---|---|
+-| 0 仿真物理 | `ign topic -l` 条数 / `/stats` 有 `iterations` | 见规程 4 | 个位数 / echo 超时 |
+-| 1 时钟 | `/clock` **实测帧数** > 0 且时间在前进 | 订阅数 8s | 0 帧 = 全栈冻结 |
+-| 2 TF | `map→astribot_torso_base` 能查到且龄期小 | `lookup_transform` | 根 frame 不是 base_link |
+-| 3 生命周期 | 每个节点 `get_state` == `active` | `ros2 service call .../get_state` | 进程活着但从未 activate |
+-| 4 数据 | 每条话题的**实测拍率** | 订阅计数 | pub>0 而 0Hz |
+-
+-时钟这一层是**最省时的分水岭**：`use_sim_time=true` 且 `/clock` 不推进时，
+-所有节点时钟恒为 0，`RCLCPP_*_THROTTLE` 永远被节流掉 →
+-节点"活着但一条日志都不打"，而 `create_wall_timer` 不受影响仍在跑、
+-状态话题照发。这个组合极像 DDS/QoS 故障，会把人引到完全错误的方向。
+-
+----
+-
+-## 规程 4 · Gazebo 不步进：先在 ign-transport 层判，别碰 ROS 侧
+-
+-ign-transport 与 ROS domain 无关，所以不受规程 2 的坑干扰。**这是第一步，不是第三步。**
+-
+-```bash
+-cat > /tmp/rosops/gz_check.sh <<'EOF'
+-#!/usr/bin/env bash
+-# Gazebo 到底在不在步进。三个数按顺序看，任一不对就不用查 ROS 侧。
+-set -uo pipefail
+-export IGN_IP=${IGN_IP:-127.0.0.1}
+-LOG="${1:-}"
+-if [ -n "$LOG" ] && [ -f "$LOG" ]; then
+-  echo "  [ign gazebo-1] 日志行数: $(grep -c 'ign gazebo-1' "$LOG")   (个位数=卡在插件加载)"
+-  echo "  最后一条 ign gazebo 行:"
+-  grep 'ign gazebo-1' "$LOG" | tail -1 | cut -c1-160 | sed 's/^/    /'
+-fi
+-echo "  ign topic -l: $(timeout 15 ign topic -l 2>/dev/null | wc -l) 个   (正常 ~21，个位数=没步进)"
+-echo "  server 自己的 CPU（不看 ruby、不看总量）:"
+-ps -eo pcpu,args --no-headers | grep -F 'gazebo server' | grep -v grep \
+-  | awk '{printf "    %s%%   (正常 ~196%%)\n",$1}'
+-echo "  /stats:"
+-timeout 15 ign topic -e -t /stats -n 1 2>&1 \
+-  | grep -E 'iterations|sim_time|real_time_factor' | head -4 | sed 's/^/    /' \
+-  || echo "    **超时/无消息 = 物理一步都没走**"
+-EOF
+-chmod +x /tmp/rosops/gz_check.sh
+-```
+-
+-### 已知卡点：`gz_ros2_control` 取 `robot_description` 的加载期死锁
+-
+-server 的**最后一行**每次都是同一行：
+-
+-```
+-[gz_ros2_control]: connected to service!! robot_state_publisher asking for robot_description
+-```
+-
+-插件在 `Configure()` 里同步等 `robot_description`，Gazebo 主循环被卡在插件里，
+-物理一步都不走。连带：`controller_manager` 服务 0 个 →
+-`joint_state_broadcaster` spawner 60s 后 FATAL → `/joint_states` 无发布者 →
+-`/clock` 无消息 → 全栈冻结。
+-
+-**关于 `headless` 的因果，我写错过两次，现在只写实测：**
+-
+-| 日期 | `headless` | `[ign gazebo-1]` 行数 | 结果 |
+-|---|---|---|---|
+-| 2026-08-20 | `true` | 4 | 卡死 |
+-| 2026-08-20 | `false` | 267 | 正常，RTF 1.0068 |
+-| 2026-08-27 | `false` | 6 | **卡死**（连续 2 次，同一行） |
+-
+-所以"headless 是触发条件、GUI 能跑"这条**不成立**——`headless:=false` 一样会卡。
+-`headless` 与这个死锁**没有稳定的因果关系**，别再把它当开关用。
+-同样已证伪的还有"GUI 软渲染吃满 CPU 饿死 server"：本机 28 核，
+-138% 的 GUI 不可能饿死 server（这条算术当年就该做）。
+-
+-**根因未定。所以：不要宣布已修好，要给出实测过的那三个数。**
+-
+----
+-
+-## 规程 5 · 清理是破坏性的：先确认机器没有别人在用
+-
+-**已犯 1 次，代价是一整条错结论。**
+-
+-2026-08-27 实测：**同一台机器上有另一个会话在跑同一套仿真栈**，
+-共用 `ROS_DOMAIN_ID=25`、共用同一份 `ws_robot/install/`、进程模式完全重叠。
+-它先跑了自己的清理，把我 4 分钟前起的实验杀了；我读到"卡在 6 行"，
+-据此写下"第 2 次同样卡死 → 是必然不是竞态"——**那个读数是它被杀时的状态，
+-不是稳定状态，结论整个是错的。**
+-
+-反向同样成立：我跑一次 `cleanup.sh` 就会杀掉它正在跑的实验。
+-
+-### 照做：清理前先查"这台机器上的栈是谁起的"
+-
+-```bash
+-cat > /tmp/rosops/whose_stack.sh <<'EOF'
+-#!/usr/bin/env bash
+-# 清理前必跑。判断当前活着的栈是不是我起的 —— 靠 launch 进程的 stdout 指向哪个日志。
+-set -uo pipefail; source /tmp/rosops/_selfsafe.sh
+-MINE="${1:-}"                     # 我这轮的日志目录，例如 /tmp/mysweep/run1
+-found=0
+-for p in $(pgrep -f -- 'ros2 launch' 2>/dev/null); do
+-  _is_tool_shell "$p" && continue
+-  log="$(readlink /proc/$p/fd/1 2>/dev/null || echo '?')"
+-  start="$(ps -o lstart= -p "$p" 2>/dev/null)"
+-  tag="**不是我的**"
+-  [ -n "$MINE" ] && case "$log" in "$MINE"*) tag="（我的）";; esac
+-  echo "  launch pid=$p  起于$start"
+-  echo "     日志 -> $log   $tag"
+-  found=1
+-done
+-[ "$found" -eq 0 ] && echo "  没有 ros2 launch 在跑"
+-echo "  其它会话的痕迹（/tmp 下最近 1 小时被别人建的实验目录）:"
+-find /tmp -maxdepth 1 -type d -newermt '-60 min' 2>/dev/null \
+-  | grep -vE '^/tmp$|/tmp/rosops|/tmp/Codex|/tmp/\.' | sed 's/^/     /'
+-EOF
+-chmod +x /tmp/rosops/whose_stack.sh
+-```
+-
+-**动手前**：`bash /tmp/rosops/whose_stack.sh /tmp/<我的日志目录>`
+-出现"不是我的"就**停下来问用户**，不要清理。
+-
+-**动手后同样重要**：读到任何异常状态（卡住、行数不涨、话题消失）时，
+-先看自己的日志有没有 `signal_handler(SIGINT/SIGTERM)` /
+-`Escalating to SIGKILL` / `process has died`。有 → 是**外部把它杀了**，
+-这个读数不能用来下任何结论。
+-
+-### 隔离手段（要与人共用机器时）
+-
+-| 手段 | 作用 |
+-|---|---|
+-| 自己的日志目录 `/tmp/<我的名字>/runN/` | 能靠 `readlink /proc/PID/fd/1` 区分是谁的进程 |
+-| 启动期间**不跑**任何清理脚本 | 清理与实验必须串行 |
+-| 结论前核对时间线 | 日志停止写入的时刻 vs 我做过的操作时刻 |
+-
+-`ROS_DOMAIN_ID` **不能**拿来隔离：本仓库由
+-`warehouse_sim.launch.py` 钉死成 25（见规程 2），改它等于改仓库行为。
+-
+----
+-
+-## 收尾自检(每次动完栈都跑一遍)
+-
+-```bash
+-bash /tmp/rosops/count.sh          # 存活进程（不含自身）
+-bash /tmp/rosops/gz_check.sh <log> # 仿真是否步进
+-source /tmp/rosops/query_env.sh    # 对齐后的查询环境
+-```
+-
+-**报结论时的硬要求**：
+-- 说"栈起来了"必须附生命周期状态或实测拍率，不能附进程数。
+-- 说"清理干净了"必须附 `count.sh` 的输出，不能附自己写的 `pgrep`。
+-- 说"修好了"必须附修之前/之后的同一个数；只能规避不能解释时，
+-  明确写"规避手段，根因未知"。
++技能/资料静态修改只证明规则已修订；若没有隔离夹具或真实会话验证，明确未验证现有停止工具的运行行为，不声称已修复工具实现。
+--- before/.agents/skills/ros2-stack-ops/references/current-entrypoints.md
++++ after/.agents/skills/ros2-stack-ops/references/current-entrypoints.md
+@@ -0,0 +1,29 @@
++# 当前操作入口及限制
++
++核对日期：2026-09-22。以下来自源码静态阅读；没有运行或停止 ROS/Gazebo。使用时重新核对源码、实际采用版本和安装产物，特别是 overlay。
++
++## 启动与会话文件
++
++| 入口 | 已见实现 | 使用边界 |
++|---|---|---|
++| [launch_sim_stack.sh](../../../../tools/launch_sim_stack.sh) | 无参数或 `name:=value` 形式进入统一 launch；旧 `--flags` 形式直接进入 supervisor；可加载 `ASTRIBOT_OVERLAY_SETUP` | 脚本先设置 domain 25，目标 domain 应显式经 launch/supervisor 参数传入；不能仅 export 另一个 domain |
++| [sim_stack.launch.py](../../../../ws_robot/src/astribot_s1_navigation/launch/sim_stack.launch.py) | 将 `instance`、`ros_domain_id`、`log_dir` 等转为 supervisor 参数；支持 `dry_run` | dry-run 只解析配置，不证明资源当前空闲或真实就绪 |
++| [sim_isolation.py](../../../../tools/sim_isolation.py) | 隔离实例的 domain 为 1–101 且非 25；生成 `astribot_<instance>` partition、domain 对应端口和锁 | ROS/Gazebo 身份隔离不覆盖 GPU、性能、安装目录和未遵守该机制的启动者 |
++| [sim_stack_supervisor.py](../../../../tools/sim_stack_supervisor.py) | 记录 `session.json`、`session.log`、导航查询 `env.sh`；对子进程建立独立进程组并捕获后代启动时间；正常退出时回收自有子进程和捕获的后代 | 清单存 `supervisor_pid`、`children[].pid`，当前没有持久化完整 boot/start 身份，不能只凭清单重接后发信号；采样子树也不是所有逃逸进程已覆盖的证明 |
++
++`session.json` 中 `state`、`ended`、`remaining_owned_pids` 和测量记录需与本次进程身份及时间线对应；磁盘上的 `ready` 可能是历史状态。`env.sh` 保存指定环境变量并加载基础 `ws_robot/install`，未完整保存 overlay；不能宣称与启动侧包解析完全相同。
++
++停止已持有的本任务 supervisor 时，由该启动句柄接收中断并执行退出路径；重新接管遗留会话需要额外可验证的身份，不能复制陈旧 PID。进程退出与停车反馈是不同证据。
++
++## 当前不适合作为通用停止入口的工具
++
++- [clean_sim_stack.sh](../../../../tools/clean_sim_stack.sh)：当前仍按全机可执行名、launch 文本及安装路径匹配并发送信号，且删除全局 DDS 共享内存。**不可推荐直接执行**；本次技能整改没有修改该工具。
++- [robot_task_control.py](../../../../tools/robot/robot_task_control.py)：真机任务工具。`--session` 读取的是含 `boot_id`、`supervisor`、`processes` 的真机清单，与仿真 supervisor 清单不同。它对 PID 启动时间做校验并使用 pidfd 发送信号，但 ROS 停车请求仍使用当前调用环境里的固定 Topic/Service/Action 名称；没有自动从清单设置或核验目标 DDS 会话。未传 `--session` 时还会按角色、路径和 domain 扩选。**不能把文件参数当作完整授权或隔离保证**；需要另行核实请求端点归属与物理反馈。`--dry-run` 只列进程，不证明停车端点安全。
++
++若需要新增安全停止器，先提供可评审设计和隔离验证：在执行点核验 `(boot_id, pid, start_time)`、受控子树/实例归属，防 PID 复用，拒绝未知对象；请求及反馈属于同一目标会话；限制升级策略并保留停车所需反馈链路。此项是后续工具工作，不能用说明文字冒充已实现。
++
++## 只读辅助证据
++
++- [record_simulation_ownership.py](../../../../tools/sim/record_simulation_ownership.py) 采样 Gazebo 实例、domain、partition、stdout 和负载，用于发现其他实例及观察性能干扰。它按部分可执行模式扫描，没有记录完整 boot/start 身份；其结果不是可直接用于停止的授权清单。
++- [record_runtime_identity.py](../../../../tools/sim/record_runtime_identity.py) 按实例记录进程启动时间、环境、日志和加载原生库哈希，可辅助区分源码与实际运行库；仍需交叉核对会话所有者，实例环境字段自身不是不可伪造身份。
++- [sim_stack_probe.py](../../../../tools/sim_stack_probe.py) 提供数据/导航就绪探测。解释输出前核对该次环境、配置的 scan、目标节点与所要求的证据层级，不能外推为整机/真机验收。
+--- before/.agents/skills/ros2-stack-ops/references/diagnostic-notes.md
++++ after/.agents/skills/ros2-stack-ops/references/diagnostic-notes.md
+@@ -0,0 +1,23 @@
++# 栈诊断经验：线索与证明分开
++
++旧技能保存过以下故障线索。本页不重新认定历史根因，不保留旧清理脚本；当前源码/会话和连续测量优先。
++
++## 工具 shell 与进程匹配
++
++工具运行 shell 时，完整脚本文本可能在 shell 的命令行里。按字符串匹配进程会把查询者、并发监控或启动 shell 本身算进去，甚至终止它们。改成按文件保存匹配串也不能建立归属。要观察实际可执行令牌和已捕获的 PID 启动身份，不能用模糊命中数量下结论。
++
++## 发现、QoS 与时钟
++
++ROS 图中看不到节点先核对目标会话环境，不能从另一个会话“借”环境。发现到发布者也不等于订阅收到数据；比较消息类型、QoS、端点归属以及窗口内实际帧数和时间戳。
++
++仿真时间不推进可能使依赖 ROS 时间的逻辑或日志节流表现异常，而 wall timer 仍有活动。应查看消费者实际时间源和推进范围，不能由“有状态消息”推导物理在动，也不能由“无日志”推导进程死亡。
++
++## Gazebo 加载阻塞与渲染
++
++历史线索包含 `gz_ros2_control` 日志停在请求 `robot_description` 附近，以及下游 controller spawner 超时。看到相同末行时，只能提出加载阻塞假设；需检查实际参数服务归属、目标 world 时间推进、相关进程状态和完整日志。单条末行不能证明死锁或因果顺序。
++
++旧记录里有无 GUI 的运行均出现过异常，不能用 `headless` 开关作为已知根因修复。CPU 利用率不能排除 GPU/渲染、锁、单线程或调度瓶颈；需要同一场景的受控比较。话题数量、日志行数和固定 CPU 历史值只作为线索。
++
++## 日志停止与外部干扰
++
++先关联本会话操作时间线、退出状态、信号、超时和采样记录，再解释日志停止。信号日志可能来自正常退出、supervisor 重试、人工停止或其他来源；未确定来源时写“会话被中断，原因未确认”，不能当作稳定复现的算法故障。无数据/环境错误归基础设施或观测无效，不计为业务成功或失败。
+--- before/AGENTS.md
++++ after/AGENTS.md
+@@ -0,0 +1,7 @@
++# 项目实现约定
++
++本项目功能实现优先使用 **C++**，只有脚本和启动文件类优先使用 **Python**。这一约定包括 ROS 节点、算法、任务/协议服务、设备适配、UI 和持久化，不因“薄适配”或文件名为脚本而改变职责分类。
++
++具体分类、既有 Python 兼容保留及渐进迁移边界，以 [.agents/skills/robot-runtime-cpp/SKILL.md](.agents/skills/robot-runtime-cpp/SKILL.md) 为统一依据。语言偏好不要求在无关任务中重写既有实现。
++
++架构工作按 [.agents/skills/astribot-architecture-design/SKILL.md](.agents/skills/astribot-architecture-design/SKILL.md) 选择相关技能；普通局部工作只加载与本次改动有关的内容。
+--- before/docs/manuals/ARCHITECTURE_REFERENCE.md
++++ after/docs/manuals/ARCHITECTURE_REFERENCE.md
+@@ -1,8 +1,8 @@
+-# 当前架构设计参考手册
++# 架构设计参考手册
+ 
+ 2026-09-18：SLAM 接入已改为仿真/真机共用 Voxel-SLAM；接口、命令与逐项验收状态见[统一 SLAM 参考](../SLAM_INTEGRATION_REFERENCE_20260918.md)。旧中转链已删除；真机尚未实测。
+ 
+-版本范围与验收边界见[手册首页](README.md)。本文描述当前源码，重点是职责归属、运行接线及扩展契约。
++版本范围与验收边界见[手册首页](README.md)。本文主体为 2026-09-18 的架构记录；2026-09-22 本次只更新源码索引、包数表述和已迁移的仲裁入口，没有重新验收所有参数、接线及功能。定位最新实现先查[项目源码入口索引](../../.agents/skills/astribot-architecture-design/references/project-map.md)，再核对实际源码、launch 和安装产物；不能把下文历史“当前”表述当作本轮实时验证。
+ 
+ 整机层面的缺口、整合/拆分建议及分阶段实施方案见[轮式双臂整体架构审查](../WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)。该方案是后续设计，不能当作当前已实现能力。
+ 
+@@ -33,17 +33,18 @@
+ 
+ ## 2. 仓库与模块职责
+ 
+-`ws_robot/src` 当前有 19 个 ROS 包：17 个自有实现/接口包、2 个第三方包。`build/install/log` 是构建产物；`tools` 是编排、部署和诊断入口；根目录 SDK 原生库与 ROS 工作区分开管理。
++包清单随原生模块迁移和领域扩展变化，以 `ws_robot/src` 中的 `package.xml` 及实际构建选择为准，不使用固定包数判断能力。`build/install/log` 是构建产物；`tools` 是编排、部署和诊断入口；根目录 SDK 原生库与 ROS 工作区分开管理。下表为领域职责概览，不是完整包清单。
+ 
+ | 模块 | 负责 | 交互与边界 |
+ |---|---|---|
+ | `astribot_s1_description`、根目录 `astribot_config` | 模型、连杆与设备配置 | TF、关节名和实体外形的共同依据 |
+-| `astribot_s1_perception` | Python 感知编排、地图来源、定位适配 | 提供地图、扫描、定位；不派发导航目标 |
++| `astribot_s1_perception` | 感知组合启动、地图来源和定位接线 | 具体运行节点按源码索引与 launch 核对；不派发导航目标 |
+ | `astribot_s1_perception_components` | C++ 自滤、切片扫描、Livox 转换 | 高频数据处理与 ROS 组件 |
+ | `astribot_autonomy_core` | 前沿搜索、几何和足迹等纯算法 | 不依赖 ROS 节点生命周期 |
+ | `astribot_s1_exploration` | 前沿候选、目标验证、探索状态机 | 通过探索 Action 入口请求导航，不直接控底盘 |
+ | `astribot_navigation_msgs` | 任务、路径风险、约束、健康、包络、起步动作契约 | 跨模块接口；修改需重建依赖包 |
+ | `astribot_s1_navigation_policy` | 观测融合、让行、路由联合决策、窄通道、末级保护 | 领域算法与 ROS 适配分离 |
++| `astribot_s1_task_arbiter_native`、`astribot_s1_navigation_policy_native` | 原生导航仲裁及策略/保护实现入口 | 核对所用 launch 与安装产物；目录存在不代表整栈验收 |
+ | `astribot_s1_navigation` | Nav2 launch、参数、BT、速度链接线 | 选择实现并配置，不复制控制律 |
+ | `astribot_s1_path_tracking` | 精确终点规划、ThreePhase、到位精调、检查器、平滑器 | 运动控制与控制侧不可执行异常 |
+ | `astribot_s1_dynamics_coupling` | 双臂姿态/运动引起的底盘约束 | 接入既有速度链，不能产生第二个运动主控 |
+@@ -68,7 +69,7 @@
+ | 探索 | `/exploration/navigate_to_pose`、`/exploration/navigate_through_poses` | 10 |
+ | Nav2 执行后端 | `/navigation_executor/navigate_to_pose` 等 | 仲裁器后端，业务方不直接调用 |
+ 
+-优先级与目标切换由 [task_arbiter_node.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/task_arbiter_node.py) 管理。新所有权需要经过旧执行取消/交接；租约、任务标识、路径版本、地图/包络版本用于使过期请求失效。
++优先级与目标切换的源码入口已迁为 [C++ task_arbiter_node.cpp](../../ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp)；使用时另核对 launch 和实际安装目标。新所有权需要经过旧执行取消/交接；租约、任务标识、路径版本、地图/包络版本用于使过期请求失效。
+ 
+ **现有测试工具的实际行为**：`run_waypoint_route.py` 和真机精度脚本使用人工 `/navigate_to_pose` 入口，不是表中的 50 级路线接口。不要与 RViz 或探索同时派发目标。
+ 
+@@ -214,5 +215,5 @@
+ | 公共运动、仿真与真机覆盖 | [arrival_motion.yaml](../../ws_robot/src/astribot_s1_navigation/config/arrival_motion.yaml)、[仿真档](../../ws_robot/src/astribot_s1_navigation/config/arrival_precision_sim.yaml)、[真机档](../../ws_robot/src/astribot_s1_navigation/config/arrival_precision_hardware.yaml) |
+ | 观测、领域契约与 profile | [observer_node.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/observer_node.py)、[contracts.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/contracts.py)、[profile.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/profile.py) |
+ | 真机启动与传感器版本归属 | [hardware_exploration.py](../../tools/robot/hardware_exploration.py)、[hardware_sensors.py](../../tools/robot/hardware_sensors.py) |
+-| 真机自体地图处理 | [grid_self_clear_node.py](../../tools/hardware_nodes/grid_self_clear_node.py) |
++| 概率栅格/机身区域处理 | [nav_prob_grid_node.cpp](../../ws_robot/src/astribot_s1_mapping/src/nav_prob_grid_node.cpp)；旧独立 `grid_self_clear_node.py` 已移除，实际参数与接线按所用 launch 核对 |
+ | SDK 底盘执行边界 | [chassis_bridge_core.py](../../ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/chassis_bridge_core.py) |

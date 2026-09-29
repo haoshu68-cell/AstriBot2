@@ -1,0 +1,35 @@
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PolicyExecution session="{policy_session}" goal="{goal}">
+      <Sequence>
+        <EnsureNavigationStart session="{policy_session}" goal="{goal}">
+          <Sequence>
+            <ComputePathToPose goal="{goal}" path="{departure_path}" planner_id="Departure"/>
+            <FollowPath path="{departure_path}" controller_id="Departure" goal_checker_id="precise_goal_checker"/>
+          </Sequence>
+        </EnsureNavigationStart>
+        <RecoverPolicyObstruction session="{policy_session}" goal="{goal}" path="{path}" required_heading="{policy_recovery_heading}">
+          <WorkstationApproach session="{policy_session}" goal="{goal}" path="{path}" alignment_path="{alignment_path}">
+            <ReactiveSequence>
+              <ReactiveFallback>
+                <KeepSafePath session="{policy_session}" path="{path}" goal="{goal}"/>
+                <ComputePathWithRecovery session="{policy_session}" goal="{goal}" path="{path}" departure_path="{connection_departure_path}">
+                  <FollowPath path="{connection_departure_path}" controller_id="Departure" goal_checker_id="precise_goal_checker"/>
+                </ComputePathWithRecovery>
+              </ReactiveFallback>
+              <RequireNavigationEnvelope reason="{navigation_envelope_failure}">
+                <FollowPath path="{path}" controller_id="FollowPath" goal_checker_id="precise_goal_checker"/>
+              </RequireNavigationEnvelope>
+            </ReactiveSequence>
+            <RequireNavigationEnvelope reason="{navigation_envelope_failure}">
+              <FollowPath path="{alignment_path}" controller_id="WorkstationAlign" goal_checker_id="precise_goal_checker"/>
+            </RequireNavigationEnvelope>
+          </WorkstationApproach>
+          <ComputePathWithRecovery session="{policy_session}" goal="{goal}" path="{path}" departure_path="{policy_departure_path}" policy_recovery="true" required_heading="{policy_recovery_heading}">
+            <FollowPath path="{policy_departure_path}" controller_id="Departure" goal_checker_id="precise_goal_checker"/>
+          </ComputePathWithRecovery>
+        </RecoverPolicyObstruction>
+      </Sequence>
+    </PolicyExecution>
+  </BehaviorTree>
+</root>

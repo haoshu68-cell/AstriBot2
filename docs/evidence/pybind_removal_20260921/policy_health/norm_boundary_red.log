@@ -1,0 +1,43 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____ test_one_ulp_speed_boundary_requires_coverage_and_movement_headings ______
+
+    def test_one_ulp_speed_boundary_requires_coverage_and_movement_headings():
+        # Python's accurate hypot is exactly .01; libc hypot rounds one ULP below.
+        # Treating this as stationary would admit motion with no depth coverage.
+        velocity = [-0.006876729203900029, -0.007260206295707338, 0.]
+>       result = run(dict(required=[], ops=[dict(op='directions', velocity=velocity),
+            dict(op='allows_motion', now=stamp(0), velocity=velocity),
+            dict(op='coverage_motion', coverage=[], velocity=velocity)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:217: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:126: in compare_values
+    compare_values(expected[key], actual[key], path + '/' + key)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = [-3.1144734043487587, -2.3290752409513105, -1.5436770775538622]
+actual = [], path = '/0/value'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+            assert set(expected) == set(actual), path
+            for key in expected:
+                compare_values(expected[key], actual[key], path + '/' + key)
+        elif isinstance(expected, list):
+>           assert len(expected) == len(actual), path
+E           AssertionError: /0/value
+E           assert 3 == 0
+E            +  where 3 = len([-3.1144734043487587, -2.3290752409513105, -1.5436770775538622])
+E            +  and   0 = len([])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:128: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_one_ulp_speed_boundary_requires_coverage_and_movement_headings
+1 failed, 39 deselected in 0.06s
+
+expected_red_exit=1

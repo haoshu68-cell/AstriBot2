@@ -1,0 +1,49 @@
+[  3%] Building CXX object CMakeFiles/policy_profile.dir/src/policy_profile.cpp.o
+[  6%] Building CXX object CMakeFiles/navigation_math.dir/src/navigation_math.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp: In function ‘std::vector<double> astribot::navigation::scan_coverage(const std::vector<double>&, double, double, double, double, double)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp:303:69: warning: suggest parentheses around ‘&&’ within ‘||’ [-Wparentheses]
+  303 |         (std::isfinite(ranges[index]) && range_min <= ranges[index] &&
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+  304 |              ranges[index] <= range_max || ranges[index] == INFINITY);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~                              
+[ 10%] Building CXX object CMakeFiles/navigation_math.dir/src/cmd_vel_body_to_world_core.cpp.o
+[ 13%] Linking CXX static library libnavigation_math.a
+[ 13%] Built target navigation_math
+[ 17%] Building CXX object CMakeFiles/fixed_envelope_core.dir/src/fixed_envelope_core.cpp.o
+[ 20%] Linking CXX static library libpolicy_profile.a
+[ 20%] Built target policy_profile
+[ 24%] Building CXX object CMakeFiles/cmd_vel_body_to_world_cpp.dir/src/cmd_vel_body_to_world_node.cpp.o
+[ 27%] Linking CXX static library libfixed_envelope_core.a
+[ 27%] Built target fixed_envelope_core
+[ 31%] Building CXX object CMakeFiles/costmap_scan_cpp.dir/src/costmap_scan_node.cpp.o
+[ 34%] Linking CXX executable costmap_scan_cpp
+[ 34%] Built target costmap_scan_cpp
+[ 37%] Building CXX object CMakeFiles/envelope_coordinator_cpp.dir/src/envelope_coordinator_node.cpp.o
+[ 41%] Linking CXX executable cmd_vel_body_to_world_cpp
+[ 41%] Built target cmd_vel_body_to_world_cpp
+[ 44%] Building CXX object CMakeFiles/final_protection_core.dir/src/final_protection_core.cpp.o
+[ 48%] Linking CXX static library libfinal_protection_core.a
+[ 48%] Built target final_protection_core
+[ 51%] Building CXX object CMakeFiles/navigation_math_test.dir/test/navigation_math_test.cpp.o
+[ 55%] Linking CXX executable navigation_math_test
+[ 55%] Built target navigation_math_test
+[ 58%] Building CXX object CMakeFiles/cmd_vel_body_to_world_core_test.dir/test/cmd_vel_body_to_world_core_test.cpp.o
+[ 62%] Linking CXX executable cmd_vel_body_to_world_core_test
+[ 62%] Built target cmd_vel_body_to_world_core_test
+[ 65%] Building CXX object CMakeFiles/policy_profile_probe.dir/test/policy_profile_probe.cpp.o
+[ 68%] Linking CXX executable policy_profile_probe
+[ 68%] Built target policy_profile_probe
+[ 72%] Building CXX object CMakeFiles/final_protection_probe.dir/test/final_protection_probe.cpp.o
+[ 75%] Linking CXX executable final_protection_probe
+[ 75%] Built target final_protection_probe
+[ 79%] Building CXX object CMakeFiles/fixed_envelope_cpp.dir/src/fixed_envelope_node.cpp.o
+[ 82%] Linking CXX executable envelope_coordinator_cpp
+[ 82%] Built target envelope_coordinator_cpp
+[ 86%] Building CXX object CMakeFiles/fixed_envelope_probe.dir/test/fixed_envelope_probe.cpp.o
+[ 89%] Linking CXX executable fixed_envelope_probe
+[ 89%] Built target fixed_envelope_probe
+[ 93%] Building CXX object CMakeFiles/final_protection_cpp.dir/src/final_protection_node.cpp.o
+[ 96%] Linking CXX executable fixed_envelope_cpp
+[ 96%] Built target fixed_envelope_cpp
+[100%] Linking CXX executable final_protection_cpp
+[100%] Built target final_protection_cpp

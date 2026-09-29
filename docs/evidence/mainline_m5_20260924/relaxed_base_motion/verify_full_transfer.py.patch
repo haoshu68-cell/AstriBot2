@@ -1,0 +1,46 @@
+--- verify_full_transfer.py.before
++++ verify_full_transfer.py.after
+@@ -76,7 +76,9 @@
+     parser.add_argument('--scenario',type=Path,default=Path(__file__).resolve().parent/'scenario.json')
+     parser.add_argument('--executor-identity',type=Path)
+     parser.add_argument('--executor-parameters',type=Path)
++    parser.add_argument('--relax-base-motion',action='store_true')
+     args=parser.parse_args()
++    non_navigation_angular_speed_limit=.10 if args.relax_base_motion else .03
+     if not args.action_endpoint.startswith('/') or args.action_endpoint.endswith('/'):
+         raise RuntimeError('EXPLICIT_ABSOLUTE_TRANSFER_ENDPOINT_REQUIRED')
+     if args.executor_identity is None:args.executor_identity=args.output.parent/'executor_owner.json'
+@@ -117,6 +119,11 @@
+                 python_navigation_goals_sent=0,python_controller_goals_sent=0,python_fixed_requests_sent=0,
+                 goal_json=str(args.goal_json),goal_sha256=hashlib.sha256(args.goal_json.read_bytes()).hexdigest(),goal=goal_dict,
+                 source_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (Path(__file__).resolve(),Path(__file__).resolve().parent/'verify_full_pick.py')})
++    report['base_motion_conditions']=dict(relaxed=args.relax_base_motion,
++        acceptance_scope='relaxed_simulation_not_original_precision_acceptance' if args.relax_base_motion else 'original_simulation_precision_conditions',
++        original_limits=dict(rotation_rad=.02,angular_speed_radps=.03),
++        active_limits=dict(rotation_rad=.05 if args.relax_base_motion else .02,angular_speed_radps=non_navigation_angular_speed_limit),
++        non_navigation_linear_speed_limit_mps=.02,nonzero_command_threshold=1e-6,final_stop_thresholds_unchanged=True)
+     gc_events=[];gc_started={};slow_spins=[]
+     def gc_timing(phase,info):
+         generation=info['generation']
+@@ -288,7 +295,7 @@
+             if phase!='NAVIGATE' and not pending_binding:
+                 if c and any(abs(c[k])>1e-6 for k in ('vx','vy','wz')):raise RuntimeError('NONZERO_CHASSIS_COMMAND_OUTSIDE_NAVIGATION')
+                 v=latest['odom']
+-                if math.hypot(v['vx'],v['vy'])>.02 or abs(v['wz'])>.03:raise RuntimeError('UNEXPECTED_MOTION_OUTSIDE_NAVIGATION')
++                if math.hypot(v['vx'],v['vy'])>.02 or abs(v['wz'])>non_navigation_angular_speed_limit:raise RuntimeError('UNEXPECTED_MOTION_OUTSIDE_NAVIGATION')
+     def spin(predicate,timeout,reason):
+         nonlocal renew_pending,renew_last,renew_sequence,renew_enabled,renew_rejected
+         end=time.monotonic()+timeout
+@@ -462,6 +469,12 @@
+         if any(active_nav.values()):raise RuntimeError('NAVIGATION_ACTIVE_AT_TRANSFER_ENTRY')
+         check_graph();controller_graph()
+         if capture(executor_identity['pid'])!=executor_identity:raise RuntimeError('EXECUTOR_CHANGED_BEFORE_SUBMISSION')
++        # Bind this acceptance condition to both live simulation consumers before any Goal.
++        report['base_motion_conditions']['readback']={}
++        for target,client in (('task_trajectory_executor',executor_params),('manipulation_execution_guard',node.create_client(GetParameters,'/manipulation_execution_guard/get_parameters'))):
++            response=read_model_parameters(client,GetParameters.Request(names=['simulation_relaxed_base_motion']),lambda:rclpy.spin_once(node,timeout_sec=.01),events=events)
++            report['base_motion_conditions']['readback'][target]=[message_dict(v) for v in response.values]
++            if len(response.values)!=1 or response.values[0].type!=1 or response.values[0].bool_value is not args.relax_base_motion:raise RuntimeError('SIMULATION_BASE_MOTION_CONDITION_MISMATCH:'+target)
+         event('parent_submission',goal=goal_dict,goal_uuid=parent_uuid.hex,remaining_steady_s=deadline-time.monotonic())
+         admission_uncertain=True;renew_enabled=True
+         pending_parent=action.send_goal_async(goal,goal_uuid=UUID(uuid=list(parent_uuid.bytes)),feedback_callback=feedback)

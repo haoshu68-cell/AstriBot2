@@ -28,7 +28,7 @@ from astribot_navigation_msgs.srv import SetFixedEnvelope
 from astribot_s1_transport_native.action import HoldResources
 from astribot_s1_transport_native.srv import RenewHold
 
-CONSUMERS = {'global_costmap', 'local_costmap', 'planner', 'controller', 'policy', 'protection'}
+CONSUMERS = {'global_costmap', 'local_costmap', 'planner', 'controller', 'policy'}
 
 
 def ns(stamp):
@@ -226,7 +226,7 @@ def main():
         for sample in acks:
             if (sample['session'], sample['epoch'], sample['hash']) == (envelope.coordinator_session_id, envelope.epoch, envelope.installed_geometry_hash) and sample['stamp_ns'] <= now:
                 latest_ack[sample['consumer']] = sample
-        return {name for name, sample in latest_ack.items() if sample['applied'] and 0 <= now-sample['stamp_ns'] < 500_000_000}
+        return {name for name, sample in latest_ack.items() if name in CONSUMERS and sample['applied'] and 0 <= now-sample['stamp_ns'] < 500_000_000}
 
     try:
         spin(lambda: action.server_is_ready() and renew.service_is_ready() and fixed.service_is_ready() and latest.get('phase') == '0' and valid_geometry() and len(commands) >= 10, 20, 'entry unavailable')
@@ -258,7 +258,7 @@ def main():
             if previous_epoch is not None:
                 assert response.epoch > previous_epoch
             previous_epoch = response.epoch
-            spin(lambda: envelope is not None and envelope.epoch == response.epoch and envelope.navigation_allowed and matching_positive() == CONSUMERS, 15, 'six actual consumers did not confirm')
+            spin(lambda: envelope is not None and envelope.epoch == response.epoch and envelope.navigation_allowed and matching_positive() == CONSUMERS, 15, 'five actual geometry consumers did not confirm')
             begin = len(envelopes)
             duration(2.)
             window = envelopes[begin:]

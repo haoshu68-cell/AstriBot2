@@ -1,0 +1,15 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_fresh_empty_scan_stale_and_recovery[cpp] _________________
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7221608e9420>
+
+    def test_fresh_empty_scan_stale_and_recovery(runtime):
+>       runtime.seed();value=runtime.tick();assert value['scan_count']==1 and value['inputs_valid'],value
+E       AssertionError: {'blocking_tracks': [], 'envelope_age_s': None, 'envelope_ready': False, 'envelope_reason': 'NO_ENVELOPE', ...}
+E       assert (0 == 1)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:141: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_fresh_empty_scan_stale_and_recovery[cpp]
+1 failed, 13 deselected in 0.59s

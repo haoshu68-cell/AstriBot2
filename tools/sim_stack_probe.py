@@ -87,7 +87,7 @@ def main():
             owners={}
             nodes=n.get_node_names_and_namespaces()
             execution_nodes={name:(name,'/') in nodes for name in
-                             ('cmd_vel_body_to_world_node','arm_speed_limiter_node','arm_chassis_speed_coupling_node')}
+                             ('cmd_vel_body_to_world_node','arm_speed_limiter_node')}
             clock_subscribers={item.node_name for item in n.get_subscriptions_info_by_topic('/clock')}
             bt_clock_nodes={name:name in clock_subscribers for name in
                             ('bt_navigator_navigate_to_pose_rclcpp_node','bt_navigator_navigate_through_poses_rclcpp_node')}

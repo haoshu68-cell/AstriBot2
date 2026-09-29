@@ -1,8 +1,8 @@
-# 当前架构设计参考手册
+# 架构设计参考手册
 
 2026-09-18：SLAM 接入已改为仿真/真机共用 Voxel-SLAM；接口、命令与逐项验收状态见[统一 SLAM 参考](../SLAM_INTEGRATION_REFERENCE_20260918.md)。旧中转链已删除；真机尚未实测。
 
-版本范围与验收边界见[手册首页](README.md)。本文描述当前源码，重点是职责归属、运行接线及扩展契约。
+版本范围与验收边界见[手册首页](README.md)。本文主体为 2026-09-18 的架构记录；2026-09-22 本次只更新源码索引、包数表述和已迁移的仲裁入口，没有重新验收所有参数、接线及功能。定位最新实现先查[项目源码入口索引](../../.agents/skills/astribot-architecture-design/references/project-map.md)，再核对实际源码、launch 和安装产物；不能把下文历史“当前”表述当作本轮实时验证。
 
 整机层面的缺口、整合/拆分建议及分阶段实施方案见[轮式双臂整体架构审查](../WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)。该方案是后续设计，不能当作当前已实现能力。
 
@@ -33,17 +33,18 @@ flowchart TD
 
 ## 2. 仓库与模块职责
 
-`ws_robot/src` 当前有 19 个 ROS 包：17 个自有实现/接口包、2 个第三方包。`build/install/log` 是构建产物；`tools` 是编排、部署和诊断入口；根目录 SDK 原生库与 ROS 工作区分开管理。
+包清单随原生模块迁移和领域扩展变化，以 `ws_robot/src` 中的 `package.xml` 及实际构建选择为准，不使用固定包数判断能力。`build/install/log` 是构建产物；`tools` 是编排、部署和诊断入口；根目录 SDK 原生库与 ROS 工作区分开管理。下表为领域职责概览，不是完整包清单。
 
 | 模块 | 负责 | 交互与边界 |
 |---|---|---|
 | `astribot_s1_description`、根目录 `astribot_config` | 模型、连杆与设备配置 | TF、关节名和实体外形的共同依据 |
-| `astribot_s1_perception` | Python 感知编排、地图来源、定位适配 | 提供地图、扫描、定位；不派发导航目标 |
+| `astribot_s1_perception` | 感知组合启动、地图来源和定位接线 | 具体运行节点按源码索引与 launch 核对；不派发导航目标 |
 | `astribot_s1_perception_components` | C++ 自滤、切片扫描、Livox 转换 | 高频数据处理与 ROS 组件 |
 | `astribot_autonomy_core` | 前沿搜索、几何和足迹等纯算法 | 不依赖 ROS 节点生命周期 |
 | `astribot_s1_exploration` | 前沿候选、目标验证、探索状态机 | 通过探索 Action 入口请求导航，不直接控底盘 |
 | `astribot_navigation_msgs` | 任务、路径风险、约束、健康、包络、起步动作契约 | 跨模块接口；修改需重建依赖包 |
 | `astribot_s1_navigation_policy` | 观测融合、让行、路由联合决策、窄通道、末级保护 | 领域算法与 ROS 适配分离 |
+| `astribot_s1_task_arbiter_native`、`astribot_s1_navigation_policy_native` | 原生导航仲裁及策略/保护实现入口 | 核对所用 launch 与安装产物；目录存在不代表整栈验收 |
 | `astribot_s1_navigation` | Nav2 launch、参数、BT、速度链接线 | 选择实现并配置，不复制控制律 |
 | `astribot_s1_path_tracking` | 精确终点规划、ThreePhase、到位精调、检查器、平滑器 | 运动控制与控制侧不可执行异常 |
 | `astribot_s1_dynamics_coupling` | 双臂姿态/运动引起的底盘约束 | 接入既有速度链，不能产生第二个运动主控 |
@@ -68,7 +69,7 @@ flowchart TD
 | 探索 | `/exploration/navigate_to_pose`、`/exploration/navigate_through_poses` | 10 |
 | Nav2 执行后端 | `/navigation_executor/navigate_to_pose` 等 | 仲裁器后端，业务方不直接调用 |
 
-优先级与目标切换由 [task_arbiter_node.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/task_arbiter_node.py) 管理。新所有权需要经过旧执行取消/交接；租约、任务标识、路径版本、地图/包络版本用于使过期请求失效。
+优先级与目标切换的源码入口已迁为 [C++ task_arbiter_node.cpp](../../ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp)；使用时另核对 launch 和实际安装目标。新所有权需要经过旧执行取消/交接；租约、任务标识、路径版本、地图/包络版本用于使过期请求失效。
 
 **现有测试工具的实际行为**：`run_waypoint_route.py` 和真机精度脚本使用人工 `/navigate_to_pose` 入口，不是表中的 50 级路线接口。不要与 RViz 或探索同时派发目标。
 
@@ -214,5 +215,5 @@ Humble 当前导航 Action result 不提供项目需要的完整原因字段，�
 | 公共运动、仿真与真机覆盖 | [arrival_motion.yaml](../../ws_robot/src/astribot_s1_navigation/config/arrival_motion.yaml)、[仿真档](../../ws_robot/src/astribot_s1_navigation/config/arrival_precision_sim.yaml)、[真机档](../../ws_robot/src/astribot_s1_navigation/config/arrival_precision_hardware.yaml) |
 | 观测、领域契约与 profile | [observer_node.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/observer_node.py)、[contracts.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/contracts.py)、[profile.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/profile.py) |
 | 真机启动与传感器版本归属 | [hardware_exploration.py](../../tools/robot/hardware_exploration.py)、[hardware_sensors.py](../../tools/robot/hardware_sensors.py) |
-| 真机自体地图处理 | [grid_self_clear_node.py](../../tools/hardware_nodes/grid_self_clear_node.py) |
+| 概率栅格/机身区域处理 | [nav_prob_grid_node.cpp](../../ws_robot/src/astribot_s1_mapping/src/nav_prob_grid_node.cpp)；旧独立 `grid_self_clear_node.py` 已移除，实际参数与接线按所用 launch 核对 |
 | SDK 底盘执行边界 | [chassis_bridge_core.py](../../ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/chassis_bridge_core.py) |

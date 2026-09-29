@@ -1,0 +1,164 @@
+.F.F....FFFF                                                             [100%]
+=================================== FAILURES ===================================
+_ test_large_sensor_timeout_starts_then_fails_at_health_output[10000000000.0-cpp] _
+
+impl = 'cpp'
+tmp_path = PosixPath('/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/ros_red/test_large_sensor_timeout_star1')
+timeout = 10000000000.0
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('timeout',[1e10,1e100])
+    def test_large_sensor_timeout_starts_then_fails_at_health_output(impl,tmp_path,timeout):
+        profile=json.loads((REF/'simulation.json').read_text());profile['sensor_timeout_s']=timeout
+        path=tmp_path/'profile.json';path.write_text(json.dumps(profile))
+>       owned=Runtime(impl,tmp_path,{'profile':str(path)},start_clock=False)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:455: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:91: in __init__
+    self.until(lambda:self.ready.service_is_ready() and self.clock.get_subscription_count()>0)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_policy_observer_ros.Runtime object at 0x747256f49de0>
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x747256f60940>
+timeout = 6.0
+
+    def until(self,predicate,timeout=6.):
+        deadline=time.monotonic()+timeout
+        while time.monotonic()<deadline:
+>           assert self.proc.poll() is None,self.log_path.read_text()
+E           AssertionError: policy observer: INVALID_INPUT: fusion.time_range
+E             
+E           assert 1 is None
+E            +  where 1 = <bound method Popen.poll of <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>>()
+E            +    where <bound method Popen.poll of <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>> = <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>.poll
+E            +      where <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...> = <test_policy_observer_ros.Runtime object at 0x747256f49de0>.proc
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:109: AssertionError
+___ test_large_sensor_timeout_starts_then_fails_at_health_output[1e+100-cpp] ___
+
+impl = 'cpp'
+tmp_path = PosixPath('/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/ros_red/test_large_sensor_timeout_star3')
+timeout = 1e+100
+
+    @pytest.mark.parametrize('impl',['python','cpp'])
+    @pytest.mark.parametrize('timeout',[1e10,1e100])
+    def test_large_sensor_timeout_starts_then_fails_at_health_output(impl,tmp_path,timeout):
+        profile=json.loads((REF/'simulation.json').read_text());profile['sensor_timeout_s']=timeout
+        path=tmp_path/'profile.json';path.write_text(json.dumps(profile))
+>       owned=Runtime(impl,tmp_path,{'profile':str(path)},start_clock=False)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:455: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:91: in __init__
+    self.until(lambda:self.ready.service_is_ready() and self.clock.get_subscription_count()>0)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_policy_observer_ros.Runtime object at 0x747256f15420>
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x747256f60b80>
+timeout = 6.0
+
+    def until(self,predicate,timeout=6.):
+        deadline=time.monotonic()+timeout
+        while time.monotonic()<deadline:
+>           assert self.proc.poll() is None,self.log_path.read_text()
+E           AssertionError: policy observer: INVALID_INPUT: fusion.time_range
+E             
+E           assert 1 is None
+E            +  where 1 = <bound method Popen.poll of <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>>()
+E            +    where <bound method Popen.poll of <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>> = <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...>.poll
+E            +      where <Popen: returncode: 1 args: ['/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp...> = <test_policy_observer_ros.Runtime object at 0x747256f15420>.proc
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:109: AssertionError
+_ test_large_json_capture_reaches_original_consumer_rejection[cpp-image_box-9223372036854775808] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x747256ff3700>
+capture = 9223372036854775808, kind = 'image_box'
+
+    @pytest.mark.parametrize('capture',[2**63,10**100])
+    @pytest.mark.parametrize('kind',['image_box','metric_box'])
+    def test_large_json_capture_reaches_original_consumer_rejection(runtime,capture,kind):
+        packet=image_packet(runtime);packet['stamp_ns']=capture
+        if kind=='metric_box':
+            # Time construction must fail before UTF-8 frame conversion, TF lookup,
+            # or the deliberately malformed metric coordinates.
+            packet['frame_id']='bad\ud800'
+            packet['observations']=[dict(kind=kind,center_m=['invalid'],size_m=[1.,1.,1.])]
+        runtime.vision_pub.publish(String(data=json.dumps(packet)))
+        runtime.until(lambda:'observation rejected:' in runtime.log_path.read_text())
+        log=runtime.log_path.read_text()
+>       assert ('expired acquisition' if kind=='image_box' else 'Total nanoseconds value is too large to store in C time point') in log
+E       AssertionError: assert 'expired acquisition' in '[WARN] [1789998996.382767417] [policy_f469f7babd]: observation rejected: native timestamp integer range\n'
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:481: AssertionError
+_ test_large_json_capture_reaches_original_consumer_rejection[cpp-image_box-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x747256f40820>
+capture = 100000000000000000...0000000000000000000, kind = 'image_box'
+
+    @pytest.mark.parametrize('capture',[2**63,10**100])
+    @pytest.mark.parametrize('kind',['image_box','metric_box'])
+    def test_large_json_capture_reaches_original_consumer_rejection(runtime,capture,kind):
+        packet=image_packet(runtime);packet['stamp_ns']=capture
+        if kind=='metric_box':
+            # Time construction must fail before UTF-8 frame conversion, TF lookup,
+            # or the deliberately malformed metric coordinates.
+            packet['frame_id']='bad\ud800'
+            packet['observations']=[dict(kind=kind,center_m=['invalid'],size_m=[1.,1.,1.])]
+        runtime.vision_pub.publish(String(data=json.dumps(packet)))
+        runtime.until(lambda:'observation rejected:' in runtime.log_path.read_text())
+        log=runtime.log_path.read_text()
+>       assert ('expired acquisition' if kind=='image_box' else 'Total nanoseconds value is too large to store in C time point') in log
+E       AssertionError: assert 'expired acquisition' in '[WARN] [1789998996.734244151] [policy_5f072c4ccc]: observation rejected: native timestamp integer range\n'
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:481: AssertionError
+_ test_large_json_capture_reaches_original_consumer_rejection[cpp-metric_box-9223372036854775808] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x747256f427d0>
+capture = 9223372036854775808, kind = 'metric_box'
+
+    @pytest.mark.parametrize('capture',[2**63,10**100])
+    @pytest.mark.parametrize('kind',['image_box','metric_box'])
+    def test_large_json_capture_reaches_original_consumer_rejection(runtime,capture,kind):
+        packet=image_packet(runtime);packet['stamp_ns']=capture
+        if kind=='metric_box':
+            # Time construction must fail before UTF-8 frame conversion, TF lookup,
+            # or the deliberately malformed metric coordinates.
+            packet['frame_id']='bad\ud800'
+            packet['observations']=[dict(kind=kind,center_m=['invalid'],size_m=[1.,1.,1.])]
+        runtime.vision_pub.publish(String(data=json.dumps(packet)))
+        runtime.until(lambda:'observation rejected:' in runtime.log_path.read_text())
+        log=runtime.log_path.read_text()
+>       assert ('expired acquisition' if kind=='image_box' else 'Total nanoseconds value is too large to store in C time point') in log
+E       AssertionError: assert 'Total nanoseconds value is too large to store in C time point' in '[WARN] [1789998997.087130415] [policy_8abbc75020]: observation rejected: native timestamp integer range\n'
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:481: AssertionError
+_ test_large_json_capture_reaches_original_consumer_rejection[cpp-metric_box-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x747256ff0970>
+capture = 100000000000000000...0000000000000000000, kind = 'metric_box'
+
+    @pytest.mark.parametrize('capture',[2**63,10**100])
+    @pytest.mark.parametrize('kind',['image_box','metric_box'])
+    def test_large_json_capture_reaches_original_consumer_rejection(runtime,capture,kind):
+        packet=image_packet(runtime);packet['stamp_ns']=capture
+        if kind=='metric_box':
+            # Time construction must fail before UTF-8 frame conversion, TF lookup,
+            # or the deliberately malformed metric coordinates.
+            packet['frame_id']='bad\ud800'
+            packet['observations']=[dict(kind=kind,center_m=['invalid'],size_m=[1.,1.,1.])]
+        runtime.vision_pub.publish(String(data=json.dumps(packet)))
+        runtime.until(lambda:'observation rejected:' in runtime.log_path.read_text())
+        log=runtime.log_path.read_text()
+>       assert ('expired acquisition' if kind=='image_box' else 'Total nanoseconds value is too large to store in C time point') in log
+E       AssertionError: assert 'Total nanoseconds value is too large to store in C time point' in '[WARN] [1789998997.297776156] [policy_85a4720429]: observation rejected: native timestamp integer range\n'
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:481: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_large_sensor_timeout_starts_then_fails_at_health_output[10000000000.0-cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_large_sensor_timeout_starts_then_fails_at_health_output[1e+100-cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_large_json_capture_reaches_original_consumer_rejection[cpp-image_box-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_large_json_capture_reaches_original_consumer_rejection[cpp-image_box-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_large_json_capture_reaches_original_consumer_rejection[cpp-metric_box-9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_large_json_capture_reaches_original_consumer_rejection[cpp-metric_box-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]
+6 failed, 6 passed, 108 deselected in 4.35s

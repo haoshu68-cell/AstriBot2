@@ -1,0 +1,13 @@
+string source_id
+string source_epoch
+string clock_epoch
+uint64 frame_sequence
+uint64 trigger_sequence
+int64 capture_stamp_ns
+int64 evaluated_stamp_ns
+int64 trigger_skew_ns
+uint64 dropped_frames
+bool valid
+bool hardware_trigger_verified
+bool simulated
+string reason

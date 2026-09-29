@@ -1,0 +1,37 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 14 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 14 tests from HealthContract
+[ RUN      ] HealthContract.ValidAlignedStreams
+[       OK ] HealthContract.ValidAlignedStreams (73 ms)
+[ RUN      ] HealthContract.RejectsInvalidIntrinsics
+[       OK ] HealthContract.RejectsInvalidIntrinsics (67 ms)
+[ RUN      ] HealthContract.RejectsMalformedDepth
+[       OK ] HealthContract.RejectsMalformedDepth (70 ms)
+[ RUN      ] HealthContract.RejectsUnknownCalibration
+[       OK ] HealthContract.RejectsUnknownCalibration (68 ms)
+[ RUN      ] HealthContract.PausedClockDoesNotKeepCameraHealthy
+[       OK ] HealthContract.PausedClockDoesNotKeepCameraHealthy (368 ms)
+[ RUN      ] HealthContract.SameRevisionCannotChangeIntrinsics
+[       OK ] HealthContract.SameRevisionCannotChangeIntrinsics (100 ms)
+[ RUN      ] HealthContract.InFlightRgbDoesNotInvalidateLastMatchedSnapshot
+[       OK ] HealthContract.InFlightRgbDoesNotInvalidateLastMatchedSnapshot (186 ms)
+[ RUN      ] HealthContract.DelayedDepthMatchesBufferedRgbAndInfo
+[       OK ] HealthContract.DelayedDepthMatchesBufferedRgbAndInfo (278 ms)
+[ RUN      ] HealthContract.UnmatchedNewFramesCannotRenewSnapshotLifetime
+[       OK ] HealthContract.UnmatchedNewFramesCannotRenewSnapshotLifetime (398 ms)
+[ RUN      ] HealthContract.PersistentSkewWithoutMatchedFramesIsRejected
+[       OK ] HealthContract.PersistentSkewWithoutMatchedFramesIsRejected (67 ms)
+[ RUN      ] HealthContract.MalformedDepthCannotHideBehindMatchedSnapshot
+[       OK ] HealthContract.MalformedDepthCannotHideBehindMatchedSnapshot (89 ms)
+[ RUN      ] HealthContract.FrameMismatchCannotHideBehindMatchedSnapshot
+[       OK ] HealthContract.FrameMismatchCannotHideBehindMatchedSnapshot (88 ms)
+[ RUN      ] HealthContract.RealLowRateRemainsRejected
+[       OK ] HealthContract.RealLowRateRemainsRejected (239 ms)
+[ RUN      ] HealthContract.ClockRollbackInvalidatesMatchedSnapshotAndChangesEpoch
+[       OK ] HealthContract.ClockRollbackInvalidatesMatchedSnapshotAndChangesEpoch (85 ms)
+[----------] 14 tests from HealthContract (2176 ms total)
+
+[----------] Global test environment tear-down
+[==========] 14 tests from 1 test suite ran. (2180 ms total)
+[  PASSED  ] 14 tests.

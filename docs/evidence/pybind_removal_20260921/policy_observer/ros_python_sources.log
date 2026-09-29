@@ -1,0 +1,21 @@
+.......................F.....                                            [100%]
+=================================== FAILURES ===================================
+_ test_cloud_requires_calibration_and_tracks_camera_epoch[python-runtime_config0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x77ea013e8ac0>
+
+    @pytest.mark.parametrize('runtime_config',[{'observation_sources':json.dumps([POINT_CLOUD_SOURCE])}],indirect=True)
+    def test_cloud_requires_calibration_and_tracks_camera_epoch(runtime):
+        runtime.seed();assert not runtime.tick()['required_sensors_valid']
+        cloud=PointCloud2();cloud.header.frame_id='odom';cloud.header.stamp=stamp(runtime.ns);cloud.width=2;cloud.height=1;cloud.point_step=12;cloud.row_step=24
+        cloud.fields=[PointField(name=n,offset=i*4,datatype=PointField.FLOAT32,count=1) for i,n in enumerate(('x','y','z'))];cloud.data=struct.pack('<ffffff',.7,-.1,.2,.8,.1,.4)
+        runtime.cloud_pub.publish(cloud);runtime.drain();first=runtime.tick();assert first['vision_count']==0 and first['errors']==1
+        info=CameraInfo();info.header.frame_id='optical';info.width=2**32-1;info.height=10;info.k=[1.,0.,0.,0.,1.,0.,0.,0.,1.];info.distortion_model='plumb_bob'
+        runtime.info_pub.publish(info);runtime.drain();runtime.sensors();cloud.header.stamp=stamp(runtime.ns);runtime.cloud_pub.publish(cloud);runtime.drain()
+>       value=runtime.tick();assert value['vision_count']==1 and value['inputs_valid'] and value['tracks']==1
+E       assert (0 == 1)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:298: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_cloud_requires_calibration_and_tracks_camera_epoch[python-runtime_config0]
+1 failed, 28 passed, 29 deselected in 22.71s

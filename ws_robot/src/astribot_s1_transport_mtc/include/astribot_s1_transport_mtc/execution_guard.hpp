@@ -30,7 +30,5 @@ inline std::string trackingFault(const std::vector<std::string>& expected,
   }
   return maximum>limit ? "MANIPULATION_TRACKING_ERROR:"+worst : "";
 }
-inline bool executionSourceFresh(int64_t now,int64_t stamp,int64_t armed) {
-  return stamp>0 && stamp>=armed && now-stamp>=-10000000 && now-stamp<=300000000;
-}
+
 }

@@ -1,0 +1,523 @@
+{
+  "schema": "astribot.live_pose_independent_score/1",
+  "evaluation_valid": true,
+  "truth_used_as_estimator_input": false,
+  "scenario": "static clear fixture, live rendered RGB-D",
+  "truth_source": "independent /world/default/pose/info Gazebo transport",
+  "camera_pose_source": "ROS /tf and /tf_static at each exact image timestamp",
+  "translation_definition": "Euclidean translation distance in capture camera frame",
+  "rotation_definition": "SO(3) geodesic angle, no symmetry relaxation",
+  "thresholds": {
+    "translation_m": 0.02,
+    "rotation_deg": 10.0
+  },
+  "observed_truth_motion": {
+    "object_translation_m": 0.0,
+    "object_rotation_deg": 0.0,
+    "robot_translation_m": 0.0,
+    "robot_rotation_deg": 0.0
+  },
+  "truth_sample_count": 555,
+  "trial_count": 5,
+  "scored_count": 5,
+  "passed_count": 5,
+  "max_translation_error_m": 0.002646222180531356,
+  "max_rotation_error_deg": 0.5811035695441227,
+  "trials": [
+    {
+      "capture_stamp_ns": 3686000000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "task_id": "live_pose_0_3686000000000",
+      "scored": true,
+      "passed": true,
+      "truth_before": {
+        "stamp_ns": 3685995000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_after": {
+        "stamp_ns": 3686012000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_bracket_sec": 0.017,
+      "camera_from_object_truth": [
+        [
+          0.8816456430849078,
+          -0.014724920145134272,
+          0.47168224129822667,
+          3.2526065174565133e-18
+        ],
+        [
+          0.17938509877321987,
+          -0.9140280527335853,
+          -0.3638319737930845,
+          -0.07499999999999998
+        ],
+        [
+          0.436488197283181,
+          0.4053836399545115,
+          -0.8032074190952853,
+          0.9999999999999996
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "world_odom_anchor_translation_m": 0.0,
+      "world_odom_anchor_rotation_deg": 7.951387651431928e-16,
+      "translation_error_m": 0.002646222180531356,
+      "rotation_error_deg": 0.5811035695441227,
+      "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+      "source_epoch": "gazebo_camera:3565702205842:2472038332"
+    },
+    {
+      "capture_stamp_ns": 3687600000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "task_id": "live_pose_1_3687600000000",
+      "scored": true,
+      "passed": true,
+      "truth_before": {
+        "stamp_ns": 3687595000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_after": {
+        "stamp_ns": 3687612000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_bracket_sec": 0.017,
+      "camera_from_object_truth": [
+        [
+          0.8816456430849078,
+          -0.014724920145134272,
+          0.47168224129822667,
+          3.2526065174565133e-18
+        ],
+        [
+          0.17938509877321987,
+          -0.9140280527335853,
+          -0.3638319737930845,
+          -0.07499999999999998
+        ],
+        [
+          0.436488197283181,
+          0.4053836399545115,
+          -0.8032074190952853,
+          0.9999999999999996
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "world_odom_anchor_translation_m": 0.0,
+      "world_odom_anchor_rotation_deg": 7.951387651431928e-16,
+      "translation_error_m": 0.002646222180531356,
+      "rotation_error_deg": 0.5811035695441227,
+      "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+      "source_epoch": "gazebo_camera:3565702205842:2472038332"
+    },
+    {
+      "capture_stamp_ns": 3689100000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "task_id": "live_pose_2_3689100000000",
+      "scored": true,
+      "passed": true,
+      "truth_before": {
+        "stamp_ns": 3689095000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_after": {
+        "stamp_ns": 3689112000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_bracket_sec": 0.017,
+      "camera_from_object_truth": [
+        [
+          0.8816456430849078,
+          -0.014724920145134272,
+          0.47168224129822667,
+          3.2526065174565133e-18
+        ],
+        [
+          0.17938509877321987,
+          -0.9140280527335853,
+          -0.3638319737930845,
+          -0.07499999999999998
+        ],
+        [
+          0.436488197283181,
+          0.4053836399545115,
+          -0.8032074190952853,
+          0.9999999999999996
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "world_odom_anchor_translation_m": 0.0,
+      "world_odom_anchor_rotation_deg": 7.951387651431928e-16,
+      "translation_error_m": 0.002646222180531356,
+      "rotation_error_deg": 0.5811035695441227,
+      "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+      "source_epoch": "gazebo_camera:3565702205842:2472038332"
+    },
+    {
+      "capture_stamp_ns": 3690700000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "task_id": "live_pose_3_3690700000000",
+      "scored": true,
+      "passed": true,
+      "truth_before": {
+        "stamp_ns": 3690696000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_after": {
+        "stamp_ns": 3690713000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_bracket_sec": 0.017,
+      "camera_from_object_truth": [
+        [
+          0.8816456430849078,
+          -0.014724920145134272,
+          0.47168224129822667,
+          3.2526065174565133e-18
+        ],
+        [
+          0.17938509877321987,
+          -0.9140280527335853,
+          -0.3638319737930845,
+          -0.07499999999999998
+        ],
+        [
+          0.436488197283181,
+          0.4053836399545115,
+          -0.8032074190952853,
+          0.9999999999999996
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "world_odom_anchor_translation_m": 0.0,
+      "world_odom_anchor_rotation_deg": 7.951387651431928e-16,
+      "translation_error_m": 0.002646222180531356,
+      "rotation_error_deg": 0.5811035695441227,
+      "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+      "source_epoch": "gazebo_camera:3565702205842:2472038332"
+    },
+    {
+      "capture_stamp_ns": 3692300000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "task_id": "live_pose_4_3692300000000",
+      "scored": true,
+      "passed": true,
+      "truth_before": {
+        "stamp_ns": 3692291000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_after": {
+        "stamp_ns": 3692308000000,
+        "world_from_object": {
+          "translation": [
+            1.0695089025067341,
+            -0.010473611799486963,
+            0.07773754932339377
+          ],
+          "quaternion_xyzw": [
+            0.4909244703111697,
+            -0.22559763759025914,
+            -0.49092447031116965,
+            0.6834413177538283
+          ]
+        },
+        "world_from_robot": {
+          "translation": [
+            -0.0035110510587977174,
+            -0.000495961587391086,
+            0.1367588211641773
+          ],
+          "quaternion_xyzw": [
+            4.883059456852352e-05,
+            -0.01664500758363698,
+            0.0029328964607567456,
+            0.9998571595265316
+          ]
+        }
+      },
+      "truth_bracket_sec": 0.017,
+      "camera_from_object_truth": [
+        [
+          0.8816456430849078,
+          -0.014724920145134272,
+          0.47168224129822667,
+          3.2526065174565133e-18
+        ],
+        [
+          0.17938509877321987,
+          -0.9140280527335853,
+          -0.3638319737930845,
+          -0.07499999999999998
+        ],
+        [
+          0.436488197283181,
+          0.4053836399545115,
+          -0.8032074190952853,
+          0.9999999999999996
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "world_odom_anchor_translation_m": 0.0,
+      "world_odom_anchor_rotation_deg": 7.951387651431928e-16,
+      "translation_error_m": 0.002646222180531356,
+      "rotation_error_deg": 0.5811035695441227,
+      "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+      "source_epoch": "gazebo_camera:3565702205842:2472038332"
+    }
+  ],
+  "report_file": "runs/grasp_pose_sim_20260921/action/live_pose_v2_scored.json",
+  "truth_stream_file": "runs/grasp_pose_sim_20260921/action/live_pose_v2_scored_truth.pbtxt.gz",
+  "report_sha256": "6f693d2d31623746867b76491bcd8bc2f251d574177060c2d61d8a9c2fa80042",
+  "truth_stream_sha256": "487076d25cd86f676fff3c873bb1c32a86c6ad019916b3577dcefadc9865af36",
+  "recorder": {}
+}

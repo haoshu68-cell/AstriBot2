@@ -1,4 +1,7 @@
-# Atomic occupied-endpoint snapshot. Unknown (-1) is NOT observed free.
+# Atomic height maps. Unknown (-1) is NOT observed free.
+# evidence_kind identifies occupied-only archives or complete simulation collision geometry.
+# header.stamp is the source snapshot inspection time; profile_revision is the
+# SHA256 of the exact shared height_slices.yaml bytes.
 # Heights are above a horizontal ground plane at ground_z in header.frame_id.
 # grids[i] corresponds to [height_edges[i], height_edges[i+1]).
 std_msgs/Header header

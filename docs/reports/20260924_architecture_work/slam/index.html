@@ -1,0 +1,200 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>引入 SLAM 后的工作推进</title><style>body{margin:0;background:#181818;color:#eee;font:16px/1.8 system-ui,"Noto Sans CJK SC",sans-serif}main{max-width:1120px;margin:auto;padding:28px}h1{font-size:30px}h2{font-size:23px}a{color:#c8d9ee}nav{display:flex;gap:14px;flex-wrap:wrap;margin:20px 0}nav a,button{color:#eee;background:#333;border:1px solid #555;border-radius:9px;padding:9px 15px;text-decoration:none;font:inherit;cursor:pointer}.muted{color:#aaa}.canvas{overflow:auto;border:1px solid #333;border-radius:14px}.canvas svg{width:100%;height:auto;display:block}.detail{background:#242424;border-radius:14px;padding:25px;margin-top:30px}summary{font-size:23px;cursor:pointer}.detail a{overflow-wrap:anywhere}.detail h2{color:#d8c69d}.note{border-left:3px solid #b49a65;padding:10px 16px;background:#28241f;color:#d6c5a5}</style><main><h1>引入 SLAM 后，围绕地图完整生命周期持续完善</h1><p class="muted">从统一输入，到存图、载图、探索收尾与地图管理。按工作推进关系归纳，非运行时调用图。</p><nav><a href="slam_work_flow.png" download>下载 PNG</a><a href="slam_work_flow.svg" download>下载 SVG</a><a href="SLAM_WORK_SUMMARY.md">详细文字汇总</a><button onclick="let s=document.querySelector('svg');s.style.width=s.style.width==='150%'?'100%':'150%'">放大 / 适应宽度</button></nav><p class="note">节点最后一行标明证据范围；底部虚线节点为待验收项。已有模块、隔离测试、仿真和真机结论分别保留。</p><div class="canvas"><svg width="1018pt" height="2740pt"
+ viewBox="0.00 0.00 610.80 1643.80" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1.67 1.67) rotate(0) translate(32.4 1611.4)">
+<title>slam_work</title>
+<polygon fill="#181818" stroke="transparent" points="-32.4,32.4 -32.4,-1611.4 578.4,-1611.4 578.4,32.4 -32.4,32.4"/>
+<text text-anchor="middle" x="273" y="-1555" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee">引入 SLAM 后的工作推进主线</text>
+<text text-anchor="middle" x="273" y="-1527" font-family="Noto Sans CJK SC" font-size="25.00" fill="#eeeeee"> </text>
+<!-- n0 -->
+<g id="node1" class="node">
+<title>n0</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M502,-1515C502,-1515 44,-1515 44,-1515 38,-1515 32,-1509 32,-1503 32,-1503 32,-1381 32,-1381 32,-1375 38,-1369 44,-1369 44,-1369 502,-1369 502,-1369 508,-1369 514,-1375 514,-1381 514,-1381 514,-1503 514,-1503 514,-1509 508,-1515 502,-1515"/>
+<text text-anchor="start" x="181" y="-1479.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">01 &#160;统一 SLAM 接入</text>
+<text text-anchor="start" x="82" y="-1448.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">仿真 / 真机共用 Voxel&#45;SLAM；PC2 + IMU 标准输入</text>
+<text text-anchor="start" x="57" y="-1419.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">补仿真 IMU；合并双雷达输入；删除重复转换与旧中间链</text>
+<text text-anchor="start" x="137.5" y="-1392.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">成果：共用启动与接口；不等于真机已验收</text>
+</g>
+<!-- n1 -->
+<g id="node2" class="node">
+<title>n1</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M488,-1343C488,-1343 58,-1343 58,-1343 52,-1343 46,-1337 46,-1331 46,-1331 46,-1209 46,-1209 46,-1203 52,-1197 58,-1197 58,-1197 488,-1197 488,-1197 494,-1197 500,-1203 500,-1209 500,-1209 500,-1331 500,-1331 500,-1337 494,-1343 488,-1343"/>
+<text text-anchor="start" x="150.5" y="-1307.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">02 &#160;理顺坐标与机器人回波</text>
+<text text-anchor="start" x="90" y="-1276.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">统一 map / odom / 底盘关系；输出 /slam/pose</text>
+<text text-anchor="start" x="71" y="-1247.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">估计前机身自滤；拒绝陈旧 TF；保留源时间与协方差</text>
+<text text-anchor="start" x="137.5" y="-1220.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">成果：定位、地图、导航使用一致坐标语义</text>
+</g>
+<!-- n0&#45;&gt;n1 -->
+<g id="edge1" class="edge">
+<title>n0&#45;&gt;n1</title>
+<path fill="none" stroke="#c3c3c3" stroke-width="1.4" d="M273,-1368.9C273,-1363.06 273,-1357.12 273,-1351.22"/>
+<polygon fill="#c3c3c3" stroke="#c3c3c3" stroke-width="1.4" points="275.8,-1351.21 273,-1343.21 270.2,-1351.21 275.8,-1351.21"/>
+</g>
+<!-- n2 -->
+<g id="node3" class="node">
+<title>n2</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M516,-1171C516,-1171 30,-1171 30,-1171 24,-1171 18,-1165 18,-1159 18,-1159 18,-1037 18,-1037 18,-1031 24,-1025 30,-1025 30,-1025 516,-1025 516,-1025 522,-1025 528,-1031 528,-1037 528,-1037 528,-1159 528,-1159 528,-1165 522,-1171 516,-1171"/>
+<text text-anchor="start" x="147" y="-1135.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">03 &#160;打通 SLAM → 导航地图</text>
+<text text-anchor="start" x="124.5" y="-1104.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">关键帧 / 回环修正 → 概率栅格 → /map</text>
+<text text-anchor="start" x="43" y="-1075.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">统一 /map_scan_filtered → 一次切片 → /scan_from_cloud</text>
+<text text-anchor="start" x="94.5" y="-1048.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">成果：处理迟到位姿与关键帧；减少重复切片与地图转发</text>
+</g>
+<!-- n1&#45;&gt;n2 -->
+<g id="edge2" class="edge">
+<title>n1&#45;&gt;n2</title>
+<path fill="none" stroke="#c3c3c3" stroke-width="1.4" d="M273,-1196.9C273,-1191.06 273,-1185.12 273,-1179.22"/>
+<polygon fill="#c3c3c3" stroke="#c3c3c3" stroke-width="1.4" points="275.8,-1179.21 273,-1171.21 270.2,-1179.21 275.8,-1179.21"/>
+</g>
+<!-- n3 -->
+<g id="node4" class="node">
+<title>n3</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M498,-999C498,-999 48,-999 48,-999 42,-999 36,-993 36,-987 36,-987 36,-865 36,-865 36,-859 42,-853 48,-853 48,-853 498,-853 498,-853 504,-853 510,-859 510,-865 510,-865 510,-987 510,-987 510,-993 504,-999 498,-999"/>
+<text text-anchor="start" x="131" y="-963.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">04 &#160;建图 → 保存 → 冷启动载图</text>
+<text text-anchor="start" x="77.5" y="-932.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">最终优化 → 文件完整性 / SHA256 → 原子 manifest</text>
+<text text-anchor="start" x="61" y="-903.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">关键帧、轨迹、PGM / YAML 成套保存；重建载图描述子</text>
+<text text-anchor="start" x="111" y="-876.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">仿真：建图 / 冷载图 / 复测各 3/3；保存 44 个关键帧</text>
+</g>
+<!-- n2&#45;&gt;n3 -->
+<g id="edge3" class="edge">
+<title>n2&#45;&gt;n3</title>
+<path fill="none" stroke="#c3c3c3" stroke-width="1.4" d="M273,-1024.9C273,-1019.06 273,-1013.12 273,-1007.22"/>
+<polygon fill="#c3c3c3" stroke="#c3c3c3" stroke-width="1.4" points="275.8,-1007.21 273,-999.21 270.2,-1007.21 275.8,-1007.21"/>
+</g>
+<!-- n4 -->
+<g id="node5" class="node">
+<title>n4</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M507,-827C507,-827 39,-827 39,-827 33,-827 27,-821 27,-815 27,-815 27,-693 27,-693 27,-687 33,-681 39,-681 39,-681 507,-681 507,-681 513,-681 519,-687 519,-693 519,-693 519,-815 519,-815 519,-821 513,-827 507,-827"/>
+<text text-anchor="start" x="141.5" y="-791.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">05 &#160;探索 → 停稳 → 会话收尾</text>
+<text text-anchor="start" x="52" y="-760.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">C++ mapping_session：等导航终态 → 确认停稳 → finish</text>
+<text text-anchor="start" x="65.5" y="-731.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">区分暂停、取消保存、自然完成；重复取消不重复存图</text>
+<text text-anchor="start" x="111.5" y="-704.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">仿真：r25 静止取消存图通过；运动中取消仍待验收</text>
+</g>
+<!-- n3&#45;&gt;n4 -->
+<g id="edge4" class="edge">
+<title>n3&#45;&gt;n4</title>
+<path fill="none" stroke="#c3c3c3" stroke-width="1.4" d="M273,-852.9C273,-847.06 273,-841.12 273,-835.22"/>
+<polygon fill="#c3c3c3" stroke="#c3c3c3" stroke-width="1.4" points="275.8,-835.21 273,-827.21 270.2,-835.21 275.8,-835.21"/>
+</g>
+<!-- n5 -->
+<g id="node6" class="node">
+<title>n5</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M490,-655C490,-655 56,-655 56,-655 50,-655 44,-649 44,-643 44,-643 44,-521 44,-521 44,-515 50,-509 56,-509 56,-509 490,-509 490,-509 496,-509 502,-515 502,-521 502,-521 502,-643 502,-643 502,-649 496,-655 490,-655"/>
+<text text-anchor="start" x="150.5" y="-619.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">06 &#160;地图变为可管理的资产</text>
+<text text-anchor="start" x="92" y="-588.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">地图导入 / 不可变版本 / 工位 → 受管 Voxel 加载</text>
+<text text-anchor="start" x="69" y="-559.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">定位 + TF + 双 costmap 就绪后提交；失败进入恢复态</text>
+<text text-anchor="start" x="124.5" y="-532.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">实现 / 隔离测试已有；真实两地图切换仍未验收</text>
+</g>
+<!-- n4&#45;&gt;n5 -->
+<g id="edge5" class="edge">
+<title>n4&#45;&gt;n5</title>
+<path fill="none" stroke="#c3c3c3" stroke-width="1.4" d="M273,-680.9C273,-675.06 273,-669.12 273,-663.22"/>
+<polygon fill="#c3c3c3" stroke="#c3c3c3" stroke-width="1.4" points="275.8,-663.21 273,-655.21 270.2,-663.21 275.8,-663.21"/>
+</g>
+<!-- n6 -->
+<g id="node7" class="node">
+<title>n6</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M507,-483C507,-483 39,-483 39,-483 33,-483 27,-477 27,-471 27,-471 27,-349 27,-349 27,-343 33,-337 39,-337 39,-337 507,-337 507,-337 513,-337 519,-343 519,-349 519,-349 519,-471 519,-471 519,-477 513,-483 507,-483"/>
+<text text-anchor="start" x="141" y="-447.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">07 &#160;虚拟墙与禁区绑定 SLAM</text>
+<text text-anchor="start" x="67" y="-416.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">绑定建图会话 / 地图版本；随存图归档并在载图后复核</text>
+<text text-anchor="start" x="52" y="-387.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">双 costmap / 保护确认；补非探索 mapping 的会话上下文</text>
+<text text-anchor="start" x="84" y="-360.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">仿真：两次冷启动各 120 s，上下文同版本确认通过（静止）</text>
+</g>
+<!-- n5&#45;&gt;n6 -->
+<g id="edge6" class="edge">
+<title>n5&#45;&gt;n6</title>
+<path fill="none" stroke="#c3c3c3" stroke-width="1.4" d="M273,-508.9C273,-503.06 273,-497.12 273,-491.22"/>
+<polygon fill="#c3c3c3" stroke="#c3c3c3" stroke-width="1.4" points="275.8,-491.21 273,-483.21 270.2,-491.21 275.8,-491.21"/>
+</g>
+<!-- n7 -->
+<g id="node8" class="node">
+<title>n7</title>
+<path fill="#333333" stroke="#565656" stroke-width="1.3" d="M508,-311C508,-311 38,-311 38,-311 32,-311 26,-305 26,-299 26,-299 26,-177 26,-177 26,-171 32,-165 38,-165 38,-165 508,-165 508,-165 514,-165 520,-171 520,-177 520,-177 520,-299 520,-299 520,-305 514,-311 508,-311"/>
+<text text-anchor="start" x="161" y="-275.2" font-family="Noto Sans CJK SC" font-weight="bold" font-size="21.00" fill="#eeeeee">08 &#160;工程化与稳定性补齐</text>
+<text text-anchor="start" x="96.5" y="-244.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">按估计 / 栅格 / 消息分包；统一 Eigen / GTSAM</text>
+<text text-anchor="start" x="51" y="-215.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#eeeeee">日志、会话隔离、C++ TF / 地图中继、SLAM 并发负载诊断</text>
+<text text-anchor="start" x="96" y="-188.8" font-family="Noto Sans CJK SC" font-size="14.00" fill="#c9bd9e">分项构建 / 隔离 / 限定负载验证；保留超时和 STALE 失败</text>
+</g>
+<!-- n6&#45;&gt;n7 -->
+<g id="edge7" class="edge">
+<title>n6&#45;&gt;n7</title>
+<path fill="none" stroke="#c3c3c3" stroke-width="1.4" d="M273,-336.9C273,-331.06 273,-325.12 273,-319.22"/>
+<polygon fill="#c3c3c3" stroke="#c3c3c3" stroke-width="1.4" points="275.8,-319.21 273,-311.21 270.2,-319.21 275.8,-319.21"/>
+</g>
+<!-- todo -->
+<g id="node9" class="node">
+<title>todo</title>
+<path fill="#342f27" stroke="#d5b575" stroke-width="1.3" stroke-dasharray="5,2" d="M534,-139C534,-139 12,-139 12,-139 6,-139 0,-133 0,-127 0,-127 0,-66 0,-66 0,-60 6,-54 12,-54 12,-54 534,-54 534,-54 540,-54 546,-60 546,-66 546,-66 546,-127 546,-127 546,-133 540,-139 534,-139"/>
+<text text-anchor="middle" x="273" y="-111.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#ead5aa">下一步：尚未闭合的验收</text>
+<text text-anchor="middle" x="273" y="-92.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#ead5aa">运动中暂停 / 取消存图 · 自然探索完成 · 两地图真实切换</text>
+<text text-anchor="middle" x="273" y="-73.4" font-family="Noto Sans CJK SC" font-size="17.00" fill="#ead5aa">SLAM 退化后的坐标连续性 / 重定位 · 长时运行 · 真机标定与验收</text>
+</g>
+<!-- n7&#45;&gt;todo -->
+<g id="edge8" class="edge">
+<title>n7&#45;&gt;todo</title>
+<path fill="none" stroke="#d5b575" stroke-width="1.4" stroke-dasharray="5,2" d="M273,-164.8C273,-158.9 273,-153.03 273,-147.35"/>
+<polygon fill="#d5b575" stroke="#d5b575" stroke-width="1.4" points="275.8,-147.18 273,-139.18 270.2,-147.18 275.8,-147.18"/>
+</g>
+<!-- note -->
+<g id="node10" class="node">
+<title>note</title>
+<path fill="#181818" stroke="transparent" stroke-width="1.3" d="M455.67,-28C455.67,-28 90.33,-28 90.33,-28 85.67,-28 81,-23.33 81,-18.67 81,-18.67 81,-9.33 81,-9.33 81,-4.67 85.67,0 90.33,0 90.33,0 455.67,0 455.67,0 460.33,0 465,-4.67 465,-9.33 465,-9.33 465,-18.67 465,-18.67 465,-23.33 460.33,-28 455.67,-28"/>
+<text text-anchor="middle" x="273" y="-17.6" font-family="Noto Sans CJK SC" font-size="13.00" fill="#9d9d9d">按工作推进与依赖归纳，不代表运行时调用顺序或全部任务通过</text>
+<text text-anchor="middle" x="273" y="-3.6" font-family="Noto Sans CJK SC" font-size="13.00" fill="#9d9d9d">依据 2026&#45;09&#45;18 至 09&#45;24 已有记录；图中数值仅适用于注明的场景</text>
+</g>
+<!-- todo&#45;&gt;note -->
+</g>
+</svg>
+</div><details class="detail"><summary>展开工作说明与来源</summary><h1>引入 SLAM 后的工作汇总</h1>
+<p>主线：<strong>接入统一 → 坐标与自滤 → 导航地图 → 存图载图 → 探索收尾 → 地图资产管理 → 禁区与会话绑定 → 工程化与稳定性。</strong></p>
+<p>依据 2026-09-18 至 09-24 已有材料按依赖关系归纳；部分工作并行或交叉推进，并非严格串行开发。工程基础中包含沿用能力，不把它们全部计为本期新增。此次只整理证据，没有启动 SLAM、Gazebo 或真机。</p>
+<p><a href="index.html">打开流程图</a> · <a href="slam_work_flow.png">下载 PNG</a> · <a href="slam_work_flow.svg">下载 SVG</a></p>
+<h2>01  统一 SLAM 接入</h2>
+<p>将 Voxel-SLAM 作为仿真与真机共用后端。驱动直接提供 PointCloud2/IMU，由算法内部解析字段、时间并同步双雷达；补齐仿真 200 Hz IMU 及桥接。删除 CustomMsg 转换、独立预处理/融合和旧专用工作空间入口。<strong>收益：减少重复链路，让仿真与真机遵守共同输入契约；实际真机输入质量另验。</strong></p>
+<p>↓</p>
+<h2>02  理顺坐标与机器人回波</h2>
+<p>算法和地图直接使用 map，由独立里程计维持局部 odom；明确 map→odom 的单一发布职责。新增 /slam/pose 与底盘协方差，TF 外推保留原始时间。SLAM 前剔除机身回波，缺失或陈旧 TF 时丢弃输入，避免把机器人本体累积成障碍。此项不能替代 SLAM 退化后坐标连续性的验证。</p>
+<p>↓</p>
+<h2>03  打通 SLAM → 导航地图</h2>
+<p>由 astribot_s1_mapping 管理在线概率栅格和最终 PGM/YAML，SLAM 通过关键帧与优化位姿接口供图。补齐先到位姿修正缓存与最终关键帧等待；仅在新鲜位姿下清理当前机身内部，删除历史轨迹清除和独立自清转发。统一 /map 和 /scan_from_cloud，只做一次切片，为 Nav2 提供地图与扫描。</p>
+<p>↓</p>
+<h2>04  建图 → 保存 → 冷启动载图</h2>
+<p>保存流程增加最终优化、二维/三维输出等待、文件与哈希检查、原子提交 manifest。载图用持久关键帧重建描述子，修正短会话、单关键帧与稀疏残差保存边界。</p>
+<p>已有仿真证据：run15 建图 3/3、run16 冷启动载图 3/3、同会话复测 3/3；最大到点误差 2.690 cm / 1.395°，基于 SLAM 位姿；保存 44 个关键帧、1911 条扫描位姿。载图是在相同仿真出生位置，不是任意位置重定位；首轮有采样缺口与时效告警，复测未复现不等于根因已修复。</p>
+<p>↓</p>
+<h2>05  探索 → 停稳 → 会话收尾</h2>
+<p>新增 C++ mapping_session：冻结探索新目标 → 等待其导航 Action 终态 → 新鲜里程计持续停稳 → 检查存图配置 → 一次触发 finish → 等待最终数据 → 校验并提交。暂停不自动结束 SLAM，取消保存标为 CANCELED_PARTIAL，不把不可达前沿当作全图完成。</p>
+<p>r25 使用真实 Voxel 完成静止取消保存，得到 1349 条扫描位姿、1 个关键帧和 278×416 栅格；重复取消未重复保存。该场景因 ENVELOPE_V2_NOT_READY 没有派发探索导航，<strong>只能证明静止收尾，不能证明运动中取消或自然遍历完成。</strong> 另外补了探索固定包络就绪检查，避免错误展示 READY。</p>
+<p>↓</p>
+<h2>06  地图变为可管理的资产</h2>
+<p>增加 C++ 地图管理器、RViz 地图工位页和受管 Voxel 适配器：校验保存会话 → 复制为不可变资产 → 绑定地图/工位版本 → 停稳与控制权检查 → 受管加载 → 定位、TF、地图及双 costmap 连续就绪 → 提交活动地图。失败转为需显式处理的恢复状态，外部 SLAM 占用时拒绝接管。</p>
+<p>导入、持久化、假依赖切图和界面门控有隔离测试；实际两地图切换/重定位尚未验收。跨楼层所需的载荷、运输与交接证据未接齐，不能因界面存在就称跨楼层可用。</p>
+<p>↓</p>
+<h2>07  虚拟墙与禁区绑定 SLAM</h2>
+<p>虚拟墙/禁区随建图会话、保存 manifest 和地图版本管理；原始 SLAM 地图保留，探索和 costmap 消费叠加约束。保存完成不等于已应用，必须等待消费者确认；从建图继承的非空约束在最终地图中重新核对。</p>
+<p>排查并修复非探索 mapping 模式遗漏 mapping_session 导致的 ZONES.NO_CONTEXT。两次独立冷启动各 120 秒，建图会话唯一、区域 token 稳定、双 costmap 与最终保护同版本确认通过；全过程静止，未执行存载图事务或区域穿越。SLAM 回环引起的旧墙坐标漂移不自动修正。</p>
+<p>↓</p>
+<h2>08  工程化与稳定性补齐</h2>
+<p>按估计、导航栅格、感知组合和 SLAM 消息职责分包，迁入 Eigen 3.4.0 / GTSAM 源码与构建约束，移除嵌套工作空间及重复 Eigen；目标机器自行构建，已有预编译库 ABI 不由此自动保证。沿用统一 spdlog/session.log，补足会话状态、事件/参数、独立日志目录和仿真归属记录。</p>
+<p>后续 map→odom 和跨域地图中继迁为 C++，相关 4/4 CTest 与安装 smoke 有记录。SLAM 与 RGB-D/推理并发压力做了分段观测、独占协议和处理健康恢复：一轮 1800 秒静止 SLAM+Nav2+重复推理通过，另一轮仍有 STALE 失败。<strong>不把地图中继优化称为 SLAM 核心算法提速，也不把静止压力通过当作运动全负载通过。</strong></p>
+<p>↓</p>
+<h2>后续验收出口</h2>
+<ul>
+<li>运动中 pause/resume、cancel 后停稳存图，以及真实封闭场景自然探索完成。</li>
+<li>两份真实地图导入、切换、定位与双 costmap 刷新；跨楼层载荷/交接条件单独验收。</li>
+<li>SLAM 退化/reset、时钟回退、传感器断流后的坐标代次与恢复授权。</li>
+<li>回环后的禁区坐标复核、长时运动并发、真实传感器标定与真机外部真值验收。</li>
+</ul>
+<h2>证据来源</h2>
+<ul>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/SLAM_CHANGE_MANUAL_20260918.md">docs/SLAM_CHANGE_MANUAL_20260918.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/SLAM_ARCHITECTURE_REVIEW_20260918.md">docs/SLAM_ARCHITECTURE_REVIEW_20260918.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/SLAM_SIMULATION_VALIDATION_20260918.md">docs/SLAM_SIMULATION_VALIDATION_20260918.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/EXPLORATION_SLAM_FINALIZATION_20260919.md">docs/EXPLORATION_SLAM_FINALIZATION_20260919.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/EXPLORATION_MAPPING_ACCEPTANCE_20260919.md">docs/EXPLORATION_MAPPING_ACCEPTANCE_20260919.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/P2_MAP_STATION_TRANSACTIONS_20260919.md">docs/P2_MAP_STATION_TRANSACTIONS_20260919.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/P2_VOXEL_SESSION_ADAPTER_20260919.md">docs/P2_VOXEL_SESSION_ADAPTER_20260919.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/MAP_SELECTION_LOAD_INTEGRATION_20260920.md">docs/MAP_SELECTION_LOAD_INTEGRATION_20260920.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/manuals/VIRTUAL_WALLS_AND_KEEP_OUT.md">docs/manuals/VIRTUAL_WALLS_AND_KEEP_OUT.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/RGBD_CUDA_PROCESS_RECOVERY_20260922.md">docs/RGBD_CUDA_PROCESS_RECOVERY_20260922.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/RGBD_EXCLUSIVE_REGRESSION_20260922.md">docs/RGBD_EXCLUSIVE_REGRESSION_20260922.md</a></li>
+<li><a href="/home/yjh/WorkSpace/astribot_sdk_ros2/docs/CPP_MIGRATION_COMPLETED_WORK_BRIEF_20260924.md">docs/CPP_MIGRATION_COMPLETED_WORK_BRIEF_20260924.md</a></li>
+</ul></details></main></html>

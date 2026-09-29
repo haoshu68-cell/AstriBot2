@@ -68,6 +68,12 @@ def main():
     p.add_argument('--session',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--policy',choices=['off'],default='off')
+    p.add_argument('--capture-barrier',type=Path,
+        help='Optional camera probe report; wait for its hold window after support startup')
+    p.add_argument('--external-support',type=Path,
+        help='Owned persistent transport support manifest; never stopped by this probe')
+    p.add_argument('--no-view-capture',action='store_true',
+        help='Skip optional GUI capture during measured compute workloads')
     a=p.parse_args();case=json.loads(a.case.read_text());session=json.loads(a.session.read_text())
     identity=session.get('isolation',{})
     if (session.get('state')!='ready' or not identity.get('ASTRIBOT_SIM_INSTANCE') or
@@ -228,9 +234,31 @@ def main():
         wait_for(lambda:time.monotonic()>=settle,5)
         if any(active_actions.values()):
             raise RuntimeError('Another navigation task is active')
-        support=launch([sys.executable,'-m','astribot_logging.launch_entry','launch',
-            'astribot_s1_transport','transport_skills.launch.py'],'support')
+        external=None
+        if a.external_support:
+            external=json.loads(a.external_support.read_text())
+            process=Path('/proc')/str(external['pid'])
+            live=dict(x.split('=',1) for x in (process/'environ').read_text().split('\0') if '=' in x)
+            if (external['instance']!=identity['ASTRIBOT_SIM_INSTANCE'] or
+                any(live.get(k)!=identity.get(k) for k in ('ROS_DOMAIN_ID','ASTRIBOT_SIM_INSTANCE')) or
+                (process/'stat').read_text().split(') ',1)[1].split()[19]!=external['start_ticks'] or
+                b'transport_skills.launch.py' not in (process/'cmdline').read_bytes().split(b'\0')):
+                raise RuntimeError('External transport support identity mismatch')
+            report['external_support']=external
+        else:
+            support=launch([sys.executable,'-m','astribot_logging.launch_entry','launch',
+                'astribot_s1_transport','transport_skills.launch.py'],'support')
         wait_for(lambda:state.get('body') is not None and state['body'].complete,60)
+        (a.output/'support_ready.json').write_text(json.dumps(
+            {'support_pid':support.pid if support else external['pid'],
+             'ready_wall':time.time(),'navigation_goals_sent':0},indent=2))
+        if a.capture_barrier:
+            def capture_ready():
+                try:
+                    value=json.loads(a.capture_barrier.read_text())
+                    return bool(value.get('hold_started_wall')) and not value.get('error') and time.time()-value['hold_started_wall']>=2.
+                except (FileNotFoundError,json.JSONDecodeError):return False
+            wait_for(capture_ready,60)
         command=[sys.executable,str(root/'tools/sim/verify_fixed_hold_expiry.py'),
             '--scenario',str(root/'ws_robot/src/astribot_s1_transport/config/warehouse_transfer.json'),
             '--output',str(a.output/'protocol'),'--prepare-entry','--prepare-compact',
@@ -244,7 +272,7 @@ def main():
         while worker.poll() is None and time.monotonic()<deadline:
             rclpy.spin_once(node,timeout_sec=.02)
             event_file=a.output/'protocol/events.jsonl'
-            if (capture is None and not case.get('cancel_on_motion') and samples and
+            if (not a.no_view_capture and capture is None and not case.get('cancel_on_motion') and samples and
                     -.4<samples[-1]['x']<.4 and samples[-1]['speed']>.02 and
                     event_file.is_file() and '"stage": "CORRIDOR_EXECUTION"' in event_file.read_text()):
                 (a.output/'during_passage').mkdir()
@@ -257,9 +285,12 @@ def main():
                 record('cancel_request',dict(signal=signal.SIGINT))
                 worker.send_signal(signal.SIGINT)
         if worker.poll() is None:raise TimeoutError('Corridor execution wall watchdog')
-        wait_for(lambda:len(samples)>0,5)
         protocol=json.loads((a.output/'protocol/summary.json').read_text())
         events=[json.loads(s) for s in (a.output/'protocol/events.jsonl').read_text().splitlines()]
+        # A rejected action legitimately produces no moving geometry samples.
+        # Preserve the protocol failure instead of replacing it with a data timeout.
+        if protocol.get('passed') or case.get('cancel_on_motion'):
+            wait_for(lambda:len(samples)>0,5)
         if case.get('cancel_on_motion'):
             end=node.get_clock().now().nanoseconds*1e-9+2
             wait_for(lambda:node.get_clock().now().nanoseconds*1e-9>=end,15)

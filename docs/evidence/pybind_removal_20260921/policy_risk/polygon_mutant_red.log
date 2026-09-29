@@ -1,0 +1,154 @@
+.F.F.F............                                                       [100%]
+=================================== FAILURES ===================================
+_______________ test_contact_containment_and_distance[profile1] ________________
+
+probe = <function probe.<locals>.call at 0x722bb1de03a0>
+profile = {'clearance_margin_m': 0.04, 'footprint_xy': [[-0.5, -0.3], [0.9, -0.3], [0.9, 0.15], [0.1, 0.6], [-0.5, 0.3]], 'half_length_m': 0.9, 'half_width_m': 0.6, ...}
+
+    @pytest.mark.parametrize('profile',[RECT,POLY])
+    def test_contact_containment_and_distance(probe,profile):
+        # Removing filled-polygon containment or the 1e-12 reserve admits contact.
+        data=dict(op='clearance',profile=profile,x=[0.]*5,y=[0.]*5,yaw=[0.]*5,
+                  lower=[[0,0],[.2,-.01],[2,0],[.95,0],[-1,-1]],
+                  upper=[[0,0],[.21,.01],[2.1,.1],[.95,0],[-.9,-.9]])
+>       out=compare(probe,data)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py:69: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x722bb1de03a0>
+data = {'lower': [[0, 0], [0.2, -0.01], [2, 0], [0.95, 0], [-1, -1]], 'op': 'clearance', 'profile': {'clearance_margin_m': 0....f_length_m': 0.9, 'half_width_m': 0.6, ...}, 'upper': [[0, 0], [0.21, 0.01], [2.1, 0.1], [0.95, 0], [-0.9, -0.9]], ...}
+
+    def compare(probe, data):
+        profile = SimpleNamespace(**data['profile'])
+        boxes = np.asarray(data['lower'],dtype=float).reshape((-1,2)), np.asarray(data['upper'],dtype=float).reshape((-1,2))
+        try:
+            if data['op'] == 'clearance':
+                want = clearance_many(np.asarray(data['x']),np.asarray(data['y']),np.asarray(data['yaw']),*boxes,profile,data.get('sampling_margin',0.))
+            else:
+                want = motion_clearance(data['command'],data['begin'],data['end'],*boxes,profile,data['origin'])
+        except ValueError:
+            assert 'error' in probe(data)
+            return
+        got = probe(data)
+        assert 'error' not in got, got
+        got = np.asarray([float(v) for v in got['values']])
+>       np.testing.assert_allclose(got,want,rtol=2e-11,atol=2e-12)
+E       AssertionError: 
+E       Not equal to tolerance rtol=2e-11, atol=2e-12
+E       
+E       Mismatched elements: 4 / 5 (80%)
+E       Max absolute difference: 0.3
+E       Max relative difference: 0.85714286
+E        x: array([-6.500000e-01, -6.600000e-01,  1.050000e+00, -1.000069e-12,
+E               2.500000e-01])
+E        y: array([-3.500000e-01, -3.600000e-01,  1.001317e+00, -1.000069e-12,
+E               2.741089e-01])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py:59: AssertionError
+________________ test_sweep_crossing_origin_and_empty[profile1] ________________
+
+probe = <function probe.<locals>.call at 0x722bb1de03a0>
+profile = {'clearance_margin_m': 0.04, 'footprint_xy': [[-0.5, -0.3], [0.9, -0.3], [0.9, 0.15], [0.1, 0.6], [-0.5, 0.3]], 'half_length_m': 0.9, 'half_width_m': 0.6, ...}
+
+    @pytest.mark.parametrize('profile',[RECT,POLY])
+    def test_sweep_crossing_origin_and_empty(probe,profile):
+        data=dict(op='sweep',profile=profile,command=[3.,0.,0.],origin=[0.,0.,0.],
+                  begin=[0.],end=[2.],lower=[[2.5,-.05]],upper=[[2.6,.05]])
+>       assert compare(probe,data)[0]<0
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x722bb1de03a0>
+data = {'begin': [0.0], 'command': [3.0, 0.0, 0.0], 'end': [2.0], 'lower': [[2.5, -0.05]], ...}
+
+    def compare(probe, data):
+        profile = SimpleNamespace(**data['profile'])
+        boxes = np.asarray(data['lower'],dtype=float).reshape((-1,2)), np.asarray(data['upper'],dtype=float).reshape((-1,2))
+        try:
+            if data['op'] == 'clearance':
+                want = clearance_many(np.asarray(data['x']),np.asarray(data['y']),np.asarray(data['yaw']),*boxes,profile,data.get('sampling_margin',0.))
+            else:
+                want = motion_clearance(data['command'],data['begin'],data['end'],*boxes,profile,data['origin'])
+        except ValueError:
+            assert 'error' in probe(data)
+            return
+        got = probe(data)
+        assert 'error' not in got, got
+        got = np.asarray([float(v) for v in got['values']])
+>       np.testing.assert_allclose(got,want,rtol=2e-11,atol=2e-12)
+E       AssertionError: 
+E       Not equal to tolerance rtol=2e-11, atol=2e-12
+E       
+E       Mismatched elements: 1 / 1 (100%)
+E       Max absolute difference: 0.4
+E       Max relative difference: 0.12698413
+E        x: array([-3.55])
+E        y: array([-3.15])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py:59: AssertionError
+____________ test_randomized_clearance_and_rotating_sweep[profile1] ____________
+
+probe = <function probe.<locals>.call at 0x722bb1de03a0>
+profile = {'clearance_margin_m': 0.04, 'footprint_xy': [[-0.5, -0.3], [0.9, -0.3], [0.9, 0.15], [0.1, 0.6], [-0.5, 0.3]], 'half_length_m': 0.9, 'half_width_m': 0.6, ...}
+
+    @pytest.mark.parametrize('profile',[RECT,POLY])
+    def test_randomized_clearance_and_rotating_sweep(probe,profile):
+        rng=random.Random(740129)
+        for sweep in (False,True):
+            for _ in range(12):
+                n=23
+                low=[[rng.uniform(-3,3),rng.uniform(-3,3)] for _ in range(n)]
+                high=[[x+rng.uniform(0,.5),y+rng.uniform(0,.5)] for x,y in low]
+                data=dict(op='sweep' if sweep else 'clearance',profile=profile,lower=low,upper=high)
+                if sweep:
+                    start=[rng.uniform(0,2) for _ in range(n)]
+                    data.update(command=[rng.uniform(-1.5,1.5),rng.uniform(-1.5,1.5),rng.choice([0.,1e-6,1e-6-1e-16,rng.uniform(-3,3)])],
+                                origin=[rng.uniform(-1,1),rng.uniform(-1,1),rng.uniform(-math.pi,math.pi)],begin=start,end=[v+rng.uniform(0,1) for v in start])
+                else:
+                    data.update(x=[rng.uniform(-2,2) for _ in range(n)],y=[rng.uniform(-2,2) for _ in range(n)],
+                                yaw=[rng.uniform(-math.pi,math.pi) for _ in range(n)],sampling_margin=rng.uniform(0,.2))
+>               compare(probe,data)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x722bb1de03a0>
+data = {'lower': [[1.3810169406079211, -0.5242879511900824], [-2.3220889652063583, -2.745244420450494], [-2.678266981383766, ... [0.1, 0.6], [-0.5, 0.3]], 'half_length_m': 0.9, 'half_width_m': 0.6, ...}, 'sampling_margin': 0.1620640693478142, ...}
+
+    def compare(probe, data):
+        profile = SimpleNamespace(**data['profile'])
+        boxes = np.asarray(data['lower'],dtype=float).reshape((-1,2)), np.asarray(data['upper'],dtype=float).reshape((-1,2))
+        try:
+            if data['op'] == 'clearance':
+                want = clearance_many(np.asarray(data['x']),np.asarray(data['y']),np.asarray(data['yaw']),*boxes,profile,data.get('sampling_margin',0.))
+            else:
+                want = motion_clearance(data['command'],data['begin'],data['end'],*boxes,profile,data['origin'])
+        except ValueError:
+            assert 'error' in probe(data)
+            return
+        got = probe(data)
+        assert 'error' not in got, got
+        got = np.asarray([float(v) for v in got['values']])
+>       np.testing.assert_allclose(got,want,rtol=2e-11,atol=2e-12)
+E       AssertionError: 
+E       Not equal to tolerance rtol=2e-11, atol=2e-12
+E       
+E       Mismatched elements: 23 / 23 (100%)
+E       Max absolute difference: 0.4
+E       Max relative difference: 8.75941939
+E        x: array([ 1.059302,  2.726033,  3.346953,  1.852654,  1.333329,  3.288567,
+E               0.392995,  2.010466,  0.724907,  1.420763, -0.515748,  2.056049,
+E               1.656347,  0.45966 ,  1.659919,  1.885707,  2.214424,  0.72267 ,
+E               0.033116,  0.878595,  2.974663, -0.192058,  1.689944])
+E        y: array([ 9.057680e-01,  2.377540e+00,  3.479935e+00,  1.985636e+00,
+E               1.288443e+00,  3.421550e+00,  4.660202e-01,  1.968656e+00,
+E               8.578891e-01,  1.234300e+00, -3.256937e-01,  1.832979e+00,...
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py::test_contact_containment_and_distance[profile1]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py::test_sweep_crossing_origin_and_empty[profile1]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_sweep.py::test_randomized_clearance_and_rotating_sweep[profile1]
+3 failed, 15 passed in 0.10s

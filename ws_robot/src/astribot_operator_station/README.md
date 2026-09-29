@@ -3,6 +3,8 @@
 默认现已使用 **WorkstationPanel + operator_backend 租约网关 + C++ 只读 3D 回放**。
 新增 P2 地图与工位页，见 [P2 事务实现](../../../docs/P2_MAP_STATION_TRANSACTIONS_20260919.md)。
 当前接口、完整启动及验收边界以 [P0/P1 交付文档](../../../docs/P0_P1_COMPLETE_IMPLEMENTATION_20260919.md) 为准。
+导航与路线、探索建图的端到端交互状态机见
+[导航与路线、探索建图交互逻辑](../../../docs/NAVIGATION_ROUTE_EXPLORATION_INTERACTION.md)。
 以下旧直连 Panel 的说明保留为兼容参考；默认配置不加载旧 Panel。
 
 C++17 + Qt5 RViz Panel、C++ rosbag2 采集器、离线事件/参数回看。无 Python 运行节点或采集脚本；XML launch 只启动本包与 RViz，不启动设备或导航栈。
@@ -20,6 +22,19 @@ ros2 run astribot_operator_station diagnostics_recorder --ros-args --params-file
 ```bash
 ros2 launch astribot_operator_station operator.launch.xml
 ```
+
+仿真或同机导航栈可以直接把导航可视化和本工作站合并到一个 RViz 窗口。此时不要再单独启动
+`operator.launch.xml`，在导航启动时传入合并配置：
+
+```bash
+ros2 launch astribot_s1_navigation nav2_full_bringup.launch.py \
+  use_rviz:=true \
+  rviz_config:=$(ros2 pkg prefix astribot_operator_station)/share/astribot_operator_station/config/operator.rviz
+```
+
+合并窗口包含地图、机器人模型、TF、激光、全局/局部代价地图、规划路径、MPPI 调试轨迹、
+多点路线工具和 `WorkstationPanel`。Gazebo 仍是独立仿真窗口；`use_rviz:=false` 时可继续用
+`operator.launch.xml` 单独打开工作站界面。
 
 同机开发可加 `recorder:=true`，同一 ROS 图只运行一个采集器。仿真传 `use_sim_time:=true`；域配置必须与目标匹配。默认不自动采集，不自动发送控制。新包不替换现有采集脚本。
 
@@ -82,3 +97,7 @@ ros2 run astribot_operator_station inspect_incident /绝对路径/events.jsonl 1
 [P0/P1 探索交互实现](../../../docs/P0_P1_EXPLORATION_INTERACTION_IMPLEMENTATION_20260919.md)。
 开发演示使用 `operator_fake.launch.xml`，默认场景 `waiting_map`，控制均映射至 `/operator_fake/*`；
 按该文档使用独立 localhost 域，不通过生产 launch 启动假后端。
+
+### 业务场景与设备标记
+
+工作站新增“业务场景”页，支持五类业务、多实例、共享或独立地图、设备位置/轮廓/停靠位/等待位版本化保存，以及停靠位加入导航草稿。详见仓库 `docs/manuals/RVIZ_BUSINESS_SCENES.md`。需一并部署本次 `astribot_map_manager` 和 `astribot_operator_backend`；本页不执行设备开门、上下料或抓放。

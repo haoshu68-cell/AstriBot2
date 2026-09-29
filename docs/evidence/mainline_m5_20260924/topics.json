@@ -312,7 +312,7 @@
       "gap_budget_sec": null
     },
     {
-      "topic": "/cmd_vel_policy_input",
+      "topic": "/cmd_vel",
       "kind": "twist",
       "type": "geometry_msgs/msg/Twist",
       "qos": "reliable",
@@ -320,9 +320,9 @@
       "gap_budget_sec": null
     },
     {
-      "topic": "/cmd_vel",
-      "kind": "twist",
-      "type": "geometry_msgs/msg/Twist",
+      "topic": "/navigation_policy/arm_speed_limit",
+      "kind": "context",
+      "type": "nav2_msgs/msg/SpeedLimit",
       "qos": "reliable",
       "required": false,
       "gap_budget_sec": null
@@ -336,8 +336,8 @@
       "gap_budget_sec": null
     },
     {
-      "topic": "/navigation_policy/protection_state",
-      "kind": "protection",
+      "topic": "/navigation_policy/constraint_state",
+      "kind": "context",
       "type": "std_msgs/msg/String",
       "qos": "reliable",
       "required": false,

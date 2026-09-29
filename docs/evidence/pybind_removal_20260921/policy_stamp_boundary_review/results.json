@@ -1,0 +1,593 @@
+{
+  "scope": "offline constructors/core operations/installed Time only; no live executor",
+  "timeouts": [
+    {
+      "timeout_s": 0.5,
+      "python_profile": "accepted",
+      "python_registry_constructor": "accepted",
+      "python_expiry_ns": 1500000000,
+      "python_time_output": "builtin_interfaces.msg.Time(sec=1, nanosec=500000000)",
+      "native": {
+        "exit_code": 0,
+        "stdout": "[{\"value\":[{\"sensor_id\":\"scan\",\"health\":\"UNAVAILABLE\",\"stamp\":{\"ns\":1000000000,\"clock\":\"ros\",\"epoch\":0},\"valid_until\":{\"ns\":1500000000,\"clock\":\"ros\",\"epoch\":0},\"frame_id\":\"unknown\",\"coverage\":[],\"depth_available\":false,\"calibration_epoch\":0,\"reason\":\"NO_CURRENT_DATA\"}]}]\n",
+        "stderr": ""
+      }
+    },
+    {
+      "timeout_s": 10000000000.0,
+      "python_profile": "accepted",
+      "python_registry_constructor": "accepted",
+      "python_expiry_ns": 10000000001000000000,
+      "python_time_output": {
+        "error": "OverflowError",
+        "message": "Total nanoseconds value is too large to store in C time point."
+      },
+      "native": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "timeout_s outside native nanosecond range\n"
+      }
+    },
+    {
+      "timeout_s": 1e+100,
+      "python_profile": "accepted",
+      "python_registry_constructor": "accepted",
+      "python_expiry_ns": 9999999999999999818508707188399807864717650964328171247958398369899072554380053298205803424393137677263358464,
+      "python_time_output": {
+        "error": "OverflowError",
+        "message": "Total nanoseconds value is too large to store in C time point."
+      },
+      "native": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "timeout_s outside native nanosecond range\n"
+      }
+    },
+    {
+      "timeout_s": 1e+300,
+      "python_profile": "accepted",
+      "python_registry_constructor": {
+        "error": "OverflowError",
+        "message": "cannot convert float infinity to integer"
+      },
+      "native": {
+        "exit_code": 1,
+        "stdout": "",
+        "stderr": "timeout_s outside native nanosecond range\n"
+      }
+    }
+  ],
+  "adapters": [
+    {
+      "case": "expiry_crosses_int64",
+      "input": {
+        "timeout": 0.5,
+        "operations": [
+          {
+            "data": "{\"schema_version\": 1, \"sensor_id\": \"camera\", \"stamp_ns\": 9223372036354775808, \"frame_id\": \"sensor\", \"calibration_epoch\": 7, \"observations\": [{\"kind\": \"image_box\", \"measurement_id\": \"image\", \"image_size_px\": [100, 100], \"box_xyxy_px\": [0.0, 0.0, 10.0, 10.0], \"geometry_quality\": 1.0, \"provenance\": [\"image\"]}]}"
+          }
+        ]
+      },
+      "python": [
+        {
+          "ok": true,
+          "result": [
+            {
+              "sensor_id": "camera",
+              "measurement_id": "image",
+              "source_track_id": null,
+              "capture_stamp": {
+                "ns": 9223372036354775808,
+                "clock": "ros",
+                "epoch": 4
+              },
+              "received_at": {
+                "ns": 1000,
+                "clock": "steady",
+                "epoch": 0
+              },
+              "valid_until": {
+                "ns": 9223372036854775808,
+                "clock": "ros",
+                "epoch": 4
+              },
+              "frame_id": "sensor",
+              "calibration_epoch": 7,
+              "geometry": {
+                "camera_id": "camera",
+                "image_width_px": 100,
+                "image_height_px": 100,
+                "xmin_px": 0.0,
+                "ymin_px": 0.0,
+                "xmax_px": 10.0,
+                "ymax_px": 10.0
+              },
+              "geometry_quality": 1.0,
+              "class_probabilities": [],
+              "provenance": [
+                "image"
+              ],
+              "velocity_observable": false,
+              "spatial_occupancy": false
+            }
+          ],
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 9223372036354775808,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ],
+            [
+              "steady",
+              0
+            ]
+          ]
+        }
+      ],
+      "native": [
+        {
+          "ok": false,
+          "type": "OverflowError",
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 9223372036354775808,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ],
+            [
+              "steady",
+              0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "case": "image_capture_above_int64",
+      "input": {
+        "timeout": 0.5,
+        "operations": [
+          {
+            "data": "{\"schema_version\": 1, \"sensor_id\": \"camera\", \"stamp_ns\": 9223372036854775808, \"frame_id\": \"sensor\", \"calibration_epoch\": 7, \"observations\": [{\"kind\": \"image_box\", \"measurement_id\": \"image\", \"image_size_px\": [100, 100], \"box_xyxy_px\": [0.0, 0.0, 10.0, 10.0], \"geometry_quality\": 1.0, \"provenance\": [\"image\"]}]}"
+          }
+        ]
+      },
+      "python": [
+        {
+          "ok": true,
+          "result": [
+            {
+              "sensor_id": "camera",
+              "measurement_id": "image",
+              "source_track_id": null,
+              "capture_stamp": {
+                "ns": 9223372036854775808,
+                "clock": "ros",
+                "epoch": 4
+              },
+              "received_at": {
+                "ns": 1000,
+                "clock": "steady",
+                "epoch": 0
+              },
+              "valid_until": {
+                "ns": 9223372037354775808,
+                "clock": "ros",
+                "epoch": 4
+              },
+              "frame_id": "sensor",
+              "calibration_epoch": 7,
+              "geometry": {
+                "camera_id": "camera",
+                "image_width_px": 100,
+                "image_height_px": 100,
+                "xmin_px": 0.0,
+                "ymin_px": 0.0,
+                "xmax_px": 10.0,
+                "ymax_px": 10.0
+              },
+              "geometry_quality": 1.0,
+              "class_probabilities": [],
+              "provenance": [
+                "image"
+              ],
+              "velocity_observable": false,
+              "spatial_occupancy": false
+            }
+          ],
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 9223372036854775808,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ],
+            [
+              "steady",
+              0
+            ]
+          ]
+        }
+      ],
+      "native": [
+        {
+          "ok": false,
+          "type": "OverflowError",
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 9223372036854775808,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "case": "negative_capture_below_int64",
+      "input": {
+        "timeout": 0.5,
+        "operations": [
+          {
+            "data": "{\"schema_version\": 1, \"sensor_id\": \"camera\", \"stamp_ns\": -9223372036854775809, \"frame_id\": \"sensor\", \"calibration_epoch\": 7, \"observations\": [{\"kind\": \"image_box\", \"measurement_id\": \"image\", \"image_size_px\": [100, 100], \"box_xyxy_px\": [0.0, 0.0, 10.0, 10.0], \"geometry_quality\": 1.0, \"provenance\": [\"image\"]}]}"
+          }
+        ]
+      },
+      "python": [
+        {
+          "ok": false,
+          "type": "ContractError",
+          "code": "INVALID_INPUT",
+          "field": "stamp.ns",
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": -9223372036854775809,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ]
+          ]
+        }
+      ],
+      "native": [
+        {
+          "ok": false,
+          "type": "OverflowError",
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": -9223372036854775809,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "case": "ordinary_capture_large_timeout",
+      "input": {
+        "timeout": 10000000000.0,
+        "operations": [
+          {
+            "data": "{\"schema_version\": 1, \"sensor_id\": \"camera\", \"stamp_ns\": 1000000000, \"frame_id\": \"sensor\", \"calibration_epoch\": 7, \"observations\": [{\"kind\": \"image_box\", \"measurement_id\": \"image\", \"image_size_px\": [100, 100], \"box_xyxy_px\": [0.0, 0.0, 10.0, 10.0], \"geometry_quality\": 1.0, \"provenance\": [\"image\"]}]}"
+          }
+        ]
+      },
+      "python": [
+        {
+          "ok": true,
+          "result": [
+            {
+              "sensor_id": "camera",
+              "measurement_id": "image",
+              "source_track_id": null,
+              "capture_stamp": {
+                "ns": 1000000000,
+                "clock": "ros",
+                "epoch": 4
+              },
+              "received_at": {
+                "ns": 1000,
+                "clock": "steady",
+                "epoch": 0
+              },
+              "valid_until": {
+                "ns": 10000000001000000000,
+                "clock": "ros",
+                "epoch": 4
+              },
+              "frame_id": "sensor",
+              "calibration_epoch": 7,
+              "geometry": {
+                "camera_id": "camera",
+                "image_width_px": 100,
+                "image_height_px": 100,
+                "xmin_px": 0.0,
+                "ymin_px": 0.0,
+                "xmax_px": 10.0,
+                "ymax_px": 10.0
+              },
+              "geometry_quality": 1.0,
+              "class_probabilities": [],
+              "provenance": [
+                "image"
+              ],
+              "velocity_observable": false,
+              "spatial_occupancy": false
+            }
+          ],
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 1000000000,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ],
+            [
+              "steady",
+              0
+            ]
+          ]
+        }
+      ],
+      "native": [
+        {
+          "ok": false,
+          "type": "OverflowError",
+          "last_packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 1000000000,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "image",
+                "image_size_px": [
+                  100,
+                  100
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "image"
+                ]
+              }
+            ]
+          },
+          "calls": [
+            [
+              "now",
+              0
+            ],
+            [
+              "now",
+              1
+            ],
+            [
+              "steady",
+              0
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "binary_sha256": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_health_probe": "79a054886357821b9fd3fe7adca3065f5cc69b518e9c871ac86a26bb167fe62e",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_strings/build/policy_observation_adapters_probe": "8572753555e8cba823138ccebe0f4f91f44c20e0638d3f791bf265279c184f7d"
+  }
+}

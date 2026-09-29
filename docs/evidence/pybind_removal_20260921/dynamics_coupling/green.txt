@@ -1,0 +1,22 @@
+........F...........                                                     [100%]
+=================================== FAILURES ===================================
+_________________________ test_qos_and_tf_nonfinite_z __________________________
+
+make_pair = <function make_pair.<locals>.create at 0x784427287f40>
+
+    def test_qos_and_tf_nonfinite_z(make_pair):
+        from rclpy.qos import ReliabilityPolicy, DurabilityPolicy
+        p = make_pair('horizontal_reach', {'scale_smoothing_alpha': 1., 'reach_update_period_sec': 0.})
+        endpoints = p.node.get_subscriptions_info_by_topic('/' + p.prefix + '/input_remapped')
+        assert len(endpoints) == 2
+        for endpoint in endpoints:
+>           assert endpoint.qos_profile.depth == 10
+E           assert 0 == 10
+E            +  where 0 = <rclpy.qos.QoSProfile object at 0x78442727a730>.depth
+E            +    where <rclpy.qos.QoSProfile object at 0x78442727a730> = <rclpy.topic_endpoint_info.TopicEndpointInfo object at 0x7844272c7290>.qos_profile
+
+ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py:317: AssertionError
+- generated xml file: /home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/green_junit.xml -
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py::test_qos_and_tf_nonfinite_z
+1 failed, 19 passed in 14.26s

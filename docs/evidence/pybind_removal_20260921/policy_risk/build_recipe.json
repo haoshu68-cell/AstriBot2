@@ -1,0 +1,23 @@
+{
+  "source": "ws_robot/src/astribot_s1_navigation_policy_native",
+  "build": "/tmp/codex_policy_integration_20260921/build",
+  "prefix": "/tmp/codex_policy_integration_20260921/install",
+  "setup": "/opt/ros/humble/setup.bash",
+  "cmake_options": {
+    "ASTRIBOT_BUILD_PYBIND": "OFF",
+    "BUILD_TESTING": "ON",
+    "CMAKE_BUILD_TYPE": "Release",
+    "Python3_EXECUTABLE": "/usr/bin/python3",
+    "astribot_navigation_msgs_DIR": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_navigation_msgs/share/astribot_navigation_msgs/cmake",
+    "CMAKE_PREFIX_PATH": "/tmp/codex_geometry_validation_20260921/cpp_install",
+    "POLICY_FUSION_GEOMETRY_INCLUDE": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_robot_geometry/include"
+  },
+  "notes": "Rebuild native message/geometry dependencies in a private prefix for an independent checkout; never reuse stale source headers for fusion.",
+  "benchmark": {
+    "script": "ws_robot/src/astribot_s1_navigation_policy_native/test/benchmark_policy_risk.py",
+    "pairs": 4,
+    "samples": 150,
+    "cpu": 26,
+    "geometry_binding": "/tmp/codex_geometry_validation_20260921/baseline_build/_geometry_native.cpython-310-x86_64-linux-gnu.so"
+  }
+}

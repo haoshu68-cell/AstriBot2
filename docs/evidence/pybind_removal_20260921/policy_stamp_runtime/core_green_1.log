@@ -1,0 +1,19 @@
+......F................................................................. [ 33%]
+........................................................................ [ 66%]
+........................................................................ [100%]
+=================================== FAILURES ===================================
+_ test_finite_large_timeout_is_consumed_by_health_query_not_constructor[-10000000000.0] _
+
+timeout = -10000000000.0
+
+    @pytest.mark.parametrize('timeout', [1e10, 1e100, -1e10])
+    def test_finite_large_timeout_is_consumed_by_health_query_not_constructor(timeout):
+        now = 10**30
+        result = run(dict(timeout=timeout, ops=[query(now)]))
+>       assert result[0]['value'][0]['valid_until']['ns'] == now + int(timeout*1e9)
+E       KeyError: 'value'
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:169: KeyError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_finite_large_timeout_is_consumed_by_health_query_not_constructor[-10000000000.0]
+1 failed, 215 passed in 13.02s

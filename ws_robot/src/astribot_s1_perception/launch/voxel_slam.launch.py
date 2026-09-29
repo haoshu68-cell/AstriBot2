@@ -27,6 +27,15 @@ def _build_voxel(context, *args, **kwargs):
     save_path = Path(LaunchConfiguration('save_path').perform(context)).expanduser().resolve()
     map_name = LaunchConfiguration('map_name').perform(context)
     previous = LaunchConfiguration('previous_map').perform(context)
+    initial_pose = LaunchConfiguration('initial_chassis_pose').perform(context).strip()
+    initial_override = {}
+    if initial_pose:
+        values = vector('initial_chassis_pose', 7)
+        if previous:
+            raise RuntimeError('initial_chassis_pose 不能叠加到 previous_map 载图定位')
+        if abs(sum(v * v for v in values[3:]) - 1.0) > 1e-6:
+            raise RuntimeError('initial_chassis_pose 四元数必须归一化')
+        initial_override['General.initial_chassis_pose'] = values
     save_map = int(LaunchConfiguration('save_map').perform(context))
     mode = LaunchConfiguration('mode').perform(context)
     if mode not in ('mapping', 'localization'):
@@ -81,6 +90,7 @@ def _build_voxel(context, *args, **kwargs):
             'General.back_extrinsic_tran': vector('back_extrinsic_tran', 3),
             'General.back_extrinsic_rota': vector('back_extrinsic_rota', 9),
             'Odometry.point_notime': int(LaunchConfiguration('point_notime').perform(context)),
+            **initial_override,
         }],
     )
     return [voxel, RegisterEventHandler(OnProcessExit(target_action=voxel,
@@ -103,7 +113,7 @@ def generate_launch_description():
         }],
     )
     map_odom = Node(
-        package='astribot_s1_perception', executable='map_odom_tf_node',
+        package='astribot_s1_perception_native', executable='map_odom_tf_node',
         name='map_odom_tf', output='screen',
         condition=IfCondition(LaunchConfiguration('publish_map_odom')),
         parameters=[{'use_sim_time': use_sim_time}],
@@ -117,6 +127,8 @@ def generate_launch_description():
         DeclareLaunchArgument('publish_grid', default_value='true'),
         DeclareLaunchArgument('publish_map_odom', default_value='true'),
         DeclareLaunchArgument('previous_map', default_value=''),
+        DeclareLaunchArgument('initial_chassis_pose', default_value='',
+                              description='静止启动时实测 map<-astribot_torso_base 的 x,y,z,qx,qy,qz,qw；留空新建局部地图'),
         DeclareLaunchArgument('imu_extrinsic_tran', default_value='0,0,0'),
         DeclareLaunchArgument('lidar_topic', default_value='/livox/lidar_left'),
         DeclareLaunchArgument('lidar_topic_back', default_value='/livox/lidar_right'),

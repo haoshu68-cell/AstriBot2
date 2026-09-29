@@ -1,0 +1,64 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_only_native_entry_selected[map_domain_relay-map_provider.launch.py-modules0] _
+
+executable = 'map_domain_relay', launch = 'map_provider.launch.py'
+modules = ['map_domain_relay']
+
+    @pytest.mark.parametrize('executable,launch,modules', [
+        ('map_domain_relay', 'map_provider.launch.py', ['map_domain_relay']),
+        ('map_odom_tf_node', 'voxel_slam.launch.py', ['map_odom_tf_node', 'map_odom_decompose']),
+    ])
+    def test_only_native_entry_selected(executable, launch, modules):
+        # These are explicit retirement/selection requirements, not a claim that
+        # source text proves ROS behavior. Independent protocol replays cover that.
+        tree = ast.parse((PERCEPTION / 'launch' / launch).read_text())
+        selected = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            args = {kw.arg: kw.value.value for kw in node.keywords if isinstance(kw.value, ast.Constant)}
+            if args.get('executable') == executable:
+                selected.append(args.get('package'))
+>       assert selected == ['astribot_s1_perception_native']
+E       AssertionError: assert ['astribot_s1_perception'] == ['astribot_s1...ption_native']
+E         At index 0 diff: 'astribot_s1_perception' != 'astribot_s1_perception_native'
+E         Full diff:
+E         - ['astribot_s1_perception_native']
+E         ?                         -------
+E         + ['astribot_s1_perception']
+
+ws_robot/src/astribot_s1_perception_native/test/test_perception_entries.py:28: AssertionError
+_ test_only_native_entry_selected[map_odom_tf_node-voxel_slam.launch.py-modules1] _
+
+executable = 'map_odom_tf_node', launch = 'voxel_slam.launch.py'
+modules = ['map_odom_tf_node', 'map_odom_decompose']
+
+    @pytest.mark.parametrize('executable,launch,modules', [
+        ('map_domain_relay', 'map_provider.launch.py', ['map_domain_relay']),
+        ('map_odom_tf_node', 'voxel_slam.launch.py', ['map_odom_tf_node', 'map_odom_decompose']),
+    ])
+    def test_only_native_entry_selected(executable, launch, modules):
+        # These are explicit retirement/selection requirements, not a claim that
+        # source text proves ROS behavior. Independent protocol replays cover that.
+        tree = ast.parse((PERCEPTION / 'launch' / launch).read_text())
+        selected = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            args = {kw.arg: kw.value.value for kw in node.keywords if isinstance(kw.value, ast.Constant)}
+            if args.get('executable') == executable:
+                selected.append(args.get('package'))
+>       assert selected == ['astribot_s1_perception_native']
+E       AssertionError: assert ['astribot_s1_perception'] == ['astribot_s1...ption_native']
+E         At index 0 diff: 'astribot_s1_perception' != 'astribot_s1_perception_native'
+E         Full diff:
+E         - ['astribot_s1_perception_native']
+E         ?                         -------
+E         + ['astribot_s1_perception']
+
+ws_robot/src/astribot_s1_perception_native/test/test_perception_entries.py:28: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_perception_native/test/test_perception_entries.py::test_only_native_entry_selected[map_domain_relay-map_provider.launch.py-modules0]
+FAILED ws_robot/src/astribot_s1_perception_native/test/test_perception_entries.py::test_only_native_entry_selected[map_odom_tf_node-voxel_slam.launch.py-modules1]
+2 failed in 0.03s

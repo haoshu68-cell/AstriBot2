@@ -36,9 +36,12 @@ def _start(context):
     os.environ['ASTRIBOT_LOG_CAPTURE'] = '1'
     configure_launch_logging()
     command = [sys.executable, '-u', str(supervisor)]
-    for name in ('instance','ros_domain_id','spawn_x','spawn_y','spawn_yaw','mode', 'map', 'map_yaml', 'navigation_policy', 'navigation_geometry_mode', 'corridor_file', 'social_scenario', 'tracker',
+    for name in ('instance','ros_domain_id','spawn_x','spawn_y','spawn_yaw','launch_slam','initial_chassis_pose','mode', 'map', 'map_yaml', 'navigation_policy', 'navigation_geometry_mode', 'corridor_file', 'social_scenario', 'tracker',
                  'max_linear_speed', 'real_time_factor', 'scan_source', 'nav_transport', 'nav_attempts',
-                 'ready_timeout', 'log_dir', 'log_level', 'log_max_bytes', 'log_backup_count'):
+                 'ready_timeout', 'log_dir', 'log_level', 'log_max_bytes', 'log_backup_count', 'runtime_manifest',
+                 'use_lidar', 'use_camera', 'use_wrist_cameras', 'use_stereo_cameras',
+                 'camera_preset', 'camera_profile', 'torso_camera_profile', 'camera_calibration_dir', 'camera_mounts_profile',
+                 'use_camera_postprocess', 'use_camera_pointcloud', 'enable_depth_obstacles'):
         value = LaunchConfiguration(name).perform(context)
         if value:
             command += ['--' + name.replace('_', '-'), value]
@@ -60,6 +63,8 @@ def generate_launch_description():
         'spawn_x': ('0.0', 'Initial Gazebo X in metres'),
         'spawn_y': ('0.0', 'Initial Gazebo Y in metres'),
         'spawn_yaw': ('0.0', 'Initial Gazebo heading in radians'),
+        'launch_slam': ('true', 'Start the SLAM producer; false permits an explicitly owned external producer'),
+        'initial_chassis_pose': ('', 'Measured stationary map chassis pose x,y,z,qx,qy,qz,qw'),
         'repo_dir': (_repository(), 'Repository root containing tools/; required for this workspace launcher'),
         'mode': ('mapping', 'mapping / explore / localize / baseline'),
         'map': ('', 'Serialized SLAM map base path'),
@@ -71,12 +76,25 @@ def generate_launch_description():
         'tracker': ('mppi', 'mppi / rpp'),
         'max_linear_speed': ('0.35', 'Existing simulation speed limit; unchanged'),
         'real_time_factor': ('1.0', 'Gazebo simulation/wall time ratio in (0,1]'),
+        'use_lidar': ('true', 'Enable simulated lidar'),
+        'camera_preset': ('', 'Common six-camera simulation preset; default is shared source baseline'),
+        'use_camera': ('', 'Override preset head and torso RGB-D switch'),
+        'use_wrist_cameras': ('', 'Override preset wrist RGB-D switch'),
+        'use_stereo_cameras': ('', 'Override preset stereo switch'),
+        'camera_profile': ('', 'Explicit head camera profile'),
+        'torso_camera_profile': ('', 'Explicit torso camera profile'),
+        'camera_calibration_dir': ('', 'Explicit six-camera profiles directory'),
+        'camera_mounts_profile': ('', 'Explicit simulation reference mounts'),
+        'use_camera_postprocess': ('', 'Override preset calibration postprocess switch'),
+        'use_camera_pointcloud': ('', 'Override preset pointcloud projection switch'),
+        'enable_depth_obstacles': ('', 'Override preset depth obstacle processing switch'),
         'scan_source': ('slice_scan', 'slice_scan / laserscan'),
         'headless': ('false', 'Disable Gazebo GUI'),
         'no_rviz': ('false', 'Disable RViz'),
         'nav_transport': ('udp', 'udp / default'),
         'nav_attempts': ('2', 'Maximum navigation startup attempts'),
         'ready_timeout': ('120', 'Readiness timeout in seconds'),
+        'runtime_manifest': ('', 'Optional pinned runtime snapshot; verify before starting any session child'),
         'log_dir': ('', 'New session directory; default sim_<time>_<PID> under the shared log root'),
         'log_level': (log_level(), 'Default logging severity'),
         'log_max_bytes': (os.environ.get('ASTRIBOT_LOG_MAX_BYTES', '10485760'), 'session.log rotation size'),

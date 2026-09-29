@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <limits>
+#include <astribot_s1_robot_geometry/layered_envelope.hpp>
 using namespace astribot::navigation;
 namespace {
 void check(bool ok,const char* message) {if(!ok)throw std::runtime_error(message);}
@@ -35,6 +36,13 @@ int main(int argc,char** argv) {
     s.model_revision="model";s.attachment_revision="empty";s.complete=true;s.attachment_state_confirmed=true;
     s.joints.name={"arm"};s.joints.position={0.};s.joint_source_stamps={s.header.stamp};s.joint_position_error_bounds={.003};
     s.physical_footprint=square(.3F);s.reserved_footprint=square(.4F);s.height_m=1.7;
+    s.height_profile_revision=astribot_s1_robot_geometry::sha256("unit-height-profile");s.ground_in_base_m=-.095;
+    const std::vector<double> edges{-.045,.155,.585,1.085,1.535,2.205};
+    for(std::size_t i=1;i<edges.size();++i) {
+      astribot_navigation_msgs::msg::EnvelopeSlice layer;layer.z_min_m=edges[i-1];layer.z_max_m=edges[i];
+      if(i!=3)layer.footprint=s.reserved_footprint;
+      s.height_slices.push_back(layer);
+    }
     FixedEnvelopeCore::Hold h;h.header.stamp=s.header.stamp;h.owner_id="task";h.hold_id="hold";
     h.attachment_revision="empty";h.hold_confirmed=true;h.lease_s=.3;
     FixedEnvelopeCore::Request r;r.request_id="request";r.hold_id="hold";r.geometry_sequence=1;
@@ -52,22 +60,32 @@ int main(int argc,char** argv) {
     c.state(s);c.hold(h);check(!c.propose(r,now,true).navigation_allowed,"proposal requires all consumers");
     FixedEnvelopeCore::Ack a;a.coordinator_session_id=c.session();a.envelope_epoch=c.epoch();
     a.installed_geometry_hash=c.output()->installed_geometry_hash;a.applied=true;a.header.stamp=fixed_stamp(now);
-    for(const auto* name:{"controller","global_costmap","local_costmap","planner","policy","protection"}) {
+    a.consumer_id="protection";c.acknowledge(a,now);
+    check(!c.tick(now)->navigation_allowed && !c.acknowledgements().count("protection"),"legacy protection ACK has no authorization role");
+    for(const auto* name:{"global_costmap","local_costmap","planner","policy"}) {
       a.consumer_id=name;c.acknowledge(a,now);
     }
-    check(c.tick(now)->navigation_allowed,"all current evidence must grant");
+    check(!c.tick(now)->navigation_allowed && c.output()->reason=="WAITING_FOR:controller","missing controller must still deny");
+    a.consumer_id="protection";c.acknowledge(a,now);
+    check(!c.tick(now)->navigation_allowed,"legacy protection cannot replace the controller ACK");
+    a.consumer_id="controller";c.acknowledge(a,now);
+    check(c.tick(now)->navigation_allowed && c.acknowledgements().size()==5,"five current geometry consumers must grant");
+    a.consumer_id="protection";a.applied=false;c.acknowledge(a,now);
+    check(c.tick(now)->navigation_allowed && !c.acknowledgements().count("protection"),"legacy protection negative ACK has no revocation role");
+    a.applied=true;
     a.consumer_id="planner";a.header.stamp=fixed_stamp(now+1);c.acknowledge(a,now);
-    check(c.acknowledgements().at("planner")==now,"future ACK must not extend evidence");
+    check(c.acknowledgements().at("planner")==now+1,"future ACK is latest positive evidence");
     a.applied=false;c.acknowledge(a,now);
     check(!c.tick(now)->navigation_allowed,"negative future ACK revokes immediately");
     a.applied=true;a.header.stamp=fixed_stamp(now+2);c.acknowledge(a,now+2);
     check(c.tick(now+2)->navigation_allowed,"post-revocation positive ACK restores only unlatched gate");
-    check(!c.tick(now+300000000LL)->navigation_allowed,"source deadline is exclusive");
-    check(c.fault()=="GEOMETRY_EXPIRED","heartbeat cannot renew source lease");
-    s.sequence=2;s.header.stamp=fixed_stamp(now+300000000LL);s.joint_source_stamps={s.header.stamp};
-    s.valid_until=fixed_stamp(now+600000000LL);h.header.stamp=s.header.stamp;c.state(s);c.hold(h);
-    check(!c.tick(now+300000000LL)->navigation_allowed,"expired grant requires a new proposal");
-    c.tick(now-1);check(c.fault()=="CLOCK_RESET","clock reversal revokes geometry commitment");
+    check(c.tick(now+300000000LL)->navigation_allowed,"positive deadline does not expire evidence");
+    check(c.tick(now+90000000000LL)->navigation_allowed,"latest geometry hold and ACK remain valid without age policy");
+    check(c.tick(now-1)->navigation_allowed,"local clock reversal does not revoke geometry commitment");
+    a.header.stamp=fixed_stamp(now+1);a.applied=false;c.acknowledge(a,now);
+    check(c.tick(now)->navigation_allowed,"out-of-order negative cannot replace newer positive ACK");
+    h.header.stamp=fixed_stamp(now+3);h.hold_confirmed=false;c.hold(h);
+    check(!c.tick(now)->navigation_allowed&&c.fault()=="ARM_HOLD_UNCONFIRMED","explicit hold revocation remains binding");
     std::cout<<"fixed envelope authority and source lease invariants passed\n";return 0;
   } catch(const std::exception& e) {std::cerr<<e.what()<<'\n';return 1;}
 }

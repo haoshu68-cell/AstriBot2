@@ -1,0 +1,270 @@
+{
+  "scope": "sampled camera health; no continuous-time or obstacle coverage proof",
+  "scenario": "exclusive_voxel_slam_async_cuda",
+  "duration_wall_sec": 600.0000936949982,
+  "warmup_sec": 2.0,
+  "cameras": {
+    "head_rgbd": {
+      "health_samples": 11957,
+      "states": {
+        "OK": 11956,
+        "STALE": 1
+      },
+      "invalid_samples": 1,
+      "max_health_gap_wall_sec": 0.26770501300052274,
+      "age_ros_sec": {
+        "p50": 0.048,
+        "p95": 0.07,
+        "p99": 0.076,
+        "max": 0.1
+      },
+      "source_epochs": [
+        "gazebo_camera:22327665409985:4267483663"
+      ],
+      "first_invalid": [
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "gazebo_camera:22327665409985:4267483663",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.4118078190004,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        }
+      ],
+      "exact_stamp_groups": 11891,
+      "cloud_messages": 11893,
+      "passed_sampled_freshness": false
+    },
+    "torso_rgbd": {
+      "health_samples": 11955,
+      "states": {
+        "OK": 11953,
+        "STALE": 2
+      },
+      "invalid_samples": 2,
+      "max_health_gap_wall_sec": 0.37764065499868593,
+      "age_ros_sec": {
+        "p50": 0.034,
+        "p95": 0.056,
+        "p99": 0.059000000000000004,
+        "max": 0.076
+      },
+      "source_epochs": [
+        "gazebo_camera:22327659457553:4253405895"
+      ],
+      "first_invalid": [
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "gazebo_camera:22327659457553:4253405895",
+          "age_sec": 0.01,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.41189036500145,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_torso_link_4/torso_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298050000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "gazebo_camera:22327659457553:4253405895",
+          "age_sec": 0.053000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.43143810699985,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_torso_link_4/torso_rgbd_sensor",
+          "header_stamp_ns": 298103000000,
+          "capture_stamp_ns": 298050000000
+        }
+      ],
+      "exact_stamp_groups": 11875,
+      "cloud_messages": 11893,
+      "passed_sampled_freshness": false
+    },
+    "left_wrist_rgbd": {
+      "health_samples": 23059,
+      "states": {
+        "OK": 23053,
+        "STALE": 6
+      },
+      "invalid_samples": 6,
+      "max_health_gap_wall_sec": 0.059954926000500564,
+      "age_ros_sec": {
+        "p50": 0.04,
+        "p95": 0.060000000000000005,
+        "p99": 0.064,
+        "max": 0.1
+      },
+      "source_epochs": [
+        "rgbd_pipeline:22443720790965:1535283026:session:22443760810456:1970670682:3:active"
+      ],
+      "first_invalid": [
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22443720790965:1535283026:session:22443760810456:1970670682:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.29037399599838,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_left_link_7/left_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22443720790965:1535283026:session:22443760810456:1970670682:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.30064144800053,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_left_link_7/left_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22443720790965:1535283026:session:22443760810456:1970670682:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.35031416399943,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_left_link_7/left_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22443720790965:1535283026:session:22443760810456:1970670682:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.3506591410005,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_left_link_7/left_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22443720790965:1535283026:session:22443760810456:1970670682:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.410614067001,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_left_link_7/left_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        }
+      ],
+      "exact_stamp_groups": 11876,
+      "cloud_messages": 11890,
+      "passed_sampled_freshness": false
+    },
+    "right_wrist_rgbd": {
+      "health_samples": 23056,
+      "states": {
+        "OK": 23052,
+        "STALE": 4
+      },
+      "invalid_samples": 4,
+      "max_health_gap_wall_sec": 0.05516982100016321,
+      "age_ros_sec": {
+        "p50": 0.044000000000000004,
+        "p95": 0.065,
+        "p99": 0.07,
+        "max": 0.1
+      },
+      "source_epochs": [
+        "rgbd_pipeline:22444080138570:2724846519:session:22443764470688:2093742174:3:active"
+      ],
+      "first_invalid": [
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22444080138570:2724846519:session:22443764470688:2093742174:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.30664326500118,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_right_link_7/right_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22444080138570:2724846519:session:22443764470688:2093742174:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.31069034499887,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_right_link_7/right_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22444080138570:2724846519:session:22443764470688:2093742174:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.36064663499928,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_right_link_7/right_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        },
+        {
+          "valid": false,
+          "state": "STALE",
+          "source_epoch": "rgbd_pipeline:22444080138570:2724846519:session:22443764470688:2093742174:3:active",
+          "age_sec": 0.060000000000000005,
+          "frequency_hz": 20.0,
+          "max_interval_sec": 0.05,
+          "reason": "CAMERA_STALE",
+          "wall_elapsed": 177.36660400899927,
+          "calibration_revision": 2026092101,
+          "frame_id": "astribot_s1/astribot_arm_right_link_7/right_wrist_rgbd_sensor",
+          "header_stamp_ns": 298060000000,
+          "capture_stamp_ns": 298000000000
+        }
+      ],
+      "exact_stamp_groups": 11876,
+      "cloud_messages": 11893,
+      "passed_sampled_freshness": false
+    }
+  },
+  "capture_completed": true,
+  "passed_sampled_freshness": false
+}

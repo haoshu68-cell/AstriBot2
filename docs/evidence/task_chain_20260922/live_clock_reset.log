@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/verify_live_clock_reset.py", line 38, in <module>
+    assert wait_until(lambda:len(health)==2 and all(h['valid'] and h['epoch']!=old[c] for c,h in health.items()),15),'fresh epochs did not recover'
+AssertionError: fresh epochs did not recover

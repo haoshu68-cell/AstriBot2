@@ -1,0 +1,49 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 145996,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_c94f2e1021/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/green/test_qos_and_tf_nonfinite_z/python_params.yaml",
+        "-r",
+        "/coupling_c94f2e1021/input:=/coupling_c94f2e1021/input_remapped",
+        "-r",
+        "/coupling_c94f2e1021/python/output:=/coupling_c94f2e1021/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 145997,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_c94f2e1021/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/green/test_qos_and_tf_nonfinite_z/cpp_params.yaml",
+        "-r",
+        "/coupling_c94f2e1021/input:=/coupling_c94f2e1021/input_remapped",
+        "-r",
+        "/coupling_c94f2e1021/cpp/output:=/coupling_c94f2e1021/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 0,
+    "cpp": 0
+  }
+}

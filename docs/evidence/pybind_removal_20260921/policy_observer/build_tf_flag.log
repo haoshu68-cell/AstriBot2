@@ -1,0 +1,50 @@
+[  4%] Building CXX object CMakeFiles/navigation_math.dir/src/navigation_math.cpp.o
+[  8%] Building CXX object CMakeFiles/policy_contracts.dir/src/policy_contracts.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp: In function ‘std::vector<double> astribot::navigation::scan_coverage(const std::vector<double>&, double, double, double, double, double)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp:304:69: warning: suggest parentheses around ‘&&’ within ‘||’ [-Wparentheses]
+  304 |         (std::isfinite(ranges[index]) && range_min <= ranges[index] &&
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+  305 |              ranges[index] <= range_max || ranges[index] == INFINITY);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~                              
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp: In constructor ‘astribot::navigation::policy::Decision::Decision(std::string, std::string, astribot::navigation::policy::Version, astribot::navigation::policy::Stamp, astribot::navigation::policy::Stamp, astribot::navigation::policy::Motion, astribot::navigation::policy::Planning, astribot::navigation::policy::Trigger, astribot::navigation::policy::MotionLimits, std::string, std::optional<std::__cxx11::basic_string<char> >, std::optional<long int>)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp:160:62: warning: comparison of integer expressions of different signedness: ‘const long int’ and ‘const uint64_t’ {aka ‘const long unsigned int’} [-Wsign-compare]
+  160 |     require(committed_path_revision&&*committed_path_revision==version.path_revision,"committed_path_revision",ErrorCode::VERSION_MISMATCH);
+      |                                      ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+[ 12%] Linking CXX static library libpolicy_contracts.a
+[ 12%] Built target policy_contracts
+[ 20%] Built target policy_profile
+[ 24%] Building CXX object CMakeFiles/policy_fusion.dir/src/policy_fusion.cpp.o
+[ 28%] Building CXX object CMakeFiles/navigation_math.dir/src/cmd_vel_body_to_world_core.cpp.o
+[ 32%] Linking CXX static library libnavigation_math.a
+[ 32%] Built target navigation_math
+Consolidate compiler generated dependencies of target policy_envelope
+[ 36%] Building CXX object CMakeFiles/policy_envelope.dir/src/policy_envelope.cpp.o
+[ 40%] Linking CXX static library libpolicy_fusion.a
+[ 40%] Built target policy_fusion
+Consolidate compiler generated dependencies of target policy_observation_adapters
+[ 44%] Building CXX object CMakeFiles/policy_observation_adapters.dir/src/policy_observation_adapters.cpp.o
+[ 48%] Linking CXX static library libpolicy_envelope.a
+[ 48%] Built target policy_envelope
+[ 52%] Building CXX object CMakeFiles/policy_observer_core.dir/src/policy_observer_core.cpp.o
+[ 56%] Linking CXX static library libpolicy_observer_core.a
+[ 56%] Built target policy_observer_core
+Consolidate compiler generated dependencies of target policy_health
+[ 60%] Building CXX object CMakeFiles/policy_health.dir/src/policy_health.cpp.o
+[ 64%] Linking CXX static library libpolicy_health.a
+[ 64%] Built target policy_health
+[ 68%] Building CXX object CMakeFiles/policy_sweep.dir/src/policy_sweep.cpp.o
+[ 72%] Linking CXX static library libpolicy_sweep.a
+[ 72%] Built target policy_sweep
+[ 76%] Building CXX object CMakeFiles/policy_risk.dir/src/policy_risk.cpp.o
+[ 80%] Linking CXX static library libpolicy_risk.a
+[ 80%] Built target policy_risk
+[ 84%] Linking CXX static library libpolicy_observation_adapters.a
+[ 84%] Built target policy_observation_adapters
+Consolidate compiler generated dependencies of target policy_observer_runtime
+[ 88%] Building CXX object CMakeFiles/policy_observer_runtime.dir/src/policy_observer_node.cpp.o
+[ 92%] Linking CXX static library libpolicy_observer_runtime.a
+[ 92%] Built target policy_observer_runtime
+Consolidate compiler generated dependencies of target policy_observer_cpp
+[ 96%] Building CXX object CMakeFiles/policy_observer_cpp.dir/src/policy_observer_main.cpp.o
+[100%] Linking CXX executable policy_observer_cpp
+[100%] Built target policy_observer_cpp

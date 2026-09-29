@@ -1,0 +1,399 @@
+{
+  "schema": "astribot.reference_camera_extrinsics/1",
+  "status": "provisional_reference",
+  "revision": 2026092101,
+  "scope": "simulation_only_pending_complete_calibration",
+  "definition": "p_parent = T_parent_optical * p_optical; metres; optical x right,y down,z forward",
+  "source_config": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_description/config/camera_mounts_reference_sim.yaml",
+  "wrist_assumption": "Both hands provisionally use negative gripper-base Y mounting face; side not identified by photos alone",
+  "cameras": {
+    "head_rgbd": {
+      "parent_frame": "astribot_head_link_2",
+      "child_frame": "head_rgbd_camera_optical_frame",
+      "translation_m": [
+        0.107328,
+        -0.22,
+        0.0
+      ],
+      "quaternion_xyzw": [
+        -1.7431527984210492e-32,
+        0.7071067811865475,
+        -1.570092458683775e-16,
+        0.7071067811865477
+      ],
+      "T_parent_optical_row_major": [
+        [
+          2.220446049250313e-16,
+          2.220446049250313e-16,
+          1.0,
+          0.107328
+        ],
+        [
+          -2.220446049250313e-16,
+          1.0,
+          -2.2204460492503126e-16,
+          -0.22
+        ],
+        [
+          -1.0,
+          -2.220446049250313e-16,
+          2.2204460492503136e-16,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "mount_xyz_m": [
+        0.107328,
+        -0.22,
+        0.0
+      ],
+      "mount_rpy_rad": [
+        1.5707963267948966,
+        0.0,
+        0.0
+      ]
+    },
+    "head_stereo_left": {
+      "parent_frame": "astribot_head_link_2",
+      "child_frame": "head_stereo_left_camera_optical_frame",
+      "translation_m": [
+        0.115197,
+        -0.15,
+        0.03
+      ],
+      "quaternion_xyzw": [
+        -1.7431527984210492e-32,
+        0.7071067811865475,
+        -1.570092458683775e-16,
+        0.7071067811865477
+      ],
+      "T_parent_optical_row_major": [
+        [
+          2.220446049250313e-16,
+          2.220446049250313e-16,
+          1.0,
+          0.115197
+        ],
+        [
+          -2.220446049250313e-16,
+          1.0,
+          -2.2204460492503126e-16,
+          -0.15
+        ],
+        [
+          -1.0,
+          -2.220446049250313e-16,
+          2.2204460492503136e-16,
+          0.03
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "mount_xyz_m": [
+        0.115197,
+        -0.15,
+        0.03
+      ],
+      "mount_rpy_rad": [
+        1.5707963267948966,
+        0.0,
+        0.0
+      ]
+    },
+    "head_stereo_right": {
+      "parent_frame": "astribot_head_link_2",
+      "child_frame": "head_stereo_right_camera_optical_frame",
+      "translation_m": [
+        0.115197,
+        -0.15,
+        -0.03
+      ],
+      "quaternion_xyzw": [
+        -1.7431527984210492e-32,
+        0.7071067811865475,
+        -1.570092458683775e-16,
+        0.7071067811865477
+      ],
+      "T_parent_optical_row_major": [
+        [
+          2.220446049250313e-16,
+          2.220446049250313e-16,
+          1.0,
+          0.115197
+        ],
+        [
+          -2.220446049250313e-16,
+          1.0,
+          -2.2204460492503126e-16,
+          -0.15
+        ],
+        [
+          -1.0,
+          -2.220446049250313e-16,
+          2.2204460492503136e-16,
+          -0.03
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "mount_xyz_m": [
+        0.115197,
+        -0.15,
+        -0.03
+      ],
+      "mount_rpy_rad": [
+        1.5707963267948966,
+        0.0,
+        0.0
+      ]
+    },
+    "torso_rgbd": {
+      "parent_frame": "astribot_torso_link_4",
+      "child_frame": "torso_rgbd_camera_optical_frame",
+      "translation_m": [
+        0.10439,
+        0.0,
+        0.12
+      ],
+      "quaternion_xyzw": [
+        -0.5,
+        0.4999999999999999,
+        -0.5,
+        0.5000000000000001
+      ],
+      "T_parent_optical_row_major": [
+        [
+          2.220446049250313e-16,
+          2.220446049250313e-16,
+          1.0,
+          0.10439
+        ],
+        [
+          -1.0,
+          0.0,
+          2.220446049250313e-16,
+          0.0
+        ],
+        [
+          0.0,
+          -1.0,
+          2.220446049250313e-16,
+          0.12
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "mount_xyz_m": [
+        0.10439,
+        0.0,
+        0.12
+      ],
+      "mount_rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "left_wrist_rgbd": {
+      "parent_frame": "astribot_arm_left_link_7",
+      "child_frame": "left_wrist_rgbd_camera_optical_frame",
+      "translation_m": [
+        0.006,
+        -0.088,
+        -0.06
+      ],
+      "quaternion_xyzw": [
+        0.7071067811865477,
+        4.3297802811774677e-17,
+        -4.329780281177467e-17,
+        0.7071067811865475
+      ],
+      "T_parent_optical_row_major": [
+        [
+          1.0,
+          1.2246467991473537e-16,
+          -2.719262146893782e-32,
+          0.006
+        ],
+        [
+          0.0,
+          -2.2204460492503128e-16,
+          -1.0,
+          -0.088
+        ],
+        [
+          -1.2246467991473532e-16,
+          1.0,
+          -2.2204460492503128e-16,
+          -0.06
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "mount_xyz_m": [
+        0.006,
+        -0.088,
+        -0.06
+      ],
+      "mount_rpy_rad": [
+        3.141592653589793,
+        0.0,
+        -1.5707963267948966
+      ],
+      "equivalent_gripper_base": {
+        "parent_frame": "astribot_gripper_left_base",
+        "T_parent_optical_row_major": [
+          [
+            1.0000000000000002,
+            1.224646799147354e-16,
+            -2.7192621468937827e-32,
+            8.673617379884035e-19
+          ],
+          [
+            -1.2246467991390916e-16,
+            0.9999999999932538,
+            3.6732051030829997e-06,
+            -0.0599998530713911
+          ],
+          [
+            4.498378872374246e-22,
+            -3.673205103083e-06,
+            0.9999999999932538,
+            0.040000220392036344
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation_m": [
+          8.673617379884035e-19,
+          -0.0599998530713911,
+          0.040000220392036344
+        ],
+        "quaternion_xyzw": [
+          -1.8366025515445977e-06,
+          -1.12459471816344e-22,
+          -6.12323399572644e-17,
+          0.9999999999983135
+        ]
+      }
+    },
+    "right_wrist_rgbd": {
+      "parent_frame": "astribot_arm_right_link_7",
+      "child_frame": "right_wrist_rgbd_camera_optical_frame",
+      "translation_m": [
+        0.006,
+        -0.088,
+        -0.06
+      ],
+      "quaternion_xyzw": [
+        0.7071067811865477,
+        4.3297802811774677e-17,
+        -4.329780281177467e-17,
+        0.7071067811865475
+      ],
+      "T_parent_optical_row_major": [
+        [
+          1.0,
+          1.2246467991473537e-16,
+          -2.719262146893782e-32,
+          0.006
+        ],
+        [
+          0.0,
+          -2.2204460492503128e-16,
+          -1.0,
+          -0.088
+        ],
+        [
+          -1.2246467991473532e-16,
+          1.0,
+          -2.2204460492503128e-16,
+          -0.06
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "mount_xyz_m": [
+        0.006,
+        -0.088,
+        -0.06
+      ],
+      "mount_rpy_rad": [
+        3.141592653589793,
+        0.0,
+        -1.5707963267948966
+      ],
+      "equivalent_gripper_base": {
+        "parent_frame": "astribot_gripper_right_base",
+        "T_parent_optical_row_major": [
+          [
+            1.0000000000000002,
+            1.224646799147354e-16,
+            -2.7192621468937827e-32,
+            8.673617379884035e-19
+          ],
+          [
+            -1.2246467991390916e-16,
+            0.9999999999932538,
+            3.6732051030829997e-06,
+            -0.0599998530713911
+          ],
+          [
+            4.498378872374246e-22,
+            -3.673205103083e-06,
+            0.9999999999932538,
+            0.040000220392036344
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation_m": [
+          8.673617379884035e-19,
+          -0.0599998530713911,
+          0.040000220392036344
+        ],
+        "quaternion_xyzw": [
+          -1.8366025515445977e-06,
+          -1.12459471816344e-22,
+          -6.12323399572644e-17,
+          0.9999999999983135
+        ]
+      }
+    }
+  },
+  "source_config_sha256": "56fb2e4ea13f631e04353e0441bd4567f99992f241db91d4812b0a8053220966",
+  "source_photo_manifest": "runs/camera_reference_20260921/reference_photos/manifest.json"
+}

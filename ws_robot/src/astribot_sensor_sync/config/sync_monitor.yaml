@@ -1,0 +1,11 @@
+sensor_sync_monitor:
+  ros__parameters:
+    allow_simulated: false
+    reference_clock_epoch: UNCONFIGURED
+    max_trigger_skew_ns: 2000000
+    max_clock_uncertainty_ns: 1000000
+    max_sample_age_ns: 250000000
+    max_receive_age_ns: 250000000
+    reorder_wait_ns: 50000000
+    sources: [head_rgbd/color, head_rgbd/depth, head_stereo/left, head_stereo/right, torso_rgbd/color, torso_rgbd/depth, left_wrist_rgbd/color, left_wrist_rgbd/depth, right_wrist_rgbd/color, right_wrist_rgbd/depth, lidar_front, lidar_back, imu]
+    clock_only_sources: [lidar_front, lidar_back, imu]

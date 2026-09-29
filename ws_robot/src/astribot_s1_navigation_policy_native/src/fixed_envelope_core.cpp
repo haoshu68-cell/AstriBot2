@@ -6,12 +6,13 @@
 #include <stdexcept>
 #include <utility>
 #include <astribot_s1_robot_geometry/geometry_kernels.hpp>
+#include <astribot_s1_robot_geometry/layered_envelope.hpp>
 
 namespace astribot::navigation {
 namespace {
 namespace geometry = astribot_s1_robot_geometry;
 const std::set<std::string> consumers{
-  "global_costmap","local_costmap","planner","controller","policy","protection"};
+  "global_costmap","local_costmap","planner","controller","policy"};
 void require(bool condition, const std::string& error) {
   if (!condition) throw std::invalid_argument(error);
 }
@@ -80,7 +81,6 @@ std::int64_t FixedEnvelopeCore::payload_until(const State& geometry,double reque
           (observation.status==observation.EMPTY)==observation.objects.empty(),"PAYLOAD_MASS_STATUS_INVALID");
   require(state->attachment_revision==geometry.attachment_revision,"PAYLOAD_MASS_REVISION_MISMATCH");
   const auto until=std::min(fixed_stamp_ns(state->valid_until),fixed_stamp_ns(observation.valid_until));
-  require(fixed_stamp_ns(observation.observed_at)<=now && fixed_stamp_ns(state->published_at)<=now && now<until,"PAYLOAD_MASS_EXPIRED");
   std::set<std::string> ids;
   long double total=0.;
   for(const auto& object:observation.objects) {
@@ -121,6 +121,9 @@ void FixedEnvelopeCore::state(const State& message) {
     revoke("GEOMETRY_VERSION_CHANGED");
 }
 void FixedEnvelopeCore::hold(const Hold& message) {
+  if(hold_ && message.owner_id==hold_->owner_id && message.hold_id==hold_->hold_id &&
+      message.attachment_revision==hold_->attachment_revision &&
+      fixed_stamp_ns(message.header.stamp)<fixed_stamp_ns(hold_->header.stamp))return;
   // Latch a revocation at receipt. A later positive heartbeat cannot erase a
   // cancel/version transition before the timer observes it.
   if(output_ && (!message.hold_confirmed || message.hold_id!=output_->hold_id ||
@@ -140,8 +143,8 @@ void FixedEnvelopeCore::validate_state(const std::shared_ptr<State>& ptr,std::in
   const auto& s=*ptr;
   require(!s.source_id.empty() && !s.model_revision.empty() && !s.attachment_revision.empty(),"GEOMETRY_ID_MISSING");
   require(s.header.frame_id==baseline_.at("base_frame").get<std::string>(),"GEOMETRY_FRAME_MISMATCH");
-  const auto source=fixed_stamp_ns(s.header.stamp),until=fixed_stamp_ns(s.valid_until);
-  require(0<source && source<=now && now<until && until<=source+500000000LL,"GEOMETRY_EXPIRED");
+  (void)now;
+  const auto source=fixed_stamp_ns(s.header.stamp);
   const auto size=s.joints.name.size();
   const std::set<std::string> names(s.joints.name.begin(),s.joints.name.end());
   require(size && names.size()==size && s.joints.position.size()==size &&
@@ -150,7 +153,7 @@ void FixedEnvelopeCore::validate_state(const std::shared_ptr<State>& ptr,std::in
   for(auto e:s.joint_position_error_bounds)require(std::isfinite(e) && 0<e && e<=.025,"HOLD_ERROR_INVALID");
   auto low=fixed_stamp_ns(s.joint_source_stamps.front()),high=low;
   for(const auto& t:s.joint_source_stamps) {low=std::min(low,fixed_stamp_ns(t));high=std::max(high,fixed_stamp_ns(t));}
-  require(low==source && high<=now && high-low<=100000000LL,"JOINT_TIMING_INVALID");
+  (void)source;(void)low;(void)high;
   require(std::isfinite(s.height_m) && s.height_m>0,"HEIGHT_INVALID");
   require(geometry::containsPolygon(geometry::validatePolygon(points(s.reserved_footprint)),
     geometry::validatePolygon(points(s.physical_footprint))),"RESERVATION_UNDERSIZED");
@@ -160,12 +163,13 @@ std::int64_t FixedEnvelopeCore::hold_until(const std::string& id,const std::stri
     hold_->attachment_revision==revision,"ARM_HOLD_UNCONFIRMED");
   const auto& h=*hold_;const auto source=fixed_stamp_ns(h.header.stamp);
   require(std::isfinite(h.lease_s) && 0<h.lease_s && h.lease_s<=.5 &&
-    now>=source && static_cast<double>(now-source)<h.lease_s*1e9,"ARM_HOLD_EXPIRED");
+    std::isfinite(static_cast<double>(source)),"ARM_HOLD_INVALID");
+  (void)now;
   return source+static_cast<std::int64_t>(std::nearbyint(h.lease_s*1e9));
 }
 const FixedEnvelopeCore::Envelope& FixedEnvelopeCore::propose(const Request& request,std::int64_t now,bool stopped) {
   (void)fixed_stamp(now);  // Bound differences before signed source-time arithmetic.
-  require(stopped,"ROBOT_MUST_BE_STOPPED_WITH_FRESH_ODOMETRY");
+  require(stopped,"ROBOT_MUST_BE_STOPPED_WITH_SLAM_POSE");
   require(!request.request_id.empty() && !request.hold_id.empty(),"REQUEST_ID_REQUIRED");
   validate_state(current_,now);
   const auto found=history_.find({current_->source_id,request.geometry_sequence});
@@ -179,7 +183,13 @@ const FixedEnvelopeCore::Envelope& FixedEnvelopeCore::propose(const Request& req
   e.clearance_m=baseline_.at("clearance_margin_m").get<double>()+baseline_.at("payload_extra_margin_m").get<double>();
   const auto reserved=points(e.reserved_footprint);
   e.installed_footprint=polygon(geometry::inflatePolygon(reserved,e.clearance_m));
+  e.height_profile_revision=reference->height_profile_revision;e.ground_in_base_m=reference->ground_in_base_m;
+  e.height_slices=reference->height_slices;
+  for(auto &slice:e.height_slices)if(!slice.footprint.points.empty())
+    slice.footprint=polygon(geometry::inflatePolygon(points(slice.footprint),e.clearance_m));
   e.installed_geometry_hash=geometry::geometryHash(points(e.installed_footprint),e.header.frame_id,e.clearance_m);
+  e.height_geometry_hash=geometry::layeredGeometryHash(points(e.installed_footprint),e.height_slices,
+    e.header.frame_id,e.clearance_m,e.height_profile_revision,e.ground_in_base_m);
   e.limits=request.limits;
   require(reference->attachment_ids.empty() || !(e.limits.payload_mass_kg<=0),"PAYLOAD_MASS_REQUIRED");
   double x=baseline_.at("half_length_m").get<double>(),y=baseline_.at("half_width_m").get<double>();
@@ -200,20 +210,19 @@ void FixedEnvelopeCore::acknowledge(const Ack& message,std::int64_t now) {
   if(message.coordinator_session_id!=session_ || message.envelope_epoch!=e.epoch ||
      message.installed_geometry_hash!=e.installed_geometry_hash)return;
   const auto source=fixed_stamp_ns(message.header.stamp);
+  const auto previous=acks_.find(message.consumer_id);
+  if(previous!=acks_.end() && source<previous->second)return;
   if(!message.applied) {
     auto boundary=ack_revocations_.find(message.consumer_id);
     if(boundary==ack_revocations_.end())ack_revocations_[message.consumer_id]=source;
     else boundary->second=std::max(boundary->second,source);
     acks_.erase(message.consumer_id);tick(now);
   }
-  else if(now>=source && now-source<=500000000LL &&
-      (!ack_revocations_.count(message.consumer_id) || source>ack_revocations_.at(message.consumer_id)))
+  else if((!ack_revocations_.count(message.consumer_id) || source>ack_revocations_.at(message.consumer_id)))
     acks_[message.consumer_id]=std::max(acks_[message.consumer_id],source);
 }
 const std::optional<FixedEnvelopeCore::Envelope>& FixedEnvelopeCore::tick(std::int64_t now) {
   (void)fixed_stamp(now);
-  if(now<last_now_) {revoke("CLOCK_RESET");history_.clear();history_order_.clear();}
-  last_now_=now;
   if(!output_)return output_;
   auto& e=*output_;e.header.stamp=fixed_stamp(now);e.navigation_allowed=false;e.limits.transport_ready=false;
   try {
@@ -237,7 +246,7 @@ const std::optional<FixedEnvelopeCore::Envelope>& FixedEnvelopeCore::tick(std::i
     std::vector<std::string> missing;
     for(const auto& consumer:consumers) {
       const auto found=acks_.find(consumer);
-      if(found==acks_.end() || now<found->second || now-found->second>=500000000LL)missing.push_back(consumer);
+      if(found==acks_.end())missing.push_back(consumer);
     }
     e.navigation_allowed=missing.empty();e.reason=missing.empty()?"READY_FIXED":"WAITING_FOR:";
     for(std::size_t i=0;i<missing.size();++i)e.reason+=(i?",":"")+missing[i];

@@ -11,8 +11,94 @@
 #include "std_msgs/msg/bool.hpp"
 #include "astribot_s1_path_tracking/path_quality.hpp"
 #include "astribot_s1_path_tracking/corridor_route.hpp"
+#include "astribot_s1_path_tracking/envelope_evidence.hpp"
 
 namespace astribot_s1_path_tracking {
+void registerWorkstationApproach(BT::BehaviorTreeFactory & factory);
+class RequireNavigationEnvelope : public BT::DecoratorNode {
+  using Evidence=EnvelopeEvidence;
+  using Message=Evidence::Message;
+public:
+  RequireNavigationEnvelope(const std::string & name,const BT::NodeConfiguration & config)
+  :BT::DecoratorNode(name,config) {
+    node_=config.blackboard->get<rclcpp::Node::SharedPtr>("node");
+    if(!node_->has_parameter("navigation_geometry_mode"))node_->declare_parameter("navigation_geometry_mode","legacy");
+    const auto mode=node_->get_parameter("navigation_geometry_mode").as_string();
+    if(mode!="legacy" && mode!="fixed_v2")throw std::invalid_argument("invalid navigation_geometry_mode");
+    enabled_=mode=="fixed_v2";
+    if(!enabled_)return;
+    if(!node_->has_parameter("robot_base_frame"))node_->declare_parameter("robot_base_frame","astribot_torso_base");
+    base_=node_->get_parameter("robot_base_frame").as_string();
+    group_=node_->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive,false);
+    executor_.add_callback_group(group_,node_->get_node_base_interface());
+    rclcpp::SubscriptionOptions options;options.callback_group=group_;
+    subscription_=node_->create_subscription<Message>("/navigation/envelope_v2",10,
+      [this](Message::ConstSharedPtr message) {
+        const auto now=node_->now().nanoseconds();const auto wall=Evidence::Wall::now();
+        // accept() clears a conflicting hash at the same epoch. Retain the
+        // identity diagnosis before that sample disappears.
+        if(bound_ && failure_.empty() && message->coordinator_session_id==bound_->coordinator_session_id &&
+          message->epoch==bound_->epoch && message->installed_geometry_hash!=bound_->installed_geometry_hash)
+          failure_="NAVIGATION_ENVELOPE_CHANGED";
+        evidence_.accept(message,now,wall);
+        // Drain queued heartbeats before judging freshness. An expired older
+        // positive sample must not hide the current one. Authority changes and
+        // explicit revocations still latch immediately within the same batch.
+        if(bound_ && failure_.empty()) {
+          const auto sample=evidence_.sample(now);
+          if(sample.message && !Evidence::sameExecution(*bound_,*sample.message))
+            failure_="NAVIGATION_ENVELOPE_CHANGED";
+          else if(sample.message &&
+            (!sample.message->navigation_allowed || !sample.message->limits.transport_ready))
+            failure_="ENVELOPE_REVOKED: "+sample.message->reason;
+          else {
+            const auto reason=Evidence::navigationReason(sample,base_,now,wall);
+            if(reason!="ENVELOPE_ROS_STALE" && reason!="ENVELOPE_WALL_STALE" &&
+              reason!="ENVELOPE_EXPIRED")failure_=reason;
+          }
+        }
+      },options);
+  }
+  static BT::PortsList providedPorts() {return {BT::OutputPort<std::string>("reason")};}
+  void halt() override {
+    bound_.reset();failure_.clear();
+    // Keep the published failure reason available after Nav2 halts the tree.
+    BT::DecoratorNode::halt();
+  }
+  BT::NodeStatus tick() override {
+    const bool report_failure=status()!=BT::NodeStatus::FAILURE;
+    setStatus(BT::NodeStatus::RUNNING);
+    if(enabled_) {
+      // spin_some takes at most one message from this subscription per tick.
+      // The bounded exhaustive pass consumes the idle-time depth-10 backlog.
+      executor_.spin_all(std::chrono::milliseconds(1));
+      const auto now=node_->now().nanoseconds();const auto wall=Evidence::Wall::now();
+      const auto sample=evidence_.sample(now);check(sample,now,wall);
+      if(!failure_.empty()) {
+        setOutput("reason",failure_);
+        if(report_failure)RCLCPP_ERROR(node_->get_logger(),"NAVIGATION_ENVELOPE_FAILURE: %s",failure_.c_str());
+        resetChild();return BT::NodeStatus::FAILURE;
+      }
+      if(!bound_) {bound_=sample.message;setOutput("reason",std::string{});}
+    }
+    const auto result=child_node_->executeTick();
+    if(result!=BT::NodeStatus::RUNNING) {bound_.reset();resetChild();}
+    return result;
+  }
+private:
+  void check(const Evidence::Sample & sample,int64_t now,Evidence::Wall::time_point wall) {
+    if(!failure_.empty())return;
+    if(bound_ && sample.message && !Evidence::sameExecution(*bound_,*sample.message))
+      failure_="NAVIGATION_ENVELOPE_CHANGED";
+    else failure_=Evidence::navigationReason(sample,base_,now,wall);
+  }
+  bool enabled_{false};std::string base_,failure_;
+  rclcpp::Node::SharedPtr node_;
+  rclcpp::CallbackGroup::SharedPtr group_;
+  rclcpp::executors::SingleThreadedExecutor executor_;
+  rclcpp::Subscription<Message>::SharedPtr subscription_;
+  Evidence evidence_;Message::ConstSharedPtr bound_;
+};
 class RequireCorridorRoute : public BT::ConditionNode {
 public:
   RequireCorridorRoute(const std::string & name,const BT::NodeConfiguration & config):BT::ConditionNode(name,config) {}
@@ -48,20 +134,28 @@ public:
   PolicyExecution(const std::string & name,const BT::NodeConfiguration & config):BT::DecoratorNode(name,config) {}
   static BT::PortsList providedPorts() {return {BT::OutputPort<std::string>("session"),BT::InputPort<geometry_msgs::msg::PoseStamped>("goal"),
     BT::InputPort<std::vector<geometry_msgs::msg::PoseStamped>>("goals")};}
+  void halt() override {
+    // Nav2's haltAllActions does not reset the root decorator's status.
+    // Execution identity must therefore follow explicit lifecycle events.
+    new_execution_=true;
+    BT::DecoratorNode::halt();
+  }
   BT::NodeStatus tick() override {
     geometry_msgs::msg::PoseStamped goal;std::vector<geometry_msgs::msg::PoseStamped> goals;
     if(getInput("goal",goal)) {goals.push_back(goal);} else {getInput("goals",goals);}
-    if(status()==BT::NodeStatus::IDLE || goals!=goals_) {
+    if(new_execution_ || goals!=goals_) {
+      new_execution_=false;
       goals_=goals;
       static std::atomic<uint64_t> serial{0};
       setOutput("session",std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+":"+std::to_string(++serial));
     }
     setStatus(BT::NodeStatus::RUNNING);
     const auto result=child_node_->executeTick();
-    if(result!=BT::NodeStatus::RUNNING) {resetChild();}
+    if(result!=BT::NodeStatus::RUNNING) {new_execution_=true;resetChild();}
     return result;
   }
 private:
+  bool new_execution_{true};
   std::vector<geometry_msgs::msg::PoseStamped> goals_;
 };
 class KeepSafePath : public BT::ConditionNode {
@@ -189,6 +283,8 @@ private:
 };
 }
 BT_REGISTER_NODES(factory) {
+  astribot_s1_path_tracking::registerWorkstationApproach(factory);
+  factory.registerNodeType<astribot_s1_path_tracking::RequireNavigationEnvelope>("RequireNavigationEnvelope");
   factory.registerNodeType<astribot_s1_path_tracking::RequireCorridorRoute>("RequireCorridorRoute");
   factory.registerNodeType<astribot_s1_path_tracking::PolicyExecution>("PolicyExecution");
   factory.registerNodeType<astribot_s1_path_tracking::KeepSafePath>("KeepSafePath");

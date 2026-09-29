@@ -1,0 +1,131 @@
+{
+  "scene": "scene33",
+  "domain": 58,
+  "identity": {
+    "task_id": "fixed_transfer_6b44552c9c9f4b79b578d46a8859c7f3",
+    "context_id": "8422b9709e7a4a95bd0f898c904c4420",
+    "goal_uuid": "d5cf11a757ed4ec7935ab472561b9dfe",
+    "lease_epoch": [
+      "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+      "4a0943f8-fcb6-4b45-a83b-b99cb8f32188"
+    ]
+  },
+  "outcome": {
+    "passed": false,
+    "error": "RuntimeError('RENEW_REJECTED:GEOMETRY_UNCONFIRMED')",
+    "parent_terminal": {
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "GEOMETRY_UNCONFIRMED",
+        "cleanup_reason": "",
+        "lease_id": "4a0943f8-fcb6-4b45-a83b-b99cb8f32188_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "1f8f7ccdf65b58b332e34c1f8321acb9106173f27d900b9e239756fd90ac7855"
+      }
+    },
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "resource_disposition": "RELEASE_CONFIRMED",
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 36,
+      "span_s": 0.7000000000000028,
+      "start_ros_s": 84.8,
+      "end_ros_s": 85.5,
+      "drift_m": 0.0,
+      "rotation_rad": 0.0,
+      "speed_mps": 0.0,
+      "angular_speed_radps": 0.0,
+      "command_max": 0.0,
+      "command_observed": true,
+      "fresh": true
+    }
+  },
+  "event_counts": {
+    "reserved": 1,
+    "navigation_revoked": 2,
+    "before_child_submission": 1,
+    "station_scene_submission": 1,
+    "station_scene_confirmed": 1,
+    "planner_submission": 1,
+    "planner_terminal": 1,
+    "child_submission": 6,
+    "child_trajectory_submission": 1,
+    "child_response": 6,
+    "stop_requested": 1,
+    "child_terminal": 6,
+    "result_release_pending": 1,
+    "resource_handoff_committed": 1
+  },
+  "journal_active_chain": {
+    "send_index": 8,
+    "response_index": 14,
+    "terminal_index": 22,
+    "sent": {
+      "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+      "controller": "arm_left_controller",
+      "joint_names": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7"
+      ],
+      "point_count": 400,
+      "sent_digest": "7005cb22571e35431e7b8dff4e7bfdb8b30f3329f91abbfb6ceb952baef15e75",
+      "stage_generation": 1,
+      "stage_id": "PREGRASP",
+      "stage_index": 0,
+      "transaction": ""
+    },
+    "response": {
+      "context": "8422b9709e7a4a95bd0f898c904c4420_op_1_PICK",
+      "controller": "arm_left_controller",
+      "joint_names": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7"
+      ],
+      "point_count": 400,
+      "sent_digest": "7005cb22571e35431e7b8dff4e7bfdb8b30f3329f91abbfb6ceb952baef15e75",
+      "stage_generation": 1,
+      "stage_id": "PREGRASP",
+      "stage_index": 0,
+      "transaction": "",
+      "uuid": "6ccc248c4102987d6c7b29595c0b3662"
+    },
+    "terminal": {
+      "controller": "arm_left_controller",
+      "result_code": 5,
+      "success": false,
+      "uuid": "6ccc248c4102987d6c7b29595c0b3662"
+    },
+    "send_response_metadata_equal": true
+  },
+  "suffix_handoff_status": "NOT_EXERCISED",
+  "stage_completion_status": "NO_STAGE_CONFIRMED",
+  "stack": {
+    "state": "stopped",
+    "remaining_owned_pids": []
+  },
+  "video": {
+    "owner_decode": {
+      "decoded_frames": 473,
+      "sidecar_rows": 473,
+      "metadata_frames": 473,
+      "passed": true
+    },
+    "m5_decoded": false,
+    "sidecar_contiguous": true
+  },
+  "used_verifier_sha256": "40e36820d4398e62d22c27f0426a9f3fea2db3f070e8cdf1955d259a0a393eb9",
+  "source_result_sha256": "f5ef75a6f9139b3aaf962ff499b89a6cbedddf566ec748fe93aeccb6d33e78d4"
+}

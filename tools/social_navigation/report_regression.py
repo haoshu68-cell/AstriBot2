@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from compare_empty_baseline import read_samples, source_time_samples
+from compare_empty_baseline import read_samples, source_time_samples, plan_paths, lateral_metrics
 from run_waypoint_route import metrics, measured_motion
 
 
@@ -36,17 +36,22 @@ def summarize(batches):
             nav_file = episode/'navigation/results.jsonl'
             if nav_file.is_file():
                 samples = read_samples(episode/'navigation/samples.csv')
+                paths = plan_paths(episode)
                 for line in nav_file.read_text().splitlines():
                     nav = json.loads(line)
                     selected = [s for s in samples if (s['cycle'], s['goal_index']) == (nav['cycle'], nav['index'])]
-                    quality = metrics(source_time_samples(selected)) if selected else {}
+                    sampled = source_time_samples(selected) if selected else []
+                    quality = metrics(sampled) if selected else {}
+                    lateral = lateral_metrics(sampled, paths)
                     actual = measured_motion(selected) if selected else {}
-                    goals.append(dict(index=nav['index'], target=nav['goal'], passed=nav['passed'],
+                    goals.append(dict(cycle=nav['cycle'], index=nav['index'], target=nav['goal'], passed=nav['passed'],
                         action_status=nav['action_status'], xy_m=nav['xy_m'], yaw_deg=nav['yaw_deg'],
                         follow_samples=quality.get('follow_samples', 0),
                         phase_coverage=quality.get('phase_coverage'),
                         unique_motion_samples=actual.get('unique_samples', 0),
-                        follow_lateral_p95_m=quality.get('cross_track_m', {}).get('p95'),
+                        follow_cross_track_p95_m=quality.get('cross_track_m', {}).get('p95'),
+                        follow_lateral_p95_m=lateral['distribution']['p95'],
+                        lateral_measurement=lateral,
                         follow_heading_p95_deg=quality.get('front_heading_error_deg', {}).get('p95'),
                         follow_actual_jerk_p95_m_s3=actual.get('jerk_m_s3', {}).get('p95')))
             expected_cancel = read(episode/'case.json').get('expected_task_outcome') == 'CANCELED'
@@ -71,6 +76,8 @@ def summarize(batches):
         canceled_episodes=sum(e['expected_cancellation'] for e in episodes),
         measurement=dict(position_source='simulation truth',
             path_quality='FOLLOW only; per-goal, at most 20 Hz by pose source timestamp',
+            cross_track='historical distance to clamped segment, including endpoint longitudinal residual',
+            lateral='normal component; exact cycle/goal/revision plan; unavailable if coverage incomplete',
             actual_jerk='original unique odometry source timestamps', elapsed_time_scored=False),
         boundary='Only completed recorded results. Unrecorded goals and canceled tasks are excluded from arrival counts; completed goals in a failed episode retain that episode failure. This report does not grant a stage or replace repeated A/B comparisons.')
 

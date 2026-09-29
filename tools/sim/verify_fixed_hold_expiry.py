@@ -41,6 +41,27 @@ class ValidationBackend(RosBackend):
     navigation_sim_timeout = None
     navigation_wall_watchdog = 300.
 
+    def check(self, ignore_cancel=False):
+        try:
+            return super().check(ignore_cancel=ignore_cancel)
+        except TaskFailure as error:
+            # Capture the guard's exact locals, not a later callback's envelope.
+            # This is validation evidence only and does not change admission.
+            trace=error.__traceback__
+            while trace:
+                values=trace.tb_frame.f_locals
+                if trace.tb_frame.f_code.co_name=='check' and 'e' in values:
+                    envelope=values['e'];observed=values.get('now')
+                    if envelope is not None:
+                        self.ledger.emit(self.ledger.stage,validation_event='ENVELOPE_GUARD_FAILURE',
+                            reason=str(error),guard_ros_s=observed,
+                            envelope_stamp_s=seconds(envelope.stamp),
+                            envelope_lease_s=envelope.lease_s,
+                            transport_ready=envelope.transport_ready,
+                            age_at_guard_s=observed-seconds(envelope.stamp))
+                trace=trace.tb_next
+            raise
+
     def future(self, future, timeout=20., checked=True):
         if not (checked and self.validation_navigation and self.navigation_sim_timeout is not None
                 and self.active is not None and future is self.active[1]):

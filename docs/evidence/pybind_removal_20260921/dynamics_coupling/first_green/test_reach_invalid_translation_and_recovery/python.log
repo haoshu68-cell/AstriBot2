@@ -1,0 +1,7 @@
+[INFO] [1789980769.155493962] [coupling_c0716a9ced.python.arm_chassis_speed_coupling_node]: arm_chassis_speed_coupling_node 已启动：订阅 /coupling_c0716a9ced/input(车体真正要下发的world系Twist) + /coupling_c0716a9ced/joints(双臂关节状态)，展开度量=水平伸展 0.420~0.886m(相对 coupling_c0716a9ced_base，监控1个连杆)，运动速率满量程2.00rad/s，算连续0~1.0限速系数(下限0.15)，平滑后缩放，发到 /coupling_c0716a9ced/python/output。/joint_states 超过0.5s未更新自动降级到固定0.30限速。
+Error:   TF_NAN_INPUT: Ignoring transform for child_frame_id "coupling_c0716a9ced_invalid" from authority "default_authority" because of a nan value in the transform (nan 0.000000 0.000000) (0.000000 0.000000 0.000000 1.000000)
+         at line 237 in ./src/buffer_core.cpp
+[WARN] [1789980769.306108669] [coupling_c0716a9ced.python.arm_chassis_speed_coupling_node]: 监控连杆的 TF 不完整或无效(coupling_c0716a9ced_invalid(LookupException))，伸展维度按满量程保护；TF 树建立后会自动恢复，此告警只打一次。
+[INFO] [1789980769.306316544] [coupling_c0716a9ced.python.arm_chassis_speed_coupling_node]: 机械臂活跃度=1.00(展开1.00/速率0.00) → 限速系数=0.15
+[ERROR] [1789980769.618573612] [coupling_c0716a9ced.python.arm_chassis_speed_coupling_node]: 解析/joint_states出错，保持上一次限速系数不变：reach 区间非法(full=0.42 <= folded=0.42)
+[WARN] [1789980769.759956584] [coupling_c0716a9ced.python.arm_chassis_speed_coupling_node]: /joint_states 已 1.00s 未更新(超过阈值0.50s)，降级到固定限速 0.30

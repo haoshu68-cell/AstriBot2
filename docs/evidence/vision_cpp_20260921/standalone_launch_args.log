@@ -1,0 +1,77 @@
+Arguments (pass arguments as '<name>:=<value>'):
+
+    'camera_id':
+        no description given
+        (default: 'head_rgbd')
+
+    'use_sim_time':
+        no description given
+        (default: 'true')
+
+    'enable_pose':
+        no description given
+        (default: 'true')
+
+    'enable_health':
+        no description given
+        (default: 'true')
+
+    'enable_yolo':
+        no description given
+        (default: 'false')
+
+    'model_path':
+        no description given
+        (default: '')
+
+    'labels_path':
+        no description given
+        (default: '')
+
+    'model_revision':
+        no description given
+        (default: '')
+
+    'model_layout':
+        One of: ['yolov5', 'yolov8']
+        (default: 'yolov5')
+
+    'calibration_revision':
+        no description given
+        (default: '1')
+
+    'enable_detection_gate':
+        no description given
+        (default: 'true')
+
+    'color_topic':
+        no description given
+        (default: PythonExpr(''/camera/color/image_raw' if '' + LaunchConfig('camera_id') + '' == 'head_rgbd' else '/camera/' + LaunchConfig('camera_id') + '/color/image_raw''))
+
+    'depth_topic':
+        no description given
+        (default: PythonExpr(''/camera/depth/image_raw' if '' + LaunchConfig('camera_id') + '' == 'head_rgbd' else '/camera/' + LaunchConfig('camera_id') + '/depth/image_raw''))
+
+    'camera_info_topic':
+        no description given
+        (default: PythonExpr(''/camera/color/camera_info' if '' + LaunchConfig('camera_id') + '' == 'head_rgbd' else '/camera/' + LaunchConfig('camera_id') + '/color/camera_info''))
+
+    'detection_topic':
+        no description given
+        (default: '/perception/detections/' + LaunchConfig('camera_id'))
+
+    'valid_detection_topic':
+        no description given
+        (default: '/perception/valid_detections/' + LaunchConfig('camera_id'))
+
+    'health_topic':
+        no description given
+        (default: '/perception/camera_health/' + LaunchConfig('camera_id'))
+
+    'output_topic':
+        no description given
+        (default: '/perception/object_pose/' + LaunchConfig('camera_id'))
+
+    'frame_id':
+        no description given
+        (default: LaunchConfig('camera_id') + '_camera_optical_frame')

@@ -1,0 +1,413 @@
+{
+  "test": "test_reach_stale_tf_keeps_fail_closed_behavior",
+  "domain": "118",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "fresh short reach",
+      "expected": 0.0,
+      "observed": {
+        "python": [
+          {
+            "wall": 2222.70770266,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127319281888
+          },
+          {
+            "wall": 2222.750022051,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127362323660
+          },
+          {
+            "wall": 2222.848420292,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127462315903
+          },
+          {
+            "wall": 2222.94545918,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127562310702
+          },
+          {
+            "wall": 2223.049383222,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127662288288
+          }
+        ],
+        "cpp": [
+          {
+            "wall": 2222.701999437,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127318868293
+          },
+          {
+            "wall": 2222.729072932,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127344229909
+          },
+          {
+            "wall": 2222.827510446,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127444220733
+          },
+          {
+            "wall": 2222.931779927,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127544218284
+          },
+          {
+            "wall": 2223.028534417,
+            "speed_limit": 0.0,
+            "percentage": true,
+            "stamp_ns": 1789978127644225441
+          }
+        ]
+      }
+    },
+    {
+      "case": "expired transform restricts speed",
+      "expected": 50.0,
+      "observed": {
+        "python": [
+          {
+            "wall": 2223.445547839,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128062274431
+          },
+          {
+            "wall": 2223.548249636,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128162312713
+          },
+          {
+            "wall": 2223.645414632,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128262272994
+          },
+          {
+            "wall": 2223.747991194,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128362304811
+          }
+        ],
+        "cpp": [
+          {
+            "wall": 2223.430281631,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128044222447
+          },
+          {
+            "wall": 2223.52766057,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128144227485
+          },
+          {
+            "wall": 2223.630284948,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128244211237
+          },
+          {
+            "wall": 2223.727366754,
+            "speed_limit": 50.0,
+            "percentage": true,
+            "stamp_ns": 1789978128344211273
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "python": [
+      {
+        "wall": 2222.357717147,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978126974368655
+      },
+      {
+        "wall": 2222.4482174,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127062313366
+      },
+      {
+        "wall": 2222.545493222,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127162302680
+      },
+      {
+        "wall": 2222.649596522,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127262296123
+      },
+      {
+        "wall": 2222.70770266,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127319281888
+      },
+      {
+        "wall": 2222.750022051,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127362323660
+      },
+      {
+        "wall": 2222.848420292,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127462315903
+      },
+      {
+        "wall": 2222.94545918,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127562310702
+      },
+      {
+        "wall": 2223.049383222,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127662288288
+      },
+      {
+        "wall": 2223.145602377,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127762374926
+      },
+      {
+        "wall": 2223.248941366,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127862389344
+      },
+      {
+        "wall": 2223.290400204,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127902503265
+      },
+      {
+        "wall": 2223.348031578,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127962372261
+      },
+      {
+        "wall": 2223.445547839,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128062274431
+      },
+      {
+        "wall": 2223.548249636,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128162312713
+      },
+      {
+        "wall": 2223.645414632,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128262272994
+      },
+      {
+        "wall": 2223.747991194,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128362304811
+      }
+    ],
+    "cpp": [
+      {
+        "wall": 2222.139138258,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978126755994884
+      },
+      {
+        "wall": 2222.227419083,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978126844239644
+      },
+      {
+        "wall": 2222.327366269,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978126944215145
+      },
+      {
+        "wall": 2222.427361616,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127044181471
+      },
+      {
+        "wall": 2222.531092215,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127144225149
+      },
+      {
+        "wall": 2222.628579683,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127244227151
+      },
+      {
+        "wall": 2222.701999437,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127318868293
+      },
+      {
+        "wall": 2222.729072932,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127344229909
+      },
+      {
+        "wall": 2222.827510446,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127444220733
+      },
+      {
+        "wall": 2222.931779927,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127544218284
+      },
+      {
+        "wall": 2223.028534417,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127644225441
+      },
+      {
+        "wall": 2223.1328955,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127744227797
+      },
+      {
+        "wall": 2223.228137091,
+        "speed_limit": 0.0,
+        "percentage": true,
+        "stamp_ns": 1789978127844214810
+      },
+      {
+        "wall": 2223.285094914,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127901958610
+      },
+      {
+        "wall": 2223.327335512,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978127944204203
+      },
+      {
+        "wall": 2223.430281631,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128044222447
+      },
+      {
+        "wall": 2223.52766057,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128144227485
+      },
+      {
+        "wall": 2223.630284948,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128244211237
+      },
+      {
+        "wall": 2223.727366754,
+        "speed_limit": 50.0,
+        "percentage": true,
+        "stamp_ns": 1789978128344211273
+      }
+    ]
+  },
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 88856,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/arm_parameter_2aaa1ee5e4/python",
+        "-p",
+        "extension_metric:=horizontal_reach",
+        "-p",
+        "joint_states_topic:=/arm_parameter_2aaa1ee5e4/joints",
+        "-p",
+        "speed_limit_topic:=/arm_parameter_2aaa1ee5e4/python/speed_limit",
+        "-p",
+        "check_period:=0.1",
+        "-p",
+        "reach_tf_timeout_sec:=0.2",
+        "-p",
+        "chassis_base_frame:=arm_parameter_2aaa1ee5e4_base",
+        "-p",
+        "monitored_links:=[arm_parameter_2aaa1ee5e4_reach]"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 88857,
+      "command": [
+        "/tmp/codex_arm_parameters_20260921/build/arm_speed_limiter_cpp",
+        "--ros-args",
+        "-r",
+        "__ns:=/arm_parameter_2aaa1ee5e4/cpp",
+        "-p",
+        "extension_metric:=horizontal_reach",
+        "-p",
+        "joint_states_topic:=/arm_parameter_2aaa1ee5e4/joints",
+        "-p",
+        "speed_limit_topic:=/arm_parameter_2aaa1ee5e4/cpp/speed_limit",
+        "-p",
+        "check_period:=0.1",
+        "-p",
+        "reach_tf_timeout_sec:=0.2",
+        "-p",
+        "chassis_base_frame:=arm_parameter_2aaa1ee5e4_base",
+        "-p",
+        "monitored_links:=[arm_parameter_2aaa1ee5e4_reach]"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ]
+}

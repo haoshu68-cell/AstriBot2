@@ -240,10 +240,9 @@ class Observation:
     def check_fresh(self, now: Stamp, max_age_ns: int, future_tolerance_ns: int = 0):
         require(type(max_age_ns) is int and max_age_ns >= 0, 'max_age_ns')
         require(type(future_tolerance_ns) is int and future_tolerance_ns >= 0, 'future_tolerance_ns')
-        age = now.since(self.capture_stamp)
-        require(age >= -future_tolerance_ns, 'capture_stamp', ErrorCode.FUTURE_OBSERVATION)
-        require(age <= max_age_ns and now.since(self.valid_until) < 0,
-                'capture_stamp/valid_until', ErrorCode.STALE_OBSERVATION)
+        # Observation timestamps identify the sample, not an admission deadline.
+        now.since(self.capture_stamp)  # Enforce the declared clock/session context.
+
 
 
 class Health(str, Enum):

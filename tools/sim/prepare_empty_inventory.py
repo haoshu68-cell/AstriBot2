@@ -123,34 +123,30 @@ class ReadbackBarrier:
         self.key, self.wall, self.ros, self.valid = key, wall, ros, True
 
     def observe(self, ready, key, wall, ros):
-        self.valid = self.valid and ready and key == self.key and 0 <= wall-self.wall < .3 and 0 <= ros-self.ros < 300_000_000
+        self.valid = self.valid and ready and key == self.key and 0 <= wall-self.wall < .3
         return self.valid
 
 
 def empty_ready(latest, received, wall, ros_ns, session, source, policy='static_world_empty_only_v1'):
     if policy not in ('static_world_empty_only_v1', 'kinematic_inventory_v1'):
         return False
-    if ros_ns <= 0 or any(wall - received.get(k, float('-inf')) >= .3 for k in ('source', 'ledger', 'geometry', 'diagnostic')):
+    if any(k not in latest for k in ('source', 'ledger', 'geometry', 'diagnostic')):
         return False
     s, state, g, d = (latest[k] for k in ('source', 'ledger', 'geometry', 'diagnostic'))
     observation = state['observation']
     for value in (s, observation):
         if not (value['environment'] == 'simulation' and value['session_id'] == session and value['source_id'] == source
                 and value['source_epoch'] and value['revision'] > 0 and value['sequence'] > 0 and value['full_inventory']
-                and value['status'] == 1 and not value['objects'] and 0 < ns(value['observed_at']) <= ros_ns < ns(value['valid_until'])
-                and 0 < ns(value['valid_until'])-ns(value['observed_at']) <= 300_000_000):
+                and value['status'] == 1 and not value['objects']):
             return False
     key = lambda value: (value['source_epoch'], value['clock_epoch'], value['revision'])
     if key(s) != key(observation):
         return False
     return bool(state['confirmed'] and state['attachment_revision'] and state['ledger_epoch']
-                and 0 < ns(state['published_at']) <= ros_ns < ns(state['valid_until'])
                 and g['complete'] and g['attachment_state_confirmed'] and not g['attachment_ids']
                 and g['attachment_revision'] == state['attachment_revision'] and g['model_revision']
-                and 0 < ns(g['header']['stamp']) <= ros_ns < ns(g['valid_until'])
                 and d['policy'] == policy and d['reason'] == 'EMPTY_INVENTORY_OBSERVED'
-                and d['source_epoch'] == s['source_epoch'] and d['revision'] == s['revision'] and d['clock_epoch'] == s['clock_epoch']
-                and 0 < d['stamp_ns'] <= ros_ns < d['stamp_ns'] + 300_000_000)
+                and d['source_epoch'] == s['source_epoch'] and d['revision'] == s['revision'] and d['clock_epoch'] == s['clock_epoch'])
 
 
 def main():
@@ -184,7 +180,12 @@ def main():
     def ready():
         return empty_ready(latest, receipts.received, time.monotonic(), node.get_clock().now().nanoseconds, args.session, args.source)
     def receive(key, value):
-        latest[key] = json.loads(value.data) if key == 'diagnostic' else message_to_ordereddict(value)
+        value = json.loads(value.data) if key == 'diagnostic' else message_to_ordereddict(value)
+        previous = receipts.keys.get(key)
+        candidate = capture_key(key, value)
+        if previous and candidate[:2] == previous[:2] and candidate[2] < previous[2]:
+            return
+        latest[key] = value
         receipts.observe(key, latest[key], time.monotonic())
         if readback is not None:
             readback.observe(ready(), proof_key(latest), time.monotonic(), node.get_clock().now().nanoseconds)

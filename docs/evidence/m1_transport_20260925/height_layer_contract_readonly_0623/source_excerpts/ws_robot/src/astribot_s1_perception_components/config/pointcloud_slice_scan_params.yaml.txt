@@ -1,0 +1,40 @@
+1: /**:
+2:   ros__parameters:
+3:     input_cloud_topic: /map_scan_filtered
+4:     output_scan_topic: /scan_from_cloud
+5:     filtered_cloud_topic: /livox/cloud_self_filtered
+6:     marker_topic: ~/debug_markers
+7:     base_frame: astribot_torso_base
+8:     tf_timeout_sec: 0.15
+9:     tf_total_budget_sec: 0.3
+10:     max_cloud_age_sec: 0.3
+31:     slice_names:
+32:     - low_obstacle
+33:     - main_nav
+34:     - torso_high
+35:     - overhead
+36:     slices:
+37:       low_obstacle:
+38:         z_min: -0.03
+39:         z_max: 0.17
+40:         min_points: 2
+41:         max_range: 6.0
+42:         enabled: true
+43:       main_nav:
+44:         z_min: 0.17
+45:         z_max: 0.6
+46:         min_points: 1
+47:         max_range: 20.0
+48:         enabled: true
+49:       torso_high:
+50:         z_min: 0.6
+51:         z_max: 1.1
+52:         min_points: 1
+53:         max_range: 20.0
+54:         enabled: true
+55:       overhead:
+56:         z_min: 1.1
+57:         z_max: 1.55
+58:         min_points: 2
+59:         max_range: 8.0
+60:         enabled: true

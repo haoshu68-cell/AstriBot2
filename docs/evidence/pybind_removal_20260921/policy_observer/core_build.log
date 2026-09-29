@@ -1,0 +1,48 @@
+ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp: In function ‘std::vector<double> astribot::navigation::scan_coverage(const std::vector<double>&, double, double, double, double, double)’:
+ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp:304:69: warning: suggest parentheses around ‘&&’ within ‘||’ [-Wparentheses]
+  304 |         (std::isfinite(ranges[index]) && range_min <= ranges[index] &&
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+  305 |              ranges[index] <= range_max || ranges[index] == INFINITY);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~                              
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp: In function ‘nlohmann::json run(const json&)’:
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:10:3: error: reference to ‘ExecutionContext’ is ambiguous
+   10 |   ExecutionContext context; ObserverMap map; json output=json::array();
+      |   ^~~~~~~~~~~~~~~~
+In file included from ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/policy_observer_core.hpp:3,
+                 from ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:1:
+ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/policy_contracts.hpp:147:8: note: candidates are: ‘struct astribot::navigation::policy::ExecutionContext’
+  147 | struct ExecutionContext {
+      |        ^~~~~~~~~~~~~~~~
+In file included from ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/policy_observer_core.hpp:2,
+                 from ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:1:
+ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/navigation_math.hpp:107:7: note:                 ‘class astribot::navigation::ExecutionContext’
+  107 | class ExecutionContext {
+      |       ^~~~~~~~~~~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:15:25: error: ‘context’ was not declared in this scope
+   15 |       if(action=="task")context.task(op.at("id"),op.at("state"),op.at("sequence"));
+      |                         ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:16:30: error: ‘context’ was not declared in this scope
+   16 |       else if(action=="path")context.path();
+      |                              ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:17:86: error: ‘context’ was not declared in this scope
+   17 |       else if(action=="localization") {auto v=array<3>(op.at("pose"));row["changed"]=context.localization({v.begin(),v.end()},number(op.at("position_limit")),number(op.at("angle_limit")));}
+      |                                                                                      ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:18:66: error: ‘context’ was not declared in this scope
+   18 |       else if(action=="version") {const auto& v=op.at("version");context.set_version(v[0],v[1],v[2],v[3],v[4],v[5]);}
+      |                                                                  ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:21:61: error: ‘context’ was not declared in this scope
+   21 |         row["accepted"]=accepted;if(accepted)row["changed"]=context.map(map.context_key());
+      |                                                             ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:28:18: error: ‘context’ was not declared in this scope
+   28 |     const auto v=context.version();row["version"]={std::get<0>(v),std::get<1>(v),std::get<2>(v),std::get<3>(v),std::get<4>(v),std::get<5>(v)};output.push_back(row);
+      |                  ^~~~~~~
+ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:28:141: error: no match for ‘operator=’ (operand types are ‘nlohmann::basic_json<>::value_type’ {aka ‘nlohmann::basic_json<>’} and ‘<brace-enclosed initializer list>’)
+   28 |     const auto v=context.version();row["version"]={std::get<0>(v),std::get<1>(v),std::get<2>(v),std::get<3>(v),std::get<4>(v),std::get<5>(v)};output.push_back(row);
+      |                                                                                                                                             ^
+In file included from ws_robot/src/astribot_s1_navigation_policy_native/test/policy_observer_core_probe.cpp:2:
+/usr/include/nlohmann/json.hpp:1224:17: note: candidate: ‘nlohmann::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType>& nlohmann::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType>::operator=(nlohmann::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType>) [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::adl_serializer; BinaryType = std::vector<unsigned char>]’
+ 1224 |     basic_json& operator=(basic_json other) noexcept (
+      |                 ^~~~~~~~
+/usr/include/nlohmann/json.hpp:1224:38: note:   no known conversion for argument 1 from ‘<brace-enclosed initializer list>’ to ‘nlohmann::basic_json<>’
+ 1224 |     basic_json& operator=(basic_json other) noexcept (
+      |                           ~~~~~~~~~~~^~~~~

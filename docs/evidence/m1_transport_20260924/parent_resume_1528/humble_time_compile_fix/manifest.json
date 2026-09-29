@@ -1,0 +1,27 @@
+{
+  "recorded_at": "2026-09-24T15:36:49.996379+08:00",
+  "before_sha256": "02506bf8d87f34a98492b58b03734b1e059f740c966fdf75871e27a9c79b256e",
+  "after_sha256": "e259b34f4ef08643b4c4119309417668b0e2a8e2751246afecb7f64a466a3fe4",
+  "source": "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp",
+  "build_failure_source": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260924/transfer_resume_1528/logs/build.log",
+  "compile_errors": [
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp:337:176: error: ‘class rclcpp::Time’ has no member named ‘to_msg’"
+  ],
+  "test_source_sha256": "369581f5a5ad29db702ede2a21e6e33ded824ef2ed86a8053818901b9d7771d2",
+  "api_evidence": "/opt/ros/humble/include/rclcpp/rclcpp/time.hpp:84 operator builtin_interfaces::msg::Time() const",
+  "scope": "one-line Humble compilation repair; source timestamp value unchanged; coordinator rebuild pending",
+  "files": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260924/parent_resume_1528/humble_time_compile_fix/original_build_failure.log",
+      "sha256": "bc5b46036aeb6bc4a334c89844ce6a21839cd211265052e8ca2b217e5e115786"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260924/parent_resume_1528/humble_time_compile_fix/fix.patch",
+      "sha256": "056d08b32016baf866671f42abbb1410d0a774eb77b84e57ff96ec914136895f"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/m1_transport_20260924/parent_resume_1528/humble_time_compile_fix/hold_executor.cpp",
+      "sha256": "e259b34f4ef08643b4c4119309417668b0e2a8e2751246afecb7f64a466a3fe4"
+    }
+  ]
+}

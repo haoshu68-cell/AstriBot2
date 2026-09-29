@@ -1,0 +1,233 @@
+{
+  "scope": "Offline partial PICK suffix evidence; full transfer remains failed",
+  "scene": "scene34",
+  "domain": 57,
+  "identity": {
+    "task_id": "fixed_transfer_fafd50adb85c4918a6277347cee37438",
+    "context_id": "6822fa3be2514fa8b632d5443f10a799",
+    "goal_uuid": "63f2858b51fa434a86af3a3c03661e0c",
+    "lease_epoch": [
+      "291eaa5a-aa5e-4cff-b9cd-3b626006dccb_1",
+      "291eaa5a-aa5e-4cff-b9cd-3b626006dccb"
+    ]
+  },
+  "outcome": {
+    "passed": false,
+    "error": "RuntimeError('RENEW_REJECTED:MTC_BASE_MOVED')",
+    "parent_terminal": {
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "MTC_BASE_MOVED",
+        "cleanup_reason": "",
+        "lease_id": "291eaa5a-aa5e-4cff-b9cd-3b626006dccb_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "906e507ad7a5c53e43b7c3e0ab837afc6a1426539b90e90d409e5fd3b7584c1a"
+      }
+    },
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "resource_disposition": "RELEASE_CONFIRMED",
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 36,
+      "span_s": 0.7000000000000028,
+      "start_ros_s": 110.74,
+      "end_ros_s": 111.44,
+      "drift_m": 7.530067393630195e-06,
+      "rotation_rad": 1.8275259861883636e-05,
+      "speed_mps": 0.00010883031421191022,
+      "angular_speed_radps": 0.00020768259219039464,
+      "command_max": 0.0,
+      "command_observed": true,
+      "fresh": true
+    }
+  },
+  "physical_submission_index": 70,
+  "physical_applied_index": 71,
+  "suffix_adopted_index": 72,
+  "payload_confirmed_index": 73,
+  "adoption": {
+    "context": "6822fa3be2514fa8b632d5443f10a799_op_1_PICK",
+    "stages": [
+      {
+        "adopted_digest": "96419082bc629ebb4329c5cdc53cd2b658de1fe202eb8ea89b4b3f01fe1237c0",
+        "joint_names": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7"
+        ],
+        "point_count": 11,
+        "returned_digest": "96419082bc629ebb4329c5cdc53cd2b658de1fe202eb8ea89b4b3f01fe1237c0",
+        "stage_id": "LIFT",
+        "stage_index": 4
+      },
+      {
+        "adopted_digest": "da7e473d0de82dd9ad2c5911b6adcc8c0ee667bc9fe1bcf89f3da0553d1f538b",
+        "joint_names": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7"
+        ],
+        "point_count": 839,
+        "returned_digest": "da7e473d0de82dd9ad2c5911b6adcc8c0ee667bc9fe1bcf89f3da0553d1f538b",
+        "stage_id": "TRANSPORT_POSTURE",
+        "stage_index": 5
+      }
+    ],
+    "start_index": 4,
+    "transaction": "291eaa5a-aa5e-4cff-b9cd-3b626006dccb_1:payload:1:3",
+    "transport_replanned": true
+  },
+  "stage_handoffs": [
+    {
+      "stage": "LIFT",
+      "stage_index": 4,
+      "stage_generation": 5,
+      "point_count": 11,
+      "joint_names": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7"
+      ],
+      "returned_digest": "96419082bc629ebb4329c5cdc53cd2b658de1fe202eb8ea89b4b3f01fe1237c0",
+      "adopted_digest": "96419082bc629ebb4329c5cdc53cd2b658de1fe202eb8ea89b4b3f01fe1237c0",
+      "sent_digest": "96419082bc629ebb4329c5cdc53cd2b658de1fe202eb8ea89b4b3f01fe1237c0",
+      "send_response_metadata_equal": true,
+      "uuid": "04c749360b62a0a26089c775cbe0d3f4",
+      "send_index": 75,
+      "response_index": 81,
+      "terminal_index": 87,
+      "terminal": {
+        "controller": "arm_left_controller",
+        "result_code": 4,
+        "success": true,
+        "uuid": "04c749360b62a0a26089c775cbe0d3f4"
+      },
+      "stage_confirmed_index": 93
+    },
+    {
+      "stage": "TRANSPORT_POSTURE",
+      "stage_index": 5,
+      "stage_generation": 6,
+      "point_count": 839,
+      "joint_names": [
+        "astribot_arm_left_joint_1",
+        "astribot_arm_left_joint_2",
+        "astribot_arm_left_joint_3",
+        "astribot_arm_left_joint_4",
+        "astribot_arm_left_joint_5",
+        "astribot_arm_left_joint_6",
+        "astribot_arm_left_joint_7"
+      ],
+      "returned_digest": "da7e473d0de82dd9ad2c5911b6adcc8c0ee667bc9fe1bcf89f3da0553d1f538b",
+      "adopted_digest": "da7e473d0de82dd9ad2c5911b6adcc8c0ee667bc9fe1bcf89f3da0553d1f538b",
+      "sent_digest": "da7e473d0de82dd9ad2c5911b6adcc8c0ee667bc9fe1bcf89f3da0553d1f538b",
+      "send_response_metadata_equal": true,
+      "uuid": "89f0cc03a0ca057c1da216dcbf3c420d",
+      "send_index": 96,
+      "response_index": 102,
+      "terminal_index": 110,
+      "terminal": {
+        "controller": "arm_left_controller",
+        "result_code": 5,
+        "success": false,
+        "uuid": "89f0cc03a0ca057c1da216dcbf3c420d"
+      },
+      "stage_confirmed_index": null
+    }
+  ],
+  "transport_observed_motion": {
+    "scope": "Simulation JTC state in steady receive window between TRANSPORT_POSTURE-executing and MTC_BASE_MOVED feedback; JTC states do not carry goal UUID or full trajectory",
+    "samples": 319,
+    "first_record_index": 13048,
+    "last_record_index": 14958,
+    "first_received_steady": 40796.92226759,
+    "last_received_steady": 40805.782108741,
+    "first_source_stamp": {
+      "sec": 103,
+      "nanosec": 390000000
+    },
+    "last_source_stamp": {
+      "sec": 110,
+      "nanosec": 20000000
+    },
+    "joint_names": [
+      "astribot_arm_left_joint_1",
+      "astribot_arm_left_joint_2",
+      "astribot_arm_left_joint_3",
+      "astribot_arm_left_joint_4",
+      "astribot_arm_left_joint_5",
+      "astribot_arm_left_joint_6",
+      "astribot_arm_left_joint_7"
+    ],
+    "actual_position_range_rad": [
+      1.0018005934719054,
+      0.4037093788960574,
+      0.9876134414400338,
+      0.1242552594037829,
+      0.8115961329265866,
+      0.05813928387781084,
+      0.40341284819102297
+    ],
+    "max_joint_range_rad": 1.0018005934719054,
+    "first_actual_positions": [
+      -1.7774038769476765,
+      -1.1954632619787275,
+      1.9440513769164882,
+      0.8233443342228037,
+      -1.941899148545262,
+      -0.1408383961328573,
+      -1.1788696856760499
+    ],
+    "last_actual_positions": [
+      -0.7756032834757711,
+      -0.7917538830826701,
+      0.9564379354764544,
+      0.9475995936265866,
+      -1.1303030156186753,
+      -0.08269911225504648,
+      -0.7754568374850269
+    ]
+  },
+  "stop_index": 108,
+  "stop_reason": "MTC_BASE_MOVED",
+  "place_status": "NOT_REACHED",
+  "full_success_verifier_status": "NOT_REACHED; original failure preserved",
+  "stack": {
+    "state": "stopped",
+    "remaining_owned_pids": []
+  },
+  "used_verifier_sha256": "40e36820d4398e62d22c27f0426a9f3fea2db3f070e8cdf1955d259a0a393eb9",
+  "source_files": [
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene34_world57/full_transfer/result.json",
+      "sha256": "80f4e5715b5fa4dc606ea11bceb7709a7d00699e2c2ee80d1765a2ceb8d0a77d"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene34_world57/result.json",
+      "sha256": "e26dfdfe79b201cf5c969ee7d3f8256131179172f307de44f5683b88ea5245d8"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene34_world57/stack/session.json",
+      "sha256": "7f9091526d8c0cca525bef7bbaa95ef3f9978dad2a0c5206b601d7e4cc69bd97"
+    },
+    {
+      "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene34_world57/used_verify_full_transfer.py",
+      "sha256": "40e36820d4398e62d22c27f0426a9f3fea2db3f070e8cdf1955d259a0a393eb9"
+    }
+  ]
+}

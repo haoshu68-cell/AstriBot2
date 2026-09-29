@@ -1,0 +1,1708 @@
+{
+  "scope": "Offline successful PICK suffix chains in failed full-transfer scene39; no ROS/GPU/build/video decode",
+  "identity": {
+    "task_id": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+    "context_id": "91547133c27444fa9350bff9eb654993",
+    "goal_uuid": "0d58a6235edb4a1787a8cd8bb225527d",
+    "lease_epoch": [
+      "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+      "2f6da1cf-56c1-465b-aa56-8852ee009d4e"
+    ]
+  },
+  "outcome": {
+    "passed": false,
+    "error": "RuntimeError('RENEW_REJECTED:FIXED_ENVELOPE_REJECTED:ARM_HOLD_UNCONFIRMED')",
+    "parent_terminal": {
+      "status": 5,
+      "result": {
+        "success": false,
+        "resources_released": true,
+        "reason": "FIXED_ENVELOPE_REJECTED:ARM_HOLD_UNCONFIRMED",
+        "cleanup_reason": "",
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "navigation_goal_uuid": "",
+        "final_attachment_revision": "e5d86b3b0c9e4f1a05046bef929464ee1a50adf6f04ad6deda0c2b3bcf5b5c3d"
+      }
+    },
+    "resource_disposition": "RELEASE_CONFIRMED",
+    "cleanup_complete": true,
+    "cleanup_errors": [],
+    "cleanup_stop": {
+      "passed": true,
+      "samples": 36,
+      "span_s": 0.7000000000000028,
+      "start_ros_s": 105.32,
+      "end_ros_s": 106.02,
+      "drift_m": 0.00019296782490904697,
+      "rotation_rad": 0.0004377618624662313,
+      "speed_mps": 0.00043310780281616854,
+      "angular_speed_radps": 0.0007872742344261496,
+      "command_max": 0.0,
+      "command_observed": true,
+      "fresh": true
+    }
+  },
+  "event_counts": {
+    "reserved": 1,
+    "navigation_revoked": 3,
+    "before_child_submission": 1,
+    "station_scene_submission": 1,
+    "station_scene_confirmed": 1,
+    "planner_submission": 1,
+    "planner_terminal": 1,
+    "child_submission": 30,
+    "child_trajectory_submission": 5,
+    "child_response": 30,
+    "child_terminal": 30,
+    "stage_confirmed": 5,
+    "remaining_plan_revalidated": 4,
+    "physical_submission": 1,
+    "physical_applied_scene_submission": 1,
+    "payload_suffix_adopted": 1,
+    "payload_transaction_confirmed": 1,
+    "hold_confirmed": 1,
+    "navigation_leg_submission": 1,
+    "stop_requested": 1,
+    "result_release_pending": 1,
+    "resource_handoff_committed": 1
+  },
+  "journal_excerpt": [
+    {
+      "index": 26,
+      "record": {
+        "details": {
+          "children": "arm_left_controller:047b1a46422a948e30058f4ca1d63884;arm_right_controller:c5b32eb86bace98e4e71d449491c9a6d;gripper_left_controller:dee973ee577a62b1f1dacee4333e199c;gripper_right_controller:a4a30b7fef84440136bf22f78c116703;head_controller:65e2b6a2b2b425102a585de5ffd9d115;mtc:a800146fb385f474bc882b9b0df535f0;torso_controller:0bfe04bfae42d4fcc3a098d7e7d5e083;",
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "index": 0,
+          "stage_id": "PREGRASP"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "stage_confirmed",
+        "issued_at": 76001000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 115,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 78001000000
+      }
+    },
+    {
+      "index": 47,
+      "record": {
+        "details": {
+          "children": "arm_left_controller:418e6e16e75e87ca3361ddba346ba082;arm_right_controller:ba8cef5906c759859adf56954fba2be2;gripper_left_controller:facc842d78a591d54b7b07cc74af53c4;gripper_right_controller:9199cb7759558bcabad21454252fbe87;head_controller:a6025ca1175c8fc36b324772d4eedb9c;torso_controller:8738d7321f75ce702485f3115250b279;",
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "index": 1,
+          "stage_id": "GRASP_APPROACH"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "stage_confirmed",
+        "issued_at": 80057000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 138,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 82057000000
+      }
+    },
+    {
+      "index": 68,
+      "record": {
+        "details": {
+          "children": "arm_left_controller:b4431085a9576dc3b02c377dd3142f67;arm_right_controller:971ec3cfb0b01fc62f93afee6cd883a2;gripper_left_controller:613191d8eaea5300154a7a950d2fd83a;gripper_right_controller:560cebfb388cb98fe97a47cb74268e88;head_controller:3f6d975c5e802d986ce6c26859791ad8;torso_controller:9ace964b52a71aa6776f1730525fe3a9;",
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "index": 2,
+          "stage_id": "GRASP_CONFIRM"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "stage_confirmed",
+        "issued_at": 85365000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 170,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 87365000000
+      }
+    },
+    {
+      "index": 70,
+      "record": {
+        "details": {
+          "capture": 87386000000,
+          "clock_epoch": 0,
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "execution": [
+            {
+              "accepted": 0,
+              "applied": 0,
+              "attached": false,
+              "clock_epoch": 0,
+              "entity": 334,
+              "epoch": "c51526be2f11e174eadd80266369647523f9c54f944fc2d44a06b6a3084b4a",
+              "parent": 187
+            }
+          ],
+          "source_epoch": "73eb7253f6f74a3d4d9583913f974dedb9b17ae1f10d2b78ce109d587f2e86",
+          "stage": "ATTACH_CONFIRM",
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "physical_submission",
+        "issued_at": 87360000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 185,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 89360000000
+      }
+    },
+    {
+      "index": 71,
+      "record": {
+        "details": {
+          "command_id": 1,
+          "source_revision": 2,
+          "source_sequence": 1233,
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "physical_applied_scene_submission",
+        "issued_at": 87428000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 186,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 89428000000
+      }
+    },
+    {
+      "index": 72,
+      "record": {
+        "details": {
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "stages": [
+            {
+              "adopted_digest": "cfbc2fc3f440d42d6e740704e77ef98d1c55f7cd95561ab8a7c184427c4eb2c2",
+              "joint_names": [
+                "astribot_arm_left_joint_1",
+                "astribot_arm_left_joint_2",
+                "astribot_arm_left_joint_3",
+                "astribot_arm_left_joint_4",
+                "astribot_arm_left_joint_5",
+                "astribot_arm_left_joint_6",
+                "astribot_arm_left_joint_7"
+              ],
+              "point_count": 7,
+              "returned_digest": "cfbc2fc3f440d42d6e740704e77ef98d1c55f7cd95561ab8a7c184427c4eb2c2",
+              "stage_id": "LIFT",
+              "stage_index": 4
+            },
+            {
+              "adopted_digest": "52a8a43ce24512145c0a52ed6c133b0bfd298835f01c750578d265f5d1f2c6bd",
+              "joint_names": [
+                "astribot_arm_left_joint_1",
+                "astribot_arm_left_joint_2",
+                "astribot_arm_left_joint_3",
+                "astribot_arm_left_joint_4",
+                "astribot_arm_left_joint_5",
+                "astribot_arm_left_joint_6",
+                "astribot_arm_left_joint_7"
+              ],
+              "point_count": 654,
+              "returned_digest": "52a8a43ce24512145c0a52ed6c133b0bfd298835f01c750578d265f5d1f2c6bd",
+              "stage_id": "TRANSPORT_POSTURE",
+              "stage_index": 5
+            }
+          ],
+          "start_index": 4,
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3",
+          "transport_replanned": true
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "payload_suffix_adopted",
+        "issued_at": 88946000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 199,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 90946000000
+      }
+    },
+    {
+      "index": 73,
+      "record": {
+        "details": {
+          "attachment_revision": "e5d86b3b0c9e4f1a05046bef929464ee1a50adf6f04ad6deda0c2b3bcf5b5c3d",
+          "command_id": 1,
+          "geometry_sequence": 1549,
+          "stage": "ATTACH_CONFIRM",
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "payload_transaction_confirmed",
+        "issued_at": 88946000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 199,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 90946000000
+      }
+    },
+    {
+      "index": 75,
+      "record": {
+        "details": {
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "controller": "arm_left_controller",
+          "joint_names": [
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7"
+          ],
+          "point_count": 7,
+          "sent_digest": "cfbc2fc3f440d42d6e740704e77ef98d1c55f7cd95561ab8a7c184427c4eb2c2",
+          "stage_generation": 5,
+          "stage_id": "LIFT",
+          "stage_index": 4,
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "child_trajectory_submission",
+        "issued_at": 88946000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 199,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 90946000000
+      }
+    },
+    {
+      "index": 81,
+      "record": {
+        "details": {
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "controller": "arm_left_controller",
+          "joint_names": [
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7"
+          ],
+          "point_count": 7,
+          "sent_digest": "cfbc2fc3f440d42d6e740704e77ef98d1c55f7cd95561ab8a7c184427c4eb2c2",
+          "stage_generation": 5,
+          "stage_id": "LIFT",
+          "stage_index": 4,
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3",
+          "uuid": "d98337b1a503959dbe4872a22fe5ac00"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "child_response",
+        "issued_at": 89072000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 200,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 91072000000
+      }
+    },
+    {
+      "index": 87,
+      "record": {
+        "details": {
+          "controller": "arm_left_controller",
+          "result_code": 4,
+          "success": true,
+          "uuid": "d98337b1a503959dbe4872a22fe5ac00"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "child_terminal",
+        "issued_at": 90551000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 215,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 92551000000
+      }
+    },
+    {
+      "index": 93,
+      "record": {
+        "details": {
+          "children": "arm_left_controller:d98337b1a503959dbe4872a22fe5ac00;arm_right_controller:fefc1112df2be507419798ef3711a588;gripper_left_controller:df942f9423f90277140e42ced52d4c0b;gripper_right_controller:bcdc59aadf494cfbd92794128520cf29;head_controller:f5310f35b8f4ac33ce35827025cff80a;torso_controller:86363702288bbfbf5043512c9d7dbf46;",
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "index": 4,
+          "stage_id": "LIFT"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "stage_confirmed",
+        "issued_at": 91257000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 222,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 93257000000
+      }
+    },
+    {
+      "index": 96,
+      "record": {
+        "details": {
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "controller": "arm_left_controller",
+          "joint_names": [
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7"
+          ],
+          "point_count": 654,
+          "sent_digest": "52a8a43ce24512145c0a52ed6c133b0bfd298835f01c750578d265f5d1f2c6bd",
+          "stage_generation": 6,
+          "stage_id": "TRANSPORT_POSTURE",
+          "stage_index": 5,
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "child_trajectory_submission",
+        "issued_at": 93261000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 239,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 95261000000
+      }
+    },
+    {
+      "index": 102,
+      "record": {
+        "details": {
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "controller": "arm_left_controller",
+          "joint_names": [
+            "astribot_arm_left_joint_1",
+            "astribot_arm_left_joint_2",
+            "astribot_arm_left_joint_3",
+            "astribot_arm_left_joint_4",
+            "astribot_arm_left_joint_5",
+            "astribot_arm_left_joint_6",
+            "astribot_arm_left_joint_7"
+          ],
+          "point_count": 654,
+          "sent_digest": "52a8a43ce24512145c0a52ed6c133b0bfd298835f01c750578d265f5d1f2c6bd",
+          "stage_generation": 6,
+          "stage_id": "TRANSPORT_POSTURE",
+          "stage_index": 5,
+          "transaction": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1:payload:1:3",
+          "uuid": "7e598e3261d51a34152e84103e1a2c27"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "child_response",
+        "issued_at": 93261000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 239,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 95261000000
+      }
+    },
+    {
+      "index": 108,
+      "record": {
+        "details": {
+          "controller": "arm_left_controller",
+          "result_code": 4,
+          "success": true,
+          "uuid": "7e598e3261d51a34152e84103e1a2c27"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "child_terminal",
+        "issued_at": 103759000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 344,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 105759000000
+      }
+    },
+    {
+      "index": 114,
+      "record": {
+        "details": {
+          "children": "arm_left_controller:7e598e3261d51a34152e84103e1a2c27;arm_right_controller:6610e81c9cd2515ec728fca3d5b8e260;gripper_left_controller:359c1f713c177da4990322816dfa4c22;gripper_right_controller:7147fa80d6c611fa5dd411a3d2c82585;head_controller:a01f02d9a6fa6a342da2f7d4d0cbcd96;torso_controller:19bbfd941fda0f0bab41cdacc2d3fafa;",
+          "context": "91547133c27444fa9350bff9eb654993_op_1_PICK",
+          "index": 5,
+          "stage_id": "TRANSPORT_POSTURE"
+        },
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "stage_confirmed",
+        "issued_at": 104477000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 2,
+        "reason": "EXECUTING",
+        "renewal_sequence": 351,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 106477000000
+      }
+    },
+    {
+      "index": 117,
+      "record": {
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "stop_requested",
+        "issued_at": 104477000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 4,
+        "reason": "FIXED_ENVELOPE_REJECTED:ARM_HOLD_UNCONFIRMED",
+        "renewal_sequence": 351,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": true,
+        "valid_until": 106477000000
+      }
+    },
+    {
+      "index": 121,
+      "record": {
+        "epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+        "event": "resource_handoff_committed",
+        "issued_at": 104477000000,
+        "joints": [
+          "astribot_arm_left_joint_1",
+          "astribot_arm_left_joint_2",
+          "astribot_arm_left_joint_3",
+          "astribot_arm_left_joint_4",
+          "astribot_arm_left_joint_5",
+          "astribot_arm_left_joint_6",
+          "astribot_arm_left_joint_7",
+          "astribot_arm_right_joint_1",
+          "astribot_arm_right_joint_2",
+          "astribot_arm_right_joint_3",
+          "astribot_arm_right_joint_4",
+          "astribot_arm_right_joint_5",
+          "astribot_arm_right_joint_6",
+          "astribot_arm_right_joint_7",
+          "astribot_gripper_left_joint_L1",
+          "astribot_gripper_right_joint_L1",
+          "astribot_head_joint_1",
+          "astribot_head_joint_2",
+          "astribot_torso_joint_1",
+          "astribot_torso_joint_2",
+          "astribot_torso_joint_3",
+          "astribot_torso_joint_4"
+        ],
+        "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+        "operation_context": "",
+        "operation_sequence": 0,
+        "owner": "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+        "phase": 0,
+        "reason": "RELEASED",
+        "renewal_sequence": 351,
+        "request": "599b6d81f681489096f26501e838b35a",
+        "requests": [
+          [
+            "fixed_transfer_61896a7e5d804ec8a50c49ff9063e4f7",
+            "599b6d81f681489096f26501e838b35a"
+          ]
+        ],
+        "schema": "astribot.resource/1",
+        "side_effects": false,
+        "valid_until": 106477000000
+      }
+    }
+  ],
+  "feedback_transitions": [
+    {
+      "index": 0,
+      "record": {
+        "wall": 43172.081415805,
+        "ros_s": 56.614000000000004,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "RESERVED",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 1,
+      "record": {
+        "wall": 43172.115987858,
+        "ros_s": 56.637,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_NAVIGATION_REVOCATION_READBACK",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 3,
+      "record": {
+        "wall": 43172.215367706,
+        "ros_s": 56.696000000000005,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "PLANNING_COMPLETE_OPERATION",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 154,
+      "record": {
+        "wall": 43179.76526913,
+        "ros_s": 62.954,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 156,
+      "record": {
+        "wall": 43179.865346218,
+        "ros_s": 63.040000000000006,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:PREGRASP",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_0",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 462,
+      "record": {
+        "wall": 43195.181744049,
+        "ros_s": 76.18900000000001,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_APPROACH",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 508,
+      "record": {
+        "wall": 43197.465138135,
+        "ros_s": 78.188,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "PREGRASP",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 512,
+      "record": {
+        "wall": 43197.665840842,
+        "ros_s": 78.36800000000001,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 514,
+      "record": {
+        "wall": 43197.765388613,
+        "ros_s": 78.455,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_APPROACH",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_1",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 554,
+      "record": {
+        "wall": 43199.78199744,
+        "ros_s": 80.233,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:GRASP_CONFIRM",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_2",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 603,
+      "record": {
+        "wall": 43202.216723447,
+        "ros_s": 82.361,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_APPROACH",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_2",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 606,
+      "record": {
+        "wall": 43202.366056428,
+        "ros_s": 82.48400000000001,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:GRASP_CONFIRM",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_2",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 679,
+      "record": {
+        "wall": 43206.031011673,
+        "ros_s": 85.384,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:ATTACH_CONFIRM",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 734,
+      "record": {
+        "wall": 43208.765697881,
+        "ros_s": 87.226,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "GRASP_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 737,
+      "record": {
+        "wall": 43208.940586339,
+        "ros_s": 87.316,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_PHYSICAL_PAYLOAD_FRAME",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 740,
+      "record": {
+        "wall": 43209.071062816,
+        "ros_s": 87.4,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_PHYSICAL_APPLICATION",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 746,
+      "record": {
+        "wall": 43209.379149115,
+        "ros_s": 87.525,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_PAYLOAD_SCENE_READBACK",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 752,
+      "record": {
+        "wall": 43209.666922873,
+        "ros_s": 87.685,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "GEOMETRY_UNCONFIRMED",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 755,
+      "record": {
+        "wall": 43209.824738978,
+        "ros_s": 87.78,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_ACTUAL_PAYLOAD_REMAINING_PATH",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_3",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 796,
+      "record": {
+        "wall": 43211.917706562,
+        "ros_s": 89.004,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:LIFT",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "ATTACH_CONFIRM",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_4",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 798,
+      "record": {
+        "wall": 43211.965349921,
+        "ros_s": 89.028,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "LIFT",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_4",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 800,
+      "record": {
+        "wall": 43212.06494566,
+        "ros_s": 89.08300000000001,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:LIFT",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "LIFT",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_4",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 891,
+      "record": {
+        "wall": 43216.631299758,
+        "ros_s": 91.345,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "CHECKING_NEXT_STAGE:TRANSPORT_POSTURE",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "LIFT",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 955,
+      "record": {
+        "wall": 43219.815938794,
+        "ros_s": 93.238,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "REVALIDATING_SAME_REMAINING_PLAN",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "LIFT",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 957,
+      "record": {
+        "wall": 43219.934650565,
+        "ros_s": 93.305,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "WAITING_FOR_EXECUTION_GUARD",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "TRANSPORT_POSTURE",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 960,
+      "record": {
+        "wall": 43220.065319164,
+        "ros_s": 93.387,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "PICK",
+          "reason": "EXECUTING_MTC_STAGE:TRANSPORT_POSTURE",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "TRANSPORT_POSTURE",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 1408,
+      "record": {
+        "wall": 43242.48609803,
+        "ros_s": 104.54400000000001,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "NAVIGATE",
+          "reason": "MANIPULATION_HOLD_CONFIRMED",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "TRANSPORT_POSTURE",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5",
+          "hold_confirmed": true,
+          "navigation_goal_uuid": ""
+        }
+      }
+    },
+    {
+      "index": 1409,
+      "record": {
+        "wall": 43242.518688231,
+        "ros_s": 104.561,
+        "goal_id": "0d58a6235edb4a1787a8cd8bb225527d",
+        "feedback": {
+          "phase": "NAVIGATE",
+          "reason": "FIXED_ENVELOPE_REJECTED:ARM_HOLD_UNCONFIRMED",
+          "lease_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1",
+          "resource_epoch": "2f6da1cf-56c1-465b-aa56-8852ee009d4e",
+          "context_id": "91547133c27444fa9350bff9eb654993",
+          "object_id": "transport_box_01",
+          "stage_id": "TRANSPORT_POSTURE",
+          "hold_id": "2f6da1cf-56c1-465b-aa56-8852ee009d4e_1_hold_1_5",
+          "hold_confirmed": false,
+          "navigation_goal_uuid": ""
+        }
+      }
+    }
+  ],
+  "base_motion_conditions": {
+    "relaxed": true,
+    "acceptance_scope": "relaxed_simulation_not_original_precision_acceptance",
+    "original_limits": {
+      "rotation_rad": 0.02,
+      "angular_speed_radps": 0.03
+    },
+    "active_limits": {
+      "rotation_rad": 0.05,
+      "angular_speed_radps": 0.1
+    },
+    "non_navigation_linear_speed_limit_mps": 0.02,
+    "nonzero_command_threshold": 1e-06,
+    "final_stop_thresholds_unchanged": true,
+    "readback": {
+      "task_trajectory_executor": [
+        {
+          "type": 1,
+          "bool_value": true,
+          "integer_value": 0,
+          "double_value": 0.0,
+          "string_value": "",
+          "byte_array_value": [],
+          "bool_array_value": [],
+          "integer_array_value": [],
+          "double_array_value": [],
+          "string_array_value": []
+        }
+      ],
+      "manipulation_execution_guard": [
+        {
+          "type": 1,
+          "bool_value": true,
+          "integer_value": 0,
+          "double_value": 0.0,
+          "string_value": "",
+          "byte_array_value": [],
+          "bool_array_value": [],
+          "integer_array_value": [],
+          "double_array_value": [],
+          "string_array_value": []
+        }
+      ]
+    }
+  },
+  "navigation_goal_uuids": [],
+  "source": {
+    "path": "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/full_transfer_scene39_world52/full_transfer/result.json",
+    "sha256": "15503ff7738cb5d4eaccf0031fab5d31e9813ec2e3249ac16f1b9a4ea6fd7170"
+  }
+}

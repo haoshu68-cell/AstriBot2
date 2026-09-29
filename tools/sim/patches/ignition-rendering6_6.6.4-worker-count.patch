@@ -1,0 +1,50 @@
+--- a/ogre2/src/Ogre2Scene.cc
++++ b/ogre2/src/Ogre2Scene.cc
+@@ -16,6 +16,8 @@
+  */
+ 
+ #include <gz/common/Console.hh>
++#include <cstdlib>
++#include "RenderingWorkerCount.hh"
+ 
+ #include "gz/rendering/RenderTypes.hh"
+ #include "gz/rendering/ogre2/Ogre2ArrowVisual.hh"
+@@ -1390,8 +1392,11 @@
+   Ogre::Root *root = Ogre2RenderEngine::Instance()->OgreRoot();
+ 
+   // getNumLogicalCores() may return 0 if couldn't detect
+-  const size_t numThreads = std::max<size_t>(
+-      1, Ogre::PlatformInformation::getNumLogicalCores());
++  const size_t detectedThreads = Ogre::PlatformInformation::getNumLogicalCores();
++  const size_t numThreads = astribot_rendering::workerCount(
++      std::getenv("ASTRIBOT_OGRE2_WORKER_THREADS"), detectedThreads);
++  ignmsg << "OGRE2_WORKER_THREADS detected=" << detectedThreads
++        << " selected=" << numThreads << std::endl;
+ 
+   // See ogre doxygen documentation regarding culling methods.
+   // In some cases you may still want to use single thread.
+--- /dev/null
++++ b/ogre2/src/RenderingWorkerCount.hh
+@@ -0,0 +1,22 @@
++// Copyright 2026 Astribot. SPDX-License-Identifier: Apache-2.0
++#ifndef ASTRIBOT_RENDERING_WORKER_COUNT_HH
++#define ASTRIBOT_RENDERING_WORKER_COUNT_HH
++#include <algorithm>
++#include <cstddef>
++#include <stdexcept>
++namespace astribot_rendering {
++// Unset preserves upstream behavior. An explicit count is strict and bounded.
++inline std::size_t workerCount(const char* value, std::size_t detected) {
++  if (!value) return std::max<std::size_t>(1, detected);
++  std::size_t count=0;
++  for (const char* p=value; *p; ++p) {
++    if (*p<'0' || *p>'9' || count>64)
++      throw std::invalid_argument("ASTRIBOT_OGRE2_WORKER_THREADS must be 1..64");
++    count=count*10+static_cast<std::size_t>(*p-'0');
++  }
++  if (count<1 || count>64)
++    throw std::invalid_argument("ASTRIBOT_OGRE2_WORKER_THREADS must be 1..64");
++  return count;
++}
++}
++#endif

@@ -1,0 +1,505 @@
+--- verified_first_cause/src/hold_executor.cpp
++++ unverified_continuous/src/hold_executor.cpp
+@@ -8,6 +8,8 @@
+ #include "astribot_s1_transport_native/payload_client.hpp"
+ #include "astribot_s1_transport_native/payload_frames.hpp"
+ #include "astribot_s1_transport_native/payload_scene.hpp"
++#include "astribot_s1_transport_native/fixed_station_scene.hpp"
++#include "astribot_s1_transport_native/fixed_station_navigation.hpp"
+ #include <astribot_s1_payload_state/consumer.hpp>
+ #include <astribot_transport_msgs/srv/revalidate_payload_transition.hpp>
+ #include <moveit_msgs/srv/apply_planning_scene.hpp>
+@@ -16,6 +18,7 @@
+ #include <tf2_eigen/tf2_eigen.hpp>
+ #include <astribot_s1_transport_native/action/plan_to_hold.hpp>
+ #include <astribot_s1_transport_native/action/manipulation_to_hold.hpp>
++#include <astribot_s1_transport_native/action/fixed_station_transfer.hpp>
+ #include <astribot_transport_msgs/action/plan_manipulation.hpp>
+ #include <astribot_transport_msgs/srv/set_execution_guard.hpp>
+ #include <astribot_transport_msgs/srv/revalidate_manipulation.hpp>
+@@ -51,6 +54,8 @@
+ constexpr const char *NODE_NAME="task_trajectory_executor",*ACTION_NAME="/transport/plan_to_hold";
+ using FullAction=astribot_s1_transport_native::action::ManipulationToHold;
+ using FullParent=rclcpp_action::ServerGoalHandle<FullAction>;
++using Transfer=astribot_s1_transport_native::action::FixedStationTransfer;
++using TransferParent=rclcpp_action::ServerGoalHandle<Transfer>;
+ using Planner=astribot_transport_msgs::action::PlanManipulation;
+ using PlannerHandle=rclcpp_action::ClientGoalHandle<Planner>;
+ using SceneQuery=moveit_msgs::srv::GetPlanningScene;
+@@ -121,6 +126,12 @@
+   envelope_sub_=create_subscription<Envelope>("/navigation/envelope_v2",10,[this](Envelope::SharedPtr m){envelope_=*m;envelope_received_=wall();++envelope_sequence_;if(owned()&&!hold_confirmed_&&!manipulation_ready(now().nanoseconds(),wall()))stopping(reason_);});
+   guard_sub_=create_subscription<GuardState>("/transport/execution_guard/status",10,[this](GuardState::SharedPtr m){guard_state_=*m;guard_received_=wall();});
+   initialize_payload();
++  rcl_interfaces::msg::ParameterDescriptor immutable;immutable.read_only=true;
++  navigation_position_tolerance_=declare_parameter("fixed_station_position_tolerance_m",.002,immutable);
++  navigation_yaw_tolerance_=declare_parameter("fixed_station_yaw_tolerance_rad",.0017453292519943296,immutable);
++  if(!std::isfinite(navigation_position_tolerance_)||navigation_position_tolerance_<=0||navigation_position_tolerance_>.002||
++     !std::isfinite(navigation_yaw_tolerance_)||navigation_yaw_tolerance_<=0||navigation_yaw_tolerance_>.0017453292519943296)
++    throw std::runtime_error("FIXED_STATION_TOLERANCE_INVALID");
+ #endif
+   auto admit=[this](const auto goal,bool full){
+ #ifndef PLAN_TO_HOLD_EXECUTOR
+@@ -155,6 +166,31 @@
+     input_.operation=goal.operation;input_.object_id=goal.object_id;input_.pre_target=goal.pre_target;
+     input_.target=goal.target;input_.exit_targets=goal.exit_targets;input_.touch_links=goal.touch_links;input_.grasp_width_m=goal.grasp_width_m;
+     start();});
++  transfer_server_=rclcpp_action::create_server<Transfer>(this,"/transport/fixed_station_transfer",
++   [this,admit](const auto &,const auto goal){
++    try {
++     if(owned())return rclcpp_action::GoalResponse::REJECT;
++     validate_transfer_goal(*goal);
++     auto request=std::make_shared<Action::Goal>();request->task_id=goal->task_id;request->request_id=goal->request_id;
++     request->context_id=goal->context_id;request->operation="PICK";request->object_id=goal->object_id;
++     return admit(request,true);
++    }catch(const std::exception &error){reason_=error.what();return rclcpp_action::GoalResponse::REJECT;}
++   },
++   [this](const auto handle){if(handle!=transfer_parent_)return rclcpp_action::CancelResponse::REJECT;stopping("TASK_CANCELED");return rclcpp_action::CancelResponse::ACCEPT;},
++   [this](const auto handle){
++    transfer_parent_=handle;full_operation_=true;operation_generation_=1;
++    const auto &goal=*handle->get_goal();input_.task_id=goal.task_id;input_.request_id=goal.request_id;
++    input_.object_id=goal.object_id;input_.operation="PICK";input_.context_id=goal.context_id+":op:1:PICK";
++    input_.touch_links=goal.touch_links;input_.grasp_width_m=goal.grasp_width_m;
++    transfer_started_=wall();transfer_budget_=int64_t(goal.timeout_s*1000000000.);
++    transfer_phase_=TransferPhase::PICK_PREPARE;navigation_started_=false;navigation_cleanup_revoke_=false;station_pending_=false;station_scene_unresolved_=false;station_ready_=false;final_scene_pending_=false;
++    navigation_=std::make_unique<FixedStationNavigation>(*this,"/navigate_to_pose");
++    start();hold_id_=authority_->lease_id()+"_hold_1_0";operation_started_ros_=now().nanoseconds();
++    const auto *state=payload_consumer_->current(now().nanoseconds(),wall());
++    if(!state){stopping("TRANSFER_INITIAL_INVENTORY_EXPIRED");return;}
++    payload_observation_=state->observation;payload_observation_bound_=true;
++    try{check_payload_raw();}catch(const std::exception &error){stopping(error.what());}
++   });
+ #endif
+   timer_=create_wall_timer(std::chrono::milliseconds(50),[this]{tick();});
+  }
+@@ -166,13 +202,14 @@
+ #endif
+  bool owned() const {
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+-  return parent_||full_parent_;
++  return parent_||full_parent_||transfer_parent_;
+ #else
+   return bool(parent_);
+ #endif
+  }
+  bool parent_active() const {
+ #ifdef PLAN_TO_HOLD_EXECUTOR
++  if(transfer_parent_)return transfer_parent_->is_active();
+   if(full_parent_)return full_parent_->is_active();
+ #endif
+   return parent_&&parent_->is_active();
+@@ -188,10 +225,234 @@
+   finish(parent_,std::make_shared<Action::Result>());
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+   finish(full_parent_,std::make_shared<FullAction::Result>());
++  if(transfer_parent_&&transfer_parent_->is_active()) {
++   auto result=transfer_result(false,released);
++   if(released&&transfer_parent_->is_canceling())transfer_parent_->canceled(result);else transfer_parent_->abort(result);
++  }
+ #endif
+  }
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+  const Action::Goal &input() const{return input_;}
++ std::string transfer_phase_name() const {
++  switch(transfer_phase_) {
++   case TransferPhase::PICK_PREPARE:case TransferPhase::PICK:return "PICK";
++   case TransferPhase::NAVIGATE:return "NAVIGATE";
++   case TransferPhase::PLACE_REVOKE:case TransferPhase::PLACE_PREPARE:case TransferPhase::PLACE:return "PLACE";
++   case TransferPhase::FINAL_VERIFY:return "FINAL_VERIFY";
++   case TransferPhase::COMPLETE:return "COMPLETE";
++  }
++  throw std::logic_error("FIXED_STATION_PHASE_INVALID");
++ }
++ std::shared_ptr<Transfer::Result> transfer_result(bool success,bool released) {
++  auto result=std::make_shared<Transfer::Result>();result->success=success;result->resources_released=released;
++  result->reason=success?"TRANSFER_COMPLETE":(released?stop_reason_:"RESOURCE_RECOVERY_REQUIRED:"+stop_reason_);
++  result->cleanup_reason=stop_at_&&reason_!=stop_reason_?reason_:"";result->lease_id=authority_->lease_id();
++  if(navigation_)result->navigation_goal_uuid=navigation_->status().nav_goal_uuid;
++  if(payload_consumer_)if(const auto *state=payload_consumer_->current(now().nanoseconds(),wall()))result->final_attachment_revision=state->attachment_revision;
++  return result;
++ }
++ FixedStations observe_stations(const Transfer::Goal &goal,int64_t ros,int64_t steady,bool bind) {
++  (void)payload_world_base(ros,ros,steady);
++  if(!world_snapshot_||ros<world_snapshot_stamp_||ros-world_snapshot_stamp_>=300*MS||
++     steady-world_snapshot_->second.steady>=300*MS-(world_snapshot_->second.ros-world_snapshot_stamp_))throw std::runtime_error("STATION_WORLD_OBSERVATION_STALE");
++  FixedStations result;
++  for(size_t i=0;i<2;++i) {
++   const auto &registered=goal.stations[i];size_t count=0;
++   for(const auto &pose:world_snapshot_->first.pose())if(pose.name()==registered.id) {
++    ++count;if(!pose.id())throw std::runtime_error("STATION_ENTITY_INVALID");
++    if(bind)station_entities_[i]=pose.id();else if(station_entities_[i]!=pose.id())throw std::runtime_error("STATION_ENTITY_CHANGED");
++    auto &value=result[i];value.id=registered.id;
++    value.world_pose.position.x=pose.position().x();value.world_pose.position.y=pose.position().y();value.world_pose.position.z=pose.position().z();
++    value.world_pose.orientation.x=pose.orientation().x();value.world_pose.orientation.y=pose.orientation().y();value.world_pose.orientation.z=pose.orientation().z();value.world_pose.orientation.w=pose.orientation().w();
++    const auto normalized=fixed_station_target_in_base(value.world_pose,Eigen::Isometry3d::Identity());
++    Eigen::Isometry3d actual,expected;tf2::fromMsg(normalized,actual);tf2::fromMsg(registered.pose,expected);
++    const Eigen::Isometry3d difference=expected.inverse()*actual;
++    if(difference.translation().norm()>1e-6||Eigen::AngleAxisd(difference.linear()).angle()>1e-6)throw std::runtime_error("FIXED_STATION_MOVED");
++    for(size_t k=0;k<3;++k)value.size_xyz[k]=registered.primitives[0].dimensions[k];
++   }
++   if(count!=1)throw std::runtime_error("STATION_MODEL_NOT_UNIQUE");
++  }
++  return result;
++ }
++ void validate_transfer_goal(const Transfer::Goal &goal) {
++  if(!payload_client_||goal.context_id.empty()||!std::isfinite(goal.timeout_s)||goal.timeout_s<=0||goal.timeout_s>540||
++     goal.stations.size()!=2||goal.stations[0].id==goal.stations[1].id||goal.navigation_target.header.frame_id!="map")throw std::runtime_error("FIXED_STATION_GOAL_INVALID");
++  auto pose=[](const geometry_msgs::msg::PoseStamped &target){
++   if(target.header.frame_id!="gazebo_world")throw std::runtime_error("STATION_TARGET_FRAME_INVALID");
++   (void)fixed_station_target_in_base(target.pose,Eigen::Isometry3d::Identity());
++  };
++  pose(goal.pick_pre_target);pose(goal.pick_target);pose(goal.place_pre_target);pose(goal.place_target);
++  if(goal.pick_exit_targets.empty()||goal.place_exit_targets.empty())throw std::runtime_error("STATION_EXIT_TARGET_REQUIRED");
++  for(const auto &target:goal.pick_exit_targets)pose(target);for(const auto &target:goal.place_exit_targets)pose(target);
++  (void)fixed_station_target_in_base(goal.navigation_target.pose,Eigen::Isometry3d::Identity());
++  for(const auto &station:goal.stations) {
++   if(station.id.empty()||station.id==goal.object_id||station.header.frame_id!="gazebo_world"||station.operation!=station.ADD||
++      station.primitives.size()!=1||station.primitive_poses.size()!=1||station.primitives[0].type!=shape_msgs::msg::SolidPrimitive::BOX||
++      station.primitives[0].dimensions.size()!=3||!station.meshes.empty()||!station.planes.empty())throw std::runtime_error("STATION_REGISTERED_BOX_REQUIRED");
++   for(double size:station.primitives[0].dimensions)if(!std::isfinite(size)||size<=0)throw std::runtime_error("STATION_SIZE_INVALID");
++   const auto &shape=station.primitive_poses[0];
++   if(shape.position.x!=0||shape.position.y!=0||shape.position.z!=0||shape.orientation.x!=0||shape.orientation.y!=0||shape.orientation.z!=0||std::abs(shape.orientation.w)!=1)throw std::runtime_error("STATION_MODEL_ORIGIN_UNREGISTERED");
++   (void)fixed_station_target_in_base(station.pose,Eigen::Isometry3d::Identity());
++  }
++  const auto ros=now().nanoseconds(),steady=wall();
++  const auto *state=payload_consumer_->current(ros,steady);
++  if(!state||!state->observation.full_inventory||state->observation.status!=Observation::EMPTY||!state->observation.objects.empty())throw std::runtime_error("TRANSFER_REQUIRES_CONFIRMED_EMPTY");
++  (void)observe_stations(goal,ros,steady,true);
++ }
++ bool navigation_revoked(int64_t ros,int64_t steady) {
++  if(revoke_pending_&&steady-revoke_sent_>3000*MS){revoke_client_->remove_pending_request(revoke_request_);revoke_pending_=false;throw std::runtime_error("NAVIGATION_REVOCATION_TIMEOUT");}
++  if(!revoke_ack_)return false;
++  if(revocation_verified_)return true;
++  if(!revoke_wait_negative_)revocation_verified_=true;
++  else if(envelope_&&envelope_sequence_>revoke_envelope_sequence_&&ns(envelope_->header.stamp)>=revoke_ros_&&ros>=ns(envelope_->header.stamp)&&ros-ns(envelope_->header.stamp)<=300*MS&&steady-envelope_received_<=300*MS) {
++   if(envelope_->epoch!=revoke_epoch_||(!reference_envelope_.coordinator_session_id.empty()&&envelope_->coordinator_session_id!=reference_envelope_.coordinator_session_id))throw std::runtime_error("MTC_COORDINATOR_CHANGED");
++   if(envelope_->mode!=Envelope::HOLD&&envelope_->mode!=Envelope::FIXED_POSTURE)throw std::runtime_error("MTC_NAVIGATION_NOT_REVOKED");
++   if(!envelope_->navigation_allowed){reference_envelope_=*envelope_;revocation_verified_=true;}
++  }
++  if(!revocation_verified_&&steady-revoke_ack_at_>3000*MS)throw std::runtime_error("NAVIGATION_REVOCATION_READBACK_TIMEOUT");
++  return revocation_verified_;
++ }
++ void prepare_station_scene() {
++  if(station_pending_||station_ready_)return;
++  station_pending_=true;station_sent_=wall();const auto lease=authority_->lease_id(),context=input().context_id;
++  const auto generation=stage_generation_;
++  auto request=std::make_shared<SceneQuery::Request>();request->components.components=1023;
++  scenes_->async_send_request(request,[this,lease,context,generation](rclcpp::Client<SceneQuery>::SharedFuture future){
++   if(!owned()||lease!=authority_->lease_id()||generation!=stage_generation_||context!=input().context_id)return;
++   if(stop_at_){station_pending_=false;return;}
++   try {
++    const auto ros=now().nanoseconds(),steady=wall();check_payload_raw();
++    if(!geometry_fresh(ros,steady)||!manipulation_ready(ros,steady)||!navigation_revoked(ros,steady))throw std::runtime_error("STATION_PREPARATION_EVIDENCE_EXPIRED:"+reason_);
++    const auto &goal=*transfer_parent_->get_goal();const auto stations=observe_stations(goal,ros,steady,false);
++    const auto capture=world_snapshot_stamp_;auto world_base=payload_world_base(capture,ros,steady);
++    if(capture<operation_started_ros_||!world_base)throw std::runtime_error("STATION_WORLD_BASE_UNCONFIRMED");
++    station_before_=future.get()->scene;
++    if(input().operation=="PICK"&&!station_before_.robot_state.attached_collision_objects.empty())throw std::runtime_error("TRANSFER_INITIAL_SCENE_NOT_EMPTY");
++    station_diff_=fixed_station_scene_diff(station_before_,stations,*world_base,known_links_);
++    auto convert=[&](const geometry_msgs::msg::PoseStamped &target){auto converted=target;converted.header.frame_id=payload_base_;converted.header.stamp=rclcpp::Time(capture).to_msg();converted.pose=fixed_station_target_in_base(target.pose,*world_base);return converted;};
++    const bool pick=input().operation=="PICK";
++    input_.pre_target=convert(pick?goal.pick_pre_target:goal.place_pre_target);input_.target=convert(pick?goal.pick_target:goal.place_target);
++    input_.exit_targets.clear();for(const auto &target:pick?goal.pick_exit_targets:goal.place_exit_targets)input_.exit_targets.push_back(convert(target));
++    reference_base_=*odom_;reference_geometry_=*geometry_;
++    if(authority_->phase()!=ResourcePhase::RESERVED)throw std::runtime_error("STATION_SCENE_REQUIRES_RESERVED_OPERATION");
++    authority_->submitted(now().nanoseconds(),wall());
++    if(!authority_->record("station_scene_submission",{{"context",context},{"operation",operation_generation_},{"capture",capture},{"station_ids",{stations[0].id,stations[1].id}}}))throw std::runtime_error(authority_->reason());
++    station_scene_unresolved_=true;station_sent_=wall();
++    auto apply=std::make_shared<SceneApply::Request>();apply->scene=station_diff_;
++    apply_client_->async_send_request(apply,[this,lease,context,generation](rclcpp::Client<SceneApply>::SharedFuture applied){
++     if(!owned()||lease!=authority_->lease_id()||generation!=stage_generation_||context!=input().context_id)return;
++     try {
++      if(!applied.get()->success)throw std::runtime_error("STATION_SCENE_APPLY_REJECTED");
++      station_sent_=wall();auto read=std::make_shared<SceneQuery::Request>();read->components.components=1023;
++      scenes_->async_send_request(read,[this,lease,context,generation](rclcpp::Client<SceneQuery>::SharedFuture reply){
++       if(!owned()||lease!=authority_->lease_id()||generation!=stage_generation_||context!=input().context_id)return;
++       try {
++        check_payload_raw();validate_fixed_station_scene(station_before_,reply.get()->scene,station_diff_,known_links_);
++        station_scene_unresolved_=false;station_pending_=false;station_ready_=true;
++        if(!authority_->record("station_scene_confirmed",{{"context",context},{"operation",operation_generation_}}))throw std::runtime_error(authority_->reason());
++        if(stop_at_)return;
++        transfer_phase_=input().operation=="PICK"?TransferPhase::PICK:TransferPhase::PLACE;query_scene(false);
++       }catch(const std::exception &error){stopping(error.what());}
++      });
++     }catch(const std::exception &error){stopping(error.what());}
++    });
++   }catch(const std::exception &error){station_pending_=false;stopping(error.what());}
++  });
++ }
++ void continue_place(int64_t ros,int64_t steady) {
++  check_payload_raw();
++  const std::string context=transfer_parent_->get_goal()->context_id+":op:2:PLACE";
++  if(!navigation_->status().cleanup_complete||!children_->all_terminal()||!hold_.status(ros,steady).hold_confirmed||!manipulation_ready(ros,steady))throw std::runtime_error("PLACE_CONTINUATION_NOT_STATIONARY");
++  if(!authority_->continue_from_hold(authority_->lease_id(),authority_->epoch(),context,1,true,true,ros,steady))throw std::runtime_error("PLACE_CONTINUATION_NOT_COMMITTED:"+authority_->reason());
++  ++operation_generation_;++stage_generation_;input_.operation="PLACE";input_.context_id=context;
++  // Retain the lease, its renewal sequence, inventory binding/raw failure and
++  // motion history. Only completed per-operation child/planner state changes.
++  auto child_names=names_;child_names.push_back("mtc");children_=std::make_unique<ChildActions>(child_names);
++  handles_.clear();cancel_sent_.clear();planner_handle_.reset();planner_cancel_sent_=false;plan_.reset();
++  hold_.cancel();hold_started_=false;hold_confirmed_=false;terminal_barrier_=false;settling_.clear();
++  hold_id_=authority_->lease_id()+"_hold_2_0";motion_sent_=false;scene_verified_=false;scene_final_verified_=false;scene_pending_=false;endpoint_.clear();
++  guard_ack_=false;guard_requested_=false;guard_pending_=false;guard_disarm_requested_=false;guard_disarmed_=false;
++  scene_stabilizing_=false;scene_retry_at_=0;revalidation_pending_=false;revalidation_readback_=false;
++  reference_geometry_=*geometry_;reference_base_=*odom_;reference_envelope_=*envelope_;
++  station_ready_=false;station_pending_=false;operation_started_ros_=ros;started_=steady;
++  transfer_phase_=TransferPhase::PLACE_PREPARE;
++ }
++ void verify_transfer_complete() {
++  if(final_scene_pending_)return;
++  const auto ros=now().nanoseconds(),steady=wall();check_payload_raw();
++  const auto *state=payload_consumer_->current(ros,steady);
++  if(!state||!state->observation.full_inventory||state->observation.status!=Observation::EMPTY||!state->observation.objects.empty()||
++     state->attachment_revision!=geometry_->attachment_revision||!geometry_->attachment_ids.empty())throw std::runtime_error("TRANSFER_FINAL_EMPTY_UNCONFIRMED");
++  require_payload_observation_bound(payload_observation_,state->observation);
++  auto physical=payload_client_->observation(ros,steady);if(!physical)return;
++  if(physical->at("attached").get<bool>()||physical->at("command_id").get<uint32_t>()!=payload_client_->id()||
++     (physical_object(*physical).translation()-placement_requested_world_).norm()>placement_tolerance_||
++     (physical_object(*physical).translation()-placement_first_).norm()>.005)throw std::runtime_error("TRANSFER_FINAL_PLACEMENT_CHANGED");
++  if(!hold_.status(ros,steady).hold_confirmed||!manipulation_ready(ros,steady)||!navigation_->status().cleanup_complete||!children_->all_terminal())throw std::runtime_error("TRANSFER_FINAL_HOLD_UNCONFIRMED");
++  final_scene_pending_=true;final_checked_at_=steady;
++  const auto lease=authority_->lease_id();const auto generation=stage_generation_;
++  auto request=std::make_shared<SceneQuery::Request>();request->components.components=1023;
++  scenes_->async_send_request(request,[this,lease,generation](rclcpp::Client<SceneQuery>::SharedFuture response){
++   if(!owned()||lease!=authority_->lease_id()||generation!=stage_generation_)return;
++   final_scene_pending_=false;if(stop_at_)return;
++   try {
++    check_payload_raw();const auto scene=response.get()->scene;
++    if(!scene.robot_state.attached_collision_objects.empty())throw std::runtime_error("TRANSFER_FINAL_SCENE_NOT_EMPTY");
++    validate_payload_scene(payload_before_,scene,payload_observation_,payload_object_,false,payload_base_object_,payload_base_,known_links_);
++    const auto ros=now().nanoseconds(),steady=wall();const auto *state=payload_consumer_->current(ros,steady);
++    if(!state||!state->observation.full_inventory||state->observation.status!=Observation::EMPTY||!state->observation.objects.empty()||
++       !geometry_fresh(ros,steady)||state->attachment_revision!=geometry_->attachment_revision||!geometry_->attachment_ids.empty())throw std::runtime_error("TRANSFER_FINAL_EMPTY_EXPIRED");
++    require_payload_observation_bound(payload_observation_,state->observation);
++    auto physical=payload_client_->observation(ros,steady);
++    if(!physical||physical->at("attached").get<bool>()||physical->at("command_id").get<uint32_t>()!=payload_client_->id()||
++       (physical_object(*physical).translation()-placement_requested_world_).norm()>placement_tolerance_||
++       (physical_object(*physical).translation()-placement_first_).norm()>.005)throw std::runtime_error("TRANSFER_FINAL_PHYSICAL_UNCONFIRMED");
++    if(!hold_.status(ros,steady).hold_confirmed||!manipulation_ready(ros,steady)||!children_->all_terminal()||!navigation_->status().cleanup_complete||
++       payload_scene_unresolved_||station_scene_unresolved_||payload_client_->unresolved())throw std::runtime_error("TRANSFER_FINAL_BARRIER_UNCONFIRMED");
++    if(!authority_->record("transfer_empty_confirmed",{{"attachment_revision",state->attachment_revision},{"physical_revision",state->observation.revision},{"navigation_goal_uuid",navigation_->status().nav_goal_uuid}}))throw std::runtime_error(authority_->reason());
++    if(!authority_->complete(lease,authority_->epoch(),true,true,true,ros,steady))throw std::runtime_error("TRANSFER_COMPLETION_NOT_COMMITTED:"+authority_->reason());
++    transfer_phase_=TransferPhase::COMPLETE;reason_="TRANSFER_COMPLETE";
++    auto feedback=std::make_shared<Transfer::Feedback>();feedback->phase="COMPLETE";feedback->reason=reason_;feedback->lease_id=lease;
++    feedback->resource_epoch=authority_->epoch();feedback->context_id=input().context_id;feedback->object_id=input().object_id;feedback->navigation_goal_uuid=navigation_->status().nav_goal_uuid;
++    transfer_parent_->publish_feedback(feedback);transfer_parent_->succeed(transfer_result(true,true));transfer_parent_.reset();hold_.cancel();hold_confirmed_=false;
++   }catch(const std::exception &error){stopping(error.what());}
++  });
++ }
++ void advance_transfer(int64_t ros,int64_t steady) {
++  if(!transfer_parent_)return;
++  if(steady-transfer_started_>transfer_budget_)throw std::runtime_error("TRANSFER_TIMEOUT");
++  check_payload_raw();
++  if(station_pending_&&steady-station_sent_>3000*MS)throw std::runtime_error("STATION_SCENE_UNCONFIRMED");
++  if(final_scene_pending_&&steady-final_checked_at_>3000*MS)throw std::runtime_error("TRANSFER_FINAL_SCENE_TIMEOUT");
++  if(transfer_phase_==TransferPhase::PICK_PREPARE||transfer_phase_==TransferPhase::PLACE_PREPARE) {
++   (void)payload_world_base(ros,ros,steady);
++   if(!world_snapshot_||world_snapshot_stamp_<operation_started_ros_)return;
++   if(navigation_revoked(ros,steady))prepare_station_scene();return;
++  }
++  if(transfer_phase_==TransferPhase::PICK&&hold_confirmed_) {
++   const auto *state=payload_consumer_->current(ros,steady);
++   if(!state||!state->observation.full_inventory||state->observation.status!=Observation::ATTACHED||state->observation.objects.size()!=1||state->observation.objects[0].object.id!=payload_object_)throw std::runtime_error("TRANSFER_ATTACHED_BOX_UNCONFIRMED");
++   auto limits=transfer_parent_->get_goal()->navigation_limits;limits.payload_mass_kg=state->observation.objects[0].weight;
++   FixedStationNavigation::Request request;request.task_id=input().task_id;request.context_id=transfer_parent_->get_goal()->context_id+":NAV";
++   request.lease_id=authority_->lease_id();request.resource_epoch=authority_->epoch();request.reference_geometry=*geometry_;
++   request.fixed=hold_.request(request.context_id,limits,ros,steady);request.navigation_target=transfer_parent_->get_goal()->navigation_target;
++   request.robot_base_frame=payload_base_;request.position_tolerance_m=navigation_position_tolerance_;request.yaw_tolerance_rad=navigation_yaw_tolerance_;
++   if(!authority_->record("navigation_leg_submission",{{"context",request.context_id},{"hold_id",request.fixed.hold_id}}))throw std::runtime_error(authority_->reason());
++   navigation_started_=true;transfer_phase_=TransferPhase::NAVIGATE;navigation_->start(std::move(request));return;
++  }
++  if(transfer_phase_==TransferPhase::NAVIGATE) {
++   if(!hold_.status(ros,steady).hold_confirmed)throw std::runtime_error("TRANSFER_NAVIGATION_HOLD_LOST");
++   navigation_->tick();const auto &status=navigation_->status();
++   if(status.phase==FixedStationNavigation::Phase::FAILED||status.phase==FixedStationNavigation::Phase::UNRESOLVED||status.phase==FixedStationNavigation::Phase::CANCELING)throw std::runtime_error(status.reason);
++   if(status.phase==FixedStationNavigation::Phase::SUCCEEDED) {
++    if(!authority_->record("navigation_leg_confirmed",{{"uuid",status.nav_goal_uuid},{"session",status.envelope_session},{"epoch",status.envelope_epoch},{"geometry_hash",status.geometry_hash}}))throw std::runtime_error(authority_->reason());
++    transfer_phase_=TransferPhase::PLACE_REVOKE;revoke_ack_=false;revocation_verified_=false;revoke_navigation();
++   }return;
++  }
++  if(transfer_phase_==TransferPhase::PLACE_REVOKE) {if(navigation_revoked(ros,steady))continue_place(ros,steady);return;}
++  if(transfer_phase_==TransferPhase::PLACE&&hold_confirmed_)transfer_phase_=TransferPhase::FINAL_VERIFY;
++  if(transfer_phase_==TransferPhase::FINAL_VERIFY)verify_transfer_complete();
++ }
+  void check_payload_raw() {
+   if(!payload_raw_failure_.empty())throw std::runtime_error(payload_raw_failure_);
+   if(!payload_observation_bound_)return;
+@@ -324,7 +585,7 @@
+   if(!full_operation_)throw std::runtime_error("PAYLOAD_REQUIRES_FULL_OPERATION");
+   payload_before_=scene;payload_started_=wall();payload_phase_=PayloadPhase::FRAME;
+   payload_physical_applied_=false;payload_scene_unresolved_=false;payload_query_pending_=false;
+-  payload_transaction_=authority_->lease_id()+":payload:"+std::to_string(plan_->index());
++  payload_transaction_=authority_->lease_id()+":payload:"+(transfer_parent_?std::to_string(operation_generation_)+":":"")+std::to_string(plan_->index());
+   payload_stopped_joints_.clear();payload_joint_bounds_.clear();placement_first_ros_=placement_first_wall_=0;
+   for(size_t i=0;i<geometry_->joints.name.size();++i){payload_stopped_joints_[geometry_->joints.name[i]]=geometry_->joints.position[i];payload_joint_bounds_[geometry_->joints.name[i]]=geometry_->joint_position_error_bounds[i];}
+   reason_="WAITING_FOR_PHYSICAL_PAYLOAD_FRAME";
+@@ -336,9 +597,10 @@
+    if(stamp.sec()<0||stamp.sec()>INT32_MAX||stamp.nsec()<0||stamp.nsec()>=1000000000)throw std::runtime_error("PAYLOAD_WORLD_STAMP_INVALID");
+    const int64_t at=stamp.sec()*1000000000+stamp.nsec();
+    if(at<=0||receipt.ros<at||ros<at||ros-at>=300*MS||steady-receipt.steady>=300*MS-(receipt.ros-at))continue;
+-   payload_frames_->observe(value,receipt);
+-  }
+-  return payload_frames_->world_from_base(capture,ros,steady);
++   if(payload_frames_)payload_frames_->observe(value,receipt);
++   if(!world_snapshot_||at>world_snapshot_stamp_){world_snapshot_=std::make_pair(value,receipt);world_snapshot_stamp_=at;}
++  }
++  return payload_frames_?payload_frames_->world_from_base(capture,ros,steady):std::nullopt;
+  }
+  Eigen::Isometry3d physical_object(const nlohmann::json &state) const {
+   const auto pose=state.at("actual_world_xyzw").get<std::vector<double>>();
+@@ -412,9 +674,12 @@
+    const auto send_ros=now().nanoseconds(),send_steady=wall();
+    if(!authority_->grant(send_ros,send_steady)||!payload_stopped(send_ros,send_steady)||!payload_client_->observation(send_ros,send_steady)||!payload_world_base(at,send_ros,send_steady))throw std::runtime_error("PAYLOAD_SEND_EVIDENCE_EXPIRED");
+    placement_requested_world_=world_object.translation();
++   // Only this validated, task-owned new physical command may replace the
++   // previous operation's observation binding. A latched raw failure is never cleared.
++   check_payload_raw();const bool previous_bound=payload_observation_bound_;payload_observation_bound_=false;
+    payload_phase_=PayloadPhase::PHYSICAL;payload_sent_=send_steady;
+    try {payload_client_->begin(attach,request,payload_radius_,diagnostic,sample.second->receipt,send_ros,send_steady);}
+-   catch(...) {if(!payload_client_->unresolved())payload_phase_=PayloadPhase::NONE;throw;}
++   catch(...) {if(!payload_client_->unresolved()){payload_phase_=PayloadPhase::NONE;payload_observation_bound_=previous_bound;}throw;}
+    reason_="WAITING_FOR_PHYSICAL_APPLICATION";return;
+   }
+   if(payload_phase_==PayloadPhase::PHYSICAL) {
+@@ -478,7 +743,7 @@
+  std::string stage_name() const {const auto &id=plan_->current().stage_id;return id.substr(0,id.find(':'));}
+  void next_stage() {
+   ++stage_generation_;hold_.cancel();hold_started_=false;hold_confirmed_=false;
+-  hold_id_=authority_->lease_id()+"_hold_"+std::to_string(plan_->index());
++  hold_id_=authority_->lease_id()+"_hold_"+(transfer_parent_?std::to_string(operation_generation_)+"_":"")+std::to_string(plan_->index());
+   children_=std::make_unique<ChildActions>(names_);handles_.clear();cancel_sent_.clear();
+   motion_sent_=false;scene_verified_=false;scene_final_verified_=false;endpoint_.clear();
+   guard_ack_=false;guard_requested_=false;guard_pending_=false;guard_disarm_requested_=false;guard_disarmed_=false;
+@@ -564,12 +829,15 @@
+      const auto&request_goal=input();Planner::Goal goal;
+      goal.operation=request_goal.operation;goal.object_id=request_goal.object_id;goal.context_id=request_goal.context_id;goal.scene=scene;
+      goal.pre_target=request_goal.pre_target;goal.target=request_goal.target;goal.exit_targets=request_goal.exit_targets;goal.touch_links=request_goal.touch_links;goal.grasp_width_m=request_goal.grasp_width_m;goal.timeout_s=45.;
+-     authority_->submitted(now().nanoseconds(),wall());children_->submitted("mtc");
++     if(!transfer_parent_||authority_->phase()==ResourcePhase::RESERVED)authority_->submitted(now().nanoseconds(),wall());
++     else if(authority_->phase()!=ResourcePhase::EXECUTING)throw std::runtime_error("PLANNER_OPERATION_PHASE_INVALID");
++     children_->submitted("mtc");
+      if(!authority_->record("planner_submission",{{"context",goal.context_id},{"geometry_sequence",geometry_->sequence}}))throw std::runtime_error(authority_->reason());
+      rclcpp_action::Client<Planner>::SendGoalOptions options;
+-     options.goal_response_callback=[this,lease](PlannerHandle::SharedPtr h){if(!owned()||lease!=authority_->lease_id())return;try{children_->response("mtc",h?canonical_goal_id(h->get_goal_id()):"");planner_handle_=h;if(!h)stopping("MTC_PLAN_REJECTED");}catch(const std::exception&e){stopping(e.what());}};
+-     options.result_callback=[this,lease](const PlannerHandle::WrappedResult &result){
+-      if(!owned()||lease!=authority_->lease_id())return;
++     const auto operation=operation_generation_;const auto context=goal.context_id;
++     options.goal_response_callback=[this,lease,operation,context](PlannerHandle::SharedPtr h){if(!owned()||lease!=authority_->lease_id()||operation!=operation_generation_||context!=input().context_id)return;try{children_->response("mtc",h?canonical_goal_id(h->get_goal_id()):"");planner_handle_=h;if(!h)stopping("MTC_PLAN_REJECTED");}catch(const std::exception&e){stopping(e.what());}};
++     options.result_callback=[this,lease,operation,context](const PlannerHandle::WrappedResult &result){
++      if(!owned()||lease!=authority_->lease_id()||operation!=operation_generation_||context!=input().context_id)return;
+       try {
+        const bool terminal=result.result&&(result.code==rclcpp_action::ResultCode::SUCCEEDED||result.code==rclcpp_action::ResultCode::ABORTED||result.code==rclcpp_action::ResultCode::CANCELED);
+        const bool okay=result.code==rclcpp_action::ResultCode::SUCCEEDED&&result.result&&result.result->success;
+@@ -626,17 +894,9 @@
+   const double dot=std::abs(a.orientation.x*b.orientation.x+a.orientation.y*b.orientation.y+a.orientation.z*b.orientation.z+a.orientation.w*b.orientation.w);
+   if(odom_->header.frame_id!=reference_base_.header.frame_id||std::hypot(std::hypot(a.position.x-b.position.x,a.position.y-b.position.y),a.position.z-b.position.z)>.02||2*std::acos(std::min(1.,dot))>.02){stopping("MTC_BASE_MOVED");return;}
+   if(payload_phase_!=PayloadPhase::NONE)return;
+-  if(revoke_pending_&&steady-revoke_sent_>3000*MS){revoke_client_->remove_pending_request(revoke_request_);revoke_pending_=false;stopping("NAVIGATION_REVOCATION_TIMEOUT");return;}
+-  if(!revoke_ack_)return;
+   if(!revocation_verified_) {
+-   if(!revoke_wait_negative_)revocation_verified_=true;
+-   else if(envelope_&&envelope_sequence_>revoke_envelope_sequence_&&ns(envelope_->header.stamp)>=revoke_ros_&&ros>=ns(envelope_->header.stamp)&&ros-ns(envelope_->header.stamp)<=300*MS&&steady-envelope_received_<=300*MS) {
+-    if(envelope_->epoch!=revoke_epoch_||(!reference_envelope_.coordinator_session_id.empty()&&envelope_->coordinator_session_id!=reference_envelope_.coordinator_session_id)){stopping("MTC_COORDINATOR_CHANGED");return;}
+-    if(envelope_->mode!=Envelope::HOLD&&envelope_->mode!=Envelope::FIXED_POSTURE){stopping("MTC_NAVIGATION_NOT_REVOKED");return;}
+-    if(!envelope_->navigation_allowed){reference_envelope_=*envelope_;revocation_verified_=true;}
+-   }
+-   if(!revocation_verified_){if(steady-revoke_ack_at_>3000*MS)stopping("NAVIGATION_REVOCATION_READBACK_TIMEOUT");return;}
+-   query_scene(false);
++   if(!navigation_revoked(ros,steady))return;
++   if(!transfer_parent_)query_scene(false);
+   }
+   if(scene_pending_&&steady-scene_sent_>3000*MS){scenes_->remove_pending_request(scene_request_);scene_pending_=false;stopping("MTC_SCENE_TIMEOUT");return;}
+   if(revalidation_pending_&&steady-revalidation_sent_>10000*MS){revalidate_client_->remove_pending_request(revalidation_request_);revalidation_pending_=false;stopping("MTC_REVALIDATION_TIMEOUT");return;}
+@@ -815,6 +1075,7 @@
+   if(!owned())return;
+   if(!stop_at_){stop_at_=wall();stop_ros_=now().nanoseconds();stop_reason_=reason;reason_=reason;authority_->stop(stop_reason_,stop_ros_,stop_at_);hold_.cancel();settling_.clear();
+ #ifdef PLAN_TO_HOLD_EXECUTOR
++   if(transfer_parent_&&navigation_started_){navigation_->cancel(stop_reason_);navigation_cleanup_revoke_=false;}
+    revoke_navigation();
+ #endif
+   }
+@@ -861,7 +1122,7 @@
+     geometry_ready=geometry_fresh(ros,steady);
+     if(!stop_at_&&(!grant||!geometry_ready||!claims_fresh(ros,steady)||!exclusive_graph()))stopping(grant?reason_:authority_->reason());
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+-    if(!stop_at_)advance_plan(ros,steady);
++    if(!stop_at_&&(!transfer_parent_||transfer_phase_==TransferPhase::PICK||transfer_phase_==TransferPhase::PLACE))advance_plan(ros,steady);
+     if(payload_phase_!=PayloadPhase::NONE) {
+      try {advance_payload(ros,steady);}catch(const std::exception &error){stopping(error.what());}
+     }
+@@ -896,20 +1157,33 @@
+ #else
+     if(!stop_at_&&!hold_confirmed_&&steady-started_>15000*MS)stopping("HOLD_COMPLETION_TIMEOUT");
+ #endif
++#ifdef PLAN_TO_HOLD_EXECUTOR
++    if(!stop_at_&&transfer_parent_)advance_transfer(now().nanoseconds(),wall());
++#endif
+     if(stop_at_) {
+      // stopping() may have sampled newer clocks inside this same tick. Keep
+      // real rollback detection intact; cleanup must use its own current pair.
+      ros=now().nanoseconds();steady=wall();
+      cancel_children();
++#ifdef PLAN_TO_HOLD_EXECUTOR
++     if(transfer_parent_&&navigation_started_) {
++      navigation_->cancel(stop_reason_);navigation_->tick();
++      if(navigation_->status().fixed_request_terminal&&!navigation_cleanup_revoke_) {
++       navigation_cleanup_revoke_=true;revoke_ack_=false;revocation_verified_=false;revoke_navigation();
++      }
++     }
++#endif
+      if(children_->all_terminal()&&!terminal_barrier_){terminal_barrier_=true;stop_ros_=ros;settling_.clear();}
+      bool ready=children_->all_terminal()&&(!motion_ever_sent_||measured_safe(ros,steady));
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+      ready=ready&&payload_phase_==PayloadPhase::NONE&&!payload_scene_unresolved_&&(!full_operation_||!payload_client_->unresolved())&&finish_guard();
++     if(transfer_parent_)ready=ready&&!station_scene_unresolved_&&(!navigation_started_||
++       (navigation_->status().cleanup_complete&&navigation_cleanup_revoke_&&navigation_revoked(now().nanoseconds(),wall())));
+ #endif
+      if(authority_->release(ready,ready,ros,steady)) {
+       finish_parent(true);parent_.reset();
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+-      full_parent_.reset();
++      full_parent_.reset();transfer_parent_.reset();
+ #endif
+      } else if(steady-stop_at_>10000*MS&&parent_active()) {
+       authority_->uncertain_result("RESOURCE_RECOVERY_REQUIRED:"+stop_reason_,ros,steady);finish_parent(false);
+@@ -941,9 +1215,20 @@
+    publish(parent_,std::make_shared<Action::Feedback>());
+ #ifdef PLAN_TO_HOLD_EXECUTOR
+    publish(full_parent_,std::make_shared<FullAction::Feedback>());
+-#endif
+-  }
+-  std_msgs::msg::String message;message.data=nlohmann::json({{"phase",phase},{"reason",reported_reason},{"cleanup_reason",stop_at_&&reason_!=stop_reason_?reason_:""},{"authority_reason",authority_->reason()},{"hold_reason",hold_.reason()},{"lease_id",authority_->lease_id()},{"epoch",authority_->epoch()},{"hold_id",hold_id_},{"hold_confirmed",state.hold_confirmed}}).dump();state_pub_->publish(message);
++   if(transfer_parent_) {
++    auto feedback=std::make_shared<Transfer::Feedback>();feedback->phase=transfer_phase_name();feedback->reason=reported_reason;
++    feedback->lease_id=authority_->lease_id();feedback->resource_epoch=authority_->epoch();feedback->context_id=input().context_id;
++    feedback->object_id=input().object_id;feedback->stage_id=stage_id_;feedback->hold_id=hold_id_;feedback->hold_confirmed=state.hold_confirmed;
++    if(navigation_)feedback->navigation_goal_uuid=navigation_->status().nav_goal_uuid;
++    transfer_parent_->publish_feedback(feedback);
++   }
++#endif
++  }
++  nlohmann::json status={{"phase",phase},{"reason",reported_reason},{"cleanup_reason",stop_at_&&reason_!=stop_reason_?reason_:""},{"authority_reason",authority_->reason()},{"hold_reason",hold_.reason()},{"lease_id",authority_->lease_id()},{"epoch",authority_->epoch()},{"hold_id",hold_id_},{"hold_confirmed",state.hold_confirmed}};
++#ifdef PLAN_TO_HOLD_EXECUTOR
++  if(transfer_parent_) {status["task_id"]=input().task_id;status["context_id"]=input().context_id;status["object_id"]=input().object_id;status["task_phase"]=transfer_phase_name();status["stage_id"]=stage_id_;status["navigation_goal_uuid"]=navigation_?navigation_->status().nav_goal_uuid:"";}
++#endif
++  std_msgs::msg::String message;message.data=status.dump();state_pub_->publish(message);
+  }
+  std::map<std::string,std::vector<std::string>> groups_;std::set<std::string> all_joints_,cancel_sent_;std::vector<std::string> names_;
+  std::unique_ptr<ResourceJournal> journal_;std::unique_ptr<ResourceAuthority> authority_;ArmHold hold_;
+@@ -986,7 +1271,17 @@
+  int64_t placement_first_ros_=0,placement_first_wall_=0;
+  SceneBinding payload_revalidated_binding_;
+  rclcpp_action::Server<FullAction>::SharedPtr full_server_;std::shared_ptr<FullParent> full_parent_;
+- Action::Goal input_;bool full_operation_=false;uint64_t stage_generation_=0;
++ Action::Goal input_;bool full_operation_=false;uint64_t stage_generation_=0,operation_generation_=0;
++ enum class TransferPhase {PICK_PREPARE,PICK,NAVIGATE,PLACE_REVOKE,PLACE_PREPARE,PLACE,FINAL_VERIFY,COMPLETE};
++ TransferPhase transfer_phase_=TransferPhase::PICK_PREPARE;
++ rclcpp_action::Server<Transfer>::SharedPtr transfer_server_;std::shared_ptr<TransferParent> transfer_parent_;
++ std::unique_ptr<FixedStationNavigation> navigation_;
++ bool navigation_started_=false,navigation_cleanup_revoke_=false,station_pending_=false,station_scene_unresolved_=false,station_ready_=false,final_scene_pending_=false;
++ int64_t transfer_started_=0,transfer_budget_=0,station_sent_=0,operation_started_ros_=0,final_checked_at_=0;
++ moveit_msgs::msg::PlanningScene station_before_,station_diff_;
++ std::optional<std::pair<ignition::msgs::Pose_V,PayloadCommand::Receipt>> world_snapshot_;int64_t world_snapshot_stamp_=0;
++ std::array<uint64_t,2> station_entities_{};
++ double navigation_position_tolerance_=0.002,navigation_yaw_tolerance_=0.0017453292519943296;
+  rclcpp_action::Client<Planner>::SharedPtr planner_;PlannerHandle::SharedPtr planner_handle_;
+  rclcpp::Client<SceneQuery>::SharedPtr scenes_;rclcpp::Client<GuardService>::SharedPtr guard_client_;rclcpp::Client<Revoke>::SharedPtr revoke_client_;
+  rclcpp::Client<Revalidate>::SharedPtr revalidate_client_;

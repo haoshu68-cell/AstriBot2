@@ -33,6 +33,7 @@
 
 import collections
 import math
+import os
 import threading
 from time import perf_counter
 from functools import wraps
@@ -57,6 +58,14 @@ from astribot_trajectory_bridge.chassis_feedback import (
     odom_drift,
     validate_leash_config,
 )
+
+if os.environ.get('ASTRIBOT_BRIDGE_NATIVE_CORE', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native
+    except ImportError:  # pragma: no cover - exercised on Python-only overlays
+        _native = None
+else:
+    _native = None
 
 ST_DISABLED = 'DISABLED'
 ST_ENABLED = 'ENABLED'
@@ -207,7 +216,7 @@ class ChassisBridgeConfig:
         to_local_velocity((0.0, 0.0, 0.0), self.input_frame, 0.0)
 
 
-class ChassisBridgeCore:
+class _PythonChassisBridgeCore:
     """底盘控制核心。节点层只负责：喂 twist、按频率调 tick、把事件转成话题。"""
 
     def __init__(self, cfg, session, pose_port, clock):
@@ -519,8 +528,8 @@ class ChassisBridgeCore:
 
         heading = self.pos_cmd[IDX_THETA]
         if self._pose_integrator is not None:
-            heading = (self._pose_integrator.anchor[IDX_THETA] +
-                       self._pose_integrator.integral[IDX_THETA])
+            heading = (self._pose_integrator.anchor_value(IDX_THETA) +
+                       self._pose_integrator.integral_value(IDX_THETA))
         v_local = to_local_velocity(vel_in, self.cfg.input_frame,
                                     heading - self.theta_ref)
         pos_before = list(self.pos_cmd)
@@ -566,11 +575,11 @@ class ChassisBridgeCore:
             return False
         self.pos_cmd = candidate
         if self._pose_integrator is not None:
-            before = list(self._pose_integrator.integral)
+            before = self._pose_integrator.integral
             self._pose_integrator.commit_preview(v_local, dt)
             for i, h in enumerate(preview_times):
                 if h == 0.0:
-                    self._pose_integrator.integral[i] = before[i] + v_local[i] * dt
+                    self._pose_integrator.set_integral(i, before[i] + v_local[i] * dt)
         self._applied_velocity = tuple(v_local)
         self._record_vel(raw_in, vel_in, v_local, dt, actual, pos_before)
         return True
@@ -743,9 +752,9 @@ class ChassisBridgeCore:
             corr_path=w['corr_path'],
             dtheta_integrated=w['dtheta_integrated'],
             pose_rebases=w['pose_rebases'],
-            frame_dx=self._pose_integrator.integral[0] if self._pose_integrator else 0.0,
-            frame_dy=self._pose_integrator.integral[1] if self._pose_integrator else 0.0,
-            frame_dtheta=self._pose_integrator.integral[2] if self._pose_integrator else 0.0,
+            frame_dx=self._pose_integrator.integral_value(0) if self._pose_integrator else 0.0,
+            frame_dy=self._pose_integrator.integral_value(1) if self._pose_integrator else 0.0,
+            frame_dtheta=self._pose_integrator.integral_value(2) if self._pose_integrator else 0.0,
             lead_xy_peak=w['lead_xy_peak'], lead_theta_peak=w['lead_theta_peak'])
         self._reset_vel_window()
         return trace
@@ -813,3 +822,165 @@ class ChassisBridgeCore:
                        '%.2fs 窗口内里程计与位姿源位移差 %.4fm 超过阈值 %.4fm'
                        % (now - t0, drift, self.cfg.odom_drift_warn_m),
                        drift, moved)
+
+
+class _NativeIntegratorView:
+    """Read-only compatibility view over the native integrator state."""
+
+    def __init__(self, core):
+        self._core = core
+
+    def _state(self):
+        return self._core._native_impl.integrator_state()
+
+    @property
+    def stamp(self):
+        return self._state()[0]
+
+    @property
+    def pose(self):
+        return list(self._state()[1])
+
+    @property
+    def anchor(self):
+        return list(self._state()[2])
+
+    @property
+    def integral(self):
+        return list(self._state()[3])
+
+    @property
+    def velocity(self):
+        return list(self._state()[4])
+
+
+class ChassisBridgeCore:
+    """Compatibility facade for the opt-in native bridge state machine."""
+
+    def __init__(self, cfg, session, pose_port, clock):
+        self.cfg = cfg
+        self.session = session
+        self.pose = pose_port
+        self.clock = clock
+        self.timing = LoopTiming()
+        self._control_lock = threading.RLock()
+        self._native_impl = None
+        self._native_integrator_view = None
+        if _native is None or not hasattr(_native, 'ChassisBridgeCore'):
+            self._impl = _PythonChassisBridgeCore(cfg, session, pose_port, clock)
+        else:
+            self._native_impl = _native.ChassisBridgeCore(
+                cfg, session, pose_port, clock)
+            self._impl = None
+
+    @property
+    def state(self):
+        return self._impl.state if self._native_impl is None else self._native_impl.state
+
+    @property
+    def pos_cmd(self):
+        if self._native_impl is None:
+            return self._impl.pos_cmd
+        value = self._native_impl.pos_cmd
+        return None if value is None else list(value)
+
+    @property
+    def last_stop(self):
+        return self._impl.last_stop if self._native_impl is None else self._native_impl.last_stop
+
+    @property
+    def events(self):
+        """兼容旧核心的待上报事件视图；取走仍通过 ``drain_events`` 完成。"""
+        if self._native_impl is None:
+            return self._impl.events
+        return [StatusEvent(code, detail, metric_1, metric_2)
+                for code, detail, metric_1, metric_2
+                in self._native_impl.events()]
+
+    @property
+    def _pose_integrator(self):
+        if self._native_impl is None:
+            return self._impl._pose_integrator
+        state = self._native_impl.integrator_state()
+        if state[0] is None:
+            return None
+        if self._native_integrator_view is None:
+            self._native_integrator_view = _NativeIntegratorView(self)
+        return self._native_integrator_view
+
+    def submit_twist(self, vx, vy, wz):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.submit_twist(vx, vy, wz)
+            return self._native_impl.submit_twist(float(vx), float(vy), float(wz))
+
+    def submit_scan_seen(self, stamp=None):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.submit_scan_seen(stamp)
+            return self._native_impl.submit_scan_seen(stamp)
+
+    def enable(self):
+        with self._control_lock:
+            self.timing.reset()
+            if self._native_impl is None:
+                return self._impl.enable()
+            return tuple(self._native_impl.enable())
+
+    def disable(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.disable()
+            return tuple(self._native_impl.disable())
+
+    def reset_leash(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.reset_leash()
+            result = tuple(self._native_impl.reset_leash())
+            self.timing.reset()
+            return result
+
+    def inner_tick(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.inner_tick()
+            return bool(self._native_impl.inner_tick())
+
+    def outer_tick(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.outer_tick()
+            return self._native_impl.outer_tick()
+
+    def drain_events(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.drain_events()
+            return [StatusEvent(code, detail, metric_1, metric_2)
+                    for code, detail, metric_1, metric_2
+                    in self._native_impl.drain_events()]
+
+    def tick_stats(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.tick_stats()
+            return TickStats(*tuple(self._native_impl.tick_stats()))
+
+    def consume_tick_window_gap(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.consume_tick_window_gap()
+            return TickWindowGap(*tuple(self._native_impl.consume_tick_window_gap()))
+
+    def reset_tick_stats(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.reset_tick_stats()
+            return self._native_impl.reset_tick_stats()
+
+    def consume_vel_trace(self):
+        with self._control_lock:
+            if self._native_impl is None:
+                return self._impl.consume_vel_trace()
+            return VelTrace(*tuple(self._native_impl.consume_vel_trace()))

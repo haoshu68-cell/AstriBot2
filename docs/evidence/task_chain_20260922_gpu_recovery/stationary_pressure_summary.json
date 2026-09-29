@@ -1,0 +1,475 @@
+{
+  "projection": {
+    "scope": "stationary warehouse + SLAM + activated Nav2 + actual CUDA wrist projection",
+    "hardware": false,
+    "vla": false,
+    "session": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/navigation_01/session.json",
+    "started_wall": 1790086430.3392482,
+    "validation_sha256": "c927aaa3ec74c403ae6e412a87a46a57aa7d8a3ee426d9984da43150ed83899a",
+    "thresholds": {
+      "publication_age_sec": 0.25,
+      "invalid_detection_sec": 0.5,
+      "recovery_sec": 4.5
+    },
+    "faults": [
+      {
+        "camera": "left_wrist_rgbd",
+        "signal": "SIGSTOP",
+        "elapsed": 45.00026961900221,
+        "ros_ns": 357919000000,
+        "before_epoch": "1485963-20853702003489:144",
+        "before_worker": 1,
+        "owned": {
+          "pid": 1486709,
+          "parent": 1485963,
+          "start_ticks": "2085631",
+          "argv": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+            "--backend",
+            "cuda",
+            ""
+          ],
+          "executable": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+          "executable_sha256": "4880b35016fafaf6f3e20e84d7c592e54a9fd4a63a4aeae963b04215ae88633d"
+        },
+        "stationary_velocities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "peer_workers": {
+          "head_rgbd": 0,
+          "torso_rgbd": 0,
+          "right_wrist_rgbd": 1
+        },
+        "invalid_after_sec": 0.2409656919990084,
+        "recovered_after_sec": 0.5810434799968789,
+        "raw_samples": 23,
+        "peer_samples": {
+          "head_rgbd": 29,
+          "torso_rgbd": 29,
+          "right_wrist_rgbd": 29
+        },
+        "raw_remained_valid": true,
+        "peers_unchanged_and_valid": true,
+        "passed": true
+      },
+      {
+        "camera": "right_wrist_rgbd",
+        "signal": "SIGKILL",
+        "elapsed": 150.00050769600057,
+        "ros_ns": 462468000000,
+        "before_epoch": "1485926-20853610276529:144",
+        "before_worker": 1,
+        "owned": {
+          "pid": 1488001,
+          "parent": 1485926,
+          "start_ticks": "2086082",
+          "argv": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+            "--backend",
+            "cuda",
+            ""
+          ],
+          "executable": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+          "executable_sha256": "4880b35016fafaf6f3e20e84d7c592e54a9fd4a63a4aeae963b04215ae88633d"
+        },
+        "stationary_velocities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "peer_workers": {
+          "head_rgbd": 0,
+          "torso_rgbd": 0,
+          "left_wrist_rgbd": 2
+        },
+        "invalid_after_sec": 0.05002721900018514,
+        "recovered_after_sec": 0.3099970760013093,
+        "raw_samples": 13,
+        "peer_samples": {
+          "head_rgbd": 15,
+          "torso_rgbd": 16,
+          "left_wrist_rgbd": 16
+        },
+        "raw_remained_valid": true,
+        "peers_unchanged_and_valid": true,
+        "passed": true
+      },
+      {
+        "camera": "left_wrist_rgbd",
+        "signal": "SIGSTOP",
+        "elapsed": 300.00069000000076,
+        "ros_ns": 611587000000,
+        "before_epoch": "1485963-20853702003489:145",
+        "before_worker": 2,
+        "owned": {
+          "pid": 1547604,
+          "parent": 1485963,
+          "start_ticks": "2105983",
+          "argv": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+            "--backend",
+            "cuda",
+            ""
+          ],
+          "executable": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+          "executable_sha256": "4880b35016fafaf6f3e20e84d7c592e54a9fd4a63a4aeae963b04215ae88633d"
+        },
+        "stationary_velocities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "peer_workers": {
+          "head_rgbd": 0,
+          "torso_rgbd": 0,
+          "right_wrist_rgbd": 2
+        },
+        "invalid_after_sec": 0.2264010920007422,
+        "recovered_after_sec": 0.5463826320010412,
+        "raw_samples": 21,
+        "peer_samples": {
+          "head_rgbd": 27,
+          "torso_rgbd": 28,
+          "right_wrist_rgbd": 27
+        },
+        "raw_remained_valid": true,
+        "peers_unchanged_and_valid": true,
+        "passed": true
+      },
+      {
+        "camera": "right_wrist_rgbd",
+        "signal": "SIGSTOP",
+        "elapsed": 900.0004804199998,
+        "ros_ns": 1208284000000,
+        "before_epoch": "1485926-20853610276529:145",
+        "before_worker": 2,
+        "owned": {
+          "pid": 1579605,
+          "parent": 1485926,
+          "start_ticks": "2116454",
+          "argv": [
+            "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+            "--backend",
+            "cuda",
+            ""
+          ],
+          "executable": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/cuda_install/astribot_s1_perception_components/lib/astribot_s1_perception_components/depth_projection_worker",
+          "executable_sha256": "4880b35016fafaf6f3e20e84d7c592e54a9fd4a63a4aeae963b04215ae88633d"
+        },
+        "stationary_velocities": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "peer_workers": {
+          "head_rgbd": 0,
+          "torso_rgbd": 0,
+          "left_wrist_rgbd": 3
+        },
+        "invalid_after_sec": 0.22043156400104635,
+        "recovered_after_sec": 0.6005366669996874,
+        "raw_samples": 23,
+        "peer_samples": {
+          "head_rgbd": 30,
+          "torso_rgbd": 30,
+          "left_wrist_rgbd": 30
+        },
+        "raw_remained_valid": true,
+        "peers_unchanged_and_valid": true,
+        "passed": true
+      }
+    ],
+    "completed": true,
+    "duration_sec": 1640.0000424770005,
+    "cameras": {
+      "head_rgbd": {
+        "health_samples": 81998,
+        "cloud_samples": 32609,
+        "outside_fault_samples": 81198,
+        "outside_fault_invalid": 0,
+        "max_publication_age_sec": 0.05,
+        "all_publications_within_budget": true,
+        "queue_bounded": true
+      },
+      "torso_rgbd": {
+        "health_samples": 81998,
+        "cloud_samples": 32608,
+        "outside_fault_samples": 81196,
+        "outside_fault_invalid": 0,
+        "max_publication_age_sec": 0.05,
+        "all_publications_within_budget": true,
+        "queue_bounded": true
+      },
+      "left_wrist_rgbd": {
+        "health_samples": 81906,
+        "cloud_samples": 32555,
+        "outside_fault_samples": 81197,
+        "outside_fault_invalid": 0,
+        "max_publication_age_sec": 0.05,
+        "all_publications_within_budget": true,
+        "queue_bounded": true
+      },
+      "right_wrist_rgbd": {
+        "health_samples": 81910,
+        "cloud_samples": 32562,
+        "outside_fault_samples": 81197,
+        "outside_fault_invalid": 0,
+        "max_publication_age_sec": 0.05,
+        "all_publications_within_budget": true,
+        "queue_bounded": true
+      }
+    },
+    "passed": true
+  },
+  "pressure": {
+    "scope": "real LibTorch C++ GraspNet CUDA inference on frozen historical cloud; compute pressure only",
+    "execution_permission": false,
+    "live_camera_inference": false,
+    "artifacts": {
+      "/home/yjh/.cache/astribot/graspnet/build_cuda/graspnet_worker": "fc2f892928634524c3de0f34e2dac62d741640dcc597e3b120327881e278012c",
+      "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/models/graspnet_cuda_v2.pt": "5acc1ff77600a6e1b8a5a814b363956c9e12bf74abf89d85b94ba6f66cfd1b7c",
+      "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/models/gazebo_cuda_validation/yawed.cloud.bin": "5003aebb83d60d9233e4e9235fe150b02b526c950630fcc67bc9480d8d5ade47"
+    },
+    "duration_wall_sec": 1740.0629923169981,
+    "interrupted": false,
+    "budget_cancellations": 1,
+    "all_completed_workers_succeeded": true
+  },
+  "pressure_attempts": 860,
+  "pressure_completed": 859,
+  "ownership": {
+    "samples": 368,
+    "other_instance_samples": 0,
+    "wall_start": 1790086269.1014209,
+    "wall_end": 1790088109.1084716
+  },
+  "navigation_cleanup": {
+    "injected": false,
+    "gazebo_pid": 1440699,
+    "instance": "task_chain_20260922_exclusive",
+    "scope": "verified stationary owned simulator cleanup; no hardware claim",
+    "stationary_velocities": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "before_ros_ns": 2001878000000,
+    "stop_requested": true,
+    "supervisor": 1440571,
+    "supervisor_start_ticks": "2069217",
+    "stop_wall": 1790088128.6313994,
+    "owned_before": [
+      {
+        "pid": 1440650,
+        "start_ticks": "2069299"
+      },
+      {
+        "pid": 1440687,
+        "start_ticks": "2069378"
+      },
+      {
+        "pid": 1440689,
+        "start_ticks": "2069378"
+      },
+      {
+        "pid": 1440693,
+        "start_ticks": "2069378"
+      },
+      {
+        "pid": 1440695,
+        "start_ticks": "2069378"
+      },
+      {
+        "pid": 1440697,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440699,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440700,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440702,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440704,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440706,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440708,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440710,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440712,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440714,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440716,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440718,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440720,
+        "start_ticks": "2069379"
+      },
+      {
+        "pid": 1440773,
+        "start_ticks": "2069381"
+      },
+      {
+        "pid": 1440779,
+        "start_ticks": "2069381"
+      },
+      {
+        "pid": 1440785,
+        "start_ticks": "2069381"
+      },
+      {
+        "pid": 1440789,
+        "start_ticks": "2069381"
+      },
+      {
+        "pid": 1440814,
+        "start_ticks": "2069381"
+      },
+      {
+        "pid": 1441164,
+        "start_ticks": "2070017"
+      },
+      {
+        "pid": 1442331,
+        "start_ticks": "2070447"
+      },
+      {
+        "pid": 1442455,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442457,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442459,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442461,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442463,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442465,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442467,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442469,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442471,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442473,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442475,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442477,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442479,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442481,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442483,
+        "start_ticks": "2070489"
+      },
+      {
+        "pid": 1442485,
+        "start_ticks": "2070490"
+      },
+      {
+        "pid": 1442487,
+        "start_ticks": "2070490"
+      },
+      {
+        "pid": 1442541,
+        "start_ticks": "2070491"
+      },
+      {
+        "pid": 1442555,
+        "start_ticks": "2070491"
+      },
+      {
+        "pid": 1442596,
+        "start_ticks": "2070493"
+      },
+      {
+        "pid": 1442602,
+        "start_ticks": "2070493"
+      },
+      {
+        "pid": 1442612,
+        "start_ticks": "2070494"
+      },
+      {
+        "pid": 1442621,
+        "start_ticks": "2070494"
+      }
+    ],
+    "remaining": [],
+    "stop_completed_wall": 1790088129.6352699
+  }
+}

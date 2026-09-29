@@ -3,21 +3,29 @@
 <package format="3">
   <name>astribot_s1_dynamics_coupling</name>
   <version>0.1.0</version>
-  <description>根据机械臂展开幅度和关节速度约束底盘速度，作为导航速度链路中的独立限速模块。</description>
+  <description>根据机械臂展开幅度和关节速度约束底盘速度，向导航约束模块发布上游百分比限速，不发布底盘速度命令。</description>
   <maintainer email="dev@astribot.local">astribot-dev</maintainer>
   <license>Apache-2.0</license>
 
-  <buildtool_depend>python3-setuptools</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <exec_depend>rclpy</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
-
-  <exec_depend>tf2_ros</exec_depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav2_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
 
   <exec_depend>astribot_logging</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>python3-yaml</test_depend>
+  <test_depend>rclpy</test_depend>
+  <test_depend>rcl_interfaces</test_depend>
+  <test_depend>rosgraph_msgs</test_depend>
+  <test_depend>tf2_ros_py</test_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

@@ -36,7 +36,7 @@ class VisionAdapter:
         for item in data['observations']:
             frame=data['frame_id'];kind=item['kind']
             if kind=='metric_box':
-                transform=self.tf.lookup_transform(self.profile.tracking_frame,frame,Time(nanoseconds=capture.ns))
+                transform=self.tf.lookup_transform(self.profile.tracking_frame,frame,Time())
                 center=self.point(item['center_m'],transform);size=Vec3(*item['size_m']);q=transform.transform.rotation
                 if min(size.x,size.y,size.z)<=0:raise ValueError('positive metric dimensions required')
                 axes=[rotate(Vec3(size.x,0,0),q),rotate(Vec3(0,size.y,0),q),rotate(Vec3(0,0,size.z),q)]

@@ -1,0 +1,37 @@
+{
+  "domain": "141",
+  "localhost_only": true,
+  "steps": [
+    {
+      "parameters_repr": {
+        "monitored_links": "['coupling_20cf85eb0d_reach', 'coupling_20cf85eb0d_reach2', 'coupling_20cf85eb0d_reach3', 'coupling_20cf85eb0d_reach4']"
+      },
+      "accepted": {
+        "cpp": true
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "cpp",
+      "pid": 171605,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_20cf85eb0d/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/performance/benchmark_02_cpp/cpp_params.yaml",
+        "-r",
+        "/coupling_20cf85eb0d/input:=/coupling_20cf85eb0d/input_remapped",
+        "-r",
+        "/coupling_20cf85eb0d/cpp/output:=/coupling_20cf85eb0d/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "cpp": 1200
+  }
+}

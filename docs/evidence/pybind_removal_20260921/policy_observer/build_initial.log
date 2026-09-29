@@ -1,0 +1,54 @@
+Consolidate compiler generated dependencies of target policy_contracts
+Consolidate compiler generated dependencies of target navigation_math
+[  4%] Building CXX object CMakeFiles/navigation_math.dir/src/navigation_math.cpp.o
+[ 12%] Built target policy_contracts
+Consolidate compiler generated dependencies of target policy_profile
+[ 20%] Built target policy_profile
+Consolidate compiler generated dependencies of target policy_fusion
+[ 28%] Built target policy_fusion
+[ 32%] Building CXX object CMakeFiles/policy_envelope.dir/src/policy_envelope.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp: In function ‘std::vector<double> astribot::navigation::scan_coverage(const std::vector<double>&, double, double, double, double, double)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp:304:69: warning: suggest parentheses around ‘&&’ within ‘||’ [-Wparentheses]
+  304 |         (std::isfinite(ranges[index]) && range_min <= ranges[index] &&
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+  305 |              ranges[index] <= range_max || ranges[index] == INFINITY);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~                              
+[ 36%] Linking CXX static library libnavigation_math.a
+[ 40%] Built target navigation_math
+[ 44%] Building CXX object CMakeFiles/policy_observation_adapters.dir/src/policy_observation_adapters.cpp.o
+[ 48%] Linking CXX static library libpolicy_envelope.a
+[ 48%] Built target policy_envelope
+[ 52%] Building CXX object CMakeFiles/policy_observer_core.dir/src/policy_observer_core.cpp.o
+[ 56%] Linking CXX static library libpolicy_observer_core.a
+[ 56%] Built target policy_observer_core
+Consolidate compiler generated dependencies of target policy_health
+[ 60%] Building CXX object CMakeFiles/policy_health.dir/src/policy_health.cpp.o
+[ 64%] Linking CXX static library libpolicy_health.a
+[ 64%] Built target policy_health
+Consolidate compiler generated dependencies of target policy_sweep
+[ 72%] Built target policy_sweep
+Consolidate compiler generated dependencies of target policy_risk
+[ 80%] Built target policy_risk
+[ 84%] Linking CXX static library libpolicy_observation_adapters.a
+[ 84%] Built target policy_observation_adapters
+[ 88%] Building CXX object CMakeFiles/policy_observer_runtime.dir/src/policy_observer_node.cpp.o
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_observer_node.cpp: In function ‘astribot::navigation::policy::PointCloudPacket astribot::navigation::policy::{anonymous}::cloud_packet(const PointCloud2&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_observer_node.cpp:50:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+   50 |   for(const auto& f:m.fields)p.fields.push_back({f.name,f.offset,f.datatype,f.count});return p;
+      |   ^~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_observer_node.cpp:50:87: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+   50 |   for(const auto& f:m.fields)p.fields.push_back({f.name,f.offset,f.datatype,f.count});return p;
+      |                                                                                       ^~~~~~
+[ 92%] Linking CXX static library libpolicy_observer_runtime.a
+[ 92%] Built target policy_observer_runtime
+[ 96%] Building CXX object CMakeFiles/policy_observer_cpp.dir/src/policy_observer_main.cpp.o
+[100%] Linking CXX executable policy_observer_cpp
+[100%] Built target policy_observer_cpp
+Consolidate compiler generated dependencies of target navigation_math
+[ 22%] Built target policy_contracts
+[ 55%] Built target navigation_math
+Consolidate compiler generated dependencies of target policy_observer_core
+[ 77%] Built target policy_observer_core
+[ 88%] Building CXX object CMakeFiles/policy_observer_core_probe.dir/test/policy_observer_core_probe.cpp.o
+[100%] Linking CXX executable policy_observer_core_probe
+[100%] Built target policy_observer_core_probe

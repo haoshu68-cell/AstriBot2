@@ -1,0 +1,85 @@
+....FFFFF..
+======================================================================
+FAIL: test_receipt_binds_exact_manifest_and_passed_snapshot (__main__.EnvironmentContract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 37, in test_receipt_binds_exact_manifest_and_passed_snapshot
+    receipt=self.receipt()
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+======================================================================
+FAIL: test_receipt_preserves_wrong_overlay_failure (__main__.EnvironmentContract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 43, in test_receipt_preserves_wrong_overlay_failure
+    receipt=self.receipt(lookup=lambda _:str(self.root/'old'))
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+======================================================================
+FAIL: test_receipt_rejects_changed_artifact (__main__.EnvironmentContract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 63, in test_receipt_rejects_changed_artifact
+    self.assertFalse(self.receipt()['passed'])
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+======================================================================
+FAIL: test_receipt_rejects_dependency_outside_hashed_artifacts (__main__.EnvironmentContract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 55, in test_receipt_rejects_dependency_outside_hashed_artifacts
+    self.assertFalse(self.receipt(manifest)['passed'])
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+======================================================================
+FAIL: test_receipt_rejects_empty_or_incomplete_snapshot (__main__.EnvironmentContract) (manifest={})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 51, in test_receipt_rejects_empty_or_incomplete_snapshot
+    self.assertFalse(self.receipt(manifest)['passed'])
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+======================================================================
+FAIL: test_receipt_rejects_empty_or_incomplete_snapshot (__main__.EnvironmentContract) (manifest={'prefixes': {}, 'files': {}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 51, in test_receipt_rejects_empty_or_incomplete_snapshot
+    self.assertFalse(self.receipt(manifest)['passed'])
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+======================================================================
+FAIL: test_receipt_rejects_empty_or_incomplete_snapshot (__main__.EnvironmentContract) (manifest={'prefixes': {'messages': '/tmp/tmpetj_6rv4'}, 'files': {}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 51, in test_receipt_rejects_empty_or_incomplete_snapshot
+    self.assertFalse(self.receipt(manifest)['passed'])
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+======================================================================
+FAIL: test_receipt_rejects_malformed_artifact_record (__main__.EnvironmentContract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 59, in test_receipt_rejects_malformed_artifact_record
+    self.assertFalse(self.receipt(manifest)['passed'])
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_task_environment.py", line 30, in receipt
+    self.assertTrue(callable(getattr(environment, 'verify_manifest_file', None)),
+AssertionError: False is not true : requested runtime snapshot needs a checked, hash-bound receipt
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.002s
+
+FAILED (failures=8)

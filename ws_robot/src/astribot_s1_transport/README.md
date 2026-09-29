@@ -83,7 +83,7 @@ RELEASE_PENDING 伪装成 PLACED。不要通过删除账本后重试解决状态
 | `/navigation/set_robot_envelope`、`/navigation/robot_envelope` | 提交运输姿态/载荷边界，等待同一 epoch 的 ready 确认 |
 | `/navigate_to_pose` | 复用整机已有导航仲裁器；任务层不发布底盘速度 |
 | `/transport/cancel`、`/transport/status` | 请求取消、阶段反馈；执行器终态和账本共同决定是否停止 |
-| `/transport/execution_guard/set`、`/transport/execution_guard/status` | C++ 执行守卫：独立上下文编号、关节期望/实测误差、底盘位移、源时效与故障锁存；fixed_v2 任务消费状态后通过现有 action 取消，不另发底盘速度 |
+| `/transport/execution_guard/set`、`/transport/execution_guard/status` | C++ 执行守卫：独立上下文编号、最新关节期望/实测误差与故障锁存；fixed_v2 任务消费状态后通过现有 action 取消，不另发底盘速度 |
 | `/transport/object_observation`、`/transport/camera_health` | 视觉观测、帧时效和标定版本；抓取准入消费观测 |
 
 `transport_compact` 是此仿真技能服务的关节目标：两臂肩部外展归零，第三关节左右
@@ -91,8 +91,7 @@ RELEASE_PENDING 伪装成 PLACED。不要通过删除账本后重试解决状态
 的碰撞和奇异点校验。导航包络从执行后的实测姿态重新计算，不使用固定缩小的半径。
 
 fixed_v2 的 MTC 机械臂阶段先开启原生 `execution_guard`，收到同一上下文的健康状态后才执行。
-守卫检查 300 ms 内的关节/TF 源证据，最大关节跟踪误差 0.05 rad、底盘位置/转角偏移
-0.02 m / 0.02 rad；数据缺失、越界或时钟回退会锁存故障，恢复正常测量不会自动放行。
+守卫使用最新关节反馈，最大关节跟踪误差为 0.05 rad。首次关节证据等待预算为 300 ms；反馈结构无效或误差越界会锁存故障，恢复正常测量不会自动放行。非导航操作阶段不检查底盘位移；导航和交接的 SLAM 停稳确认保持不变。
 任务仍负责取消确认与保载。守卫是运行中偏离检测，不证明任意机械臂轨迹的连续碰撞安全或动力学稳定。
 新运行时计算优先 C++；Python 保留现有任务编排接口和验证脚本。
 

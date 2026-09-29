@@ -7,19 +7,23 @@
 #include <QLabel>
 #include <QDoubleSpinBox>
 #include "astribot_operator_station/map_page.hpp"
+#include "astribot_operator_station/scene_page.hpp"
+#include "astribot_operator_station/zone_page.hpp"
+#include <geometry_msgs/msg/point_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <QPlainTextEdit>
 #include <QTableWidget>
 #include <QLineEdit>
 #include <QTimer>
 #include <QPushButton>
+#include <QProcess>
 #include <nlohmann/json.hpp>
 #include <thread>
 namespace astribot_operator_station {
 class WorkstationPanel : public rviz_common::Panel {
  Q_OBJECT
 public:explicit WorkstationPanel(QWidget * parent=nullptr);~WorkstationPanel() override;
-signals:void statusReceived(QString);void responseReceived(QString);void pointReceived(QString);
+signals:void statusReceived(QString);void responseReceived(QString);void pointReceived(QString);void zonePointReceived(QString);
 private:
  using Command=astribot_operator_msgs::srv::OperatorCommand;
  using Clock=std::chrono::steady_clock;
@@ -27,14 +31,26 @@ private:
  rclcpp::Client<Command>::SharedPtr command_;
  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr status_sub_;
  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr point_sub_;
- nlohmann::json state_;
+ nlohmann::json state_ = nlohmann::json::object();
  std::string boot_,lease_,last_command_,pending_command_,renew_command_,mapping_session_;Clock::time_point seen_{},renew_at_{},deadline_{},renew_deadline_{};
  bool pending_{false},renew_pending_{false};int64_t pending_id_{0},renew_id_{0};
- MapPage * maps_page_;std::string active_map_version_;
+ ZonePage * zone_page_;std::string zone_context_;
+ rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr zone_point_sub_;
+ rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr zone_markers_;int zone_marker_count_{0};
+ MapPage * maps_page_;ScenePage * scene_page_;std::string active_map_version_,scene_context_;
+ rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr equipment_;int equipment_count_{0};
  QComboBox * arm_group_;QLabel * arm_status_;
  QLabel * summary_;QPlainTextEdit * log_;QTableWidget * points_;QLineEdit * frame_;QDoubleSpinBox * dwell_;
  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr preview_;int marker_count_{0};
- void preview();void routeFile(bool save);
+ QPushButton * start_navigation_button_{};
+ bool route_loaded_{false};QString loaded_route_file_;
+ QProcess * simulation_bootstrap_{nullptr};
+ bool bootstrap_mapping_requested_{false};
+ bool bootstrap_acquire_sent_{false};
+ void preview();void routeFile(bool save);void startNavigation();
+ void startNewMappingSession();void maybeStartBootstrapMapping();bool startDefaultSimulation();
+ QString defaultRouteFile() const;QString routePathForDisplay(const QString &) const;
+ bool saveRouteDocument(const QString &,QString * error=nullptr) const;
  std::vector<QPushButton *> draft_buttons_;
  QTimer * timer_;std::map<std::string,QPushButton *> buttons_;
  void submit(const std::string &,nlohmann::json payload=nlohmann::json::object(),bool confirmation=true);

@@ -9,6 +9,8 @@ import yaml
 
 def load_scenario(path):
     config = yaml.safe_load(Path(path).read_text())['hunav_loader']['ros__parameters']
+    if not isinstance(config.get('enable_empty_observations', False), bool):
+        raise ValueError('enable_empty_observations must be boolean')
     names = config['agents']
     if len(names) != len(set(names)):
         raise ValueError('Duplicate scenario names')
@@ -81,22 +83,31 @@ def prepare_world(base_world, scenario_path, output, wrapper_prefix, bringup_pre
                 ('scene-broadcaster', 'SceneBroadcaster')):
             ET.SubElement(world, 'plugin', filename=f'ignition-gazebo-{library}-system',
                           name=f'ignition::gazebo::systems::{system}')
-    mesh = Path(wrapper_prefix)/'share/hunav_gazebo_fortress_wrapper/worlds/models/walk.dae'
-    library = Path(wrapper_prefix)/'lib/libHuNavSystemPluginIGN.so'
     monitor_library = Path(bringup_prefix)/'lib/libastribot_social_scene.so'
-    for path in (mesh, library, monitor_library):
+    required = [monitor_library]
+    with_hunav = bool(config['agents']) or config.get('enable_empty_observations', False)
+    if with_hunav:
+        if wrapper_prefix is None:
+            raise FileNotFoundError('HuNav wrapper is required for observed social scenarios')
+        library = Path(wrapper_prefix)/'lib/libHuNavSystemPluginIGN.so'
+        required.append(library)
+        if config['agents']:
+            mesh = Path(wrapper_prefix)/'share/hunav_gazebo_fortress_wrapper/worlds/models/walk.dae'
+            required.append(mesh)
+    for path in required:
         if not path.is_file():
             raise FileNotFoundError(path)
     def element(parent, tag, text):
         node = ET.SubElement(parent, tag); node.text = str(text); return node
-    plugin = ET.SubElement(world, 'plugin', filename=str(library), name='HuNavSystemPluginIGN')
-    for name, value in {'robot_name': 'astribot_s1', 'global_frame_to_publish': 'social_sim_world',
+    if with_hunav:
+        plugin = ET.SubElement(world, 'plugin', filename=str(library), name='HuNavSystemPluginIGN')
+        for name, value in {'robot_name': 'astribot_s1', 'global_frame_to_publish': 'social_sim_world',
                         'use_navgoal_to_start': str(config.get('wait_for_episode_start', False)).lower(), 'update_rate': 20,
                         'use_gazebo_obs': 'false'}.items():
-        element(plugin, name, value)
+            element(plugin, name, value)
+        ignored = ET.SubElement(plugin, 'ignore_models')
     monitor = ET.SubElement(world, 'plugin', filename=str(monitor_library), name='astribot::SocialScene')
     element(monitor, 'robot_name', 'astribot_s1')
-    ignored = ET.SubElement(plugin, 'ignore_models')
     for name in config['agents']:
         spec = config[name]; p = spec['init_pose']; radius = spec['radius']; height = 1.7
         actor = ET.SubElement(world, 'actor', name=name)

@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "capture_stamp_ns": 114500000000,
+  "source": "actual Gazebo rendered raw RGB-D",
+  "camera": "head_rgbd",
+  "frame": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+  "width": 640,
+  "height": 360,
+  "K": [
+    374.53749988523185,
+    0.0,
+    320.0,
+    0.0,
+    374.5374998852318,
+    180.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "D": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "P": [
+    374.53749988523185,
+    0.0,
+    320.0,
+    0.0,
+    0.0,
+    374.5374998852318,
+    180.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+  ],
+  "R": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion_model": "plumb_bob",
+  "encoding": {
+    "rgb": "rgb8",
+    "depth": "32FC1"
+  },
+  "exact_sync_stamps": {
+    "rgb": 114500000000,
+    "depth": 114500000000,
+    "info": 114500000000
+  },
+  "base_from_camera": {
+    "parent": "astribot_torso_base",
+    "child": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+    "stamp_ns": 114500000000,
+    "translation": [
+      0.08513465023302236,
+      -0.027672445077088215,
+      1.5702789862000657
+    ],
+    "quaternion_xyzw": [
+      -0.5501443192294728,
+      0.5527068633118969,
+      -0.45144080740584147,
+      0.4336560257580034
+    ]
+  },
+  "odom_from_camera": {
+    "parent": "odom",
+    "child": "astribot_s1/astribot_head_link_2/head_rgbd_sensor",
+    "stamp_ns": 114500000000,
+    "translation": [
+      0.02955926278908892,
+      -0.027974219959511267,
+      1.709001585219192
+    ],
+    "quaternion_xyzw": [
+      0.5441764382484501,
+      -0.5437929039571148,
+      0.4592141882174242,
+      -0.44416619749923697
+    ]
+  },
+  "target_mask_pixels": 0,
+  "scene_points": 0,
+  "segmentation": "HSV magenta color + finite rendered depth; validation fixture; not YOLO",
+  "normal_method": "organized depth central differences; toward camera; depth-edge rejection",
+  "truth_used_for_segmentation_or_projection": false,
+  "stream_counts": {
+    "rgb": 46,
+    "depth": 39,
+    "info": 80
+  },
+  "stream_sim_hz": {
+    "rgb": 6.338028169014085,
+    "depth": 5.205479452054795,
+    "info": 10.0
+  },
+  "clock": {
+    "count": 8002,
+    "first_ns": 107401000000,
+    "last_ns": 115402000000
+  },
+  "wall_observation_seconds": 8.05963159700002
+}

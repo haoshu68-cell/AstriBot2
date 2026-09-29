@@ -3,7 +3,7 @@ map_session_adapter:
     # Deployment must explicitly select sim or hardware and own the Voxel stack.
     profile: ""
     allow_navigation_reconfigure: false
-    asset_root: /tmp/astribot_map_catalog/assets
+    asset_root: ""  # Must match the map manager storage_root/assets; empty uses the durable default.
     runtime_root: /tmp/astribot_voxel_activation
     map_topic: /map
     odom_topic: /odom

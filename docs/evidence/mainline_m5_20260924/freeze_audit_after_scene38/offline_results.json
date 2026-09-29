@@ -1,0 +1,26 @@
+{
+  "scope": "Two authorized offline checks of the exact added production block; no ROS/build",
+  "cases": [
+    {
+      "input": {
+        "type": 3,
+        "double_value": 3.0
+      },
+      "expected_error": null,
+      "observed_error": null,
+      "passed": true
+    },
+    {
+      "input": {
+        "type": 3,
+        "double_value": 2.0
+      },
+      "expected_error": "CHASSIS_IDLE_POSITION_KP_MISMATCH",
+      "observed_error": "CHASSIS_IDLE_POSITION_KP_MISMATCH",
+      "passed": true
+    }
+  ],
+  "syntax": true,
+  "all_other_code_unchanged": true,
+  "reader_sha256": "7368749120cc6ad099ff418b60a218e94c19aedb327f00b4bec4babdb9264f76"
+}

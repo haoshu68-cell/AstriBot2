@@ -1,0 +1,734 @@
+{
+  "schema": "astribot.live_inference_validation/2",
+  "source": "live Gazebo raw RGB-D",
+  "truth_used_as_input": false,
+  "pose_source": "/perception/estimate_object_pose",
+  "model_id": "asymmetric_union",
+  "segmentation": "HSV magenta fixture, not YOLO",
+  "execution_permission": false,
+  "trials": [
+    {
+      "capture_stamp_ns": 3777100000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "points": 1710,
+      "camera_id": "torso_rgbd",
+      "task_id": "live_pose_0_3777100000000",
+      "capture_tf": {
+        "source": "ROS /tf and /tf_static, lookup at RGB-D capture stamp",
+        "requested_stamp_ns": 3777100000000,
+        "latest_tf_fallback": false,
+        "odom_from_camera": {
+          "parent": "odom",
+          "child": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+          "stamp_ns": 3777100000000,
+          "translation": [
+            0.06707340519286067,
+            0.0012493197745702162,
+            0.05112694731076477
+          ],
+          "quaternion_xyzw": [
+            0.5160507479655796,
+            -0.5077649174512151,
+            0.4984063803908172,
+            -0.4769250403529371
+          ]
+        },
+        "odom_from_robot_base": {
+          "parent": "odom",
+          "child": "astribot_torso_base",
+          "stamp_ns": 3777100000000,
+          "translation": [
+            -0.0035597098442611288,
+            -0.0004983976464926774,
+            0.13675898063351047
+          ],
+          "quaternion_xyzw": [
+            4.899014624014296e-05,
+            -0.016645326884628043,
+            0.002942895385684903,
+            0.999857124823151
+          ]
+        },
+        "robot_base_frame": "astribot_torso_base",
+        "exact_sync_stamps": {
+          "rgb": 3777100000000,
+          "depth": 3777100000000,
+          "info": 3777100000000
+        },
+        "camera_info": {
+          "header": {
+            "stamp": {
+              "sec": 3777,
+              "nanosec": 100000000
+            },
+            "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+          },
+          "height": 360,
+          "width": 640,
+          "distortion_model": "plumb_bob",
+          "d": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "k": [
+            345.69400008261766,
+            0.0,
+            320.0,
+            0.0,
+            345.6940000826176,
+            180.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "r": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "p": [
+            345.69400008261766,
+            0.0,
+            320.0,
+            0.0,
+            0.0,
+            345.6940000826176,
+            180.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          "binning_x": 0,
+          "binning_y": 0,
+          "roi": {
+            "x_offset": 0,
+            "y_offset": 0,
+            "height": 0,
+            "width": 0,
+            "do_rectify": false
+          }
+        }
+      },
+      "input_cloud_file": "live_pose_far_v2_final_inputs/3777100000000.bin",
+      "capture_age_before_send_sec": 0.044,
+      "source_epoch": "gazebo_camera:3565702205842:2472038332",
+      "calibration_revision": 1,
+      "camera_health_at_capture": {
+        "header": {
+          "stamp": {
+            "sec": 3777,
+            "nanosec": 144000000
+          },
+          "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+        },
+        "camera_id": "torso_rgbd",
+        "source_epoch": "gazebo_camera:3565702205842:2472038332",
+        "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "state": "OK",
+        "reason_code": "CAMERA_READY",
+        "age_sec": 0.044000000000000004,
+        "frequency_hz": 10.0,
+        "max_interval_sec": 0.1,
+        "sync_skew_sec": 0.0,
+        "drop_count": 0,
+        "sequence": 14524,
+        "calibration_revision": 1,
+        "capture_stamp": {
+          "sec": 3777,
+          "nanosec": 100000000
+        },
+        "valid_until": {
+          "sec": 3777,
+          "nanosec": 350000000
+        },
+        "valid": true
+      },
+      "accepted": true,
+      "status": 4,
+      "result": {
+        "success": true,
+        "reason_code": "KNOWN_MODEL_6D_POSE",
+        "observation": {
+          "header": {
+            "stamp": {
+              "sec": 3777,
+              "nanosec": 100000000
+            },
+            "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+          },
+          "object_id": "asymmetric_union",
+          "pose": {
+            "pose": {
+              "position": {
+                "x": 0.0185592058072,
+                "y": -0.101700033033,
+                "z": 1.14983041735
+              },
+              "orientation": {
+                "x": -0.3833523468654331,
+                "y": 0.7850309847903717,
+                "z": -0.48333054630166394,
+                "w": -0.056204217666997895
+              }
+            },
+            "covariance": [
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0
+            ]
+          },
+          "source_camera_id": "torso_rgbd",
+          "source_epoch": "gazebo_camera:3565702205842:2472038332",
+          "source_model": "asymmetric_union",
+          "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+          "calibration_revision": 1,
+          "planning_scene_revision": 1,
+          "envelope_epoch": 1,
+          "reason_code": "KNOWN_MODEL_6D_POSE",
+          "quality": 0.998830409357,
+          "valid_until": {
+            "sec": 3782,
+            "nanosec": 100000000
+          },
+          "position_valid": true,
+          "orientation_valid": true
+        },
+        "model_coverage": 0.340772818121,
+        "visible_model_coverage": 0.771822358346,
+        "visibility_model_used": true,
+        "observable_normal_directions": 3,
+        "scene_coverage": 0.998830409357,
+        "rmse_m": 0.00238990468001,
+        "symmetry_equivalent": false,
+        "inference_time_sec": 1.4604281187057495
+      },
+      "wall_latency_sec": 1.461191031999988
+    },
+    {
+      "capture_stamp_ns": 3778500000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "points": 1710,
+      "camera_id": "torso_rgbd",
+      "task_id": "live_pose_1_3778500000000",
+      "capture_tf": {
+        "source": "ROS /tf and /tf_static, lookup at RGB-D capture stamp",
+        "requested_stamp_ns": 3778500000000,
+        "latest_tf_fallback": false,
+        "odom_from_camera": {
+          "parent": "odom",
+          "child": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+          "stamp_ns": 3778500000000,
+          "translation": [
+            0.06707340519286067,
+            0.0012493197745702162,
+            0.05112694731076477
+          ],
+          "quaternion_xyzw": [
+            0.5160507479655796,
+            -0.5077649174512151,
+            0.4984063803908172,
+            -0.4769250403529371
+          ]
+        },
+        "odom_from_robot_base": {
+          "parent": "odom",
+          "child": "astribot_torso_base",
+          "stamp_ns": 3778500000000,
+          "translation": [
+            -0.0035597098442611288,
+            -0.0004983976464926774,
+            0.13675898063351047
+          ],
+          "quaternion_xyzw": [
+            4.899014624014296e-05,
+            -0.016645326884628043,
+            0.002942895385684903,
+            0.999857124823151
+          ]
+        },
+        "robot_base_frame": "astribot_torso_base",
+        "exact_sync_stamps": {
+          "rgb": 3778500000000,
+          "depth": 3778500000000,
+          "info": 3778500000000
+        },
+        "camera_info": {
+          "header": {
+            "stamp": {
+              "sec": 3778,
+              "nanosec": 500000000
+            },
+            "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+          },
+          "height": 360,
+          "width": 640,
+          "distortion_model": "plumb_bob",
+          "d": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "k": [
+            345.69400008261766,
+            0.0,
+            320.0,
+            0.0,
+            345.6940000826176,
+            180.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "r": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "p": [
+            345.69400008261766,
+            0.0,
+            320.0,
+            0.0,
+            0.0,
+            345.6940000826176,
+            180.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          "binning_x": 0,
+          "binning_y": 0,
+          "roi": {
+            "x_offset": 0,
+            "y_offset": 0,
+            "height": 0,
+            "width": 0,
+            "do_rectify": false
+          }
+        }
+      },
+      "input_cloud_file": "live_pose_far_v2_final_inputs/3778500000000.bin",
+      "capture_age_before_send_sec": 0.109,
+      "source_epoch": "gazebo_camera:3565702205842:2472038332",
+      "calibration_revision": 1,
+      "camera_health_at_capture": {
+        "header": {
+          "stamp": {
+            "sec": 3778,
+            "nanosec": 594000000
+          },
+          "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+        },
+        "camera_id": "torso_rgbd",
+        "source_epoch": "gazebo_camera:3565702205842:2472038332",
+        "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "state": "OK",
+        "reason_code": "CAMERA_READY",
+        "age_sec": 0.094,
+        "frequency_hz": 10.0,
+        "max_interval_sec": 0.1,
+        "sync_skew_sec": 0.0,
+        "drop_count": 0,
+        "sequence": 14553,
+        "calibration_revision": 1,
+        "capture_stamp": {
+          "sec": 3778,
+          "nanosec": 500000000
+        },
+        "valid_until": {
+          "sec": 3778,
+          "nanosec": 750000000
+        },
+        "valid": true
+      },
+      "accepted": true,
+      "status": 4,
+      "result": {
+        "success": true,
+        "reason_code": "KNOWN_MODEL_6D_POSE",
+        "observation": {
+          "header": {
+            "stamp": {
+              "sec": 3778,
+              "nanosec": 500000000
+            },
+            "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+          },
+          "object_id": "asymmetric_union",
+          "pose": {
+            "pose": {
+              "position": {
+                "x": 0.0185592058072,
+                "y": -0.101700033033,
+                "z": 1.14983041735
+              },
+              "orientation": {
+                "x": -0.3833523468654331,
+                "y": 0.7850309847903717,
+                "z": -0.48333054630166394,
+                "w": -0.056204217666997895
+              }
+            },
+            "covariance": [
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0
+            ]
+          },
+          "source_camera_id": "torso_rgbd",
+          "source_epoch": "gazebo_camera:3565702205842:2472038332",
+          "source_model": "asymmetric_union",
+          "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+          "calibration_revision": 1,
+          "planning_scene_revision": 1,
+          "envelope_epoch": 1,
+          "reason_code": "KNOWN_MODEL_6D_POSE",
+          "quality": 0.998830409357,
+          "valid_until": {
+            "sec": 3783,
+            "nanosec": 500000000
+          },
+          "position_valid": true,
+          "orientation_valid": true
+        },
+        "model_coverage": 0.340772818121,
+        "visible_model_coverage": 0.771822358346,
+        "visibility_model_used": true,
+        "observable_normal_directions": 3,
+        "scene_coverage": 0.998830409357,
+        "rmse_m": 0.00238990468001,
+        "symmetry_equivalent": false,
+        "inference_time_sec": 1.4906342029571533
+      },
+      "wall_latency_sec": 1.4912071059998198
+    },
+    {
+      "capture_stamp_ns": 3780000000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "points": 1710,
+      "camera_id": "torso_rgbd",
+      "task_id": "live_pose_2_3780000000000",
+      "capture_tf": {
+        "source": "ROS /tf and /tf_static, lookup at RGB-D capture stamp",
+        "requested_stamp_ns": 3780000000000,
+        "latest_tf_fallback": false,
+        "odom_from_camera": {
+          "parent": "odom",
+          "child": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+          "stamp_ns": 3780000000000,
+          "translation": [
+            0.06707340519286067,
+            0.0012493197745702162,
+            0.05112694731076477
+          ],
+          "quaternion_xyzw": [
+            0.5160507479655796,
+            -0.5077649174512151,
+            0.4984063803908172,
+            -0.4769250403529371
+          ]
+        },
+        "odom_from_robot_base": {
+          "parent": "odom",
+          "child": "astribot_torso_base",
+          "stamp_ns": 3780000000000,
+          "translation": [
+            -0.0035597098442611288,
+            -0.0004983976464926774,
+            0.13675898063351047
+          ],
+          "quaternion_xyzw": [
+            4.899014624014296e-05,
+            -0.016645326884628043,
+            0.002942895385684903,
+            0.999857124823151
+          ]
+        },
+        "robot_base_frame": "astribot_torso_base",
+        "exact_sync_stamps": {
+          "rgb": 3780000000000,
+          "depth": 3780000000000,
+          "info": 3780000000000
+        },
+        "camera_info": {
+          "header": {
+            "stamp": {
+              "sec": 3780,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+          },
+          "height": 360,
+          "width": 640,
+          "distortion_model": "plumb_bob",
+          "d": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "k": [
+            345.69400008261766,
+            0.0,
+            320.0,
+            0.0,
+            345.6940000826176,
+            180.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "r": [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "p": [
+            345.69400008261766,
+            0.0,
+            320.0,
+            0.0,
+            0.0,
+            345.6940000826176,
+            180.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          "binning_x": 0,
+          "binning_y": 0,
+          "roi": {
+            "x_offset": 0,
+            "y_offset": 0,
+            "height": 0,
+            "width": 0,
+            "do_rectify": false
+          }
+        }
+      },
+      "input_cloud_file": "live_pose_far_v2_final_inputs/3780000000000.bin",
+      "capture_age_before_send_sec": 0.105,
+      "source_epoch": "gazebo_camera:3565702205842:2472038332",
+      "calibration_revision": 1,
+      "camera_health_at_capture": {
+        "header": {
+          "stamp": {
+            "sec": 3780,
+            "nanosec": 94000000
+          },
+          "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+        },
+        "camera_id": "torso_rgbd",
+        "source_epoch": "gazebo_camera:3565702205842:2472038332",
+        "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "state": "OK",
+        "reason_code": "CAMERA_READY",
+        "age_sec": 0.094,
+        "frequency_hz": 10.0,
+        "max_interval_sec": 0.1,
+        "sync_skew_sec": 0.0,
+        "drop_count": 0,
+        "sequence": 14583,
+        "calibration_revision": 1,
+        "capture_stamp": {
+          "sec": 3780,
+          "nanosec": 0
+        },
+        "valid_until": {
+          "sec": 3780,
+          "nanosec": 250000000
+        },
+        "valid": true
+      },
+      "accepted": true,
+      "status": 4,
+      "result": {
+        "success": true,
+        "reason_code": "KNOWN_MODEL_6D_POSE",
+        "observation": {
+          "header": {
+            "stamp": {
+              "sec": 3780,
+              "nanosec": 0
+            },
+            "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+          },
+          "object_id": "asymmetric_union",
+          "pose": {
+            "pose": {
+              "position": {
+                "x": 0.0185592058072,
+                "y": -0.101700033033,
+                "z": 1.14983041735
+              },
+              "orientation": {
+                "x": -0.3833523468654331,
+                "y": 0.7850309847903717,
+                "z": -0.48333054630166394,
+                "w": -0.056204217666997895
+              }
+            },
+            "covariance": [
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              1000000.0
+            ]
+          },
+          "source_camera_id": "torso_rgbd",
+          "source_epoch": "gazebo_camera:3565702205842:2472038332",
+          "source_model": "asymmetric_union",
+          "model_revision": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429:a8a43181fe2378ca583f6517e07baacb74f466236b6aa7bdedf841728e6a819f",
+          "calibration_revision": 1,
+          "planning_scene_revision": 1,
+          "envelope_epoch": 1,
+          "reason_code": "KNOWN_MODEL_6D_POSE",
+          "quality": 0.998830409357,
+          "valid_until": {
+            "sec": 3785,
+            "nanosec": 0
+          },
+          "position_valid": true,
+          "orientation_valid": true
+        },
+        "model_coverage": 0.340772818121,
+        "visible_model_coverage": 0.771822358346,
+        "visibility_model_used": true,
+        "observable_normal_directions": 3,
+        "scene_coverage": 0.998830409357,
+        "rmse_m": 0.00238990468001,
+        "symmetry_equivalent": false,
+        "inference_time_sec": 1.5108510255813599
+      },
+      "wall_latency_sec": 1.5116008410004724
+    }
+  ]
+}

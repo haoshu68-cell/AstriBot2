@@ -1,0 +1,82 @@
+{
+  "updated_at": "2026-09-23T01:15:35.482969+08:00",
+  "scope": "W1 attachment ledger, geometry, task-owned hold core and envelope offline contract",
+  "state": "offline_scope_complete_runtime_integration_pending",
+  "full_W1_accepted": false,
+  "stage_implementation_complete": false,
+  "simulation_started": false,
+  "hardware_started": false,
+  "VLA_validated": false,
+  "shared_install_overwritten": false,
+  "completed_offline": [
+    "typed attachment observation and ledger state",
+    "C++ ledger, read-only scene reconciliation adapter and durable journal",
+    "C++ geometry ledger consumer and completion version/lease gates",
+    "C++ task-owned ArmHold core and fixed-envelope request construction",
+    "fixed-envelope immediate revocation, clock-epoch and ACK regression",
+    "seven direct Ledger-to-envelope composition scenarios"
+  ],
+  "compiled_not_started": [
+    "payload_state",
+    "geometry_state",
+    "fixed_envelope_cpp"
+  ],
+  "tests": {
+    "gtest_cases": 91,
+    "native_executables": 5,
+    "geometry_differential_pytest_cases": 26,
+    "launch_parameter_pytest_cases": 5,
+    "failures": 0
+  },
+  "remaining_implementation": [
+    {
+      "item": "full authoritative attachment inventory source",
+      "reason": "existing kinematic attachment feedback describes one configured object, not all robot attachments or a versioned full empty inventory",
+      "requires_hardware": false,
+      "code_can_be_developed_offline": true
+    },
+    {
+      "item": "formal task resource/executor adapter and runtime ArmHold publisher/client",
+      "reason": "ArmHold is an in-process core; existing Python transport owner ID and active-controller checks do not supply its formal ResourceGrant/HoldCompletion contract",
+      "requires_hardware": false,
+      "code_can_be_developed_offline": true
+    }
+  ],
+  "not_run": [
+    {
+      "item": "ROS source/scene/controller/hold integration and restart/expiry protocol",
+      "reason": "user requested no simulation; no ROS runtime nodes started"
+    },
+    {
+      "item": "original controller/local_costmap negative ACK reproduction",
+      "reason": "only deterministic core behavior verified; original online cause not reproduced"
+    },
+    {
+      "item": "SLAM/MPPI actual motion and inference/GPU load combinations",
+      "reason": "requires live simulation"
+    },
+    {
+      "item": "TF/source restart, six-camera ROI and 3D coverage matrix",
+      "reason": "requires live sensor environment"
+    }
+  ],
+  "deferred": [
+    "VLA real model",
+    "physical hardware and calibration",
+    "full dynamic pick/carry/place"
+  ],
+  "evidence": {
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/PAYLOAD_STATE_OFFLINE_20260923.md",
+    "tests": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260923_payload_offline/test_results.json",
+    "sources": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260923_payload_offline/source_manifest.json",
+    "builds": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260923_payload_offline/build_context.json",
+    "raw_runs": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260923_payload_offline"
+  },
+  "timing": {
+    "started_at": "2026-09-23T00:13:31+08:00",
+    "completed_at": "2026-09-23T01:15:35.482969+08:00",
+    "elapsed_seconds": 3724.482969,
+    "deadline": "2026-09-23T01:43:31+08:00",
+    "budget_reset_between_substeps": false
+  }
+}

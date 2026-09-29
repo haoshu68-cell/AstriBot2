@@ -1,0 +1,125 @@
+{
+  "updated_at": "2026-09-22T23:23:27.550354+08:00",
+  "scope": "W1 exclusive RGB-D/CUDA and camera continuity recovery",
+  "deadline": null,
+  "full_W1_accepted": false,
+  "implemented": [
+    "C++ bounded async CPU/CUDA RGB-D processing and latency histograms",
+    "C++ int64 decimation validation before narrowing",
+    "C++ camera continuity epoch and capture/complete-pair recovery barriers",
+    "cooperative exclusive simulation performance lease",
+    "bounded clock observer statistics"
+  ],
+  "current_verified": {
+    "cpp_ctest_targets": 14,
+    "cpp_gtest_cases": 118,
+    "tests": {
+      "detection_gate_test.gtest.xml": {
+        "cases": 1,
+        "failures": 0,
+        "skipped": 0
+      },
+      "depth_projection_test.gtest.xml": {
+        "cases": 7,
+        "failures": 0,
+        "skipped": 0
+      },
+      "yolo_pipeline_test.gtest.xml": {
+        "cases": 4,
+        "failures": 0,
+        "skipped": 0
+      },
+      "camera_postprocess_frame_test.gtest.xml": {
+        "cases": 2,
+        "failures": 0,
+        "skipped": 0
+      },
+      "health_epoch_flow_test.gtest.xml": {
+        "cases": 1,
+        "failures": 0,
+        "skipped": 0
+      },
+      "camera_health_test.gtest.xml": {
+        "cases": 27,
+        "failures": 0,
+        "skipped": 0
+      },
+      "vision_contract_test.gtest.xml": {
+        "cases": 23,
+        "failures": 0,
+        "skipped": 0
+      },
+      "camera_session_test.gtest.xml": {
+        "cases": 7,
+        "failures": 0,
+        "skipped": 0
+      },
+      "yolo_decode_test.gtest.xml": {
+        "cases": 6,
+        "failures": 0,
+        "skipped": 0
+      },
+      "rgbd_pointcloud_test.gtest.xml": {
+        "cases": 28,
+        "failures": 0,
+        "skipped": 0
+      },
+      "wrist_session_node_test.gtest.xml": {
+        "cases": 8,
+        "failures": 0,
+        "skipped": 0
+      },
+      "latency_metrics_test.gtest.xml": {
+        "cases": 4,
+        "failures": 0,
+        "skipped": 0
+      }
+    },
+    "camera_recovery_capture_sec": 600.0011603539997,
+    "single_pause_sec": 0.4007180469998275,
+    "camera_new_epochs_all": true,
+    "outside_explicit_fault_window_all_observed_healthy": true,
+    "owned_simulation_remaining": []
+  },
+  "earlier_verified_in_this_round": {
+    "pressure03_sec": 1800.000088318,
+    "pressure03_cuda_requests_succeeded": 889,
+    "pressure03_scope": "older metrics_overlay, SLAM plus stationary activated Nav2 and frozen-input GraspNet; not moving or VLA"
+  },
+  "preserved_failed_or_invalid_experiments": [
+    "camera_02_slam sustained freshness FAIL",
+    "camera_04 clock-stall source epoch unchanged FAIL",
+    "clock_pause_05.json preflight failed without injection",
+    "clock_pause_05_repeat.json preflight ordering failure without injection"
+  ],
+  "next_task": "W1 formal attachment/arm-hold/fixed-envelope transaction, then actual-motion matrix and original negative ACK reproduction",
+  "open_gates": [
+    "remaining SLAM/MPPI actual-motion/inference workload combinations",
+    "TF loss/source restart and six-camera ROI/3D coverage",
+    "original nonhome navigation envelope negative ACK diagnosis and reproduction",
+    "complete task-owned runtime camera client integration"
+  ],
+  "deferred": [
+    "VLA real model validation",
+    "physical hardware and calibration acceptance",
+    "full dynamic pick/carry/place"
+  ],
+  "artifacts": {
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/RGBD_EXCLUSIVE_REGRESSION_20260922.md",
+    "recovery": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260922_exclusive/clock_pause_05_analysis.json",
+    "normal_window": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260922_exclusive/camera_05_window_analysis.json",
+    "cpp_tests": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_exclusive/health_epoch_final_recheck.log",
+    "runtime_manifest": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260922_exclusive/health_epoch_runtime_05.json",
+    "next_plan": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/superpowers/plans/2026-09-22-rgbd-cuda-recovery.md"
+  },
+  "latest_continuation": {
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/RGBD_CUDA_PROCESS_RECOVERY_20260922.md",
+    "tests": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/task_chain_20260922_gpu_recovery/test_results.json",
+    "projection_process_and_health": "implemented and scoped fixture/GPU/stationary warehouse checks passed",
+    "navigation_projection_gate": "360s stationary warehouse pass; no motion stopping-distance claim",
+    "mapping_context": "two cold starts, 120s each, real global/local costmap and protection ACK pass",
+    "deadline": "2026-09-22T23:34:18+08:00",
+    "state": "paused_timeout",
+    "paused_at": "2026-09-22T23:34:57.030896+08:00"
+  }
+}

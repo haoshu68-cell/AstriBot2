@@ -10,6 +10,7 @@ from launch.actions import (
     DeclareLaunchArgument,
     GroupAction,
     IncludeLaunchDescription,
+    OpaqueFunction,
     SetLaunchConfiguration,
 )
 from launch.conditions import IfCondition
@@ -17,6 +18,19 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from astribot_logging.launch import Node
 from launch_ros.substitutions import FindPackageShare
+
+def _static_map_context(context):
+    path = ''
+    if (LaunchConfiguration('env').perform(context) == 'sim' and
+            LaunchConfiguration('slam_backend').perform(context) == 'static_map' and
+            IfCondition(LaunchConfiguration('launch_navigation')).evaluate(context)):
+        from astribot_s1_perception.map_source_config import resolve, require
+        _, params, _, _ = resolve(
+            LaunchConfiguration('map_source_file').perform(context) or None,
+            {'map_source': 'real_file', 'localization': 'ground_truth',
+             'map_yaml_path': LaunchConfiguration('map_yaml_path').perform(context)})
+        path = require(params, 'map_yaml_path', str, default='')
+    return [SetLaunchConfiguration('simulation_static_map_yaml', path)]
 
 def generate_launch_description():
     pkg_navigation = FindPackageShare('astribot_s1_navigation')
@@ -35,10 +49,19 @@ def generate_launch_description():
             'slam_backend', default_value='voxel',
             description='统一 SLAM 后端：voxel 或仿真基线 static_map'),
         DeclareLaunchArgument('launch_gazebo', default_value='true'),
+        DeclareLaunchArgument(
+            'launch_slam',
+            default_value=PythonExpression([
+                "'false' if ('", LaunchConfiguration('mode'), "' == 'mapping' and '",
+                LaunchConfiguration('slam_backend'), "' == 'voxel') else 'true'"
+            ]),
+            description='voxel mapping 默认交给 mapping_runtime；static_map 基线仍启动障碍点云处理，但不发布 SLAM 地图/定位 TF'),
         DeclareLaunchArgument('ros_domain_id', default_value='25'),
         DeclareLaunchArgument('spawn_x', default_value='0.0'),
         DeclareLaunchArgument('spawn_y', default_value='0.0'),
         DeclareLaunchArgument('spawn_yaw', default_value='0.0'),
+        DeclareLaunchArgument('initial_chassis_pose', default_value='',
+                              description='显式 SLAM 初始 map 底盘实测位姿；不从 spawn 推测'),
         DeclareLaunchArgument('social_scenario', default_value=''),
         DeclareLaunchArgument('corridor_file', default_value=''),
         DeclareLaunchArgument('navigation_geometry_mode', default_value='legacy'),
@@ -46,6 +69,16 @@ def generate_launch_description():
                               description='透传已有策略阶段；不自动提高阶段放行状态'),
         DeclareLaunchArgument('launch_navigation', default_value='true',
                               description='是否启动 Nav2；false 可将仿真和导航分开启动'),
+        DeclareLaunchArgument(
+            'operator_runtime_params_file',
+            default_value=PathJoinSubstitution([
+                FindPackageShare('astribot_operator_backend'), 'config',
+                PythonExpression([
+                    "'mapping_runtime_sim.yaml' if '", LaunchConfiguration('env'),
+                    "' == 'sim' else 'mapping_runtime.yaml'"
+                ])
+            ]),
+            description='operator/mapping_runtime 配置；仿真默认启用受管快速建图，硬件默认保持未配置'),
         DeclareLaunchArgument('previous_map', default_value=''),
         DeclareLaunchArgument('save_path', default_value='/tmp/astribot_slam_sessions/'),
         DeclareLaunchArgument(
@@ -64,22 +97,48 @@ def generate_launch_description():
             description='map_source:=real_file 时的地图 **yaml** 绝对路径'
                         '（不是 pgm）。留空用配置文件的值'),
         DeclareLaunchArgument('use_rviz', default_value='true'),
+        DeclareLaunchArgument(
+            'rviz_config',
+            default_value=PathJoinSubstitution([pkg_navigation, 'rviz', 'nav2_view.rviz']),
+            description='RViz 配置文件；可传入 astribot_operator_station/config/operator.rviz，'
+                        '将导航可视化与上位机控制面板合并为单一 RViz 窗口。'),
         DeclareLaunchArgument('robot_name', default_value='astribot_s1'),
         DeclareLaunchArgument('camera_profile', default_value=PathJoinSubstitution([FindPackageShare('astribot_s1_description'), 'config', 'camera_rgbd_transport.yaml'])),
+        DeclareLaunchArgument('use_lidar', default_value='true'),
+        DeclareLaunchArgument('use_camera', default_value='true'),
+        DeclareLaunchArgument('use_wrist_cameras', default_value='false'),
+        DeclareLaunchArgument('use_stereo_cameras', default_value='false'),
+        DeclareLaunchArgument('torso_camera_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_torso_rgbd_nav_sim.yaml'])),
+        DeclareLaunchArgument('camera_calibration_dir', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config'])),
+        DeclareLaunchArgument('control_loopback_udp', default_value='false'),
+        DeclareLaunchArgument('camera_mounts_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_mounts_reference_sim.yaml'])),
+        DeclareLaunchArgument('use_camera_postprocess', default_value='true'),
+        DeclareLaunchArgument('use_camera_pointcloud', default_value='true'),
         DeclareLaunchArgument(
             'controller_plugin', default_value='rpp',
             description='rpp(任务书默认要求，非全向退化行为) 或 '
                         'mppi(推荐，能真正利用全向底盘能力，见README)'),
         DeclareLaunchArgument(
             'enable_arm_chassis_coupling', default_value='true',
-            description='是否接入臂-底盘动力学耦合动态调速节点(astribot_s1_dynamics_'
-                        'coupling)，透传给 navigation.launch.py'),
+            description='是否将臂展/关节活动限速接入 Nav2 上游约束，透传给 navigation.launch.py'),
+        DeclareLaunchArgument(
+            'enable_depth_obstacles', default_value='true',
+            description='局部代价图是否要求 RGB-D 点云；关闭仅用于显式激光-only 仿真回归'),
+        DeclareLaunchArgument(
+            'obstacle_layer_plugin', default_value='nav2_costmap_2d::ObstacleLayer',
+            description='代价图插件；VoxelLayer 仅用于三维覆盖回归，默认保持基线 ObstacleLayer'),
         DeclareLaunchArgument(
             'enable_posture_monitor',
             default_value=PythonExpression(
 
                 ["'false' if '", LaunchConfiguration('env'), "' == 'hardware' else 'true'"]),
             description='cmd_vel_body_to_world_node 的姿态止损监控，透传给 navigation.launch.py'),
+        DeclareLaunchArgument(
+            'enable_body_to_world', default_value='false',
+            description='是否将 Nav2 车体系速度旋转为 VelocityControl 所需的 world 系分量，透传给 navigation.launch.py'),
         DeclareLaunchArgument(
             'max_linear_speed', default_value='1.0',
             description='线速度上限(m/s)，透传给 navigation.launch.py，一键同时压住 MPPI 的 vx_max/vy_max/vx_min/vy_min 与 velocity_s'),
@@ -118,9 +177,21 @@ def generate_launch_description():
             'env': env,
             'navigation_geometry_mode':LaunchConfiguration('navigation_geometry_mode'),
             'headless': LaunchConfiguration('headless'),
+            'control_loopback_udp': LaunchConfiguration('control_loopback_udp'),
             'camera_profile': LaunchConfiguration('camera_profile'),
+            'use_lidar': LaunchConfiguration('use_lidar'),
+            'use_camera': LaunchConfiguration('use_camera'),
+            'use_wrist_cameras': LaunchConfiguration('use_wrist_cameras'),
+            'use_stereo_cameras': LaunchConfiguration('use_stereo_cameras'),
+            'torso_camera_profile': LaunchConfiguration('torso_camera_profile'),
+            'camera_calibration_dir': LaunchConfiguration('camera_calibration_dir'),
+            'camera_mounts_profile': LaunchConfiguration('camera_mounts_profile'),
+            'use_camera_postprocess': LaunchConfiguration('use_camera_postprocess'),
+            'use_camera_pointcloud': LaunchConfiguration('use_camera_pointcloud'),
             'mode': mode,
             'slam_backend': LaunchConfiguration('slam_backend'),
+            'launch_slam': LaunchConfiguration('launch_slam'),
+            'initial_chassis_pose': LaunchConfiguration('initial_chassis_pose'),
             'launch_gazebo': LaunchConfiguration('launch_gazebo'),
             'ros_domain_id': LaunchConfiguration('ros_domain_id'),
             'spawn_x': LaunchConfiguration('spawn_x'),
@@ -186,8 +257,13 @@ def generate_launch_description():
             'enable_arm_chassis_coupling': LaunchConfiguration('enable_arm_chassis_coupling'),
             'max_linear_speed': LaunchConfiguration('max_linear_speed'),
             'enable_posture_monitor': LaunchConfiguration('enable_posture_monitor'),
+            'enable_body_to_world': LaunchConfiguration('enable_body_to_world'),
             'posture_normal_height': LaunchConfiguration('posture_normal_height'),
             'scan_topic': scan_topic_expr,
+            'enable_depth_obstacles': LaunchConfiguration('enable_depth_obstacles'),
+            'obstacle_layer_plugin': LaunchConfiguration('obstacle_layer_plugin'),
+            'operator_runtime_params_file': LaunchConfiguration('operator_runtime_params_file'),
+            'simulation_static_map_yaml': LaunchConfiguration('simulation_static_map_yaml'),
         }.items(),
     )
 
@@ -195,7 +271,7 @@ def generate_launch_description():
         package='rviz2',
         executable='rviz2',
         output='screen',
-        arguments=['-d', PathJoinSubstitution([pkg_navigation, 'rviz', 'nav2_view.rviz'])],
+        arguments=['-d', LaunchConfiguration('rviz_config')],
         remappings=[('/scan', scan_topic_expr)],
         parameters=[{'use_sim_time': use_sim_time_expr}],
         condition=IfCondition(LaunchConfiguration('nav2_rviz_flag')),
@@ -204,6 +280,7 @@ def generate_launch_description():
     return LaunchDescription(declare_args + [
         save_use_rviz,
         perception_slam,
+        OpaqueFunction(function=_static_map_context),
         navigation,
         exploration,
         rviz_node,

@@ -1,6 +1,7 @@
 <launch>
  <arg name="use_sim_time" default="false"/>
  <node pkg="astribot_route_executor" exec="loop_route_executor" name="loop_route_executor" output="screen">
+  <param name="require_navigation_zones" value="true"/>
   <param name="use_sim_time" value="$(var use_sim_time)"/>
  </node>
 </launch>

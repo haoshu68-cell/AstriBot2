@@ -56,5 +56,28 @@ TEST(Backend, LeaseIdempotencyExpiryAndTerminalBarrier) {
  EXPECT_EQ(call(q).reason_code,"MAP.CONTEXT_BLOCKED");EXPECT_EQ(goals,1);
  catalog["motion_blocked"]=false;catalog["active_map"]["version"]="v2";update_catalog();
  q->command_id="stale-map";EXPECT_EQ(call(q).reason_code,"MAP.VERSION_MISMATCH");EXPECT_EQ(goals,1);
+ catalog["active_scene"]={{"scene_id","echo"},{"version",2}};catalog["scene_ready"]=true;update_catalog();
+ q->command_id="old-scene";EXPECT_EQ(call(q).reason_code,"SCENE.VERSION_MISMATCH");EXPECT_EQ(goals,1);
+ q->payload_json=R"({"frame":"map","x":1,"y":0,"yaw":0,"map_version":"v2","scene_id":"echo","scene_version":2})";
+ catalog["scene_ready"]=false;update_catalog();q->command_id="changed-device";EXPECT_EQ(call(q).reason_code,"SCENE.CONTEXT_INVALID");EXPECT_EQ(goals,1);
+ catalog["scene_ready"]=true;update_catalog();
+ const auto pose_request=q->payload_json;q->operation="renew";q->command_id="renew-scene";q->payload_json="{}";ASSERT_TRUE(call(q).accepted);
+ q->operation="navigate";q->command_id="current-scene";q->payload_json=pose_request;EXPECT_TRUE(call(q).accepted);spin(100);EXPECT_EQ(goals,2);
+ ASSERT_TRUE(goal&&goal->is_active());goal->succeed(std::make_shared<Nav::Result>());spin(50);
  executor.remove_node(backend);executor.remove_node(node);backend.reset();node.reset();rclcpp::shutdown();
+}
+
+TEST(Backend, ZonesVersionAdmissionAndOwnedNavigationCancellation) {
+ rclcpp::init(0,nullptr);auto backend=std::make_shared<OperatorBackend>(rclcpp::NodeOptions().parameter_overrides({rclcpp::Parameter("require_navigation_zones",true),rclcpp::Parameter("lease_ttl_sec",30.)}));auto driver=std::make_shared<rclcpp::Node>("zone_gateway_test");
+ rclcpp::executors::SingleThreadedExecutor e;e.add_node(backend);e.add_node(driver);auto spin=[&](int ms){auto until=std::chrono::steady_clock::now()+std::chrono::milliseconds(ms);while(std::chrono::steady_clock::now()<until){e.spin_some();std::this_thread::sleep_for(std::chrono::milliseconds(2));}};
+ using Command=astribot_operator_msgs::srv::OperatorCommand;using Nav=nav2_msgs::action::NavigateToPose;Json status;int goals=0,cancels=0;
+ auto sub=driver->create_subscription<std_msgs::msg::String>("/operator_backend/status",rclcpp::QoS(1).transient_local(),[&](std_msgs::msg::String::ConstSharedPtr m){status=Json::parse(m->data);});
+ std::shared_ptr<rclcpp_action::ServerGoalHandle<Nav>> handle;auto nav=rclcpp_action::create_server<Nav>(driver,"/navigate_to_pose",[&](auto,auto){++goals;return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;},[&](auto){++cancels;return rclcpp_action::CancelResponse::ACCEPT;},[&](auto h){handle=h;});
+ auto pub=driver->create_publisher<std_msgs::msg::String>("/navigation_zones/status",rclcpp::QoS(1).transient_local());auto client=driver->create_client<Command>("/operator_backend/command");spin(350);
+ auto q=std::make_shared<Command::Request>();q->robot_id="astribot";q->expected_boot_id=status.at("boot_id");q->command_id="owner";q->operation="acquire";
+ auto call=[&]{auto f=client->async_send_request(q);for(int i=0;i<200&&f.wait_for(std::chrono::seconds(0))!=std::future_status::ready;++i)spin(5);return f.get();};auto acquired=call();ASSERT_TRUE(acquired->accepted);q->lease_id=Json::parse(acquired->result_json).at("lease_id");
+ q->command_id="no-zones";q->operation="navigate";Json pose={{"frame","map"},{"x",1.},{"y",0.},{"yaw",0.},{"zone_token","old"}};q->payload_json=pose.dump();EXPECT_EQ(call()->reason_code,"ZONES.NOT_READY");
+ Json zones={{"token","v1"},{"ready",true},{"boot_id","zones"},{"context_id","mapping:s"},{"revision",1},{"can_edit",true}};auto update=[&]{std_msgs::msg::String m;m.data=zones.dump();pub->publish(m);spin(100);};update();q->command_id="old-zone";EXPECT_EQ(call()->reason_code,"ZONES.VERSION_MISMATCH");EXPECT_EQ(goals,0);
+ pose["zone_token"]="v1";q->payload_json=pose.dump();q->command_id="current-zone";EXPECT_TRUE(call()->accepted);spin(150);EXPECT_EQ(goals,1);zones["token"]="v2";update();spin(250);EXPECT_GE(cancels,1);ASSERT_TRUE(handle&&handle->is_canceling());handle->canceled(std::make_shared<Nav::Result>());spin(100);
+ e.remove_node(backend);e.remove_node(driver);backend.reset();driver.reset();rclcpp::shutdown();
 }

@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(camera_mount_collision_check)
+set(CMAKE_CXX_STANDARD 17)
+find_package(ament_cmake REQUIRED)
+find_package(moveit_core REQUIRED)
+find_package(moveit_ros_planning REQUIRED)
+add_executable(camera_mount_collision_check check.cpp)
+ament_target_dependencies(camera_mount_collision_check moveit_core moveit_ros_planning)

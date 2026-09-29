@@ -1,0 +1,142 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "first stale warning",
+      "clock_ns": 20000000000,
+      "expected_scale": 0.3,
+      "observed": {
+        "python": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ],
+        "cpp": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ]
+      }
+    },
+    {
+      "case": "immediate duplicate throttled",
+      "clock_ns": 20000000000,
+      "expected_scale": 0.3,
+      "observed": {
+        "python": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ],
+        "cpp": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ]
+      }
+    },
+    {
+      "case": "paused ROS clock, wall-time warning renews",
+      "clock_ns": 20000000000,
+      "expected_scale": 0.3,
+      "observed": {
+        "python": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ],
+        "cpp": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ]
+      }
+    },
+    {
+      "case": "backward ROS clock, wall-time warning renews",
+      "clock_ns": 19000000000,
+      "expected_scale": 0.3,
+      "observed": {
+        "python": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ],
+        "cpp": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 164894,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_1502829dee/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/log_clock_red/test_stale_warning_uses_wall_clock_during_ros_pause_and_rollback/python_params.yaml",
+        "-r",
+        "/coupling_1502829dee/input:=/coupling_1502829dee/input_remapped",
+        "-r",
+        "/coupling_1502829dee/python/output:=/coupling_1502829dee/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 164895,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_1502829dee/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/log_clock_red/test_stale_warning_uses_wall_clock_during_ros_pause_and_rollback/cpp_params.yaml",
+        "-r",
+        "/coupling_1502829dee/input:=/coupling_1502829dee/input_remapped",
+        "-r",
+        "/coupling_1502829dee/cpp/output:=/coupling_1502829dee/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 4,
+    "cpp": 4
+  }
+}

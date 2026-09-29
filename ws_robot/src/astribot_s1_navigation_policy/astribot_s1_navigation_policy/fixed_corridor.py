@@ -1,7 +1,9 @@
 """Asymmetric admission for an actually held posture. No implicit home fallback."""
 import math
+import numpy as np
 from dataclasses import replace
 from astribot_s1_robot_geometry.polygon import projection
+from astribot_s1_robot_geometry._geometry_native import corridor_turns_outside
 from .corridor import CorridorPolicy,Passage,angle
 
 class FixedCorridorPolicy(CorridorPolicy):
@@ -27,6 +29,12 @@ class FixedCorridorPolicy(CorridorPolicy):
                 return c.reverse(),c.bidirectional
         return super().choose(robot,path)
     def route_fits(self,c,path):
+        self.route_failure=''
+        if not corridor_turns_outside(self.profile.footprint_xy,
+                np.asarray([c.coordinates(*point) for point in path],dtype=float).reshape(-1,2),
+                c.length,c.width_m,self.margin(c),self.profile.narrow_heading_limit_rad):
+            self.route_failure='CORRIDOR_ROUTE_TURN_UNREACHABLE'
+            return False
         if path and all(math.dist(path[0],point)<1e-6 for point in path):
             along,side=c.coordinates(*path[0]);low,high=self.lateral_interval(c)
             return 0<=along<=c.length and low<=side<=high
@@ -91,7 +99,12 @@ class FixedCorridorPolicy(CorridorPolicy):
             self.centering_target=self.centering_target or c.point(s,target);self.state='CENTER'
             return Passage(replace(selection,motion='CENTER',speed=p.narrow_centering_speed_m_s,reason='CORRIDOR_ASYMMETRIC_OFFSET'),
                 'CENTER',c.corridor_id,0.,centering_target=self.centering_target)
-        if not self.route_fits(c,path):return self.hold('CORRIDOR_OFFSET_ROUTE_REQUIRED',now,selection)
+        if not self.route_fits(c,path):
+            if self.route_failure:
+                self.state='HOLD';self.permit=()
+                return Passage(replace(selection,motion='HOLD',speed=0.,reason=self.route_failure),
+                    'HOLD',c.corridor_id,failure=self.route_failure)
+            return self.hold('CORRIDOR_OFFSET_ROUTE_REQUIRED',now,selection)
         if not geometry_clear:return self.hold('CORRIDOR_GEOMETRY_UNAVAILABLE',now,selection)
         # Direct admission includes a restart inside an aligned passage. The
         # current world/path/geometry have just been revalidated; no width tier

@@ -1,0 +1,30 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________________ test_persistent_motion_static_dedup_and_epoch _________________
+
+    def test_persistent_motion_static_dedup_and_epoch():
+        ops = [update(i*100000000, [observation(i*100000000, str(i), center=(i*.03, 0., .5))]) for i in range(12)]
+        ops += [update(1100000000, [observation(1100000000, '11', center=(9., 0., .5))]),
+                snapshot(1200000000, region=[100., 100., 0.]), snapshot(2500000000), snapshot(5000000000),
+                dict(action='snapshot', now=stamp(0, epoch=1)), update(0, [observation(0, 'epoch', capture_stamp=stamp(0,epoch=1), valid_until=stamp(500000000,epoch=1))], epoch=1)]
+>       check(ops)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:136: in check
+    compare(reference(case), native(case))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = {'operations': [{'action': 'update', 'now': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'observations': [{'calibration_epoc...tamp': {'clock': 'ros', 'epoch': 0, 'ns': 500000000}, 'class_probabilities': [[...]], 'frame_id': 'odom', ...}]}, ...]}
+
+    def native(case):
+>       assert PROBE.is_file(), 'persistent native ConservativeFusion executable has not been implemented'
+E       AssertionError: persistent native ConservativeFusion executable has not been implemented
+E       assert False
+E        +  where False = <bound method Path.is_file of PosixPath('/tmp/codex_policy_fusion_20260921/policy_fusion_probe')>()
+E        +    where <bound method Path.is_file of PosixPath('/tmp/codex_policy_fusion_20260921/policy_fusion_probe')> = PosixPath('/tmp/codex_policy_fusion_20260921/policy_fusion_probe').is_file
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:117: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_persistent_motion_static_dedup_and_epoch
+1 failed, 23 deselected in 0.06s

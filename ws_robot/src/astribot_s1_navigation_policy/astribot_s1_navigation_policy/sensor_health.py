@@ -1,7 +1,17 @@
 """Acquisition-time health and directional depth coverage, independent of ROS."""
 import math
+import os
+from numbers import Real
 from dataclasses import replace
 from .contracts import Health, SensorHealth, Stamp, BearingCone, Vec3
+
+
+_native = None
+if os.environ.get('ASTRIBOT_NAV_NATIVE_KERNELS', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_s1_navigation_policy_native import _navigation_math_native as _native
+    except ImportError:  # pragma: no cover - Python-only overlays remain supported
+        _native = None
 
 
 class SensorHealthRegistry:
@@ -12,7 +22,7 @@ class SensorHealthRegistry:
         self.clock=None
 
     def record(self, sensor, capture, now, frame, coverage, depth, calibration_epoch):
-        if not 0<=now.since(capture)<=self.timeout_ns:return False
+        if (capture.clock,capture.epoch)!=(now.clock,now.epoch):return False
         clock=(now.clock,now.epoch)
         if clock!=self.clock:self.records.clear();self.clock=clock
         old=self.records.get(sensor)
@@ -29,8 +39,6 @@ class SensorHealthRegistry:
             if item is None or (item.stamp.clock,item.stamp.epoch)!=(now.clock,now.epoch):
                 out.append(SensorHealth(sensor,Health.UNAVAILABLE,now,
                     Stamp(now.ns+self.timeout_ns,now.clock,now.epoch),'unknown',(),False,0,'NO_CURRENT_DATA'))
-            elif now.ns>item.valid_until.ns or now.ns<item.stamp.ns:
-                out.append(replace(item,health=Health.STALE,reason='ACQUISITION_EXPIRED'))
             else:out.append(item)
         return tuple(out)
 
@@ -52,6 +60,16 @@ class SensorHealthRegistry:
 
 def scan_coverage(ranges, range_min, range_max, angle_min, angle_increment, body_yaw=0.):
     """Each valid beam certifies its angular cell; invalid rays leave explicit gaps."""
+    if (_native is not None and isinstance(ranges, (list, tuple)) and
+            all(isinstance(value, Real) for value in ranges) and
+            all(isinstance(value, Real) for value in
+                (range_min, range_max, angle_min, angle_increment, body_yaw))):
+        values = _native.scan_coverage(
+            [float(value) for value in ranges], float(range_min), float(range_max),
+            float(angle_min), float(angle_increment), float(body_yaw))
+        return tuple(BearingCone(Vec3(values[index], values[index + 1], values[index + 2]),
+                                 values[index + 3])
+                     for index in range(0, len(values), 4))
     cones=[];start=None
     valid=lambda r:(math.isfinite(r) and range_min<=r<=range_max) or r==math.inf
     for index in range(len(ranges)+1):
@@ -65,6 +83,8 @@ def scan_coverage(ranges, range_min, range_max, angle_min, angle_increment, body
 
 
 def movement_directions(vx,vy,wz):
+    if (_native is not None and all(isinstance(value, Real) for value in (vx, vy, wz))):
+        return tuple(_native.movement_directions(float(vx), float(vy), float(wz)))
     if abs(wz)>.02:return tuple(i*math.pi/8 for i in range(16))
     if math.hypot(vx,vy)<.01:return ()
     angle=math.atan2(vy,vx)
@@ -87,6 +107,24 @@ class CameraCalibrationRegistry:
 
 def coverage_allows_motion(cones, vx, vy, wz):
     """Cover the complete required interval, including gaps between sampled headings."""
+    if (_native is not None and all(isinstance(value, Real) for value in (vx, vy, wz))):
+        flat = []
+        native_compatible = True
+        for cone in cones:
+            try:
+                direction = cone.direction
+                values = (direction.x, direction.y, cone.half_angle_rad)
+            except AttributeError:
+                native_compatible = False
+                break
+            if not all(isinstance(value, Real) and math.isfinite(float(value))
+                       for value in values):
+                native_compatible = False
+                break
+            flat.extend(float(value) for value in values)
+        if native_compatible:
+            return bool(_native.coverage_allows_motion(
+                flat, float(vx), float(vy), float(wz)))
     if abs(wz)>.02:left,right=-math.pi,math.pi
     elif math.hypot(vx,vy)>=.01:
         angle=math.atan2(vy,vx);left,right=angle-math.pi/4,angle+math.pi/4

@@ -124,7 +124,8 @@ class RosBackend(Node):
         self.clock_changed = time.monotonic()
         self.tf = Buffer()
         self.listener = TransformListener(self.tf, self)
-        from .source_inbox import SourceInbox
+        from .source_inbox import SourceInbox, EnvelopeInbox
+        self.envelope_inbox = EnvelopeInbox() if self.fixed_v2 else None
         self.source_inboxes={name:SourceInbox(config['observation_max_age_s']) for name in ('odom','joints','scan')}
         self.create_subscription(Odometry, '/odom', lambda m: self.receive_source('odom',m), qos_profile_sensor_data)
         self.create_subscription(JointState, '/joint_states', lambda m: self.receive_source('joints',m), qos_profile_sensor_data)
@@ -186,6 +187,7 @@ class RosBackend(Node):
             self.get_clock().now().nanoseconds*1e-9,self.payload_radius)
 
     def receive_fixed_envelope(self,msg):
+        self.envelope_inbox.receive(msg)
         self.navigation_envelope=msg;self.envelope=msg.limits
 
     def publish_arm_hold(self):
@@ -321,11 +323,18 @@ class RosBackend(Node):
             if self.ledger.stage == 'TRANSPORT':
                 e = self.envelope
                 if self.fixed_v2:
-                    if self.navigation_envelope is None:
+                    # One immutable envelope selected for one observed clock.
+                    # Future renewals cannot replace still-valid evidence;
+                    # context changes and revocations are immediate barriers.
+                    now_ns = self.get_clock().now().nanoseconds
+                    now = now_ns * 1e-9
+                    navigation_envelope = self.envelope_inbox.select(now_ns)
+                    if navigation_envelope is None:
                         raise TaskFailure('FIXED_V2_ENVELOPE_MISSING')
-                    if not self.navigation_envelope.navigation_allowed:
-                        raise TaskFailure('FIXED_V2_REVOKED:'+self.navigation_envelope.reason)
-                    if seconds(self.navigation_envelope.valid_until)<=now:
+                    e = navigation_envelope.limits
+                    if not navigation_envelope.navigation_allowed:
+                        raise TaskFailure('FIXED_V2_REVOKED:'+navigation_envelope.reason)
+                    if seconds(navigation_envelope.valid_until)<=now:
                         raise TaskFailure('FIXED_V2_SOURCE_EVIDENCE_EXPIRED')
                 if e is None or not e.transport_ready or not 0 <= now - seconds(e.stamp) <= e.lease_s:
                     raise TaskFailure('TRANSPORT_ENVELOPE_LOST')
@@ -778,7 +787,6 @@ class RosBackend(Node):
             [self.arm_target('place', self.c['approach_m'], d) for d in (.08, .10, .06)])
         if self.vla:
             goal = self.vla.propose(goal, snapshot)
-        self.mtc_base = self.transform(self.c['map_frame'], self.c['base_frame'])
         self.mtc_scene_context = self.scene_context(snapshot)
         self.mtc_static_scene_context = self.scene_context(snapshot, include_occupancy=False)
         self.mtc_payload_context = self.payload_context(snapshot)
@@ -804,10 +812,6 @@ class RosBackend(Node):
         self.require_manipulation_hold()
         if self.envelope.epoch != self.mtc_hold_epoch:
             raise TaskFailure('MTC_HOLD_EPOCH_CHANGED')
-        base = self.transform(self.c['map_frame'], self.c['base_frame'])
-        delta = np.linalg.inv(self.mtc_base) @ base
-        if np.linalg.norm(delta[:3, 3]) > .02 or Rotation.from_matrix(delta[:3, :3]).magnitude() > .02:
-            raise TaskFailure('MTC_BASE_MOVED')
         if (self.observation or {}).get('calibration_epoch') != self.mtc_calibration:
             raise TaskFailure('MTC_CALIBRATION_CHANGED')
 
@@ -877,10 +881,8 @@ class RosBackend(Node):
         context=None
         if self.fixed_v2 and kind=='ARM':
             context=str(uuid.uuid4())
-            reference=PoseStamped();reference.header.frame_id=self.c['map_frame']
-            reference.header.stamp=self.get_clock().now().to_msg();reference.pose=pose_from_matrix(self.mtc_base)
             request=SetExecutionGuard.Request(enable=True,context_id=context,
-                joint_names=list(trajectory.joint_trajectory.joint_names),base_reference=reference)
+                joint_names=list(trajectory.joint_trajectory.joint_names))
         try:
             if context is not None:
                 response=self.call(self.execution_guard_client,request)

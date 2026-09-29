@@ -1,0 +1,74 @@
+[OUTPUT] 
+Internal ctest changing into directory: /tmp/astribot_pose_core_build/astribot_object_pose_core
+
+[HANDLER_OUTPUT] 
+Test project /tmp/astribot_pose_core_build/astribot_object_pose_core
+
+      Start  1: large_rotation
+ 1/11 Test  #1: large_rotation ...................***Failed    0.00 sec
+success=0 reason=not_implemented coverage=0,0 rmse=inf candidates=0
+FAIL: registration rejected: not_implemented
+
+      Start  2: noisy_partial
+ 2/11 Test  #2: noisy_partial ....................***Failed    0.00 sec
+success=0 reason=not_implemented coverage=0,0 rmse=inf candidates=0
+FAIL: registration rejected: not_implemented
+
+      Start  3: multi_depth
+ 3/11 Test  #3: multi_depth ......................***Failed    0.00 sec
+success=0 reason=not_implemented coverage=0,0 rmse=inf candidates=0
+FAIL: registration rejected: not_implemented
+
+      Start  4: camera_xyz
+ 4/11 Test  #4: camera_xyz .......................***Failed    0.00 sec
+success=0 reason=not_implemented coverage=0,0 rmse=inf candidates=0
+FAIL: registration rejected: not_implemented
+
+      Start  5: empty
+ 5/11 Test  #5: empty ............................***Failed    0.00 sec
+FAIL: empty input must be rejected
+
+      Start  6: sparse
+ 6/11 Test  #6: sparse ...........................***Failed    0.00 sec
+FAIL: sparse input must be rejected
+
+      Start  7: nan
+ 7/11 Test  #7: nan ..............................***Failed    0.00 sec
+FAIL: NaN must be rejected before matcher
+
+      Start  8: plane
+ 8/11 Test  #8: plane ............................***Failed    0.00 sec
+FAIL: plane must be rejected
+
+      Start  9: wrong_model
+ 9/11 Test  #9: wrong_model ......................***Failed    0.00 sec
+FAIL: wrong CAD must fail geometric quality gates
+
+      Start 10: undeclared_symmetry
+10/11 Test #10: undeclared_symmetry ..............***Failed    0.00 sec
+FAIL: undeclared box symmetry must not claim unique pose
+
+      Start 11: declared_symmetry
+11/11 Test #11: declared_symmetry ................***Failed    0.00 sec
+FAIL: declared symmetric object must expose equivalent orientation semantics
+
+
+0% tests passed, 11 tests failed out of 11
+
+Total Test time (real) =   0.02 sec
+
+The following tests FAILED:
+	  1 - large_rotation (Failed)
+	  2 - noisy_partial (Failed)
+	  3 - multi_depth (Failed)
+	  4 - camera_xyz (Failed)
+	  5 - empty (Failed)
+	  6 - sparse (Failed)
+	  7 - nan (Failed)
+	  8 - plane (Failed)
+	  9 - wrong_model (Failed)
+	 10 - undeclared_symmetry (Failed)
+	 11 - declared_symmetry (Failed)
+[ERROR_MESSAGE] 
+Errors while running CTest
+

@@ -1,0 +1,169 @@
+{
+  "scope": "stationary owned Gazebo freeze; health, new capture, and source epoch recovery; independent of downstream request replay",
+  "capture_completed": true,
+  "injection": {
+    "preflight_invalid_counts": {
+      "MISSING_ODOM": 31,
+      "ODOM_AHEAD_OF_CLOCK": 6
+    },
+    "injected": true,
+    "gazebo_pid": 1072735,
+    "instance": "task_chain_20260922_exclusive",
+    "scope": "stationary Gazebo pause, not a moving braking or physical hardware test",
+    "pause_requested_sec": 0.4,
+    "preflight_last": {
+      "velocities": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "odom_wall_age": 0.016739656999561703,
+      "clock_wall_age": 0.0033496609994472237,
+      "clock_minus_odom_ns": 14000000,
+      "reason": "OK"
+    },
+    "stationary_velocities": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "before_ros_ns": 243354000000,
+    "pause_wall": 1790071922.09501,
+    "pause_monotonic": 6507.960571802,
+    "resume_wall": 1790071922.4957273,
+    "resume_monotonic": 6508.361289849,
+    "actual_pause_wall_sec": 0.4007180469998275,
+    "clock_resumed": true,
+    "after_ros_ns": 243355000000,
+    "clock_resume_latency_sec": 0.00016133699955389602
+  },
+  "cameras": {
+    "head_rgbd": {
+      "healthy_before": true,
+      "stale_observed": true,
+      "recovered_new_frame": true,
+      "final_healthy": true,
+      "stale_samples": 5,
+      "before_epoch": "gazebo_camera:6257730605456:2573563314",
+      "first_stale_observed_after_pause_s": 0.21022543599974597,
+      "after_epoch": "gazebo_camera:6257730605456:2573563314:g1",
+      "epoch_changed": true,
+      "first_healthy_in_selected_window_s": 0.5108100990000821,
+      "passed_health_recovery": true,
+      "first_observed_recovery_after_resume_s": 0.10958137499983422,
+      "new_capture_after_pre_pause_ros": true,
+      "first_recovered_epoch": "gazebo_camera:6257730605456:2573563314:g1",
+      "fault_epoch_stable": true,
+      "healthy_epoch_stable_10s": true,
+      "no_old_epoch_after_invalidation": true,
+      "passed_version_recovery": true
+    },
+    "torso_rgbd": {
+      "healthy_before": true,
+      "stale_observed": true,
+      "recovered_new_frame": true,
+      "final_healthy": true,
+      "stale_samples": 4,
+      "before_epoch": "gazebo_camera:6257730733308:1629780541",
+      "first_stale_observed_after_pause_s": 0.2606078720000369,
+      "after_epoch": "gazebo_camera:6257730733308:1629780541:g1",
+      "epoch_changed": true,
+      "first_healthy_in_selected_window_s": 0.5108754399998361,
+      "passed_health_recovery": true,
+      "first_observed_recovery_after_resume_s": 0.06037691300025472,
+      "new_capture_after_pre_pause_ros": true,
+      "first_recovered_epoch": "gazebo_camera:6257730733308:1629780541:g1",
+      "fault_epoch_stable": true,
+      "healthy_epoch_stable_10s": true,
+      "no_old_epoch_after_invalidation": true,
+      "passed_version_recovery": true
+    },
+    "left_wrist_rgbd": {
+      "healthy_before": true,
+      "stale_observed": true,
+      "recovered_new_frame": true,
+      "final_healthy": true,
+      "stale_samples": 10,
+      "before_epoch": "rgbd_pipeline:6351312706747:1757087623:g7:session:6351350735341:2829393432:3:active",
+      "first_stale_observed_after_pause_s": 0.2380161199998838,
+      "after_epoch": "rgbd_pipeline:6351312706747:1757087623:g8:session:6351350735341:2829393432:3:active",
+      "epoch_changed": true,
+      "first_healthy_in_selected_window_s": 0.5374914789999821,
+      "passed_health_recovery": true,
+      "first_observed_recovery_after_resume_s": 0.07746930299981614,
+      "new_capture_after_pre_pause_ros": true,
+      "first_recovered_epoch": "rgbd_pipeline:6351312706747:1757087623:g8:session:6351350735341:2829393432:3:active",
+      "fault_epoch_stable": true,
+      "healthy_epoch_stable_10s": true,
+      "no_old_epoch_after_invalidation": true,
+      "passed_version_recovery": true
+    },
+    "right_wrist_rgbd": {
+      "healthy_before": true,
+      "stale_observed": true,
+      "recovered_new_frame": true,
+      "final_healthy": true,
+      "stale_samples": 8,
+      "before_epoch": "rgbd_pipeline:6351298402826:2611582108:g7:session:6351298063291:1552718007:3:active",
+      "first_stale_observed_after_pause_s": 0.22434941899973637,
+      "after_epoch": "rgbd_pipeline:6351298402826:2611582108:g8:session:6351298063291:1552718007:3:active",
+      "epoch_changed": true,
+      "first_healthy_in_selected_window_s": 0.5016639260002194,
+      "passed_health_recovery": true,
+      "first_observed_recovery_after_resume_s": 0.07366620199991303,
+      "new_capture_after_pre_pause_ros": true,
+      "first_recovered_epoch": "rgbd_pipeline:6351298402826:2611582108:g8:session:6351298063291:1552718007:3:active",
+      "fault_epoch_stable": true,
+      "healthy_epoch_stable_10s": true,
+      "no_old_epoch_after_invalidation": true,
+      "passed_version_recovery": true
+    }
+  },
+  "epoch_rebuild_gate": "new stable source epoch required; no old valid epoch after invalidation",
+  "clock": {
+    "scope": "Observer clock receive gaps, not Gazebo server execution timing",
+    "samples": 597971,
+    "advanced_sec": 598.7090000000001,
+    "first_source_ns": 99260000000,
+    "last_source_ns": 697969000000,
+    "tail_silence_wall_sec": 0.0016513649998159963,
+    "max_receive_interval_wall_sec": 0.4024581579997175,
+    "receive_gaps_over_250ms": 1,
+    "duplicate_source_intervals": 0,
+    "source_regressions": 0,
+    "gap_events": [
+      {
+        "previous_receive_monotonic_sec": 6507.961660005,
+        "receive_monotonic_sec": 6508.364118163,
+        "interval_wall_sec": 0.4024581579997175,
+        "previous_source_ns": 243357000000,
+        "source_ns": 243358000000
+      }
+    ],
+    "gap_events_omitted": 0
+  },
+  "matched_clock_gaps": [
+    {
+      "previous_receive_monotonic_sec": 6507.961660005,
+      "receive_monotonic_sec": 6508.364118163,
+      "interval_wall_sec": 0.4024581579997175,
+      "previous_source_ns": 243357000000,
+      "source_ns": 243358000000
+    }
+  ],
+  "passed_health_recovery_subcase": true,
+  "passed_version_recovery_subcase": true,
+  "full_W1_accepted": false,
+  "not_proven": [
+    "downstream old-result replay in Gazebo (separate isolated C++ ROS test exists)",
+    "navigation braking",
+    "GPU hard-hang recovery",
+    "hardware synchronization"
+  ]
+}

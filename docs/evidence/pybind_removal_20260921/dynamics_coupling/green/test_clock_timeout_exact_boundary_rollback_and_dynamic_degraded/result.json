@@ -1,0 +1,206 @@
+{
+  "domain": "140",
+  "localhost_only": true,
+  "steps": [
+    {
+      "case": "fresh",
+      "clock_ns": 10000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "age exactly timeout still fresh",
+      "clock_ns": 10500000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "one nanosecond beyond timeout degraded",
+      "clock_ns": 10500000001,
+      "expected_scale": 0.3,
+      "observed": {
+        "python": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ],
+        "cpp": [
+          0.3,
+          -0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.8999999999999999
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "degraded_scale": "0.22"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic degraded scale",
+      "clock_ns": 10500000001,
+      "expected_scale": 0.22,
+      "observed": {
+        "python": [
+          0.22,
+          -0.44,
+          0.0,
+          0.0,
+          0.0,
+          0.66
+        ],
+        "cpp": [
+          0.22,
+          -0.44,
+          0.0,
+          0.0,
+          0.0,
+          0.66
+        ]
+      }
+    },
+    {
+      "parameters_repr": {
+        "joint_state_timeout_sec": "1.0"
+      },
+      "accepted": {
+        "python": true,
+        "cpp": true
+      }
+    },
+    {
+      "case": "dynamic timeout",
+      "clock_ns": 10500000001,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    },
+    {
+      "case": "negative joint age remains fresh in baseline",
+      "clock_ns": 9000000000,
+      "expected_scale": 1.0,
+      "observed": {
+        "python": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ],
+        "cpp": [
+          1.0,
+          -2.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "implementation": "python",
+      "pid": 144770,
+      "command": [
+        "/usr/bin/python3",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_dynamics_coupling/test/test_ros.py",
+        "--oracle",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_043a4d1c21/python",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/green/test_clock_timeout_exact_boundary_rollback_and_dynamic_degraded/python_params.yaml",
+        "-r",
+        "/coupling_043a4d1c21/input:=/coupling_043a4d1c21/input_remapped",
+        "-r",
+        "/coupling_043a4d1c21/python/output:=/coupling_043a4d1c21/python/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    },
+    {
+      "implementation": "cpp",
+      "pid": 144771,
+      "command": [
+        "/tmp/codex_dynamics_coupling_20260921/build/arm_chassis_speed_coupling_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/coupling_043a4d1c21/cpp",
+        "--params-file",
+        "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/dynamics_coupling/green/test_clock_timeout_exact_boundary_rollback_and_dynamic_degraded/cpp_params.yaml",
+        "-r",
+        "/coupling_043a4d1c21/input:=/coupling_043a4d1c21/input_remapped",
+        "-r",
+        "/coupling_043a4d1c21/cpp/output:=/coupling_043a4d1c21/cpp/output_remapped"
+      ],
+      "exit_code": 0,
+      "owned_pid_reaped": true
+    }
+  ],
+  "output_counts": {
+    "python": 6,
+    "cpp": 6
+  }
+}

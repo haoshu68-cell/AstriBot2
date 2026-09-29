@@ -1,0 +1,699 @@
+{
+  "scope": "Entirely synthetic event contract fixture; no runtime or trajectory computation evidence",
+  "events": [
+    {
+      "event": "child_trajectory_submission",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "transaction": "",
+        "stage_id": "PREGRASP:prefix",
+        "stage_index": 0,
+        "stage_generation": 1,
+        "controller": "arm_left_controller",
+        "sent_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "point_count": 2,
+        "joint_names": [
+          "arm_left_joint1"
+        ]
+      }
+    },
+    {
+      "event": "physical_submission",
+      "details": {
+        "stage": "ATTACH_CONFIRM",
+        "context": "synthetic_parent_op_1_PICK",
+        "transaction": "synthetic_lease:PICK"
+      }
+    },
+    {
+      "event": "physical_applied_scene_submission",
+      "details": {
+        "transaction": "synthetic_lease:PICK"
+      }
+    },
+    {
+      "event": "payload_suffix_adopted",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "transaction": "synthetic_lease:PICK",
+        "start_index": 4,
+        "transport_replanned": true,
+        "stages": [
+          {
+            "stage_id": "LIFT:synthetic",
+            "stage_index": 4,
+            "returned_digest": "fc5eecb09095112360fb53de56afd450a443c91c81a78fb292587f232ff9a733",
+            "adopted_digest": "fc5eecb09095112360fb53de56afd450a443c91c81a78fb292587f232ff9a733",
+            "point_count": 3,
+            "joint_names": [
+              "arm_left_joint1",
+              "arm_left_joint2"
+            ]
+          },
+          {
+            "stage_id": "TRANSPORT_POSTURE:synthetic",
+            "stage_index": 5,
+            "returned_digest": "94f13988af53122b37cb18acbf11248a836639a55315a05d36d264c3c4f35e2b",
+            "adopted_digest": "94f13988af53122b37cb18acbf11248a836639a55315a05d36d264c3c4f35e2b",
+            "point_count": 3,
+            "joint_names": [
+              "arm_left_joint1",
+              "arm_left_joint2"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "event": "payload_transaction_confirmed",
+      "details": {
+        "transaction": "synthetic_lease:PICK"
+      }
+    },
+    {
+      "event": "child_submission",
+      "details": {
+        "controller": "arm_left_controller"
+      }
+    },
+    {
+      "event": "child_trajectory_submission",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "transaction": "synthetic_lease:PICK",
+        "stage_id": "LIFT:synthetic",
+        "stage_index": 4,
+        "stage_generation": 14,
+        "controller": "arm_left_controller",
+        "sent_digest": "fc5eecb09095112360fb53de56afd450a443c91c81a78fb292587f232ff9a733",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ]
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "deb96f8dc67317fe6c224ed744a260d8"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "deb96f8dc67317fe6c224ed744a260d8",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "75e49cd6d7b711ce9930e548d40e4f02"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "75e49cd6d7b711ce9930e548d40e4f02",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "ff07c4188cb86e3b90986dad4fa7b140"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "ff07c4188cb86e3b90986dad4fa7b140",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "cf7e382e928323b00b2b6f31c135e177"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "cf7e382e928323b00b2b6f31c135e177",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "01cea8a88907d0b9e96735c608e8c3fe"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "01cea8a88907d0b9e96735c608e8c3fe",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "transaction": "synthetic_lease:PICK",
+        "stage_id": "LIFT:synthetic",
+        "stage_index": 4,
+        "stage_generation": 14,
+        "controller": "arm_left_controller",
+        "sent_digest": "fc5eecb09095112360fb53de56afd450a443c91c81a78fb292587f232ff9a733",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ],
+        "uuid": "2d3c144ee2da8e2fbb3036e121ff10f6"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_left_controller",
+        "uuid": "2d3c144ee2da8e2fbb3036e121ff10f6",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "stage_confirmed",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "stage_id": "LIFT:synthetic",
+        "index": 4,
+        "children": "arm_left_controller:2d3c144ee2da8e2fbb3036e121ff10f6;arm_right_controller:deb96f8dc67317fe6c224ed744a260d8;head_controller:75e49cd6d7b711ce9930e548d40e4f02;torso_controller:ff07c4188cb86e3b90986dad4fa7b140;gripper_left_controller:cf7e382e928323b00b2b6f31c135e177;gripper_right_controller:01cea8a88907d0b9e96735c608e8c3fe;"
+      }
+    },
+    {
+      "event": "child_submission",
+      "details": {
+        "controller": "arm_left_controller"
+      }
+    },
+    {
+      "event": "child_trajectory_submission",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "transaction": "synthetic_lease:PICK",
+        "stage_id": "TRANSPORT_POSTURE:synthetic",
+        "stage_index": 5,
+        "stage_generation": 15,
+        "controller": "arm_left_controller",
+        "sent_digest": "94f13988af53122b37cb18acbf11248a836639a55315a05d36d264c3c4f35e2b",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ]
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "a4d07a3b8194b573a3a0aa1d033dc634"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "a4d07a3b8194b573a3a0aa1d033dc634",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "7a9e9ef8d8459be527ac4fbe2ef707f3"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "7a9e9ef8d8459be527ac4fbe2ef707f3",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "43f0d88024cd4782f51eb4010681d6ea"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "43f0d88024cd4782f51eb4010681d6ea",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "5ffe4fdcec2e5f8f161082467d820243"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "5ffe4fdcec2e5f8f161082467d820243",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "76f195111a3090f7f2756e3991153b62"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "76f195111a3090f7f2756e3991153b62",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "transaction": "synthetic_lease:PICK",
+        "stage_id": "TRANSPORT_POSTURE:synthetic",
+        "stage_index": 5,
+        "stage_generation": 15,
+        "controller": "arm_left_controller",
+        "sent_digest": "94f13988af53122b37cb18acbf11248a836639a55315a05d36d264c3c4f35e2b",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ],
+        "uuid": "dfa33c72cbadfc70cdf42c9242fe57c9"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_left_controller",
+        "uuid": "dfa33c72cbadfc70cdf42c9242fe57c9",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "stage_confirmed",
+      "details": {
+        "context": "synthetic_parent_op_1_PICK",
+        "stage_id": "TRANSPORT_POSTURE:synthetic",
+        "index": 5,
+        "children": "arm_left_controller:dfa33c72cbadfc70cdf42c9242fe57c9;arm_right_controller:a4d07a3b8194b573a3a0aa1d033dc634;head_controller:7a9e9ef8d8459be527ac4fbe2ef707f3;torso_controller:43f0d88024cd4782f51eb4010681d6ea;gripper_left_controller:5ffe4fdcec2e5f8f161082467d820243;gripper_right_controller:76f195111a3090f7f2756e3991153b62;"
+      }
+    },
+    {
+      "event": "child_trajectory_submission",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "transaction": "",
+        "stage_id": "PREGRASP:prefix",
+        "stage_index": 0,
+        "stage_generation": 1,
+        "controller": "arm_left_controller",
+        "sent_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "point_count": 2,
+        "joint_names": [
+          "arm_left_joint1"
+        ]
+      }
+    },
+    {
+      "event": "physical_submission",
+      "details": {
+        "stage": "DETACH_CONFIRM",
+        "context": "synthetic_parent_op_2_PLACE",
+        "transaction": "synthetic_lease:PLACE"
+      }
+    },
+    {
+      "event": "physical_applied_scene_submission",
+      "details": {
+        "transaction": "synthetic_lease:PLACE"
+      }
+    },
+    {
+      "event": "payload_suffix_adopted",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "transaction": "synthetic_lease:PLACE",
+        "start_index": 4,
+        "transport_replanned": false,
+        "stages": [
+          {
+            "stage_id": "RETREAT:synthetic",
+            "stage_index": 4,
+            "returned_digest": "0eff30ee8111e27d5d2d08b7a06d8387f110087461b9e44a779e895ffaa4e558",
+            "adopted_digest": "0eff30ee8111e27d5d2d08b7a06d8387f110087461b9e44a779e895ffaa4e558",
+            "point_count": 3,
+            "joint_names": [
+              "arm_left_joint1",
+              "arm_left_joint2"
+            ]
+          },
+          {
+            "stage_id": "STOW:synthetic",
+            "stage_index": 5,
+            "returned_digest": "33b4b5cd540296826aacff8851eca3a899d96b42e8838e8e2d8bdbec35693d6a",
+            "adopted_digest": "33b4b5cd540296826aacff8851eca3a899d96b42e8838e8e2d8bdbec35693d6a",
+            "point_count": 3,
+            "joint_names": [
+              "arm_left_joint1",
+              "arm_left_joint2"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "event": "payload_transaction_confirmed",
+      "details": {
+        "transaction": "synthetic_lease:PLACE"
+      }
+    },
+    {
+      "event": "child_submission",
+      "details": {
+        "controller": "arm_left_controller"
+      }
+    },
+    {
+      "event": "child_trajectory_submission",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "transaction": "synthetic_lease:PLACE",
+        "stage_id": "RETREAT:synthetic",
+        "stage_index": 4,
+        "stage_generation": 14,
+        "controller": "arm_left_controller",
+        "sent_digest": "0eff30ee8111e27d5d2d08b7a06d8387f110087461b9e44a779e895ffaa4e558",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ]
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "c8b24dfece61ecf7f40e710d47106a67"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "c8b24dfece61ecf7f40e710d47106a67",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "068d36e7aa30bfded57a737cb7b46294"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "068d36e7aa30bfded57a737cb7b46294",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "bcbb9c532d1725071a4f475da4451012"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "bcbb9c532d1725071a4f475da4451012",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "8c6d8282b9dcd33df2fa0a692b414127"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "8c6d8282b9dcd33df2fa0a692b414127",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "6f90167798186f60cfb97492788b09e3"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "6f90167798186f60cfb97492788b09e3",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "transaction": "synthetic_lease:PLACE",
+        "stage_id": "RETREAT:synthetic",
+        "stage_index": 4,
+        "stage_generation": 14,
+        "controller": "arm_left_controller",
+        "sent_digest": "0eff30ee8111e27d5d2d08b7a06d8387f110087461b9e44a779e895ffaa4e558",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ],
+        "uuid": "0e60577c46a29117205b7feeecb4e87a"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_left_controller",
+        "uuid": "0e60577c46a29117205b7feeecb4e87a",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "stage_confirmed",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "stage_id": "RETREAT:synthetic",
+        "index": 4,
+        "children": "arm_left_controller:0e60577c46a29117205b7feeecb4e87a;arm_right_controller:c8b24dfece61ecf7f40e710d47106a67;head_controller:068d36e7aa30bfded57a737cb7b46294;torso_controller:bcbb9c532d1725071a4f475da4451012;gripper_left_controller:8c6d8282b9dcd33df2fa0a692b414127;gripper_right_controller:6f90167798186f60cfb97492788b09e3;"
+      }
+    },
+    {
+      "event": "child_submission",
+      "details": {
+        "controller": "arm_left_controller"
+      }
+    },
+    {
+      "event": "child_trajectory_submission",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "transaction": "synthetic_lease:PLACE",
+        "stage_id": "STOW:synthetic",
+        "stage_index": 5,
+        "stage_generation": 15,
+        "controller": "arm_left_controller",
+        "sent_digest": "33b4b5cd540296826aacff8851eca3a899d96b42e8838e8e2d8bdbec35693d6a",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ]
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "2211622d1fe313969f67a769b628edc1"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_right_controller",
+        "uuid": "2211622d1fe313969f67a769b628edc1",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "7176f61601ca868f9b6df3ec09a207ab"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "head_controller",
+        "uuid": "7176f61601ca868f9b6df3ec09a207ab",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "6da9e88b9a5e59909f7c8abdc318d7f5"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "torso_controller",
+        "uuid": "6da9e88b9a5e59909f7c8abdc318d7f5",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "176404b4364e850a177d59c0c8e70ce7"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_left_controller",
+        "uuid": "176404b4364e850a177d59c0c8e70ce7",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "308eaee3f07105f74f9e7ae49cfeae36"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "gripper_right_controller",
+        "uuid": "308eaee3f07105f74f9e7ae49cfeae36",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "child_response",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "transaction": "synthetic_lease:PLACE",
+        "stage_id": "STOW:synthetic",
+        "stage_index": 5,
+        "stage_generation": 15,
+        "controller": "arm_left_controller",
+        "sent_digest": "33b4b5cd540296826aacff8851eca3a899d96b42e8838e8e2d8bdbec35693d6a",
+        "point_count": 3,
+        "joint_names": [
+          "arm_left_joint1",
+          "arm_left_joint2"
+        ],
+        "uuid": "e0231ff7c8ff17d5de0902d28882cb82"
+      }
+    },
+    {
+      "event": "child_terminal",
+      "details": {
+        "controller": "arm_left_controller",
+        "uuid": "e0231ff7c8ff17d5de0902d28882cb82",
+        "success": true,
+        "result_code": 4
+      }
+    },
+    {
+      "event": "stage_confirmed",
+      "details": {
+        "context": "synthetic_parent_op_2_PLACE",
+        "stage_id": "STOW:synthetic",
+        "index": 5,
+        "children": "arm_left_controller:e0231ff7c8ff17d5de0902d28882cb82;arm_right_controller:2211622d1fe313969f67a769b628edc1;head_controller:7176f61601ca868f9b6df3ec09a207ab;torso_controller:6da9e88b9a5e59909f7c8abdc318d7f5;gripper_left_controller:176404b4364e850a177d59c0c8e70ce7;gripper_right_controller:308eaee3f07105f74f9e7ae49cfeae36;"
+      }
+    }
+  ]
+}

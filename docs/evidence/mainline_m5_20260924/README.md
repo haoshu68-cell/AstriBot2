@@ -26,13 +26,15 @@
 
 全部 raw 前缀为 `/camera/raw/<camera>/`，总计 16 个流。双目目前不提供 depth 或 ProjectionHealth，不能要求不存在的接口。
 
-`topics.json` 共列 39 个订阅，显式添加 `/transport/status` 后 40 个：
+`topics.json` 当前共列 40 个订阅，显式添加 native `/transport/hold_executor/status` 后 41 个。导航约束改为前置决策后，移除已撤销的 `/cmd_vel_policy_input`，诊断改为 `/navigation_policy/constraint_state`，新增上游 `/navigation_policy/arm_speed_limit` 百分比源；当前与历史场次虽同为 41 话题，清单不同，历史证据保持原样。精确启动、Action 前订阅验收、停止语义、M3 有界 head raw 录制及视频逐帧时钟方案见 [CAPTURE_HANDOFF.md](CAPTURE_HANDOFF.md)：
 
 - 16 个 raw 流、`/clock` 为基础采样必需项。四路 RGB-D 的接收间隔预算为 250 ms；双目只统计间隔和存在性，没有擅自规定时效阈值。
 - 四路 `/perception/camera_health/<camera>` 与 `/perception/projection_health/<camera>`；订阅 QoS 为 reliable + transient_local。头腹健康默认 expected_rate_hz 仍为 10，不能用健康有效替代 20 Hz 采样验证。
 - 头腹 `/camera/<camera>/points_raw`、`/camera/<camera>/points`，双腕 `/manipulation/camera/<camera>/points`。双腕处理链须有消费者有效租约；raw 可用不等于双腕处理已激活。
-- `/tf`、`/tf_static`、`/joint_states`、`/odom`、`/cmd_vel_policy_input`、`/cmd_vel`、`/navigation_policy/constraint`、`/navigation_policy/protection_state`。
-- 阶段源必须显式传入。兼容接口 `/transport/status` 为 String JSON，含 stage/object_state/version；后续 native PlanToHold 的 task/request/lease/resource_epoch/hold_id/phase 由 M1 提供明确的 topic 类型或所有者事件文件，不能从速度和时间顺序猜阶段。
+- `/tf`、`/tf_static`、`/joint_states`、`/odom`、`/cmd_vel`、`/navigation_policy/arm_speed_limit`、`/navigation_policy/constraint`、`/navigation_policy/constraint_state`。
+- `/navigation_policy/arm_speed_limit` 为 `nav2_msgs/msg/SpeedLimit`，既有 `kind=context` 原样保留 header、percentage、speed_limit；该专用话题约定 `percentage=true`、`0%=HOLD`，不采用原生 Nav2 SpeedLimit 的零值“无限制”语义。上游 arm_chassis_speed_coupling 只发布百分比，不输出 Twist；由 NavigationConstraint 消费后形成最终 MotionConstraint。采样存在本身不能证明该约束已被消费。
+- 新增必需 `/transport/execution_guard/status`，typed `ExecutionGuardStatus` 原样保留 reason/stamp/joint_stamp/base_stamp；它没有 header，顶层 source_ns=null 不表示丢失消息内时钟。
+- 阶段源必须显式传入。当前 native `/transport/hold_executor/status` 为 String JSON；兼容 `/transport/status` 只用于对应旧流程。task/request/lease/resource_epoch/hold_id/phase 依实际原始状态或所有者事件文件关联，不能从速度和时间顺序猜阶段。
 
 可选项只是允许采样器在未激活链路中运行；它们缺失仍会显示 MISSING。**采样器的 PASS 仅表示必需话题存在与显式接收间隔预算满足，不能作为运动、健康、控制或覆盖通过。** 完整动作窗口须另查所用相机处理健康、有效租约、TF 和控制证据。
 
@@ -46,7 +48,7 @@
 
 健康消息使用 capture_stamp 和 source_epoch/processing_epoch 识别同一采集；重复心跳不会刷新该帧的现实年龄。应用 pending_depth 为采样值，不能推成 DDS 队列占用。处理 published_stamp 的 ROS 龄期不能冒充现实端到端延迟。跨机器 monotonic 不可直接相减。
 
-现有 protection_state 已含 proposal/constraint epoch/sequence、deadline、output_publish_start_ns、projection_ready/reason、loop_wall_dt_s 等字段，采集器原样保留。它默认不是每控制周期发布；本轮不改变诊断频率。无 stamp/ID 的 Twist 不能通过“最近一条”配对制造因果控制延迟。
+当前 `/navigation_constraint` 的 `constraint_state` 为 String JSON，含 proposal/constraint epoch/sequence、deadline、`constraint_publish_start_ns`、projection_ready/reason、loop_wall_dt_s 等字段，以既有 `kind=context` 原样保留。它不发布 Twist 或 protection envelope ACK，诊断不能作为速度输出/制动证明；`/cmd_vel` 由当前 body-to-world 唯一路径直接输出，arm coupling 已移到上游百分比源。诊断默认不是每控制周期发布，本轮不改变频率。无 stamp/ID 的 Twist 不能通过“最近一条”配对制造因果控制延迟。旧场次 `protection_state` 和其 `output_publish_start_ns` 仍按旧契约解释；旧 `verify_navigation_projection_gate.py` 含末级速度所有权及零输出判据，不适用于本次新架构采证，未纳入本场正常采集入口。
 
 工具明确标 `NOT_MEASURED`：控制因果时延、实际运动验收、ROI/三维覆盖、图与所有权、DDS 队列。TF 消息保存不等于消费者在采集时刻查 TF 成功。点云 width×height 不是有效深度点数。
 
@@ -80,7 +82,7 @@
 python3 tools/vision/capture_m5_observer.py \
   --topic-config docs/evidence/mainline_m5_20260924/topics.json \
   --session-json "$M5_SESSION_JSON" --output "$M5_CAPTURE_DIR" \
-  --seconds 300 --phase-topic /transport/status \
+  --seconds 300 --phase-topic /transport/hold_executor/status \
   --phase-events "$M5_OWNER_EVENTS" \
   --reference ws_robot/src/astribot_s1_description/config/simulation_navigation_full/launch_preset.yaml
 
@@ -88,7 +90,7 @@ python3 tools/vision/analyze_m5_capture.py \
   --capture "$M5_CAPTURE_DIR" --output "$M5_ANALYSIS_JSON"
 ```
 
-`--phase-events` 仅在确有所有者文件时传入。native 阶段接口明确后用显式 topic/type 替换兼容源；文件保持原始 schema/ID。输出目录与分析 JSON 必须是新路径。所有者还须保存实际发布者/QoS/参数、Gazebo 与构建负载清单；本工具不证明主机独占或调用者拥有动作权限。
+`--phase-events` 仅在确有所有者文件时传入；文件保持原始 schema/ID。输出目录与分析 JSON 必须是新路径。所有者还须保存实际发布者/QoS/参数、Gazebo 与构建负载清单；本工具不证明主机独占或调用者拥有动作权限。提前 SIGINT 的退出码为 130，完整窗口标 INCOMPLETE，不能改记 300 秒 PASS。
 
 离线验证入口：
 
@@ -96,7 +98,7 @@ python3 tools/vision/analyze_m5_capture.py \
 python3 -m unittest discover -s tools/vision -p 'test_*m5*.py' -v
 python3 tools/vision/capture_m5_observer.py \
   --topic-config docs/evidence/mainline_m5_20260924/topics.json \
-  --check-config --phase-topic /transport/status
+  --check-config --phase-topic /transport/hold_executor/status
 ```
 
 实际测试日志与文件哈希在本目录。后续恢复入口即上述 S0/S1 交接；本轮没有用旧数据填充新采集 manifest。

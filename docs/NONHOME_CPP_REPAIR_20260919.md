@@ -133,3 +133,264 @@ Gazebo 位置误差 0.0331 mm；该值属于仿真内部真值，不代表外部
 下一步优先迁移已测到的融合与快照热点到 C++，保留源采样时间、障碍留存和同版
 包络确认；通过同输入差分后，再跑带载通道、动态遮挡及负载矩阵。当前 P0–P5
 尚不能整体放行；本页中的单次成功不覆盖历史失败记录。
+
+## 融合快照热点迁移（Phase A，2026-09-20）
+
+### 已实现
+
+1. `astribot_s1_robot_geometry` 新增纯 C++ 快照推导内核
+   `include/astribot_s1_robot_geometry/fusion_snapshot.hpp`：对每条航迹只计算
+   派生量——`age`／`old`（预测速度归零）、平移 `min(age, track_memory)`、
+   协方差膨胀 `min(age,3)²×age_variance`、stationary 检测、预测方差、region
+   相关半径。内核不拥有时钟、权限或 lease；调用方保留 `ConservativeFusion`
+   的状态（tracks、epoch、sequence、sensors）。
+2. pybind11 绑定 `snapshot_tracks`（32 列行布局 + 变长 sample 数组），逐条对应
+   `fusion.py::snapshot()` 的算术：capture 时间、时钟 epoch、几何／包络版本、
+   协方差保留、障碍留存（`spatial_occupancy` 不移动且方差置 0）、未知拒绝、
+   `occupancy_only` 由 `velocity_m_s` 决定（镜像参考所读的同一字段，而非借用
+   `velocity_covariance` 的间接不变量）、region 过滤、旧航迹预测速度归零。
+3. `fusion.py` 增加 `snapshot_native()` 薄适配：构造 32 列 numpy 行与变长 sample
+   数组，调内核后用 `_new_frozen`（`object.__new__` + `object.__setattr__`）重建
+   冻结数据类，跳过 ingest 期已完成、快照无需重复的 `require`/`label` 校验。
+   epoch 变化仍走 `update((), now)`，与 `snapshot()` 一致；原生模块缺失时显式
+   抛错，不静默降级回 Python。
+4. 测试：C++ CTest `fusion_snapshot_test`（空输入、NaN 拒绝、未来、旧、新鲜、
+   占据格、`has_velocity_m_s` 映射守卫、region）；pytest 差分
+   `test_fusion_snapshot.py`（结构化 + 200 条随机 + 空 + epoch 清空 + 内核拒绝
+   NaN／Inf／坏形状），逐字段比对两路径输出。
+
+### 已验证
+
+- 独立构建 `/tmp/fusion_cpp_build → /tmp/fusion_cpp_install` 成功。
+- CTest 2/2 通过（`filled_collision`、`fusion_snapshot`）。
+- pytest 差分 6/6 通过；既有内核回归 `test_native_kernels.py` 18/18 通过，
+  新增 `snapshot_tracks` 不影响既有箱距／凸包／扫掠内核。
+- 微基准（2,832 条合成航迹，同输入）：`snapshot()` 中位 33.7 ms →
+  `snapshot_native()` 中位 29.7 ms（min 30.8 → 23.6 ms），约 23% 墙钟下降；
+  两路径逐字段等价、航迹数一致（2,832）。
+
+原始日志在 `runs/nonhome_cpp_repair_20260919/fusion_snapshot_phase_a/`
+（`fusion_cpp_build.log`、`fusion_cpp_ctest.log`、`fusion_snapshot_pytest.log`）。
+以上是同输入内核等价性对照，不是完整传感器回放或端到端截止时间验收。
+
+### 未通过 / 未验收
+
+- Phase B（感知覆盖鲁棒性）、Phase C（规划器／窄通道回归）、Phase D（隔离仿真
+  端到端）本轮未在 live 隔离 Gazebo 实例上重跑，仍为 未验收。
+- `snapshot_native()` 是增量新增的可选路径，`update()` 与现有调用方仍走
+  `snapshot()`；把该路径接为默认返回需在 Phase D live 仿真回归后再做。
+- 微基准里快照构造仍占主导：约 23% 增益来自去掉逐条契约校验；对象重建
+  （MetricBox／Vec3／Covariance3／PredictionModel／TrackedObstacle）仍在 Python
+  侧，没有被消除。不能据此宣称融合与策略整体实时性已修复；
+  `transport07`／`transport09` 的扫描年龄超限记录与结论仍有效。
+- 高负载下其余 Python 热点（预测行、风险几何、策略输入）尚未迁移。
+
+## Phase B/D 追加验证（2026-09-20）
+
+### 快照内核边界修复
+
+补充修复了 C++ 快照内核的运行时边界：运行链路使用整数纳秒采集时间，避免
+超过 2^53 后由 double 转换造成 lease 边界改变；无整数时间传输时，超过精确
+double 范围的兼容输入会拒绝。补充有限值、正尺寸、协方差对称/半正定、布尔标志、
+区域半径溢出和采样偏移检查，并在内核计算时释放 GIL。
+
+差分测试 8 项、全几何/策略测试 84 项、C++ CTest 2 项通过。实测 2,832 条
+合成航迹上，当前 `snapshot_native()` 包含 numpy 行打包和 Python 冻结对象重建，
+中位约 21.2 ms，对照 Python 参考约 16.0 ms；因此没有接为默认运行路径。该内核
+仍是已验证的迁移候选，待把对象重建和风险计算一并下沉后再重新评估。
+
+### 动态障碍与独立保护
+
+在隔离实例 `nonhome_next_20260920`（ROS Domain 76、独立 Ignition partition）中：
+
+| 注入场景 | 结果 |
+|---|---|
+| 动态障碍 | `YIELD`，路径状态 `OCCUPIED`；首个零指令 0.305 s，稳定停止 0.880 s，最大故障后位移 31.2 mm，无反弹，保护净空下界 127.9 mm，PASS |
+| geometry_state 进程暂停 | `GEOMETRY_EXPIRED`；首个零指令 0.248 s，稳定停止 0.841 s，无反弹，PASS |
+| policy_controller 进程暂停 | `WAITING_FOR:policy`；首个零指令 0.226 s，稳定停止 0.877 s，无反弹，PASS |
+
+原始证据分别位于 `moving_obstacle06/summary.json`、`geometry_fault07/summary.json`
+和 `policy_fault08/summary.json`。这些是独立保护与控制停止证据，不是接触力或实机
+制动距离验收。
+
+### 高度覆盖结果
+
+早期 `height11/height12` 保留了两个独立问题：验证器曾把世界坐标高度直接与
+`astribot_torso_base` 切片上限比较，且 MPPI 栈曾出现 `controller_server` 心跳
+丢失。前者会把 2.5 m 目标误判为不在投影范围，后者属于仿真运行稳定性问题，
+不能混入感知覆盖结论。
+
+本轮在隔离实例 `nonhome_height_rpp_20260920`（ROS Domain 78、独立 Ignition
+partition、RPP 控制器）完成修复后的 `height06/summary.json`：
+
+| 世界高度 | 基座切片 Z 包络（m） | 新鲜点云 | 代价图由 105→254 | 判定 |
+|---:|---:|---:|---:|---|
+| 0.10 | -0.2083…0.0017 | 是 | 是 | 通过 |
+| 0.60 | 0.2914…0.5014 | 是 | 是 | 通过 |
+| 1.20 | 0.8911…1.1010 | 是 | 是 | 通过 |
+| 1.90 | 1.5907…1.8007 | 是 | 是 | 通过 |
+| 2.50 | 2.1904…2.4003 | 是 | 是 | 通过 |
+
+验证器现在同时记录世界坐标与基座坐标包络，按 TF 旋转后的完整盒体 Z 投影与
+`[-0.03, 2.2] m` 切片范围比较；基线代价固定取夹具创建前的空闲样本，避免点云
+清除延迟把新夹具误记为“创建前已占用”。完整点云输入为 `/map_scan`；
+`/map_scan_filtered` 仍保留 Voxel-SLAM 历史 `nav_scan_z_max=1.534 m` 裁剪，
+因此不能用后者替代固定版本的高度覆盖证据。
+
+RPP 栈在 height06 后进行约 20 s 稳定性采样：生命周期节点全部 `active`、
+`/clock` 持续有数据、日志无 `controller_server` 心跳失败。验证结束后按记录的
+supervisor/skills PID 发送 SIGINT，`session.json` 为 `stopped` 且
+`remaining_owned_pids=[]`；实例环境扫描为 0 个残留进程。height03（未继承
+Ignition 分区）、height04（TF 尚未连通）和 height05（基线时序误判）作为工具
+边界失败证据保留，不能覆盖 height06 的通过结果。
+
+随后在全新隔离实例 `nonhome_mppi_stability_20260920`（ROS Domain 79）运行
+MPPI 空闲稳定性对照约 185 s：七个导航生命周期节点持续 `active`，日志中
+`Have not received a heartbeat` 与 `CRITICAL FAILURE: SERVER controller_server`
+均为 0；实测 `/clock` 与 `/scan_from_cloud` 均有持续数据。该结果说明 height12
+的心跳故障不是确定性复现，但尚未覆盖运动负载、长时间传感器压力或进程失联注入，
+因此仍作为“待根因定位”的可靠性问题保留，而非宣称修复。
+
+在同类隔离 MPPI 实例上发送 0.5 m 裸导航目标的运动入口探针被安全门拒绝，
+`mppi_motion_summary.json` 记录原因 `ENVELOPE_V2_NOT_READY`、路径点数为 0、
+`controller_server` 心跳失败为 0 且生命周期仍为 `active`。这确认未建立非 home
+几何租约时不会进入控制器执行；该拒绝是预期安全行为，不能作为 MPPI 运动成功，
+也不能把裸导航动作当作搬运动态回归。
+该 MPPI 运动探针随后按 supervisor PID 清理，`session.json` 为 `stopped`、
+`remaining_owned_pids=[]`，实例环境扫描无残留。
+
+离线多场景矩阵 `offline_nonhome_navigation.json` 覆盖 200 个几何组合和 1,200
+个生产 `FixedCorridorPolicy` 决策：126 个组合几何可通过、74 个拒绝；输入或
+几何无效时均保持 HOLD，通道内没有 ALIGN/CENTER 原地转向。该矩阵是规则与故障
+语义回归，仍不替代已建立包络后的 live MPPI/RPP 运动回归。
+
+代码回归补跑结果：导航策略 31 项、几何 55 项、搬运 86 项 Python 测试均通过；
+融合快照差分 8 项通过，`filled_collision` 与 `fusion_snapshot` 两项 CTest 通过。
+合并收集多个测试目录时存在同名 `test_geometry.py` 的 pytest 模块冲突，已按包
+分开执行，未把该收集器问题计入运行时失败。
+
+### 当前剩余工作
+
+- 将 snapshot 的对象构造、预测行和风险几何继续迁移到 C++，直到真实回放中 P95
+  处理时间和采集时效回到门槛内，再接入默认路径。
+- 高度投影与 1.9–2.5 m 覆盖在 RPP 隔离实例已通过；遮挡、稀疏点云和 VoxelLayer
+  参数矩阵已在新的隔离域完成，但双 RGB-D 源持续新鲜度仍未达到放行门槛。
+- 在同一几何版本与包络下补做端到端多负载抓取／搬运／放置；保护性 HOLD/拒绝继续
+  算安全结果，不算任务成功。
+
+### 当前阻塞与放行边界（2026-09-20 追加）
+
+- MPPI 隔离栈在 `height12` 出现过 `controller_server` 心跳丢失并主动降级；
+  RPP 对照栈在 `height06` 已稳定通过，但 MPPI 的复现、根因定位和恢复策略仍未
+  完成，不能把 RPP 结果写成默认控制器的稳定性结论。
+- C++ `snapshot_native()` 的边界与等价性已通过，但含 numpy 打包和 Python 冻结
+  对象重建时仍慢于参考路径，不能接为默认运行时；预测行、风险几何和对象构造尚未
+  全部下沉。
+- 动态障碍、几何过期、策略暂停的保护停机，以及遮挡／稀疏／VoxelLayer 安全保持
+  已通过；端到端多负载搬运在 READY_RIGHT skill planner 无解处停止，Hybrid/Omni
+  候选的 live 执行回归仍未完成。历史完整搬运成功不替代这些验收。
+- VLA 通用接口和 55 项接口回归已完成，但当前仍是 Python 适配层/示例策略；真实
+  模型服务、完整 VLA 抓取搬运放置动态回归、动作块执行和真机相机外参均未放行。
+
+## 传感器 profile 与 MPPI 运动复核（2026-09-20 追加）
+
+### 已实现
+
+1. 修复 `navigation.launch.py` 的参数重写范围。此前通用 `topic` 重写会递归改写
+   头部／躯干点云话题，导致 `PointCloud2` 被错误接到 `LaserScan` 订阅，局部代价图
+   不会配置。现在只重写两个 obstacle-layer 的 `scan.topic`，深度点云保持原消息类型
+   和话题。
+2. 为 `nav2_full_bringup.launch.py`、`perception_slam_bringup.launch.py` 和
+   `sim_stack_supervisor.py` 增加一致的传感器开关：`use_lidar`、`use_camera`、
+   `use_camera_postprocess`、`use_camera_pointcloud`、`enable_depth_obstacles`。默认
+   保留激光、RGB-D 和三维障碍门槛；只有明确的 lidar-only 回归才关闭相机与深度层。
+   `enable_depth_obstacles=false` 只改变代价图观测源，不放宽包络、碰撞或策略安全门。
+3. 运行时仍遵守 C++ 优先：上述改动只负责启动与参数接线，几何和碰撞内核继续由
+   `astribot_s1_robot_geometry` C++ 实现提供，Python 仅作为启动／验证适配层。
+
+### 验证证据
+
+- `astribot_s1_navigation`、`astribot_s1_perception` 定向构建通过；三份 launch 文件和
+  `sim_stack_supervisor.py` 通过 `py_compile`，`git diff --check` 通过。
+- 隔离实例 `nonhome_mppi_lidar_only_rtf05_20260920`（ROS Domain 86、RTF 0.5、P5、
+  MPPI、固定 V2）完成包络握手和一次 1 m 运动：
+  `runs/nonhome_mppi_lidar_only_rtf05_20260920/envelope_motion/summary.json` 中
+  `envelope_ready=true`、`navigation_succeeded=true`、`hold_revoked=true`，固定几何
+  哈希为 `44e83422d77fd8980202342934a6f670fcabcc4c6d7b5e09fc98100a287a3b2b`，最终平面
+  误差 `0.001135 m`，严格 2 mm／0.1° 到位判据通过。日志包含 `ARRIVAL_REACHED`，导航
+  生命周期在采样时均为 `active`。
+- 同一实例的 `/clock` 约 495 Hz、`/scan_from_cloud` 约 5 Hz；
+  `/navigation_policy/costmap_scan` 为 `LaserScan`，两个 costmap 订阅者均为
+  `BEST_EFFORT`；关闭相机后头／躯干点云话题无发布者，证明 lidar-only profile 没有
+  隐式接入失配的 RGB-D 话题。
+- 早先默认实时因子 1.0 且同时存在多个自有栈时，运动探针分别出现
+  `WAIT_TIMEOUT` 与 `SIM_CLOCK_STALLED`。清理自有旧实例后以 RTF 0.5 重跑通过；这两条
+  记录保留为负载边界证据，不改写为控制器碰撞失败。一次 `REQUIRED_COVERAGE_UNAVAILABLE`
+  也被策略保持为 HOLD，说明激光覆盖过期时不会以降低门槛换取运动成功。
+
+### 当前剩余工作
+
+- 上述运动成功是明确标注的 lidar-only profile，不包含 RGB-D/VoxelLayer 三维覆盖验收；
+  默认相机 profile 仍需在低负载隔离实例补做新鲜点云、稀疏／遮挡和窄通道矩阵。
+- VLA 真实模型服务、完整抓取／搬运／放置动态回归和真机相机外参按当前任务继续跳过；
+  其接口静态回归不等于真实服务验收。
+
+默认相机 profile 的只读检查在隔离实例 `nonhome_camera_profile_20260920`（ROS Domain
+88、RTF 0.5）完成：头部和躯干 RGB-D self-filter 均发布 `sensor_msgs/PointCloud2`，
+local costmap 的参数明确保留 `scan head_depth torso_depth`，头部点云订阅者的类型和
+BEST_EFFORT QoS 与发布者一致，导航生命周期可进入 `active`。但该实例同时记录了
+点云观测超过 0.30 s 的 warning，未达到三维感知新鲜度验收；实例已按 PID 清理，不能
+把“话题接通”写成“点云覆盖通过”。
+
+## RGB-D／遮挡／VoxelLayer 与多负载回归（2026-09-20 追加）
+
+### 三维覆盖实现
+
+在现有导航参数中补齐了 VoxelLayer 的可选 profile，不复制第二套导航栈：
+`obstacle_layer_plugin:=nav2_costmap_2d::VoxelLayer` 时同一 local/global source
+块切换为 VoxelLayer，并启用 `origin_z=0`、`z_resolution=0.10 m`、`z_voxels=32`、
+`max_obstacle_height=2.0 m`、`mark_threshold=0` 和 `publish_voxel_map`；默认值仍为
+`ObstacleLayer`。`sim_stack_supervisor.py`、`nav2_full_bringup.launch.py` 及
+`navigation.launch.py` 已透传该选择，深度源仍严格使用 `PointCloud2`。新增的
+`tools/sim/verify_3d_coverage_matrix.py` 只负责观测和证据，不把点云缺失解释成安全
+通过。
+
+### 隔离场景结果
+
+| 场景 | 隔离实例与证据 | 结果 |
+|---|---|---|
+| VoxelLayer + RGB-D | `coverage_voxel_20260920`，Domain 91，RTF 0.5，七个 Nav2 生命周期均 `active`；`coverage_voxel/summary.json` 记录 `/local_costmap/voxel_grid` 74 条、代价图 12 条，参数 dump 明确为 `nav2_costmap_2d::VoxelLayer`、32 层 | `PASS`：体素链路已发布；头部点云仅有空样本、躯干只收到一帧非空，因此不把它写成完整双目新鲜度通过 |
+| 遮挡 | 同一实例临时创建并在探针结束时删除的 Gazebo 静态遮挡体；`coverage_occluded/summary.json` | `PASS_SAFE_HOLD`：点云覆盖退化时保持 HOLD，VoxelGrid 仍有 55 条；没有用遮挡后的残留体素放行 |
+| 稀疏／无 RGB-D | `coverage_sparse_20260920b`，Domain 93，`use_camera_pointcloud=false`，VoxelLayer 仍有 56 条输出；`coverage_sparse/summary.json` 头／躯干均为 0 点 | `PASS_SAFE_HOLD`：缺失三维输入没有被当作可通行 |
+| 窄通道三维规则 | `runs/narrow_3d_matrix_20260920.json` | 200 个几何组合、1,200 个生产 `FixedCorridorPolicy` 决策；126 个可通过、74 个拒绝，通道内无 ALIGN/CENTER 原地转向，输入/包络无效时 HOLD |
+
+一次同时启动第二个 Gazebo 实例的尝试在 `coverage_sparse_20260920` 被
+`gz_ros2_control` 的 `robot_description` 加载期阻塞，监督器按超时退出且
+`remaining_owned_pids=[]`；这属于同机并发调度边界，不能归因给 VoxelLayer。后续分开
+实例重跑即得到上表的 sparse 结果。
+
+### 多负载搬运动态回归
+
+新增 `tools/sim/verify_multi_load_dynamic.py`，复用生产 `FixedEnvelope` 协调器回放
+空载、0.2 kg 轻载、1.2 kg 偏置重载和释放后的空载四个连续几何版本。证据
+`runs/multi_load_dynamic_20260920e/summary.json` 显示每一载荷均获得新 epoch 与几何
+hash，包络半长从 0.3301 m → 0.4001 m → 0.5001 m 后恢复，附着载荷质量严格为正，
+所有消费者 ACK 后才 `transport_ready=true`；缺 `controller` ACK 得到
+`WAITING_FOR:controller`，未确认 hold 被拒绝为 `ARM_HOLD_UNCONFIRMED`。
+
+同时启动真实 `transport_task`（无 VLA）时，搬运事务已通过 ADMISSION、固定包络与
+场景同步，但在 `READY_RIGHT` 的 MoveIt skill planner 返回
+`RETRIES_EXHAUSTED ... planner returned no solution`，因此没有把这次运行记作抓取／
+搬运／放置成功。原始记录在 `runs/transport_multi_load_20260920/nominal_retry/`；
+MTC 首次启动缺少 `librviz_marker_tools.so`，补齐隔离依赖路径后 MTC 进程正常启动，
+剩余阻塞是 READY_RIGHT 规划无解。该项仍是完整动态搬运的明确未放行卡点，不影响上述
+包络事务回归和安全 HOLD 结论。
+
+### 本轮验证边界
+
+- `astribot_s1_navigation` launch 回归 3/3、搬运事务／payload／geometry 回归 26/26，
+  `verify_multi_load_dynamic.py` 通过；覆盖采集器、窄通道矩阵和各隔离 supervisor 均在
+  结束后核对 `session.json` 为 `stopped` 且 `remaining_owned_pids=[]`。
+- RGB-D 的真实双源持续新鲜度、遮挡后的可见体积证明、真实接触力以及 VLA 服务仍未放行。
+  完整抓取／搬运／放置还需先解决 `READY_RIGHT` 规划无解，再按同一多负载矩阵重复端到端
+  事务；本轮没有用降低碰撞或时效门槛来掩盖该失败。

@@ -3,12 +3,50 @@
 Conservative geometry and acquisition-time state for fixed non-home navigation.
 The ROS adapter publishes geometry evidence; it does not command the robot.
 
-The C++ extension `_geometry_native` implements convex hulls, filled-polygon/AABB
-distance, batch scan free-space certification, capture-time scan projection and
-occupied-cell generation, per-joint acquisition caches and source-time selection.
-Python remains the ROS/model adapter during migration.
-Build dependencies include `pybind11-dev` and `python3-dev`; NumPy is required by
-the binding adapter. Build this package before navigation policy or transport,
+`geometry_state` is a direct C++ ROS producer. It reads URDF collision geometry,
+OBJ/ASCII STL/binary STL bounds, measured joint state (including mimic chains),
+attached primitives and projection configuration, and publishes the same geometry
+and attachment evidence topics. It preserves bounded asynchronous computation,
+input identity checks, acquisition deadlines, attachment filtering acknowledgements
+and height coverage checks. It does not load Python or issue robot commands.
+
+Attachment confirmation now defaults to the versioned C++ payload ledger
+(`attachment_source_mode=ledger`). Configure matching `payload_environment`,
+`payload_session_id` and `payload_source_id`, and supply the independent physical
+inventory and scene readback described in `../astribot_s1_payload_state/README.md`.
+Missing evidence is incomplete geometry, not an empty robot. Even confirmed empty
+has a ledger version. An async result cannot outlive its original attachment lease
+or ignore a newer revocation. `planning_scene_legacy` is an explicit compatibility
+mode only; existing direct-scene protocol fixtures select it explicitly and do not
+prove physical attachment confirmation. The 2026-09-23 offline candidate and its
+remaining integration gates are recorded in `docs/PAYLOAD_STATE_OFFLINE_20260923.md`.
+
+A 1 ms wall timer checks completion only while one job is pending, then applies
+the same input and source-lease checks. It cannot select a new sample; sampling
+still uses the original 20 ms ROS timer and 100 ms wall-time throttle.
+This entry point changes only after a fresh build/install of this package. The
+existing shared workspace installation is not replaced by editing these sources;
+the migration validation uses separate installations under `/tmp`.
+The former Python `scripts/geometry_state` and module `main()` entry points are
+removed. The retained Python class is an analysis oracle and still supplies
+helpers used by legacy consumers; only test drivers construct it for comparison.
+
+`geometry_core` is an exported C++ interface target. `geometry_kernels.hpp` exposes
+convex hulls, filled-polygon/AABB distance, scan free-space certification and
+capture-time occupied-cell projection without Python types. `robot_model.hpp`
+provides model geometry; `joint_snapshot.hpp`, `source_time.hpp` and
+`geometry_state_core.hpp` provide acquisition and completed-work checks.
+
+The temporary `_geometry_native` compatibility adapter calls these same C++
+kernels for consumers that have not migrated yet. It is still required by the
+Python observer, fixed-envelope and transport paths; replacing this producer
+alone does not remove those dependencies. Python model/polygon code remains as
+the differential analysis oracle. Configure
+`-DASTRIBOT_GEOMETRY_BUILD_PYTHON_COMPAT=OFF` for a C++-only installation once the
+selected application does not require those legacy consumers.
+Core build dependencies include Eigen, TinyXML2, OpenSSL and nlohmann JSON.
+Compatibility builds additionally need `pybind11-dev` and `python3-dev`; NumPy is
+required by the binding adapter. Build this package before navigation policy or transport,
 and source the resulting install setup. A Python source directory alone is not
 a complete runtime installation. Do not overwrite a library used by a live stack.
 
@@ -39,10 +77,20 @@ does not change the sensor's acquisition deadline.
 Verification after sourcing the built overlay:
 
 ```bash
-python3 -m pytest -q ws_robot/src/astribot_s1_robot_geometry/test
+ROS_DOMAIN_ID=115 ROS_LOCALHOST_ONLY=1 GEOMETRY_STATE_CPP=/absolute/install/astribot_s1_robot_geometry/lib/astribot_s1_robot_geometry/geometry_state python3 -m pytest -q ws_robot/src/astribot_s1_robot_geometry/test
 python3 tools/sim/benchmark_geometry_kernels.py --output /tmp/geometry-kernels.json
 ```
 
 The NumPy/scalar reference functions are retained for differential validation.
+The protocol test starts only its own C++ producer and read-only fixture services
+in domain 115, verifies the child's actual domain and absence of Python mappings,
+checks attachment revision compatibility and original source deadlines, then
+stops only its own process. This is isolated ROS protocol evidence, not a Gazebo,
+closed-loop navigation or hardware acceptance result.
 Offline timing is not a guarantee of ROS end-to-end deadlines; see
 `docs/NONHOME_CPP_REPAIR_20260919.md` for the simulation evidence and open gates.
+
+The isolated Release replay, original-stamp latency definition, and controlled
+source-age phase diagnosis are recorded in
+`docs/evidence/pybind_removal_20260921/geometry/README.md`. The performance
+comparison driver lives under `test/` and is never installed as a ROS entry point.

@@ -187,6 +187,8 @@ private:
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
   sensor_msgs::msg::PointCloud2::ConstSharedPtr pending_cloud_;
+  int64_t last_cloud_stamp_{-1};
+  std::string last_cloud_frame_;
   std::mutex queue_mutex_;
   std::condition_variable queue_cv_;
   std::atomic<bool> running_{false};

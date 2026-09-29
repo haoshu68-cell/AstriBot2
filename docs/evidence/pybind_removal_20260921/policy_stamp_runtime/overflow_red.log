@@ -1,0 +1,47 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_metric_time_float_overflow_preserves_original_partial_transaction ____
+
+    def test_metric_time_float_overflow_preserves_original_partial_transaction():
+        capture=10**400
+        item=observation(capture)
+        # Python has already adopted the epoch, marked the measurement seen, and
+        # allocated the next identity when conversion for velocity history fails.
+        # Repeating that measurement is therefore discarded, not retried as new.
+        ops=[update(capture,[item]),snapshot(capture),update(capture,[item]),snapshot(capture)]
+        expected=reference(dict(operations=ops))
+        assert expected[0]==dict(ok=False,error='OverflowError',message='int too large to convert to float')
+        assert expected[1]['result']['tracks']==[] and expected[3]['result']['tracks']==[]
+>       compare(expected,native(dict(operations=ops)))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:236: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'error': 'OverflowError', 'message': 'int too large to convert to float', 'ok': False}
+b = {'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'error': 'OverflowError', 'message': 'int too large to convert to float', 'ok': False}, {'code': 'INVALID_INPUT', 'field': 'stamp.ns', 'ok': False})
+E           assert {'error', 'message', 'ok'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'message'
+E             'error'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_metric_time_float_overflow_preserves_original_partial_transaction
+1 failed, 101 deselected in 0.07s

@@ -1,0 +1,30 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________________ test_clock_tf_rotation_velocity_and_metadata _________________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_clock_tf_rotation_velocity_and_metadata(authority):
+        p=vision();p['observations'][0].update(velocity_m_s=[.1,-.2,.3],velocity_variance_m2_s2=.04)
+        p['resolved_measurement_ids']=['old'];q=[.18257418583505536,.3651483716701107,.5477225575051661,.7302967433402214]
+>       check(dict(options={'sensor_id':'camera'},transform=dict(translation=[.5,-.3,.7],rotation=q),operations=[dict(packet=p)]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:141: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = {'operations': [{'packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'center_m': [...], 'classe...': [0.18257418583505536, 0.3651483716701107, 0.5477225575051661, 0.7302967433402214], 'translation': [0.5, -0.3, 0.7]}}
+
+    def native(case):
+>       assert PROBE.is_file(),'native observation adapter executable has not been implemented'
+E       AssertionError: native observation adapter executable has not been implemented
+E       assert False
+E        +  where False = <bound method Path.is_file of PosixPath('/tmp/codex_policy_observation_adapters_20260921/policy_observation_adapters_probe')>()
+E        +    where <bound method Path.is_file of PosixPath('/tmp/codex_policy_observation_adapters_20260921/policy_observation_adapters_probe')> = PosixPath('/tmp/codex_policy_observation_adapters_20260921/policy_observation_adapters_probe').is_file
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:117: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_clock_tf_rotation_velocity_and_metadata
+1 failed, 15 deselected in 0.10s

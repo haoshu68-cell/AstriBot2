@@ -1,4 +1,5 @@
 #include "astribot_s1_gazebo_bringup/payload_geometry.hpp"
+#include <astribot_s1_payload_state/kinematic_geometry.hpp>
 #include <ignition/gazebo/Util.hh>
 #include <ignition/gazebo/components/Link.hh>
 #include <ignition/gazebo/components/Collision.hh>
@@ -59,6 +60,11 @@ moveit_msgs::msg::AttachedCollisionObject observed_payload(const sim::EntityComp
  auto collisions=ecm.ChildrenByComponents(links[0],c::Collision());require(!collisions.empty() && collisions.size()<=64,"PAYLOAD_COLLISION_INCOMPLETE");
  std::sort(collisions.begin(),collisions.end());
  moveit_msgs::msg::AttachedCollisionObject out;out.link_name=tcp;out.weight=mass;out.touch_links={tcp};
+ // Keep intentional pad contact in the authoritative attachment after temporary grasp ACM restoration.
+ if(tcp=="astribot_arm_left_tcp_link")
+   out.touch_links={tcp,"astribot_gripper_left_Link_L11","astribot_gripper_left_Link_R11"};
+ else if(tcp=="astribot_arm_right_tcp_link")
+   out.touch_links={tcp,"astribot_gripper_right_Link_L11","astribot_gripper_right_Link_R11"};
  out.object.id=id;out.object.header.frame_id=tcp;out.object.operation=out.object.ADD;
  out.object.pose=pose(parent_from_tcp.Inverse()*p.offset);
  for(auto entity:collisions) {
@@ -89,7 +95,7 @@ moveit_msgs::msg::AttachedCollisionObject observed_payload(const sim::EntityComp
   for(double d:shape.dimensions)require(std::isfinite(d) && d>0.,"PAYLOAD_DIMENSIONS_INVALID");
   require(local.IsFinite(),"PAYLOAD_COLLISION_POSE_INVALID");
   // Conservatively enclose bounded model-origin translation and orientation error.
-  const auto margin=.005+.01*(local.Pos().Length()+radius);
+  const auto margin=astribot::payload::kinematic_payload_margin(radius,local.Pos().Length());
   if(shape.type==shape.BOX)for(auto &d:shape.dimensions)d+=2.*margin;
   else if(shape.type==shape.SPHERE)shape.dimensions[0]+=margin;
   else {shape.dimensions[0]+=2.*margin;shape.dimensions[1]+=margin;}

@@ -1,0 +1,165 @@
+{
+  "scope": "existing C++ mapping session and real zone consumer ACK in stationary warehouse; no goal/save requests",
+  "pass": true,
+  "checks": {
+    "required_parameters": true,
+    "single_session_publisher": true,
+    "single_zone_publisher": true,
+    "single_command_owner": true,
+    "session_valid": true,
+    "zone_ready": true,
+    "stable_token": true,
+    "consumer_ack": true,
+    "context_matches": true,
+    "projection_ready": true,
+    "command_zero": true,
+    "odom_stationary": true
+  },
+  "duration": 120.01898289200108,
+  "session": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/navigation_04/session.json",
+  "parameters": {
+    "use_sim_time": true,
+    "require_navigation_zones": true
+  },
+  "publishers": {
+    "/mapping_session/status": [
+      "mapping_session"
+    ],
+    "/navigation_zones/status": [
+      "navigation_zones"
+    ],
+    "/cmd_vel": [
+      "navigation_final_protection"
+    ]
+  },
+  "latest": {
+    "/navigation_zones/status": {
+      "kind": "/navigation_zones/status",
+      "data": {
+        "applied": {
+          "global_costmap": true,
+          "local_costmap": true,
+          "protection": true
+        },
+        "boot_id": "1705589553-1091443703",
+        "can_edit": false,
+        "context_id": "mapping:slam_1790090439516482179",
+        "ready": true,
+        "reason_code": "ZONES.READY",
+        "regions": [],
+        "review_required": false,
+        "revision": 0,
+        "robot_id": "astribot",
+        "schema_version": 1,
+        "source_context": "",
+        "stamp": 217.517,
+        "storage_root": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/navigation_04/map_catalog/navigation_zones",
+        "token": "1705589553-1091443703:mapping:slam_1790090439516482179:0"
+      },
+      "elapsed": 119.92002362399944
+    },
+    "/map_manager/status": {
+      "kind": "/map_manager/status",
+      "data": {
+        "active_map": null,
+        "active_map_ready": true,
+        "active_scene": null,
+        "boot_id": "1525835820-3319161317",
+        "devices": {},
+        "idle_evidence": false,
+        "maps": {},
+        "motion_blocked": false,
+        "revision": 0,
+        "robot_id": "astribot",
+        "scene_ready": true,
+        "scenes": {},
+        "schema_version": 1,
+        "state": "READY",
+        "stations": {},
+        "stop_evidence": true,
+        "storage_root": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260922_gpu_recovery/navigation_04/map_catalog",
+        "switch_available": true,
+        "transaction": null
+      },
+      "elapsed": 119.94794135600023
+    },
+    "protection": {
+      "kind": "protection",
+      "data": {
+        "clock_running": true,
+        "hold": true,
+        "input_speed_m_s": 0.0,
+        "last_scan_error": "",
+        "limiter_recovering": true,
+        "loop_control_dt_s": 0.01999999999998181,
+        "loop_wall_dt_s": 0.02000856599988765,
+        "odom_age_s": 0.015999999999991132,
+        "odom_wall_age_s": 0.01602782199915964,
+        "output_speed_m_s": 0.0,
+        "pending_scans": 0,
+        "points": 599,
+        "policy_wall_age_s": 0.010421611001220299,
+        "projection_future_samples_rejected": 19,
+        "projection_ready": true,
+        "projection_reason": "CAMERA_PROJECTION_READY",
+        "projection_released_ns": 4990000000,
+        "projection_revision": 1,
+        "reason": "ROBOT_ENVELOPE_UNAVAILABLE",
+        "scan_age_s": 0.11599999999998545,
+        "scan_expired": 0,
+        "scan_invalid": 0,
+        "scan_received": 2126,
+        "scan_tf_waits": 0,
+        "scan_transformed": 2126,
+        "scan_wall_age_s": 0.06177120500069577,
+        "time_domain": "simulation"
+      },
+      "elapsed": 119.91972610000084
+    },
+    "cmd": {
+      "kind": "cmd",
+      "data": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "elapsed": 119.99923076500272
+    },
+    "odom": {
+      "kind": "odom",
+      "data": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "elapsed": 120.00328731300033
+    },
+    "/mapping_session/status": {
+      "kind": "/mapping_session/status",
+      "data": {
+        "detail": "",
+        "directory": "",
+        "exploration_outcome": "",
+        "finish_sent": false,
+        "session_id": "slam_1790090439516482179",
+        "state": "IDLE"
+      },
+      "elapsed": 119.64498826899944
+    }
+  },
+  "samples": {
+    "/navigation_zones/status": 596,
+    "/map_manager/status": 1191,
+    "protection": 1198,
+    "cmd": 5960,
+    "odom": 5951,
+    "/mapping_session/status": 109
+  },
+  "supervisor_sha256": "af411c1d581d3180110f47912ed2f81b85a3c23446540e1597db8980339a393d"
+}

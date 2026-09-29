@@ -1,5 +1,7 @@
 # Navigation policy
 
+2026-09-24 控制边界调整：取消独立整机末级执行保护。当前停车、限速与不可执行判断前置至导航仲裁、BT、策略和 Nav2 控制器；`navigation_constraint_cpp` 只发导航约束与诊断，不写速度、不参与包络 ACK。以下历史阶段验证不自动证明新控制链已完成整栈验收，见 [当前边界](../../../docs/NAVIGATION_UPPER_BODY_BOUNDARY_20260924.md)。
+
 独立领域模块通过 ROS 适配器接入现有导航。默认启动参数 `navigation_policy_stage=off` 保留原命令链路；阶段进度及仿真证据见 [实施记录](../../../docs/NAVIGATION_POLICY_IMPLEMENTATION.md)。P0–P2 基线仿真检查已通过，停车修订仍有航向质量对照待完成；P3 功能闭环已验证、质量待办保留；用户已授权继续 P4，P4 已通过指定配置仿真，P5 自动候选与包络准入专项通过，完整阶段仍有待办。P2 验证入口为 `--navigation-policy p2 --max-linear-speed .32`，原默认基线保留。
 
 - `contracts.py` / `ports.py`：SI 单位、时间与 epoch、协方差、来源和健康信息，分离执行与规划意图。
@@ -8,17 +10,17 @@
 - `observer_node.py`：扫描、地图、里程计与视觉适配。扫描等待采集时刻对应的 TF，不使用最新 TF 冒充采集时刻变换。
 - `behavior.py` / `policy_node.py`：减速、让行、确认恢复和阻塞 episode；P2 不发动态绕行请求。
 - `path_evidence.py`：当前路径身份、碰撞段距离和证据有效期；远处占据允许谨慎接近，未知或过期占据不能获得慢行权限。
-- `protection.py` / `protection_node.py`：独立扫描扫掠、输入及墙钟看门狗、约束汇总与末级速度输出。正常许可稳定后原样传递未受约束的指令；安全停车优先，恢复限制加速度。
+- 原生 `navigation_constraint_node.cpp`：扫描扫掠、输入时效与导航约束汇总；只向 Nav2 提供 `MotionConstraint`。旧末级速度输出已移除，底盘设备失联处理保留于设备/坐标适配器。
 - `control_time.py`：仿真按 ROS 物理时间检查采集龄期、租约和恢复加速度，独立墙钟检测仿真停滞。普通暂停保留仍有效的观测，撤销旧运动授权；恢复首帧正常接收，时间回跳才重建观测时间线。真机仍同时检查采集龄期和墙钟接收龄期。
 - `continuous_sweep.py`：候选起始转向、实际运动预测与末级扫描防护共用的连续区间证明。外接圆能证明安全时直接通过，否则细分边界区间；达到细分上限仍无法证明安全时拒绝，保留原机身、观测不确定性和安全间距。
-- `start_maneuver.py` / `start_maneuver_adapter.py`：P3 及之后的起步恢复。完整转向通过现有扫掠判据时，由原跟踪器转向；不通过则停稳并规划 x− 倒退退出，退出停稳后重新判定完整转向。恢复期间接管停车和低速倒退；转向许可不占用路由协调器，原路径有风险时仍可检查和重规划。
+- 起点检查与恢复由 C++ 包 [`astribot_s1_navigation_recovery`](../astribot_s1_navigation_recovery/README.md) 负责：`EnsureNavigationStart` 在最终目标路径规划前查询起点条件，需要恢复时调用 `DeparturePlanner` / `DepartureController`，实测停稳并复检为 READY 后才放行目标规划。本策略节点继续负责原有让行、约束和路由协调。
 - `planning_session.py`：P3 请求所有权、版本与预算管理，由 `route_coordinator.py` 接入 P3 异步联合决策。几何候选服务返回 `geometry_valid`，不能直接作为执行许可。
 
 P3 仿真入口：`--navigation-policy p3 --max-linear-speed .32`。`candidate_safety.py` 复核停止与不同可达速度下的预测占据；`ResolveRoute` 把经过验证的候选交回 BT 提交，不能直接发布底盘指令。单目标执行的局部/全局候选共用有界请求，完整阶段回归通过前不开放 P4/P5。
 
-P2 的命令链：现有跟踪器 → 现有速度平滑与姿态/双臂约束 → `/cmd_vel_policy_input` → `final_protection` → `/cmd_vel`。最终约束使用 `astribot_navigation_msgs/MotionConstraint`；ArrivalController 与 PoseProgressChecker 的适配层排除显式让行时间，保留原控制和检查逻辑。
+当前命令链：导航前置约束 → Nav2 跟踪器 → 既有速度平滑与坐标/动力学适配 → `/cmd_vel`。`/cmd_vel_policy_input` 与 `final_protection` 不再用于当前装配。前置约束使用 `astribot_navigation_msgs/MotionConstraint`；ArrivalController 在产生指令时统一应用停车、线/角速度和禁轴约束。
 
-起步恢复参数在 `start_maneuver` 配置中：仿真倒退速度最多 0.05 m/s、退出搜索范围 2 m，横向偏离最多 3 cm、航向偏离最多 0.03 rad，总时限 120 s、无进展时限 15 s。退出时的小幅姿态修正只在实测向后运动中启用，不能用零平移的旋转指令试探通行。静态地图、未知区域和保留不确定性的预测观测共同参与完整倒退扫掠，后向观测覆盖不可缺失；末级保护和控制器局部足迹检查继续生效。`StartManeuverRequest` 携带实际起步航向及路径，许可绑定本次控制器尝试并限制为 0.3 s；换路径、过期和位姿不匹配均不能沿用旧许可。真机模板默认关闭此能力，启用须补充 `hardware_evidence.start_maneuver`。85 cm 通道闭环及终点禁止转向属于后续验收，不能由理想几何验证替代。
+起点恢复的参数、几何准入、告警与证据接口见 [`astribot_s1_navigation_recovery`](../astribot_s1_navigation_recovery/README.md)。`Departure` 插件参数在导航配置中设置；恢复仅尝试一次，复检未 READY 则失败。该实现当前面向仿真 `fixed_v2`，构建与离线测试不能替代同场景闭环或真机验收。
 
 ## 视觉接口
 
@@ -70,7 +72,7 @@ P2 的命令链：现有跟踪器 → 现有速度平滑与姿态/双臂约束 �
 
 `CorridorAlignment` 是现有跟踪任务的入口修正请求，不发布速度。准备距离使用完整旋转半径加制动距离，停得较近时仍需车体在入口外且完整旋转扫掠可行。入口横向偏差先由 `CENTER` 修正，再停稳、对齐航向和确认准入；居中扫掠覆盖当前位姿到目标中心线的全包络及预测障碍。
 
-控制器要求短时租约、完整 active path、坐标系和位置锚点匹配。`MotionConstraint.alignment_required` 与 `centering_required` 互斥，缺失或无效请求保持停车；居中目标还受 30 cm 距离、锚点线段偏离和朝向漂移检查约束。最终防护仍为唯一 `/cmd_vel` 输出方，对齐禁止平移，居中禁止旋转。普通 P2/P3 的两个字段均为 false。
+控制器要求短时租约、完整 active path、坐标系和位置锚点匹配。`MotionConstraint.alignment_required` 与 `centering_required` 互斥，缺失或无效请求保持停车；居中目标还受 30 cm 距离、锚点线段偏离和朝向漂移检查约束。Nav2 形成指令时执行对齐禁止平移、居中禁止旋转；底盘输出端不重复裁决。普通 P2/P3 的两个字段均为 false。
 
 仿真入口居中参数：`narrow_centering_speed_m_s=0.05`、`narrow_centering_tolerance_m=0.01`、`narrow_centering_max_offset_m=0.3`。更窄通道还将释放偏差收紧到可用侧向余量的一半。超过修正范围、已进入通道或扫掠不可行时保留有界失败；此接口不执行未经验证的后退。
 

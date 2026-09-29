@@ -1,0 +1,34 @@
+{
+  "source_url": "https://github.com/ultralytics/yolov5/releases/tag/v6.0",
+  "input": "/tmp/astribot_vision_models/yolov5n-v6.0.onnx",
+  "output": "/tmp/astribot_vision_models/yolov5n-v6.0-fixed640-detections.onnx",
+  "input_sha256": "6c686f5c56c5da87c6445a2f7bd2dc2d6b664325368d9de1fd7c05100b9e442e",
+  "output_sha256": "83008218c4d28c0c43834f81d6aef96d061d26adbcb44d8b5b280cdd1173f951",
+  "input_shape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "output_shape": [
+    1,
+    25200,
+    85
+  ],
+  "onnx": "1.23.0",
+  "onnxsim": "v0.7.3",
+  "onnxruntime": "1.23.2",
+  "parity": {
+    "seeds": [
+      0,
+      1
+    ],
+    "max_absolute_errors": [
+      0.0,
+      0.0
+    ],
+    "rtol": 0.0001,
+    "atol": 0.0001
+  },
+  "scope": "graph numerical equivalence; not detector accuracy or robot acceptance"
+}

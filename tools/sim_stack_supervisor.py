@@ -5,6 +5,7 @@ import argparse
 import fcntl
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import signal
@@ -15,6 +16,9 @@ import time
 from astribot_logging import log_directory, log_level
 from astribot_logging.output import SessionLog, SessionHandler, ProcessOutput, publish_session_link
 from sim_isolation import SimulationIsolation,is_stack_process
+from sim_performance_lease import acquire_performance_lease, simulation_servers, PERFORMANCE_LEASE_PATH
+from sim_camera_preset import DEFAULT_RELATIVE_PRESET, PATHS, load_camera_preset
+from vision.verify_task_environment import verify_manifest_file
 
 
 def process_identity(pid):
@@ -63,6 +67,15 @@ def finish_descendants(identities,term_timeout=3.):
     return list(remaining)
 
 
+def control_environment(environment, transport, profile):
+    env = environment.copy()
+    if transport == 'udp':
+        profile.write_text('''<?xml version="1.0"?><profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles"><transport_descriptors><transport_descriptor><transport_id>nav_udp</transport_id><type>UDPv4</type><interfaceWhiteList><address>127.0.0.1</address></interfaceWhiteList></transport_descriptor></transport_descriptors><participant profile_name="nav" is_default_profile="true"><rtps><userTransports><transport_id>nav_udp</transport_id></userTransports><useBuiltinTransports>false</useBuiltinTransports></rtps></participant></profiles>''')
+        env.update(FASTRTPS_DEFAULT_PROFILES_FILE=str(profile),
+                   RMW_IMPLEMENTATION='rmw_fastrtps_cpp', ROS_LOCALHOST_ONLY='0')
+    return env
+
+
 def arguments():
     p = argparse.ArgumentParser()
     p.add_argument('--instance',default='',help='Opt-in isolated copy of the same canonical world')
@@ -70,12 +83,19 @@ def arguments():
     p.add_argument('--spawn-x',type=float,default=0.,help='Initial Gazebo X in metres')
     p.add_argument('--spawn-y',type=float,default=0.,help='Initial Gazebo Y in metres')
     p.add_argument('--spawn-yaw',type=float,default=0.,help='Initial Gazebo heading in radians; simulation fixture only')
+    p.add_argument('--launch-slam', choices=['true', 'false'], default='true',
+                   help='false requires an external SLAM owner; sensor readiness still waits for its clouds')
+    p.add_argument('--initial-chassis-pose', default='',
+                   help='Measured stationary map chassis x,y,z,qx,qy,qz,qw; never inferred from spawn')
     p.add_argument('--mode', choices=['mapping', 'explore', 'localize', 'baseline'], default='mapping')
+    p.add_argument('--exclusive-performance', action='store_true',
+                   help='Reserve this host against other cooperating simulation supervisors')
     p.add_argument('--map', default='', help='Voxel session directory for localization')
     p.add_argument('--save-session', default='', help='new Voxel session directory to save')
     p.add_argument('--match-threshold', type=float, default=0.3)
     p.add_argument('--map-yaml', default='')
     p.add_argument('--navigation-geometry-mode', choices=['legacy','fixed_v2'], default='legacy')
+    p.add_argument('--payload-source-id', default='', help='explicit physical inventory source; enables read-only ledger in isolated fixed_v2 session')
     p.add_argument('--navigation-policy', choices=['off', 'p2', 'p3', 'p4', 'p5'], default='off')
     p.add_argument('--corridor-file', default='', help='Map-frame corridor annotations for P4')
     p.add_argument('--social-scenario', default='', help='Optional HuNav YAML in the baseline world; behavior is enabled separately')
@@ -84,6 +104,25 @@ def arguments():
     p.add_argument('--tracker', choices=['mppi', 'rpp'], default='mppi')
     p.add_argument('--max-linear-speed', type=float, default=0.35)
     p.add_argument('--scan-source', choices=['slice_scan', 'laserscan'], default='slice_scan')
+    p.add_argument('--use-lidar', choices=['true', 'false'], default='true',
+                   help='simulation sensor fixture: keep the Livox streams enabled by default')
+    p.add_argument('--camera-preset', default=str(Path(__file__).resolve().parents[1]/DEFAULT_RELATIVE_PRESET))
+    p.add_argument('--use-camera', choices=['true', 'false'], default=None,
+                   help='simulation sensor fixture: keep calibrated cameras enabled by default')
+    p.add_argument('--use-wrist-cameras', choices=['true', 'false'], default=None)
+    p.add_argument('--use-stereo-cameras', choices=['true', 'false'], default=None)
+    p.add_argument('--camera-profile', default=None)
+    p.add_argument('--torso-camera-profile', default=None)
+    p.add_argument('--camera-calibration-dir', default=None)
+    p.add_argument('--camera-mounts-profile', default=None)
+    p.add_argument('--use-camera-postprocess', choices=['true', 'false'], default=None)
+    p.add_argument('--use-camera-pointcloud', choices=['true', 'false'], default=None)
+    p.add_argument('--enable-depth-obstacles', choices=['true', 'false'], default=None,
+                   help='require RGB-D points in the local costmap; false is an explicit lidar-only regression')
+    p.add_argument('--obstacle-layer-plugin',
+                   choices=['nav2_costmap_2d::ObstacleLayer', 'nav2_costmap_2d::VoxelLayer'],
+                   default='nav2_costmap_2d::ObstacleLayer',
+                   help='costmap plugin; VoxelLayer is an explicit 3-D coverage profile')
     p.add_argument('--headless', action='store_true')
     p.add_argument('--real-time-factor', type=float, default=1.0,
                    help='Gazebo simulation/wall time ratio, (0, 1]; preserves the navigation world and sensor timestamps')
@@ -100,8 +139,21 @@ def arguments():
     p.add_argument('--log-backup-count', type=int,
                    default=os.environ.get('ASTRIBOT_LOG_BACKUP_COUNT', '5'),
                    help='managed output log backup count (default: 5)')
+    p.add_argument('--runtime-manifest', default='',
+                   help='Optional pinned package/artifact/ELF dependency snapshot; reject drift before spawning')
     p.add_argument('--dry-run', action='store_true')
     a = p.parse_args()
+    try:
+        parameters, a.camera_baseline = load_camera_preset(a.camera_preset)
+    except (OSError, ValueError) as error:
+        p.error('camera preset: ' + str(error))
+    a.camera_baseline['explicit_overrides'] = {}
+    for key, value in parameters.items():
+        supplied = getattr(a, key)
+        if supplied is None or supplied == '':
+            setattr(a, key, value)
+        elif supplied != value:
+            a.camera_baseline['explicit_overrides'][key] = supplied
     if not all(float('-inf') < value < float('inf') for value in (a.spawn_x,a.spawn_y)):
         p.error('--spawn-x and --spawn-y must be finite')
     if not -3.141592653589793<=a.spawn_yaw<=3.141592653589793:
@@ -112,6 +164,11 @@ def arguments():
         p.error('log-max-bytes and log-backup-count must be positive')
     if not 0 < a.max_linear_speed <= 1.5 or a.ready_timeout <= 0:
         p.error('speed must be in (0, 1.5] and readiness timeout must be positive')
+    if a.navigation_geometry_mode == 'fixed_v2' and a.navigation_policy not in ('p4','p5'):
+        p.error('fixed_v2 requires corridor policy p4 or p5')
+    if a.payload_source_id and (not a.instance or a.navigation_geometry_mode != 'fixed_v2' or
+                                not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}', a.payload_source_id)):
+        p.error('--payload-source-id requires isolated fixed_v2 and a simple bounded source identity')
     if a.navigation_policy == 'p4' and (not a.corridor_file or not Path(a.corridor_file).is_file()):
         p.error('P4 requires --corridor-file')
     if not 0 < a.real_time_factor <= 1.0:
@@ -145,6 +202,11 @@ def arguments():
 
 def main():
     a = arguments()
+    runtime_preflight = None
+    if a.runtime_manifest:
+        runtime_preflight = verify_manifest_file(a.runtime_manifest)
+        if not runtime_preflight['passed']:
+            raise RuntimeError('RUNTIME_MANIFEST_REJECTED: ' + json.dumps(runtime_preflight))
     isolation=SimulationIsolation(a.instance,a.ros_domain_id)
     os.environ.update(isolation.environment())
     os.environ['ASTRIBOT_LOG_LEVEL'] = a.log_level
@@ -155,13 +217,29 @@ def main():
     run = Path(a.log_dir or (log_root / f'sim_{time.strftime("%Y%m%d_%H%M%S")}_{os.getpid()}')).resolve()
     sim = ['ros2', 'launch', 'astribot_s1_navigation', 'nav2_full_bringup.launch.py',
            'env:=sim', 'launch_gazebo:=true', 'launch_navigation:=false',
+           f'control_loopback_udp:={str(a.nav_transport == "udp").lower()}',
+           # This split supervisor waits for clouds before starting navigation;
+           # its sensor child owns SLAM, not the later idle mapping_runtime.
+           f'launch_slam:={a.launch_slam}',
            f'navigation_geometry_mode:={a.navigation_geometry_mode}',
            f'mode:={"localization" if a.mode == "localize" else "mapping"}',
            f'exploration:={str(a.mode == "explore").lower()}',
            f'scan_source:={a.scan_source}', f'headless:={str(a.headless).lower()}',
-           f'use_rviz:={str(not a.no_rviz).lower()}']
+           f'use_rviz:={str(not a.no_rviz).lower()}',
+           f'use_lidar:={a.use_lidar}', f'use_camera:={a.use_camera}',
+           f'use_camera_postprocess:={a.use_camera_postprocess}',
+           f'use_camera_pointcloud:={a.use_camera_pointcloud}',
+           f'enable_depth_obstacles:={a.enable_depth_obstacles}',
+           f'obstacle_layer_plugin:={a.obstacle_layer_plugin}']
+    sim += [f'use_wrist_cameras:={a.use_wrist_cameras}',
+            f'use_stereo_cameras:={a.use_stereo_cameras}']
+    for name in PATHS:
+        if value := getattr(a, name):
+            sim.append(name+':='+str(Path(value).expanduser().resolve()))
     sim += [f'ros_domain_id:={a.ros_domain_id}', f'spawn_x:={a.spawn_x}',
             f'spawn_y:={a.spawn_y}', f'spawn_yaw:={a.spawn_yaw}']
+    if a.initial_chassis_pose:
+        sim.append('initial_chassis_pose:=' + a.initial_chassis_pose)
     if a.instance:
         sim += [f'save_path:={run}/slam_sessions/']
     if a.map:
@@ -179,8 +257,15 @@ def main():
            'use_sim_time:=true', f'controller_plugin:={a.tracker}',
            f'max_linear_speed:={a.max_linear_speed}', f'navigation_policy_stage:={a.navigation_policy}',
            f'navigation_geometry_mode:={a.navigation_geometry_mode}',
-           'scan_topic:=' + ('/scan_from_cloud' if a.scan_source=='slice_scan' else '/scan')]
+           'scan_topic:=' + ('/scan_from_cloud' if a.scan_source=='slice_scan' else '/scan'),
+           f'enable_depth_obstacles:={a.enable_depth_obstacles}',
+           f'obstacle_layer_plugin:={a.obstacle_layer_plugin}']
+    if a.payload_source_id:
+        nav += ['enable_payload_ledger:=true', 'payload_environment:=simulation',
+                'payload_session_id:='+a.instance, 'payload_source_id:='+a.payload_source_id,
+                'payload_journal_path:='+str(run/'payload_ledger.jsonl')]
     if a.mode == 'baseline':
+        nav += ['simulation_static_map_yaml:=' + (a.map_yaml or str(repo / 'maps/warehouse_baseline.yaml'))]
         nav += ['arrival_precision_profile:=simulation_precision']
     if a.social_scenario:
         nav += ['obstacle_layer_plugin:=astribot_s1_autonomy::ObservedRayObstacleLayer']
@@ -192,15 +277,29 @@ def main():
                 'operator_runtime_params_file:='+str(run/'mapping_runtime.yaml'),
                 'enable_voxel_adapter:=true',
                 'voxel_adapter_params_file:='+str(run/'voxel_session_adapter.yaml')]
+    # The split mapping workflow already owns SLAM in the sensor child, but
+    # needs its formal C++ session owner for zones and eventual archival.
+    # Exploration owns this node in its launch; fixed/localized maps use their
+    # map context instead. Never start another SLAM instance to fill this gap.
+    mapping_session = (['ros2', 'run', 'astribot_s1_exploration', 'mapping_session_node',
+                        '--ros-args', '-p', 'use_sim_time:=true', '-p',
+                        'require_navigation_zones:=true'] if a.mode == 'mapping' else None)
     if a.dry_run:
-        print(json.dumps({'simulation': sim, 'navigation': nav, 'logs': str(run),
+        print(json.dumps({'simulation': sim, 'navigation': nav, 'mapping_session': mapping_session, 'logs': str(run),
                           'isolation':isolation.environment(),'locks':isolation.lock_paths(),
+                          'performance_lease': {'path':str(PERFORMANCE_LEASE_PATH),
+                                                'exclusive':a.exclusive_performance},
                           'real_time_factor': a.real_time_factor,
                           'nav_transport': a.nav_transport,
+                          'camera_baseline': a.camera_baseline,
+                          'runtime_preflight': runtime_preflight,
                           'logging': {'layout': 'unified', 'file': str(run / 'session.log'), 'level': a.log_level, 'max_bytes': a.log_max_bytes,
                                       'backup_count': a.log_backup_count}}, indent=2))
         return
-    locks=[]
+    locks=[acquire_performance_lease(a.exclusive_performance)]
+    if a.exclusive_performance and (existing_servers := simulation_servers()):
+        raise RuntimeError('EXCLUSIVE_PERFORMANCE_REQUIRES_IDLE_HOST: existing Gazebo PIDs '+
+                           ','.join(str(item['pid']) for item in existing_servers))
     for path in isolation.lock_paths():
         lock=open(path,'a');fcntl.flock(lock,fcntl.LOCK_EX | fcntl.LOCK_NB);locks.append(lock)
     # Detect direct executables, without matching shell command text or killing other sessions.
@@ -250,7 +349,11 @@ def main():
     def remember_children():
         owned_processes.update(owned_descendants([c.pid for c in children]))
     manifest = {'supervisor_pid': os.getpid(), 'started': time.time(), 'state': 'starting',
+                'camera_baseline': a.camera_baseline,
+                'runtime_preflight': runtime_preflight,
                 'isolation':isolation.environment(),'locks':isolation.lock_paths(),
+                'performance_lease': {'path':str(PERFORMANCE_LEASE_PATH),
+                                      'exclusive':a.exclusive_performance},
                 'children': [], 'logging_backend': 'spdlog', 'log_layout': 'unified',
                 'unified_log': str(output_path), 'log_files': {}}
     def save():
@@ -280,7 +383,10 @@ def main():
     signal.signal(signal.SIGTERM, stopped)
     signal.signal(signal.SIGINT, stopped)
     try:
-        spawn('simulation', sim, os.environ.copy())
+        env = control_environment(os.environ, a.nav_transport, run/'nav_udp.xml')
+        manifest['control_transport'] = {key: env.get(key) for key in (
+            'RMW_IMPLEMENTATION', 'ROS_LOCALHOST_ONLY', 'FASTRTPS_DEFAULT_PROFILES_FILE')}
+        spawn('simulation', sim, env)
         end = time.monotonic() + a.ready_timeout
         while time.monotonic() < end:
             check_logs()
@@ -337,22 +443,16 @@ def main():
             finally:
                 if process.poll() is not None:
                     children.remove(process)
-        measured = probe('data', os.environ.copy())
+        measured = probe('data', env)
         if not measured.get('ready'):
             raise RuntimeError(f'clock/TF/scan/odom not ready: {measured}')
         manifest['pre_navigation'] = measured
-        env = os.environ.copy()
-        if a.nav_transport == 'udp':
-            profile = run / 'nav_udp.xml'
-            profile.write_text('''<?xml version="1.0"?><profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles"><transport_descriptors><transport_descriptor><transport_id>nav_udp</transport_id><type>UDPv4</type><interfaceWhiteList><address>127.0.0.1</address></interfaceWhiteList></transport_descriptor></transport_descriptors><participant profile_name="nav" is_default_profile="true"><rtps><userTransports><transport_id>nav_udp</transport_id></userTransports><useBuiltinTransports>false</useBuiltinTransports></rtps></participant></profiles>''')
-            env['FASTRTPS_DEFAULT_PROFILES_FILE'] = str(profile)
-            # Humble rmw_fastrtps appends a SHM transport when this is 1,
-            # even when XML disables built-ins. The explicit interface whitelist
-            # above preserves localhost isolation while making --nav-transport=udp
-            # actually UDP-only. Do not clean shared /dev/shm state to recover it.
-            env['ROS_LOCALHOST_ONLY'] = '0'
+        # The same local-only transport is used for pre-navigation probes and
+        # control nodes; camera bridges retain their dedicated transport.
         # Queries use the exact environment given to this owned navigation process.
         (run / 'env.sh').write_text('source /opt/ros/humble/setup.bash\nsource ' + shlex.quote(str(repo/'ws_robot/install/setup.bash')) + '\n' + ''.join('export '+k+'='+shlex.quote(v)+'\n' for k,v in env.items() if k in ('ROS_DOMAIN_ID','ROS_LOCALHOST_ONLY','RMW_IMPLEMENTATION','FASTRTPS_DEFAULT_PROFILES_FILE','IGN_IP','GZ_IP','IGN_PARTITION','GZ_PARTITION','IGN_DISCOVERY_MSG_PORT','IGN_DISCOVERY_SRV_PORT','ASTRIBOT_SIM_INSTANCE')))
+        if mapping_session:
+            spawn('mapping_session', mapping_session, env)
         for attempt in range(1, a.nav_attempts+1):
             child = spawn(f'navigation_{attempt}', nav, env)
             measured = probe('navigation', env)

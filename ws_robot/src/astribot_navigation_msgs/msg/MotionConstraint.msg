@@ -14,3 +14,5 @@ bool alignment_required
 bool centering_required
 # During straight-passage tracking, a matching heading request is required.
 bool corridor_tracking_required
+# The same route session committed an independently evaluated layered alignment.
+bool workstation_alignment

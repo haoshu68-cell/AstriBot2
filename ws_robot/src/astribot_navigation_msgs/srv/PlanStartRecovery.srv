@@ -1,0 +1,11 @@
+# Select a bounded departure after a real planned start connection was rejected.
+# The heading is expressed in header.frame_id; stamp identifies the observation,
+# not a freshness deadline. This query never commands motion.
+std_msgs/Header header
+string execution_id
+float64 required_heading
+bool use_policy_obstacles
+---
+bool success
+string reason
+nav_msgs/Path path

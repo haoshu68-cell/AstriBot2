@@ -1,0 +1,249 @@
+{
+  "model_sha256": "70326173d46614c99021f34abb9857fe142b74a81c2147b823fb50fbb7b3e594",
+  "device": "cpu",
+  "mode": "offline replay of actual Gazebo RGB-D captures",
+  "fresh_action_service_acceptance": false,
+  "results": [
+    {
+      "backend": "libtorch_cpp",
+      "input_points": 5844,
+      "sampled_points": 20000,
+      "candidates": 1019,
+      "load_ms": 53.4776,
+      "inference_ms": 6776.07,
+      "collision_checked": false,
+      "provenance": {
+        "source_url": "https://github.com/graspnet/graspnet-baseline",
+        "source_commit": "280c215129f759ed8649cb4e89fc5dfee55f4f80",
+        "checkpoint_sha256": "60680087c61cba2b6791614fef1519071e294f6dcaf99b3f581bb95f7c51a868",
+        "checkpoint_epoch": 18,
+        "checkpoint_source": "pinned HF mirror; direct official Drive quota exceeded",
+        "publisher_signature_verified": false,
+        "checkpoint_keys_loaded_strict": 162,
+        "torch_version": "2.5.1+cpu",
+        "source_license_sha256": "acdeaedbed2d5b38b1fdacba406db53743d06a05f4220126bee91a548241f09b",
+        "operators": "scripted_torch_compatibility_v1",
+        "operators_sha256": "9cb86ec902962bd190e33053a760f243e437ff0477592bf5ec7ca958e6a25552",
+        "original_cuda_extension_bitwise_parity_verified": false,
+        "sample_points": 20000,
+        "sampling": "torch CPU generator seed 0: randperm or randint existing points",
+        "input": "1x20000x3 float32, camera optical XYZ metres",
+        "output": "Nx17 upstream pred_decode; no collision or NMS filter"
+      },
+      "case": "close",
+      "process_wall_ms": 7145.922357000018,
+      "input_sha256": "6b24a4c07e56b4517eecc5950c9c16eef26383c0152e7d059ee9df6c718b0a2b",
+      "output_sha256": "cdef63c5c82a7617dab707331825816b2a8a8ca164e9a2cdc36b12c3493514b3",
+      "capture_stamp_ns": 817900000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "source_epoch": "gazebo_camera",
+      "calibration_revision": 1,
+      "camera_health_at_capture": {
+        "header": {
+          "stamp": {
+            "sec": 817,
+            "nanosec": 931000000
+          },
+          "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+        },
+        "camera_id": "torso_rgbd",
+        "source_epoch": "gazebo_camera",
+        "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "state": "OK",
+        "reason_code": "CAMERA_READY",
+        "age_sec": 0.031000000000000003,
+        "frequency_hz": 10.0,
+        "max_interval_sec": 0.9,
+        "sync_skew_sec": 0.0,
+        "drop_count": 0,
+        "sequence": 16498,
+        "calibration_revision": 1,
+        "capture_stamp": {
+          "sec": 817,
+          "nanosec": 900000000
+        },
+        "valid_until": {
+          "sec": 818,
+          "nanosec": 150000000
+        },
+        "valid": true
+      },
+      "segmentation": "HSV magenta color + finite rendered depth; validation fixture; not YOLO",
+      "truth_used_for_inference": false,
+      "score_min": 0.019252203404903412,
+      "score_max": 0.5842399597167969,
+      "width_min_m": 0.04441569373011589,
+      "width_max_m": 0.09637044370174408,
+      "physical_grasp_success_tested": false,
+      "rotation_orthogonality_max_error": 2.384185791015625e-07
+    },
+    {
+      "backend": "libtorch_cpp",
+      "input_points": 2389,
+      "sampled_points": 20000,
+      "candidates": 749,
+      "load_ms": 110.744,
+      "inference_ms": 5412.7,
+      "collision_checked": false,
+      "provenance": {
+        "source_url": "https://github.com/graspnet/graspnet-baseline",
+        "source_commit": "280c215129f759ed8649cb4e89fc5dfee55f4f80",
+        "checkpoint_sha256": "60680087c61cba2b6791614fef1519071e294f6dcaf99b3f581bb95f7c51a868",
+        "checkpoint_epoch": 18,
+        "checkpoint_source": "pinned HF mirror; direct official Drive quota exceeded",
+        "publisher_signature_verified": false,
+        "checkpoint_keys_loaded_strict": 162,
+        "torch_version": "2.5.1+cpu",
+        "source_license_sha256": "acdeaedbed2d5b38b1fdacba406db53743d06a05f4220126bee91a548241f09b",
+        "operators": "scripted_torch_compatibility_v1",
+        "operators_sha256": "9cb86ec902962bd190e33053a760f243e437ff0477592bf5ec7ca958e6a25552",
+        "original_cuda_extension_bitwise_parity_verified": false,
+        "sample_points": 20000,
+        "sampling": "torch CPU generator seed 0: randperm or randint existing points",
+        "input": "1x20000x3 float32, camera optical XYZ metres",
+        "output": "Nx17 upstream pred_decode; no collision or NMS filter"
+      },
+      "case": "tilted",
+      "process_wall_ms": 5893.24880900017,
+      "input_sha256": "fc1bdbd14884e5b4837bbb27143b3017ee828587d12f572ecff4633b2587c95e",
+      "output_sha256": "c464093b4be05071d351075fcb44b4bf1f3d509c0caf373bd4acc81972916a05",
+      "capture_stamp_ns": 515800000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "source_epoch": "gazebo_camera",
+      "calibration_revision": 1,
+      "camera_health_at_capture": {
+        "header": {
+          "stamp": {
+            "sec": 515,
+            "nanosec": 823000000
+          },
+          "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+        },
+        "camera_id": "torso_rgbd",
+        "source_epoch": "gazebo_camera",
+        "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "state": "OK",
+        "reason_code": "CAMERA_READY",
+        "age_sec": 0.023000000000000003,
+        "frequency_hz": 10.0,
+        "max_interval_sec": 0.9,
+        "sync_skew_sec": 0.0,
+        "drop_count": 0,
+        "sequence": 10422,
+        "calibration_revision": 1,
+        "capture_stamp": {
+          "sec": 515,
+          "nanosec": 800000000
+        },
+        "valid_until": {
+          "sec": 516,
+          "nanosec": 50000000
+        },
+        "valid": true
+      },
+      "segmentation": "HSV magenta color + finite rendered depth; validation fixture; not YOLO",
+      "truth_used_for_inference": false,
+      "score_min": 0.02308758907020092,
+      "score_max": 0.6814706325531006,
+      "width_min_m": 0.0435439832508564,
+      "width_max_m": 0.10000000149011612,
+      "physical_grasp_success_tested": false,
+      "rotation_orthogonality_max_error": 2.384185791015625e-07
+    },
+    {
+      "backend": "libtorch_cpp",
+      "input_points": 2186,
+      "sampled_points": 20000,
+      "candidates": 1022,
+      "load_ms": 57.7167,
+      "inference_ms": 4593.2,
+      "collision_checked": false,
+      "provenance": {
+        "source_url": "https://github.com/graspnet/graspnet-baseline",
+        "source_commit": "280c215129f759ed8649cb4e89fc5dfee55f4f80",
+        "checkpoint_sha256": "60680087c61cba2b6791614fef1519071e294f6dcaf99b3f581bb95f7c51a868",
+        "checkpoint_epoch": 18,
+        "checkpoint_source": "pinned HF mirror; direct official Drive quota exceeded",
+        "publisher_signature_verified": false,
+        "checkpoint_keys_loaded_strict": 162,
+        "torch_version": "2.5.1+cpu",
+        "source_license_sha256": "acdeaedbed2d5b38b1fdacba406db53743d06a05f4220126bee91a548241f09b",
+        "operators": "scripted_torch_compatibility_v1",
+        "operators_sha256": "9cb86ec902962bd190e33053a760f243e437ff0477592bf5ec7ca958e6a25552",
+        "original_cuda_extension_bitwise_parity_verified": false,
+        "sample_points": 20000,
+        "sampling": "torch CPU generator seed 0: randperm or randint existing points",
+        "input": "1x20000x3 float32, camera optical XYZ metres",
+        "output": "Nx17 upstream pred_decode; no collision or NMS filter"
+      },
+      "case": "yawed",
+      "process_wall_ms": 4910.407939999914,
+      "input_sha256": "5003aebb83d60d9233e4e9235fe150b02b526c950630fcc67bc9480d8d5ade47",
+      "output_sha256": "002332e71c3681d3072406f4eba5dd34e0adc9d742a2d61ebe1b35057e42aa2a",
+      "capture_stamp_ns": 811300000000,
+      "frame": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+      "source_epoch": "gazebo_camera",
+      "calibration_revision": 1,
+      "camera_health_at_capture": {
+        "header": {
+          "stamp": {
+            "sec": 811,
+            "nanosec": 384000000
+          },
+          "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor"
+        },
+        "camera_id": "torso_rgbd",
+        "source_epoch": "gazebo_camera",
+        "frame_id": "astribot_s1/astribot_torso_base/torso_rgbd_sensor",
+        "state": "OK",
+        "reason_code": "CAMERA_READY",
+        "age_sec": 0.084,
+        "frequency_hz": 10.0,
+        "max_interval_sec": 0.9,
+        "sync_skew_sec": 0.0,
+        "drop_count": 0,
+        "sequence": 16363,
+        "calibration_revision": 1,
+        "capture_stamp": {
+          "sec": 811,
+          "nanosec": 300000000
+        },
+        "valid_until": {
+          "sec": 811,
+          "nanosec": 550000000
+        },
+        "valid": true
+      },
+      "segmentation": "HSV magenta color + finite rendered depth; validation fixture; not YOLO",
+      "truth_used_for_inference": false,
+      "score_min": 0.018865982070565224,
+      "score_max": 0.8926523327827454,
+      "width_min_m": 0.033994272351264954,
+      "width_max_m": 0.10000000149011612,
+      "physical_grasp_success_tested": false,
+      "rotation_orthogonality_max_error": 2.384185791015625e-07
+    }
+  ],
+  "rejected_inputs": [
+    {
+      "input": "empty",
+      "exit_code": 2,
+      "error": "graspnet_worker: cloud must contain 2048..2000000 XYZ float32 points"
+    },
+    {
+      "input": "sparse",
+      "exit_code": 2,
+      "error": "graspnet_worker: cloud must contain 2048..2000000 XYZ float32 points"
+    },
+    {
+      "input": "nonfinite",
+      "exit_code": 2,
+      "error": "graspnet_worker: nonfinite input"
+    },
+    {
+      "input": "negative_depth",
+      "exit_code": 2,
+      "error": "graspnet_worker: cloud must use optical frame with positive depth"
+    }
+  ]
+}

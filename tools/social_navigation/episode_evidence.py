@@ -66,6 +66,24 @@ def assess_evidence(case, records, summary, policy, navigation_status=None):
         # telemetry, unlike a missing stream. Authority is checked separately.
         checks['policy_telemetry_covers_motion'] = covers_motion(groups['social'], SOCIAL_STATUS_MAX_AGE_S)
 
+    # The social policy may deliberately select SLOW/YIELD while both speed
+    # candidates are still geometrically admissible. Preserve that decision
+    # as exercised conflict evidence; requiring an inadmissible candidate
+    # would reject the goal-occupied and early-warning cases.
+    if case.get('expect_conflict') and not summary.get('_force_conflict_false'):
+        reasons = {'PREDICTED_CONFLICT', 'YIELD', 'STATIONARY_CONFLICT',
+                   'SOCIAL_BLOCKED_TIMEOUT', 'GOAL_OCCUPIED'}
+        conflict_rows = [r for r in groups['social'] if r.get('active') and (
+            any(not c.get('admissible', True) for c in r.get('candidates', [])) or
+            (r.get('goal_occupied') and r.get('reason') in reasons) or
+            r.get('reason') in reasons)]
+        checks['conflict_exercised'] = bool(conflict_rows)
+        if conflict_rows:
+            first_conflict = conflict_rows[0].get('ros_s', float('inf'))
+            checks['recovery_exercised'] = any(
+                r.get('state') == 'CRUISE' and r.get('ros_s', 0.) > first_conflict
+                for r in groups['social'])
+
     if case.get('cancel'):
         checks.pop('arrivals', None)
         checks.pop('recovery_exercised', None)
@@ -115,6 +133,21 @@ def assess_evidence(case, records, summary, policy, navigation_status=None):
             checks['motion_stopped_after_cancel'] = False
     else:
         checks['navigation_process_completed'] = summary.get('navigation_returncode') == 0
+
+    # Once a dynamic-obstacle stop has settled, no body motion is allowed
+    # until the explicit resume event. This catches a command leak that a
+    # single sampled HOLD status can miss.
+    if case.get('expect_goal_occupied') and summary.get('pause_stop_evidence'):
+        evidence = summary['pause_stop_evidence']
+        settled = evidence.get('settled_source_s')
+        resume = next((e.get('ros_s') for e in summary.get('events', [])
+                       if e.get('command') == 'start' and
+                       e.get('ros_s', -1) > evidence.get('pause_source_s', float('inf'))), None)
+        motion_rows = groups['motion']
+        occupied = [r for r in motion_rows if settled is not None and resume is not None and
+                    settled + .2 <= r.get('ros_s', -1) < resume]
+        checks['no_motion_while_occupied'] = bool(occupied) and all(
+            r.get('v', 0.) < .01 and abs(r.get('w', 0.)) < .02 for r in occupied)
 
     missing = [name for name, passed in checks.items() if passed is not True]
     invalid_fixture = {'episode_ack', 'human_moved', 'conflict_exercised',

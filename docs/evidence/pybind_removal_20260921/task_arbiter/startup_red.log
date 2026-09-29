@@ -1,0 +1,196 @@
+FF..FFFF                                                                 [100%]
+=================================== FAILURES ===================================
+_______________ test_valid_startup_numeric_conversion[10-python] _______________
+
+impl = 'python', value = '10'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/startup_red/test_valid_startup_numeric_con0')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('value', ['10', '60.0', 'true', '"10.0"'])
+    def test_valid_startup_numeric_conversion(impl, value, tmp_path):
+>       r = Runtime(impl, tmp_path, timeout=value)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:153: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x7c0138321870>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+----------------------------- Captured stdout call -----------------------------
+discovery failure: ['arbiter_probe_fab94cda'] [('/arbiter_fe5120abc3da/exploration/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_fe5120abc3da/exploration/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_fe5120abc3da/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_fe5120abc3da/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_fe5120abc3da/route/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_fe5120abc3da/route/navigate_to_pose', ['nav2_msgs/action/NavigateToPose'])] [('/arbiter_fe5120abc3da/exploration/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/exploration/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_fe5120abc3da/exploration/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_fe5120abc3da/exploration/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/exploration/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_fe5120abc3da/exploration/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_fe5120abc3da/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_fe5120abc3da/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_fe5120abc3da/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_fe5120abc3da/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_fe5120abc3da/navigation_executor/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_fe5120abc3da/route/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/route/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_fe5120abc3da/route/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_fe5120abc3da/route/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_fe5120abc3da/route/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_fe5120abc3da/route/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_fe5120abc3da_runtime/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically']), ('/arbiter_probe_fab94cda/describe_parameters', ['rcl_interfaces/srv/DescribeParameters']), ('/arbiter_probe_fab94cda/get_parameter_types', ['rcl_interfaces/srv/GetParameterTypes']), ('/arbiter_probe_fab94cda/get_parameters', ['rcl_interfaces/srv/GetParameters']), ('/arbiter_probe_fab94cda/list_parameters', ['rcl_interfaces/srv/ListParameters']), ('/arbiter_probe_fab94cda/set_parameters', ['rcl_interfaces/srv/SetParameters']), ('/arbiter_probe_fab94cda/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically'])]
+________________ test_valid_startup_numeric_conversion[10-cpp] _________________
+
+impl = 'cpp', value = '10'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/startup_red/test_valid_startup_numeric_con1')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('value', ['10', '60.0', 'true', '"10.0"'])
+    def test_valid_startup_numeric_conversion(impl, value, tmp_path):
+>       r = Runtime(impl, tmp_path, timeout=value)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:153: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x7c0138375360>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+----------------------------- Captured stdout call -----------------------------
+discovery failure: ['arbiter_probe_babfaadc'] [('/arbiter_ef7787ebce44/exploration/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_ef7787ebce44/exploration/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_ef7787ebce44/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_ef7787ebce44/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_ef7787ebce44/route/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_ef7787ebce44/route/navigate_to_pose', ['nav2_msgs/action/NavigateToPose'])] [('/arbiter_ef7787ebce44/exploration/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/exploration/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_ef7787ebce44/exploration/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_ef7787ebce44/exploration/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/exploration/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_ef7787ebce44/exploration/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_ef7787ebce44/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_ef7787ebce44/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_ef7787ebce44/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_ef7787ebce44/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_ef7787ebce44/navigation_executor/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_ef7787ebce44/route/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/route/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_ef7787ebce44/route/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_ef7787ebce44/route/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_ef7787ebce44/route/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_ef7787ebce44/route/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_ef7787ebce44_runtime/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically']), ('/arbiter_probe_babfaadc/describe_parameters', ['rcl_interfaces/srv/DescribeParameters']), ('/arbiter_probe_babfaadc/get_parameter_types', ['rcl_interfaces/srv/GetParameterTypes']), ('/arbiter_probe_babfaadc/get_parameters', ['rcl_interfaces/srv/GetParameters']), ('/arbiter_probe_babfaadc/list_parameters', ['rcl_interfaces/srv/ListParameters']), ('/arbiter_probe_babfaadc/set_parameters', ['rcl_interfaces/srv/SetParameters']), ('/arbiter_probe_babfaadc/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically'])]
+______________ test_valid_startup_numeric_conversion[true-python] ______________
+
+impl = 'python', value = 'true'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/startup_red/test_valid_startup_numeric_con4')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('value', ['10', '60.0', 'true', '"10.0"'])
+    def test_valid_startup_numeric_conversion(impl, value, tmp_path):
+>       r = Runtime(impl, tmp_path, timeout=value)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:153: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x7c0138375a20>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+----------------------------- Captured stdout call -----------------------------
+discovery failure: ['arbiter_probe_6f325932'] [('/arbiter_f4b5c79d6882/exploration/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_f4b5c79d6882/exploration/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_f4b5c79d6882/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_f4b5c79d6882/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_f4b5c79d6882/route/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_f4b5c79d6882/route/navigate_to_pose', ['nav2_msgs/action/NavigateToPose'])] [('/arbiter_f4b5c79d6882/exploration/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/exploration/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_f4b5c79d6882/exploration/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_f4b5c79d6882/exploration/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/exploration/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_f4b5c79d6882/exploration/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_f4b5c79d6882/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_f4b5c79d6882/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_f4b5c79d6882/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_f4b5c79d6882/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_f4b5c79d6882/navigation_executor/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_f4b5c79d6882/route/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/route/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_f4b5c79d6882/route/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_f4b5c79d6882/route/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_f4b5c79d6882/route/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_f4b5c79d6882/route/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_f4b5c79d6882_runtime/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically']), ('/arbiter_probe_6f325932/describe_parameters', ['rcl_interfaces/srv/DescribeParameters']), ('/arbiter_probe_6f325932/get_parameter_types', ['rcl_interfaces/srv/GetParameterTypes']), ('/arbiter_probe_6f325932/get_parameters', ['rcl_interfaces/srv/GetParameters']), ('/arbiter_probe_6f325932/list_parameters', ['rcl_interfaces/srv/ListParameters']), ('/arbiter_probe_6f325932/set_parameters', ['rcl_interfaces/srv/SetParameters']), ('/arbiter_probe_6f325932/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically'])]
+_______________ test_valid_startup_numeric_conversion[true-cpp] ________________
+
+impl = 'cpp', value = 'true'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/startup_red/test_valid_startup_numeric_con5')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('value', ['10', '60.0', 'true', '"10.0"'])
+    def test_valid_startup_numeric_conversion(impl, value, tmp_path):
+>       r = Runtime(impl, tmp_path, timeout=value)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:153: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x7c01383756c0>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+----------------------------- Captured stdout call -----------------------------
+discovery failure: ['arbiter_probe_d7ac9cd4'] [('/arbiter_2bb8b1553f9e/exploration/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_2bb8b1553f9e/exploration/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_2bb8b1553f9e/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_2bb8b1553f9e/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_2bb8b1553f9e/route/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_2bb8b1553f9e/route/navigate_to_pose', ['nav2_msgs/action/NavigateToPose'])] [('/arbiter_2bb8b1553f9e/exploration/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/exploration/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_2bb8b1553f9e/exploration/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_2bb8b1553f9e/exploration/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/exploration/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_2bb8b1553f9e/exploration/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_2bb8b1553f9e/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_2bb8b1553f9e/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_2bb8b1553f9e/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_2bb8b1553f9e/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_2bb8b1553f9e/navigation_executor/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_2bb8b1553f9e/route/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/route/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_2bb8b1553f9e/route/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_2bb8b1553f9e/route/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_2bb8b1553f9e/route/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_2bb8b1553f9e/route/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_2bb8b1553f9e_runtime/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically']), ('/arbiter_probe_d7ac9cd4/describe_parameters', ['rcl_interfaces/srv/DescribeParameters']), ('/arbiter_probe_d7ac9cd4/get_parameter_types', ['rcl_interfaces/srv/GetParameterTypes']), ('/arbiter_probe_d7ac9cd4/get_parameters', ['rcl_interfaces/srv/GetParameters']), ('/arbiter_probe_d7ac9cd4/list_parameters', ['rcl_interfaces/srv/ListParameters']), ('/arbiter_probe_d7ac9cd4/set_parameters', ['rcl_interfaces/srv/SetParameters']), ('/arbiter_probe_d7ac9cd4/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically'])]
+_____________ test_valid_startup_numeric_conversion["10.0"-python] _____________
+
+impl = 'python', value = '"10.0"'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/startup_red/test_valid_startup_numeric_con6')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('value', ['10', '60.0', 'true', '"10.0"'])
+    def test_valid_startup_numeric_conversion(impl, value, tmp_path):
+>       r = Runtime(impl, tmp_path, timeout=value)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:153: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x7c01383752d0>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+----------------------------- Captured stdout call -----------------------------
+discovery failure: ['arbiter_probe_55c39658'] [('/arbiter_301f56127286/exploration/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_301f56127286/exploration/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_301f56127286/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_301f56127286/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_301f56127286/navigation_executor/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_301f56127286/navigation_executor/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_301f56127286/route/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_301f56127286/route/navigate_to_pose', ['nav2_msgs/action/NavigateToPose'])] [('/arbiter_301f56127286/exploration/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/exploration/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_301f56127286/exploration/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_301f56127286/exploration/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/exploration/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_301f56127286/exploration/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_301f56127286/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_301f56127286/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_301f56127286/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_301f56127286/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_301f56127286/navigation_executor/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/navigation_executor/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_301f56127286/navigation_executor/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_301f56127286/navigation_executor/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/navigation_executor/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_301f56127286/navigation_executor/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_301f56127286/route/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/route/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_301f56127286/route/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_301f56127286/route/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_301f56127286/route/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_301f56127286/route/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_301f56127286_runtime/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically']), ('/arbiter_probe_55c39658/describe_parameters', ['rcl_interfaces/srv/DescribeParameters']), ('/arbiter_probe_55c39658/get_parameter_types', ['rcl_interfaces/srv/GetParameterTypes']), ('/arbiter_probe_55c39658/get_parameters', ['rcl_interfaces/srv/GetParameters']), ('/arbiter_probe_55c39658/list_parameters', ['rcl_interfaces/srv/ListParameters']), ('/arbiter_probe_55c39658/set_parameters', ['rcl_interfaces/srv/SetParameters']), ('/arbiter_probe_55c39658/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically'])]
+______________ test_valid_startup_numeric_conversion["10.0"-cpp] _______________
+
+impl = 'cpp', value = '"10.0"'
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/startup_red/test_valid_startup_numeric_con7')
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    @pytest.mark.parametrize('value', ['10', '60.0', 'true', '"10.0"'])
+    def test_valid_startup_numeric_conversion(impl, value, tmp_path):
+>       r = Runtime(impl, tmp_path, timeout=value)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:484: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:153: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x7c01383768c0>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+----------------------------- Captured stdout call -----------------------------
+discovery failure: ['arbiter_probe_2bf25c83'] [('/arbiter_610abc035563/exploration/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_610abc035563/exploration/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_610abc035563/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_610abc035563/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_610abc035563/navigation_executor/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_610abc035563/navigation_executor/navigate_to_pose', ['nav2_msgs/action/NavigateToPose']), ('/arbiter_610abc035563/route/navigate_through_poses', ['nav2_msgs/action/NavigateThroughPoses']), ('/arbiter_610abc035563/route/navigate_to_pose', ['nav2_msgs/action/NavigateToPose'])] [('/arbiter_610abc035563/exploration/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/exploration/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_610abc035563/exploration/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_610abc035563/exploration/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/exploration/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_610abc035563/exploration/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_610abc035563/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_610abc035563/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_610abc035563/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_610abc035563/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_610abc035563/navigation_executor/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/navigation_executor/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_610abc035563/navigation_executor/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_610abc035563/navigation_executor/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/navigation_executor/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_610abc035563/navigation_executor/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_610abc035563/route/navigate_through_poses/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/route/navigate_through_poses/_action/get_result', ['nav2_msgs/action/NavigateThroughPoses_GetResult']), ('/arbiter_610abc035563/route/navigate_through_poses/_action/send_goal', ['nav2_msgs/action/NavigateThroughPoses_SendGoal']), ('/arbiter_610abc035563/route/navigate_to_pose/_action/cancel_goal', ['action_msgs/srv/CancelGoal']), ('/arbiter_610abc035563/route/navigate_to_pose/_action/get_result', ['nav2_msgs/action/NavigateToPose_GetResult']), ('/arbiter_610abc035563/route/navigate_to_pose/_action/send_goal', ['nav2_msgs/action/NavigateToPose_SendGoal']), ('/arbiter_610abc035563_runtime/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically']), ('/arbiter_probe_2bf25c83/describe_parameters', ['rcl_interfaces/srv/DescribeParameters']), ('/arbiter_probe_2bf25c83/get_parameter_types', ['rcl_interfaces/srv/GetParameterTypes']), ('/arbiter_probe_2bf25c83/get_parameters', ['rcl_interfaces/srv/GetParameters']), ('/arbiter_probe_2bf25c83/list_parameters', ['rcl_interfaces/srv/ListParameters']), ('/arbiter_probe_2bf25c83/set_parameters', ['rcl_interfaces/srv/SetParameters']), ('/arbiter_probe_2bf25c83/set_parameters_atomically', ['rcl_interfaces/srv/SetParametersAtomically'])]
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_valid_startup_numeric_conversion[10-python]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_valid_startup_numeric_conversion[10-cpp]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_valid_startup_numeric_conversion[true-python]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_valid_startup_numeric_conversion[true-cpp]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_valid_startup_numeric_conversion["10.0"-python]
+FAILED ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_valid_startup_numeric_conversion["10.0"-cpp]
+6 failed, 2 passed, 54 deselected in 48.98s

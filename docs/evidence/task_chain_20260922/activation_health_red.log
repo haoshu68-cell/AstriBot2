@@ -1,0 +1,49 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+Note: Google Test filter = *TaskSession*:*LostSession*
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from HealthContract
+[ RUN      ] HealthContract.MissingTaskSessionRejectsFreshImages
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:141: Failure
+Value of: health->valid
+  Actual: true
+Expected: false
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:141: Failure
+Expected equality of these values:
+  health->state
+    Which is: "OK"
+  "INACTIVE"
+[  FAILED  ] HealthContract.MissingTaskSessionRejectsFreshImages (74 ms)
+[ RUN      ] HealthContract.TaskSessionReleaseImmediatelyRevokesHealth
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:148: Failure
+Value of: health->valid
+  Actual: true
+Expected: false
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:148: Failure
+Expected equality of these values:
+  health->state
+    Which is: "OK"
+  "INACTIVE"
+[  FAILED  ] HealthContract.TaskSessionReleaseImmediatelyRevokesHealth (108 ms)
+[ RUN      ] HealthContract.LostSessionHeartbeatCannotUseFreshImages
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:155: Failure
+Value of: health->valid
+  Actual: true
+Expected: false
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_perception_components/test/camera_health_test.cpp:155: Failure
+Expected equality of these values:
+  health->state
+    Which is: "OK"
+  "INACTIVE"
+[  FAILED  ] HealthContract.LostSessionHeartbeatCannotUseFreshImages (421 ms)
+[----------] 3 tests from HealthContract (603 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (608 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] HealthContract.MissingTaskSessionRejectsFreshImages
+[  FAILED  ] HealthContract.TaskSessionReleaseImmediatelyRevokesHealth
+[  FAILED  ] HealthContract.LostSessionHeartbeatCannotUseFreshImages
+
+ 3 FAILED TESTS

@@ -1,0 +1,29 @@
+--- a/moveit_ros/move_group/src/move_group.cpp
++++ b/moveit_ros/move_group/src/move_group.cpp
+@@ -109,6 +109,10 @@
+       RCLCPP_ERROR(LOGGER, "No MoveGroup context created. Nothing will work.");
+   }
+ 
++  // Keep capability deleter code mapped until the ROS node releases its weak
++  // callback-group entries. The guard is owned outside the node's scope.
++  auto getCapabilityLoader() const { return capability_plugin_loader_; }
++
+   MoveGroupContextPtr getContext()
+   {
+     return context_;
+@@ -205,6 +209,7 @@
+ {
+   rclcpp::init(argc, argv);
+ 
++  std::shared_ptr<pluginlib::ClassLoader<move_group::MoveGroupCapability>> capability_loader_guard;
+   rclcpp::NodeOptions opt;
+   opt.allow_undeclared_parameters(true);
+   opt.automatically_declare_parameters_from_overrides(true);
+@@ -294,6 +299,7 @@
+     rclcpp::executors::MultiThreadedExecutor executor;
+ 
+     move_group::MoveGroupExe mge(moveit_cpp, default_planning_pipeline, debug);
++    capability_loader_guard = mge.getCapabilityLoader();
+ 
+     bool monitor_dynamics;
+     if (nh->get_parameter("monitor_dynamics", monitor_dynamics) && monitor_dynamics)

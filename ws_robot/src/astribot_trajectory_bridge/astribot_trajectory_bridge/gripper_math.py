@@ -32,6 +32,16 @@
 ``if self.__in_simulation: return``，实测返回 None）。力限只能在真机上验。
 """
 
+import os
+
+if os.environ.get('ASTRIBOT_BRIDGE_NATIVE_KERNELS', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native
+    except ImportError:  # pragma: no cover
+        _native = None
+else:
+    _native = None
+
 CMD_OPEN = 0.0
 CMD_CLOSED = 100.0
 
@@ -51,12 +61,14 @@ def clamp_cmd(cmd):
     让越界在我们这一层就有明确记录，而不是依赖下游的隐式行为 ——
     依赖下游意味着换个后端（真机）行为可能不同。
     """
-    return max(CMD_OPEN, min(CMD_CLOSED, float(cmd)))
+    value = float(cmd)
+    return _native.clamp_cmd(value) if _native is not None else max(CMD_OPEN, min(CMD_CLOSED, value))
 
 
 def is_cmd_in_range(cmd):
     """命令是否在 [0, 100] 内（不夹，只判断）。"""
-    return CMD_OPEN <= float(cmd) <= CMD_CLOSED
+    value = float(cmd)
+    return _native.is_cmd_in_range(value) if _native is not None else CMD_OPEN <= value <= CMD_CLOSED
 
 
 def cmd_to_rad(cmd, clamp=True):
@@ -66,13 +78,13 @@ def cmd_to_rad(cmd, clamp=True):
     注意弧度随**闭合**增大 —— 它是闭合角，不是张开角。
     """
     c = clamp_cmd(cmd) if clamp else float(cmd)
-    return c * RAD_PER_CMD
+    return _native.cmd_to_rad(c, False) if _native is not None else c * RAD_PER_CMD
 
 
 def rad_to_cmd(rad, clamp=True):
     """驱动关节弧度 -> 命令空间。是 :func:`cmd_to_rad` 的严格逆。"""
     c = float(rad) / RAD_PER_CMD
-    return clamp_cmd(c) if clamp else c
+    return _native.rad_to_cmd(float(rad), clamp) if _native is not None else (clamp_cmd(c) if clamp else c)
 
 
 def opening_fraction_to_cmd(fraction):
@@ -85,13 +97,17 @@ def opening_fraction_to_cmd(fraction):
 
     提供这个函数的目的就是**让上层不必自己记住极性是反的**。
     """
-    f = max(0.0, min(1.0, float(fraction)))
+    f = float(fraction)
+    if _native is not None:
+        return _native.opening_fraction_to_cmd(f)
+    f = max(0.0, min(1.0, f))
     return (1.0 - f) * CMD_CLOSED
 
 
 def cmd_to_opening_fraction(cmd):
     """命令 -> "张开程度"（1 = 全张开）。是 :func:`opening_fraction_to_cmd` 的逆。"""
-    return 1.0 - clamp_cmd(cmd) / CMD_CLOSED
+    return (_native.cmd_to_opening_fraction(float(cmd)) if _native is not None
+            else 1.0 - clamp_cmd(cmd) / CMD_CLOSED)
 
 
 def validate_grasp_cmd(cmd, name='gripper_cmd'):

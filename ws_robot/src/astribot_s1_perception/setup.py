@@ -29,9 +29,7 @@ setup(
         'console_scripts': [
             'slam_session = astribot_s1_perception.slam_session:main',
             'autonomous_patrol_node = astribot_s1_perception.autonomous_patrol_node:main',
-            'map_domain_relay = astribot_s1_perception.map_domain_relay:main',
             'map_start_cell_check = astribot_s1_perception.map_start_cell_check:main',
-            'map_odom_tf_node = astribot_s1_perception.map_odom_tf_node:main',
         ],
     },
 )

@@ -1,0 +1,30 @@
+......F......                                                            [100%]
+=================================== FAILURES ===================================
+____________________ test_localization_strict_norm_boundary ____________________
+
+probe = <function probe.<locals>.call at 0x777a5717f130>
+
+    def test_localization_strict_norm_boundary(probe):
+        op=lambda pose:dict(action='localization',pose=pose,position_limit=.5,angle_limit=.15)
+>       result=compare(probe,[op([0.,0.,0.]),op([.3653736529718966,.34132403037871817,0.])])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x777a5717f130>
+ops = [{'action': 'localization', 'angle_limit': 0.15, 'pose': [0.0, 0.0, 0.0], 'position_limit': 0.5}, {'action': 'localization', 'angle_limit': 0.15, 'pose': [0.3653736529718966, 0.34132403037871817, 0.0], 'position_limit': 0.5}]
+
+    def compare(probe,ops):
+        want=reference(ops);got=probe(ops);assert len(got)==len(want)
+        for index,(a,b) in enumerate(zip(got,want)):
+            assert a.keys()==b.keys(),(index,ops[index],a,b)
+            for key in a:
+                if key=='point':assert a[key]==pytest.approx(b[key],rel=2e-14,abs=2e-14)
+>               else:assert a[key]==b[key],(index,ops[index],a,b)
+E               AssertionError: (1, {'action': 'localization', 'angle_limit': 0.15, 'pose': [0.3653736529718966, 0.34132403037871817, 0.0], 'position_...': 0.5}, {'changed': False, 'version': ['idle', 0, 0, 0, 0, 0]}, {'changed': True, 'version': ['idle', 0, 0, 0, 1, 0]})
+E               assert False == True
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:82: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py::test_localization_strict_norm_boundary
+1 failed, 12 passed in 0.15s

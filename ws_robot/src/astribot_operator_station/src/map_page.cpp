@@ -7,7 +7,8 @@
 namespace astribot_operator_station {
 using Json=nlohmann::json;
 MapPage::MapPage(QWidget * parent):QWidget(parent){
- auto outer=new QVBoxLayout(this);auto scroll=new QScrollArea;scroll->setWidgetResizable(true);outer->addWidget(scroll);auto content=new QWidget;scroll->setWidget(content);auto layout=new QVBoxLayout(content);auto form=new QFormLayout;layout->addLayout(form);
+ setMinimumSize(0,0);setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Ignored);
+ auto layout=new QVBoxLayout(this);layout->setContentsMargins(6,6,6,6);auto form=new QFormLayout;layout->addLayout(form);
  detail_=new QLabel("地图管理未连接");detail_->setWordWrap(true);detail_->setSizePolicy(QSizePolicy::Preferred,QSizePolicy::Maximum);detail_->setTextFormat(Qt::PlainText);layout->addWidget(detail_);
  maps_=new QComboBox;maps_->setObjectName("catalog_maps");form->addRow("地图版本",maps_);
  stations_=new QComboBox;form->addRow("工位版本",stations_);

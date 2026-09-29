@@ -1,0 +1,28 @@
+{
+  "recorded_at": "2026-09-25T06:02:47.836850+08:00",
+  "issue": "MTC_SCENE_CHANGED_DURING_REVALIDATION",
+  "original_first_observed": "2026-09-25T05:56:00+08:00",
+  "checkpoint": "2026-09-25T06:56:00+08:00",
+  "scope": "Only failure snapshot diagnostics, identify actual scene delta, then minimal correction and same-case mainline verification.",
+  "fixed_parameters": {
+    "idle_position_hold": true,
+    "idle_position_kp": 3.0,
+    "simulation_relaxed_base_motion": true,
+    "trajectory_time_scaling": 2.5,
+    "velocity_scaling": 0.1,
+    "acceleration_scaling": 0.1
+  },
+  "frozen_files": {
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_chassis_effort_drive/config/omni_effort_drive_params.yaml": "789b21ef001122e30615ec81df99e9855d1bc042de3e203d6ea9b92708809421",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_chassis_effort_drive_native/src/omni_effort_drive_node.cpp": "0984fb92458504622ec36f24b2e6a10295216a83bf24a76b568e0fb7a23cdcde",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/src/execution_guard.cpp": "4eb50d390ddd40b5a075b8f2f39418136f44275c7a4134134be21e3079dc597a",
+    "/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_transport_mtc/include/astribot_s1_transport_mtc/base_motion_limits.hpp": "7fad088aadbc7f8477663c00a4cc7652d2f7a223b02d464b7def8b8ca1a92219",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/run_full_transfer.py": "8f3212167d0d423d561ff984149d900d3fb73eec05cc4b4e10a1bf79e6538cd1",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/verify_full_transfer.py": "1333136611ff06fbf31d285858c61833893c6997f11a8937ec936b9ac3081184",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/read_full_executor_parameters.py": "7368749120cc6ad099ff418b60a218e94c19aedb327f00b4bec4babdb9264f76",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/scenario.json": "ad21630122ec833dc7ca17de21117aed7c57a58e4263ba1b96b29cca180dce3a",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/prepare_transfer_goal.py": "52cbceb61f04a1719fc5129caf125738b411156d2ec63a511765ed9d09c516a3",
+    "/home/yjh/WorkSpace/astribot_validation/M1_execution_response_20260924/full_action_wiring/transport_skills_candidate.launch.py": "72ec4c8ad73967ef45acd83ee64d193ad82309f48713fa0937ebf19cde6c3ff9"
+  },
+  "authorized_change": "reader checks frozen kp=3.0 in addition to idle=true; C++ executor captures actual scenes only on revalidation mismatch"
+}

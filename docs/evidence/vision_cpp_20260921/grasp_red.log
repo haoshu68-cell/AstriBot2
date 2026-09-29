@@ -1,0 +1,39 @@
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 3 tests from GraspPose
+[ RUN      ] GraspPose.RejectsNonUnitQuaternion
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/test_grasp_candidate_gate.cpp:7: Failure
+Value of: finite_pose(p)
+  Actual: true
+Expected: false
+[  FAILED  ] GraspPose.RejectsNonUnitQuaternion (0 ms)
+[ RUN      ] GraspPose.RejectsOverflowQuaternion
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/test_grasp_candidate_gate.cpp:10: Failure
+Value of: finite_pose(p)
+  Actual: true
+Expected: false
+[  FAILED  ] GraspPose.RejectsOverflowQuaternion (0 ms)
+[ RUN      ] GraspPose.AcceptsUnitQuaternion
+[       OK ] GraspPose.AcceptsUnitQuaternion (0 ms)
+[----------] 3 tests from GraspPose (0 ms total)
+
+[----------] 1 test from GraspGate
+[ RUN      ] GraspGate.MissingContextMustNotPass
+[INFO] [1789969446.076984073] [grasp_candidate_gate]: Grasp candidate gate listening on /perception/grasp_candidates and publishing /manipulation/valid_grasp_candidates (score >= 0.200, age <= 0.500s)
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/test_grasp_candidate_gate.cpp:33: Failure
+Value of: received->candidates.empty()
+  Actual: false
+Expected: true
+[  FAILED  ] GraspGate.MissingContextMustNotPass (28 ms)
+[----------] 1 test from GraspGate (28 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 2 test suites ran. (28 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 3 tests, listed below:
+[  FAILED  ] GraspPose.RejectsNonUnitQuaternion
+[  FAILED  ] GraspPose.RejectsOverflowQuaternion
+[  FAILED  ] GraspGate.MissingContextMustNotPass
+
+ 3 FAILED TESTS

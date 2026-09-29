@@ -1,0 +1,13 @@
+{"scene": "clear", "elapsed_wall_sec": 0.007733145999736735, "exit_code": 2, "scene_sha256": "666449ba657dffbb722fb50c34fc166dfa2484af2c443b9af4fb7d922b7e9daf", "model_sha256": "4eaf790018ab4e72bf9dc8ce24b8e296b32844235b99ca566af6c8921c133429", "translation_error_m": null, "rotation_error_deg": null, "accepted": false, "schema": "astribot.object_pose/1", "method": "known_cad_ppf_icp", "success": false, "reason": "invalid_visibility_model_file", "camera_from_object": null, "coverage": 0, "model_coverage": 0, "total_model_coverage": 0, "visible_model_coverage": null, "visible_model_points": 0, "observable_normal_directions": 0, "scene_coverage": 0, "rmse_m": null, "ambiguous": false, "symmetry_equivalent": false, "candidate_count": 0}
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/sim_pose_evaluate.py", line 46, in <module>
+    if __name__=='__main__':main()
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/sim_pose_evaluate.py", line 44, in main
+    summary=dict(visibility_model_sha256=sha(a.visibility_model) if a.visibility_model else None,schema_version=1,estimator_cli_sha256=sha(cli),estimator_library_sha256=sha(lib),fixed_thresholds=dict(translation_m=.020,rotation_deg=10),object_symmetry='none declared; asymmetric CAD',truth_passed_to_estimator=False,scene_source='actual raw Gazebo RGB-D, HSV validation mask; not YOLO',results=result,accepted_count=sum(x['accepted'] for x in result),total_count=len(result))
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/sim_pose_evaluate.py", line 9, in sha
+    def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+  File "/usr/lib/python3.10/pathlib.py", line 1126, in read_bytes
+    with self.open(mode='rb') as f:
+  File "/usr/lib/python3.10/pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+FileNotFoundError: [Errno 2] No such file or directory: 'runs/grasp_pose_sim_20260921/models/asymmetric_union_visibility.json'

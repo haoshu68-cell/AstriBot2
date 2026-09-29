@@ -1,0 +1,52 @@
+--- runs/task_chain_20260922_resume/scene_overlay/install/astribot_s1_gazebo_bringup/share/astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py	2026-09-22 09:59:22.000000000 +0800
++++ ws_robot/src/astribot_s1_gazebo_bringup/launch/warehouse_sim.launch.py	2026-09-22 10:33:54.637761280 +0800
+@@ -475,9 +475,10 @@
+         'head_stereo_left': ('mono', '/camera/head_stereo_left/image_raw', None, '/camera/head_stereo_left/camera_info'),
+         'head_stereo_right': ('mono', '/camera/head_stereo_right/image_raw', None, '/camera/head_stereo_right/camera_info'),
+     }
+-    camera_bridge_args = []
+-    camera_remappings = []
++    camera_bridges = []
+     for camera_id, (kind, image_topic, depth_topic, info_topic) in camera_topics.items():
++        camera_bridge_args = []
++        camera_remappings = []
+         gz_prefix = [TextSubstitution(text='/model/'), robot_name,
+                      TextSubstitution(text=f'/{camera_id}')]
+         if kind == 'rgbd':
+@@ -498,6 +499,12 @@
+                 camera_remappings.append((gz_prefix + [TextSubstitution(text=suffix)],
+                                           f'/camera/raw/{camera_id}{suffix}'))
+ 
++        # Separate native bridge processes keep image conversion/DDS pressure
++        # out of the clock/odometry bridge and out of other camera sources.
++        camera_bridges.append(OpaqueFunction(function=_camera_bridge_node, kwargs=dict(
++            name=camera_id+'_gazebo_bridge', arguments=camera_bridge_args,
++            remappings=camera_remappings)))
++
+     bridge_args = [
+         '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+         [TextSubstitution(text='/model/'), robot_name,
+@@ -511,7 +518,6 @@
+         [TextSubstitution(text='/model/'), robot_name,
+          TextSubstitution(text='/livox_mid360_imu@sensor_msgs/msg/Imu[gz.msgs.IMU')],
+     ]
+-    bridge_args.extend(camera_bridge_args)
+ 
+     ros_gz_bridge = OpaqueFunction(function=_camera_bridge_node, kwargs=dict(
+         arguments=bridge_args,
+@@ -529,7 +535,6 @@
+               TextSubstitution(text='/livox_mid360_right/points')], '/livox/lidar_right'),
+             ([TextSubstitution(text='/model/'), robot_name,
+               TextSubstitution(text='/livox_mid360_imu')], '/livox/imu'),
+-            *camera_remappings,
+         ],
+     ))
+ 
+@@ -791,6 +796,7 @@
+         delay_controllers_after_spawn,
+         delay_effort_drive_after_controllers,
+         ros_gz_bridge,
++        *camera_bridges,
+         GroupAction([
+             OpaqueFunction(function=_camera_pipeline_environment),
+             *camera_postprocess_nodes,

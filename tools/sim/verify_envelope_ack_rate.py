@@ -45,7 +45,7 @@ def main():
         nonlocal current
         current=m
         data['samples'].append({'at':time.monotonic(),'allowed':m.navigation_allowed,'reason':m.reason,'epoch':m.epoch})
-        for consumer in ('global_costmap','local_costmap','planner','controller','policy','protection'):
+        for consumer in ('global_costmap','local_costmap','planner','controller','policy'):
             a=EnvelopeApplyStatus();a.header.stamp=m.header.stamp;a.coordinator_session_id=m.coordinator_session_id
             a.consumer_id=consumer;a.envelope_epoch=m.epoch;a.installed_geometry_hash=m.installed_geometry_hash
             a.applied=not (negative and consumer=='controller');a.reason='ISOLATED_PROTOCOL_FIXTURE';ack.publish(a)

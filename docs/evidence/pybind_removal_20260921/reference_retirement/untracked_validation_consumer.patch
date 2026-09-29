@@ -1,0 +1,21 @@
+--- a/tools/sim/verify_multi_load_dynamic.py
++++ b/tools/sim/verify_multi_load_dynamic.py
+@@ -2,11 +2,17 @@
+ """Replay dynamic empty/light/heavy/offset payload envelope transitions.
+ 
+ The transport executor remains a ROS runtime concern; this bounded validator
+-drives the production ``FixedEnvelope`` coordinator with the same geometry,
++drives the retired Python ``FixedEnvelope`` reference coordinator with the same geometry,
+ hold and consumer-ack contracts used by the runtime.  It checks that every
+ load gets a new geometry/epoch, that attached payloads require a positive mass,
+ and that stale, missing or mismatched acknowledgements hold navigation.
+ """
++from pathlib import Path as _ReferencePath
++import sys as _reference_sys
++_reference_sys.path.insert(0, str(_ReferencePath(__file__).resolve().parents[2] / "tools/migration/python_reference"))
++from reference_bootstrap import enable as _enable_references
++_enable_references()
++
+ import argparse
+ import json
+ from pathlib import Path

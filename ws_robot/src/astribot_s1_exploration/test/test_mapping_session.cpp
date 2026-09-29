@@ -25,6 +25,7 @@ TEST(SessionArchive, RejectsIncompleteAndCommitsCompatibleManifest) {
 
 class SessionTest : public ::testing::Test {
 protected:
+  virtual bool requireZones()const{return false;}
   std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> executor;
   std::shared_ptr<MappingSession> session;
   rclcpp::Node::SharedPtr slam, driver;
@@ -46,7 +47,7 @@ protected:
     slam->declare_parameter("finish", false);
     rclcpp::NodeOptions options; options.parameter_overrides({
       rclcpp::Parameter("slam_node", "/fake_voxel"), rclcpp::Parameter("odom_topic", "/fake_odom"),
-      rclcpp::Parameter("save_timeout_sec", 3.0), rclcpp::Parameter("settle_sec", 0.15)});
+      rclcpp::Parameter("require_navigation_zones",requireZones()),rclcpp::Parameter("save_timeout_sec", 3.0), rclcpp::Parameter("settle_sec", 0.15)});
     session = std::make_shared<MappingSession>(options);
     driver = std::make_shared<rclcpp::Node>("mapping_test_driver");
     odom = driver->create_publisher<nav_msgs::msg::Odometry>("/fake_odom", 10);
@@ -120,4 +121,16 @@ TEST_F(SessionTest, FinalSignalAloneIsNotSavedAndRetryOnlyValidatesFiles) {
   EXPECT_EQ(status["state"], "SAVED");
   std::ifstream file(dir / "manifest.json"); nlohmann::json metadata; file >> metadata;
   EXPECT_EQ(metadata["exploration_outcome"], "CANCELED_PARTIAL");
+}
+
+class ZonesSessionTest:public SessionTest{protected:bool requireZones()const override{return true;}};
+TEST_F(ZonesSessionTest, SaveFreezesCurrentMapBoundZonesIntoManifest) {
+ ASSERT_TRUE(call(finalize));spin(650,0.);EXPECT_FALSE(slam->get_parameter("finish").as_bool());
+ auto pub=driver->create_publisher<std_msgs::msg::String>("/navigation_zones/constraints",rclcpp::QoS(1).transient_local());
+ uint64_t sequence=0;const auto context="mapping:"+status.at("session_id").get<std::string>();
+ nlohmann::json regions=nlohmann::json::array({{{"id","wall"},{"name","wall"},{"enabled",true},{"type","wall"},{"points",{{0,0},{1,0}}},{"width_m",.1}}});
+ auto timer=driver->create_wall_timer(std::chrono::milliseconds(30),[&]{std_msgs::msg::String m;m.data=nlohmann::json({{"schema_version",1},{"frame","map"},{"boot_id","zones"},{"context_id",context},{"revision",7},{"sequence",++sequence},{"valid",true},{"stamp",driver->now().seconds()},{"regions",regions}}).dump();pub->publish(m);});
+ spin(450,0.);EXPECT_TRUE(slam->get_parameter("finish").as_bool());
+ astribot_slam_msgs::msg::KeyframePoseArray m;m.is_final=true;m.save_dir=dir.string();m.map_name=dir.filename().string();m.updates.resize(1);final->publish(m);spin(400);
+ ASSERT_EQ(status.at("state"),"SAVED");std::ifstream file(dir/"manifest.json");nlohmann::json manifest;file>>manifest;EXPECT_EQ(manifest.at("navigation_zones").at("context_id"),context);EXPECT_EQ(manifest.at("navigation_zones").at("revision"),7);EXPECT_EQ(manifest.at("navigation_zones").at("regions").size(),1u);
 }

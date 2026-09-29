@@ -1,0 +1,194 @@
+Arguments (pass arguments as '<name>:=<value>'):
+
+    'navigation_geometry_mode':
+        no description given
+        (default: 'legacy')
+
+    'social_scenario':
+        Optional HuNav scene in the same warehouse
+        (default: '')
+
+    'world_name':
+        aws_robomaker_small_warehouse_world 里的世界名，可选 small_warehouse 或 no_roof_small_warehouse（无屋顶版本渲染更快、排查模型是否加载更方便）
+        (default: 'small_warehouse')
+
+    'robot_name':
+        生成的机器人实体名，多机器人/防止重名冲突时修改此参数
+        (default: 'astribot_s1')
+
+    'headless':
+        true 时只起 Gazebo server(-s)，不起 GUI。
+!!! 什么时候必须用它(实测踩过) !!!：本机 EGL 初始化失败时（日志里 "libEGL warning: egl: failed to create dri2 screen"），Gazebo GUI 会退化成软件渲染并把 CPU 吃满(实测 188%)，把 server 挤到 2% 上不去、物理根本步不动 —— 表现是 /clock 不推进、/joint_states 与所有传感器话题都有发布者但零消息，上层 nav2/SLAM/探索全部卡在等一个永远不来的仿真时间。这种情况下用 headless:=true + RViz 可视化即可正常跑，不需要 GUI（RViz 用的是独立的 OpenGL 上下文，不受影响）。
+        (default: 'false')
+
+    'spawn_x':
+        出生点 X (m)
+        (default: '0.0')
+
+    'spawn_y':
+        出生点 Y (m)
+        (default: '0.0')
+
+    'spawn_z':
+        出生点 Z (m)。!!! 力控重构方案实测更新 !!!：改成0.15，因为修掉"躯干碰撞圆柱体比轮子只高1.7mm、整机其实坐在肚皮上"这个根因后(见astribot_s1_torso_wheel.xacro的记录)，现在真正靠四个轮子接地，实测静止高度 z≈0.1292，出生点比静止高度略高一点(留约2cm)自然落到轮子上，避免初始穿透。!!! 跟 wheel_radius 联动扫描测试时 !!!：静止高度 ≈ wheel_radius+0.049，出生点取 wheel_radius+0.07 左右；同时注意轮径变大后"同样摩擦力产生的反抗力矩 τ=F·r"也按比例变大，wheel_effort_limit 要同步放大，否则轮子会被憋死转不动(实测 r=0.30 时需要 >20N·m)
+        (default: '0.15')
+
+    'spawn_yaw':
+        出生朝向 yaw (rad)
+        (default: '0.0')
+
+    'use_lidar':
+        是否挂载双Livox Mid-360激光雷达
+        (default: 'true')
+
+    'use_camera':
+        是否挂载头部和躯干 RGB-D 相机
+        (default: 'true')
+
+    'use_wrist_cameras':
+        是否额外挂载左右腕部 RGB-D；导航回归默认关闭以保证双源时效
+        (default: 'false')
+
+    'use_stereo_cameras':
+        是否额外挂载头部双目；导航回归默认关闭以保证双源时效
+        (default: 'false')
+
+    'camera_profile':
+        Head RGB-D profile; navigation simulation defaults to scaled robot intrinsics
+        (default: PathJoinSubstitution('FindPackageShare(pkg='astribot_s1_description'), 'config', 'camera_head_rgbd_nav_sim.yaml''))
+
+    'torso_camera_profile':
+        Torso RGB-D profile; navigation simulation defaults to scaled robot intrinsics
+        (default: PathJoinSubstitution('FindPackageShare(pkg='astribot_s1_description'), 'config', 'camera_torso_rgbd_nav_sim.yaml''))
+
+    'camera_calibration_dir':
+        Directory containing the six robot calibration camera profiles
+        (default: PathJoinSubstitution('FindPackageShare(pkg='astribot_s1_description'), 'config''))
+
+    'use_camera_postprocess':
+        用真机 K/D 对仿真图像做 OpenCV 畸变重映射并重发布 CameraInfo
+        (default: 'true')
+
+    'use_camera_pointcloud':
+        将头部和躯干 RGB-D 深度图投影为供 Nav2/MoveIt 使用的 PointCloud2
+        (default: 'true')
+
+    'enable_rgbd_pose_estimator':
+        启用 C++ RGB-D 可见表面三维位置观测（朝向未知）
+        (default: 'false')
+
+    'enable_yolo_detector':
+        no description given
+        (default: 'false')
+
+    'yolo_camera_id':
+        One of: ['head_rgbd', 'torso_rgbd']
+        (default: 'head_rgbd')
+
+    'yolo_model_path':
+        no description given
+        (default: '')
+
+    'yolo_labels_path':
+        no description given
+        (default: '')
+
+    'yolo_model_revision':
+        no description given
+        (default: '')
+
+    'yolo_model_layout':
+        One of: ['yolov5', 'yolov8']
+        (default: 'yolov5')
+
+    'use_native_camera_distortion':
+        使用 Gazebo 原生畸变；与 camera postprocess 同时开启会重复畸变
+        (default: 'false')
+
+    'use_sim_time':
+        是否使用仿真时钟
+        (default: 'true')
+
+    'use_rviz':
+        是否自动打开RViz2
+        (default: 'true')
+
+    'wheel_radius':
+        轮子碰撞球半径(m)，同时驱动逆解运动学(与enable_effort_drive节点的wheel_radius参数保持一致，见下方)，扫描测试改这个
+        (default: '0.08')
+
+    'wheel_effort_limit':
+        轮关节effort力矩限幅(N·m)，起始估算值，需要单轮测试标定
+        (default: '15.0')
+
+    'wheel_velocity_limit':
+        轮关节速度限幅(rad/s)
+        (default: '40.0')
+
+    'wheel_joint_damping':
+        轮关节粘性阻尼(N·m·s/rad)。力矩闭环稳定的必要条件——没有阻尼时轮子是无阻尼自由旋转体，一旦地面反作用力不足就会几毫秒内飙到速度限位、PID在扭矩限幅间bang-bang振荡
+        (default: '1.0')
+
+    'wheel_joint_friction':
+        轮关节静摩擦(N·m)，模拟减速器/轴承的干摩擦
+        (default: '0.1')
+
+    'enable_effort_drive':
+        是否拉起 astribot_s1_chassis_effort_drive 的力矩闭环驱动节点。VelocityControl/MecanumDrive已整体移除，关掉这个底盘就完全没有驱动力——仅用于调试阶段单独核对ros2_control/SDF是否加载正确的场景
+        (default: 'true')
+
+    'effort_drive_node_impl':
+        力矩闭环实现：python（默认 oracle）或 cpp（直接链接 native runtime）
+        (default: 'python')
+
+    'ros_domain_id':
+        本次仿真独占的 ROS_DOMAIN_ID。取 25 是为了与厂商 env.sh:115 写死的值一致 —— 桥接要与 SDK 同域才能互相看见，而真机上 SDK 后端是既有进程、改不动。同一台机器上如果还跑着别的 ROS2 图（哪怕是完全无关的项目），只要都用默认 domain 0，/robot_description、/controller_manager/... 这类未加命名空间的话题/服务就会被 DDS 发现机制"撞名"——本方案实测就遇到过：另一个无关工作空间残留的 robot_state_publisher 通过 transient_local QoS 抢答了我们的 /robot_description 订阅，导致生成的是别的模型、控制器加载互相冲突。 固定一个独占 domain 可以彻底避免这类"看起来随机"的故障，和别的机器人/别的仿真同时跑时改这个参数即可。
+        (default: '25')
+
+    'localhost_only':
+        把本次仿真的所有话题限制在本机，局域网内其它机器发现不到也抓不到。默认 true——仿真栈会拉起 25+ 个节点，其中 /cmd_vel 之类是可写的，不该暴露在办公网。实测（/proc/net/igmp 逐网卡数多播加入次数）：ROS_LOCALHOST_ONLY=1 能真正阻止 DDS 在物理网卡上加入 239.255.0.1；而 Fast DDS 的 interfaceWhiteList XML 无效（只过滤单播 locator）。Gazebo 的 ign-transport 是独立于 DDS 的第二条通道，必须另设 IGN_IP/GZ_IP，否则它照样多播 239.255.0.7。需要跨机联调（如另一台机器跑 RViz）时设 false，并配合 ASTRIBOT_NET_MODE=lan source env.sh 走网段白名单。
+        (default: 'true')
+
+    'gz_args':
+        Arguments to be passed to Gazebo Sim
+        (default: '')
+
+    'gz_version':
+        Gazebo Sim's major version
+        (default: '6')
+
+    'ign_args':
+        Deprecated: Arguments to be passed to Gazebo Sim
+        (default: '')
+
+    'ign_version':
+        Deprecated: Gazebo Sim's major version
+        (default: '')
+
+    'debugger':
+        Run in Debugger
+        (default: 'false')
+
+    'debug_env':
+        Debug environment variables
+        (default: 'false')
+
+    'on_exit_shutdown':
+        Shutdown on gz-sim exit
+        (default: 'false')
+
+    'cmd_vel_topic':
+        no description given
+        (default: '/cmd_vel')
+
+    'joint_states_topic':
+        no description given
+        (default: '/joint_states')
+
+    'effort_command_topic':
+        no description given
+        (default: '/wheel_effort_controller/commands')
+
+    'params_file':
+        本节点的YAML参数文件，可整体替换成自定义调参版本
+        (default: PathJoinSubstitution('FindPackageShare(pkg='astribot_s1_chassis_effort_drive'), 'config', 'omni_effort_drive_params.yaml''))

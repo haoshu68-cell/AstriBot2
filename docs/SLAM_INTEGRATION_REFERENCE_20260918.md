@@ -105,3 +105,27 @@ python3 tools/sim_stack_supervisor.py --mode localize --headless \
 - 全仓库探索、完整历史跟踪路线、窄通道及真机运动回归尚未完成。三段短路线不能证明所有场景性能不低于原基线。
 
 当前实测日志根目录：`/tmp/astribot_slam_unified/`。统一日志索引：`~/.ros/log/astribot/latest_sim/session.log`；该索引指向最近会话，状态以会话 `session.json` 为准。
+
+## 机器人相机标定同步（2026-09-20）
+
+从 `astribot@10.249.22.137` 只读取得 `/etc/config/sensor_calib.json`，并与
+`/opt/astribot_ros/software/astribot_camera/config/sensor_calib.json` 做 SHA-256 核对，
+两者均为 `40ffd44f5ab103b2b03f2877fa9f4c4bd4511de2bd72d17263456a0b7acc1cd3`。
+文件包含 `head_rgbd`、`torso_rgbd`、左右腕部 RGB-D 以及头部双目相机的内参与外参。
+
+本仓库新增：
+
+- `ws_robot/src/astribot_s1_description/config/camera_calibration_robot.json`：机器人原始标定快照；
+- `camera_head_rgbd.yaml`、`camera_torso_rgbd.yaml`、`camera_left_wrist_rgbd.yaml`、`camera_right_wrist_rgbd.yaml`、`camera_head_stereo_left.yaml`、`camera_head_stereo_right.yaml`：六路仿真相机 profile；`camera_rgbd_transport.yaml` 保留为头部 RGB-D 兼容入口。
+
+仿真默认已加载六路实测相机；头部 RGB-D 的 profile 为 `1280×720`、
+`fx=749.075, fy=748.902, cx=636.504, cy=358.606`，畸变为
+`[0.0765807, -0.106598, -0.0000918542, 0.000439831, 0.0439563]`。
+外参来源为机器人 `head` → `head_rgbd` 矩阵；同步到本项目时映射为
+`astribot_head_link_2` → `head_rgbd_camera_optical_frame`，并扣除了 URDF 固定的
+`camera_link` → `camera_optical_frame` 旋转。重构误差小于 `1.2e-8`。
+
+当前 Gazebo 相机链路会实际消费六路相机各自的 mount、分辨率、FOV 和裁剪范围；profile 中保留完整
+内参、畸变和原始矩阵作为校准来源。默认通过 `camera_calibration_postprocess` 使用 OpenCV Brown 模型对六路图像做重映射，并重发布真机 `K/D` 的 CameraInfo；Gazebo 原生 `<distortion>` 作为可选近似模式保留，不能与后处理同时开启，否则会重复畸变。
+本次没有激活真机相机服务，也未调用运动接口；机器人运行时没有 CameraInfo 话题可读，
+因此 live topic 采样状态为 `NO_CAMERA_INFO_OBSERVED`，文件标定是本次同步的权威来源。

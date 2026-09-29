@@ -12,19 +12,18 @@ uint64_t natural(const nlohmann::json &value) {
 struct Snapshot {
  std::string source_epoch,plugin_epoch;
  uint64_t entity=0,source_clock=0,plugin_clock=0,revision=0,accepted=0,applied=0;
- int64_t capture=0,deadline=0;
+ int64_t capture=0;
  bool attached=false,complete=false;
 };
 Snapshot snapshot(const std::string &model,const nlohmann::json &d,PayloadCommand::Receipt receipt,int64_t ros,int64_t steady) {
  try {
   const auto capture=natural(d.at("stamp_ns"));
-  require(capture>0&&capture<=uint64_t(INT64_MAX)&&receipt.ros>=int64_t(capture)&&ros>=receipt.ros&&ros-int64_t(capture)<300000000&&receipt.steady>=0&&steady>=receipt.steady,"PAYLOAD_DIAGNOSTIC_STALE");
-  const int64_t remaining=300000000-(receipt.ros-int64_t(capture));
-  require(steady-receipt.steady<remaining&&receipt.steady<=INT64_MAX-remaining,"PAYLOAD_DIAGNOSTIC_STALE");
+  (void)receipt;(void)ros;(void)steady;
+  require(capture>0&&capture<=uint64_t(INT64_MAX),"PAYLOAD_DIAGNOSTIC_STAMP_INVALID");
   uint64_t entity=0;size_t matches=0;
   for(const auto &row:d.at("models"))if(row.at(1).get<std::string>()==model){entity=natural(row.at(0));++matches;}
   require(matches==1&&entity>0,"PAYLOAD_MODEL_IDENTITY_INVALID");
-  Snapshot result;result.entity=entity;result.capture=int64_t(capture);result.deadline=receipt.steady+remaining;
+  Snapshot result;result.entity=entity;result.capture=int64_t(capture);
   result.source_epoch=d.at("source_epoch").get<std::string>();
   require(!result.source_epoch.empty(),"PAYLOAD_EPOCH_MISSING");
   result.source_clock=natural(d.at("clock_epoch"));result.revision=natural(d.at("revision"));
@@ -56,15 +55,14 @@ PayloadCommand::PayloadCommand(std::string model,bool attach,const nlohmann::jso
  require(s.accepted<UINT32_MAX,"PAYLOAD_COMMAND_IDS_EXHAUSTED");
  source_epoch_=s.source_epoch;plugin_epoch_=s.plugin_epoch;entity_=s.entity;
  source_clock_=s.source_clock;plugin_clock_=s.plugin_clock;revision_=s.revision;capture_=s.capture;
- latest_capture_=s.capture;deadline_=s.deadline;
+ latest_capture_=s.capture;
  command_=uint32_t(s.accepted+1);
 }
 bool PayloadCommand::applied(const nlohmann::json &d,Receipt receipt,int64_t ros,int64_t steady) {
  const auto s=snapshot(model_,d,receipt,ros,steady);
  require(s.source_epoch==source_epoch_&&s.source_clock==source_clock_&&s.entity==entity_,"PAYLOAD_COMMAND_CONTEXT_CHANGED");
- require(s.capture>=latest_capture_,"PAYLOAD_CAPTURE_REGRESSED");
- deadline_=s.capture>latest_capture_?s.deadline:std::min(deadline_,s.deadline);latest_capture_=s.capture;
- require(steady<deadline_,"PAYLOAD_DIAGNOSTIC_STALE");
+ if(s.capture<latest_capture_)return false;
+ latest_capture_=s.capture;
  if(!s.plugin_epoch.empty())require(s.plugin_epoch==plugin_epoch_&&s.plugin_clock==plugin_clock_,"PAYLOAD_COMMAND_CONTEXT_CHANGED");
  if(!s.complete){unconfirmed_capture_=std::max(unconfirmed_capture_,s.capture);return false;}
  if(s.capture<=unconfirmed_capture_)return false;

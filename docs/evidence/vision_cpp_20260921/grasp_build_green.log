@@ -1,0 +1,25 @@
+Starting >>> astribot_s1_manipulation
+[0.247s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_eigen_vendor
+- astribot_logging
+- astribot_perception_msgs
+- astribot_transport_msgs
+- astribot_s1_description
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_eigen_vendor
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_perception_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_transport_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_description
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_eigen_vendor astribot_logging astribot_perception_msgs astribot_transport_msgs astribot_s1_description
+--- stderr: astribot_s1_manipulation
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/test_grasp_candidate_gate.cpp: In member function ‘virtual void GraspGate_MissingContextMustNotPass_Test::TestBody()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_manipulation/test_grasp_candidate_gate.cpp:33:28: warning: suggest explicit braces to avoid ambiguous ‘else’ [-Wdangling-else]
+   33 |   EXPECT_TRUE(received); if(received) EXPECT_TRUE(received->candidates.empty());
+      |                            ^
+---
+Finished <<< astribot_s1_manipulation [5.72s]
+
+Summary: 1 package finished [5.91s]
+  1 package had stderr output: astribot_s1_manipulation

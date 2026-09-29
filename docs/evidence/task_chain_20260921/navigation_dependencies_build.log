@@ -1,0 +1,141 @@
+[0.294s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_s1_perception_components' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/task_chain_20260921/ros_ws/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/ros_ws/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_perception_components, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_perception_components
+	'astribot_s1_navigation' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_navigation, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_navigation
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_s1_navigation astribot_s1_perception_components
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_navigation_zones
+[0.303s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_operator_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_operator_msgs
+Starting >>> astribot_trajectory_bridge_native
+--- stderr: astribot_trajectory_bridge_native
+lto-wrapper: warning: using serial compilation of 5 LTRANS jobs
+---
+Finished <<< astribot_trajectory_bridge_native [10.0s]
+Starting >>> astribot_s1_perception_components
+[10.350s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_autonomy_core
+- astribot_eigen_vendor
+- astribot_logging
+- astribot_perception_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_autonomy_core
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_eigen_vendor
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/ros_ws/install/astribot_perception_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_autonomy_core astribot_eigen_vendor astribot_logging astribot_perception_msgs
+Finished <<< astribot_s1_perception_components [0.19s]
+Starting >>> astribot_s1_perception_native
+[10.548s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_logging
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_logging
+Finished <<< astribot_s1_perception_native [10.1s]
+--- stderr: astribot_navigation_zones
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/geometry.cpp: In function ‘bool astribot_navigation_zones::sweptCircleBlocked(const std::vector<astribot_navigation_zones::Region>&, double, double, double, double, double, double, double, double)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/geometry.cpp:44:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   44 |  if(radius<0||horizon<0||horizon>30)return true;const double speed=std::hypot(vx,vy);const int steps=std::max(1,static_cast<int>(std::ceil(horizon/.02)));const double dt=horizon/steps;
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/geometry.cpp:44:49: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   44 |  if(radius<0||horizon<0||horizon>30)return true;const double speed=std::hypot(vx,vy);const int steps=std::max(1,static_cast<int>(std::ceil(horizon/.02)));const double dt=horizon/steps;
+      |                                                 ^~~~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp: In member function ‘void astribot_navigation_zones::Store::ensure(const string&, const string&, const string&, const Json&)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp:24:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   24 |  if(key.empty()||key.size()>256)throw std::runtime_error("ZONES.INVALID_CONTEXT");auto c=context(key);
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp:24:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   24 |  if(key.empty()||key.size()>256)throw std::runtime_error("ZONES.INVALID_CONTEXT");auto c=context(key);
+      |                                                                                   ^~~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp: In member function ‘astribot_navigation_zones::Json astribot_navigation_zones::Store::replace(const string&, const string&, uint64_t, const Json&, const string&, bool)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp:36:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   36 |  if(id.empty()||id.size()>128||actor.empty()||actor.size()>128)throw std::runtime_error("ZONES.INVALID_ACTOR_OR_ID");const auto canonical=encodeRegions(parseRegions(regions));const auto signature=Json({key,expected,canonical,actor,reviewed}).dump();
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp:36:118: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   36 |  if(id.empty()||id.size()>128||actor.empty()||actor.size()>128)throw std::runtime_error("ZONES.INVALID_ACTOR_OR_ID");const auto canonical=encodeRegions(parseRegions(regions));const auto signature=Json({key,expected,canonical,actor,reviewed}).dump();
+      |                                                                                                                      ^~~~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp:39:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   39 |  if(!reviewed)throw std::runtime_error("ZONES.REVIEW_REQUIRED");if(c.at("history").size()>=100||data_.at("commands").size()>=4096)throw std::runtime_error("ZONES.STORE_CAPACITY");
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/store.cpp:39:65: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   39 |  if(!reviewed)throw std::runtime_error("ZONES.REVIEW_REQUIRED");if(c.at("history").size()>=100||data_.at("commands").size()>=4096)throw std::runtime_error("ZONES.STORE_CAPACITY");
+      |                                                                 ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/zone_server.cpp: In member function ‘void astribot_navigation_zones::ZoneServer::selectContext()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/zone_server.cpp:29:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   29 |  if(!fresh("map"))return;const auto &map=observed_.at("map").data;
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/zone_server.cpp:29:26: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   29 |  if(!fresh("map"))return;const auto &map=observed_.at("map").data;
+      |                          ^~~~~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/zone_layer.cpp: In member function ‘virtual void astribot_navigation_zones::ZoneLayer::updateCosts(nav2_costmap_2d::Costmap2D&, int, int, int, int)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/zone_layer.cpp:15:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   15 |  if(stamp>0&&(age>.5||age<-.1))throw std::runtime_error("ZONES.TF_STALE");const auto&q=transform.transform.rotation;tx=transform.transform.translation.x;ty=transform.transform.translation.y;yaw=std::atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/src/zone_layer.cpp:15:75: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   15 |  if(stamp>0&&(age>.5||age<-.1))throw std::runtime_error("ZONES.TF_STALE");const auto&q=transform.transform.rotation;tx=transform.transform.translation.x;ty=transform.transform.translation.y;yaw=std::atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
+      |                                                                           ^~~~~
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/test_ros.cpp:2:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/../src/zone_server.cpp: In member function ‘void astribot_navigation_zones::ZoneServer::selectContext()’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/../src/zone_server.cpp:29:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   29 |  if(!fresh("map"))return;const auto &map=observed_.at("map").data;
+      |  ^~
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_navigation_zones/test/../src/zone_server.cpp:29:26: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   29 |  if(!fresh("map"))return;const auto &map=observed_.at("map").data;
+      |                          ^~~~~
+---
+Finished <<< astribot_navigation_zones [35.4s]
+Starting >>> astribot_s1_navigation_policy_native
+[35.735s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_navigation_msgs
+- astribot_operator_msgs
+- astribot_s1_robot_geometry
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_navigation_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_navigation_msgs astribot_operator_msgs astribot_s1_robot_geometry
+Starting >>> astribot_s1_task_arbiter_native
+[35.745s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_navigation_msgs
+- astribot_operator_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_navigation_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_navigation_msgs astribot_operator_msgs
+--- stderr: astribot_s1_navigation_policy_native
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/fixed_envelope_core.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/fixed_envelope_core.hpp:9:10: fatal error: astribot_navigation_msgs/msg/arm_hold_status.hpp: 没有那个文件或目录
+    9 | #include <astribot_navigation_msgs/msg/arm_hold_status.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/fixed_envelope_core.dir/build.make:76：CMakeFiles/fixed_envelope_core.dir/src/fixed_envelope_core.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:578：CMakeFiles/fixed_envelope_core.dir/all] 错误 2
+gmake[1]: *** 正在等待未完成的任务....
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp: In function ‘std::vector<double> astribot::navigation::scan_coverage(const std::vector<double>&, double, double, double, double, double)’:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_math.cpp:304:69: warning: suggest parentheses around ‘&&’ within ‘||’ [-Wparentheses]
+  304 |         (std::isfinite(ranges[index]) && range_min <= ranges[index] &&
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+  305 |              ranges[index] <= range_max || ranges[index] == INFINITY);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~                              
+gmake: *** [Makefile:146：all] 错误 2
+---
+Failed   <<< astribot_s1_navigation_policy_native [6.50s, exited with code 2]
+Aborted  <<< astribot_s1_task_arbiter_native [14.4s]
+
+Summary: 4 packages finished [50.1s]
+  1 package failed: astribot_s1_navigation_policy_native
+  1 package aborted: astribot_s1_task_arbiter_native
+  3 packages had stderr output: astribot_navigation_zones astribot_s1_navigation_policy_native astribot_trajectory_bridge_native
+  1 package not processed

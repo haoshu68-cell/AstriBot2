@@ -7,6 +7,7 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <astribot_slam_msgs/msg/keyframe_pose_array.hpp>
 #include <future>
+#include "astribot_navigation_zones/client.hpp"
 
 namespace astribot_s1_autonomy {
 class MappingSession : public rclcpp::Node {
@@ -15,7 +16,9 @@ class MappingSession : public rclcpp::Node {
   using Set = rcl_interfaces::srv::SetParameters;
   using Trigger = std_srvs::srv::Trigger;
   std::string state_{"IDLE"}, detail_, end_reason_;
+  const std::string session_id_{"slam_"+std::to_string(std::chrono::system_clock::now().time_since_epoch().count())};
   fs::path directory_;
+  bool require_zones_{false};astribot_navigation_zones::Client zones_;nlohmann::json archived_zones_;
   Clock::time_point deadline_, odom_at_{}, still_since_{}, next_status_{};
   bool pending_{false}, finish_sent_{false}, final_seen_{false};
   size_t samples_{0}, updates_{0};
@@ -38,7 +41,7 @@ class MappingSession : public rclcpp::Node {
   }
   void publish() {
     std_msgs::msg::String message;
-    message.data = nlohmann::json({{"state", state_}, {"detail", detail_},
+    message.data = nlohmann::json({{"state", state_}, {"session_id",session_id_}, {"detail", detail_},
       {"directory", directory_.string()}, {"finish_sent", finish_sent_}, {"exploration_outcome", end_reason_}}).dump();
     status_->publish(message);
   }
@@ -101,6 +104,8 @@ class MappingSession : public rclcpp::Node {
       }); request_id_ = result.request_id;
     }
     if (state_ == "WAIT_FINISH" && stopped() && set_->service_is_ready()) {
+      if(require_zones_){auto z=zones_.get();if(!z||z->context!="mapping:"+session_id_){detail_="Waiting for current navigation zones snapshot";return;}
+        archived_zones_={{"schema_version",1},{"frame","map"},{"context_id",z->context},{"revision",z->revision},{"regions",astribot_navigation_zones::encodeRegions(z->regions)}};}
       status("FINALIZING", "Submitting finish; this ends the current SLAM session");
       finish_sent_ = true; pending_ = true;
       auto request = std::make_shared<Set::Request>();
@@ -120,8 +125,9 @@ class MappingSession : public rclcpp::Node {
     }
     if (state_ == "FINALIZING" && final_seen_ && !pending_) {
       const auto dir = directory_; const auto updates = updates_; const auto reason = end_reason_;
-      inspection_ = std::async(std::launch::async, [dir, updates, reason] {
-        try {auto manifest = inspectSession(dir); manifest["exploration_outcome"] = reason;
+      const auto zones=archived_zones_;
+      inspection_ = std::async(std::launch::async, [dir, updates, reason,zones] {
+        try {auto manifest = inspectSession(dir); manifest["exploration_outcome"] = reason;if(!zones.is_null())manifest["navigation_zones"]=zones;
           commitSession(dir, manifest, updates); return std::string();}
         catch (const std::exception & e) {return std::string(e.what());}
       });
@@ -129,6 +135,7 @@ class MappingSession : public rclcpp::Node {
   }
 public:
   explicit MappingSession(const rclcpp::NodeOptions & options = rclcpp::NodeOptions()) : Node("mapping_session", options) {
+    require_zones_=declare_parameter("require_navigation_zones",false);if(require_zones_)zones_.init(*this);
     timeout_ = declare_parameter("save_timeout_sec", 120.0);
     settle_sec_ = declare_parameter("settle_sec", 0.5);
     odom_timeout_ = declare_parameter("odom_timeout_sec", 0.3);

@@ -1,0 +1,28 @@
+.......................F.........                                        [100%]
+=================================== FAILURES ===================================
+_ test_humble_camera_info_retains_original_coefficient_rejection[cpp-runtime_config0] _
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7e89ea1c9300>
+
+    @pytest.mark.parametrize('runtime_config',[{'observation_sources':json.dumps([POINT_CLOUD_SOURCE])}],indirect=True)
+    def test_humble_camera_info_retains_original_coefficient_rejection(runtime):
+        runtime.seed();assert not runtime.tick()['required_sensors_valid']
+        cloud=PointCloud2();cloud.header.frame_id='odom';cloud.header.stamp=stamp(runtime.ns);cloud.width=2;cloud.height=1;cloud.point_step=12;cloud.row_step=24
+        cloud.fields=[PointField(name=n,offset=i*4,datatype=PointField.FLOAT32,count=1) for i,n in enumerate(('x','y','z'))];cloud.data=struct.pack('<ffffff',.7,-.1,.2,.8,.1,.4)
+        runtime.cloud_pub.publish(cloud);runtime.drain();first=runtime.tick();assert first['vision_count']==0 and first['errors']==1
+        info=CameraInfo();info.header.frame_id='optical';info.width=2**32-1;info.height=10;info.k=[1.,0.,0.,0.,1.,0.,0.,0.,1.];info.distortion_model='plumb_bob'
+        runtime.info_pub.publish(info);runtime.drain();runtime.sensors();cloud.header.stamp=stamp(runtime.ns);runtime.cloud_pub.publish(cloud);runtime.drain()
+        # Humble's Python wire type exposes K as numpy.float64 values. The existing
+        # strict coefficient contract rejects them; a migration must not silently
+        # make this required source valid. The separate typed registry tests cover
+        # accepted built-in float coefficients and epoch changes.
+        value=runtime.tick();assert value['vision_count']==0 and not value['inputs_valid'] and value['errors']==2
+        info.width=123;runtime.info_pub.publish(info);runtime.drain();runtime.sensors();cloud.header.stamp=stamp(runtime.ns);runtime.cloud_pub.publish(cloud);runtime.drain();assert runtime.tick()['vision_count']==0
+>       assert all(all(s.sensor_id!='depth' for s in h.sensors) for h in runtime.health)
+E       assert False
+E        +  where False = all(<generator object test_humble_camera_info_retains_original_coefficient_rejection.<locals>.<genexpr> at 0x7e89f058f0d0>)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:305: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_humble_camera_info_retains_original_coefficient_rejection[cpp-runtime_config0]
+1 failed, 32 passed, 33 deselected in 15.70s

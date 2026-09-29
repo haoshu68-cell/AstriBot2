@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="12" skipped="0" tests="14" time="18.700" timestamp="2026-09-21T15:59:26.115100" hostname="sh-xf2731"><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_joint_speed_percentage_changes_on_timer_without_new_joint_callback" time="1.903"><failure message="AssertionError: cpp same classification, timer must read updated percentage: expected 27.0, observed [50.0, 50.0]&#10;assert [50.0, 50.0] == [27.0, 27.0]&#10;  At index 0 diff: 50.0 != 27.0&#10;  Full diff:&#10;  - [27.0, 27.0]&#10;  + [50.0, 50.0]">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x72473be66a70&gt;
+
+    def test_joint_speed_percentage_changes_on_timer_without_new_joint_callback(pair):
+        pair.expect(50.0, 'initial extended')
+        pair.joints_enabled = False
+        pair.set(extended_speed_limit_pct=27.0)
+&gt;       pair.expect(27.0, 'same classification, timer must read updated percentage')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x72473be66a70&gt;
+expected = 27.0
+label = 'same classification, timer must read updated percentage'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp same classification, timer must read updated percentage: expected 27.0, observed [50.0, 50.0]
+E           assert [50.0, 50.0] == [27.0, 27.0]
+E             At index 0 diff: 50.0 != 27.0
+E             Full diff:
+E             - [27.0, 27.0]
+E             + [50.0, 50.0]
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_joint_reference_update_changes_classification" time="1.779"><failure message="AssertionError: cpp new folded reference: expected 0.0, observed [50.0, 50.0]&#10;assert [50.0, 50.0] == [0.0, 0.0]&#10;  At index 0 diff: 50.0 != 0.0&#10;  Full diff:&#10;  - [0.0, 0.0]&#10;  + [50.0, 50.0]&#10;  ?  +     +">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7247385b6560&gt;
+
+    def test_joint_reference_update_changes_classification(pair):
+        pair.expect(50.0, 'initial extended')
+        pair.set(folded_reference_rad=[0.8] + [0.0] * 13)
+&gt;       pair.expect(0.0, 'new folded reference')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7247385b6560&gt;
+expected = 0.0, label = 'new folded reference'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp new folded reference: expected 0.0, observed [50.0, 50.0]
+E           assert [50.0, 50.0] == [0.0, 0.0]
+E             At index 0 diff: 50.0 != 0.0
+E             Full diff:
+E             - [0.0, 0.0]
+E             + [50.0, 50.0]
+E             ?  +     +
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_joint_threshold_update_changes_classification" time="1.763"><failure message="AssertionError: cpp new joint threshold: expected 0.0, observed [50.0, 50.0]&#10;assert [50.0, 50.0] == [0.0, 0.0]&#10;  At index 0 diff: 50.0 != 0.0&#10;  Full diff:&#10;  - [0.0, 0.0]&#10;  + [50.0, 50.0]&#10;  ?  +     +">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7247384c5120&gt;
+
+    def test_joint_threshold_update_changes_classification(pair):
+        pair.expect(50.0, 'initial extended')
+        pair.set(extended_threshold_rad=1.0)
+&gt;       pair.expect(0.0, 'new joint threshold')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:238: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7247384c5120&gt;
+expected = 0.0, label = 'new joint threshold'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp new joint threshold: expected 0.0, observed [50.0, 50.0]
+E           assert [50.0, 50.0] == [0.0, 0.0]
+E             At index 0 diff: 50.0 != 0.0
+E             Full diff:
+E             - [0.0, 0.0]
+E             + [50.0, 50.0]
+E             ?  +     +
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_frame_update_changes_tf_origin" time="1.728"><failure message="AssertionError: cpp offset chassis frame yields 0.2 m: expected 0.0, observed [50.0, 50.0]&#10;assert [50.0, 50.0] == [0.0, 0.0]&#10;  At index 0 diff: 50.0 != 0.0&#10;  Full diff:&#10;  - [0.0, 0.0]&#10;  + [50.0, 50.0]&#10;  ?  +     +">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x72473885c490&gt;
+
+    def test_reach_frame_update_changes_tf_origin(pair):
+        pair.expect(50.0, 'initial extended at 0.7 m')
+        pair.set(chassis_base_frame=pair.frame('offset_base'))
+&gt;       pair.expect(0.0, 'offset chassis frame yields 0.2 m')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:244: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x72473885c490&gt;
+expected = 0.0, label = 'offset chassis frame yields 0.2 m'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp offset chassis frame yields 0.2 m: expected 0.0, observed [50.0, 50.0]
+E           assert [50.0, 50.0] == [0.0, 0.0]
+E             At index 0 diff: 50.0 != 0.0
+E             Full diff:
+E             - [0.0, 0.0]
+E             + [50.0, 50.0]
+E             ?  +     +
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_monitored_links_update_changes_tf_selection" time="1.726"><failure message="AssertionError: cpp selected short link is 0.2 m: expected 0.0, observed [50.0, 50.0]&#10;assert [50.0, 50.0] == [0.0, 0.0]&#10;  At index 0 diff: 50.0 != 0.0&#10;  Full diff:&#10;  - [0.0, 0.0]&#10;  + [50.0, 50.0]&#10;  ?  +     +">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7247386af850&gt;
+
+    def test_reach_monitored_links_update_changes_tf_selection(pair):
+        pair.expect(50.0, 'initial long link')
+        pair.set(monitored_links=[pair.frame('short')])
+&gt;       pair.expect(0.0, 'selected short link is 0.2 m')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:250: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7247386af850&gt;
+expected = 0.0, label = 'selected short link is 0.2 m'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp selected short link is 0.2 m: expected 0.0, observed [50.0, 50.0]
+E           assert [50.0, 50.0] == [0.0, 0.0]
+E             At index 0 diff: 50.0 != 0.0
+E             Full diff:
+E             - [0.0, 0.0]
+E             + [50.0, 50.0]
+E             ?  +     +
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_threshold_update_changes_classification" time="1.745"><failure message="AssertionError: cpp 0.7 m is below new release threshold: expected 0.0, observed [50.0, 50.0]&#10;assert [50.0, 50.0] == [0.0, 0.0]&#10;  At index 0 diff: 50.0 != 0.0&#10;  Full diff:&#10;  - [0.0, 0.0]&#10;  + [50.0, 50.0]&#10;  ?  +     +">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7247385b0be0&gt;
+
+    def test_reach_threshold_update_changes_classification(pair):
+        pair.expect(50.0, 'initial 0.7 m exceeds 0.64 m')
+        pair.set(extended_reach_m=0.9)
+&gt;       pair.expect(0.0, '0.7 m is below new release threshold')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7247385b0be0&gt;
+expected = 0.0, label = '0.7 m is below new release threshold'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp 0.7 m is below new release threshold: expected 0.0, observed [50.0, 50.0]
+E           assert [50.0, 50.0] == [0.0, 0.0]
+E             At index 0 diff: 50.0 != 0.0
+E             Full diff:
+E             - [0.0, 0.0]
+E             + [50.0, 50.0]
+E             ?  +     +
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_hysteresis_update_preserves_previous_classification" time="2.126"><failure message="AssertionError: cpp 0.62 m falls below updated 0.63 m release threshold: expected 0.0, observed [50.0, 50.0]&#10;assert [50.0, 50.0] == [0.0, 0.0]&#10;  At index 0 diff: 50.0 != 0.0&#10;  Full diff:&#10;  - [0.0, 0.0]&#10;  + [50.0, 50.0]&#10;  ?  +     +">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x7247385b35e0&gt;
+
+    def test_reach_hysteresis_update_preserves_previous_classification(pair):
+        pair.expect(50.0, 'initial extended')
+        pair.reach = 0.62
+        pair.expect(50.0, '0.62 m remains inside original extended hysteresis band')
+        pair.set(extended_reach_hysteresis_m=0.01)
+&gt;       pair.expect(0.0, '0.62 m falls below updated 0.63 m release threshold')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:264: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x7247385b35e0&gt;
+expected = 0.0, label = '0.62 m falls below updated 0.63 m release threshold'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp 0.62 m falls below updated 0.63 m release threshold: expected 0.0, observed [50.0, 50.0]
+E           assert [50.0, 50.0] == [0.0, 0.0]
+E             At index 0 diff: 50.0 != 0.0
+E             Full diff:
+E             - [0.0, 0.0]
+E             + [50.0, 50.0]
+E             ?  +     +
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_stale_tf_keeps_fail_closed_behavior" time="1.962" /><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_reach_missing_updated_link_fails_closed" time="1.731"><failure message="AssertionError: cpp missing newly selected TF must restrict speed: expected 50.0, observed [0.0, 0.0]&#10;assert [0.0, 0.0] == [50.0, 50.0]&#10;  At index 0 diff: 0.0 != 50.0&#10;  Full diff:&#10;  - [50.0, 50.0]&#10;  ?  -     -&#10;  + [0.0, 0.0]">pair = &lt;test_arm_dynamic_parameters.Pair object at 0x72473880eaa0&gt;
+
+    def test_reach_missing_updated_link_fails_closed(pair):
+        pair.reach = 0.2
+        pair.expect(0.0, 'fresh short reach')
+        pair.set(monitored_links=[pair.frame('missing')])
+&gt;       pair.expect(50.0, 'missing newly selected TF must restrict speed')
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:281: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;test_arm_dynamic_parameters.Pair object at 0x72473880eaa0&gt;
+expected = 50.0, label = 'missing newly selected TF must restrict speed'
+
+    def expect(self, expected, label):
+        # Wait for multiple *fresh* output samples after the transition; checking
+        # only final values could accidentally read a sample preceding an update.
+        starts = {key: len(value) for key, value in self.values.items()}
+        self.pump(0.4)
+        observed = {key: values[starts[key]:] for key, values in self.values.items()}
+        self.steps.append({'case': label, 'expected': expected, 'observed': observed})
+        for key, values in observed.items():
+            assert len(values) &gt;= 2, '{} did not republish current state'.format(key)
+            assert all(v['percentage'] for v in values)
+            actual = [v['speed_limit'] for v in values[-2:]]
+&gt;           assert actual == [expected, expected], '{} {}: expected {}, observed {}'.format(
+                key, label, expected, actual)
+E           AssertionError: cpp missing newly selected TF must restrict speed: expected 50.0, observed [0.0, 0.0]
+E           assert [0.0, 0.0] == [50.0, 50.0]
+E             At index 0 diff: 0.0 != 50.0
+E             Full diff:
+E             - [50.0, 50.0]
+E             ?  -     -
+E             + [0.0, 0.0]
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:175: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_joint_metric_and_timer_stay_construction_parameters" time="2.079" /><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_invalid_startup_parameter_reports_failure[reach_tf_timeout_sec-0.0-python]" time="0.003"><failure message="AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']&#10; +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x724734327050&gt;()&#10; +    where &lt;built-in method encode of str object at 0x724734327050&gt; = ('ROS_DOMAIN_ID=' + '118').encode">implementation = 'python', parameter = 'reach_tf_timeout_sec', value = '0.0'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-13/test_invalid_startup_parameter0')
+
+    @pytest.mark.parametrize('implementation', ('python', 'cpp'))
+    @pytest.mark.parametrize('parameter,value', (
+        ('reach_tf_timeout_sec', '0.0'), ('check_period', '-0.1')))
+    def test_invalid_startup_parameter_reports_failure(implementation, parameter, value, tmp_path):
+        cpp = os.environ.get('ASTRIBOT_ARM_LIMITER_CPP', '')
+        assert cpp and Path(cpp).is_file(), 'Set ASTRIBOT_ARM_LIMITER_CPP'
+        name = 'invalid_startup_' + parameter + '_' + implementation
+        output = Path(os.environ.get('ASTRIBOT_ARM_PARAMETER_EVIDENCE', str(tmp_path))) / name
+        output.mkdir(parents=True, exist_ok=True)
+        command = ([sys.executable, str(Path(__file__).resolve()), '--oracle']
+                   if implementation == 'python' else [cpp])
+        command += ['--ros-args', '-r', '__ns:=/arm_invalid_' + uuid.uuid4().hex[:10],
+                    '-p', parameter + ':=' + value]
+        env = os.environ.copy()
+        env.update(ROS_DOMAIN_ID=os.environ.get('ASTRIBOT_ARM_PARAMETER_DOMAIN', '118'),
+                   ROS_LOCALHOST_ONLY='1', ROS_LOG_DIR=str(output / 'ros_logs'),
+                   ASTRIBOT_BRIDGE_NATIVE_KERNELS='0')
+        child = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            environ = Path('/proc', str(child.pid), 'environ').read_bytes().split(b'\0')
+&gt;           assert ('ROS_DOMAIN_ID=' + env['ROS_DOMAIN_ID']).encode() in environ
+E           AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']
+E            +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x724734327050&gt;()
+E            +    where &lt;built-in method encode of str object at 0x724734327050&gt; = ('ROS_DOMAIN_ID=' + '118').encode
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:316: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_invalid_startup_parameter_reports_failure[reach_tf_timeout_sec-0.0-cpp]" time="0.002"><failure message="AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']&#10; +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x72473437f410&gt;()&#10; +    where &lt;built-in method encode of str object at 0x72473437f410&gt; = ('ROS_DOMAIN_ID=' + '118').encode">implementation = 'cpp', parameter = 'reach_tf_timeout_sec', value = '0.0'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-13/test_invalid_startup_parameter1')
+
+    @pytest.mark.parametrize('implementation', ('python', 'cpp'))
+    @pytest.mark.parametrize('parameter,value', (
+        ('reach_tf_timeout_sec', '0.0'), ('check_period', '-0.1')))
+    def test_invalid_startup_parameter_reports_failure(implementation, parameter, value, tmp_path):
+        cpp = os.environ.get('ASTRIBOT_ARM_LIMITER_CPP', '')
+        assert cpp and Path(cpp).is_file(), 'Set ASTRIBOT_ARM_LIMITER_CPP'
+        name = 'invalid_startup_' + parameter + '_' + implementation
+        output = Path(os.environ.get('ASTRIBOT_ARM_PARAMETER_EVIDENCE', str(tmp_path))) / name
+        output.mkdir(parents=True, exist_ok=True)
+        command = ([sys.executable, str(Path(__file__).resolve()), '--oracle']
+                   if implementation == 'python' else [cpp])
+        command += ['--ros-args', '-r', '__ns:=/arm_invalid_' + uuid.uuid4().hex[:10],
+                    '-p', parameter + ':=' + value]
+        env = os.environ.copy()
+        env.update(ROS_DOMAIN_ID=os.environ.get('ASTRIBOT_ARM_PARAMETER_DOMAIN', '118'),
+                   ROS_LOCALHOST_ONLY='1', ROS_LOG_DIR=str(output / 'ros_logs'),
+                   ASTRIBOT_BRIDGE_NATIVE_KERNELS='0')
+        child = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            environ = Path('/proc', str(child.pid), 'environ').read_bytes().split(b'\0')
+&gt;           assert ('ROS_DOMAIN_ID=' + env['ROS_DOMAIN_ID']).encode() in environ
+E           AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']
+E            +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x72473437f410&gt;()
+E            +    where &lt;built-in method encode of str object at 0x72473437f410&gt; = ('ROS_DOMAIN_ID=' + '118').encode
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:316: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_invalid_startup_parameter_reports_failure[check_period--0.1-python]" time="0.003"><failure message="AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']&#10; +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x7247343110c0&gt;()&#10; +    where &lt;built-in method encode of str object at 0x7247343110c0&gt; = ('ROS_DOMAIN_ID=' + '118').encode">implementation = 'python', parameter = 'check_period', value = '-0.1'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-13/test_invalid_startup_parameter2')
+
+    @pytest.mark.parametrize('implementation', ('python', 'cpp'))
+    @pytest.mark.parametrize('parameter,value', (
+        ('reach_tf_timeout_sec', '0.0'), ('check_period', '-0.1')))
+    def test_invalid_startup_parameter_reports_failure(implementation, parameter, value, tmp_path):
+        cpp = os.environ.get('ASTRIBOT_ARM_LIMITER_CPP', '')
+        assert cpp and Path(cpp).is_file(), 'Set ASTRIBOT_ARM_LIMITER_CPP'
+        name = 'invalid_startup_' + parameter + '_' + implementation
+        output = Path(os.environ.get('ASTRIBOT_ARM_PARAMETER_EVIDENCE', str(tmp_path))) / name
+        output.mkdir(parents=True, exist_ok=True)
+        command = ([sys.executable, str(Path(__file__).resolve()), '--oracle']
+                   if implementation == 'python' else [cpp])
+        command += ['--ros-args', '-r', '__ns:=/arm_invalid_' + uuid.uuid4().hex[:10],
+                    '-p', parameter + ':=' + value]
+        env = os.environ.copy()
+        env.update(ROS_DOMAIN_ID=os.environ.get('ASTRIBOT_ARM_PARAMETER_DOMAIN', '118'),
+                   ROS_LOCALHOST_ONLY='1', ROS_LOG_DIR=str(output / 'ros_logs'),
+                   ASTRIBOT_BRIDGE_NATIVE_KERNELS='0')
+        child = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            environ = Path('/proc', str(child.pid), 'environ').read_bytes().split(b'\0')
+&gt;           assert ('ROS_DOMAIN_ID=' + env['ROS_DOMAIN_ID']).encode() in environ
+E           AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']
+E            +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x7247343110c0&gt;()
+E            +    where &lt;built-in method encode of str object at 0x7247343110c0&gt; = ('ROS_DOMAIN_ID=' + '118').encode
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:316: AssertionError</failure></testcase><testcase classname="ws_robot.src.astribot_trajectory_bridge_native.test.test_arm_dynamic_parameters" name="test_invalid_startup_parameter_reports_failure[check_period--0.1-cpp]" time="0.002"><failure message="AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']&#10; +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x72473437ca30&gt;()&#10; +    where &lt;built-in method encode of str object at 0x72473437ca30&gt; = ('ROS_DOMAIN_ID=' + '118').encode">implementation = 'cpp', parameter = 'check_period', value = '-0.1'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-13/test_invalid_startup_parameter3')
+
+    @pytest.mark.parametrize('implementation', ('python', 'cpp'))
+    @pytest.mark.parametrize('parameter,value', (
+        ('reach_tf_timeout_sec', '0.0'), ('check_period', '-0.1')))
+    def test_invalid_startup_parameter_reports_failure(implementation, parameter, value, tmp_path):
+        cpp = os.environ.get('ASTRIBOT_ARM_LIMITER_CPP', '')
+        assert cpp and Path(cpp).is_file(), 'Set ASTRIBOT_ARM_LIMITER_CPP'
+        name = 'invalid_startup_' + parameter + '_' + implementation
+        output = Path(os.environ.get('ASTRIBOT_ARM_PARAMETER_EVIDENCE', str(tmp_path))) / name
+        output.mkdir(parents=True, exist_ok=True)
+        command = ([sys.executable, str(Path(__file__).resolve()), '--oracle']
+                   if implementation == 'python' else [cpp])
+        command += ['--ros-args', '-r', '__ns:=/arm_invalid_' + uuid.uuid4().hex[:10],
+                    '-p', parameter + ':=' + value]
+        env = os.environ.copy()
+        env.update(ROS_DOMAIN_ID=os.environ.get('ASTRIBOT_ARM_PARAMETER_DOMAIN', '118'),
+                   ROS_LOCALHOST_ONLY='1', ROS_LOG_DIR=str(output / 'ros_logs'),
+                   ASTRIBOT_BRIDGE_NATIVE_KERNELS='0')
+        child = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            environ = Path('/proc', str(child.pid), 'environ').read_bytes().split(b'\0')
+&gt;           assert ('ROS_DOMAIN_ID=' + env['ROS_DOMAIN_ID']).encode() in environ
+E           AssertionError: assert b'ROS_DOMAIN_ID=118' in [b'']
+E            +  where b'ROS_DOMAIN_ID=118' = &lt;built-in method encode of str object at 0x72473437ca30&gt;()
+E            +    where &lt;built-in method encode of str object at 0x72473437ca30&gt; = ('ROS_DOMAIN_ID=' + '118').encode
+
+ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py:316: AssertionError</failure></testcase></testsuite></testsuites>

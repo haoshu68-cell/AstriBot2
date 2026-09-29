@@ -15,6 +15,7 @@ struct InventoryModel {uint64_t id;bool robot_member,is_static;};
 struct InventoryPlugin {uint64_t entity;std::string name,filename;};
 struct InventorySnapshot {
   bool world_present=false,world_metadata=false,model_metadata_missing=false,background_matches=false,robot_structure_matches=false;
+  uint64_t world_entity=0;
   unsigned robot_count=0,detachable_joints=0,external_joints=0;
   std::vector<InventoryModel> models;
   std::vector<InventoryPlugin> plugins;
@@ -25,7 +26,10 @@ inline std::string library_name(std::string value) {
   const auto so=value.find(".so");if(so!=std::string::npos)value.erase(so);
   return value;
 }
-inline bool known_nonattachment_plugin(const InventoryPlugin &p) {
+inline bool known_nonattachment_plugin(const InventoryPlugin &p,uint64_t world_entity) {
+  if(p.name=="astribot::HeightSliceMap")
+    return world_entity!=0 && p.entity==world_entity &&
+      p.filename.substr(p.filename.find_last_of('/')+1)=="libastribot_height_slice_map.so";
   auto lib=library_name(p.filename);auto name=p.name;
   if(name.rfind("gz::sim::",0)==0)name.replace(0,9,"ignition::gazebo::");
   if(lib.rfind("gz-sim-",0)==0)lib.replace(0,7,"ignition-gazebo-");
@@ -39,6 +43,7 @@ inline bool known_nonattachment_plugin(const InventoryPlugin &p) {
     {"ignition::gazebo::systems::PosePublisher","ignition-gazebo-pose-publisher-system"},
     {"ignition::gazebo::systems::JointStatePublisher","ignition-gazebo-joint-state-publisher-system"},
     {"gz_ros2_control::GazeboSimROS2ControlPlugin","gz_ros2_control-system"},
+    {"astribot::ContactEvidence","astribot_contact_evidence"},
     {"astribot::EmptyInventory","astribot_empty_inventory"}};
   return allowed.count({name,lib});
 }
@@ -63,7 +68,7 @@ inline std::string empty_inventory_reason(const InventorySnapshot &s) {
     if(!m.id || !ids.insert(m.id).second)return "DUPLICATE_MODEL_ID";
     if(!m.robot_member && !m.is_static)return "UNSUPPORTED_DYNAMIC_MODEL";
   }
-  for(const auto &p:s.plugins)if(!known_nonattachment_plugin(p))return "UNSUPPORTED_SYSTEM_PLUGIN";
+  for(const auto &p:s.plugins)if(!known_nonattachment_plugin(p,s.world_entity))return "UNSUPPORTED_SYSTEM_PLUGIN";
   return "EMPTY_INVENTORY_OBSERVED";
 }
 struct Version {uint64_t clock_epoch=0,sequence=0,revision=0;};

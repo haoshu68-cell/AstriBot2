@@ -1,0 +1,95 @@
+{
+  "W0": {
+    "state": "passed_pinned_simulation_baseline",
+    "current_round_start": "2026-09-22T00:31:05.111172+08:00",
+    "deadline": "2026-09-22T02:01:05.111172+08:00",
+    "scope": "frozen installed simulation baseline, not arbitrary version ABI support",
+    "passed": [
+      "frozen runtime manifest matches",
+      "explicit wrong overlay rejected before spawn",
+      "source drift detected separately",
+      "verified orphan cleanup; mismatched identity refused",
+      "paused clock revokes head/torso health",
+      "clock rewind changes head/torso epochs and remains invalid with no fresh data"
+    ],
+    "failed": [
+      "Gazebo time-only reset did not automatically recover images within 15 seconds"
+    ],
+    "pending": [],
+    "completed_at": "2026-09-22T00:52:43.971536+08:00"
+  },
+  "W1": {
+    "state": "paused_timeout",
+    "pending": [
+      "Load newly built map/exploration overlay, freeze runtime assets and verify live map context + all zone ACKs before navigation",
+      "Use canonical corridor scene and require physical geometry samples before movement; rerun MPPI fixed-posture motion",
+      "Full W1 per-role ROI/coverage, source/TF/restart/clock fault matrix, stage latency/queue peaks and 30 min combined load",
+      "Install and verify scoped wrist launch DDS update; full task-stage C++ client and unique provider admission"
+    ],
+    "started": "2026-09-22T00:52:43.971536+08:00",
+    "deadline": "2026-09-22T02:22:43.971536+08:00",
+    "passed": [
+      "C++ session core 6 tests",
+      "activation health 17 tests before epoch hardening",
+      "Gazebo dual-wrist service 24 checks with 31/30 clouds",
+      "six-camera launch forwarding 2 offline checks",
+      "C++ old-frame activation regression now rejected",
+      "C++ delayed /clock image regression: forward only after clock catches up",
+      "8 live ROS node tests for session data forwarding, expiry, release and rollback",
+      "full navigation P4 lifecycle active with SLAM and six cameras",
+      "Final C++ four-suite regression: 52 cases (projection 18, health 19, core lease 7, ROS lease forwarding 8)",
+      "Both compact arm trajectories completed in actual Gazebo before navigation admission failed",
+      "Final v6 C++ regression: 53 cases (18 projection, 20 health, 7 lease core, 8 ROS forwarding); 4 CTest groups pass",
+      "Current path-tracking overlay builds and 6 CTest groups pass; fixed_v2/off rejected before spawn",
+      "600 s DDS comparison: no STALE/RATE_LOW on all four RGB-D sources; 11 wrist inactive samples remain in old v3",
+      "v5 600 s capture: no post-warmup inactive samples; 7 STALE samples across four cameras, so no freshness acceptance",
+      "Final v6 600 s sampled freshness: all four RGB-D sources zero invalid samples after 2 s warmup; maximum health gap 69.16 ms. Static-map/SLAM-compute and failed navigation admission scope, no MPPI motion",
+      "620 s camera capture overlapping 600 s real C++ CUDA GraspNet compute: all four RGB-D zero invalid sampled health after warmup; 296 successful workers, one end-of-window budget cancellation. Frozen cloud, no live grasp or motion validation.",
+      "Owned final navigation supervisor stopped with remaining_owned_pids=[]; camera probes cleaned owned children",
+      "Current exploration dependency built in isolated map overlay; original failed map build preserved",
+      "After rebuilding exploration and clearing the stale CMake cache, current map manager built successfully in 38.2 s; static map context CTest passed in 3.23 s (two C++ test cases). No live Nav2 reintegration run."
+    ],
+    "failed": [
+      "600 s baseline: head 2 STALE and right wrist 1 STALE after warmup; not continuously healthy",
+      "new session accepted buffered old images: reproduced; capture generation fix under test",
+      "v3 relay default DDS: complete forwarding counters but downstream loss remains; camera profile comparison running",
+      "live renewal rejected caller clock 1 ms ahead; bounded original-request retry now used",
+      "Moving MPPI attempt sent zero navigation goals: envelope consumers missing ACK; controller/planner loaded legacy root-install path-tracking library with no navigation_geometry_mode support",
+      "Final navigation attempt: envelope ACK handshake and compact preparation succeeded; one navigation goal rejected. Live zones status ZONES.NO_CONTEXT; installed map manager lacks simulation_static_map_yaml. No MPPI motion acceptance.",
+      "Corridor probe had no social_sim physical geometry stream; legacy outer summary masked ACTION_REJECTED with sample timeout. Reporting reordered and saved failure replay checked.",
+      "Current map manager isolated build blocked by stale exploration install lacking session_archive.hpp; upstream dependency rebuild underway",
+      "First dependency retry still used old exploration CMake cache; explicitly reconfigured with current isolated prefix, bounded final build running"
+    ],
+    "paused_at": "2026-09-22T02:23:10.283772+08:00",
+    "stop_reason": "90 minute W1 wall-clock budget exhausted; no new implementation or validation after deadline; final bookkeeping only"
+  },
+  "W2": {
+    "state": "pending"
+  },
+  "W3": {
+    "state": "pending",
+    "historical": "5/7 known-CAD fixture scenes accepted; multiview pending"
+  },
+  "W4": {
+    "state": "pending"
+  },
+  "W5": {
+    "state": "pending",
+    "historical": "9/9 static transport service plans; original task contexts pending"
+  },
+  "W6": {
+    "state": "pending",
+    "historical": "56 native voxel marking/clear cases; warehouse coverage matrix pending"
+  },
+  "W7": {
+    "state": "pending"
+  },
+  "W8": {
+    "state": "deferred",
+    "reason": "full dynamic pick/carry/place and hardware outside current authorized scope"
+  },
+  "W9": {
+    "state": "pending",
+    "note": "cross-cutting C++ migration and endurance"
+  }
+}

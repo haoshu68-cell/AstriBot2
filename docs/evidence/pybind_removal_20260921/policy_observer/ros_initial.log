@@ -1,0 +1,46 @@
+...F.F.F.F....                                                           [100%]
+=================================== FAILURES ===================================
+________________ test_fresh_empty_scan_stale_and_recovery[cpp] _________________
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7301242bdb40>
+
+    def test_fresh_empty_scan_stale_and_recovery(runtime):
+>       runtime.seed();value=runtime.tick();assert value['scan_count']==1 and value['inputs_valid']
+E       assert (0 == 1)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:140: AssertionError
+________________ test_scan_obstacle_and_clearing_evidence[cpp] _________________
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7301243b37c0>
+
+    def test_scan_obstacle_and_clearing_evidence(runtime):
+>       runtime.seed(.3);first=runtime.tick();assert first['tracks']>0 and first['risk']['blocked']
+E       assert (0 > 0)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:146: AssertionError
+______________ test_latest_transformable_scan_and_delayed_tf[cpp] ______________
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7301242beb30>
+
+    def test_latest_transformable_scan_and_delayed_tf(runtime):
+        runtime.seed(scan_frame='late_scan');assert runtime.tick()['scan_count']==0
+        runtime.tf.publish(TFMessage(transforms=[transform('astribot_torso_base','late_scan')]))
+>       runtime.drain();assert runtime.tick()['scan_count']==1
+E       assert 0 == 1
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:153: AssertionError
+______________ test_clock_rollback_revokes_sources_and_risk[cpp] _______________
+
+runtime = <test_policy_observer_ros.Runtime object at 0x7301242c8400>
+
+    def test_clock_rollback_revokes_sources_and_risk(runtime):
+>       runtime.seed(.6);assert runtime.tick()['inputs_valid']
+E       assert False
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py:156: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_fresh_empty_scan_stale_and_recovery[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_scan_obstacle_and_clearing_evidence[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_latest_transformable_scan_and_delayed_tf[cpp]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_ros.py::test_clock_rollback_revokes_sources_and_risk[cpp]
+4 failed, 10 passed in 7.80s

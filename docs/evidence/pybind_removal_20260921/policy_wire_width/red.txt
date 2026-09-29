@@ -1,0 +1,602 @@
+.FFFFFFF.FF.FF.FF.FF                                                     [100%]
+=================================== FAILURES ===================================
+___________ test_wire_uint64_version_roundtrip[9223372036854775808] ____________
+
+counter = 9223372036854775808
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    def test_wire_uint64_version_roundtrip(counter):
+        value=dict(goal_id='wire',path_revision=counter,map_epoch=counter,envelope_epoch=counter,
+                   localization_epoch=counter,clock_epoch=counter)
+>       check([dict(action='check_contract',type='Version',value=value),
+               dict(action='set_version',version=value),snapshot(0)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:463: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': None}
+b = {'code': 'INVALID_INPUT', 'field': 'envelope_epoch', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': None}, {'code': 'INVALID_INPUT', 'field': 'envelope_epoch', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'ok', 'field'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+___________ test_wire_uint64_version_roundtrip[18446744073709551615] ___________
+
+counter = 18446744073709551615
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    def test_wire_uint64_version_roundtrip(counter):
+        value=dict(goal_id='wire',path_revision=counter,map_epoch=counter,envelope_epoch=counter,
+                   localization_epoch=counter,clock_epoch=counter)
+>       check([dict(action='check_contract',type='Version',value=value),
+               dict(action='set_version',version=value),snapshot(0)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:463: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': None}
+b = {'code': 'INVALID_INPUT', 'field': 'envelope_epoch', 'ok': False}
+path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': None}, {'code': 'INVALID_INPUT', 'field': 'envelope_epoch', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'ok', 'field'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_______ test_wire_version_negative_preserves_field_order[path_revision] ________
+
+field = 'path_revision'
+
+    @pytest.mark.parametrize('field',['path_revision','map_epoch','envelope_epoch','localization_epoch','clock_epoch'])
+    def test_wire_version_negative_preserves_field_order(field):
+        value=dict(goal_id='wire',path_revision=2**64-1,map_epoch=2**64-1,envelope_epoch=2**64-1,
+                   localization_epoch=2**64-1,clock_epoch=2**64-1)
+        value[field]=-1
+        bad_goal=dict(value,goal_id='')
+>       check([dict(action='check_contract',type='Version',value=value),dict(action='check_contract',type='Version',value=bad_goal)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:472: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'path_revision', b = 'envelope_epoch', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'path_revision', 'envelope_epoch')
+E       assert 'path_revision' == 'envelope_epoch'
+E         - envelope_epoch
+E         + path_revision
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_________ test_wire_version_negative_preserves_field_order[map_epoch] __________
+
+field = 'map_epoch'
+
+    @pytest.mark.parametrize('field',['path_revision','map_epoch','envelope_epoch','localization_epoch','clock_epoch'])
+    def test_wire_version_negative_preserves_field_order(field):
+        value=dict(goal_id='wire',path_revision=2**64-1,map_epoch=2**64-1,envelope_epoch=2**64-1,
+                   localization_epoch=2**64-1,clock_epoch=2**64-1)
+        value[field]=-1
+        bad_goal=dict(value,goal_id='')
+>       check([dict(action='check_contract',type='Version',value=value),dict(action='check_contract',type='Version',value=bad_goal)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:472: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'map_epoch', b = 'envelope_epoch', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'map_epoch', 'envelope_epoch')
+E       assert 'map_epoch' == 'envelope_epoch'
+E         - envelope_epoch
+E         + map_epoch
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_______ test_wire_version_negative_preserves_field_order[envelope_epoch] _______
+
+field = 'envelope_epoch'
+
+    @pytest.mark.parametrize('field',['path_revision','map_epoch','envelope_epoch','localization_epoch','clock_epoch'])
+    def test_wire_version_negative_preserves_field_order(field):
+        value=dict(goal_id='wire',path_revision=2**64-1,map_epoch=2**64-1,envelope_epoch=2**64-1,
+                   localization_epoch=2**64-1,clock_epoch=2**64-1)
+        value[field]=-1
+        bad_goal=dict(value,goal_id='')
+>       check([dict(action='check_contract',type='Version',value=value),dict(action='check_contract',type='Version',value=bad_goal)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:472: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'envelope_epoch', b = 'map_epoch', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'envelope_epoch', 'map_epoch')
+E       assert 'envelope_epoch' == 'map_epoch'
+E         - map_epoch
+E         + envelope_epoch
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+_____ test_wire_version_negative_preserves_field_order[localization_epoch] _____
+
+field = 'localization_epoch'
+
+    @pytest.mark.parametrize('field',['path_revision','map_epoch','envelope_epoch','localization_epoch','clock_epoch'])
+    def test_wire_version_negative_preserves_field_order(field):
+        value=dict(goal_id='wire',path_revision=2**64-1,map_epoch=2**64-1,envelope_epoch=2**64-1,
+                   localization_epoch=2**64-1,clock_epoch=2**64-1)
+        value[field]=-1
+        bad_goal=dict(value,goal_id='')
+>       check([dict(action='check_contract',type='Version',value=value),dict(action='check_contract',type='Version',value=bad_goal)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:472: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'localization_epoch', b = 'envelope_epoch', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'localization_epoch', 'envelope_epoch')
+E       assert 'localization_epoch' == 'envelope_epoch'
+E         - envelope_epoch
+E         + localization_epoch
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+________ test_wire_version_negative_preserves_field_order[clock_epoch] _________
+
+field = 'clock_epoch'
+
+    @pytest.mark.parametrize('field',['path_revision','map_epoch','envelope_epoch','localization_epoch','clock_epoch'])
+    def test_wire_version_negative_preserves_field_order(field):
+        value=dict(goal_id='wire',path_revision=2**64-1,map_epoch=2**64-1,envelope_epoch=2**64-1,
+                   localization_epoch=2**64-1,clock_epoch=2**64-1)
+        value[field]=-1
+        bad_goal=dict(value,goal_id='')
+>       check([dict(action='check_contract',type='Version',value=value),dict(action='check_contract',type='Version',value=bad_goal)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:472: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:180: in compare
+    for k in a: compare(a[k], b[k], path + '.' + k)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = 'clock_epoch', b = 'envelope_epoch', path = '[0].field'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+            assert set(a) == set(b), (path, a, b)
+            for k in a: compare(a[k], b[k], path + '.' + k)
+        elif isinstance(a, list):
+            assert len(a) == len(b), (path, a, b)
+            for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+>       else: assert a == b, (path, a, b)
+E       AssertionError: ('[0].field', 'clock_epoch', 'envelope_epoch')
+E       assert 'clock_epoch' == 'envelope_epoch'
+E         - envelope_epoch
+E         + clock_epoch
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:184: AssertionError
+________________ test_wire_uint32_image_dimensions[2147483648] _________________
+
+dimension = 2147483648
+
+    @pytest.mark.parametrize('dimension',[2**31-1,2**31,2**32-1])
+    def test_wire_uint32_image_dimensions(dimension):
+        obs=observation(0)
+        obs['geometry']=dict(kind='ImageBox',camera_id='front',image_width_px=dimension,image_height_px=dimension,
+                             xmin_px=0.,ymin_px=0.,xmax_px=float(dimension),ymax_px=float(dimension))
+>       check([dict(action='validate',type='Observation',value=obs),update(0,[obs]),snapshot(0)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:479: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class_probabilities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class...lities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'ok', 'field'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+________________ test_wire_uint32_image_dimensions[4294967295] _________________
+
+dimension = 4294967295
+
+    @pytest.mark.parametrize('dimension',[2**31-1,2**31,2**32-1])
+    def test_wire_uint32_image_dimensions(dimension):
+        obs=observation(0)
+        obs['geometry']=dict(kind='ImageBox',camera_id='front',image_width_px=dimension,image_height_px=dimension,
+                             xmin_px=0.,ymin_px=0.,xmax_px=float(dimension),ymax_px=float(dimension))
+>       check([dict(action='validate',type='Observation',value=obs),update(0,[obs]),snapshot(0)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:479: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:189: in check
+    compare(reference(case), native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:183: in compare
+    for i,(x,y) in enumerate(zip(a,b)): compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class_probabilities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}
+b = {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False}, path = '[0]'
+
+    def compare(a, b, path=''):
+        if isinstance(a, float):
+            assert b == pytest.approx(a, rel=2e-12, abs=2e-12), (path, a, b)
+            if a == 0. and b == 0.: assert math.copysign(1., a) == math.copysign(1., b), (path, a, b)
+        elif isinstance(a, dict):
+>           assert set(a) == set(b), (path, a, b)
+E           AssertionError: ('[0]', {'ok': True, 'result': {'calibration_epoch': 0, 'capture_stamp': {'clock': 'ros', 'epoch': 0, 'ns': 0}, 'class...lities': [['unknown', 0.5]], 'frame_id': 'odom', ...}}, {'code': 'INVALID_INPUT', 'field': 'image.width', 'ok': False})
+E           assert {'ok', 'result'} == {'code', 'field', 'ok'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'code'
+E             'field'
+E             Full diff:
+E             - {'code', 'ok', 'field'}...
+E             
+E             ...Full output truncated (2 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py:179: AssertionError
+_____________ test_wire_uint32_calibration_dimensions[2147483648] ______________
+
+dimension = 2147483648
+
+    @pytest.mark.parametrize('dimension',[2**31-1,2**31,2**32-1])
+    def test_wire_uint32_calibration_dimensions(dimension):
+        c=calibration(image_width_px=dimension,image_height_px=dimension)
+>       run(dict(ops=[dict(op='calibrate',calibration=c),dict(op='calibration',camera_id='front',epoch=1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:365: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': None}, actual = {'error': 'INVALID_INPUT: image_width_px'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_____________ test_wire_uint32_calibration_dimensions[4294967295] ______________
+
+dimension = 4294967295
+
+    @pytest.mark.parametrize('dimension',[2**31-1,2**31,2**32-1])
+    def test_wire_uint32_calibration_dimensions(dimension):
+        c=calibration(image_width_px=dimension,image_height_px=dimension)
+>       run(dict(ops=[dict(op='calibrate',calibration=c),dict(op='calibration',camera_id='front',epoch=1)]))
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:365: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:145: in run
+    compare_values(expected, actual)
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:130: in compare_values
+    compare_values(left, right, f'{path}/{index}')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+expected = {'value': None}, actual = {'error': 'INVALID_INPUT: image_width_px'}
+path = '/0'
+
+    def compare_values(expected, actual, path=''):
+        if isinstance(expected, dict):
+>           assert set(expected) == set(actual), path
+E           AssertionError: /0
+E           assert {'value'} == {'error'}
+E             Extra items in the left set:
+E             'value'
+E             Extra items in the right set:
+E             'error'
+E             Full diff:
+E             - {'error'}
+E             + {'value'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py:124: AssertionError
+_____________ test_wire_uint64_task_sequence[9223372036854775808] ______________
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+sequence = 9223372036854775808
+
+    @pytest.mark.parametrize('sequence',[2**63-1,2**63,2**64-1])
+    def test_wire_uint64_task_sequence(probe,sequence):
+>       compare(probe,[dict(action='task',id='a',state='EXECUTING',sequence=sequence-1),
+                       dict(action='path'),dict(action='task',id='b',state='EXECUTING',sequence=sequence),
+                       dict(action='task',id='b',state='SUCCEEDED',sequence=sequence-1),
+                       dict(action='task',id='a',state='EXECUTING',sequence=-1),
+                       dict(action='task',id='b',state='SUCCEEDED',sequence=sequence)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:145: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+ops = [{'action': 'task', 'id': 'a', 'sequence': 9223372036854775807, 'state': 'EXECUTING'}, {'action': 'path'}, {'action': ...ence': -1, 'state': 'EXECUTING'}, {'action': 'task', 'id': 'b', 'sequence': 9223372036854775808, 'state': 'SUCCEEDED'}]
+
+    def compare(probe,ops):
+        want=reference(ops);got=probe(ops);assert len(got)==len(want)
+        for index,(a,b) in enumerate(zip(got,want)):
+            assert a.keys()==b.keys(),(index,ops[index],a,b)
+            for key in a:
+                if key=='point':assert a[key]==pytest.approx(b[key],rel=2e-14,abs=2e-14)
+>               else:assert a[key]==b[key],(index,ops[index],a,b)
+E               AssertionError: (2, {'action': 'task', 'id': 'b', 'sequence': 9223372036854775808, 'state': 'EXECUTING'}, {'version': ['a', 1, 0, 0, 0, 0]}, {'version': ['b', 0, 0, 0, 0, 0]})
+E               assert ['a', 1, 0, 0, 0, 0] == ['b', 0, 0, 0, 0, 0]
+E                 At index 0 diff: 'a' != 'b'
+E                 Full diff:
+E                 - ['b', 0, 0, 0, 0, 0]
+E                 ?   ^            ---
+E                 + ['a', 1, 0, 0, 0, 0]
+E                 ?   ^   +++
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:82: AssertionError
+_____________ test_wire_uint64_task_sequence[18446744073709551615] _____________
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+sequence = 18446744073709551615
+
+    @pytest.mark.parametrize('sequence',[2**63-1,2**63,2**64-1])
+    def test_wire_uint64_task_sequence(probe,sequence):
+>       compare(probe,[dict(action='task',id='a',state='EXECUTING',sequence=sequence-1),
+                       dict(action='path'),dict(action='task',id='b',state='EXECUTING',sequence=sequence),
+                       dict(action='task',id='b',state='SUCCEEDED',sequence=sequence-1),
+                       dict(action='task',id='a',state='EXECUTING',sequence=-1),
+                       dict(action='task',id='b',state='SUCCEEDED',sequence=sequence)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:145: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+ops = [{'action': 'task', 'id': 'a', 'sequence': 18446744073709551614, 'state': 'EXECUTING'}, {'action': 'path'}, {'action':...nce': -1, 'state': 'EXECUTING'}, {'action': 'task', 'id': 'b', 'sequence': 18446744073709551615, 'state': 'SUCCEEDED'}]
+
+    def compare(probe,ops):
+        want=reference(ops);got=probe(ops);assert len(got)==len(want)
+        for index,(a,b) in enumerate(zip(got,want)):
+            assert a.keys()==b.keys(),(index,ops[index],a,b)
+            for key in a:
+                if key=='point':assert a[key]==pytest.approx(b[key],rel=2e-14,abs=2e-14)
+>               else:assert a[key]==b[key],(index,ops[index],a,b)
+E               AssertionError: (0, {'action': 'task', 'id': 'a', 'sequence': 18446744073709551614, 'state': 'EXECUTING'}, {'version': ['idle', 0, 0, 0, 0, 0]}, {'version': ['a', 0, 0, 0, 0, 0]})
+E               assert ['idle', 0, 0, 0, 0, 0] == ['a', 0, 0, 0, 0, 0]
+E                 At index 0 diff: 'idle' != 'a'
+E                 Full diff:
+E                 - ['a', 0, 0, 0, 0, 0]
+E                 ?   ^
+E                 + ['idle', 0, 0, 0, 0, 0]
+E                 ?   ^^^^
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:82: AssertionError
+____________ test_wire_uint64_context_version[9223372036854775808] _____________
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+counter = 9223372036854775808
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    def test_wire_uint64_context_version(probe,counter):
+>       compare(probe,[dict(action='version',version=['wire',counter,counter,counter,counter,counter]),
+                       dict(action='task',id='next',state='EXECUTING',sequence=0)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+ops = [{'action': 'version', 'version': ['wire', 9223372036854775808, 9223372036854775808, 9223372036854775808, 9223372036854775808, 9223372036854775808]}, {'action': 'task', 'id': 'next', 'sequence': 0, 'state': 'EXECUTING'}]
+
+    def compare(probe,ops):
+        want=reference(ops);got=probe(ops);assert len(got)==len(want)
+        for index,(a,b) in enumerate(zip(got,want)):
+            assert a.keys()==b.keys(),(index,ops[index],a,b)
+            for key in a:
+                if key=='point':assert a[key]==pytest.approx(b[key],rel=2e-14,abs=2e-14)
+>               else:assert a[key]==b[key],(index,ops[index],a,b)
+E               AssertionError: (0, {'action': 'version', 'version': ['wire', 9223372036854775808, 9223372036854775808, 9223372036854775808, 922337203...n': ['wire', 9223372036854775808, 9223372036854775808, 9223372036854775808, 9223372036854775808, 9223372036854775808]})
+E               assert ['wire', -922...2036854775808] == ['wire', 9223...2036854775808]
+E                 At index 1 diff: -9223372036854775808 != 9223372036854775808
+E                 Full diff:
+E                   [
+E                    'wire',
+E                 -  9223372036854775808,
+E                 +  -9223372036854775808,
+E                 ?  +...
+E                 
+E                 ...Full output truncated (14 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:82: AssertionError
+____________ test_wire_uint64_context_version[18446744073709551615] ____________
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+counter = 18446744073709551615
+
+    @pytest.mark.parametrize('counter',[2**63-1,2**63,2**64-1])
+    def test_wire_uint64_context_version(probe,counter):
+>       compare(probe,[dict(action='version',version=['wire',counter,counter,counter,counter,counter]),
+                       dict(action='task',id='next',state='EXECUTING',sequence=0)])
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7077be9669e0>
+ops = [{'action': 'version', 'version': ['wire', 18446744073709551615, 18446744073709551615, 18446744073709551615, 18446744073709551615, 18446744073709551615]}, {'action': 'task', 'id': 'next', 'sequence': 0, 'state': 'EXECUTING'}]
+
+    def compare(probe,ops):
+        want=reference(ops);got=probe(ops);assert len(got)==len(want)
+        for index,(a,b) in enumerate(zip(got,want)):
+            assert a.keys()==b.keys(),(index,ops[index],a,b)
+            for key in a:
+                if key=='point':assert a[key]==pytest.approx(b[key],rel=2e-14,abs=2e-14)
+>               else:assert a[key]==b[key],(index,ops[index],a,b)
+E               AssertionError: (0, {'action': 'version', 'version': ['wire', 18446744073709551615, 18446744073709551615, 18446744073709551615, 184467...'wire', 18446744073709551615, 18446744073709551615, 18446744073709551615, 18446744073709551615, 18446744073709551615]})
+E               assert ['wire', -1, -1, -1, -1, -1] == ['wire', 1844...4073709551615]
+E                 At index 1 diff: -1 != 18446744073709551615
+E                 Full diff:
+E                   [
+E                    'wire',
+E                 -  18446744073709551615,
+E                 -  18446744073709551615,
+E                 -  18446744073709551615,...
+E                 
+E                 ...Full output truncated (9 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py:82: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint64_version_roundtrip[9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint64_version_roundtrip[18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_version_negative_preserves_field_order[path_revision]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_version_negative_preserves_field_order[map_epoch]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_version_negative_preserves_field_order[envelope_epoch]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_version_negative_preserves_field_order[localization_epoch]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_version_negative_preserves_field_order[clock_epoch]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint32_image_dimensions[2147483648]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py::test_wire_uint32_image_dimensions[4294967295]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_wire_uint32_calibration_dimensions[2147483648]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_health.py::test_wire_uint32_calibration_dimensions[4294967295]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py::test_wire_uint64_task_sequence[9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py::test_wire_uint64_task_sequence[18446744073709551615]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py::test_wire_uint64_context_version[9223372036854775808]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observer_core.py::test_wire_uint64_context_version[18446744073709551615]
+15 failed, 5 passed, 103 deselected in 0.43s

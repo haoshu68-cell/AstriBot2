@@ -1,0 +1,21 @@
+Running main() from ./googletest/src/gtest_main.cc
+Note: Google Test filter = CameraSession.ClockAheadRequestCanRetryWithItsOriginalIdentity
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from CameraSession
+[ RUN      ] CameraSession.ClockAheadRequestCanRetryWithItsOriginalIdentity
+ws_robot/src/astribot_s1_perception_components/test/camera_session_test.cpp:37: Failure
+Expected equality of these values:
+  s.reason()
+    Which is: "REQUEST_EXPIRED"
+  "REQUEST_CLOCK_AHEAD"
+[  FAILED  ] CameraSession.ClockAheadRequestCanRetryWithItsOriginalIdentity (0 ms)
+[----------] 1 test from CameraSession (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] CameraSession.ClockAheadRequestCanRetryWithItsOriginalIdentity
+
+ 1 FAILED TEST

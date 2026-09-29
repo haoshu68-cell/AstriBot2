@@ -1,0 +1,1256 @@
+{
+  "scope": "Isolated ROS2 fixture, one articulated arm joint, empty and offset payload; no simulator or hardware",
+  "comparisons": [
+    {
+      "scenario": "empty",
+      "cpp_before_source_to_publish_ms": {
+        "p50": 25.331151,
+        "p95": 33.2593748,
+        "p99": 33.281159179999996
+      },
+      "cpp_after_source_to_publish_ms": {
+        "p50": 3.494997,
+        "p95": 7.271548,
+        "p99": 7.334698
+      },
+      "python_source_to_publish_ms": {
+        "p50": 33.621483,
+        "p95": 34.29700035,
+        "p99": 34.32419714
+      },
+      "latency_no_regression": true,
+      "receipt_latency_no_regression": true,
+      "cpp_before_cpu_percent_one_core": 0.9444077417689747,
+      "cpp_after_cpu_percent_one_core": 1.1665970695594474,
+      "python_cpu_percent_one_core": 8.666260077520118,
+      "cpp_rss_median_mib": 27.125,
+      "python_rss_median_mib": 76.99609375,
+      "all_rounds_valid": true
+    },
+    {
+      "scenario": "offset_payload",
+      "cpp_before_source_to_publish_ms": {
+        "p50": 33.270415,
+        "p95": 36.420504,
+        "p99": 36.4784278
+      },
+      "cpp_after_source_to_publish_ms": {
+        "p50": 13.272155999999999,
+        "p95": 20.1045975,
+        "p99": 20.299751450000002
+      },
+      "python_source_to_publish_ms": {
+        "p50": 37.660008,
+        "p95": 39.139219,
+        "p99": 39.1706982
+      },
+      "latency_no_regression": true,
+      "receipt_latency_no_regression": true,
+      "cpp_before_cpu_percent_one_core": 0.9444087847230107,
+      "cpp_after_cpu_percent_one_core": 1.1666017496216512,
+      "python_cpu_percent_one_core": 8.555141033307068,
+      "cpp_rss_median_mib": 26.6875,
+      "python_rss_median_mib": 77.87890625,
+      "all_rounds_valid": true
+    }
+  ],
+  "controlled_phase_pairs": [
+    {
+      "stage": "before",
+      "scenario": "empty",
+      "source_phase_ms": 0,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.1985,
+            "p95": 0.23700549999999998,
+            "p99": 0.3456407999999998
+          },
+          "compute_ms": {
+            "p50": 2.589331,
+            "p95": 3.6424174999999996,
+            "p99": 3.7675002799999997
+          },
+          "result_wait_ms": {
+            "p50": 17.22678,
+            "p95": 18.0849776,
+            "p99": 18.11145324
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.950707,
+            "p95": 20.3039818,
+            "p99": 20.3292267
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 20.0,
+            "p95": 20.0,
+            "p99": 20.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.071739,
+            "p95": 0.08426969999999999,
+            "p99": 0.0863895
+          },
+          "compute_ms": {
+            "p50": 0.101163,
+            "p95": 0.1091569,
+            "p99": 0.11483157999999999
+          },
+          "result_wait_ms": {
+            "p50": 19.821023,
+            "p95": 19.914131,
+            "p99": 19.98410378
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.988773,
+            "p95": 20.0893442,
+            "p99": 20.12672446
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 20.0,
+            "p95": 20.0,
+            "p99": 20.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "scenario": "empty",
+      "source_phase_ms": 5,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.070666,
+            "p95": 0.0851899,
+            "p99": 0.09324339999999999
+          },
+          "compute_ms": {
+            "p50": 0.100025,
+            "p95": 0.1039975,
+            "p99": 0.1045419
+          },
+          "result_wait_ms": {
+            "p50": 19.822541,
+            "p95": 19.9061257,
+            "p99": 19.943655160000002
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.983971,
+            "p95": 20.066688699999997,
+            "p99": 20.11739288
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 25.0,
+            "p95": 25.0,
+            "p99": 25.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.167929,
+            "p95": 0.23831719999999998,
+            "p99": 0.27576177999999996
+          },
+          "compute_ms": {
+            "p50": 2.115433,
+            "p95": 3.6023495000000003,
+            "p99": 3.8556256599999994
+          },
+          "result_wait_ms": {
+            "p50": 17.637747,
+            "p95": 18.1393648,
+            "p99": 18.158069779999998
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.868884,
+            "p95": 20.16478,
+            "p99": 20.17680764
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 25.0,
+            "p95": 25.0,
+            "p99": 25.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "scenario": "empty",
+      "source_phase_ms": 10,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.1925405,
+            "p95": 0.24280649999999998,
+            "p99": 0.25044325
+          },
+          "compute_ms": {
+            "p50": 2.8368125,
+            "p95": 3.6323455,
+            "p99": 3.95791775
+          },
+          "result_wait_ms": {
+            "p50": 16.795756,
+            "p95": 18.106516499999998,
+            "p99": 18.3811655
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.8982955,
+            "p95": 20.2202825,
+            "p99": 20.441249
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 30.0,
+            "p95": 30.0,
+            "p99": 30.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.062974,
+            "p95": 0.0723412,
+            "p99": 0.07567452
+          },
+          "compute_ms": {
+            "p50": 0.100946,
+            "p95": 0.1118762,
+            "p99": 0.11244306
+          },
+          "result_wait_ms": {
+            "p50": 19.837059,
+            "p95": 19.9624471,
+            "p99": 20.016160839999998
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 20.002852,
+            "p95": 20.1275691,
+            "p99": 20.18222964
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 30.0,
+            "p95": 30.0,
+            "p99": 30.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "scenario": "empty",
+      "source_phase_ms": 15,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.070181,
+            "p95": 0.08791874999999998,
+            "p99": 0.12564198000000001
+          },
+          "compute_ms": {
+            "p50": 0.099716,
+            "p95": 0.10741144999999999,
+            "p99": 0.12534869
+          },
+          "result_wait_ms": {
+            "p50": 19.841364,
+            "p95": 19.9241829,
+            "p99": 19.950941540000002
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 20.018419,
+            "p95": 20.09206195,
+            "p99": 20.11811496
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 35.0,
+            "p95": 35.0,
+            "p99": 35.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.160781,
+            "p95": 0.2165633,
+            "p99": 0.28852861999999985
+          },
+          "compute_ms": {
+            "p50": 2.254293,
+            "p95": 3.7496273999999996,
+            "p99": 4.1248290999999995
+          },
+          "result_wait_ms": {
+            "p50": 17.566734,
+            "p95": 18.0780664,
+            "p99": 18.12205168
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.923596,
+            "p95": 20.2112791,
+            "p99": 20.40917242
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 35.0,
+            "p95": 35.0,
+            "p99": 35.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "scenario": "offset_payload",
+      "source_phase_ms": 0,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.14737250000000002,
+            "p95": 0.22804804999999997,
+            "p99": 0.25746198000000003
+          },
+          "compute_ms": {
+            "p50": 3.6968955,
+            "p95": 4.13083085,
+            "p99": 4.9095346200000005
+          },
+          "result_wait_ms": {
+            "p50": 16.231952,
+            "p95": 17.7587523,
+            "p99": 17.95412729
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.9072525,
+            "p95": 20.201868150000003,
+            "p99": 20.23242335
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 20.0,
+            "p95": 20.0,
+            "p99": 20.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.069695,
+            "p95": 0.08774,
+            "p99": 0.08851416000000001
+          },
+          "compute_ms": {
+            "p50": 0.118152,
+            "p95": 0.1386672,
+            "p99": 0.17615135999999992
+          },
+          "result_wait_ms": {
+            "p50": 19.793826,
+            "p95": 19.9134777,
+            "p99": 19.94232548
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.977753,
+            "p95": 20.0929173,
+            "p99": 20.125413039999998
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 20.0,
+            "p95": 20.0,
+            "p99": 20.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "scenario": "offset_payload",
+      "source_phase_ms": 5,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.0718935,
+            "p95": 0.09084985,
+            "p99": 0.13244208000000002
+          },
+          "compute_ms": {
+            "p50": 0.11882000000000001,
+            "p95": 0.12610329999999997,
+            "p99": 0.13025698
+          },
+          "result_wait_ms": {
+            "p50": 19.801882499999998,
+            "p95": 19.8912724,
+            "p99": 19.92091169
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.984906000000002,
+            "p95": 20.084757200000002,
+            "p99": 20.0988672
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 25.0,
+            "p95": 25.0,
+            "p99": 25.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.175606,
+            "p95": 0.24898699999999996,
+            "p99": 0.3027302599999999
+          },
+          "compute_ms": {
+            "p50": 2.408445,
+            "p95": 3.7467262,
+            "p99": 4.0668351
+          },
+          "result_wait_ms": {
+            "p50": 17.245202,
+            "p95": 17.7194092,
+            "p99": 17.9459426
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.835485,
+            "p95": 20.2760161,
+            "p99": 20.6238403
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 25.0,
+            "p95": 25.0,
+            "p99": 25.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "scenario": "offset_payload",
+      "source_phase_ms": 10,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.204687,
+            "p95": 0.35726069999999993,
+            "p99": 0.39099631999999995
+          },
+          "compute_ms": {
+            "p50": 2.954322,
+            "p95": 4.3863515,
+            "p99": 5.6013872399999975
+          },
+          "result_wait_ms": {
+            "p50": 16.067262,
+            "p95": 17.5950804,
+            "p99": 17.66849242
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.877179,
+            "p95": 20.1783152,
+            "p99": 20.81998004
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 30.0,
+            "p95": 30.0,
+            "p99": 30.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.077277,
+            "p95": 0.0987366,
+            "p99": 0.10110074
+          },
+          "compute_ms": {
+            "p50": 0.129405,
+            "p95": 0.1383154,
+            "p99": 0.14402027999999997
+          },
+          "result_wait_ms": {
+            "p50": 19.804641,
+            "p95": 19.854741399999998,
+            "p99": 19.86157182
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.994119,
+            "p95": 20.0583557,
+            "p99": 20.0620875
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 30.0,
+            "p95": 30.0,
+            "p99": 30.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "scenario": "offset_payload",
+      "source_phase_ms": 15,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.0709655,
+            "p95": 0.08558545000000001,
+            "p99": 0.09132441000000001
+          },
+          "compute_ms": {
+            "p50": 0.12050949999999999,
+            "p95": 0.12609545,
+            "p99": 0.12680321
+          },
+          "result_wait_ms": {
+            "p50": 19.7736215,
+            "p95": 19.85263235,
+            "p99": 19.86212256
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.9639485,
+            "p95": 20.0244884,
+            "p99": 20.06032577
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 35.0,
+            "p95": 35.0,
+            "p99": 35.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.155289,
+            "p95": 0.205109,
+            "p99": 0.23243049999999996
+          },
+          "compute_ms": {
+            "p50": 2.978265,
+            "p95": 4.2736629,
+            "p99": 4.621386919999999
+          },
+          "result_wait_ms": {
+            "p50": 17.087543,
+            "p95": 18.018919999999998,
+            "p99": 18.112467
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.909957,
+            "p95": 20.373901099999998,
+            "p99": 20.698046299999998
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 35.0,
+            "p95": 35.0,
+            "p99": 35.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "empty",
+      "source_phase_ms": 0,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.150453,
+            "p95": 0.2347468,
+            "p99": 0.28850053999999986
+          },
+          "compute_ms": {
+            "p50": 2.529464,
+            "p95": 3.3760924,
+            "p99": 3.6674389599999992
+          },
+          "result_wait_ms": {
+            "p50": 17.313694,
+            "p95": 18.1717896,
+            "p99": 18.219427099999997
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.894755,
+            "p95": 20.2376461,
+            "p99": 20.2567153
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 20.0,
+            "p95": 20.0,
+            "p99": 20.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.0703695,
+            "p95": 0.0792605,
+            "p99": 0.08140249999999999
+          },
+          "compute_ms": {
+            "p50": 0.10392599999999999,
+            "p95": 0.1238975,
+            "p99": 0.1276625
+          },
+          "result_wait_ms": {
+            "p50": 0.960925,
+            "p95": 1.006708,
+            "p99": 1.03407175
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.137766,
+            "p95": 1.1754164999999999,
+            "p99": 1.2020737499999998
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "empty",
+      "source_phase_ms": 5,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.072101,
+            "p95": 0.09297409999999999,
+            "p99": 0.09838092
+          },
+          "compute_ms": {
+            "p50": 0.114393,
+            "p95": 0.1183676,
+            "p99": 0.1190221
+          },
+          "result_wait_ms": {
+            "p50": 0.956843,
+            "p95": 1.0143575,
+            "p99": 1.0417354799999998
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.141791,
+            "p95": 1.1792402,
+            "p99": 1.19962724
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.137152,
+            "p95": 0.21316559999999998,
+            "p99": 0.22391535999999998
+          },
+          "compute_ms": {
+            "p50": 2.508965,
+            "p95": 3.3301971,
+            "p99": 3.5686264
+          },
+          "result_wait_ms": {
+            "p50": 17.298485,
+            "p95": 18.283323499999998,
+            "p99": 18.41728916
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.891291,
+            "p95": 20.1787106,
+            "p99": 20.2472812
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 25.0,
+            "p95": 25.0,
+            "p99": 25.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "empty",
+      "source_phase_ms": 10,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.196101,
+            "p95": 0.2315737,
+            "p99": 0.23729056
+          },
+          "compute_ms": {
+            "p50": 1.954479,
+            "p95": 3.3289747,
+            "p99": 3.41382738
+          },
+          "result_wait_ms": {
+            "p50": 17.692959,
+            "p95": 18.2392902,
+            "p99": 18.335207139999998
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.831071,
+            "p95": 20.124498199999998,
+            "p99": 20.162297979999998
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 30.0,
+            "p95": 30.0,
+            "p99": 30.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.061507,
+            "p95": 0.0792172,
+            "p99": 0.0875855
+          },
+          "compute_ms": {
+            "p50": 0.102667,
+            "p95": 0.110938,
+            "p99": 0.11559696
+          },
+          "result_wait_ms": {
+            "p50": 0.96115,
+            "p95": 1.0095489,
+            "p99": 1.0318711999999999
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.125055,
+            "p95": 1.1697243,
+            "p99": 1.1858795
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "empty",
+      "source_phase_ms": 15,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.070768,
+            "p95": 0.0822604,
+            "p99": 0.08524102
+          },
+          "compute_ms": {
+            "p50": 0.104367,
+            "p95": 0.1146813,
+            "p99": 0.11530096
+          },
+          "result_wait_ms": {
+            "p50": 0.959807,
+            "p95": 0.9924939,
+            "p99": 1.00237196
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.132795,
+            "p95": 1.1646894,
+            "p99": 1.1673970999999999
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.155221,
+            "p95": 0.20589075,
+            "p99": 0.20768350000000002
+          },
+          "compute_ms": {
+            "p50": 2.3217,
+            "p95": 4.13045775,
+            "p99": 4.3420225
+          },
+          "result_wait_ms": {
+            "p50": 17.395274,
+            "p95": 18.0449145,
+            "p99": 18.253054
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.8840735,
+            "p95": 20.231872499999998,
+            "p99": 20.31592
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 35.0,
+            "p95": 35.0,
+            "p99": 35.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "offset_payload",
+      "source_phase_ms": 0,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.185846,
+            "p95": 0.2550934,
+            "p99": 0.26777861999999997
+          },
+          "compute_ms": {
+            "p50": 2.707564,
+            "p95": 4.1233711,
+            "p99": 4.208255579999999
+          },
+          "result_wait_ms": {
+            "p50": 16.852594,
+            "p95": 17.8969917,
+            "p99": 17.93476096
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.820739,
+            "p95": 20.6430013,
+            "p99": 20.77869798
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 20.0,
+            "p95": 20.0,
+            "p99": 20.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          },
+          "dispatch_ms": {
+            "p50": 0.068808,
+            "p95": 0.0844015,
+            "p99": 0.08808858
+          },
+          "compute_ms": {
+            "p50": 0.123577,
+            "p95": 0.1376792,
+            "p99": 0.1384025
+          },
+          "result_wait_ms": {
+            "p50": 0.942726,
+            "p95": 0.9900838,
+            "p99": 0.99514662
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.136793,
+            "p95": 1.1603641999999998,
+            "p99": 1.16959784
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "offset_payload",
+      "source_phase_ms": 5,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.0720585,
+            "p95": 0.08478495,
+            "p99": 0.09003736
+          },
+          "compute_ms": {
+            "p50": 0.124855,
+            "p95": 0.13618734999999998,
+            "p99": 0.13924173
+          },
+          "result_wait_ms": {
+            "p50": 0.950147,
+            "p95": 1.0412399499999998,
+            "p99": 1.08806407
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.145894,
+            "p95": 1.2353021,
+            "p99": 1.26144413
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 5.0,
+            "p95": 5.0,
+            "p99": 5.0
+          },
+          "dispatch_ms": {
+            "p50": 0.164763,
+            "p95": 0.2180536,
+            "p99": 0.2502584399999999
+          },
+          "compute_ms": {
+            "p50": 3.223055,
+            "p95": 4.1868003,
+            "p99": 4.2483965800000005
+          },
+          "result_wait_ms": {
+            "p50": 16.715299,
+            "p95": 17.7755266,
+            "p99": 17.88685
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.894657,
+            "p95": 20.5136215,
+            "p99": 20.64129738
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 25.0,
+            "p95": 25.0,
+            "p99": 25.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "offset_payload",
+      "source_phase_ms": 10,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.178411,
+            "p95": 0.24862019999999999,
+            "p99": 0.25790618
+          },
+          "compute_ms": {
+            "p50": 2.714628,
+            "p95": 4.0372141,
+            "p99": 4.170714719999999
+          },
+          "result_wait_ms": {
+            "p50": 16.836401,
+            "p95": 17.8204937,
+            "p99": 17.871273379999998
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.895502,
+            "p95": 20.4958583,
+            "p99": 20.87287876
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 30.0,
+            "p95": 30.0,
+            "p99": 30.0
+          }
+        },
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          },
+          "dispatch_ms": {
+            "p50": 0.072009,
+            "p95": 0.082458,
+            "p99": 0.09306143999999998
+          },
+          "compute_ms": {
+            "p50": 0.122471,
+            "p95": 0.1273481,
+            "p99": 0.12843926
+          },
+          "result_wait_ms": {
+            "p50": 0.943759,
+            "p95": 1.0191921,
+            "p99": 1.0445319199999998
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.140356,
+            "p95": 1.2136661,
+            "p99": 1.24745668
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 10.0,
+            "p95": 10.0,
+            "p99": 10.0
+          }
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "scenario": "offset_payload",
+      "source_phase_ms": 15,
+      "source_and_clock_sequences_identical": true,
+      "variants": {
+        "cpp": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.067997,
+            "p95": 0.08687579999999998,
+            "p99": 0.0944339
+          },
+          "compute_ms": {
+            "p50": 0.1220135,
+            "p95": 0.12507275,
+            "p99": 0.12538459999999998
+          },
+          "result_wait_ms": {
+            "p50": 0.9443575,
+            "p95": 1.01883445,
+            "p99": 1.0335320000000001
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 1.133586,
+            "p95": 1.2157562999999998,
+            "p99": 1.23337989
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          }
+        },
+        "python": {
+          "source_age_at_submit_ms": {
+            "p50": 15.0,
+            "p95": 15.0,
+            "p99": 15.0
+          },
+          "dispatch_ms": {
+            "p50": 0.1598775,
+            "p95": 0.2196145,
+            "p99": 0.23181449999999998
+          },
+          "compute_ms": {
+            "p50": 2.1512865000000003,
+            "p95": 3.861082,
+            "p99": 3.91335425
+          },
+          "result_wait_ms": {
+            "p50": 17.366498,
+            "p95": 17.99433975,
+            "p99": 18.0088985
+          },
+          "submit_to_publish_wall_ms": {
+            "p50": 19.825833,
+            "p95": 20.16747275,
+            "p99": 20.234938500000002
+          },
+          "source_to_publish_ros_ms": {
+            "p50": 35.0,
+            "p95": 35.0,
+            "p99": 35.0
+          }
+        }
+      }
+    }
+  ],
+  "completion_faults": [
+    {
+      "scenario": "source_deadline",
+      "source_ns": 4300000000,
+      "clock_after_fault_ns": 4600000000,
+      "expected_reason": "GEOMETRY_COMPUTE_EXCEEDED_SOURCE_LEASE",
+      "observed_reasons": [
+        "GEOMETRY_COMPUTE_EXCEEDED_SOURCE_LEASE"
+      ],
+      "rejected_complete_source": true,
+      "worker_delay_ms": 120,
+      "pid": 45158,
+      "session_log": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/geometry/completion_faults/source_deadline/session.log"
+    },
+    {
+      "scenario": "clock_rollback",
+      "source_ns": 4300000000,
+      "clock_after_fault_ns": 4200000000,
+      "expected_reason": "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE",
+      "observed_reasons": [
+        "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE"
+      ],
+      "rejected_complete_source": true,
+      "worker_delay_ms": 120,
+      "pid": 45474,
+      "session_log": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/geometry/completion_faults/clock_rollback/session.log"
+    },
+    {
+      "scenario": "malformed_joint",
+      "source_ns": 4300000000,
+      "clock_after_fault_ns": 4300000000,
+      "expected_reason": "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE",
+      "observed_reasons": [
+        "GEOMETRY_INPUT_CHANGED_DURING_COMPUTE"
+      ],
+      "rejected_complete_source": true,
+      "worker_delay_ms": 120,
+      "pid": 45722,
+      "session_log": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/pybind_removal_20260921/geometry/completion_faults/malformed_joint/session.log"
+    }
+  ],
+  "cpp_complete_frames": 325,
+  "python_complete_frames": 323,
+  "performance_passed": true,
+  "excluded_batch": "contended_aborted: startup overlapped another test; entire partial batch excluded"
+}

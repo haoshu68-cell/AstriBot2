@@ -7,6 +7,15 @@ Nav2 负责基于定位的轨迹反馈控制。桥接只对其积分位置指令
 """
 
 import math
+import os
+
+if os.environ.get('ASTRIBOT_BRIDGE_NATIVE_KERNELS', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native
+    except ImportError:  # pragma: no cover - Python-only overlays remain supported
+        _native = None
+else:
+    _native = None
 
 from astribot_trajectory_bridge.chassis_integrator import (
     ChassisConfigError,
@@ -51,10 +60,14 @@ def check_leash(pos_cmd, sdk_actual, leash_xy_m, leash_theta_rad):
     且与下发量同源（同一个 frame，不需要任何对齐）。SLAM 低频且跨 frame，
     用它做 leash 会引入 frame 失配这个与打滑无关的误差来源。
     """
-    err = pose_error(pos_cmd, sdk_actual)
-    err_xy, err_theta = error_magnitude(err)
-    # SDK position commands use continuous theta; a full-turn error is not zero.
-    err_theta = abs(pos_cmd[IDX_THETA] - sdk_actual[IDX_THETA])
+    if (_native is not None and
+            all(math.isfinite(value) for value in (*pos_cmd, *sdk_actual))):
+        err_xy, err_theta = _native.leash_error(tuple(pos_cmd), tuple(sdk_actual))
+    else:
+        err = pose_error(pos_cmd, sdk_actual)
+        err_xy, err_theta = error_magnitude(err)
+        # SDK position commands use continuous theta; a full-turn error is not zero.
+        err_theta = abs(pos_cmd[IDX_THETA] - sdk_actual[IDX_THETA])
     if err_xy > leash_xy_m:
         return LeashState(True, err_xy, err_theta,
                           'xy 偏差 %.4fm > 阈值 %.4fm' % (err_xy, leash_xy_m))
@@ -103,8 +116,12 @@ def detect_pose_jump(pose_now, pose_prev, jump_threshold_m):
     """
     if pose_prev is None:
         return (False, 0.0)
-    jump = math.hypot(pose_now[IDX_X] - pose_prev[IDX_X],
-                      pose_now[IDX_Y] - pose_prev[IDX_Y])
+    if (_native is not None and
+            all(math.isfinite(value) for value in (*pose_now, *pose_prev))):
+        jump = _native.pose_jump_distance(tuple(pose_now), tuple(pose_prev))
+    else:
+        jump = math.hypot(pose_now[IDX_X] - pose_prev[IDX_X],
+                          pose_now[IDX_Y] - pose_prev[IDX_Y])
     return (jump > jump_threshold_m, jump)
 
 
@@ -121,6 +138,9 @@ def odom_drift(disp_sdk_xy, disp_slam_xy):
     物理含义也更干净：**"轮子以为走了多远"与"世界里实际走了多远"之差**，
     这正是打滑的定义，且不掺任何 frame 失配成分。
     """
+    if (_native is not None and
+            all(math.isfinite(value) for value in (*disp_sdk_xy, *disp_slam_xy))):
+        return _native.odom_drift(tuple(disp_sdk_xy), tuple(disp_slam_xy))
     d_sdk = math.hypot(disp_sdk_xy[0], disp_sdk_xy[1])
     d_slam = math.hypot(disp_slam_xy[0], disp_slam_xy[1])
     return abs(d_sdk - d_slam)

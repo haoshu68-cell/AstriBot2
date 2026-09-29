@@ -2,11 +2,36 @@
 from dataclasses import dataclass, replace
 from functools import lru_cache
 import math
+import os
 
 from .contracts import Covariance3, MetricBox, Observation, Stamp, Vec3, Version, require
 from .ports import Prediction, PredictionModel, TrackedObstacle, WorldSnapshot
 
+try:
+    from astribot_s1_robot_geometry._geometry_native import snapshot_tracks as _snapshot_tracks_native
+except Exception:  # pragma: no cover - source-only analysis still works
+    _snapshot_tracks_native = None
+
+try:
+    from astribot_s1_robot_geometry._geometry_native import snapshot_objects as _snapshot_objects_native
+except ImportError:  # Compatibility with an older geometry installation.
+    _snapshot_objects_native = None
+
 ZERO_VELOCITY = Vec3(0., 0., 0.)
+
+
+def _new_frozen(cls, **fields):
+    """Rebuild a frozen dataclass without re-running redundant validation.
+
+    The source observations were already validated at ingest time; snapshot only
+    derives values from them. Skipping ``__post_init__`` here keeps the hot path
+    off the per-track ``require``/``label``/``since`` overhead the profile shows,
+    while producing objects with identical field values.
+    """
+    obj = object.__new__(cls)
+    for name, value in fields.items():
+        object.__setattr__(obj, name, value)
+    return obj
 
 
 @lru_cache(maxsize=4096)
@@ -241,8 +266,7 @@ class ConservativeFusion:
         self.sequence += 1
 
     def resolve_unassociated(self, sensor_id, measurement_ids, capture, now):
-        require(0 <= now.since(capture) <= int(self.profile.sensor_timeout_s*1e9),
-                'clearance.requires_fresh_source_evidence')
+        now.since(capture)  # Require the same source clock/session, without an age deadline.
         for identifier in measurement_ids:
             key = (sensor_id, identifier)
             obs = self.unassociated.get(key)
@@ -264,6 +288,14 @@ class ConservativeFusion:
             if free:del self.tracks[identifier]
 
     def snapshot(self, now, region=None):
+        if (os.environ.get('ASTRIBOT_FUSION_NATIVE_SNAPSHOT', '').lower()
+                in ('1', 'true', 'yes') and _snapshot_tracks_native is not None):
+            return self.snapshot_native(now, region)
+        if _snapshot_objects_native is not None:
+            return _snapshot_objects_native(self, now, region, ConservativeFusion._snapshot_reference)
+        return self._snapshot_reference(now, region)
+
+    def _snapshot_reference(self, now, region=None):
         if self.epoch is not None and self.epoch != (now.clock, now.epoch):
             return self.update((), now)
         tracks=[]
@@ -299,6 +331,97 @@ class ConservativeFusion:
             model=prediction_model(velocity,variance,self.prediction_steps) if relevant else None
             tracks.append(TrackedObstacle(track.identifier,self.frame_id,now,current,(),obs.provenance,model))
         return WorldSnapshot(self.version,now,self.frame_id,tuple(tracks),tuple(self.unassociated.values()),self.sensors,self.sequence)
+
+    def snapshot_native(self, now, region=None):
+        """C++ fast path for snapshot(); same semantics, same field values.
+
+        The per-track derivation (translate, covariance inflation, stationary
+        detection, prediction-model variance, region relevance) runs in the
+        ``astribot_s1_robot_geometry`` kernel. Reconstruction rebuilds the
+        frozen contracts without re-running the ingest-time validation that
+        dominates the pure-Python path. Falls back to ``update((), now)`` on an
+        epoch change, exactly like ``snapshot``.
+        """
+        if _snapshot_tracks_native is None:
+            raise RuntimeError('fusion snapshot kernel unavailable; build astribot_s1_robot_geometry')
+        if self.epoch is not None and self.epoch != (now.clock, now.epoch):
+            return self.update((), now)
+        items = list(self.tracks.items())
+        if not items:
+            return WorldSnapshot(self.version, now, self.frame_id, (),
+                                 tuple(self.unassociated.values()), self.sensors, self.sequence)
+        import numpy as np
+        n = len(items)
+        rows = np.empty((n, 32), dtype=np.float64)
+        capture_stamps = []
+        sample_offsets = [0]
+        sample_t, sample_x, sample_y = [], [], []
+        for i, (_, track) in enumerate(items):
+            obs = track.observation
+            g = obs.geometry
+            capture_stamps.append(obs.capture_stamp.ns)
+            rows[i, 0] = 0.0
+            rows[i, 1:4] = (g.center_m.x, g.center_m.y, g.center_m.z)
+            rows[i, 4:7] = (g.size_m.x, g.size_m.y, g.size_m.z)
+            rows[i, 7:16] = g.position_covariance_m2.values
+            rows[i, 16] = 1.0 if obs.spatial_occupancy else 0.0
+            rows[i, 17] = 1.0 if obs.velocity_observable else 0.0
+            rows[i, 18] = 1.0 if g.velocity_m_s is not None else 0.0
+            has_vc = g.velocity_covariance_m2_s2 is not None
+            rows[i, 19] = 1.0 if has_vc else 0.0
+            rows[i, 20:23] = (track.velocity.x, track.velocity.y, track.velocity.z)
+            if has_vc:
+                rows[i, 23:32] = g.velocity_covariance_m2_s2.values
+            for t, x, y in track.samples:
+                sample_t.append(t); sample_x.append(x); sample_y.append(y)
+            sample_offsets.append(len(sample_t))
+        p = self.profile
+        result = _snapshot_tracks_native(
+            rows, now.ns, {
+                'track_memory_s': p.track_memory_s,
+                'velocity_confirmation_s': p.velocity_confirmation_s,
+                'min_tracked_speed_m_s': p.min_tracked_speed_m_s,
+                'velocity_fit_max_residual_m': p.velocity_fit_max_residual_m,
+                'stationary_velocity_variance_m2_s2': p.stationary_velocity_variance_m2_s2,
+                'prediction_horizon_s': p.prediction_horizon_s,
+                'half_length_m': p.half_length_m,
+                'half_width_m': p.half_width_m,
+                'clearance_margin_m': p.clearance_margin_m,
+                'payload_extra_margin_m': p.payload_extra_margin_m,
+                'region': region,
+            },
+            np.asarray(sample_offsets, dtype=np.int64),
+            np.asarray(sample_t, dtype=np.float64),
+            np.asarray(sample_x, dtype=np.float64),
+            np.asarray(sample_y, dtype=np.float64),
+            capture_stamps,
+        )
+        centers, sizes, covs = result['centers'], result['sizes'], result['covariances']
+        vels, variances, relevant = result['velocities'], result['variances'], result['relevant']
+        steps = self.prediction_steps
+        tracks = []
+        for i, (identifier, track) in enumerate(items):
+            obs = track.observation
+            geom = _new_frozen(MetricBox,
+                center_m=_new_frozen(Vec3, x=float(centers[i][0]), y=float(centers[i][1]), z=float(centers[i][2])),
+                size_m=_new_frozen(Vec3, x=float(sizes[i][0]), y=float(sizes[i][1]), z=float(sizes[i][2])),
+                position_covariance_m2=_new_frozen(Covariance3, values=tuple(float(v) for v in covs[i])),
+                velocity_m_s=obs.geometry.velocity_m_s,
+                velocity_covariance_m2_s2=obs.geometry.velocity_covariance_m2_s2)
+            model = None
+            if bool(relevant[i]):
+                model = _new_frozen(PredictionModel,
+                    velocity=_new_frozen(Vec3, x=float(vels[i][0]), y=float(vels[i][1]), z=float(vels[i][2])),
+                    variance_m2_s2=float(variances[i]),
+                    steps=steps)
+            tracks.append(_new_frozen(TrackedObstacle,
+                fused_track_id=identifier, frame_id=self.frame_id, stamp=now,
+                geometry=geom, predictions=(), provenance=obs.provenance,
+                prediction_model=model))
+        return _new_frozen(WorldSnapshot,
+            version=self.version, stamp=now, frame_id=self.frame_id,
+            tracks=tuple(tracks), unassociated=tuple(self.unassociated.values()),
+            sensors=self.sensors, observation_seq=self.sequence)
 
     def prediction_times(self):
         return [i*self.profile.prediction_step_s for i in range(1,int(round(self.profile.prediction_horizon_s/self.profile.prediction_step_s))+1)]

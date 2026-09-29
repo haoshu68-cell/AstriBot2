@@ -1,0 +1,109 @@
+...FFFFF                                                                 [100%]
+=================================== FAILURES ===================================
+_ test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py] _
+
+relative = 'astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py'
+
+    @pytest.mark.parametrize('relative', (
+        'astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py',
+        'astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py',
+    ))
+    def test_retired_python_reference_has_no_runtime_entry(relative):
+        import ast
+        tree = ast.parse((Path(__file__).resolve().parents[2] / relative).read_text())
+>       assert not any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+                       node.name == 'main' for node in tree.body)
+E       assert not True
+E        +  where True = any(<generator object test_retired_python_reference_has_no_runtime_entry.<locals>.<genexpr> at 0x70003d3be420>)
+
+ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py:70: AssertionError
+_ test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py] _
+
+relative = 'astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py'
+
+    @pytest.mark.parametrize('relative', (
+        'astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py',
+        'astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py',
+    ))
+    def test_retired_python_reference_has_no_runtime_entry(relative):
+        import ast
+        tree = ast.parse((Path(__file__).resolve().parents[2] / relative).read_text())
+>       assert not any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+                       node.name == 'main' for node in tree.body)
+E       assert not True
+E        +  where True = any(<generator object test_retired_python_reference_has_no_runtime_entry.<locals>.<genexpr> at 0x70003d3bdf50>)
+
+ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py:70: AssertionError
+_ test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py] _
+
+relative = 'astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py'
+
+    @pytest.mark.parametrize('relative', (
+        'astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py',
+        'astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py',
+    ))
+    def test_retired_python_reference_has_no_runtime_entry(relative):
+        import ast
+        tree = ast.parse((Path(__file__).resolve().parents[2] / relative).read_text())
+>       assert not any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+                       node.name == 'main' for node in tree.body)
+E       assert not True
+E        +  where True = any(<generator object test_retired_python_reference_has_no_runtime_entry.<locals>.<genexpr> at 0x70003d45ceb0>)
+
+ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py:70: AssertionError
+_ test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py] _
+
+relative = 'astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py'
+
+    @pytest.mark.parametrize('relative', (
+        'astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py',
+        'astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py',
+    ))
+    def test_retired_python_reference_has_no_runtime_entry(relative):
+        import ast
+        tree = ast.parse((Path(__file__).resolve().parents[2] / relative).read_text())
+>       assert not any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+                       node.name == 'main' for node in tree.body)
+E       assert not True
+E        +  where True = any(<generator object test_retired_python_reference_has_no_runtime_entry.<locals>.<genexpr> at 0x70003d535a80>)
+
+ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py:70: AssertionError
+_ test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py] _
+
+relative = 'astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py'
+
+    @pytest.mark.parametrize('relative', (
+        'astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py',
+        'astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py',
+        'astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py',
+    ))
+    def test_retired_python_reference_has_no_runtime_entry(relative):
+        import ast
+        tree = ast.parse((Path(__file__).resolve().parents[2] / relative).read_text())
+>       assert not any(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+                       node.name == 'main' for node in tree.body)
+E       assert not True
+E        +  where True = any(<generator object test_retired_python_reference_has_no_runtime_entry.<locals>.<genexpr> at 0x70003d3be0a0>)
+
+ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py:70: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py::test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation/astribot_s1_navigation/cmd_vel_body_to_world_node.py]
+FAILED ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py::test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py]
+FAILED ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py::test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation_policy/astribot_s1_navigation_policy/envelope_node.py]
+FAILED ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py::test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation_policy/astribot_s1_navigation_policy/protection_node.py]
+FAILED ws_robot/src/astribot_s1_navigation/test/test_cpp_runtime_selection.py::test_retired_python_reference_has_no_runtime_entry[astribot_s1_navigation_policy/astribot_s1_navigation_policy/costmap_scan_node.py]
+5 failed, 3 passed in 0.13s

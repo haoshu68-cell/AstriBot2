@@ -1,0 +1,40 @@
+# Simulation commissioning of one registered box from READY, with one owner.
+# Manipulation targets and the two BOX station objects use gazebo_world, an
+# explicit physical-world convention, never MoveIt's base-fixed "world" TF.
+# The executor converts them using the current measured world_from_base.
+string task_id
+string request_id
+string context_id
+string object_id
+geometry_msgs/PoseStamped pick_pre_target
+geometry_msgs/PoseStamped pick_target
+geometry_msgs/PoseStamped[] pick_exit_targets
+geometry_msgs/PoseStamped place_pre_target
+geometry_msgs/PoseStamped place_target
+geometry_msgs/PoseStamped[] place_exit_targets
+geometry_msgs/PoseStamped navigation_target
+moveit_msgs/CollisionObject[] stations
+string[] touch_links
+float64 grasp_width_m
+astribot_navigation_msgs/RobotEnvelope navigation_limits
+# Positive steady-clock budget, at most 540 seconds; never a sensor lease.
+float64 timeout_s
+---
+bool success
+bool resources_released
+string reason
+string cleanup_reason
+string lease_id
+string navigation_goal_uuid
+string final_attachment_revision
+---
+string phase
+string reason
+string lease_id
+string resource_epoch
+string context_id
+string object_id
+string stage_id
+string hold_id
+bool hold_confirmed
+string navigation_goal_uuid

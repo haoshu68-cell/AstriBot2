@@ -17,6 +17,9 @@ def _validate(context):
         raise RuntimeError('env 必须为 sim/hardware，slam_backend 必须为 voxel/static_map')
     if backend == 'static_map' and (env != 'sim' or LaunchConfiguration('mode').perform(context) != 'mapping'):
         raise RuntimeError('static_map 仅供仿真真值基线；载图定位请使用 voxel + previous_map')
+    if (backend == 'static_map' and LaunchConfiguration('launch_slam').perform(context) == 'true'
+            and not LaunchConfiguration('initial_chassis_pose').perform(context).strip()):
+        raise RuntimeError('static_map 的 SLAM 必须提供实测 initial_chassis_pose 配准，不能把 spawn 当成实际启动位姿')
     if LaunchConfiguration('social_scenario').perform(context) and (env != 'sim' or backend != 'static_map'):
         raise RuntimeError('H1 social_scenario requires simulation with ground-truth static_map')
     return []
@@ -42,17 +45,33 @@ def generate_launch_description():
         DeclareLaunchArgument('slam_backend', default_value='voxel',
                               description='voxel 或仿真基线 static_map'),
         DeclareLaunchArgument('launch_gazebo', default_value='true'),
+        DeclareLaunchArgument('launch_slam', default_value='true',
+                              description='是否直接启动 Voxel-SLAM；受管建图入口会关闭此项，由 mapping_runtime 拥有会话'),
         DeclareLaunchArgument('ros_domain_id', default_value='25'),
         DeclareLaunchArgument('spawn_x', default_value='0.0'),
         DeclareLaunchArgument('spawn_y', default_value='0.0'),
         DeclareLaunchArgument('spawn_yaw', default_value='0.0'),
         DeclareLaunchArgument('social_scenario', default_value=''),
         DeclareLaunchArgument('previous_map', default_value=''),
+        DeclareLaunchArgument('initial_chassis_pose', default_value=''),
         DeclareLaunchArgument('save_path', default_value='/tmp/astribot_slam_sessions/'),
         DeclareLaunchArgument('map_name', default_value=''),
         DeclareLaunchArgument('save_map', default_value='0'),
         DeclareLaunchArgument('use_rviz', default_value='true'),
         DeclareLaunchArgument('headless', default_value='false'),
+        DeclareLaunchArgument('control_loopback_udp', default_value='false'),
+        DeclareLaunchArgument('use_lidar', default_value='true'),
+        DeclareLaunchArgument('use_camera', default_value='true'),
+        DeclareLaunchArgument('use_wrist_cameras', default_value='false'),
+        DeclareLaunchArgument('use_stereo_cameras', default_value='false'),
+        DeclareLaunchArgument('torso_camera_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_torso_rgbd_nav_sim.yaml'])),
+        DeclareLaunchArgument('camera_calibration_dir', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config'])),
+        DeclareLaunchArgument('camera_mounts_profile', default_value=PathJoinSubstitution([
+            FindPackageShare('astribot_s1_description'), 'config', 'camera_mounts_reference_sim.yaml'])),
+        DeclareLaunchArgument('use_camera_postprocess', default_value='true'),
+        DeclareLaunchArgument('use_camera_pointcloud', default_value='true'),
         DeclareLaunchArgument('robot_name', default_value='astribot_s1'),
         DeclareLaunchArgument('camera_profile', default_value=PathJoinSubstitution([FindPackageShare('astribot_s1_description'), 'config', 'camera_rgbd_transport.yaml'])),
         DeclareLaunchArgument('autonomous_patrol', default_value='false'),
@@ -77,7 +96,17 @@ def generate_launch_description():
             'spawn_yaw': LaunchConfiguration('spawn_yaw'),
             'use_rviz': 'false',
             'headless': LaunchConfiguration('headless'),
+            'control_loopback_udp': LaunchConfiguration('control_loopback_udp'),
             'camera_profile': LaunchConfiguration('camera_profile'),
+            'use_lidar': LaunchConfiguration('use_lidar'),
+            'use_camera': LaunchConfiguration('use_camera'),
+            'use_wrist_cameras': LaunchConfiguration('use_wrist_cameras'),
+            'use_stereo_cameras': LaunchConfiguration('use_stereo_cameras'),
+            'torso_camera_profile': LaunchConfiguration('torso_camera_profile'),
+            'camera_calibration_dir': LaunchConfiguration('camera_calibration_dir'),
+            'camera_mounts_profile': LaunchConfiguration('camera_mounts_profile'),
+            'use_camera_postprocess': LaunchConfiguration('use_camera_postprocess'),
+            'use_camera_pointcloud': LaunchConfiguration('use_camera_pointcloud'),
             'social_scenario': LaunchConfiguration('social_scenario'),
         }.items(),
         condition=IfCondition(PythonExpression([
@@ -95,10 +124,14 @@ def generate_launch_description():
             'lidar_topic_back': '/livox/lidar_right',
             'imu_topic': '/livox/imu',
             'point_notime': '1',
+            'initial_chassis_pose': LaunchConfiguration('initial_chassis_pose'),
             'publish_grid': PythonExpression(["'", backend, "' == 'voxel'"]),
             'publish_map_odom': PythonExpression(["'", backend, "' == 'voxel'"]),
         }.items(),
-        condition=IfCondition(sim_voxel),
+        condition=IfCondition(PythonExpression([
+            "'", env, "' == 'sim' and '",
+            LaunchConfiguration('launch_slam'), "' == 'true'"
+        ])),
     )
 
     sim_perception = IncludeLaunchDescription(
@@ -134,9 +167,13 @@ def generate_launch_description():
             'lidar_topic_back': '/livox/lidar_right',
             'imu_topic': '/livox/imu',
             'point_notime': '0',
+            'initial_chassis_pose': LaunchConfiguration('initial_chassis_pose'),
             'imu_extrinsic_tran': '-0.011,-0.02329,0.04412',
         }.items(),
-        condition=IfCondition(hardware_voxel),
+        condition=IfCondition(PythonExpression([
+            "'", env, "' == 'hardware' and '", backend, "' == 'voxel' and '",
+            LaunchConfiguration('launch_slam'), "' == 'true'"
+        ])),
     )
 
     map_provider = IncludeLaunchDescription(

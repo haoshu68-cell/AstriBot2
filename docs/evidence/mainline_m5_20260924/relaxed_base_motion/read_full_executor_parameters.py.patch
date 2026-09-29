@@ -1,0 +1,12 @@
+--- read_full_executor_parameters.py.before
++++ read_full_executor_parameters.py.after
+@@ -77,6 +77,9 @@
+             raise RuntimeError('CHASSIS_PARAMETER_RESPONSE_SIZE_MISMATCH')
+         report['chassis_parameters'] = {
+             name: message_to_ordereddict(value) for name, value in zip(chassis_names, chassis_response.values)}
++        idle_hold = report['chassis_parameters']['idle_position_hold']
++        if idle_hold['type'] != 1 or idle_hold['bool_value'] is not True:
++            raise RuntimeError('CHASSIS_IDLE_POSITION_HOLD_REQUIRED')
+         filter_names = ['use_sim_time', 'cloud_pose_frame', 'max_cloud_age_sec',
+                         'tf_timeout_sec', 'tf_total_budget_sec',
+                         'qos_overrides./tf.subscription.reliability',

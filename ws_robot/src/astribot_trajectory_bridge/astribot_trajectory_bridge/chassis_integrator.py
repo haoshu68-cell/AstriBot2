@@ -37,6 +37,22 @@ SDK 位置误差检查由控制核心执行，速度与加减速限制由上层�
 
 import collections
 import math
+import os
+
+# The native package is optional during migration.  The Python functions below
+# remain the executable reference when the overlay is not built; once present,
+# the numerically hot kernels use the same-input C++ implementation.  Keeping
+# the import optional makes rollback and isolated unit tests deterministic.
+if os.environ.get('ASTRIBOT_BRIDGE_NATIVE_KERNELS', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native
+    except ImportError:  # pragma: no cover - exercised on Python-only overlays
+        _native = None
+else:
+    # A pybind call per scalar tick is slower than in-process Python math.
+    # Keep native kernels opt-in until the surrounding state machine is native,
+    # so the compatibility phase cannot degrade the 250 Hz bridge loop.
+    _native = None
 
 IDX_X = 0
 IDX_Y = 1
@@ -55,10 +71,17 @@ class ChassisConfigError(ValueError):
 
 def wrap_angle(theta):
     """定位朝向和几何误差取最短角；SDK 位置目标不得调用此函数。"""
+    # Python's math.sin/cos raise ValueError for +/-inf.  Keep that boundary
+    # behavior instead of allowing libm in the native kernel to silently turn
+    # it into NaN.
+    if not math.isfinite(theta) and not math.isnan(theta):
+        return math.atan2(math.sin(theta), math.cos(theta))
+    if _native is not None:
+        return _native.wrap_angle(theta)
     return math.atan2(math.sin(theta), math.cos(theta))
 
 
-class PoseFrameIntegrator:
+class _PythonPoseFrameIntegrator:
     """SDK 目标 = 最新反馈基准 + 本帧指令积分，三个轴同时换帧。
 
     无前瞻模式累加 SLAM 的局部测量增量；有限前瞻模式由控制核心按 SLAM
@@ -120,7 +143,7 @@ class PoseFrameIntegrator:
         self.velocity = list(velocity)
 
 
-class SdkPoseHistory:
+class _PythonSdkPoseHistory:
     """SDK read-time samples aligned to localization time, without accumulating frame bias."""
 
     def __init__(self, duration):
@@ -149,12 +172,96 @@ class SdkPoseHistory:
         return list(self.samples[-1][1])
 
 
+class PoseFrameIntegrator:
+    """Compatibility facade selecting the native state object when enabled.
+
+    The public read accessors return lists just like the old Python class.  The
+    bridge core uses ``*_value``/``set_integral`` for mutation so the native
+    implementation cannot accidentally expose a detached copy.
+    """
+
+    def __init__(self, pose, stamp, sdk_pose):
+        if _native is None:
+            self._impl = _PythonPoseFrameIntegrator(pose, stamp, sdk_pose)
+        else:
+            self._impl = _native.PoseFrameIntegrator(tuple(pose), stamp, tuple(sdk_pose))
+
+    @property
+    def stamp(self):
+        return self._impl.stamp if _native is None else self._impl.stamp()
+
+    @property
+    def pose(self):
+        return list(self._impl.pose) if _native is None else list(self._impl.pose())
+
+    @property
+    def anchor(self):
+        return list(self._impl.anchor) if _native is None else list(self._impl.anchor())
+
+    @property
+    def integral(self):
+        return list(self._impl.integral) if _native is None else list(self._impl.integral())
+
+    @property
+    def velocity(self):
+        return list(self._impl.velocity) if _native is None else list(self._impl.velocity())
+
+    def anchor_value(self, axis):
+        return self.anchor[axis]
+
+    def integral_value(self, axis):
+        return self.integral[axis]
+
+    def set_integral(self, axis, value):
+        if _native is None:
+            self._impl.integral[axis] = value
+        else:
+            self._impl.set_integral(axis, value)
+
+    def observe(self, pose, stamp):
+        return self._impl.observe(tuple(pose), stamp)
+
+    def reanchor_axis(self, axis, actual):
+        return self._impl.reanchor_axis(axis, actual)
+
+    def target(self, velocity, dt):
+        return list(self._impl.target(tuple(velocity), dt))
+
+    def commit(self, velocity, dt):
+        return self._impl.commit(tuple(velocity), dt)
+
+    def preview_target(self, velocity, dt, times, xy_limit, theta_limit):
+        return list(self._impl.preview_target(tuple(velocity), dt, tuple(times),
+                                              xy_limit, theta_limit))
+
+    def commit_preview(self, velocity, dt):
+        return self._impl.commit_preview(tuple(velocity), dt)
+
+
+class SdkPoseHistory:
+    """Compatibility facade for the timestamp-aligned SDK history."""
+
+    def __init__(self, duration):
+        self._impl = (_PythonSdkPoseHistory(duration) if _native is None
+                      else _native.SdkPoseHistory(duration))
+
+    def append(self, stamp, pose):
+        return self._impl.append(stamp, tuple(pose)) if _native is not None \
+            else self._impl.append(stamp, pose)
+
+    def at(self, stamp):
+        return list(self._impl.at(stamp))
+
+
 def local_pose_displacement(previous, current):
     """SLAM 帧间位移转成 SDK 示例使用的本体行程；转弯按 SE(2) 对数映射。
 
     使用最短 yaw 差，假定相邻定位帧的真实转角小于 pi。sinc 补偿避免将圆弧
     的弦长当作本体行程；不能恢复两帧间未被测量的复杂运动。
     """
+    if _native is not None and all(math.isfinite(value) for value in
+                                   (previous[IDX_THETA], current[IDX_THETA])):
+        return tuple(_native.local_pose_displacement(tuple(previous), tuple(current)))
     turn = wrap_angle(current[IDX_THETA] - previous[IDX_THETA])
     mid_yaw = previous[IDX_THETA] + 0.5 * turn
     chord = (current[IDX_X] - previous[IDX_X], current[IDX_Y] - previous[IDX_Y])
@@ -205,6 +312,8 @@ def to_local_velocity(twist_xy_wz, input_frame, theta):
     if input_frame not in VALID_INPUT_FRAMES:
         raise ChassisConfigError(
             'input_frame=%r 非法，只能是 %s' % (input_frame, list(VALID_INPUT_FRAMES)))
+    if _native is not None and math.isfinite(theta):
+        return tuple(_native.to_local_velocity(tuple(twist_xy_wz), input_frame, theta))
     vx, vy, wz = twist_xy_wz
     if input_frame == FRAME_BODY:
         return (vx, vy, wz)
@@ -251,6 +360,12 @@ def measure_tick_dt(now, prev, nominal_dt, max_dt):
             'max_dt=%r 小于 nominal_dt=%r —— 那样连按标称频率跑的拍都会被钳位，'
             '积分恒等于钳位值，等于没修这个缺陷' % (max_dt, nominal_dt))
 
+    if _native is not None and (
+            prev is None or all(math.isfinite(value) for value in (now, prev))):
+        dt, clamped, reason, raw = _native.measure_tick_dt(
+            now, prev, nominal_dt, max_dt)
+        return TickDt(float(dt), bool(clamped), str(reason), raw)
+
     if prev is None:
         return TickDt(nominal_dt, False, '', None)
 
@@ -283,6 +398,11 @@ def integrate_step_dt(pos_cmd, local_velocity, dt):
             'pos_cmd 长度=%d，期望 %d。注意 chassis_dof 由 ROBOT_TYPE 决定，'
             '未设置为 S1 时是 2（见 astribot_base.py:36-38）'
             % (len(pos_cmd), CHASSIS_DOF_S1))
+    if _native is not None:
+        try:
+            return list(_native.integrate_step_dt(tuple(pos_cmd), tuple(local_velocity), dt))
+        except ValueError as exc:
+            raise ChassisConfigError(str(exc)) from exc
     return [
         pos_cmd[IDX_X] + local_velocity[0] * dt,
         pos_cmd[IDX_Y] + local_velocity[1] * dt,
@@ -307,11 +427,19 @@ def integrate_step(pos_cmd, local_velocity, freq):
     """
     if freq <= 0.0:
         raise ChassisConfigError('freq=%r 必须为正' % (freq,))
+    if _native is not None:
+        try:
+            return list(_native.integrate_step(tuple(pos_cmd), tuple(local_velocity), freq))
+        except ValueError as exc:
+            raise ChassisConfigError(str(exc)) from exc
     return integrate_step_dt(pos_cmd, local_velocity, 1.0 / freq)
 
 
 def pose_error(pos_a, pos_b):
     """位姿差 a - b，返回 (dx, dy, dtheta)。dtheta 已按最短弧归一。"""
+    if _native is not None and all(math.isfinite(value) for value in
+                                   (pos_a[IDX_THETA], pos_b[IDX_THETA])):
+        return tuple(_native.pose_error(tuple(pos_a), tuple(pos_b)))
     return (pos_a[IDX_X] - pos_b[IDX_X],
             pos_a[IDX_Y] - pos_b[IDX_Y],
             wrap_angle(pos_a[IDX_THETA] - pos_b[IDX_THETA]))
@@ -324,4 +452,6 @@ def error_magnitude(err_xy_theta):
     合成需要一个人为的权重，那个权重会变成一个说不清依据的魔数。
     分开返回，让 leash 用两个独立阈值判断。
     """
+    if _native is not None:
+        return tuple(_native.error_magnitude(tuple(err_xy_theta)))
     return (math.hypot(err_xy_theta[0], err_xy_theta[1]), abs(err_xy_theta[2]))

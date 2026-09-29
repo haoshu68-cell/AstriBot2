@@ -1,3 +1,4 @@
+#include "astribot_navigation_zones/client.hpp"
 // Copyright 2026 Astribot.
 #ifndef ASTRIBOT_S1_AUTONOMY__EXPLORATION_COORDINATOR_NODE_HPP_
 #define ASTRIBOT_S1_AUTONOMY__EXPLORATION_COORDINATOR_NODE_HPP_
@@ -76,6 +77,10 @@ private:
     double cost{0.0};
   };
 
+  bool require_zones_{false};astribot_navigation_zones::Gate zones_;
+  std::shared_ptr<GridMap> raw_zone_map_,filtered_zone_source_;
+  std::string zone_token_,filtered_zone_token_;bool zones_present_{false};
+  bool refreshZoneMap();
   void declareParameters();
   struct EvaluatedCandidate {GoalCandidatePose goal; std::vector<PlanarPoint> path;};
   std::vector<EvaluatedCandidate> evaluated_candidates_;
@@ -335,6 +340,9 @@ private:
   bool exploration_complete_{false};
   /// pause 服务请求的冻结标志，与异常导致的 kPaused 区分开。
   bool manually_paused_{false};
+  /// 仅在显式恢复/暂停或真正进入目标生成后置为 true。
+  /// 防止尚未建立探索会话时错误开放“取消并保存”。
+  bool session_started_{false};
 
   /// 地图内容足以做探索决策的已知格数下限。
   std::size_t min_known_cells_for_decision_{0U};

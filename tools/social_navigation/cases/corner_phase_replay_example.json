@@ -1,0 +1,46 @@
+{
+  "evidence_layer": "SYNTHETIC_HELPER_CHECK",
+  "context": {
+    "session_id": "synthetic-example",
+    "clock_epoch": 1,
+    "revision": 1,
+    "cursor": 0,
+    "requested_state": "CORNER_RECOVERY",
+    "armed_ros_s": 10.0,
+    "armed_wall_s": 100.0
+  },
+  "records": [
+    {
+      "kind": "state",
+      "event": {
+        "session_id": "synthetic-example",
+        "clock_epoch": 1,
+        "revision": 1,
+        "cursor": 0,
+        "state": "RECOVERING",
+        "pose_s": 10.1,
+        "received_ros_s": 10.1,
+        "received_wall_s": 100.1,
+        "sequence": 1
+      }
+    },
+    {
+      "kind": "probe",
+      "sample": {
+        "now_ros_s": 10.2,
+        "now_wall_s": 100.2,
+        "pose_s": 10.2,
+        "phase": "ALIGN_CORNER"
+      }
+    },
+    {
+      "kind": "dispatch",
+      "now_ros_s": 10.21,
+      "now_wall_s": 100.21
+    },
+    {
+      "kind": "ack",
+      "acknowledged": true
+    }
+  ]
+}

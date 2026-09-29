@@ -225,7 +225,18 @@ def main():
         social=[r for r in records if r['kind']=='social' and r.get('active')]
         geometry=[r for r in records if r['kind']=='geometry']
         reasons=Counter(r['reason'] for r in social)
-        conflicts=[r for r in social if any(not c['admissible'] for c in r['candidates'])]
+        # A social conflict can be represented by the policy's selected
+        # reason even when the speed candidates remain geometrically
+        # admissible (for example a goal occupied by a person: the policy
+        # chooses SLOW/YIELD before the hard envelope becomes infeasible).
+        # Treating only `admissible == false` as a conflict made that valid
+        # decision invisible to the scenario oracle.
+        conflict_reasons={'PREDICTED_CONFLICT','YIELD','STATIONARY_CONFLICT',
+                          'SOCIAL_BLOCKED_TIMEOUT','GOAL_OCCUPIED'}
+        conflicts=[r for r in social if (
+            any(not c.get('admissible', True) for c in r.get('candidates', [])) or
+            (r.get('goal_occupied') and r.get('reason') in conflict_reasons) or
+            r.get('reason') in conflict_reasons)]
         summary.update(status='completed',navigation_returncode=child.returncode,events=events,
             all_goals_passed=len(results)==(1 if case.get('through_poses') else len(case['route'])) and all(r['passed'] for r in results),
             arrivals=[{'xy_m':r['xy_m'],'yaw_deg':r['yaw_deg'],'passed':r['passed']} for r in results],

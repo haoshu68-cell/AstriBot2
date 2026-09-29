@@ -1,0 +1,114 @@
+[0.291s] WARNING:colcon.colcon_core.package_selection:Some selected packages are already built in one or more underlay workspaces:
+	'astribot_s1_navigation' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_s1_navigation, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_navigation
+	'astribot_s1_moveit_config' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/camera_reference_20260921/ros_ws/install/astribot_s1_moveit_config, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_moveit_config
+	'astribot_navigation_msgs' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_navigation_msgs, /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_navigation_msgs
+	'astribot_s1_robot_geometry' is in: /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry
+If a package in a merged underlay workspace is overridden and it installs headers, then all packages in the overlay must sort their include directories by workspace order. Failure to do so may result in build failures or undefined behavior at run time.
+If the overridden package is used by another package in any underlay, then the overriding package in the overlay must be API and ABI compatible or undefined behavior at run time may occur.
+
+If you understand the risks and want to override a package anyways, add the following to the command line:
+	--allow-overriding astribot_navigation_msgs astribot_s1_moveit_config astribot_s1_navigation astribot_s1_robot_geometry
+
+This may be promoted to an error in a future release of colcon-override-check.
+Starting >>> astribot_navigation_msgs
+Starting >>> astribot_navigation_zones
+[0.305s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_operator_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_operator_msgs
+Finished <<< astribot_navigation_zones [0.90s]
+Starting >>> astribot_trajectory_bridge_native
+Finished <<< astribot_trajectory_bridge_native [1.01s]
+Starting >>> astribot_s1_perception_native
+[2.225s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_logging
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_logging
+Finished <<< astribot_s1_perception_native [0.62s]
+Starting >>> astribot_s1_moveit_config
+[2.845s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_eigen_vendor
+- astribot_logging
+- astribot_perception_msgs
+- astribot_transport_msgs
+- astribot_s1_description
+- astribot_s1_manipulation
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_eigen_vendor
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_logging
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/ros_ws/install/astribot_perception_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/install/astribot_transport_msgs
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/camera_reference_20260921/ros_ws/install/astribot_s1_description
+- /home/yjh/WorkSpace/astribot_sdk_ros2/runs/grasp_pose_sim_20260921/ros_ws/install/astribot_s1_manipulation
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_eigen_vendor astribot_logging astribot_perception_msgs astribot_transport_msgs astribot_s1_description astribot_s1_manipulation
+Finished <<< astribot_s1_moveit_config [0.71s]
+Finished <<< astribot_navigation_msgs [9.59s]
+Starting >>> astribot_s1_robot_geometry
+Starting >>> astribot_s1_task_arbiter_native
+[9.893s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_operator_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_operator_msgs
+Finished <<< astribot_s1_task_arbiter_native [0.53s]
+--- stderr: astribot_s1_robot_geometry
+lto-wrapper: warning: using serial compilation of 4 LTRANS jobs
+---
+Finished <<< astribot_s1_robot_geometry [17.7s]
+Starting >>> astribot_s1_navigation_policy_native
+[27.583s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- astribot_operator_msgs
+They are being used from the following locations instead:
+- /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_operator_msgs
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore astribot_operator_msgs
+--- stderr: astribot_s1_navigation_policy_native
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_sweep.cpp:4:10: fatal error: astribot_s1_robot_geometry/geometry_kernels.hpp: 没有那个文件或目录
+    4 | #include "astribot_s1_robot_geometry/geometry_kernels.hpp"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/policy_sweep.dir/build.make:76：CMakeFiles/policy_sweep.dir/src/policy_sweep.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:819：CMakeFiles/policy_sweep.dir/all] 错误 2
+gmake[1]: *** 正在等待未完成的任务....
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/fixed_envelope_core.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/fixed_envelope_core.hpp:9:10: fatal error: astribot_navigation_msgs/msg/arm_hold_status.hpp: 没有那个文件或目录
+    9 | #include <astribot_navigation_msgs/msg/arm_hold_status.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/fixed_envelope_core.dir/build.make:76：CMakeFiles/fixed_envelope_core.dir/src/fixed_envelope_core.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:578：CMakeFiles/fixed_envelope_core.dir/all] 错误 2
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/final_protection_core.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/final_protection_core.hpp:10:10: fatal error: astribot_navigation_msgs/msg/navigation_envelope_v2.hpp: 没有那个文件或目录
+   10 | #include <astribot_navigation_msgs/msg/navigation_envelope_v2.hpp>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/final_protection_core.dir/build.make:76：CMakeFiles/final_protection_core.dir/src/final_protection_core.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:366：CMakeFiles/final_protection_core.dir/all] 错误 2
+In file included from /home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_envelope.cpp:1:
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/policy_envelope.hpp:4:10: fatal error: astribot_s1_robot_geometry/geometry_kernels.hpp: 没有那个文件或目录
+    4 | #include "astribot_s1_robot_geometry/geometry_kernels.hpp"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/policy_envelope.dir/build.make:76：CMakeFiles/policy_envelope.dir/src/policy_envelope.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:932：CMakeFiles/policy_envelope.dir/all] 错误 2
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_navigation_policy_native/src/policy_observation_adapters.cpp:2:10: fatal error: astribot_s1_robot_geometry/geometry_kernels.hpp: 没有那个文件或目录
+    2 | #include "astribot_s1_robot_geometry/geometry_kernels.hpp"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/policy_observation_adapters.dir/build.make:76：CMakeFiles/policy_observation_adapters.dir/src/policy_observation_adapters.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:986：CMakeFiles/policy_observation_adapters.dir/all] 错误 2
+lto-wrapper: warning: using serial compilation of 4 LTRANS jobs
+gmake: *** [Makefile:146：all] 错误 2
+---
+Failed   <<< astribot_s1_navigation_policy_native [14.8s, exited with code 2]
+
+Summary: 7 packages finished [42.3s]
+  1 package failed: astribot_s1_navigation_policy_native
+  2 packages had stderr output: astribot_s1_navigation_policy_native astribot_s1_robot_geometry
+  1 package not processed

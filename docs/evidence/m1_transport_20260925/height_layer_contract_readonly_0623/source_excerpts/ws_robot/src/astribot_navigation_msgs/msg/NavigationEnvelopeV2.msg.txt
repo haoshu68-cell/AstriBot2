@@ -1,0 +1,23 @@
+1: uint8 HOLD=0
+2: uint8 FIXED_POSTURE=1
+3: uint8 RESERVED_ARM_MOTION=2
+4: std_msgs/Header header
+5: builtin_interfaces/Time valid_until
+6: string coordinator_session_id
+7: string request_id
+8: string hold_id
+9: uint64 epoch
+10: uint64 clock_epoch
+11: uint64 reference_state_sequence
+12: uint64 source_state_sequence
+13: string model_revision
+14: string attachment_revision
+15: uint8 mode
+16: RobotEnvelope limits
+17: geometry_msgs/Polygon reserved_footprint
+18: # reserved_footprint plus clearance_m; Nav2 footprint_padding must be zero.
+19: geometry_msgs/Polygon installed_footprint
+20: string installed_geometry_hash
+21: float64 clearance_m
+22: bool navigation_allowed
+23: string reason

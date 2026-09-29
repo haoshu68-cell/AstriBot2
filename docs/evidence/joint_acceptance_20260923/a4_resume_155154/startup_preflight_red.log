@@ -1,0 +1,71 @@
+FFF
+======================================================================
+FAIL: test_changed_library_rejected_before_session_creation (__main__.RuntimeManifestStartup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/test/test_runtime_manifest_startup.py", line 55, in test_changed_library_rejected_before_session_creation
+    self.assertIn('RUNTIME_MANIFEST_REJECTED', result.stderr)
+AssertionError: 'RUNTIME_MANIFEST_REJECTED' not found in 'usage: sim_stack_supervisor.py [-h] [--instance INSTANCE]\n                               [--ros-domain-id ROS_DOMAIN_ID]\n                               [--spawn-x SPAWN_X] [--spawn-y SPAWN_Y]\n                               [--spawn-yaw SPAWN_YAW]\n                               [--mode {mapping,explore,localize,baseline}]\n                               [--exclusive-performance] [--map MAP]\n                               [--save-session SAVE_SESSION]\n                               [--match-threshold MATCH_THRESHOLD]\n                               [--map-yaml MAP_YAML]\n                               [--navigation-geometry-mode {legacy,fixed_v2}]\n                               [--payload-source-id PAYLOAD_SOURCE_ID]\n                               [--navigation-policy {off,p2,p3,p4,p5}]\n                               [--corridor-file CORRIDOR_FILE]\n                               [--social-scenario SOCIAL_SCENARIO]\n                               [--social-policy {off,h2}]\n                               [--tracker {mppi,rpp}]\n                               [--max-linear-speed MAX_LINEAR_SPEED]\n                               [--scan-source {slice_scan,laserscan}]\n                               [--use-lidar {true,false}]\n                               [--camera-preset CAMERA_PRESET]\n                               [--use-camera {true,false}]\n                               [--use-wrist-cameras {true,false}]\n                               [--use-stereo-cameras {true,false}]\n                               [--camera-profile CAMERA_PROFILE]\n                               [--torso-camera-profile TORSO_CAMERA_PROFILE]\n                               [--camera-calibration-dir CAMERA_CALIBRATION_DIR]\n                               [--camera-mounts-profile CAMERA_MOUNTS_PROFILE]\n                               [--use-camera-postprocess {true,false}]\n                               [--use-camera-pointcloud {true,false}]\n                               [--enable-depth-obstacles {true,false}]\n                               [--obstacle-layer-plugin {nav2_costmap_2d::ObstacleLayer,nav2_costmap_2d::VoxelLayer}]\n                               [--headless]\n                               [--real-time-factor REAL_TIME_FACTOR]\n                               [--no-rviz] [--nav-transport {udp,default}]\n                               [--nav-attempts {1,2,3}]\n                               [--ready-timeout READY_TIMEOUT]\n                               [--log-dir LOG_DIR]\n                               [--log-level {debug,info,warn,error,fatal}]\n                               [--log-max-bytes LOG_MAX_BYTES]\n                               [--log-backup-count LOG_BACKUP_COUNT]\n                               [--dry-run]\nsim_stack_supervisor.py: error: unrecognized arguments: --runtime-manifest /tmp/tmprvd0cz8y/manifest.json\n'
+
+======================================================================
+FAIL: test_missing_manifest_rejected_before_session_creation (__main__.RuntimeManifestStartup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/test/test_runtime_manifest_startup.py", line 62, in test_missing_manifest_rejected_before_session_creation
+    self.assertIn('RUNTIME_MANIFEST_REJECTED', result.stderr)
+AssertionError: 'RUNTIME_MANIFEST_REJECTED' not found in 'usage: sim_stack_supervisor.py [-h] [--instance INSTANCE]\n                               [--ros-domain-id ROS_DOMAIN_ID]\n                               [--spawn-x SPAWN_X] [--spawn-y SPAWN_Y]\n                               [--spawn-yaw SPAWN_YAW]\n                               [--mode {mapping,explore,localize,baseline}]\n                               [--exclusive-performance] [--map MAP]\n                               [--save-session SAVE_SESSION]\n                               [--match-threshold MATCH_THRESHOLD]\n                               [--map-yaml MAP_YAML]\n                               [--navigation-geometry-mode {legacy,fixed_v2}]\n                               [--payload-source-id PAYLOAD_SOURCE_ID]\n                               [--navigation-policy {off,p2,p3,p4,p5}]\n                               [--corridor-file CORRIDOR_FILE]\n                               [--social-scenario SOCIAL_SCENARIO]\n                               [--social-policy {off,h2}]\n                               [--tracker {mppi,rpp}]\n                               [--max-linear-speed MAX_LINEAR_SPEED]\n                               [--scan-source {slice_scan,laserscan}]\n                               [--use-lidar {true,false}]\n                               [--camera-preset CAMERA_PRESET]\n                               [--use-camera {true,false}]\n                               [--use-wrist-cameras {true,false}]\n                               [--use-stereo-cameras {true,false}]\n                               [--camera-profile CAMERA_PROFILE]\n                               [--torso-camera-profile TORSO_CAMERA_PROFILE]\n                               [--camera-calibration-dir CAMERA_CALIBRATION_DIR]\n                               [--camera-mounts-profile CAMERA_MOUNTS_PROFILE]\n                               [--use-camera-postprocess {true,false}]\n                               [--use-camera-pointcloud {true,false}]\n                               [--enable-depth-obstacles {true,false}]\n                               [--obstacle-layer-plugin {nav2_costmap_2d::ObstacleLayer,nav2_costmap_2d::VoxelLayer}]\n                               [--headless]\n                               [--real-time-factor REAL_TIME_FACTOR]\n                               [--no-rviz] [--nav-transport {udp,default}]\n                               [--nav-attempts {1,2,3}]\n                               [--ready-timeout READY_TIMEOUT]\n                               [--log-dir LOG_DIR]\n                               [--log-level {debug,info,warn,error,fatal}]\n                               [--log-max-bytes LOG_MAX_BYTES]\n                               [--log-backup-count LOG_BACKUP_COUNT]\n                               [--dry-run]\nsim_stack_supervisor.py: error: unrecognized arguments: --runtime-manifest /tmp/tmpe8h9p836/manifest.json\n'
+
+======================================================================
+FAIL: test_valid_snapshot_reaches_dry_run_and_retains_receipt (__main__.RuntimeManifestStartup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/test/test_runtime_manifest_startup.py", line 46, in test_valid_snapshot_reaches_dry_run_and_retains_receipt
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 2 != 0 : usage: sim_stack_supervisor.py [-h] [--instance INSTANCE]
+                               [--ros-domain-id ROS_DOMAIN_ID]
+                               [--spawn-x SPAWN_X] [--spawn-y SPAWN_Y]
+                               [--spawn-yaw SPAWN_YAW]
+                               [--mode {mapping,explore,localize,baseline}]
+                               [--exclusive-performance] [--map MAP]
+                               [--save-session SAVE_SESSION]
+                               [--match-threshold MATCH_THRESHOLD]
+                               [--map-yaml MAP_YAML]
+                               [--navigation-geometry-mode {legacy,fixed_v2}]
+                               [--payload-source-id PAYLOAD_SOURCE_ID]
+                               [--navigation-policy {off,p2,p3,p4,p5}]
+                               [--corridor-file CORRIDOR_FILE]
+                               [--social-scenario SOCIAL_SCENARIO]
+                               [--social-policy {off,h2}]
+                               [--tracker {mppi,rpp}]
+                               [--max-linear-speed MAX_LINEAR_SPEED]
+                               [--scan-source {slice_scan,laserscan}]
+                               [--use-lidar {true,false}]
+                               [--camera-preset CAMERA_PRESET]
+                               [--use-camera {true,false}]
+                               [--use-wrist-cameras {true,false}]
+                               [--use-stereo-cameras {true,false}]
+                               [--camera-profile CAMERA_PROFILE]
+                               [--torso-camera-profile TORSO_CAMERA_PROFILE]
+                               [--camera-calibration-dir CAMERA_CALIBRATION_DIR]
+                               [--camera-mounts-profile CAMERA_MOUNTS_PROFILE]
+                               [--use-camera-postprocess {true,false}]
+                               [--use-camera-pointcloud {true,false}]
+                               [--enable-depth-obstacles {true,false}]
+                               [--obstacle-layer-plugin {nav2_costmap_2d::ObstacleLayer,nav2_costmap_2d::VoxelLayer}]
+                               [--headless]
+                               [--real-time-factor REAL_TIME_FACTOR]
+                               [--no-rviz] [--nav-transport {udp,default}]
+                               [--nav-attempts {1,2,3}]
+                               [--ready-timeout READY_TIMEOUT]
+                               [--log-dir LOG_DIR]
+                               [--log-level {debug,info,warn,error,fatal}]
+                               [--log-max-bytes LOG_MAX_BYTES]
+                               [--log-backup-count LOG_BACKUP_COUNT]
+                               [--dry-run]
+sim_stack_supervisor.py: error: unrecognized arguments: --runtime-manifest /tmp/tmpuqnaofnp/manifest.json
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.333s
+
+FAILED (failures=3)

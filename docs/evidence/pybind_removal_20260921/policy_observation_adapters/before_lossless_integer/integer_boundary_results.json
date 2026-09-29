@@ -1,0 +1,616 @@
+{
+  "calibration_epoch_above_int64": {
+    "input": {
+      "operations": [
+        {
+          "packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 100,
+            "frame_id": "sensor",
+            "calibration_epoch": 9223372036854775808,
+            "observations": [
+              {
+                "kind": "metric_box",
+                "measurement_id": "m",
+                "track_id": "track",
+                "center_m": [
+                  1.0,
+                  2.0,
+                  3.0
+                ],
+                "size_m": [
+                  0.2,
+                  0.4,
+                  0.6
+                ],
+                "position_variance_m2": 0.01,
+                "geometry_quality": 0.8,
+                "classes": {
+                  "person": 0.6,
+                  "unknown": 0.3
+                },
+                "provenance": [
+                  "frame:100"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "python": [
+      {
+        "ok": true,
+        "result": [
+          {
+            "sensor_id": "camera",
+            "measurement_id": "m",
+            "source_track_id": "track",
+            "capture_stamp": {
+              "ns": 100,
+              "clock": "ros",
+              "epoch": 4
+            },
+            "received_at": {
+              "ns": 1000,
+              "clock": "steady",
+              "epoch": 0
+            },
+            "valid_until": {
+              "ns": 500000100,
+              "clock": "ros",
+              "epoch": 4
+            },
+            "frame_id": "odom",
+            "calibration_epoch": 9223372036854775808,
+            "geometry": {
+              "center_m": {
+                "x": 1.0,
+                "y": 2.0,
+                "z": 3.0
+              },
+              "size_m": {
+                "x": 0.2,
+                "y": 0.4,
+                "z": 0.6
+              },
+              "position_covariance_m2": {
+                "values": [
+                  0.01,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.01,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.01
+                ]
+              },
+              "velocity_m_s": null,
+              "velocity_covariance_m2_s2": null
+            },
+            "geometry_quality": 0.8,
+            "class_probabilities": [
+              [
+                "person",
+                0.6
+              ],
+              [
+                "unknown",
+                0.3
+              ]
+            ],
+            "provenance": [
+              "frame:100"
+            ],
+            "velocity_observable": true,
+            "spatial_occupancy": false
+          }
+        ],
+        "last_packet": {
+          "schema_version": 1,
+          "sensor_id": "camera",
+          "stamp_ns": 100,
+          "frame_id": "sensor",
+          "calibration_epoch": 9223372036854775808,
+          "observations": [
+            {
+              "kind": "metric_box",
+              "measurement_id": "m",
+              "track_id": "track",
+              "center_m": [
+                1.0,
+                2.0,
+                3.0
+              ],
+              "size_m": [
+                0.2,
+                0.4,
+                0.6
+              ],
+              "position_variance_m2": 0.01,
+              "geometry_quality": 0.8,
+              "classes": {
+                "person": 0.6,
+                "unknown": 0.3
+              },
+              "provenance": [
+                "frame:100"
+              ]
+            }
+          ]
+        },
+        "calls": [
+          [
+            "now",
+            0
+          ],
+          [
+            "now",
+            1
+          ],
+          [
+            "tf",
+            "odom",
+            "sensor",
+            100
+          ],
+          [
+            "steady",
+            0
+          ]
+        ]
+      }
+    ],
+    "native": [
+      {
+        "ok": false,
+        "type": "OverflowError",
+        "last_packet": {
+          "schema_version": 1,
+          "sensor_id": "camera",
+          "stamp_ns": 100,
+          "frame_id": "sensor",
+          "calibration_epoch": 9223372036854775808,
+          "observations": [
+            {
+              "kind": "metric_box",
+              "measurement_id": "m",
+              "track_id": "track",
+              "center_m": [
+                1.0,
+                2.0,
+                3.0
+              ],
+              "size_m": [
+                0.2,
+                0.4,
+                0.6
+              ],
+              "position_variance_m2": 0.01,
+              "geometry_quality": 0.8,
+              "classes": {
+                "person": 0.6,
+                "unknown": 0.3
+              },
+              "provenance": [
+                "frame:100"
+              ]
+            }
+          ]
+        },
+        "calls": [
+          [
+            "now",
+            0
+          ],
+          [
+            "now",
+            1
+          ],
+          [
+            "tf",
+            "odom",
+            "sensor",
+            100
+          ],
+          [
+            "steady",
+            0
+          ]
+        ]
+      }
+    ]
+  },
+  "image_width_above_int64": {
+    "input": {
+      "operations": [
+        {
+          "packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 100,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "image_box",
+                "measurement_id": "wide",
+                "image_size_px": [
+                  9223372036854775808,
+                  480
+                ],
+                "box_xyxy_px": [
+                  0.0,
+                  0.0,
+                  10.0,
+                  10.0
+                ],
+                "geometry_quality": 1.0,
+                "provenance": [
+                  "wide"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "python": [
+      {
+        "ok": true,
+        "result": [
+          {
+            "sensor_id": "camera",
+            "measurement_id": "wide",
+            "source_track_id": null,
+            "capture_stamp": {
+              "ns": 100,
+              "clock": "ros",
+              "epoch": 4
+            },
+            "received_at": {
+              "ns": 1000,
+              "clock": "steady",
+              "epoch": 0
+            },
+            "valid_until": {
+              "ns": 500000100,
+              "clock": "ros",
+              "epoch": 4
+            },
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "geometry": {
+              "camera_id": "camera",
+              "image_width_px": 9223372036854775808,
+              "image_height_px": 480,
+              "xmin_px": 0.0,
+              "ymin_px": 0.0,
+              "xmax_px": 10.0,
+              "ymax_px": 10.0
+            },
+            "geometry_quality": 1.0,
+            "class_probabilities": [],
+            "provenance": [
+              "wide"
+            ],
+            "velocity_observable": false,
+            "spatial_occupancy": false
+          }
+        ],
+        "last_packet": {
+          "schema_version": 1,
+          "sensor_id": "camera",
+          "stamp_ns": 100,
+          "frame_id": "sensor",
+          "calibration_epoch": 7,
+          "observations": [
+            {
+              "kind": "image_box",
+              "measurement_id": "wide",
+              "image_size_px": [
+                9223372036854775808,
+                480
+              ],
+              "box_xyxy_px": [
+                0.0,
+                0.0,
+                10.0,
+                10.0
+              ],
+              "geometry_quality": 1.0,
+              "provenance": [
+                "wide"
+              ]
+            }
+          ]
+        },
+        "calls": [
+          [
+            "now",
+            0
+          ],
+          [
+            "now",
+            1
+          ],
+          [
+            "steady",
+            0
+          ]
+        ]
+      }
+    ],
+    "native": [
+      {
+        "ok": false,
+        "type": "OverflowError",
+        "last_packet": {
+          "schema_version": 1,
+          "sensor_id": "camera",
+          "stamp_ns": 100,
+          "frame_id": "sensor",
+          "calibration_epoch": 7,
+          "observations": [
+            {
+              "kind": "image_box",
+              "measurement_id": "wide",
+              "image_size_px": [
+                9223372036854775808,
+                480
+              ],
+              "box_xyxy_px": [
+                0.0,
+                0.0,
+                10.0,
+                10.0
+              ],
+              "geometry_quality": 1.0,
+              "provenance": [
+                "wide"
+              ]
+            }
+          ]
+        },
+        "calls": [
+          [
+            "now",
+            0
+          ],
+          [
+            "now",
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  "stamp_plus_timeout_above_int64": {
+    "input": {
+      "operations": [
+        {
+          "packet": {
+            "schema_version": 1,
+            "sensor_id": "camera",
+            "stamp_ns": 9223372036354775808,
+            "frame_id": "sensor",
+            "calibration_epoch": 7,
+            "observations": [
+              {
+                "kind": "metric_box",
+                "measurement_id": "m",
+                "track_id": "track",
+                "center_m": [
+                  1.0,
+                  2.0,
+                  3.0
+                ],
+                "size_m": [
+                  0.2,
+                  0.4,
+                  0.6
+                ],
+                "position_variance_m2": 0.01,
+                "geometry_quality": 0.8,
+                "classes": {
+                  "person": 0.6,
+                  "unknown": 0.3
+                },
+                "provenance": [
+                  "frame:100"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "python": [
+      {
+        "ok": true,
+        "result": [
+          {
+            "sensor_id": "camera",
+            "measurement_id": "m",
+            "source_track_id": "track",
+            "capture_stamp": {
+              "ns": 9223372036354775808,
+              "clock": "ros",
+              "epoch": 4
+            },
+            "received_at": {
+              "ns": 1000,
+              "clock": "steady",
+              "epoch": 0
+            },
+            "valid_until": {
+              "ns": 9223372036854775808,
+              "clock": "ros",
+              "epoch": 4
+            },
+            "frame_id": "odom",
+            "calibration_epoch": 7,
+            "geometry": {
+              "center_m": {
+                "x": 1.0,
+                "y": 2.0,
+                "z": 3.0
+              },
+              "size_m": {
+                "x": 0.2,
+                "y": 0.4,
+                "z": 0.6
+              },
+              "position_covariance_m2": {
+                "values": [
+                  0.01,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.01,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.01
+                ]
+              },
+              "velocity_m_s": null,
+              "velocity_covariance_m2_s2": null
+            },
+            "geometry_quality": 0.8,
+            "class_probabilities": [
+              [
+                "person",
+                0.6
+              ],
+              [
+                "unknown",
+                0.3
+              ]
+            ],
+            "provenance": [
+              "frame:100"
+            ],
+            "velocity_observable": true,
+            "spatial_occupancy": false
+          }
+        ],
+        "last_packet": {
+          "schema_version": 1,
+          "sensor_id": "camera",
+          "stamp_ns": 9223372036354775808,
+          "frame_id": "sensor",
+          "calibration_epoch": 7,
+          "observations": [
+            {
+              "kind": "metric_box",
+              "measurement_id": "m",
+              "track_id": "track",
+              "center_m": [
+                1.0,
+                2.0,
+                3.0
+              ],
+              "size_m": [
+                0.2,
+                0.4,
+                0.6
+              ],
+              "position_variance_m2": 0.01,
+              "geometry_quality": 0.8,
+              "classes": {
+                "person": 0.6,
+                "unknown": 0.3
+              },
+              "provenance": [
+                "frame:100"
+              ]
+            }
+          ]
+        },
+        "calls": [
+          [
+            "now",
+            0
+          ],
+          [
+            "now",
+            1
+          ],
+          [
+            "tf",
+            "odom",
+            "sensor",
+            9223372036354775808
+          ],
+          [
+            "steady",
+            0
+          ]
+        ]
+      }
+    ],
+    "native": [
+      {
+        "ok": false,
+        "type": "OverflowError",
+        "last_packet": {
+          "schema_version": 1,
+          "sensor_id": "camera",
+          "stamp_ns": 9223372036354775808,
+          "frame_id": "sensor",
+          "calibration_epoch": 7,
+          "observations": [
+            {
+              "kind": "metric_box",
+              "measurement_id": "m",
+              "track_id": "track",
+              "center_m": [
+                1.0,
+                2.0,
+                3.0
+              ],
+              "size_m": [
+                0.2,
+                0.4,
+                0.6
+              ],
+              "position_variance_m2": 0.01,
+              "geometry_quality": 0.8,
+              "classes": {
+                "person": 0.6,
+                "unknown": 0.3
+              },
+              "provenance": [
+                "frame:100"
+              ]
+            }
+          ]
+        },
+        "calls": [
+          [
+            "now",
+            0
+          ],
+          [
+            "now",
+            1
+          ],
+          [
+            "tf",
+            "odom",
+            "sensor",
+            9223372036354775808
+          ],
+          [
+            "steady",
+            0
+          ]
+        ]
+      }
+    ]
+  }
+}

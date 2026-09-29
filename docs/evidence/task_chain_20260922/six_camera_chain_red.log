@@ -1,0 +1,54 @@
+FF
+======================================================================
+FAIL: test_bringup_layers_forward_profile_without_replacement (__main__.SixCameras)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_six_camera_launch_chain.py", line 25, in test_bringup_layers_forward_profile_without_replacement
+    self.assertEqual(len(selected),1,path)
+AssertionError: 0 != 1 : ws_robot/src/astribot_s1_navigation/launch/nav2_full_bringup.launch.py
+
+======================================================================
+FAIL: test_supervisor_forwards_explicit_sensor_configuration (__main__.SixCameras)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/tools/vision/test_six_camera_launch_chain.py", line 14, in test_supervisor_forwards_explicit_sensor_configuration
+    p=subprocess.run(command,capture_output=True,text=True);self.assertEqual(p.returncode,0,p.stderr);args=json.loads(p.stdout)['simulation']
+AssertionError: 2 != 0 : usage: sim_stack_supervisor.py [-h] [--instance INSTANCE]
+                               [--ros-domain-id ROS_DOMAIN_ID]
+                               [--spawn-x SPAWN_X] [--spawn-y SPAWN_Y]
+                               [--spawn-yaw SPAWN_YAW]
+                               [--mode {mapping,explore,localize,baseline}]
+                               [--map MAP] [--save-session SAVE_SESSION]
+                               [--match-threshold MATCH_THRESHOLD]
+                               [--map-yaml MAP_YAML]
+                               [--navigation-geometry-mode {legacy,fixed_v2}]
+                               [--navigation-policy {off,p2,p3,p4,p5}]
+                               [--corridor-file CORRIDOR_FILE]
+                               [--social-scenario SOCIAL_SCENARIO]
+                               [--social-policy {off,h2}]
+                               [--tracker {mppi,rpp}]
+                               [--max-linear-speed MAX_LINEAR_SPEED]
+                               [--scan-source {slice_scan,laserscan}]
+                               [--use-lidar {true,false}]
+                               [--use-camera {true,false}]
+                               [--use-camera-postprocess {true,false}]
+                               [--use-camera-pointcloud {true,false}]
+                               [--enable-depth-obstacles {true,false}]
+                               [--obstacle-layer-plugin {nav2_costmap_2d::ObstacleLayer,nav2_costmap_2d::VoxelLayer}]
+                               [--headless]
+                               [--real-time-factor REAL_TIME_FACTOR]
+                               [--no-rviz] [--nav-transport {udp,default}]
+                               [--nav-attempts {1,2,3}]
+                               [--ready-timeout READY_TIMEOUT]
+                               [--log-dir LOG_DIR]
+                               [--log-level {debug,info,warn,error,fatal}]
+                               [--log-max-bytes LOG_MAX_BYTES]
+                               [--log-backup-count LOG_BACKUP_COUNT]
+                               [--dry-run]
+sim_stack_supervisor.py: error: unrecognized arguments: --use-wrist-cameras true --use-stereo-cameras true --camera-calibration-dir /fixture/calib --torso-camera-profile /fixture/torso.yaml
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.120s
+
+FAILED (failures=2)

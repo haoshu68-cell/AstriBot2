@@ -1,0 +1,210 @@
+EEEEEEE
+==================================== ERRORS ====================================
+____ ERROR at setup of test_goal_feedback_and_result[python-pose-operator] _____
+
+request = <SubRequest 'runtime' for <Function test_goal_feedback_and_result[python-pose-operator]>>
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_unique/test_goal_feedback_and_result_0')
+
+    @pytest.fixture(params=['python', 'cpp'])
+    def runtime(request, tmp_path):
+>       r = Runtime(request.param, tmp_path)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:150: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x75d90c0fd480>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+______ ERROR at setup of test_goal_feedback_and_result[python-pose-route] ______
+
+request = <SubRequest 'runtime' for <Function test_goal_feedback_and_result[python-pose-route]>>
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_unique/test_goal_feedback_and_result_1')
+
+    @pytest.fixture(params=['python', 'cpp'])
+    def runtime(request, tmp_path):
+>       r = Runtime(request.param, tmp_path)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:150: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x75d90f8b8dc0>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+___ ERROR at setup of test_goal_feedback_and_result[python-pose-exploration] ___
+
+request = <SubRequest 'runtime' for <Function test_goal_feedback_and_result[python-pose-exploration]>>
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_unique/test_goal_feedback_and_result_2')
+
+    @pytest.fixture(params=['python', 'cpp'])
+    def runtime(request, tmp_path):
+>       r = Runtime(request.param, tmp_path)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:150: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x75d90f8b95a0>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+____ ERROR at setup of test_goal_feedback_and_result[python-poses-operator] ____
+
+request = <SubRequest 'runtime' for <Function test_goal_feedback_and_result[python-poses-operator]>>
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_unique/test_goal_feedback_and_result_3')
+
+    @pytest.fixture(params=['python', 'cpp'])
+    def runtime(request, tmp_path):
+>       r = Runtime(request.param, tmp_path)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:150: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x75d90f8b8e50>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+_____ ERROR at setup of test_goal_feedback_and_result[python-poses-route] ______
+
+request = <SubRequest 'runtime' for <Function test_goal_feedback_and_result[python-poses-route]>>
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_unique/test_goal_feedback_and_result_4')
+
+    @pytest.fixture(params=['python', 'cpp'])
+    def runtime(request, tmp_path):
+>       r = Runtime(request.param, tmp_path)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:150: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x75d90f8b9120>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+__ ERROR at setup of test_goal_feedback_and_result[python-poses-exploration] ___
+
+request = <SubRequest 'runtime' for <Function test_goal_feedback_and_result[python-poses-exploration]>>
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_unique/test_goal_feedback_and_result_5')
+
+    @pytest.fixture(params=['python', 'cpp'])
+    def runtime(request, tmp_path):
+>       r = Runtime(request.param, tmp_path)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:150: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x75d90f8b9900>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+_______________ ERROR at setup of test_backend_failure[python-6] _______________
+
+request = <SubRequest 'runtime' for <Function test_backend_failure[python-6]>>
+tmp_path = PosixPath('/tmp/astribot_task_arbiter_20260921/oracle_unique/test_backend_failure_python_6_0')
+
+    @pytest.fixture(params=['python', 'cpp'])
+    def runtime(request, tmp_path):
+>       r = Runtime(request.param, tmp_path)
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:232: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:150: in __init__
+    wait(lambda: self.clients['pose', 'operator'].server_is_ready() and
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function Runtime.__init__.<locals>.<lambda> at 0x75d90f8ba0e0>
+timeout = 8.0
+
+    def wait(predicate, timeout=5.):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(.002)
+>       raise AssertionError('timed out waiting for isolated ROS contract')
+E       AssertionError: timed out waiting for isolated ROS contract
+
+ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:43: AssertionError
+=========================== short test summary info ============================
+ERROR ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_goal_feedback_and_result[python-pose-operator]
+ERROR ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_goal_feedback_and_result[python-pose-route]
+ERROR ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_goal_feedback_and_result[python-pose-exploration]
+ERROR ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_goal_feedback_and_result[python-poses-operator]
+ERROR ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_goal_feedback_and_result[python-poses-route]
+ERROR ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_goal_feedback_and_result[python-poses-exploration]
+ERROR ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py::test_backend_failure[python-6]
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astribot_s1_task_arbiter_native/test/test_arbiter_protocol.py:42: KeyboardInterrupt
+(to show a full traceback on KeyboardInterrupt use --full-trace)
+18 deselected, 7 errors in 62.94s (0:01:02)

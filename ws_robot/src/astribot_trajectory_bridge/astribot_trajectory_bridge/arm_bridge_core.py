@@ -15,6 +15,8 @@
 把每条分支都走到。
 """
 
+import os
+
 from astribot_trajectory_bridge.arm_traj_math import (
     ArmConfigError,
     INTERP_CUBIC,
@@ -27,6 +29,14 @@ from astribot_trajectory_bridge.arm_traj_math import (
     is_settled,
     max_abs_error,
 )
+
+if os.environ.get('ASTRIBOT_ARM_NATIVE_CORE', '').lower() in ('1', 'true', 'yes'):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native
+    except ImportError:  # pragma: no cover - exercised on Python-only overlays
+        _native = None
+else:
+    _native = None
 
 PH_IDLE = 'IDLE'
 PH_STREAMING = 'STREAMING'      # 正在按时间轴下发
@@ -156,7 +166,7 @@ class Feedback:
         self.error = float(error)
 
 
-class ArmTrajExecutor:
+class _PythonArmTrajExecutor:
     """单条轨迹的流式执行器（方案 B）。
 
     用法（节点层）::
@@ -540,7 +550,128 @@ class ArmTrajExecutor:
         return self.phase
 
 
-class WaypointDispatcher:
+class _ArmNativeSessionAdapter:
+    """Translate native positional calls back to the SessionPort keyword API."""
+
+    def __init__(self, session):
+        self._session = session
+
+    def get_joints_position_limit(self, names):
+        return self._session.get_joints_position_limit(names)
+
+    def get_current_joints_position(self, names):
+        return self._session.get_current_joints_position(names)
+
+    def set_joints_position(self, names, position, control_way='filter',
+                            use_wbc=False, add_default_torso=True):
+        return self._session.set_joints_position(
+            names, position, control_way=control_way, use_wbc=use_wbc,
+            add_default_torso=add_default_torso)
+
+    def move_joints_waypoints(self, names, waypoints, time_list,
+                              use_wbc=False, add_default_torso=True):
+        return self._session.move_joints_waypoints(
+            names, waypoints, time_list, use_wbc=use_wbc,
+            add_default_torso=add_default_torso)
+
+
+class ArmTrajExecutor:
+    """Compatibility facade selecting the opt-in C++ state machine."""
+
+    def __init__(self, cfg, session, clock):
+        self.cfg = cfg
+        self.session = session
+        self.clock = clock
+        self._native_impl = None
+        if _native is None or not hasattr(_native, 'ArmTrajExecutor'):
+            self._impl = _PythonArmTrajExecutor(cfg, session, clock)
+        else:
+            self._native_session = _ArmNativeSessionAdapter(session)
+            self._native_impl = _native.ArmTrajExecutor(
+                cfg, self._native_session, clock)
+            self._impl = None
+
+    @property
+    def phase(self):
+        return self._impl.phase if self._native_impl is None else self._native_impl.phase
+
+    @property
+    def error_code(self):
+        return (self._impl.error_code if self._native_impl is None
+                else self._native_impl.error_code)
+
+    @property
+    def detail(self):
+        return self._impl.detail if self._native_impl is None else self._native_impl.detail
+
+    @property
+    def _lower(self):
+        if self._native_impl is None:
+            return self._impl._lower
+        values = list(self._native_impl.lower)
+        return values if values else None
+
+    @property
+    def _upper(self):
+        if self._native_impl is None:
+            return self._impl._upper
+        values = list(self._native_impl.upper)
+        return values if values else None
+
+    @property
+    def events(self):
+        if self._native_impl is None:
+            return self._impl.events
+        return [StatusEvent(code, detail, metric_1, metric_2)
+                for code, detail, metric_1, metric_2 in self._native_impl.events]
+
+    @property
+    def feedbacks(self):
+        if self._native_impl is None:
+            return self._impl.feedbacks
+        return [Feedback(t, desired, actual, error)
+                for t, desired, actual, error in self._native_impl.feedbacks]
+
+    def load_limits(self, urdf_lower=None, urdf_upper=None):
+        if self._native_impl is None:
+            return self._impl.load_limits(urdf_lower, urdf_upper)
+        result = self._native_impl.load_limits(urdf_lower, urdf_upper)
+        return bool(result[0]), str(result[1])
+
+    def start(self, joint_names, times, positions, velocities=None):
+        if self._native_impl is None:
+            return self._impl.start(joint_names, times, positions, velocities)
+        result = self._native_impl.start(
+            list(joint_names), list(times), [list(row) for row in positions],
+            None if velocities is None else [list(row) for row in velocities])
+        return bool(result[0]), int(result[1]), str(result[2])
+
+    def request_cancel(self):
+        if self._native_impl is None:
+            return self._impl.request_cancel()
+        return self._native_impl.request_cancel()
+
+    def step(self):
+        if self._native_impl is None:
+            return self._impl.step()
+        return str(self._native_impl.step())
+
+    def drain_events(self):
+        if self._native_impl is None:
+            return self._impl.drain_events()
+        return [StatusEvent(code, detail, metric_1, metric_2)
+                for code, detail, metric_1, metric_2
+                in self._native_impl.drain_events()]
+
+    def drain_feedbacks(self):
+        if self._native_impl is None:
+            return self._impl.drain_feedbacks()
+        return [Feedback(t, desired, actual, error)
+                for t, desired, actual, error
+                in self._native_impl.drain_feedbacks()]
+
+
+class _PythonWaypointDispatcher:
     """方案 A（保留接口）。**阻塞、期间不可取消。**
 
     单独成类而不是塞进 ArmTrajExecutor：让"不可取消"这个缺陷留在一个边界清晰的
@@ -597,3 +728,44 @@ class WaypointDispatcher:
             return (False, 'SDK_CALL_FAILED',
                     'move_joints_waypoints 失败：%s' % exc, 0, dropped)
         return (True, 'SUCCESS', '', len(kept_wp), dropped)
+
+
+class WaypointDispatcher:
+    """Compatibility facade for the optional native waypoint dispatcher."""
+
+    def __init__(self, cfg, session, enabled=False):
+        self.cfg = cfg
+        self.session = session
+        self.enabled = bool(enabled)
+        self._native_impl = None
+        if _native is None or not hasattr(_native, 'WaypointDispatcher'):
+            self._impl = _PythonWaypointDispatcher(cfg, session, enabled=enabled)
+        else:
+            self._native_session = _ArmNativeSessionAdapter(session)
+            self._native_impl = _native.WaypointDispatcher(
+                cfg, self._native_session, bool(enabled))
+            self._impl = None
+
+    @property
+    def events(self):
+        if self._native_impl is None:
+            return self._impl.events
+        return [StatusEvent(code, detail, metric_1, metric_2)
+                for code, detail, metric_1, metric_2 in self._native_impl.events]
+
+    def drain_events(self):
+        if self._native_impl is None:
+            return self._impl.drain_events()
+        return [StatusEvent(code, detail, metric_1, metric_2)
+                for code, detail, metric_1, metric_2
+                in self._native_impl.drain_events()]
+
+    def dispatch(self, waypoints, time_list, lower=None, upper=None):
+        if self._native_impl is None:
+            return self._impl.dispatch(waypoints, time_list, lower, upper)
+        result = self._native_impl.dispatch(
+            [list(row) for row in waypoints], list(time_list),
+            None if lower is None else list(lower),
+            None if upper is None else list(upper))
+        return (bool(result[0]), str(result[1]), str(result[2]),
+                int(result[3]), int(result[4]))

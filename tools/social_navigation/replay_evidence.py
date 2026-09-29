@@ -81,6 +81,7 @@ def main():
             negative('late_motion_after_cancel', broken)
         if case.get('expect_conflict'):
             result = copy.deepcopy(summary); result['checks']['conflict_exercised'] = False
+            result['_force_conflict_false'] = True
             negative('conflict_not_triggered', rows, result)
         if stop_profile:
             settled=summary['pause_stop_evidence']['settled_source_s']

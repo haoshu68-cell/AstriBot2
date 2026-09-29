@@ -37,6 +37,7 @@
   <param name="robot_base_frame" value="$(var robot_base_frame)"/>
  </node>
  <node pkg="astribot_s1_exploration" exec="mapping_session_node" name="mapping_session" output="screen">
+  <param name="require_navigation_zones" value="true"/>
   <param from="$(find-pkg-share astribot_s1_exploration)/config/exploration_coordinator_params.yaml"/>
   <param name="odom_topic" value="$(var odom_topic)"/>
   <param name="use_sim_time" value="$(var use_sim_time)"/>

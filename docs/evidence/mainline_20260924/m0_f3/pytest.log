@@ -1,0 +1,118 @@
+............FFFFFF...................................................... [ 65%]
+......................................                                   [100%]
+=================================== FAILURES ===================================
+_____________ test_early_renewal_keeps_old_deadline_then_promotes ______________
+
+    def test_early_renewal_keeps_old_deadline_then_promotes():
+>       inbox = EnvelopeInbox()
+
+ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <astribot_s1_transport.source_inbox.EnvelopeInbox object at 0x785ac6475750>
+
+    def __init__(self):
+        import threading
+>       from astribot_s1_robot_geometry._geometry_native import LeaseSelector
+E       ImportError: cannot import name 'LeaseSelector' from 'astribot_s1_robot_geometry._geometry_native' (/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/_geometry_native.cpython-310-x86_64-linux-gnu.so)
+
+ws_robot/src/astribot_s1_transport/astribot_s1_transport/source_inbox.py:25: ImportError
+________________ test_future_stream_never_extends_old_deadline _________________
+
+    def test_future_stream_never_extends_old_deadline():
+>       inbox = EnvelopeInbox()
+
+ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <astribot_s1_transport.source_inbox.EnvelopeInbox object at 0x785ac686e470>
+
+    def __init__(self):
+        import threading
+>       from astribot_s1_robot_geometry._geometry_native import LeaseSelector
+E       ImportError: cannot import name 'LeaseSelector' from 'astribot_s1_robot_geometry._geometry_native' (/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/_geometry_native.cpython-310-x86_64-linux-gnu.so)
+
+ws_robot/src/astribot_s1_transport/astribot_s1_transport/source_inbox.py:25: ImportError
+_________ test_revoke_and_changed_context_immediately_prevent_fallback _________
+
+    def test_revoke_and_changed_context_immediately_prevent_fallback():
+        for mutate in (lambda m: setattr(m, 'navigation_allowed', False),
+                       lambda m: setattr(m.limits, 'transport_ready', False),
+                       lambda m: setattr(m, 'epoch', 2),
+                       lambda m: setattr(m, 'installed_geometry_hash', 'changed'),
+                       lambda m: setattr(m.limits, 'max_speed_m_s', .1)):
+>           inbox = EnvelopeInbox(); inbox.receive(message(1_000_000_000))
+
+ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <astribot_s1_transport.source_inbox.EnvelopeInbox object at 0x785ac6a574c0>
+
+    def __init__(self):
+        import threading
+>       from astribot_s1_robot_geometry._geometry_native import LeaseSelector
+E       ImportError: cannot import name 'LeaseSelector' from 'astribot_s1_robot_geometry._geometry_native' (/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/_geometry_native.cpython-310-x86_64-linux-gnu.so)
+
+ws_robot/src/astribot_s1_transport/astribot_s1_transport/source_inbox.py:25: ImportError
+__________ test_shorter_deadline_no_fallback_and_no_clock_epoch_reuse __________
+
+    def test_shorter_deadline_no_fallback_and_no_clock_epoch_reuse():
+>       inbox = EnvelopeInbox(); inbox.receive(message(1_000_000_000))
+
+ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py:52: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <astribot_s1_transport.source_inbox.EnvelopeInbox object at 0x785ac6501c90>
+
+    def __init__(self):
+        import threading
+>       from astribot_s1_robot_geometry._geometry_native import LeaseSelector
+E       ImportError: cannot import name 'LeaseSelector' from 'astribot_s1_robot_geometry._geometry_native' (/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/_geometry_native.cpython-310-x86_64-linux-gnu.so)
+
+ws_robot/src/astribot_s1_transport/astribot_s1_transport/source_inbox.py:25: ImportError
+___________ test_bounded_queue_and_limits_timestamp_are_both_checked ___________
+
+    def test_bounded_queue_and_limits_timestamp_are_both_checked():
+>       inbox = EnvelopeInbox(); inbox.receive(message(1_000_000_000))
+
+ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <astribot_s1_transport.source_inbox.EnvelopeInbox object at 0x785ac6609e70>
+
+    def __init__(self):
+        import threading
+>       from astribot_s1_robot_geometry._geometry_native import LeaseSelector
+E       ImportError: cannot import name 'LeaseSelector' from 'astribot_s1_robot_geometry._geometry_native' (/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/_geometry_native.cpython-310-x86_64-linux-gnu.so)
+
+ws_robot/src/astribot_s1_transport/astribot_s1_transport/source_inbox.py:25: ImportError
+__________ test_real_transport_guard_uses_coherent_selected_envelope ___________
+
+    def test_real_transport_guard_uses_coherent_selected_envelope():
+        import time
+        from types import SimpleNamespace as NS
+        from rclpy.time import Time
+        from astribot_s1_transport.ros_backend import RosBackend
+        from astribot_s1_transport.core import TaskFailure
+        import pytest
+>       inbox = EnvelopeInbox()
+
+ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <astribot_s1_transport.source_inbox.EnvelopeInbox object at 0x785ac6a57e50>
+
+    def __init__(self):
+        import threading
+>       from astribot_s1_robot_geometry._geometry_native import LeaseSelector
+E       ImportError: cannot import name 'LeaseSelector' from 'astribot_s1_robot_geometry._geometry_native' (/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/install/astribot_s1_robot_geometry/local/lib/python3.10/dist-packages/astribot_s1_robot_geometry/_geometry_native.cpython-310-x86_64-linux-gnu.so)
+
+ws_robot/src/astribot_s1_transport/astribot_s1_transport/source_inbox.py:25: ImportError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py::test_early_renewal_keeps_old_deadline_then_promotes
+FAILED ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py::test_future_stream_never_extends_old_deadline
+FAILED ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py::test_revoke_and_changed_context_immediately_prevent_fallback
+FAILED ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py::test_shorter_deadline_no_fallback_and_no_clock_epoch_reuse
+FAILED ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py::test_bounded_queue_and_limits_timestamp_are_both_checked
+FAILED ws_robot/src/astribot_s1_transport/test/test_envelope_inbox.py::test_real_transport_guard_uses_coherent_selected_envelope
+6 failed, 104 passed in 1.75s

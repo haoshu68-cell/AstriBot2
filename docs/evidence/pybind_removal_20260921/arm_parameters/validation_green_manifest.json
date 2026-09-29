@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-09-21T08:11:05.667001+00:00",
+  "stage": "final_parameter_validation_green",
+  "build_type": "Release",
+  "pybind": "OFF",
+  "binary": "/tmp/codex_arm_parameters_20260921/build/arm_speed_limiter_cpp",
+  "binary_sha256": "1b0d3977e0398788d25105e40ffc5472d1c72051aa0121c194ce75d23093a7ed",
+  "source_hashes": {
+    "ws_robot/src/astribot_trajectory_bridge_native/src/arm_speed_limiter_node.cpp": "66f969b327d0ea68de4770419c5b60677f9f84526285b6aae2b3f4674e528ba6",
+    "ws_robot/src/astribot_trajectory_bridge_native/CMakeLists.txt": "4c9f46ae8c896982392a96f0f9d43ecd0c21d58834fddc93edd8f0a1aec64e4a",
+    "ws_robot/src/astribot_trajectory_bridge_native/package.xml": "2128e63218bedd0a4d593cdc2d238e192b29e9bdff23ecadcf33dfd29d9acc67",
+    "ws_robot/src/astribot_trajectory_bridge_native/test/test_arm_dynamic_parameters.py": "10f35eaa89500fdb0d9fb40f70a1291e1f13dc3c6620b00791b72437cbefa2b1",
+    "ws_robot/src/astribot_s1_navigation/astribot_s1_navigation/arm_speed_limiter_node.py": "96e5cfd138dda618e9763eb2786e34c150b24210fef0c474f6151318b544aebe",
+    "ws_robot/src/astribot_s1_navigation/astribot_s1_navigation/arm_reach_metric.py": "29f4de3b5265b13b46af3613dd6565efc2174e428a6fd2754ce4645e94aa2201"
+  },
+  "validation_red": {
+    "selected_cases": 8,
+    "passed": 2,
+    "failed": 6
+  },
+  "validation_green": {
+    "ctest_passed": 7,
+    "ctest_failed": 0,
+    "arm_ros_pytest_passed": 22,
+    "arm_ros_pytest_failed": 0,
+    "atomic_invalid_updates_rejected": 24,
+    "owned_children_reaped": 40,
+    "normal_exit_code": 0,
+    "invalid_startup_exit_code": 1
+  },
+  "stricter_contract_than_python": {
+    "extended_reach_m": "finite > 0",
+    "extended_reach_hysteresis_m": "finite, 0 <= hysteresis < candidate reach",
+    "extended_threshold_rad": "finite >= 0",
+    "folded_reference_rad": "each value finite; existing length/zip semantics retained",
+    "extended_speed_limit_pct": "finite (0,100]; zero is Nav2 no-limit, reserved for folded output",
+    "reach_tf_timeout_sec": "finite > 0",
+    "atomicity": "validate merged candidate only; no state or parameter writes inside callback"
+  },
+  "environment": {
+    "ROS_DOMAIN_ID": 118,
+    "ROS_LOCALHOST_ONLY": 1,
+    "underlay": "/opt/ros/humble",
+    "shared_install_modified": false,
+    "shared_install_sourced": false,
+    "gazebo": false,
+    "sdk": false,
+    "hardware": false
+  },
+  "live_cpp_maps_assertions": "No libpython or _chassis_math_native in each owned C++ child maps",
+  "command": "ASTRIBOT_ARM_PARAMETER_EVIDENCE=<evidence>/validation_green ctest --test-dir /tmp/codex_arm_parameters_20260921/build --output-on-failure --output-junit <evidence>/validation_green_ctest_junit.xml"
+}

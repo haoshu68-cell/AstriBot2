@@ -1,0 +1,133 @@
+Internal ctest changing into directory: /home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/geometry_build
+Test project /home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/geometry_build
+    Start 1: filled_collision
+1/5 Test #1: filled_collision .................   Passed    0.02 sec
+    Start 2: fusion_snapshot
+2/5 Test #2: fusion_snapshot ..................   Passed    0.00 sec
+    Start 3: geometry_state_core
+3/5 Test #3: geometry_state_core ..............   Passed    0.00 sec
+    Start 4: cpp_geometry_differential
+4/5 Test #4: cpp_geometry_differential ........***Failed    0.58 sec
+
+==================================== ERRORS ====================================
+________________________ ERROR collecting test session _________________________
+/usr/lib/python3/dist-packages/pluggy/hooks.py:286: in __call__
+    return self._hookexec(self, self.get_hookimpls(), kwargs)
+/usr/lib/python3/dist-packages/pluggy/manager.py:92: in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+/usr/lib/python3/dist-packages/pluggy/manager.py:83: in <lambda>
+    self._inner_hookexec = lambda hook, methods, kwargs: hook.multicall(
+/usr/lib/python3/dist-packages/_pytest/python.py:200: in pytest_collect_file
+    module: Module = ihook.pytest_pycollect_makemodule(path=path, parent=parent)
+/usr/lib/python3/dist-packages/pluggy/hooks.py:286: in __call__
+    return self._hookexec(self, self.get_hookimpls(), kwargs)
+/usr/lib/python3/dist-packages/pluggy/manager.py:92: in _hookexec
+    return self._inner_hookexec(hook, methods, kwargs)
+/usr/lib/python3/dist-packages/pluggy/manager.py:83: in <lambda>
+    self._inner_hookexec = lambda hook, methods, kwargs: hook.multicall(
+/opt/ros/humble/lib/python3.10/site-packages/launch_testing/pytest/hooks.py:193: in pytest_pycollect_makemodule
+    entrypoint = find_launch_test_entrypoint(path)
+/opt/ros/humble/lib/python3.10/site-packages/launch_testing/pytest/hooks.py:186: in find_launch_test_entrypoint
+    module = path.pyimport()
+/usr/lib/python3/dist-packages/py/_path/local.py:704: in pyimport
+    __import__(modname)
+/usr/lib/python3/dist-packages/_pytest/assertion/rewrite.py:170: in exec_module
+    exec(co, module.__dict__)
+../source/ws_robot/src/astribot_s1_robot_geometry/test/test_cpp_robot_model.py:7: in <module>
+    from astribot_s1_robot_geometry.model import RobotModel, Shape
+E   ModuleNotFoundError: No module named 'astribot_s1_robot_geometry.model'
+=========================== short test summary info ============================
+ERROR .. - ModuleNotFoundError: No module named 'astribot_s1_robot_geometry.m...
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.14s
+
+    Start 5: geometry_state_cpp_protocol
+5/5 Test #5: geometry_state_cpp_protocol ......***Failed    0.73 sec
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_____ test_cpp_producer_preserves_attachment_identity_and_source_deadline ______
+
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-0/test_cpp_producer_preserves_at0')
+
+    def test_cpp_producer_preserves_attachment_identity_and_source_deadline(tmp_path):
+        executable=Path(os.environ.get('GEOMETRY_STATE_CPP','/tmp/codex_geometry_cpp_20260921/install/astribot_s1_robot_geometry/lib/astribot_s1_robot_geometry/geometry_state'))
+        assert executable.is_file(), 'C++ geometry_state producer has not been built'
+        import rclpy
+        from rclpy.node import Node
+        from rclpy.parameter import Parameter
+        from rclpy.qos import qos_profile_sensor_data
+        from rcl_interfaces.srv import GetParameters
+        from moveit_msgs.srv import GetPlanningScene
+        from moveit_msgs.msg import PlanningScene, AttachedCollisionObject
+        from geometry_msgs.msg import Pose
+        from shape_msgs.msg import SolidPrimitive
+        from std_msgs.msg import String
+        from sensor_msgs.msg import JointState
+        from astribot_navigation_msgs.msg import RobotGeometryState
+        from rosidl_runtime_py.convert import message_to_ordereddict
+>       from test_cpp_robot_model import URDF
+
+../source/ws_robot/src/astribot_s1_robot_geometry/test/test_geometry_state_cpp_protocol.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3/dist-packages/_pytest/assertion/rewrite.py:170: in exec_module
+    exec(co, module.__dict__)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """C++ URDF/mesh geometry compared with the retained Python analysis oracle."""
+    import json
+    from pathlib import Path
+    import subprocess
+    import numpy as np
+    import pytest
+>   from astribot_s1_robot_geometry.model import RobotModel, Shape
+E   ModuleNotFoundError: No module named 'astribot_s1_robot_geometry.model'
+
+../source/ws_robot/src/astribot_s1_robot_geometry/test/test_cpp_robot_model.py:7: ModuleNotFoundError
+_________ test_ready_geometry_publishes_without_another_sampling_tick __________
+
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-0/test_ready_geometry_publishes_0')
+
+    def test_ready_geometry_publishes_without_another_sampling_tick(tmp_path):
+        import rclpy
+        from rclpy.node import Node
+        from rclpy.parameter import Parameter
+        from rclpy.qos import qos_profile_sensor_data
+        from rcl_interfaces.srv import GetParameters
+        from moveit_msgs.srv import GetPlanningScene
+        from moveit_msgs.msg import PlanningScene
+        from rosgraph_msgs.msg import Clock
+        from sensor_msgs.msg import JointState
+        from std_msgs.msg import String
+        from astribot_navigation_msgs.msg import RobotGeometryState
+>       from test_cpp_robot_model import URDF
+
+../source/ws_robot/src/astribot_s1_robot_geometry/test/test_geometry_completion_schedule.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3/dist-packages/_pytest/assertion/rewrite.py:170: in exec_module
+    exec(co, module.__dict__)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """C++ URDF/mesh geometry compared with the retained Python analysis oracle."""
+    import json
+    from pathlib import Path
+    import subprocess
+    import numpy as np
+    import pytest
+>   from astribot_s1_robot_geometry.model import RobotModel, Shape
+E   ModuleNotFoundError: No module named 'astribot_s1_robot_geometry.model'
+
+../source/ws_robot/src/astribot_s1_robot_geometry/test/test_cpp_robot_model.py:7: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED ../source/ws_robot/src/astribot_s1_robot_geometry/test/test_geometry_state_cpp_protocol.py::test_cpp_producer_preserves_attachment_identity_and_source_deadline
+FAILED ../source/ws_robot/src/astribot_s1_robot_geometry/test/test_geometry_completion_schedule.py::test_ready_geometry_publishes_without_another_sampling_tick
+2 failed in 0.28s
+
+
+60% tests passed, 2 tests failed out of 5
+
+Total Test time (real) =   1.33 sec
+
+The following tests FAILED:
+	  4 - cpp_geometry_differential (Failed)
+	  5 - geometry_state_cpp_protocol (Failed)
+Errors while running CTest

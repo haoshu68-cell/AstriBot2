@@ -11,6 +11,7 @@
 #include <sdf/Box.hh>
 #include <sdf/Mesh.hh>
 #include <fstream>
+#include <algorithm>
 #include <unistd.h>
 #include <ignition/common/MeshManager.hh>
 #include <ignition/common/Mesh.hh>
@@ -34,6 +35,20 @@ TEST(PayloadGeometry,MassOffsetAndTrackingBoundComeFromPhysicalComponents) {
  PayloadExecution p;p.attached=true;p.parent=parent;p.capture=100;p.epoch="e";p.accepted=p.applied=1;
  write_execution(model,e,p);auto actual=read_execution(model,e);ASSERT_TRUE(actual);EXPECT_EQ(actual->applied,1u);
  auto out=observed_payload(e,model,p,"box","tcp",ignition::math::Pose3d(0,.15,0,0,0,0));
+ EXPECT_EQ(out.touch_links,(std::vector<std::string>{"tcp"}));
+ for(const std::string side:{"left","right"}) {
+   const auto tcp="astribot_arm_"+side+"_tcp_link";
+   const auto gripper="astribot_gripper_"+side;
+   const auto attached=observed_payload(e,model,p,"box",tcp,ignition::math::Pose3d(0,.15,0,0,0,0));
+   EXPECT_EQ(attached.touch_links,(std::vector<std::string>{tcp,gripper+"_Link_L11",gripper+"_Link_R11"}));
+   EXPECT_EQ(attached.object.primitives,out.object.primitives);
+   EXPECT_EQ(attached.object.primitive_poses,out.object.primitive_poses);
+   EXPECT_EQ(attached.object.pose,out.object.pose);EXPECT_DOUBLE_EQ(attached.weight,out.weight);
+   for(const std::string candidate:{"astribot_arm_"+side+"_link_7",gripper+"_base",gripper+"_Link_L2",gripper+"_Link_R2",
+       "astribot_gripper_"+std::string(side=="left"?"right":"left")+"_Link_L11",
+       "astribot_gripper_"+std::string(side=="left"?"right":"left")+"_Link_R11"})
+     EXPECT_EQ(std::find(attached.touch_links.begin(),attached.touch_links.end(),candidate),attached.touch_links.end());
+ }
  ASSERT_EQ(out.object.primitives.size(),1u);EXPECT_DOUBLE_EQ(out.weight,.75);EXPECT_NEAR(out.object.pose.position.y,-.15,1e-12);
  // Translation 5 mm plus angular 10 mrad at sqrt(3)*0.1 m radius, each side.
  EXPECT_NEAR(out.object.primitives[0].dimensions[0],.21346410161513776,1e-12);

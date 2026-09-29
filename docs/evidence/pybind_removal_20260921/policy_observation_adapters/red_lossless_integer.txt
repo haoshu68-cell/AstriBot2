@@ -1,0 +1,270 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_________________ test_bigint_calibration_retains_exact_epoch __________________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_bigint_calibration_retains_exact_epoch(authority):
+        for value in [2**63,2**64-1,2**64,2**64+1,10**399,-2**64]:
+>           check(dict(operations=[dict(packet=vision(calibration_epoch=value))]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:370: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:139: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration_epoch':...: 'ros', 'epoch': 4, 'ns': 100}, 'class_probabilities': [['person', 0.6], ['unknown', 0.3]], 'frame_id': 'odom', ...}]}
+b = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration_epoch':... 'geometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration...'geometry_quality': 0.8, 'kind': 'metric_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'type', 'last_packet', 'ok', 'calls'}
+E             ?  --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:131: AssertionError
+________________ test_bigint_image_exact_mixed_pixel_boundaries ________________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_bigint_image_exact_mixed_pixel_boundaries(authority):
+        item=dict(kind='image_box',measurement_id='wide',image_size_px=[100,100],box_xyxy_px=[0.,0.,10.,10.],geometry_quality=1.,provenance=['wide'])
+        cases=[(2**64-1,float(2**64)),(2**64,float(2**64)),(2**64-1,2**64-1),
+               (10**399,1.),(10**399,10**398),(2**53+1,2**53+1),(2**53,2**53+1),
+               (2**64+1,2**64+1),(2**64+1,2**64+2),(-2**64,1.),(True,1.)]
+        for width,xmax in cases:
+            p=vision(observations=[item|dict(image_size_px=[width,100],box_xyxy_px=[0.,0.,xmax,10.])])
+>           check(dict(operations=[dict(packet=p)]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:382: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:139: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1]], 'code': 'INVALID_INPUT', 'field': 'image.box.x', 'last_packet': {'calibration_epoc...uality': 1.0, 'image_size_px': [18446744073709551615, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, ...}
+b = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'observations': [{'b...8446744073709551615, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1]], 'code': 'INVALID_INPUT', 'field': 'image.box.x', 'last_packet': {'calibrat...446744073709551615, 100], 'kind': 'image_box', ...}], 'schema_version': 1, ...}, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'co... 'ok', 'type'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'field'
+E             'code'
+E             Full diff:
+E             - {'type', 'last_packet', 'ok', 'calls'}
+E             + {'field', 'type', 'code', 'last_packet', 'ok', 'calls'}
+E             ?  +++++++++       ++++++++
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:131: AssertionError
+__________ test_bigint_unknown_fields_and_transport_marker_collision ___________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_bigint_unknown_fields_and_transport_marker_collision(authority):
+        p=vision(observations=[],unknown=[2**64+1,-2**64-1,10**399,{'bytes':[49,50,51],'subtype':4409680},'__integer_json__0','__native_nonfinite__0'])
+>       check(dict(operations=[dict(packet=p)]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:387: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:139: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:122: in native
+    p=subprocess.run([str(PROBE)],input=json.dumps(case,allow_nan=False),text=True,capture_output=True,check=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = '{"operations": [{"packet": {"schema_version": 1, "sensor_id": "camera", "stamp_ns": 100, "frame_id": "sensor", "calib...0000000000000000000000, {"bytes": [49, 50, 51], "subtype": 4409680}, "__integer_json__0", "__native_nonfinite__0"]}}]}'
+capture_output = True, timeout = None, check = True
+popenargs = (['/tmp/codex_policy_observation_adapters_20260921/policy_observation_adapters_probe'],)
+kwargs = {'stderr': -1, 'stdin': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/tmp/codex_policy_observation_adapters_2026092...>
+stdout = ''
+stderr = "[json.exception.out_of_range.406] number overflow parsing '1000000000000000000000000000000000000000000000000000000000...0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'\n"
+retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/tmp/codex_policy_observation_adapters_20260921/policy_observation_adapters_probe']' returned non-zero exit status 1.
+
+/usr/lib/python3.10/subprocess.py:526: CalledProcessError
+___________________ test_bigint_raw_and_typed_option_budgets ___________________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_bigint_raw_and_typed_option_budgets(authority):
+        for value in [2**64+1,10**399,str(10**399),-2**64]:
+            for name in ['max_packet_bytes','max_observations']:
+>               check(dict(raw_options={name:value},operations=[dict(packet=vision())]),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:395: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:139: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration_epoch':...: 'ros', 'epoch': 4, 'ns': 100}, 'class_probabilities': [['person', 0.6], ['unknown', 0.3]], 'frame_id': 'odom', ...}]}
+b = {'calls': [], 'last_packet': None, 'ok': False, 'type': 'OverflowError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1], ['tf', 'odom', 'sensor', 100], ['steady', 0]], 'last_packet': {'calibration...'unknown', 0.3]], 'frame_id': 'odom', ...}]}, {'calls': [], 'last_packet': None, 'ok': False, 'type': 'OverflowError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'type', 'last_packet', 'ok', 'calls'}
+E             ?  --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:131: AssertionError
+________________ test_json_integer_digit_limit_and_error_order _________________
+
+authority = (<module '_frozen_policy_observation_adapters.contracts' from '/home/yjh/WorkSpace/astribot_sdk_ros2/ws_robot/src/astr...ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observation_adapters/observation_adapters.py'>)
+
+    def test_json_integer_digit_limit_and_error_order(authority):
+        assert sys.get_int_max_str_digits()==4300
+        base=json.dumps(vision(observations=[]))[:-1]
+        huge='7'*4301
+        ops=[dict(data=base+',"ignored":'+('7'*4300)+'}'),dict(data=base+',"ignored":'+huge+'}'),
+             dict(data='{"invalid": ,"ignored":'+huge+'}'),dict(data='{"ignored":'+huge+',"invalid": }'),
+             dict(data=base+',"ignored":"'+huge+'"}'),dict(packet=vision(calibration_epoch=huge)),
+             dict(data=base+',"ignored":1e999}'),dict(data=base+',"ignored":-Infinity}')]
+>       check(dict(operations=ops),authority)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:409: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:139: in check
+    def check(case,authority):compare(reference(case,authority),native(case))
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:135: in compare
+    for i,(x,y) in enumerate(zip(a,b)):compare(x,y,path+f'[{i}]')
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'ignored': 777777777777777777...7777777777777777777, 'observations': [], ...}, 'ok': True, 'result': []}
+b = {'calls': [], 'last_packet': None, 'ok': False, 'type': 'JSONDecodeError'}
+path = '[0]'
+
+    def compare(a,b,path=''):
+        if isinstance(a,float):
+            assert b==pytest.approx(a,rel=2e-12,abs=2e-12),(path,a,b)
+            if a==0. and b==0.:assert math.copysign(1.,a)==math.copysign(1.,b),(path,a,b)
+        elif isinstance(a,dict):
+>           assert set(a)==set(b),(path,a,b)
+E           AssertionError: ('[0]', {'calls': [['now', 0], ['now', 1]], 'last_packet': {'calibration_epoch': 7, 'frame_id': 'sensor', 'ignored': 7...ions': [], ...}, 'ok': True, 'result': []}, {'calls': [], 'last_packet': None, 'ok': False, 'type': 'JSONDecodeError'})
+E           assert {'calls', 'la...ok', 'result'} == {'calls', 'la... 'ok', 'type'}
+E             Extra items in the left set:
+E             'result'
+E             Extra items in the right set:
+E             'type'
+E             Full diff:
+E             - {'type', 'last_packet', 'ok', 'calls'}
+E             ?  --------...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py:131: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_bigint_calibration_retains_exact_epoch
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_bigint_image_exact_mixed_pixel_boundaries
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_bigint_unknown_fields_and_transport_marker_collision
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_bigint_raw_and_typed_option_budgets
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_observation_adapters.py::test_json_integer_digit_limit_and_error_order
+5 failed, 35 deselected in 0.21s

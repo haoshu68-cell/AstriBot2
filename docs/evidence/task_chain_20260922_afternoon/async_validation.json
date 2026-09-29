@@ -1,0 +1,271 @@
+{
+  "status": "IMPLEMENTED_AND_ISOLATED_TESTED_W1_NOT_ACCEPTED",
+  "tests": [
+    {
+      "build": "async_build",
+      "test": "depth_projection_test.gtest.xml",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "path": "runs/task_chain_20260922_afternoon/async_build/test_results/astribot_s1_perception_components/depth_projection_test.gtest.xml"
+    },
+    {
+      "build": "async_build",
+      "test": "rgbd_pointcloud_test.gtest.xml",
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "path": "runs/task_chain_20260922_afternoon/async_build/test_results/astribot_s1_perception_components/rgbd_pointcloud_test.gtest.xml"
+    },
+    {
+      "build": "async_cpu_only_build",
+      "test": "depth_projection_test.gtest.xml",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "path": "runs/task_chain_20260922_afternoon/async_cpu_only_build/test_results/astribot_s1_perception_components/depth_projection_test.gtest.xml"
+    }
+  ],
+  "source_hashes": {
+    "ws_robot/src/astribot_s1_perception_components/src/rgbd_pointcloud_node.cpp": "82f505a9a897c7ab284ba37ae53274ebb9736d012f59aafc9d786b2e3950d996",
+    "ws_robot/src/astribot_s1_perception_components/src/depth_projection.cpp": "c2fe49da48d0f8f5578b6f02da1752115057b5576ff844f6ebbafbad4fd4e1ec",
+    "ws_robot/src/astribot_s1_perception_components/src/depth_projection_cuda.cpp": "80890516e7693b21ae19be8ce526ceb18d7872181683b27c05df9406e0f654ee",
+    "ws_robot/src/astribot_s1_perception_components/include/astribot_s1_perception_components/depth_projection.hpp": "1c0453f9b6d480f939707e0baa443f2e232f91a51e1bae3b5020d7db04af8e53",
+    "ws_robot/src/astribot_s1_perception_components/test/rgbd_pointcloud_test.cpp": "457cc0eb82a2c0999a2b7864c2f5f5cdc671699e31aa6720ea7ee5d28a34515a",
+    "ws_robot/src/astribot_s1_perception_components/test/depth_projection_test.cpp": "536237a0616c755b6464c5a34d7030472d40528e4c81d72ef2003bb76f2c6ca4",
+    "ws_robot/src/astribot_s1_perception_components/CMakeLists.txt": "4345f56e633da6200013dd19ae4d6c0152aa65ef587fdb8d4afaefec8b308a85",
+    "ws_robot/src/astribot_s1_perception_components/launch/rgbd_vision_pipeline.launch.py": "ebb0828b939a38968d7fcaf44f7aad204e4eed9f1322a892ccc6a26159498eab",
+    "ws_robot/src/astribot_s1_perception_components/launch/wrist_camera_session.launch.py": "3c9d2e7771af820c12af87399b30c16a029d901e901f7db48a4c218f8dab1ba8"
+  },
+  "simulation": {
+    "run": "runs/task_chain_20260922_afternoon/navigation_09_async",
+    "duration_wall_sec": 600.0003060380004,
+    "clock_advanced_sec": 325.278,
+    "rtf": 0.5421297234795058,
+    "health_samples": {
+      "head_rgbd": {
+        "OK": 11990,
+        "STALE": 11
+      },
+      "head_stereo_left": {},
+      "head_stereo_right": {},
+      "torso_rgbd": {
+        "OK": 11989,
+        "STALE": 11
+      },
+      "left_wrist_rgbd": {
+        "OK": 23101,
+        "STALE": 20
+      },
+      "right_wrist_rgbd": {
+        "OK": 23090,
+        "STALE": 19
+      }
+    },
+    "depth_stream_timing": {
+      "torso_rgbd/depth": {
+        "capture_to_observer_ros_age_sec": {
+          "samples": 6506,
+          "min": 0.001,
+          "max": 0.001,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001
+        },
+        "capture_interval_sec": {
+          "samples": 6505,
+          "min": 0.05,
+          "max": 0.05,
+          "p50": 0.05,
+          "p95": 0.05,
+          "p99": 0.05
+        },
+        "receive_interval_wall_sec": {
+          "samples": 6505,
+          "min": 0.06205397400117363,
+          "max": 0.4836527279985603,
+          "p50": 0.0874640760011971,
+          "p95": 0.13060354979752445,
+          "p99": 0.1719949193605862
+        },
+        "receive_gaps_over_250ms": 2,
+        "nonpositive_intervals": 0
+      },
+      "left_wrist_rgbd/depth": {
+        "capture_to_observer_ros_age_sec": {
+          "samples": 6506,
+          "min": 0.001,
+          "max": 0.001,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001
+        },
+        "capture_interval_sec": {
+          "samples": 6505,
+          "min": 0.05,
+          "max": 0.05,
+          "p50": 0.05,
+          "p95": 0.05,
+          "p99": 0.05
+        },
+        "receive_interval_wall_sec": {
+          "samples": 6505,
+          "min": 0.062317591000464745,
+          "max": 0.5177973110003222,
+          "p50": 0.08732459200109588,
+          "p95": 0.1300469680005335,
+          "p99": 0.1702264384800219
+        },
+        "receive_gaps_over_250ms": 3,
+        "nonpositive_intervals": 0
+      },
+      "right_wrist_rgbd/depth": {
+        "capture_to_observer_ros_age_sec": {
+          "samples": 6506,
+          "min": 0.001,
+          "max": 0.001,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001
+        },
+        "capture_interval_sec": {
+          "samples": 6505,
+          "min": 0.05,
+          "max": 0.05,
+          "p50": 0.05,
+          "p95": 0.05,
+          "p99": 0.05
+        },
+        "receive_interval_wall_sec": {
+          "samples": 6505,
+          "min": 0.062065522997727385,
+          "max": 0.5708798380001099,
+          "p50": 0.08737015700171469,
+          "p95": 0.1295263548025104,
+          "p99": 0.17028481259869296
+        },
+        "receive_gaps_over_250ms": 3,
+        "nonpositive_intervals": 0
+      },
+      "head_rgbd/depth": {
+        "capture_to_observer_ros_age_sec": {
+          "samples": 6506,
+          "min": 0.001,
+          "max": 0.004,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001
+        },
+        "capture_interval_sec": {
+          "samples": 6505,
+          "min": 0.05,
+          "max": 0.05,
+          "p50": 0.05,
+          "p95": 0.05,
+          "p99": 0.05
+        },
+        "receive_interval_wall_sec": {
+          "samples": 6505,
+          "min": 0.061644837998755975,
+          "max": 0.5824274769984186,
+          "p50": 0.08749036999870441,
+          "p95": 0.12911797700144234,
+          "p99": 0.17143678484033448
+        },
+        "receive_gaps_over_250ms": 5,
+        "nonpositive_intervals": 0
+      }
+    },
+    "worker_last_cumulative_counters": {
+      "torso_rgbd_pointcloud": {
+        "paired": 7188.0,
+        "replaced": 0.0,
+        "processed": 7188.0,
+        "expired": 0.0,
+        "invalidated": 0.0,
+        "errors": 0.0,
+        "cache_peak": 3.0,
+        "pending_peak": 1.0,
+        "max_queue_ms": 125.371,
+        "max_compute_ms": 1.17,
+        "max_total_ms": 125.505
+      },
+      "head_rgbd_pointcloud": {
+        "paired": 7190.0,
+        "replaced": 0.0,
+        "processed": 7190.0,
+        "expired": 0.0,
+        "invalidated": 0.0,
+        "errors": 0.0,
+        "cache_peak": 2.0,
+        "pending_peak": 1.0,
+        "max_queue_ms": 90.854,
+        "max_compute_ms": 2.163,
+        "max_total_ms": 91.1
+      },
+      "left_wrist_rgbd_manipulation_pointcloud": {
+        "paired": 6572.0,
+        "replaced": 0.0,
+        "processed": 6572.0,
+        "expired": 0.0,
+        "invalidated": 0.0,
+        "errors": 0.0,
+        "cache_peak": 2.0,
+        "pending_peak": 1.0,
+        "max_queue_ms": 113.361,
+        "max_compute_ms": 4.074,
+        "max_total_ms": 113.948
+      },
+      "right_wrist_rgbd_manipulation_pointcloud": {
+        "paired": 6572.0,
+        "replaced": 0.0,
+        "processed": 6572.0,
+        "expired": 0.0,
+        "invalidated": 0.0,
+        "errors": 0.0,
+        "cache_peak": 2.0,
+        "pending_peak": 1.0,
+        "max_queue_ms": 101.103,
+        "max_compute_ms": 3.648,
+        "max_total_ms": 101.568
+      }
+    },
+    "navigation": {
+      "case": "R02-fixed-p4-13",
+      "scenario_passed": false,
+      "verdict": "FAIL",
+      "failed_checks": [
+        "protocol_passed",
+        "original_cases_executed",
+        "selected_corridor_executed",
+        "precise_arrivals"
+      ],
+      "protocol": {
+        "evidence": "canonical_warehouse_corridor_execution_and_hold_expiry",
+        "motion_goals_sent": 1,
+        "error": "FIXED_V2_REVOKED:WAITING_FOR:controller,local_costmap",
+        "passed": false
+      },
+      "arrivals": [],
+      "checks": {
+        "protocol_passed": false,
+        "original_cases_executed": false,
+        "selected_corridor_executed": false,
+        "precise_arrivals": false
+      }
+    },
+    "camera_lease_checks_passed": true,
+    "freshness_passed": false,
+    "completed_cuda_inferences": 262,
+    "inference_budget_cancellations": 1,
+    "inference_scope": "real LibTorch C++ GraspNet CUDA inference on frozen historical cloud; compute pressure only",
+    "cleanup": [],
+    "limits": [
+      "600s simulation used pre-malformed-timestamp-fix node; final fix has subsequent isolated ROS tests",
+      "health states are samples, not count of unique fault episodes",
+      "not 600s continuous motion: first navigation goal canceled",
+      "no GPU hard-hang or process recovery acceptance",
+      "no physical calibration, VLA, or full manipulation acceptance"
+    ]
+  }
+}

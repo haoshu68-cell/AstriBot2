@@ -51,8 +51,20 @@ TEST_F(AuthorityFixture, PureReservationMayReleaseWithoutInventedMotionEvidence)
 }
 TEST_F(AuthorityFixture, WallExpiryAndClockResetDoNotRenew) {
  ASSERT_TRUE(acquire().accepted);EXPECT_FALSE(a.grant(T,T+2000*MS));
+ EXPECT_EQ(a.phase(),ResourcePhase::QUARANTINED);EXPECT_EQ(a.reason(),"RESOURCE_LEASE_EXPIRED");
  ResourceAuthority b("boot2",joints(),[](const auto &){});ASSERT_TRUE(b.acquire("task","r",T,T).accepted);
- EXPECT_FALSE(b.grant(T-1,T+1));EXPECT_EQ(b.phase(),ResourcePhase::QUARANTINED);
+ const auto original=b.grant(T,T);ASSERT_TRUE(original);
+ const auto ros_reversed=b.grant(T-1,T+1);ASSERT_TRUE(ros_reversed);
+ EXPECT_EQ(b.phase(),ResourcePhase::RESERVED);
+ EXPECT_EQ(ros_reversed->valid_until,original->valid_until);
+ EXPECT_EQ(ros_reversed->received_at,original->received_at);
+ EXPECT_EQ(ros_reversed->received_steady,original->received_steady);
+ EXPECT_TRUE(b.grant(T-2,T+2000*MS-1));
+ EXPECT_FALSE(b.grant(T-3,T+2000*MS));
+ EXPECT_EQ(b.phase(),ResourcePhase::QUARANTINED);EXPECT_EQ(b.reason(),"RESOURCE_LEASE_EXPIRED");
+ ResourceAuthority c("boot3",joints(),[](const auto &){});ASSERT_TRUE(c.acquire("task","r",T,T).accepted);
+ EXPECT_FALSE(c.grant(T+1,T-1));EXPECT_EQ(c.phase(),ResourcePhase::QUARANTINED);
+ EXPECT_EQ(c.reason(),"RESOURCE_CLOCK_RESET");
 }
 TEST_F(AuthorityFixture, RestartRetainsUnresolvedResourcesAndRequestIdentity) {
  ASSERT_TRUE(acquire().accepted);a.submitted(T,T);auto saved=records.back();
@@ -81,7 +93,11 @@ TEST(ResourceAuthority, FailedReleaseCommitKeepsResourcesQuarantined) {
 TEST_F(AuthorityFixture, ContinueOperationPreservesLeaseAndDoesNotRenewIt) {
  ASSERT_TRUE(acquire().accepted);a.submitted(T,T);a.holding(T+MS,T+MS);
  const auto original=*a.grant(T+MS,T+MS);
- ASSERT_TRUE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+2*MS,T+2*MS));
+ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,"transfer:op:2:PLACE",1,true,true,T+2*MS,T+2*MS));
+ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,std::string(118,'a')+"_op_2_PLACE",1,true,true,T+2*MS,T+2*MS));
+ EXPECT_EQ(a.phase(),ResourcePhase::HOLDING);
+ const auto context=std::string(117,'a')+"_op_2_PLACE";
+ ASSERT_TRUE(a.continue_from_hold(original.lease_id,original.epoch,context,1,true,true,T+2*MS,T+2*MS));
  EXPECT_EQ(a.phase(),ResourcePhase::RESERVED);
  const auto continued=*a.grant(T+2*MS,T+2*MS);
  EXPECT_EQ(continued.owner_id,original.owner_id);EXPECT_EQ(continued.lease_id,original.lease_id);
@@ -89,7 +105,7 @@ TEST_F(AuthorityFixture, ContinueOperationPreservesLeaseAndDoesNotRenewIt) {
  EXPECT_EQ(records.back()["event"],"operation_continuation_committed");
  EXPECT_TRUE(records.back()["side_effects"].get<bool>());
  a.submitted(T+3*MS,T+3*MS);a.holding(T+4*MS,T+4*MS);
- EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,"place",1,true,true,T+5*MS,T+5*MS));
+ EXPECT_FALSE(a.continue_from_hold(original.lease_id,original.epoch,context,1,true,true,T+5*MS,T+5*MS));
  EXPECT_EQ(a.phase(),ResourcePhase::HOLDING);
 }
 TEST_F(AuthorityFixture, ContinueRequiresCurrentIdentityHoldAndBothEvidenceBoundaries) {

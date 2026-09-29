@@ -1,0 +1,27 @@
+ORACLE_FILE=/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py", line 389, in main
+    try:executor.spin()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 323, in spin
+    self.spin_once()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 863, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 860, in _spin_once_impl
+    future.result()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 109, in result
+    raise self.exception()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/task.py", line 272, in _execute_coroutine_step
+    result = coro.send(None)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 488, in handler
+    await call_coroutine(entity, arg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 396, in _execute_timer
+    await await_or_execute(tmr.callback)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 110, in await_or_execute
+    return callback(*args)
+  File "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/cpp_migration_20260921/stage6b_stamp/source/ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_observer/observer_node.py", line 344, in tick
+    self.health_pub.publish(health)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/publisher.py", line 70, in publish
+    self.__publisher.publish(msg)
+UnicodeEncodeError: 'utf-8' codec can't encode character '\ud800' in position 6: surrogates not allowed
+The following exception was never retrieved: cannot use Destroyable because destruction was requested

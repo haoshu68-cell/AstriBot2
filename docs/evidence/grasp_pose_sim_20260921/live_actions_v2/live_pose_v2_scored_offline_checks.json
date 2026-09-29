@@ -1,0 +1,61 @@
+{
+  "checks": [
+    {
+      "case": "five_fresh_live_snapshots",
+      "passed": true
+    },
+    {
+      "case": "legacy_report_without_tf",
+      "passed": true,
+      "reason": "Missing exact capture-time TF; old reports cannot be scored"
+    },
+    {
+      "case": "missing_tf",
+      "passed": true,
+      "reason": "Missing exact capture-time TF; old reports cannot be scored"
+    },
+    {
+      "case": "latest_tf_fallback",
+      "passed": true,
+      "reason": "Missing exact capture-time TF; old reports cannot be scored"
+    },
+    {
+      "case": "wrong_tf_stamp",
+      "passed": true,
+      "reason": "TF frame or capture stamp mismatch"
+    },
+    {
+      "case": "wrong_result_frame",
+      "passed": true,
+      "reason": "Action result frame or capture stamp mismatch"
+    },
+    {
+      "case": "unbracketed_truth",
+      "passed": true,
+      "reason": "Capture is not bracketed by independent truth"
+    },
+    {
+      "case": "truth_used_as_input",
+      "passed": true,
+      "reason": "Report does not establish truth-free estimator input"
+    },
+    {
+      "case": "wrong_result_epoch",
+      "passed": true,
+      "reason": "Action result provenance or pose validity mismatch"
+    },
+    {
+      "case": "moving_truth",
+      "passed": true,
+      "reason": "Observed motion invalidates static-fixture scoring: {'object_translation_m': 0.0009999999999998899, 'object_rotation_deg': 0.0, 'robot_translation_m': 0.0, 'robot_rotation_deg': 0.0}"
+    },
+    {
+      "case": "above_fixed_translation_limit",
+      "passed": true
+    }
+  ],
+  "passed_count": 11,
+  "check_count": 11,
+  "reused_live_data_only": true,
+  "new_action_calls": 0
+}

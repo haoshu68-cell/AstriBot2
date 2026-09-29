@@ -1,0 +1,26 @@
+115: struct GeometrySlice {double z_min,z_max;Polygon2 footprint;};
+116: struct RobotGeometry {Polygon2 physical,reserved;double height,z_min;std::vector<GeometrySlice> slices;};
+232:   RobotGeometry geometry(const JointValues &q,const JointValues &errors,const std::vector<Shape> &attachments={},double padding=.01,std::array<double,2> floor={.31,.31}) const {
+233:     geometryRequire(std::isfinite(padding) && padding>=0 && padding<=.1,"invalid model padding");
+234:     for(const auto &shape:attachments)for(const auto &name:chain(shape.link))geometryRequire(!invariant_.count(name),"attachment changes an invariant joint; rebuild collision model");
+235:     RobotGeometry out;std::vector<GeometrySlice> bodies;std::map<std::string,Transform> cache;
+236:     auto append=[&](const Shape &shape) {
+237:       const auto transform=fk(shape.link,q,cache);const auto footprint=shape.polygon(transform);
+238:       const double low=-shape.support({0.,0.,-1.},transform),high=shape.support({0.,0.,1.},transform);
+239:       const double error=padding+errorRadius(shape,q,errors);const auto region=inflatePolygon(footprint,error);
+240:       out.physical.insert(out.physical.end(),footprint.begin(),footprint.end());out.reserved.insert(out.reserved.end(),region.begin(),region.end());
+241:       bodies.push_back({low-error,high+error,region});
+242:     };
+243:     for(const auto &shape:shapes_)append(shape);
+244:     for(const auto &shape:attachments)append(shape);
+245:     const Polygon2 bottom{{-floor[0],-floor[1]},{floor[0],-floor[1]},{floor[0],floor[1]},{-floor[0],floor[1]}};
+246:     out.physical.insert(out.physical.end(),bottom.begin(),bottom.end());const auto reserve=inflatePolygon(bottom,padding);
+247:     out.reserved.insert(out.reserved.end(),reserve.begin(),reserve.end());out.z_min=INFINITY;out.height=-INFINITY;
+248:     for(const auto &body:bodies) {out.z_min=std::min(out.z_min,body.z_min);out.height=std::max(out.height,body.z_max);}
+249:     const double start=std::floor(out.z_min/.25)*.25,end=std::ceil(out.height/.25)*.25;
+250:     for(double low=start;low<end;low+=.25) {
+251:       const double high=low+.25;Polygon2 points;
+252:       for(const auto &body:bodies)if(body.z_min<=high && body.z_max>=low)points.insert(points.end(),body.footprint.begin(),body.footprint.end());
+253:       if(!points.empty())out.slices.push_back({low,high,convexHull(points)});
+254:     }
+255:     out.physical=convexHull(out.physical);out.reserved=convexHull(out.reserved);return out;

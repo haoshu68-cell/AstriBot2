@@ -1,0 +1,50 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____________ test_signal_shutdown_while_waiting_for_first_map[cpp] _____________
+
+impl = 'cpp'
+
+    @pytest.mark.parametrize('impl', ['python', 'cpp'])
+    def test_signal_shutdown_while_waiting_for_first_map(impl):
+        relay = Relay(impl, 'shutdown_no_map')
+        try:
+            relay.ready()
+        finally:
+>           relay.close()
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:304: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <test_map_relay.Relay object at 0x73b089cebd60>, expected = 0
+
+    def close(self, expected=0):
+        code = None
+        if self.p:
+            if self.p.poll() is None:
+                self.p.send_signal(signal.SIGINT)
+            try:
+                code = self.p.wait(timeout=3.)
+            except subprocess.TimeoutExpired:
+                self.p.kill()
+                self.p.wait()
+                raise AssertionError('Owned relay required SIGKILL')
+            finally:
+                self.handle.close()
+                self.details['returncode'] = self.p.returncode
+                self.details['samples'] = len(self.messages)
+                (self.path / 'result.json').write_text(json.dumps(self.details, indent=2) + '\n')
+        for executor, node, context in zip(self.executors, self.nodes, self.contexts):
+            executor.shutdown()
+            node.destroy_node()
+            context.try_shutdown()
+        if expected is not None:
+>           assert code == expected, (code, (self.path / 'node.log').read_text())
+E           AssertionError: (-2, '[WARN] [1789983618.126274249] [rclcpp]: logging was initialized more than once
+E             [WARN] [1789983618.132072140] [r...]: 地图中继启动：远端 domain=162 话题=/relay_6208d3558ee1/source，本机 domain=163 话题=/relay_6208d3558ee1/destination，等待远端地图，超时 8s
+E             ')
+E           assert -2 == 0
+
+ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py:195: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_perception_native/test/test_map_relay.py::test_signal_shutdown_while_waiting_for_first_map[cpp]
+1 failed, 31 deselected in 0.23s

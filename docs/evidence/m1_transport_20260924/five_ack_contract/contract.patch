@@ -1,0 +1,227 @@
+--- before/ws_robot/src/astribot_s1_navigation_policy_native/src/fixed_envelope_core.cpp
++++ after/ws_robot/src/astribot_s1_navigation_policy_native/src/fixed_envelope_core.cpp
+@@ -11,7 +11,7 @@
+ namespace {
+ namespace geometry = astribot_s1_robot_geometry;
+ const std::set<std::string> consumers{
+-  "global_costmap","local_costmap","planner","controller","policy","protection"};
++  "global_costmap","local_costmap","planner","controller","policy"};
+ void require(bool condition, const std::string& error) {
+   if (!condition) throw std::invalid_argument(error);
+ }
+--- before/ws_robot/src/astribot_s1_navigation_policy_native/test/fixed_envelope_core_test.cpp
++++ after/ws_robot/src/astribot_s1_navigation_policy_native/test/fixed_envelope_core_test.cpp
+@@ -52,10 +52,19 @@
+     c.state(s);c.hold(h);check(!c.propose(r,now,true).navigation_allowed,"proposal requires all consumers");
+     FixedEnvelopeCore::Ack a;a.coordinator_session_id=c.session();a.envelope_epoch=c.epoch();
+     a.installed_geometry_hash=c.output()->installed_geometry_hash;a.applied=true;a.header.stamp=fixed_stamp(now);
+-    for(const auto* name:{"controller","global_costmap","local_costmap","planner","policy","protection"}) {
++    a.consumer_id="protection";c.acknowledge(a,now);
++    check(!c.tick(now)->navigation_allowed && !c.acknowledgements().count("protection"),"legacy protection ACK has no authorization role");
++    for(const auto* name:{"global_costmap","local_costmap","planner","policy"}) {
+       a.consumer_id=name;c.acknowledge(a,now);
+     }
+-    check(c.tick(now)->navigation_allowed,"all current evidence must grant");
++    check(!c.tick(now)->navigation_allowed && c.output()->reason=="WAITING_FOR:controller","missing controller must still deny");
++    a.consumer_id="protection";c.acknowledge(a,now);
++    check(!c.tick(now)->navigation_allowed,"legacy protection cannot replace the controller ACK");
++    a.consumer_id="controller";c.acknowledge(a,now);
++    check(c.tick(now)->navigation_allowed && c.acknowledgements().size()==5,"five current geometry consumers must grant");
++    a.consumer_id="protection";a.applied=false;c.acknowledge(a,now);
++    check(c.tick(now)->navigation_allowed && !c.acknowledgements().count("protection"),"legacy protection negative ACK has no revocation role");
++    a.applied=true;
+     a.consumer_id="planner";a.header.stamp=fixed_stamp(now+1);c.acknowledge(a,now);
+     check(c.acknowledgements().at("planner")==now,"future ACK must not extend evidence");
+     a.applied=false;c.acknowledge(a,now);
+--- before/ws_robot/src/astribot_s1_navigation_policy_native/test/fixed_hold_flow_test.cpp
++++ after/ws_robot/src/astribot_s1_navigation_policy_native/test/fixed_hold_flow_test.cpp
+@@ -47,10 +47,10 @@
+     ack.installed_geometry_hash=coordinator.output()->installed_geometry_hash;ack.applied=true;ack.header.stamp=nav::fixed_stamp(now);
+   }
+   void acknowledge(const std::string &consumer) {ack.consumer_id=consumer;coordinator.acknowledge(ack,now);}
+-  void all() {for(const auto *name:{"controller","global_costmap","local_costmap","planner","policy","protection"})acknowledge(name);}
++  void all() {for(const auto *name:{"controller","global_costmap","local_costmap","planner","policy"})acknowledge(name);}
+ };
+ TEST_F(Flow, MissingControllerAndLocalCostmapStayExplicitlyBlocked) {
+-  for(const auto *name:{"global_costmap","planner","policy","protection"})acknowledge(name);
++  for(const auto *name:{"global_costmap","planner","policy"})acknowledge(name);
+   EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+   EXPECT_EQ(coordinator.output()->reason,"WAITING_FOR:controller,local_costmap");
+   acknowledge("controller");EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+@@ -72,7 +72,7 @@
+ TEST_F(Flow, SamePolygonOldEpochAckCannotAuthorizeNewRequest) {
+   all();ASSERT_TRUE(coordinator.tick(now)->navigation_allowed);const auto old_ack=ack;
+   coordinator.propose(hold.request("request_2",limits,now,now),now,true);
+-  for(const auto *name:{"controller","global_costmap","local_costmap","planner","policy","protection"}) {
++  for(const auto *name:{"controller","global_costmap","local_costmap","planner","policy"}) {
+     auto stale=old_ack;stale.consumer_id=name;coordinator.acknowledge(stale,now);
+   }
+   EXPECT_FALSE(coordinator.tick(now)->navigation_allowed);
+--- before/ws_robot/src/astribot_s1_transport_native/src/fixed_station_navigation.cpp
++++ after/ws_robot/src/astribot_s1_transport_native/src/fixed_station_navigation.cpp
+@@ -29,7 +29,7 @@
+ using Command=geometry_msgs::msg::Twist;
+ using Nav=nav2_msgs::action::NavigateToPose;
+ using Handle=rclcpp_action::ClientGoalHandle<Nav>;
+-const std::array<std::string,6> CONSUMERS={"global_costmap","local_costmap","planner","controller","policy","protection"};
++const std::array<std::string,5> CONSUMERS={"global_costmap","local_costmap","planner","controller","policy"};
+ int64_t stamp(const builtin_interfaces::msg::Time& t){return int64_t(t.sec)*1000000000LL+t.nanosec;}
+ int64_t wall(){return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();}
+ struct Time {int64_t ros,steady;};
+--- before/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp
++++ after/ws_robot/src/astribot_s1_transport_native/test/fixed_station_navigation_test.cpp
+@@ -37,7 +37,7 @@
+   std::unique_ptr<tf2_ros::StaticTransformBroadcaster> broadcaster;
+   std::shared_ptr<ServerHandle> goal;
+   Envelope envelope;
+-  bool fixed_received=false,omit_protection=false,finish_cancel=true;
++  bool fixed_received=false,omit_controller=false,legacy_protection=false,finish_cancel=true;
+   int goals=0,cancels=0;
+   double x=0,speed=0;
+   void SetUp()override {
+@@ -100,7 +100,8 @@
+       envelope.header.stamp=at;envelope.header.frame_id="base";envelope.valid_until=at+rclcpp::Duration::from_seconds(.3);
+       envelope_pub->publish(envelope);
+       for(const auto* consumer:{"global_costmap","local_costmap","planner","controller","policy","protection"}) {
+-        if(omit_protection&&std::string(consumer)=="protection")continue;
++        if(std::string(consumer)=="protection"&&!legacy_protection)continue;
++        if(omit_controller&&std::string(consumer)=="controller")continue;
+         Ack a;a.header.stamp=at;a.coordinator_session_id="coordinator";a.envelope_epoch=7;
+         a.installed_geometry_hash="shape";a.consumer_id=consumer;a.applied=true;ack_pub->publish(a);
+       }
+@@ -130,8 +131,8 @@
+   EXPECT_EQ(helper->status().nav_goal_uuid.size(),32u);EXPECT_EQ(helper->status().envelope_epoch,7u);
+   EXPECT_LT(helper->status().position_error_m,1e-10);EXPECT_EQ(cancels,0);
+ }
+-TEST_F(FixedStationNavigationTest, MissingAckNeverDispatchesAndCancellationStillRequiresStop) {
+-  omit_protection=true;helper->start(request());
++TEST_F(FixedStationNavigationTest, LegacyProtectionCannotReplaceControllerAndCancellationStillRequiresStop) {
++  omit_controller=true;legacy_protection=true;helper->start(request());
+   EXPECT_FALSE(wait([&]{return goals!=0;},1.5));EXPECT_EQ(goals,0);
+   helper->cancel("TASK_CANCELED");EXPECT_FALSE(helper->status().cleanup_complete);
+   ASSERT_TRUE(wait([&]{return helper->status().cleanup_complete;},2.));
+--- before/tools/sim/verify_fixed_navigation.py
++++ after/tools/sim/verify_fixed_navigation.py
+@@ -132,7 +132,7 @@
+     latest={}; receipts={}; motion=[]; commands=[]; events=[]; envelopes=[]; acks=[]; scenarios=[]; plans=[]; phases=[]; diagnostics=[]; diagnostic_at={}
+     active_goals={}; execution_active=set(); execution_events=[]; seen_nav_ids=set(); own_nav_ids=set(); pending_nav=None; pending_hold=None; pending_nav_id=None; pending_hold_id=None
+     nav_admission_uncertain=False;hold_admission_uncertain=False
+-    consumers={'global_costmap','local_costmap','planner','controller','policy','protection'}
++    consumers={'global_costmap','local_costmap','planner','controller','policy'}
+     hold_goal=hold_result=nav_goal=nav_result=None;hold_binding=None
+     renew_enabled=False; renew_sequence=0; renew_pending=None; renew_last=0.; suspended=None
+     cleanup_mode=False;cleanup_health_errors=[];graph_ready=False;graph_last=0.
+@@ -245,7 +245,7 @@
+         matched={}
+         for a in acks:
+             if (a['session'],a['epoch'],a['hash'])==(e.coordinator_session_id,e.epoch,e.installed_geometry_hash): matched[a['consumer']]=a
+-        return {name for name,a in matched.items() if a['applied'] and 0<=ros()-a['stamp']<.5 and 0<=time.monotonic()-a['wall']<.5}==consumers
++        return {name for name,a in matched.items() if name in consumers and a['applied'] and 0<=ros()-a['stamp']<.5 and 0<=time.monotonic()-a['wall']<.5}==consumers
+     def spin(predicate,timeout,reason,monitor_motion=False):
+         nonlocal renew_pending,renew_last,renew_sequence,renew_enabled,graph_last
+         deadline=time.monotonic()+timeout
+@@ -309,7 +309,7 @@
+         request=SetFixedEnvelope.Request(request_id='n4_fixed_'+uuid.uuid4().hex,hold_id=latest['hold'].hold_id,geometry_sequence=latest['geometry'].sequence,limits=limits)
+         future=fixed.call_async(request);spin(future.done,3,'FIXED_REQUEST');response=future.result()
+         if not response.accepted: raise RuntimeError('FIXED_REJECTED:'+response.reason)
+-        spin(lambda:positive(response.epoch),15,'SIX_CONSUMERS_NOT_APPLIED')
++        spin(lambda:positive(response.epoch),15,'FIVE_GEOMETRY_CONSUMERS_NOT_APPLIED')
+         event('formal_admission',epoch=response.epoch,hold_id=request.hold_id,request_id=request.request_id)
+         return response.epoch
+     def start_nav(target):
+--- before/tools/sim/verify_fixed_envelope_hold.py
++++ after/tools/sim/verify_fixed_envelope_hold.py
+@@ -28,7 +28,7 @@
+ from astribot_s1_transport_native.action import HoldResources
+ from astribot_s1_transport_native.srv import RenewHold
+ 
+-CONSUMERS = {'global_costmap', 'local_costmap', 'planner', 'controller', 'policy', 'protection'}
++CONSUMERS = {'global_costmap', 'local_costmap', 'planner', 'controller', 'policy'}
+ 
+ 
+ def ns(stamp):
+@@ -226,7 +226,7 @@
+         for sample in acks:
+             if (sample['session'], sample['epoch'], sample['hash']) == (envelope.coordinator_session_id, envelope.epoch, envelope.installed_geometry_hash) and sample['stamp_ns'] <= now:
+                 latest_ack[sample['consumer']] = sample
+-        return {name for name, sample in latest_ack.items() if sample['applied'] and 0 <= now-sample['stamp_ns'] < 500_000_000}
++        return {name for name, sample in latest_ack.items() if name in CONSUMERS and sample['applied'] and 0 <= now-sample['stamp_ns'] < 500_000_000}
+ 
+     try:
+         spin(lambda: action.server_is_ready() and renew.service_is_ready() and fixed.service_is_ready() and latest.get('phase') == '0' and valid_geometry() and len(commands) >= 10, 20, 'entry unavailable')
+@@ -258,7 +258,7 @@
+             if previous_epoch is not None:
+                 assert response.epoch > previous_epoch
+             previous_epoch = response.epoch
+-            spin(lambda: envelope is not None and envelope.epoch == response.epoch and envelope.navigation_allowed and matching_positive() == CONSUMERS, 15, 'six actual consumers did not confirm')
++            spin(lambda: envelope is not None and envelope.epoch == response.epoch and envelope.navigation_allowed and matching_positive() == CONSUMERS, 15, 'five actual geometry consumers did not confirm')
+             begin = len(envelopes)
+             duration(2.)
+             window = envelopes[begin:]
+--- before/tools/sim/verify_fixed_mass.py
++++ after/tools/sim/verify_fixed_mass.py
+@@ -7,7 +7,7 @@
+ import copy
+ import math
+ 
+-CONSUMERS = {'global_costmap', 'local_costmap', 'planner', 'controller', 'policy', 'protection'}
++CONSUMERS = {'global_costmap', 'local_costmap', 'planner', 'controller', 'policy'}
+ 
+ 
+ def ns(stamp):
+@@ -409,7 +409,7 @@
+         row=dict(request=request.request_id,epoch=response.epoch,mass_kg=mass,accepted=response.accepted,reason=response.reason,ledger=before)
+         if response.accepted != expect: raise RuntimeError('UNEXPECTED_MASS_ADMISSION:'+str(row))
+         if expect:
+-            spin(lambda:positive_match(latest.get('envelope'),acks,request.request_id,response.epoch,mass,time.monotonic(),ros(),owned_hold_id),15,'SIX_MATCHED_CONSUMERS')
++            spin(lambda:positive_match(latest.get('envelope'),acks,request.request_id,response.epoch,mass,time.monotonic(),ros(),owned_hold_id),15,'FIVE_MATCHED_GEOMETRY_CONSUMERS')
+         elif not response.reason.startswith('PAYLOAD_MASS_UNDERREPORTED'):
+             raise RuntimeError('WRONG_LOW_MASS_REJECTION:'+response.reason)
+         after=summary()
+--- before/tools/sim/verify_envelope_ack_rate.py
++++ after/tools/sim/verify_envelope_ack_rate.py
+@@ -45,7 +45,7 @@
+         nonlocal current
+         current=m
+         data['samples'].append({'at':time.monotonic(),'allowed':m.navigation_allowed,'reason':m.reason,'epoch':m.epoch})
+-        for consumer in ('global_costmap','local_costmap','planner','controller','policy','protection'):
++        for consumer in ('global_costmap','local_costmap','planner','controller','policy'):
+             a=EnvelopeApplyStatus();a.header.stamp=m.header.stamp;a.coordinator_session_id=m.coordinator_session_id
+             a.consumer_id=consumer;a.envelope_epoch=m.epoch;a.installed_geometry_hash=m.installed_geometry_hash
+             a.applied=not (negative and consumer=='controller');a.reason='ISOLATED_PROTOCOL_FIXTURE';ack.publish(a)
+--- before/tools/sim/test_fixed_mass.py
++++ after/tools/sim/test_fixed_mass.py
+@@ -19,7 +19,7 @@
+ class MassProbeTest(unittest.TestCase):
+     def baseline(self):
+         env=dict(session='c',epoch=2,hash='h',request='r',mass=.5,allowed=True,wall=2.,stamp=10.,until=10.3)
+-        ack=[dict(session='c',epoch=2,hash='h',consumer=k,applied=True,wall=2.,stamp=10.) for k in ('global_costmap','local_costmap','planner','controller','policy','protection')]
++        ack=[dict(session='c',epoch=2,hash='h',consumer=k,applied=True,wall=2.,stamp=10.) for k in ('global_costmap','local_costmap','planner','controller','policy')]
+         source=dict(valid_until_ns=10250000000,capture_ns=10000000000)
+         return env,ack,source
+ 
+@@ -130,10 +130,13 @@
+         v['observation']['objects']=[dict(object=dict(id=k),weight=1.7e308) for k in ('a','b')]
+         with self.assertRaises(ValueError):ledger_summary(v,'s','source',150)
+ 
+-    def test_matching_request_and_six_acks(self):
++    def test_matching_request_and_five_acks(self):
+         env=dict(session='coordinator',epoch=2,hash='h',request='request',mass=.5,allowed=True,wall=2.,stamp=10.,until=10.3)
+-        ack=[dict(session='coordinator',epoch=2,hash='h',consumer=k,applied=True,wall=2.,stamp=10.) for k in ('global_costmap','local_costmap','planner','controller','policy','protection')]
++        ack=[dict(session='coordinator',epoch=2,hash='h',consumer=k,applied=True,wall=2.,stamp=10.) for k in ('global_costmap','local_costmap','planner','controller','policy')]
+         self.assertTrue(positive_match(env,ack,'request',2,.5,2.1,10.1))
++        legacy=dict(ack[-1],consumer='protection')
++        self.assertFalse(positive_match(env,[a for a in ack if a['consumer']!='controller']+[legacy],'request',2,.5,2.1,10.1))
++        self.assertTrue(positive_match(env,ack+[dict(legacy,applied=False)],'request',2,.5,2.1,10.1))
+         self.assertFalse(positive_match(dict(env,hold_id='foreign'),ack,'request',2,.5,2.1,10.1,'ours'))
+         self.assertTrue(positive_match(dict(env,hold_id='ours'),ack,'request',2,.5,2.1,10.1,'ours'))
+         self.assertFalse(positive_match(env,ack,'new',2,.5,2.1,10.1))
+@@ -145,7 +148,7 @@
+ 
+     def test_stale_and_future_ack(self):
+         env=dict(session='c',epoch=2,hash='h',request='r',mass=0.,allowed=True,wall=2.,stamp=10.,until=10.3)
+-        ack=[dict(session='c',epoch=2,hash='h',consumer=k,applied=True,wall=2.,stamp=10.) for k in ('global_costmap','local_costmap','planner','controller','policy','protection')]
++        ack=[dict(session='c',epoch=2,hash='h',consumer=k,applied=True,wall=2.,stamp=10.) for k in ('global_costmap','local_costmap','planner','controller','policy')]
+         self.assertFalse(positive_match(env,ack,'r',2,0.,2.6,10.1))
+         ack[-1]['stamp']=11.
+         self.assertFalse(positive_match(env,ack,'r',2,0.,2.1,10.1))

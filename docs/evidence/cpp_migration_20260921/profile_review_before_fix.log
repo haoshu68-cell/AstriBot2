@@ -1,0 +1,291 @@
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 49%]
+........................................................................ [ 66%]
+........................................................................ [ 82%]
+....................................................................FFFF [ 99%]
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_______________ test_json_must_consume_entire_file[ {}-profile] ________________
+
+target = 'profile', suffix = ' {}'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_0')
+
+    @pytest.mark.parametrize('target', ['profile', 'base', 'stop'])
+    @pytest.mark.parametrize('suffix', [' {}', ' INVALID'])
+    def test_json_must_consume_entire_file(target, suffix, tmp_path):
+        data = dict(BASE)
+        base = dict(BASE)
+        stop = json.loads((POLICY / 'config/measured_stop_reference_20260915.json').read_text())
+        if target == 'base': data = {'base_profile': 'base.json'}
+        if target == 'stop': data['stop_reference_file'] = 'stop.json'
+        for name, value in [('profile', data), ('base', base), ('stop', stop)]:
+            (tmp_path / f'{name}.json').write_text(json.dumps(value) + (suffix if target == name else ''))
+>       compare(tmp_path / 'profile.json')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_0/profile.json')
+simulated = True
+
+    def compare(path, simulated=True):
+        binary = os.environ.get('POLICY_PROFILE_PROBE')
+        if not binary:
+            pytest.skip('POLICY_PROFILE_PROBE must select the standalone C++ test binary')
+        try:
+            reference = Profile.load(path)
+            reference.require_environment(simulated)
+        except Exception:
+            reference = None
+        result = subprocess.run([binary, str(path), str(simulated).lower()],
+                                capture_output=True, text=True, timeout=3)
+>       assert (result.returncode == 0) == (reference is not None), result.stderr
+E       AssertionError: 
+E       assert (0 == 0) == (None is not None)
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_native_build_20260923_envelope_off/policy_profile_probe', '/tmp/pytest-of-yjh/py..._confirmation_s":0.4,"velocity_fit_max_residual_m":0.06,"velocity_fit_window_s":0.6,"wait_budget_s":8.0}\n', stderr='').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:68: AssertionError
+_________________ test_json_must_consume_entire_file[ {}-base] _________________
+
+target = 'base', suffix = ' {}'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_1')
+
+    @pytest.mark.parametrize('target', ['profile', 'base', 'stop'])
+    @pytest.mark.parametrize('suffix', [' {}', ' INVALID'])
+    def test_json_must_consume_entire_file(target, suffix, tmp_path):
+        data = dict(BASE)
+        base = dict(BASE)
+        stop = json.loads((POLICY / 'config/measured_stop_reference_20260915.json').read_text())
+        if target == 'base': data = {'base_profile': 'base.json'}
+        if target == 'stop': data['stop_reference_file'] = 'stop.json'
+        for name, value in [('profile', data), ('base', base), ('stop', stop)]:
+            (tmp_path / f'{name}.json').write_text(json.dumps(value) + (suffix if target == name else ''))
+>       compare(tmp_path / 'profile.json')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_1/profile.json')
+simulated = True
+
+    def compare(path, simulated=True):
+        binary = os.environ.get('POLICY_PROFILE_PROBE')
+        if not binary:
+            pytest.skip('POLICY_PROFILE_PROBE must select the standalone C++ test binary')
+        try:
+            reference = Profile.load(path)
+            reference.require_environment(simulated)
+        except Exception:
+            reference = None
+        result = subprocess.run([binary, str(path), str(simulated).lower()],
+                                capture_output=True, text=True, timeout=3)
+>       assert (result.returncode == 0) == (reference is not None), result.stderr
+E       AssertionError: 
+E       assert (0 == 0) == (None is not None)
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_native_build_20260923_envelope_off/policy_profile_probe', '/tmp/pytest-of-yjh/py..._confirmation_s":0.4,"velocity_fit_max_residual_m":0.06,"velocity_fit_window_s":0.6,"wait_budget_s":8.0}\n', stderr='').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:68: AssertionError
+_________________ test_json_must_consume_entire_file[ {}-stop] _________________
+
+target = 'stop', suffix = ' {}'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_2')
+
+    @pytest.mark.parametrize('target', ['profile', 'base', 'stop'])
+    @pytest.mark.parametrize('suffix', [' {}', ' INVALID'])
+    def test_json_must_consume_entire_file(target, suffix, tmp_path):
+        data = dict(BASE)
+        base = dict(BASE)
+        stop = json.loads((POLICY / 'config/measured_stop_reference_20260915.json').read_text())
+        if target == 'base': data = {'base_profile': 'base.json'}
+        if target == 'stop': data['stop_reference_file'] = 'stop.json'
+        for name, value in [('profile', data), ('base', base), ('stop', stop)]:
+            (tmp_path / f'{name}.json').write_text(json.dumps(value) + (suffix if target == name else ''))
+>       compare(tmp_path / 'profile.json')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_2/profile.json')
+simulated = True
+
+    def compare(path, simulated=True):
+        binary = os.environ.get('POLICY_PROFILE_PROBE')
+        if not binary:
+            pytest.skip('POLICY_PROFILE_PROBE must select the standalone C++ test binary')
+        try:
+            reference = Profile.load(path)
+            reference.require_environment(simulated)
+        except Exception:
+            reference = None
+        result = subprocess.run([binary, str(path), str(simulated).lower()],
+                                capture_output=True, text=True, timeout=3)
+>       assert (result.returncode == 0) == (reference is not None), result.stderr
+E       AssertionError: 
+E       assert (0 == 0) == (None is not None)
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_native_build_20260923_envelope_off/policy_profile_probe', '/tmp/pytest-of-yjh/py..._confirmation_s":0.4,"velocity_fit_max_residual_m":0.06,"velocity_fit_window_s":0.6,"wait_budget_s":8.0}\n', stderr='').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:68: AssertionError
+_____________ test_json_must_consume_entire_file[ INVALID-profile] _____________
+
+target = 'profile', suffix = ' INVALID'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_3')
+
+    @pytest.mark.parametrize('target', ['profile', 'base', 'stop'])
+    @pytest.mark.parametrize('suffix', [' {}', ' INVALID'])
+    def test_json_must_consume_entire_file(target, suffix, tmp_path):
+        data = dict(BASE)
+        base = dict(BASE)
+        stop = json.loads((POLICY / 'config/measured_stop_reference_20260915.json').read_text())
+        if target == 'base': data = {'base_profile': 'base.json'}
+        if target == 'stop': data['stop_reference_file'] = 'stop.json'
+        for name, value in [('profile', data), ('base', base), ('stop', stop)]:
+            (tmp_path / f'{name}.json').write_text(json.dumps(value) + (suffix if target == name else ''))
+>       compare(tmp_path / 'profile.json')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_3/profile.json')
+simulated = True
+
+    def compare(path, simulated=True):
+        binary = os.environ.get('POLICY_PROFILE_PROBE')
+        if not binary:
+            pytest.skip('POLICY_PROFILE_PROBE must select the standalone C++ test binary')
+        try:
+            reference = Profile.load(path)
+            reference.require_environment(simulated)
+        except Exception:
+            reference = None
+        result = subprocess.run([binary, str(path), str(simulated).lower()],
+                                capture_output=True, text=True, timeout=3)
+>       assert (result.returncode == 0) == (reference is not None), result.stderr
+E       AssertionError: 
+E       assert (0 == 0) == (None is not None)
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_native_build_20260923_envelope_off/policy_profile_probe', '/tmp/pytest-of-yjh/py..._confirmation_s":0.4,"velocity_fit_max_residual_m":0.06,"velocity_fit_window_s":0.6,"wait_budget_s":8.0}\n', stderr='').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:68: AssertionError
+______________ test_json_must_consume_entire_file[ INVALID-base] _______________
+
+target = 'base', suffix = ' INVALID'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_4')
+
+    @pytest.mark.parametrize('target', ['profile', 'base', 'stop'])
+    @pytest.mark.parametrize('suffix', [' {}', ' INVALID'])
+    def test_json_must_consume_entire_file(target, suffix, tmp_path):
+        data = dict(BASE)
+        base = dict(BASE)
+        stop = json.loads((POLICY / 'config/measured_stop_reference_20260915.json').read_text())
+        if target == 'base': data = {'base_profile': 'base.json'}
+        if target == 'stop': data['stop_reference_file'] = 'stop.json'
+        for name, value in [('profile', data), ('base', base), ('stop', stop)]:
+            (tmp_path / f'{name}.json').write_text(json.dumps(value) + (suffix if target == name else ''))
+>       compare(tmp_path / 'profile.json')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_4/profile.json')
+simulated = True
+
+    def compare(path, simulated=True):
+        binary = os.environ.get('POLICY_PROFILE_PROBE')
+        if not binary:
+            pytest.skip('POLICY_PROFILE_PROBE must select the standalone C++ test binary')
+        try:
+            reference = Profile.load(path)
+            reference.require_environment(simulated)
+        except Exception:
+            reference = None
+        result = subprocess.run([binary, str(path), str(simulated).lower()],
+                                capture_output=True, text=True, timeout=3)
+>       assert (result.returncode == 0) == (reference is not None), result.stderr
+E       AssertionError: 
+E       assert (0 == 0) == (None is not None)
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_native_build_20260923_envelope_off/policy_profile_probe', '/tmp/pytest-of-yjh/py..._confirmation_s":0.4,"velocity_fit_max_residual_m":0.06,"velocity_fit_window_s":0.6,"wait_budget_s":8.0}\n', stderr='').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:68: AssertionError
+______________ test_json_must_consume_entire_file[ INVALID-stop] _______________
+
+target = 'stop', suffix = ' INVALID'
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_5')
+
+    @pytest.mark.parametrize('target', ['profile', 'base', 'stop'])
+    @pytest.mark.parametrize('suffix', [' {}', ' INVALID'])
+    def test_json_must_consume_entire_file(target, suffix, tmp_path):
+        data = dict(BASE)
+        base = dict(BASE)
+        stop = json.loads((POLICY / 'config/measured_stop_reference_20260915.json').read_text())
+        if target == 'base': data = {'base_profile': 'base.json'}
+        if target == 'stop': data['stop_reference_file'] = 'stop.json'
+        for name, value in [('profile', data), ('base', base), ('stop', stop)]:
+            (tmp_path / f'{name}.json').write_text(json.dumps(value) + (suffix if target == name else ''))
+>       compare(tmp_path / 'profile.json')
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_json_must_consume_entire_5/profile.json')
+simulated = True
+
+    def compare(path, simulated=True):
+        binary = os.environ.get('POLICY_PROFILE_PROBE')
+        if not binary:
+            pytest.skip('POLICY_PROFILE_PROBE must select the standalone C++ test binary')
+        try:
+            reference = Profile.load(path)
+            reference.require_environment(simulated)
+        except Exception:
+            reference = None
+        result = subprocess.run([binary, str(path), str(simulated).lower()],
+                                capture_output=True, text=True, timeout=3)
+>       assert (result.returncode == 0) == (reference is not None), result.stderr
+E       AssertionError: 
+E       assert (0 == 0) == (None is not None)
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_native_build_20260923_envelope_off/policy_profile_probe', '/tmp/pytest-of-yjh/py..._confirmation_s":0.4,"velocity_fit_max_residual_m":0.06,"velocity_fit_window_s":0.6,"wait_budget_s":8.0}\n', stderr='').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:68: AssertionError
+___________ test_null_sources_rejected_when_applying_stop_reference ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_null_sources_rejected_whe0')
+
+    def test_null_sources_rejected_when_applying_stop_reference(tmp_path):
+        stop = (POLICY / 'config/measured_stop_reference_20260915.json').read_text()
+        (tmp_path / 'stop.json').write_text(stop)
+        path = tmp_path / 'profile.json'
+        path.write_text(json.dumps(dict(BASE, sources=None, stop_reference_file='stop.json')))
+>       compare(path)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-yjh/pytest-7/test_null_sources_rejected_whe0/profile.json')
+simulated = True
+
+    def compare(path, simulated=True):
+        binary = os.environ.get('POLICY_PROFILE_PROBE')
+        if not binary:
+            pytest.skip('POLICY_PROFILE_PROBE must select the standalone C++ test binary')
+        try:
+            reference = Profile.load(path)
+            reference.require_environment(simulated)
+        except Exception:
+            reference = None
+        result = subprocess.run([binary, str(path), str(simulated).lower()],
+                                capture_output=True, text=True, timeout=3)
+>       assert (result.returncode == 0) == (reference is not None), result.stderr
+E       AssertionError: 
+E       assert (0 == 0) == (None is not None)
+E        +  where 0 = CompletedProcess(args=['/tmp/astribot_native_build_20260923_envelope_off/policy_profile_probe', '/tmp/pytest-of-yjh/py..._confirmation_s":0.4,"velocity_fit_max_residual_m":0.06,"velocity_fit_window_s":0.6,"wait_budget_s":8.0}\n', stderr='').returncode
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py:68: AssertionError
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py::test_json_must_consume_entire_file[ {}-profile]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py::test_json_must_consume_entire_file[ {}-base]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py::test_json_must_consume_entire_file[ {}-stop]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py::test_json_must_consume_entire_file[ INVALID-profile]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py::test_json_must_consume_entire_file[ INVALID-base]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py::test_json_must_consume_entire_file[ INVALID-stop]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_profile_differential.py::test_null_sources_rejected_when_applying_stop_reference
+7 failed, 428 passed in 1.36s

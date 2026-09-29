@@ -12,4 +12,6 @@ HuNav 接口是独立的 `/simulation/social_agents_truth`，保留真值标识�
 
 仿真场景支持 `wait_for_episode_start: true`。`/social_sim/episode` 的 `start`/`pause` 只控制行人，`/social_sim/episode_state` 返回状态。每个 Regular 行人的行为树在本次日志目录生成，不依赖场景名称碰巧对应已安装 XML。
 
+空场景有两种用途：`h2_empty.yaml` 仅保留物理几何观察，供相机等轻量验证使用；导航回归使用 `h2_empty_observed.yaml`，通过 `enable_empty_observations: true` 启动实际 HuNav 空清单观测、启停确认和断流注入接口。后者没有行人模型，仍要求观测按仿真时间持续更新；缺失输入不能作为无人证据。
+
 `hunav_truth_adapter` 的 `observation_mode` 为仿真故障注入接口：`normal` 正常发布、`drop` 不发布、`repeat` 重发旧帧但不更新时间戳/序号。仅该仿真适配器具有此参数；用例结束必须恢复 `normal`。场景与运行方法见 `tools/social_navigation/README.md`。

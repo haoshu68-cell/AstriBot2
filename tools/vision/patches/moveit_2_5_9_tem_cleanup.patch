@@ -1,0 +1,15 @@
+--- a/moveit_ros/planning/trajectory_execution_manager/src/trajectory_execution_manager.cpp
++++ b/moveit_ros/planning/trajectory_execution_manager/src/trajectory_execution_manager.cpp
+@@ -81,6 +81,12 @@
+   if (private_executor_thread_.joinable())
+     private_executor_thread_.join();
+   private_executor_.reset();
++  // Controller callback groups and handles can carry deleters from the plugin.
++  // Release them while the plugin loader is still alive, before member teardown.
++  active_handles_.clear();
++  callback_handler_.reset();
++  controller_manager_.reset();
++  controller_mgr_node_.reset();
+ }
+ 
+ void TrajectoryExecutionManager::initialize()

@@ -1,0 +1,49 @@
+Running main() from ./googletest/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from CameraSession
+[ RUN      ] CameraSession.AcquiresAndRejectsOtherOwner
+ws_robot/src/astribot_s1_perception_components/test/camera_session_test.cpp:5: Failure
+Value of: a
+  Actual: false
+Expected: true
+[  FAILED  ] CameraSession.AcquiresAndRejectsOtherOwner (0 ms)
+[ RUN      ] CameraSession.DuplicateAcquireCannotRenewLease
+ws_robot/src/astribot_s1_perception_components/test/camera_session_test.cpp:9: Failure
+Value of: s.request(0,"owner","run","q1","",.5,100,100,100)
+  Actual: false
+Expected: true
+[  FAILED  ] CameraSession.DuplicateAcquireCannotRenewLease (0 ms)
+[ RUN      ] CameraSession.ReleaseAndExpiredTokensCannotReactivate
+ws_robot/src/astribot_s1_perception_components/test/camera_session_test.cpp:13: Failure
+Value of: s.request(0,"o","e","a","",.5,100,100,100)
+  Actual: false
+Expected: true
+[  FAILED  ] CameraSession.ReleaseAndExpiredTokensCannotReactivate (0 ms)
+[ RUN      ] CameraSession.WallExpiryAndClockRollbackInvalidate
+ws_robot/src/astribot_s1_perception_components/test/camera_session_test.cpp:19: Failure
+Value of: s.request(0,"o","e","a","",.5,100,100,100)
+  Actual: false
+Expected: true
+[  FAILED  ] CameraSession.WallExpiryAndClockRollbackInvalidate (0 ms)
+[ RUN      ] CameraSession.RejectsMissingIdentityInvalidBudgetAndOldRequest
+[       OK ] CameraSession.RejectsMissingIdentityInvalidBudgetAndOldRequest (0 ms)
+[ RUN      ] CameraSession.CorrectRenewExtendsAndDifferentBootHasDifferentToken
+ws_robot/src/astribot_s1_perception_components/test/camera_session_test.cpp:30: Failure
+Value of: s.request(0,"o","e","a","",.5,100,100,100)
+  Actual: false
+Expected: true
+[  FAILED  ] CameraSession.CorrectRenewExtendsAndDifferentBootHasDifferentToken (0 ms)
+[----------] 6 tests from CameraSession (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 5 tests, listed below:
+[  FAILED  ] CameraSession.AcquiresAndRejectsOtherOwner
+[  FAILED  ] CameraSession.DuplicateAcquireCannotRenewLease
+[  FAILED  ] CameraSession.ReleaseAndExpiredTokensCannotReactivate
+[  FAILED  ] CameraSession.WallExpiryAndClockRollbackInvalidate
+[  FAILED  ] CameraSession.CorrectRenewExtendsAndDifferentBootHasDifferentToken
+
+ 5 FAILED TESTS

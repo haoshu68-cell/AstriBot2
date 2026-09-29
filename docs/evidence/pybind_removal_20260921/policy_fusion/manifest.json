@@ -1,0 +1,200 @@
+{
+  "scope": "standalone native immutable contracts and persistent fusion; no observer/controller/ROS/hardware acceptance",
+  "session_id": "policy_fusion_20260921",
+  "robot_id": null,
+  "task_id": "policy_fusion_core",
+  "source_node": null,
+  "source_topic_or_action": null,
+  "frame_id": "odom (synthetic fixtures)",
+  "clock_epoch": "synthetic ROS/steady/epoch boundaries",
+  "calibration_revision": "synthetic 0",
+  "phase": "offline differential and sanitizer validation",
+  "environment": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "python": "3.10.12",
+  "compiler": "g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0",
+  "native_source_sha256": {
+    "ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/policy_contracts.hpp": "cc1e9a76ac7cfab02b1e0c2b6506160732b80e8940001612c86da9e1818d6d56",
+    "ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/policy_fusion.hpp": "7d7b2920b9418c2f7bd949d92a3342a397ec67de93204035b9bd096dddb8dd4b",
+    "ws_robot/src/astribot_s1_navigation_policy_native/src/policy_contracts.cpp": "85b41ec11c510860e267af66e1add40123a2dfbccbf962d697e961d0ecb0f8e8",
+    "ws_robot/src/astribot_s1_navigation_policy_native/src/policy_fusion.cpp": "732878d4ffbd50b178ad37f477b03197d8dd389c3f529b6bb4e359c81ab4fc99",
+    "ws_robot/src/astribot_s1_navigation_policy_native/cmake/policy_fusion.cmake": "28b845fadfd403b70e76f13a2f2f2fd222f0de4824d9cf2555af631e70c735b0",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/policy_fusion_probe.cpp": "41accbfa4fcd0f90ddd62f43a43698cd8f389743ab65d4d2feb06b87c30f3d41",
+    "ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_fusion.py": "1219fa667af99681d46dbb0da6f5a8e2bb7a7d29b93fcc3a9304170e7c3ea0f7",
+    "ws_robot/src/astribot_s1_navigation_policy_native/include/astribot_s1_navigation_policy_native/policy_numeric.hpp": "873c8f716ccf30d4ddaf07a9166033ef3c4daa0e79a602d772b642cdcf9a1714",
+    "ws_robot/src/astribot_s1_robot_geometry/include/astribot_s1_robot_geometry/fusion_snapshot.hpp": "ba367bcc5aafdeb5881cbbe08f7274c0ed59522c71cc7805e1b3b859c92a4aa5"
+  },
+  "frozen_oracles": {
+    "contracts": {
+      "sha256": "6a55bc374c1ae146d33e13ad7d7a0bb98514007cbf8816cb1ad09c1015d019b5",
+      "authority": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/contracts.py",
+      "frozen": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_fusion/contracts.py",
+      "byte_identical": true
+    },
+    "ports": {
+      "sha256": "b85892a71e8170f07b6b4d8d6cabeb676123135a3904473dab985e81478f853b",
+      "authority": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/ports.py",
+      "frozen": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_fusion/ports.py",
+      "byte_identical": true
+    },
+    "fusion": {
+      "sha256": "c20cf0fc1a030823d0c9faf60109b75915403911d5d9edc37bcfd674f9b25473",
+      "authority": "ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/fusion.py",
+      "frozen": "ws_robot/src/astribot_s1_navigation_policy_native/test/reference/policy_fusion/fusion.py",
+      "byte_identical": true
+    }
+  },
+  "baseline_geometry_source": {
+    "src/geometry_native.cpp": {
+      "sha256": "ef4fc8be70b1965cdc59de80b3e16a11f5578895657be7ecc4b40d3629bebded",
+      "byte_identical": true
+    },
+    "include/astribot_s1_robot_geometry/fusion_snapshot.hpp": {
+      "sha256": "a34a2cc68fb1fe7f0908f8f36fed3568cc40e6e0a92f44402cd42cdc8ea1c916",
+      "verified_identical_before_norm_callback_extension": true,
+      "current_source_sha256": "ba367bcc5aafdeb5881cbbe08f7274c0ed59522c71cc7805e1b3b859c92a4aa5",
+      "extension": "Default-null norm2 callback; old callers unchanged, native policy passes compensated norm."
+    }
+  },
+  "baseline_binding_sha256": "e60b44c7b755d51ec2fa5ea98bb46fc46a1eba8221feefb7bbb3018c0bec4627",
+  "native_probe_sha256": "35fc946584f169e6f3078bcb967bde67485ef3c1de8c5786e16137df69f144f5",
+  "memory": "No runtime track cap added; original retention and evidence-clearing behavior retained.",
+  "omissions": [
+    "ROS observer/controller adapters and their QoS/TF/mailbox integration",
+    "closed-loop simulation",
+    "hardware acceptance",
+    "production Python or binding removal"
+  ],
+  "domain_notes": [
+    "Native stamps and epochs are signed 64-bit nonnegative integers; Python integers are unbounded.",
+    "Snapshot region originates at finite robot positions with nonnegative derived travel. Positive infinity travel from finite extreme odometry is preserved; negative travel is outside the observer call contract.",
+    "Default Python overflow and exact norm thresholds retained. The optional historical binding differs on infinity region radius and libm threshold rounding; targeted tests select default Python explicitly.",
+    "No whole ROS observer/controller, Python retirement, binding retirement, or hardware claim."
+  ],
+  "sanitized_probe_sha256": "0588f48ee1bf59d6b0ac68fc2dbeee4fbf36ee61d84d9af81e9a4f7430f2d41e",
+  "verification": {
+    "default_oracle": {
+      "tests": 47,
+      "passed": 47,
+      "log": "green.txt"
+    },
+    "optional_historical_native_oracle": {
+      "tests": 47,
+      "passed": 47,
+      "log": "green_native_snapshot.txt"
+    },
+    "sanitizer": {
+      "log": "sanitized.txt",
+      "flags": "address,undefined; detect_leaks=1; halt_on_error=1",
+      "tests": 47,
+      "passed": 47,
+      "seconds": 21.3,
+      "loader_workaround": "Per-probe runner prepends libasan via LD_PRELOAD; global /etc/ld.so.preload audit hook is preserved. First attempted run failure is archived in sanitizer_preload_failure.txt."
+    },
+    "independent_review": {
+      "state_scenarios": 101,
+      "state_operations": 16005,
+      "norm_cases": 106000,
+      "norm_mismatches_after_fix": 0,
+      "location": "/tmp/review_policy_fusion/ (review worker owns report)"
+    },
+    "default_null_snapshot_callback": {
+      "scenarios": 12,
+      "rows": 3000,
+      "byte_identical": true,
+      "result": "snapshot_default_compatibility/result.json"
+    }
+  },
+  "compiler_flags": "-std=c++17 -O2 -ffp-contract=off -Wall -Wextra -Wpedantic",
+  "independent_review_archives": [
+    {
+      "original_path": "/tmp/review_policy_fusion/REVIEW.md",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/REVIEW.md",
+      "sha256": "25f91bbeeb9787efe2bc58b3c32326b8c271ea527bb27de83099a6c5bd0e97c5"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/association_boundary.py",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/association_boundary.py",
+      "sha256": "30892b7f4c9ef3b36667a3d8968f0a92cf6899a8f959d31dd46b3d92533480e9"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/association_boundary_case.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/association_boundary_case.json",
+      "sha256": "20691b02a83b92aff23163ac0bf70cc5c771560d3c4d3edba6be63bf542078f8"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/association_boundary_result.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/association_boundary_result.json",
+      "sha256": "5102e50c2734e29211fcbc3937b4292092b2f6802c9ddeafb303aa707774cff5"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/bearing_boundary.py",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/bearing_boundary.py",
+      "sha256": "8f1f0d3cba4e7c49a3513ce2348ae62d45d6cfee5d1d2097b90e5e654997d89d"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/bearing_boundary_failure.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/bearing_boundary_failure.json",
+      "sha256": "da2cbd8a253008a2f954dad354ecd675c056b87be5a864dc5135e9a1cb49ccc4"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/distance_boundary.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/distance_boundary.json",
+      "sha256": "f9af4d9a648c91c7d8faea325174a2cbef22f6637c6f784a526b9a7f35ed2219"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/norm_probe.cpp",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/norm_probe.cpp",
+      "sha256": "8cda548f16ad867f83c397a98acee424d8592b9b5dcce4560935b65a043e60b6"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/norm_stress.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/norm_stress.json",
+      "sha256": "d4ef41eeda4eaccfeed1b6678df5618214e05c9e66c4afc17d6fb15b308d2407"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/norm_stress.py",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/norm_stress.py",
+      "sha256": "0abd3de7feb35b9d84d50a5f2afd59c5063533114ace380f6a2043cb28c1768e"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/norm_stress_final.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/norm_stress_final.json",
+      "sha256": "51c14cd5b2db00ee93b651890075ed627477ab7b024c3242a299eeab8bca1527"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/provenance_boundary_case.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/provenance_boundary_case.json",
+      "sha256": "2cf66adc4e83cb05a082a572ebfa208e5c029c4d1c514bbe3b66474841358bde"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/provenance_boundary_result.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/provenance_boundary_result.json",
+      "sha256": "48432b63e5068d43613d32046bc791f53012066b882c2270267911f3f15c47e5"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/source_hashes_before.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/source_hashes_before.json",
+      "sha256": "c6147d06d19cc99a5cce0d00a4b4b2ce1e7b9e90e8aab91b00946694a137abd4"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/source_hashes_final.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/source_hashes_final.json",
+      "sha256": "00add122903b882093a5b502c45834709bdcebf3bbdf3111a7dbabfbceec6013"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/state_checks.py",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/state_checks.py",
+      "sha256": "3a609c1b3997effb224d843325d1473be924a5b5ed379c059bed3b84d0e09336"
+    },
+    {
+      "original_path": "/tmp/review_policy_fusion/state_review_result.json",
+      "archived": "docs/evidence/pybind_removal_20260921/policy_fusion/independent_review/state_review_result.json",
+      "sha256": "ebdaa8e7001f221f945f0878e89e5361e112f1f0483bb6ac42718250b23a735b"
+    }
+  ],
+  "verification_log_sha256": {
+    "green.txt": "743edd65059a50939dfb06c7c16da487a36b488f01bebab7b56b6e3655f665af",
+    "green_native_snapshot.txt": "8acc53286390d33a6ccafbb45fdd4ef8a4f319b3397c218987ffb4664eb1779f",
+    "sanitized.txt": "713259eacdedf9654bec047f1b2035a35da00d943225d9db0372f43ff2ecdbc9"
+  }
+}

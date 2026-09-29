@@ -1,0 +1,88 @@
+{
+  "scope": "Offline private script blocks with mocked parameter service; no ROS/build or simulation acceptance",
+  "cases": [
+    {
+      "name": "strict_below",
+      "passed": true,
+      "observed_error": null
+    },
+    {
+      "name": "strict_reject",
+      "passed": true,
+      "observed_error": "UNEXPECTED_MOTION_OUTSIDE_NAVIGATION"
+    },
+    {
+      "name": "relaxed_accept",
+      "passed": true,
+      "observed_error": null
+    },
+    {
+      "name": "relaxed_reject",
+      "passed": true,
+      "observed_error": "UNEXPECTED_MOTION_OUTSIDE_NAVIGATION"
+    },
+    {
+      "name": "linear_unchanged",
+      "passed": true,
+      "observed_error": "UNEXPECTED_MOTION_OUTSIDE_NAVIGATION"
+    },
+    {
+      "name": "command_unchanged",
+      "passed": true,
+      "observed_error": "NONZERO_CHASSIS_COMMAND_OUTSIDE_NAVIGATION"
+    },
+    {
+      "name": "navigation_unchanged",
+      "passed": true,
+      "observed_error": null
+    },
+    {
+      "name": "strict_readback",
+      "passed": true,
+      "observed_error": null
+    },
+    {
+      "name": "relaxed_readback",
+      "passed": true,
+      "observed_error": null
+    },
+    {
+      "name": "executor_mismatch",
+      "passed": true,
+      "observed_error": "SIMULATION_BASE_MOTION_CONDITION_MISMATCH:task_trajectory_executor"
+    },
+    {
+      "name": "guard_mismatch",
+      "passed": true,
+      "observed_error": "SIMULATION_BASE_MOTION_CONDITION_MISMATCH:manipulation_execution_guard"
+    },
+    {
+      "name": "undeclared_not_false",
+      "passed": true,
+      "observed_error": "SIMULATION_BASE_MOTION_CONDITION_MISMATCH:task_trajectory_executor"
+    },
+    {
+      "name": "idle_enabled",
+      "passed": true,
+      "observed_error": null
+    },
+    {
+      "name": "idle_disabled",
+      "passed": true,
+      "observed_error": "CHASSIS_IDLE_POSITION_HOLD_REQUIRED"
+    },
+    {
+      "name": "idle_wrong_type",
+      "passed": true,
+      "observed_error": "CHASSIS_IDLE_POSITION_HOLD_REQUIRED"
+    }
+  ],
+  "syntax": true,
+  "cli_flag_checked": true,
+  "condition_report_checked": true,
+  "stop_and_handoff_blocks_unchanged": true,
+  "hashes": {
+    "verify_full_transfer.py": "1333136611ff06fbf31d285858c61833893c6997f11a8937ec936b9ac3081184",
+    "read_full_executor_parameters.py": "6db3a2214f222c66f02eff73d9deac3b8d6cbc698321bb4b4f8a653ea655240c"
+  }
+}

@@ -1,0 +1,837 @@
+{
+  "updated_at": "2026-09-23T19:39:03.891395+08:00",
+  "status": "MAIN_FLOW_PASSED_CONTINUING_I1_AND_NARROW_ARM_REVIEW",
+  "stage": "I1",
+  "stage_acceptance": "IN_PROGRESS",
+  "hardware_operated": false,
+  "shared_install_modified": false,
+  "tasks": {
+    "A": {
+      "task": "A",
+      "scope": "A1-A4 version, install, evidence and metric definitions",
+      "started_at": "2026-09-21T14:56:15+00:00",
+      "deadline": "2026-09-21T15:56:15+00:00",
+      "status": "COMPLETE",
+      "limit_seconds": 3600,
+      "finished_at": "2026-09-21T15:12:30.156466+00:00",
+      "elapsed_seconds": 975.156466
+    },
+    "B": {
+      "task": "B",
+      "scope": "B1-B4 sensor ownership and startup validation",
+      "started_at": "2026-09-21T15:12:30.156466+00:00",
+      "deadline": "2026-09-21T16:12:30.156466+00:00",
+      "status": "COMPLETE",
+      "limit_seconds": 3600,
+      "finished_at": "2026-09-21T15:52:42.423072+00:00",
+      "elapsed_seconds": 2412.266606
+    },
+    "C": {
+      "task": "C remaining stages C2-C4",
+      "status": "CORE_COMPLETED_CONDITIONAL_PROGRESSION",
+      "started_at": "2026-09-23T05:40:41+08:00",
+      "deadline": "2026-09-23T07:10:41+08:00",
+      "limit_seconds": 5400,
+      "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C96_TRIGGER_STOP_RECOVERY_20260923.md",
+      "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C96_20260923_054041",
+      "C1": "USER_PROVISIONALLY_ACCEPTED",
+      "C2": "PASS_16_OF_16",
+      "C3": "PASS_7_CORE_CASES_FIXED_V2_SETUP_PENDING",
+      "simulation_started": true,
+      "hardware_operated": false,
+      "shared_install_modified": false,
+      "stage_acceptance": "CONDITIONAL_PROGRESSION_BY_USER",
+      "progression_decision": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C96_20260923_054041/user_progression_decision.json",
+      "simulation_allowed": true,
+      "hardware_allowed": false,
+      "reason": "User provisionally accepts C1/current drive result and authorizes advancing. Keep C1 evidence gaps explicit; do not relabel missing trials as measured PASS.",
+      "user_progression_update": "After confirming trigger, actual stop and recovery, proceed to whole-repository integration verification, then subsequent work and I0.2 merged build; keep uncovered repetitions/extended scenarios explicitly deferred.",
+      "finished_at": "2026-09-23T06:46:31.695313+08:00",
+      "elapsed_seconds": 3950.695313,
+      "C4": "REVIEWED_PAIRED_VISUAL_WITH_LIMITS"
+    },
+    "D": {
+      "task": "D whole-repository integration logic audit and source selection",
+      "started_at": "2026-09-23T06:46:31.695313+08:00",
+      "deadline": "2026-09-23T08:16:31.695313+08:00",
+      "limit_seconds": 5400,
+      "status": "SOURCE_INTEGRATION_READY",
+      "scope": "Current source dependency closure, entrypoints, ownership, interfaces and selected C94/C95 integration; extended D runtime matrix carried forward explicitly into I0.2 baseline validation, not marked passed",
+      "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/D_integration_20260923_064631",
+      "finished_at": "2026-09-23T06:51:15.568512+08:00",
+      "elapsed_seconds": 283.873199
+    },
+    "I0.2_I1_I6": {
+      "status": "I0_2_RUNNING_I1_I6_NOT_OPENED"
+    },
+    "I0.2": {
+      "task": "I0.2 shared baseline A2/A3 integration and regression",
+      "started_at": "2026-09-23T14:05:45+08:00",
+      "deadline": "2026-09-23T15:35:45+08:00",
+      "limit_seconds": 5400,
+      "status": "RUNNING_OFFLINE_PREPARATION",
+      "authorization": "Other collaborating task relays fresh user continue instruction and explicitly requests independent I0.2 restart; no Gazebo before A3 resource handoff",
+      "previous_attempt": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_113306",
+      "hardware_operated": false,
+      "shared_install_modified": false,
+      "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545"
+    }
+  },
+  "previous_attempt_C": {
+    "task": "C",
+    "scope": "C1-C4 standard corner closed-loop and multi-scenario boundaries",
+    "started_at": "2026-09-21T15:52:42.423072+00:00",
+    "deadline": "2026-09-21T16:52:42.423072+00:00",
+    "status": "PAUSED_TIME_LIMIT",
+    "limit_seconds": 3600,
+    "paused_at": "2026-09-21T16:53:03.717232+00:00",
+    "elapsed_seconds": 3621.29416,
+    "reason": "C1-C4 acceptance incomplete at original one-hour deadline; downstream tasks not opened"
+  },
+  "candidate_C90": {
+    "updated_at": "2026-09-22T03:23:12.101517+00:00",
+    "status": "PAUSED_TIME_LIMIT",
+    "candidate": "v10",
+    "stage_acceptance": "NOT_PASSED",
+    "candidate_counts": {
+      "PASS": 16,
+      "TIMEOUT_UNACCEPTED": 1,
+      "ROUTE_SHORTCUT_FAIL": 1,
+      "CANCEL_PASS": 4,
+      "FAULT_WRONG_REASON": 2,
+      "FAULT_STOP_OBSERVED": 2,
+      "REJECTION_OBSERVED": 3,
+      "INFRA_FAILURE": 1,
+      "FAIL": 1
+    },
+    "standard_corner_attempts": 8,
+    "cleanup_reports": {
+      "v10_warm_boundary": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v10_warm_envelope": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v10_warm_faults": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v10_warm_on": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v6_warm_on": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": "two_trim"
+      },
+      "v7_warm_on": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v8_warm_off": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v8_warm_on": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v9_warm_faults": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      },
+      "v9_warm_on": {
+        "remaining_owned_pids": [],
+        "error": null,
+        "fixture_failure": null
+      }
+    },
+    "next_fixes": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C90/NEXT_FIXES.md",
+    "report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C90/REPORT.md",
+    "hardware_operated": false,
+    "shared_install_modified": false
+  },
+  "historical_C60_summary": {
+    "counts_all_versions": {
+      "INFRA_FAILURE": 4,
+      "PASS": 16,
+      "FAIL": 1,
+      "CANCEL_PASS": 3,
+      "INVALID_FIXTURE": 1,
+      "TIMEOUT_UNACCEPTED": 1
+    },
+    "v4_repeat_matrix": [
+      {
+        "variant": "off",
+        "turn_degrees": 45,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_off_45_1"
+        ]
+      },
+      {
+        "variant": "off",
+        "turn_degrees": -45,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_off_-45_1"
+        ]
+      },
+      {
+        "variant": "off",
+        "turn_degrees": 90,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_off_90_1"
+        ]
+      },
+      {
+        "variant": "off",
+        "turn_degrees": -90,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_off_-90_1"
+        ]
+      },
+      {
+        "variant": "off",
+        "turn_degrees": 135,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_off_135_1"
+        ]
+      },
+      {
+        "variant": "off",
+        "turn_degrees": -135,
+        "required": 3,
+        "passed": 0,
+        "cases": []
+      },
+      {
+        "variant": "on",
+        "turn_degrees": 45,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_on_45_1"
+        ]
+      },
+      {
+        "variant": "on",
+        "turn_degrees": -45,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_on_-45_1"
+        ]
+      },
+      {
+        "variant": "on",
+        "turn_degrees": 90,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_on_90_retry1"
+        ]
+      },
+      {
+        "variant": "on",
+        "turn_degrees": -90,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_on_-90_1"
+        ]
+      },
+      {
+        "variant": "on",
+        "turn_degrees": 135,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_on_135_1"
+        ]
+      },
+      {
+        "variant": "on",
+        "turn_degrees": -135,
+        "required": 3,
+        "passed": 1,
+        "cases": [
+          "v4_on_-135_retry1"
+        ]
+      }
+    ],
+    "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01",
+    "report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C/REPORT.md",
+    "inventory": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C/case_inventory.json",
+    "visual_review": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C/v4_gui_left90/visual_review.json",
+    "remaining_work": [
+      "Complete v4 on/off repeated angle matrix and straight/arc controls",
+      "Resolve same-goal corner identity across replans and self intersections",
+      "Diagnose rotation translation drift and validate corner position bound",
+      "Complete corner-phase dynamic crossing, cancellation, localization jump, old-response and envelope-invalid scenarios",
+      "Recover cold-start physics readiness and paired full-route visuals",
+      "Only then close C and start D; I0.2 and I1-I6 remain closed"
+    ],
+    "current_evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C90"
+  },
+  "previous_attempt_C90": {
+    "task": "C",
+    "attempt": "resume_20260922_90min",
+    "scope": "C1-C4 unchanged; reset once by explicit user request",
+    "started_at": "2026-09-22T01:53:30+00:00",
+    "deadline": "2026-09-22T03:23:30+00:00",
+    "limit_seconds": 5400,
+    "status": "PAUSED_TIME_LIMIT",
+    "previous_attempt": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/task_C_timing.json",
+    "finished_at": "2026-09-22T03:23:12.101517+00:00",
+    "elapsed_seconds": 5382.101517
+  },
+  "candidate_C91": {
+    "candidate": "v13",
+    "status": "PAUSED_TIME_LIMIT",
+    "report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C91/REPORT.md",
+    "matrix": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C91/v13_matrix_review.json",
+    "runtime_library": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C91/install_v13/astribot_s1_path_tracking/lib/libastribot_s1_path_tracking.so",
+      "sha256": "4bd3d241c16b9995db1c171ecb1adb1d628d71e5c40a66fcadf9e103f7e1b263"
+    },
+    "hardware_operated": false,
+    "shared_install_modified": false,
+    "historical_v12_fix_gate": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C91/v12_fix_gate.json",
+    "review_finding": "zero-arc paths blocked terminal refinement; RED reproduced, fix CTest 7/7; live regression running",
+    "summary": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C91/v13_summary.json",
+    "counts": {
+      "PASS": 14,
+      "CANCEL_PASS": 1,
+      "INVALID_PEDESTRIAN_STATIC_CLEARANCE": 4,
+      "CROSSING_UNACCEPTED": 2,
+      "EXPECTED_UNSUPPORTED_REJECTION": 1,
+      "FAULT_STOP_OBSERVED": 4,
+      "INFRA_FAILURE": 3
+    }
+  },
+  "historical_C90_process_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C90/final_process_audit.json",
+  "final_process_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C95_20260922_234843/final_process_audit.json",
+  "last_simulation_attempt_C91": {
+    "task": "C",
+    "attempt": "resume_20260922_134142_90min",
+    "scope": "C1-C4 unchanged; explicit user reset",
+    "started_at": "2026-09-22T05:41:42+00:00",
+    "deadline": "2026-09-22T07:11:42+00:00",
+    "limit_seconds": 5400,
+    "status": "PAUSED_TIME_LIMIT",
+    "previous_attempt": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C90/task_timing.json",
+    "finished_at": "2026-09-22T07:11:24.568957+00:00",
+    "elapsed_seconds": 5382.568957,
+    "reason": "C1-C4 acceptance incomplete; preserve final candidate and evidence, downstream not opened"
+  },
+  "candidate_C92": {
+    "status": "OFFLINE_VALIDATED_NOT_SIMULATION_ACCEPTED",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C_OFFLINE_REPAIR_20260922.md",
+    "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C92_offline",
+    "ctest_passed": 12,
+    "ctest_total": 12,
+    "contract_assertions": 69,
+    "surrogate_cases": 48,
+    "offline_tool_tests": 8,
+    "simulation_started": false,
+    "hardware_operated": false,
+    "shared_install_modified": false,
+    "stage_acceptance": "NOT_PASSED",
+    "phase_evidence_continuation": {
+      "task": "C offline phase-evidence continuation",
+      "status": "OFFLINE_COMPLETE_SIMULATION_PAUSED",
+      "continued_at": "2026-09-22T17:12:40+08:00",
+      "budget_started_at": "2026-09-22T16:04:54+08:00",
+      "deadline": "2026-09-22T17:34:54+08:00",
+      "finished_at": "2026-09-22T17:26:42.548783+08:00",
+      "total_budget_elapsed_seconds": 4908.548783,
+      "scope": "offline validation helper and scenario cards only",
+      "runtime_source_and_library_unchanged": true,
+      "tests": {
+        "passed": 22,
+        "total": 22
+      },
+      "scenario_cards": {
+        "prepared": 24,
+        "executed": 0
+      },
+      "simulation_started": false,
+      "hardware_operated": false,
+      "live_collector_injector_adapter": "NOT_CONNECTED",
+      "stage_acceptance": "NOT_PASSED",
+      "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C_PHASE_EVIDENCE_20260922.md"
+    }
+  },
+  "candidate_C93": {
+    "status": "OFFLINE_CANDIDATE_PAUSED_NOT_COPIED",
+    "report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C93_offline/REPORT.md",
+    "timing": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C93_offline/task_timing.json",
+    "historical_ctest_passed": 12,
+    "historical_ctest_total": 12,
+    "simulation_started": false,
+    "hardware_operated": false,
+    "stage_acceptance": "NOT_PASSED",
+    "superseded_by": "C94: fresh verification and guarded source copy"
+  },
+  "candidate_C94": {
+    "status": "OFFLINE_COMPLETE_SIMULATION_PAUSED",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C94_OFFLINE_CONTINUATION_20260922.md",
+    "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C94_20260922_182441",
+    "started_at": "2026-09-22T22:06:27.270366+08:00",
+    "deadline": "2026-09-22T23:36:27.270366+08:00",
+    "finished_at": "2026-09-22T22:23:45.962405+08:00",
+    "elapsed_seconds": 1038.692039,
+    "ctest_passed": 13,
+    "ctest_total": 13,
+    "contract_assertions": 73,
+    "observation_assertions": 14,
+    "approach_surrogate_cases": 48,
+    "fixture_tests": 6,
+    "existing_metric_tests": 8,
+    "legacy_phase_tests": 22,
+    "versioned_phase_tests": 16,
+    "cpp_log_integration_tests": 6,
+    "source_copied": true,
+    "simulation_started": false,
+    "hardware_operated": false,
+    "shared_install_modified": false,
+    "stage_acceptance": "NOT_PASSED",
+    "live_collector_injector_adapter": "NOT_CONNECTED",
+    "runtime_library": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C94_20260922_182441/install/lib/libastribot_s1_path_tracking.so",
+      "sha256": "930a1621003f58ce9e73aa24741ff55218091bd3ca397ac6b5d86b3f7dbc4fc8"
+    }
+  },
+  "previous_task_C_before_C94": {
+    "task": "C",
+    "started_at": "2026-09-22T16:04:54+08:00",
+    "deadline": "2026-09-22T17:34:54+08:00",
+    "status": "PAUSED_TIME_LIMIT",
+    "simulation_allowed": false,
+    "hardware_allowed": false,
+    "finished_at": "2026-09-22T17:11:27.093578+08:00",
+    "elapsed_seconds": 3993.093578,
+    "reason": "Authorized offline repairs and offline regressions delivered; no simulator/hardware authorization; C acceptance remains NOT_PASSED",
+    "stage_acceptance": "NOT_PASSED",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C_OFFLINE_REPAIR_20260922.md",
+    "latest_offline_continuation": {
+      "task": "C offline phase-evidence continuation",
+      "status": "OFFLINE_COMPLETE_SIMULATION_PAUSED",
+      "continued_at": "2026-09-22T17:12:40+08:00",
+      "budget_started_at": "2026-09-22T16:04:54+08:00",
+      "deadline": "2026-09-22T17:34:54+08:00",
+      "finished_at": "2026-09-22T17:26:42.548783+08:00",
+      "total_budget_elapsed_seconds": 4908.548783,
+      "scope": "offline validation helper and scenario cards only",
+      "runtime_source_and_library_unchanged": true,
+      "tests": {
+        "passed": 22,
+        "total": 22
+      },
+      "scenario_cards": {
+        "prepared": 24,
+        "executed": 0
+      },
+      "simulation_started": false,
+      "hardware_operated": false,
+      "live_collector_injector_adapter": "NOT_CONNECTED",
+      "stage_acceptance": "NOT_PASSED"
+    },
+    "continuation": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C93_offline/task_timing.json"
+  },
+  "candidate_C95": {
+    "task": "C closed-loop regression",
+    "started_at": "2026-09-22T23:48:43+08:00",
+    "deadline": "2026-09-23T01:18:43+08:00",
+    "limit_seconds": 5400,
+    "status": "PAUSED_BEFORE_DEADLINE",
+    "simulation_allowed": true,
+    "hardware_allowed": false,
+    "stage_acceptance": "NOT_PASSED",
+    "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C95_20260922_234843",
+    "C1_required_matrix": 36,
+    "hardware_operated": false,
+    "shared_install_modified": false,
+    "baseline_matrix": {
+      "required": 36,
+      "executed": 20,
+      "passed": 19,
+      "failed": 1,
+      "not_run": 16
+    },
+    "finished_at": "2026-09-23T01:13:05.200745+08:00",
+    "elapsed_seconds": 5062.200745,
+    "reason": "C1 baseline failure reproduced; isolated drive repair completed bounded and angle diagnostic cases, but full non-degradation and 36-case matrix require another group beyond remaining budget. Stop before 90-minute deadline after owned cleanup; C2-C4 and downstream remain unopened.",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C95_SIMULATION_REGRESSION_20260923.md",
+    "drive_candidate": {
+      "status": "BOUNDED_SIMULATION_PASS_NOT_PROMOTED",
+      "goals_passed": 12,
+      "goals_executed": 12,
+      "mapped_standard_matrix_cases": 10,
+      "matrix_remaining": 26,
+      "ctest_passed": 2,
+      "ctest_total": 2,
+      "full_non_degradation_accepted": false
+    }
+  },
+  "historical_previous_final_process_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C91/final_process_audit.json",
+  "candidate_C96": {
+    "task": "C remaining stages C2-C4",
+    "started_at": "2026-09-23T05:40:41+08:00",
+    "deadline": "2026-09-23T07:10:41+08:00",
+    "limit_seconds": 5400,
+    "status": "CORE_COMPLETED_CONDITIONAL_PROGRESSION",
+    "simulation_allowed": true,
+    "hardware_allowed": false,
+    "reason": "User provisionally accepts C1/current drive result and authorizes advancing. Keep C1 evidence gaps explicit; do not relabel missing trials as measured PASS.",
+    "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C96_20260923_054041",
+    "C1_progression": "USER_PROVISIONALLY_ACCEPTED",
+    "C1_measured_full_matrix": false,
+    "C2": "PASS_16_OF_16",
+    "C3": "PASS_7_CORE_CASES_FIXED_V2_SETUP_PENDING",
+    "C4": "REVIEWED_PAIRED_VISUAL_WITH_LIMITS",
+    "C2_completed": 16,
+    "C2_required": 16,
+    "C2_passed": 16,
+    "C2_invalid_attempts": [
+      "c96_duplicate"
+    ],
+    "offline_tool_tests": 40,
+    "user_progression_update": "After confirming trigger, actual stop and recovery, proceed to whole-repository integration verification, then subsequent work and I0.2 merged build; keep uncovered repetitions/extended scenarios explicitly deferred.",
+    "C2_report": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C96_20260923_054041/C2_reviewed_summary.json",
+    "finished_at": "2026-09-23T06:46:31.695313+08:00",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C96_TRIGGER_STOP_RECOVERY_20260923.md"
+  },
+  "historical_task_C95": {
+    "task": "C",
+    "status": "PAUSED_BEFORE_DEADLINE",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/C95_SIMULATION_REGRESSION_20260923.md",
+    "evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C95_20260922_234843",
+    "started_at": "2026-09-22T23:48:43+08:00",
+    "deadline": "2026-09-23T01:18:43+08:00",
+    "simulation_started": true,
+    "hardware_operated": false,
+    "shared_install_modified": false,
+    "stage_acceptance": "NOT_PASSED",
+    "live_collector_injector_adapter": "PREPARED_OFFLINE_5_TESTS_NOT_LIVE_ACCEPTED",
+    "runtime_library": {
+      "path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C94_20260922_182441/install/lib/libastribot_s1_path_tracking.so",
+      "sha256": "930a1621003f58ce9e73aa24741ff55218091bd3ca397ac6b5d86b3f7dbc4fc8"
+    },
+    "simulation_allowed": true,
+    "hardware_allowed": false,
+    "continuation": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C95_20260922_234843/task_timing.json",
+    "reason": "C1 baseline failure reproduced; isolated drive repair completed bounded and angle diagnostic cases, but full non-degradation and 36-case matrix require another group beyond remaining budget. Stop before 90-minute deadline after owned cleanup; C2-C4 and downstream remain unopened.",
+    "offline_counts_provenance": "Inherited C94 offline evidence only; current live counts are in C95 report",
+    "historical_C94_offline_counts": {
+      "ctest_passed": 13,
+      "ctest_total": 13,
+      "contract_assertions": 73,
+      "observation_assertions": 14,
+      "approach_surrogate_cases": 48,
+      "fixture_tests": 6,
+      "existing_metric_tests": 8,
+      "legacy_phase_tests": 22,
+      "versioned_phase_tests": 16,
+      "cpp_log_integration_tests": 6,
+      "source_copied": true
+    },
+    "finished_at": "2026-09-23T01:13:05.200745+08:00",
+    "elapsed_seconds": 5062.200745,
+    "current_runtime_source_promoted": false,
+    "baseline_matrix": {
+      "required": 36,
+      "executed": 20,
+      "passed": 19,
+      "failed": 1,
+      "not_run": 16
+    },
+    "isolated_drive_candidate": {
+      "status": "BOUNDED_SIMULATION_PASS_NOT_PROMOTED",
+      "goals_passed": 12,
+      "goals_executed": 12,
+      "mapped_standard_matrix_cases": 10,
+      "matrix_remaining": 26,
+      "ctest_passed": 2,
+      "ctest_total": 2,
+      "full_non_degradation_accepted": false
+    },
+    "offline_tool_tests": {
+      "passed": 21,
+      "total": 21
+    },
+    "owned_process_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/C95_20260922_234843/final_process_audit.json"
+  },
+  "I0_2_build_evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/build_result.json",
+  "current_evidence_root": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154",
+  "empty_return_quality": "USER_PROVISIONALLY_ACCEPTED_FOR_PROGRESSION",
+  "acceptance_record": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_continue_20260923_094328/user_provisional_empty_quality_acceptance.json",
+  "latest_source_decision": "User accepts latest code as integration candidate; original measured results retained",
+  "fixed_v2_owner_proposed": "01a0c405-627f-7742-b500-e057726ed2e7",
+  "integration_owner": "01a09962-8e15-71e0-b9a6-a92798318698",
+  "pending_waiter": null,
+  "owned_cleanup": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r3_01/final_review.json",
+  "latest_source_integration": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_113306/joint_source_manifest_final.json",
+  "latest_source_build": "48 packages passed; 51 payload +16 inventory/geometry GTests, 14 tracking CTests and 31 tool checks passed",
+  "runtime_motion_protection_unchanged": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_continue_20260923_094328/runtime_unchanged_after_08.json",
+  "fixed_v2_owner_confirmed": "01a0c405-627f-7742-b500-e057726ed2e7",
+  "handoff_record": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/FIXED_V2_HANDOFF_20260923.md",
+  "active_owned_jobs": [],
+  "current_attempt": {
+    "task": "I0.2 continuation: bounded URDF cold-start repair, consumer expiry and return diagnostics",
+    "started_at": "2026-09-23T15:51:54+08:00",
+    "status": "SCAN_ROUND_CLOSED_MASS_OFFLINE_SUSPENDED",
+    "authorization": "User explicitly reopened scan freshness and return90 via collaborating owner. Historical elapsed and failures retained.",
+    "previous_attempt": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545",
+    "hardware_operated": false,
+    "shared_install_modified": false,
+    "first_resource_window_end": "2026-09-23T16:25:00+08:00",
+    "window1_results": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/window1_results.json",
+    "freshness_deferred": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/freshness_user_defer.json",
+    "historical_chain_deadline": "2026-09-23T17:21:54+08:00",
+    "historical_chain_limit_seconds": 5400,
+    "execution_policy": "docs/TASK_EXECUTION_POLICY_20260923.md",
+    "policy_updated_at": "2026-09-23T16:27:07.450397+08:00",
+    "per_issue_limit_seconds": 3600,
+    "chain_deadline_active": false,
+    "current_issue": "SCAN-FRESHNESS-01",
+    "prior_issue_cumulative_seconds": null,
+    "current_round_started_at": "2026-09-23T16:35:59+08:00",
+    "current_round_checkpoint": "2026-09-23T17:35:59+08:00",
+    "mass_probe": {
+      "status": "25_OFFLINE_CHECKS_PASS_FINAL_REVIEW_INTERRUPTED_RUNTIME_NOT_RUN",
+      "tests": 25,
+      "path": "tools/sim/verify_fixed_mass.py",
+      "started_at": "2026-09-23T16:19:00+08:00",
+      "suspended_at": "2026-09-23T16:40:44.585865+08:00"
+    }
+  },
+  "common_baseline": "docs/evidence/unified_navigation_resume_20260921/JOINT_BASELINE_20260923.md",
+  "current_regression": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r3_01/final_review.json",
+  "startup_diagnosis": {
+    "default_ros_node": "TIMEOUT_8S_DURING_CREATE",
+    "loopback_udp_node": "CREATED",
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_113306/startup_ros_node_probe.txt",
+    "control_transport_repair": "LIVE_READY_AND_4_SCENARIOS_PASS"
+  },
+  "common_git_commits": [
+    "1c34d973c8381c19341e354c8b4e0cac3dbaa2b3",
+    "a1ccf87daa7aa27090f4b1b8288a7ba4db5aed68",
+    "e61235155f3cf24d8bf8921b16a39f8268dc01af",
+    "a50ce8eb0373796f49c304808048c2831f6f5342"
+  ],
+  "formal_payload_source_A1": {
+    "status": "PASS_21_ISOLATED_GAZEBO_PHASES",
+    "evidence": "docs/evidence/joint_acceptance_20260923/a1/result.json",
+    "limitations": [
+      "not force-contact grasping",
+      "A2 ArmHold pending",
+      "A3 six-consumer handshake pending"
+    ]
+  },
+  "joint_first_batch": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_113306/joint_first_batch_metrics.json",
+  "historical_comparison_branches": "ARCHIVED_AND_BRANCH_REFS_REMOVED",
+  "archive_record": "docs/ARCHIVED_COMPARISON_BRANCHES_20260923.md",
+  "historical_previous_I0_2_attempt": {
+    "task": "I0.2 shared baseline A2/A3 integration and regression",
+    "started_at": "2026-09-23T14:05:45+08:00",
+    "deadline": "2026-09-23T15:35:45+08:00",
+    "limit_seconds": 5400,
+    "status": "PAUSED_BEFORE_TIME_LIMIT",
+    "authorization": "Other collaborating task relays fresh user continue instruction and explicitly requests independent I0.2 restart; no Gazebo before A3 resource handoff",
+    "previous_attempt": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_113306",
+    "hardware_operated": false,
+    "shared_install_modified": false,
+    "finished_at": "2026-09-23T15:33:20.593852+08:00",
+    "reason": "Two repeated infrastructure failures; insufficient remaining 90-minute window for startup, measured recovery and owned cleanup. No reset of original deadline."
+  },
+  "joint_navigation_results": {
+    "timestamp": "2026-09-23T13:00:31.141402+08:00",
+    "functional_pass_episodes": 12,
+    "valid_arrivals": 12,
+    "max_arrival_xy_mm": 1.7551830986161359,
+    "max_arrival_yaw_deg": 0.08695810712325165,
+    "one_pair_quality_checks": {
+      "three_pairs": false,
+      "distinct_episodes": true,
+      "same_route": true,
+      "same_navigation_mode": true,
+      "same_recorded_motion_parameters": true,
+      "expected_modes": true,
+      "all_arrivals": true,
+      "all_episode_checks": true,
+      "event_only_planning": true,
+      "no_extra_midroute_hold": true,
+      "same_initial_heading_and_scene": true,
+      "complete_controller_evidence": true,
+      "expected_controller_policy_switches": true,
+      "same_complete_controller_configuration": true,
+      "control_regression": true
+    },
+    "quality_acceptance": "1/3 pairs; individual metric comparisons pass, repetition acceptance pending",
+    "scope": "same six-camera baseline, simulation only; normal smoothed-stop prediction NOT passed; no fixed_v2 motion"
+  },
+  "next_steps": [
+    "Prioritize normal navigation and coordinated grasp-carry-place flow; verify only each next-step prerequisites",
+    "Report direct normal-flow blockers with evidence and a bounded minimal fix",
+    "Keep extended fault/quality/visual matrices deferred; do not treat I0.2 aggregate status as universal gate"
+  ],
+  "formal_hold_A2": {
+    "commit": "09bc10d7",
+    "evidence": "docs/evidence/joint_acceptance_20260923/a2/result.json",
+    "scope": "cooperative current-pose joint hold in simulation; not base lock or hardware authority"
+  },
+  "current_build": {
+    "packages": 48,
+    "transport_ctest": 4,
+    "policy_ctest": 17,
+    "source_receipt": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/joint_source_manifest_final.json"
+  },
+  "formal_fixed_A3": {
+    "commit": "c0d24b1b1497a10512cce121bce6b9a5ca22bda3",
+    "evidence": "docs/evidence/joint_acceptance_20260923/a3/result.json",
+    "status": "PASS_9_STATIONARY_CASES",
+    "scope": "confirmed EMPTY at current pose; no dynamic navigation",
+    "recovery": "ACK expiry may recover same epoch with fresh confirmations; hold/geometry invalidation requires new authority request"
+  },
+  "quality_acceptance_30pct": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/quality_user_acceptance_30pct.json",
+  "quality_policy": "User provisional: lateral/heading P95 median increase <=30%; jerk unchanged; preserve old-rule failure",
+  "corner_stop_mean_speed_user_acceptance": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/lu_corner_user_acceptance_30pct.json",
+  "corner_stop_mean_speed_tolerance": {
+    "original_mps": 0.01,
+    "user_relative_increase": 0.3,
+    "accepted_mps": 0.013,
+    "runtime_changed": false
+  },
+  "quality_recomputed_30pct": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/quality_30pct_recomputed.json",
+  "current_integration_evidence": {
+    "updated_at": "2026-09-23T15:33:20.593852+08:00",
+    "I0_2_passed": false,
+    "stage": "I0.2",
+    "user_quality_acceptance": {
+      "relative_tolerance": 0.3,
+      "metrics": [
+        "lateral error",
+        "heading error",
+        "mean pose speed"
+      ],
+      "raw_results_retained": true,
+      "runtime_thresholds_changed": false
+    },
+    "N1": {
+      "scene_passes": 6,
+      "arrivals": 12,
+      "quality_checks_passed": 15,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/quality_30pct_integrity_recomputed.json"
+    },
+    "N2": {
+      "scene_passes": 4,
+      "corner_windows_accepted": 12,
+      "original_stop_mean_speed_passes": 11,
+      "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/lu_corner_user_acceptance_30pct.json"
+    },
+    "N3": {
+      "scene_passes": 1,
+      "arrivals": 2,
+      "sampled_person_clearance_lower_bound_m": 0.355598,
+      "visual_limit": "terminal pedestrian partially clipped; does not establish whole-body floor contact or whole-map clearing"
+    },
+    "N4": {
+      "hold_cancel_passed": true,
+      "hold_cancel_result": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/fixed_navigation_09/navigation/result.json",
+      "positive_only_arrivals": [
+        "fixed_navigation_07",
+        "fixed_navigation_08"
+      ],
+      "return_90_passed": false,
+      "consumer_pause_executed": false,
+      "attempt_index": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/n4_attempt_index.json",
+      "nonhome_loaded_navigation_accepted": false
+    },
+    "diagnostics": {
+      "cpp_ctest_passed": 14,
+      "intake": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/command_diagnostics_intake.json",
+      "patch": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/command_diagnostics_only.patch",
+      "live_navigation_exercised": false,
+      "limitation": "warning output in rejection branches holds costmap mutex; no timing-equivalence claim"
+    },
+    "commits": [
+      "579b69c1",
+      "b087aeb2"
+    ],
+    "cleanup": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_140545/current_cleanup.json",
+    "next_plan": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/N4_PERCEPTION_TIMING_REPAIR_20260923.md",
+    "hardware_operated": false
+  },
+  "freshness_user_defer": {
+    "recorded_at": "2026-09-23T16:19:57.767053+08:00",
+    "source_task": "01a0c405-627f-7742-b500-e057726ed2e7",
+    "user_instruction": "扫描源过期先过。继续其他任务，后续再排查",
+    "decision": "Proceed provisionally with remaining integration work; retain freshness failure as deferred, not measured pass",
+    "runtime_freshness_gate_changed": false,
+    "r0_runtime_intake": false,
+    "r0_closed_loop_run_cancelled": true,
+    "next": [
+      "payload mass guard real source wiring and static ROS-freeze revoke/recovery",
+      "new kinematic source session prepare-only four payload fixtures and mass admission checks"
+    ],
+    "existing_deadline": "2026-09-23T17:21:54+08:00"
+  },
+  "execution_policy": "docs/TASK_EXECUTION_POLICY_20260923.md",
+  "scan_reopened": {
+    "user_requested_via": "01a0c405-627f-7742-b500-e057726ed2e7",
+    "round_start": "2026-09-23T16:35:59+08:00",
+    "checkpoint": "2026-09-23T17:35:59+08:00",
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r3_01",
+    "result": "R3_OUTWARD_PASS_RETURN_MANEUVER_TIMEOUT_DEADLINE_AUDIT_PASS",
+    "cleanup_complete": true,
+    "hardware_operated": false,
+    "r2_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r2_01/deadline_audit.json",
+    "r2_failure": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r2_01/lease_latch_diagnosis.json",
+    "r3_intake": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/r3_intake.json"
+  },
+  "current_priority": "Finish I1 entry integration; geometry-aware narrow passage correction and targeted verification. I2-I6 remain incomplete.",
+  "normal_return90_repair": {
+    "status": "SIMULATION_PASS",
+    "report": "/home/yjh/WorkSpace/astribot_sdk_ros2/docs/evidence/unified_navigation_resume_20260921/RETURN90_REPAIR_20260923.md",
+    "evidence": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/scan_r6_01/result.json",
+    "final_deadline_audit": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_navigation_20260923_155154/return90_resume_1807/r6_final_deadline_audit.json",
+    "hardware_operated": false,
+    "scope": "two normal navigation goals; no expanded matrix"
+  },
+  "historical_stage_acceptance_before_main_flow_pass": "PENDING_A4_AND_REPEATED_INTEGRATION",
+  "current_task": {
+    "narrow_cpp_checks": 19,
+    "narrow_policy_tests": 16,
+    "normal_fixed_v2_simulation": "passed",
+    "normal_simulation_path": "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/narrow_arms_20260923_1902/normal_return_01",
+    "arm_span_corridor_closed_loop": "not_yet_verified",
+    "i1_offline_checks": 7,
+    "i1_simulation": "3/3 targeted episodes passed; six arrivals; repeated matrix deferred",
+    "hardware_operated": false,
+    "new_install_isolated": true,
+    "final_combined_simulation": "passed",
+    "cleanup_complete": true,
+    "report": "docs/evidence/unified_navigation_resume_20260921/I1_ENTRY_AND_ARM_SPAN_20260923.md"
+  }
+}

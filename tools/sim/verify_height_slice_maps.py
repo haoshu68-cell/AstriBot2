@@ -43,7 +43,7 @@ def main():
                 "sha256": {str(p.relative_to(session)): hashlib.sha256(p.read_bytes()).hexdigest()
                            for p in (session / "alidarState.txt", session / "kf/1.pcd")}}
     (session / "manifest.json").write_text(json.dumps(manifest))
-    command = [args.executable, "--ros-args", "--params-file", args.config,
+    command = [args.executable, "--ros-args", "-p", f"height_profile_path:={args.config}",
                "-p", f"session_directory:={session}", "-p", f"output_directory:={root / 'maps'}",
                "-p", "frame_id:=map", "-p", "ground_z:=0.0", "-p", "ground_reference:=known_fixture_plane"]
     rclpy.init()
@@ -74,6 +74,7 @@ def main():
             assert list(bundle.point_counts) == [3, 1, 1, 1, 1]
             assert bundle.above_band_points == 1
             assert len(bundle.map_revision) == len(bundle.profile_revision) == 64
+            assert bundle.profile_revision == hashlib.sha256(Path(args.config).read_bytes()).hexdigest()
             for i, name in enumerate(names):
                 grid = layers[name]
                 assert grid == bundle.grids[i], "torn layer output"

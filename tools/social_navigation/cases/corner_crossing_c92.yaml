@@ -1,0 +1,35 @@
+hunav_loader:
+  ros__parameters:
+    yaml_base_name: corner_crossing_c92
+    simulator: Gazebo Fortress
+    map: small_warehouse
+    publish_people: false
+    global_goals:
+      1:
+        x: 1.8
+        y: -1.0
+    agents:
+    - social_person_1
+    wait_for_episode_start: true
+    social_person_1:
+      id: 1
+      group_id: -1
+      skin: 0
+      max_vel: 0.4
+      radius: 0.3
+      goal_radius: 0.15
+      cyclic_goals: false
+      init_pose:
+        x: 0.4
+        y: 1.2
+        z: 1.25
+        h: -1.004067109
+      behavior:
+        type: Regular
+        configuration: 1
+        goal_force_factor: 2.0
+        obstacle_force_factor: 10.0
+        social_force_factor: 5.0
+        other_force_factor: 20.0
+      goals:
+      - 1

@@ -1,0 +1,87 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_____ test_finite_measured_velocity_can_overflow_forecast_distance[path0] ______
+
+probe = <function probe.<locals>.call at 0x7c492a4dc3a0>, path = []
+
+    @pytest.mark.parametrize('path',[[],[[0.,0.],[3.,0.],[3.,2.]]])
+    def test_finite_measured_velocity_can_overflow_forecast_distance(probe,path):
+        t=dict(id='far',box=box(10.,0.),model=dict(velocity=[0.,0.,0.],variance=0.,steps=[[2*10**9,2.]]))
+        d=data([t]);d['robot']=[0.,0.,0.,1e308,1e308,0.];d['path']=path
+>       result=compare(probe,d)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7c492a4dc3a0>
+data = {'op': 'risk', 'path': [], 'profile': {'angular_brake_deceleration_rad_s2': 1.0, 'brake_deceleration_m_s2': 0.6, 'clearance_margin_m': 0.04, 'half_length_m': 0.5, ...}, 'robot': [0.0, 0.0, 0.0, 1e+308, 1e+308, 0.0], ...}
+
+    def compare(probe,data):
+        w=make_world(data)
+        if data['op']=='rows':
+            try: want=prediction_rows(w,data.get('include_current',False),data.get('swept',False))
+            except ValueError:
+                assert 'error' in probe(data);return
+            got=probe(data);assert 'error' not in got,got
+            rows=got['rows'];assert [r['owner'] for r in rows]==want.owners.tolist()
+            assert [r['offset_ns'] for r in rows]==want.offsets_ns.tolist()
+            np.testing.assert_allclose(np.asarray([r['lower'] for r in rows]).reshape((-1,2)),want.lower,rtol=3e-14,atol=3e-14)
+            np.testing.assert_allclose(np.asarray([r['upper'] for r in rows]).reshape((-1,2)),want.upper,rtol=3e-14,atol=3e-14)
+            return rows
+        try: want=asdict(evaluate_risk(w,RobotState(*data['robot']),tuple(map(tuple,data['path'])),SimpleNamespace(**data['profile']),data.get('speed_limit')))
+        except ValueError:
+            assert 'error' in probe(data);return
+>       got=probe(data);assert 'error' not in got,got
+E       AssertionError: {'error': 'finite path, distances and fallback required'}
+E       assert 'error' not in {'error': 'finite path, distances and fallback required'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:68: AssertionError
+_____ test_finite_measured_velocity_can_overflow_forecast_distance[path1] ______
+
+probe = <function probe.<locals>.call at 0x7c492a4dc3a0>
+path = [[0.0, 0.0], [3.0, 0.0], [3.0, 2.0]]
+
+    @pytest.mark.parametrize('path',[[],[[0.,0.],[3.,0.],[3.,2.]]])
+    def test_finite_measured_velocity_can_overflow_forecast_distance(probe,path):
+        t=dict(id='far',box=box(10.,0.),model=dict(velocity=[0.,0.,0.],variance=0.,steps=[[2*10**9,2.]]))
+        d=data([t]);d['robot']=[0.,0.,0.,1e308,1e308,0.];d['path']=path
+>       result=compare(probe,d)
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+probe = <function probe.<locals>.call at 0x7c492a4dc3a0>
+data = {'op': 'risk', 'path': [[0.0, 0.0], [3.0, 0.0], [3.0, 2.0]], 'profile': {'angular_brake_deceleration_rad_s2': 1.0, 'br...m_s2': 0.6, 'clearance_margin_m': 0.04, 'half_length_m': 0.5, ...}, 'robot': [0.0, 0.0, 0.0, 1e+308, 1e+308, 0.0], ...}
+
+    def compare(probe,data):
+        w=make_world(data)
+        if data['op']=='rows':
+            try: want=prediction_rows(w,data.get('include_current',False),data.get('swept',False))
+            except ValueError:
+                assert 'error' in probe(data);return
+            got=probe(data);assert 'error' not in got,got
+            rows=got['rows'];assert [r['owner'] for r in rows]==want.owners.tolist()
+            assert [r['offset_ns'] for r in rows]==want.offsets_ns.tolist()
+            np.testing.assert_allclose(np.asarray([r['lower'] for r in rows]).reshape((-1,2)),want.lower,rtol=3e-14,atol=3e-14)
+            np.testing.assert_allclose(np.asarray([r['upper'] for r in rows]).reshape((-1,2)),want.upper,rtol=3e-14,atol=3e-14)
+            return rows
+        try: want=asdict(evaluate_risk(w,RobotState(*data['robot']),tuple(map(tuple,data['path'])),SimpleNamespace(**data['profile']),data.get('speed_limit')))
+        except ValueError:
+            assert 'error' in probe(data);return
+>       got=probe(data);assert 'error' not in got,got
+E       AssertionError: {'error': 'finite path, distances and fallback required'}
+E       assert 'error' not in {'error': 'finite path, distances and fallback required'}
+
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py:68: AssertionError
+=============================== warnings summary ===============================
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_finite_measured_velocity_can_overflow_forecast_distance[path0]
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_finite_measured_velocity_can_overflow_forecast_distance[path0]
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_finite_measured_velocity_can_overflow_forecast_distance[path1]
+ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_finite_measured_velocity_can_overflow_forecast_distance[path1]
+  Warning: overflow encountered in hypot
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+=========================== short test summary info ============================
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_finite_measured_velocity_can_overflow_forecast_distance[path0]
+FAILED ws_robot/src/astribot_s1_navigation_policy_native/test/test_policy_risk.py::test_finite_measured_velocity_can_overflow_forecast_distance[path1]
+2 failed, 16 deselected, 4 warnings in 0.09s

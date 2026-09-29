@@ -1,0 +1,116 @@
+{
+  "source": "live RGB-D plus deliberate request faults",
+  "real_worker": true,
+  "execution_permission": false,
+  "cases": [
+    {
+      "case": "wrong_frame",
+      "accepted": false,
+      "capture_age_sec": 0.063,
+      "latency_sec": 0.0005308540003170492,
+      "passed": true
+    },
+    {
+      "case": "stale_input",
+      "accepted": false,
+      "capture_age_sec": 0.07,
+      "latency_sec": 0.00032246699993265793,
+      "passed": true
+    },
+    {
+      "case": "wrong_calibration",
+      "accepted": false,
+      "capture_age_sec": 0.084,
+      "latency_sec": 0.0003526330001477618,
+      "passed": true
+    },
+    {
+      "case": "wrong_scene",
+      "accepted": false,
+      "capture_age_sec": 0.087,
+      "latency_sec": 0.0006581400002687587,
+      "passed": true
+    },
+    {
+      "case": "wrong_envelope",
+      "accepted": false,
+      "capture_age_sec": 0.092,
+      "latency_sec": 0.0004588860001604189,
+      "passed": true
+    },
+    {
+      "case": "wrong_epoch",
+      "accepted": false,
+      "capture_age_sec": 0.096,
+      "latency_sec": 0.0003054210001209867,
+      "passed": true
+    },
+    {
+      "case": "nonfinite",
+      "accepted": true,
+      "capture_age_sec": 0.1,
+      "status": 6,
+      "success": false,
+      "reason": "INVALID_CLOUD_POINT",
+      "candidates": 0,
+      "latency_sec": 0.0010166500005652779,
+      "passed": true
+    },
+    {
+      "case": "sparse",
+      "accepted": true,
+      "capture_age_sec": 0.105,
+      "status": 6,
+      "success": false,
+      "reason": "INVALID_CLOUD_LAYOUT",
+      "candidates": 0,
+      "latency_sec": 0.0012753040000461624,
+      "passed": true
+    },
+    {
+      "case": "timeout",
+      "accepted": true,
+      "capture_age_sec": 0.109,
+      "status": 6,
+      "success": false,
+      "reason": "INFERENCE_TIMEOUT",
+      "candidates": 0,
+      "latency_sec": 0.058472872000493226,
+      "passed": true
+    },
+    {
+      "case": "expired_result",
+      "accepted": true,
+      "capture_age_sec": 0.072,
+      "status": 6,
+      "success": false,
+      "reason": "RESULT_EXPIRED",
+      "candidates": 0,
+      "latency_sec": 0.42509072099983314,
+      "passed": true
+    },
+    {
+      "case": "cancel",
+      "accepted": true,
+      "capture_age_sec": 0.098,
+      "cancel_return_code": 0,
+      "status": 5,
+      "success": false,
+      "reason": "CANCELED",
+      "candidates": 0,
+      "latency_sec": 0.11003001300014148,
+      "passed": true
+    },
+    {
+      "case": "recovery",
+      "accepted": true,
+      "capture_age_sec": 0.011,
+      "status": 4,
+      "success": true,
+      "reason": "PROPOSALS_REQUIRE_MTC_VALIDATION",
+      "candidates": 8,
+      "latency_sec": 1.1948023610002565,
+      "passed": true
+    }
+  ]
+}

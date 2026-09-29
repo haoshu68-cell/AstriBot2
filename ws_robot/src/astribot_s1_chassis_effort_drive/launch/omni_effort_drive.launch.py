@@ -39,9 +39,9 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='true'),
     ]
 
-    drive_node = Node(
-        package='astribot_s1_chassis_effort_drive',
-        executable='omni_effort_drive_node',
+    native_drive_node = Node(
+        package='astribot_s1_chassis_effort_drive_native',
+        executable='omni_effort_drive_cpp',
         name='omni_effort_drive_node',
         output='screen',
         respawn=True,
@@ -59,4 +59,4 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription(declare_args + [drive_node])
+    return LaunchDescription(declare_args + [native_drive_node])

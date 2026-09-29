@@ -22,10 +22,21 @@ odom 的契约只是**局部连续**：允许缓慢漂移，但**不允许跳变
 """
 
 import math
+import os
 from dataclasses import dataclass, field
 
 from astribot_trajectory_bridge.chassis_feedback import detect_pose_jump
 from astribot_trajectory_bridge.chassis_integrator import wrap_angle
+
+
+_native_odom = None
+if any(os.environ.get(name, '').lower() in ('1', 'true', 'yes')
+       for name in ('ASTRIBOT_BRIDGE_NATIVE_KERNELS',
+                    'ASTRIBOT_BRIDGE_NATIVE_ODOM')):
+    try:
+        from astribot_trajectory_bridge_native import _chassis_math_native as _native_odom
+    except ImportError:  # pragma: no cover - Python-only overlays remain supported
+        _native_odom = None
 
 
 IDX_X, IDX_Y, IDX_THETA = 0, 1, 2
@@ -98,6 +109,9 @@ class ChassisOdomSource:
         self.velocity_frame = velocity_frame
         self.stats = OdomStats()
         self._prev_pose = None
+        self._native_source = (
+            _native_odom.ChassisOdomSource(self.jump_threshold_m, velocity_frame)
+            if _native_odom is not None else None)
 
     def sample(self, pos, vel):
         """把一对 SDK 读数变成 OdomSample。
@@ -107,6 +121,11 @@ class ChassisOdomSource:
         """
         pose = self._as_triple(pos, 'pos')
         twist = self._as_triple(vel, 'vel')
+
+        if self._native_source is not None:
+            values = self._native_source.sample(tuple(pose), tuple(twist))
+            self._sync_native_stats()
+            return OdomSample(*values)
 
         jumped, jump_m = detect_pose_jump(pose, self._prev_pose, self.jump_threshold_m)
 
@@ -126,6 +145,14 @@ class ChassisOdomSource:
             x=pose[IDX_X], y=pose[IDX_Y], theta=wrap_angle(pose[IDX_THETA]),
             vx_body=vx_body, vy_body=vy_body, wz=twist[IDX_WZ],
             jump_m=jump_m, jumped=jumped)
+
+    def _sync_native_stats(self):
+        samples, jumps, max_jump_m, travelled_m, history = self._native_source.stats()
+        self.stats.samples = int(samples)
+        self.stats.jumps = int(jumps)
+        self.stats.max_jump_m = float(max_jump_m)
+        self.stats.travelled_m = float(travelled_m)
+        self.stats.jump_history[:] = list(history)
 
     def _to_body_velocity(self, twist, theta):
         """统一到机体系。Odometry.twist 按规定就在 child_frame 里表达。"""
@@ -153,6 +180,8 @@ class ChassisOdomSource:
     @property
     def jump_ratio(self):
         """跳变帧占比。这个数不为 0 就意味着"SDK 位姿能当 odom"这个前提不成立。"""
+        if self._native_source is not None:
+            return float(self._native_source.jump_ratio())
         if self.stats.samples == 0:
             return 0.0
         return self.stats.jumps / self.stats.samples

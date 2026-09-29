@@ -16,26 +16,6 @@ class Profile:
         data.setdefault('narrow_centering_speed_m_s',.05)
         data.setdefault('narrow_centering_tolerance_m',.01)
         data.setdefault('narrow_centering_max_offset_m',.3)
-        data.setdefault('start_maneuver',dict(enabled=data.get('environment')=='simulation',
-            speed_m_s=.05,max_distance_m=2.,search_step_m=.05,position_tolerance_m=.008,
-            lateral_tolerance_m=.03,heading_tolerance_rad=.03,position_gain=.8,
-            stopped_linear_m_s=.01,stopped_angular_rad_s=.02,timeout_s=120.,progress_timeout_s=15.,
-            lateral_gain=1.,lateral_speed_m_s=.01,heading_gain=3.,angular_damping=.5,
-            angular_speed_rad_s=.1))
-        maneuver=data['start_maneuver']
-        require(type(maneuver.get('enabled')) is bool,'start_maneuver.enabled')
-        for name in ('speed_m_s','max_distance_m','search_step_m','position_tolerance_m',
-                     'lateral_tolerance_m','heading_tolerance_rad','position_gain',
-                     'stopped_linear_m_s','stopped_angular_rad_s','timeout_s','progress_timeout_s',
-                     'lateral_gain','lateral_speed_m_s','heading_gain','angular_damping',
-                     'angular_speed_rad_s'):
-            finite(maneuver.get(name),'start_maneuver.'+name,0)
-            require(maneuver[name]>0,'start_maneuver.'+name)
-        require(maneuver['speed_m_s']<=min(.05,data.get('max_speed_m_s',0)),'start_maneuver.speed')
-        require(maneuver['position_tolerance_m']<maneuver['search_step_m']<=maneuver['max_distance_m']<=2.,'start_maneuver.distance')
-        require(maneuver['progress_timeout_s']<maneuver['timeout_s'],'start_maneuver.timeout')
-        require(maneuver['lateral_speed_m_s']<=.01 and maneuver['angular_speed_rad_s']<=.1,
-                'start_maneuver.correction_bounds')
         require(data.get('schema_version') == 1, 'profile.schema_version')
         require(data.get('environment') in ('simulation', 'hardware'), 'profile.environment')
         require(type(data.get('hardware_validated')) is bool, 'profile.hardware_validated')
@@ -105,8 +85,6 @@ class Profile:
             keys=('transport_envelope','payload','braking','latency','sensor_coverage')
             require(self.hardware_validated and all(self.hardware_evidence.get(k) for k in keys),
                     'hardware_evidence_required')
-            if self.start_maneuver['enabled']:
-                require(bool(self.hardware_evidence.get('start_maneuver')),'hardware_start_maneuver_evidence_required')
 
     def stopping_distance(self, speed):
         finite(speed, 'speed', 0)

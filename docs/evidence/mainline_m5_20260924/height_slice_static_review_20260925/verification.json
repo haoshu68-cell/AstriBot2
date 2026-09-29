@@ -1,0 +1,261 @@
+{
+  "status": "PASS_FOR_DECLARED_STATIC_SCOPE",
+  "recorded_at": "2026-09-25T06:40:12.500749+08:00",
+  "evidence_level": "offline_source_and_saved_artifact_verification",
+  "accepted_scope": {
+    "height_range_m": [
+      0.05,
+      2.3
+    ],
+    "height_reference": "above declared horizontal ground_z in map",
+    "finite_five_layers": true,
+    "unbounded_overflow_claimed": false,
+    "above_band_spatial_output_required": false,
+    "scope_authority": "Coordinator explicitly confirmed finite [.05,2.30) scope on 2026-09-25 after review."
+  },
+  "source_archive": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/slam_unification_20260918/sessions/sim_unified_15",
+  "product_directory": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps",
+  "product_manifest_sha256": "3f2477b3ed30e8bf09fefe0c71b606f4b873ff977ed198b665fa38e1a8490955",
+  "map_revision": "11c1313cfc763fb195b364463ffef8b25cf1a1e30104f2c98a3af754ebd775ed",
+  "profile_revision": "33705a1e5a2d4faf13964d9a4172ee1d4f4a17d954afd0f2136c7d3b22b2894a",
+  "profile": {
+    "frame_id": "map",
+    "ground_reference": "offline_plane_fit_not_calibration_20260925",
+    "ground_z": -0.0845156162,
+    "height_edges": [
+      0.05,
+      0.25,
+      0.68,
+      1.18,
+      1.63,
+      2.3
+    ],
+    "layer_names": [
+      "low_obstacle",
+      "main_nav",
+      "torso",
+      "head",
+      "upper_extension"
+    ],
+    "resolution": 0.05
+  },
+  "shared_geometry": {
+    "width": 278,
+    "height": 416,
+    "resolution_m": 0.05,
+    "origin_xy_yaw": [
+      -6.95,
+      -10.4,
+      0.0
+    ]
+  },
+  "method": {
+    "pose_index": "numeric PCD filename id is zero-based alidarState row",
+    "rotation": "independent quaternion vector formula: v + 2*(qw*cross(qxyz,v) + cross(qxyz,cross(qxyz,v)))",
+    "quaternion_normalization": true,
+    "world_transform": "rotated local point + pose xyz",
+    "classification": "height=z-ground_z; left-closed right-open intervals via searchsorted(side=right)",
+    "rasterization": "floor(x/resolution), floor(y/resolution), shared origin, reverse Y for PGM storage",
+    "comparison": "Every saved PGM pixel compared with independent reconstruction from all original PCD points"
+  },
+  "source_files_verified": {
+    "alidarState.txt": "364a8b8462fefc51fdcab42c78e03d4d0893756eec5eb03370c34e99f7df953d",
+    "kf/9.pcd": "c98d8b68363145f2e323a2da7026a1174d53af4bf5e302d2edf52a6ff5b6a56a",
+    "kf/1042.pcd": "f7c2a0af874f137c79e3dfce4a5179d7c37af59c5523fe39ff1fb0c707d7c7ac",
+    "kf/1059.pcd": "db02af37929d71f47b9c2251995409d1b97b0bdcbeeb9ee144fc0421bb6337b9",
+    "kf/1072.pcd": "8232ac634996fed4fa51e35b93a125d5876bdcb833bf50a3874aa3a0cd918e75",
+    "kf/1087.pcd": "8026f208cd9d6a651c0cb4ece8dce991eb918f9d692653908fda633441a862c7",
+    "kf/1103.pcd": "e1094b10e0da0df0c7dddd5d3a7dd9b865d11503aaab08324269e4f6fb945fc3",
+    "kf/1147.pcd": "05515568c497d3b6250cee730d3276c76da53d89ab7f1c8438f825f9bf682dd5",
+    "kf/1157.pcd": "1b10ac215a09586ab1ca028b183129cc5208790ad6ee3620f407dc968e34bec2",
+    "kf/1167.pcd": "996aaa8f4c837f0685ee90f395963aa0ff400e691e219bdeb97b8f83820cd16c",
+    "kf/1177.pcd": "03198b6c9bcd32074d5b9acf7118e3a0b8929475e59eb781b0d7af47895e8389",
+    "kf/1212.pcd": "1ca0d4244a9469ec1b9cb8c941d5d5015cbed6cc5f73aed852c997762b4ea739",
+    "kf/1222.pcd": "46978b708016a9228854616b311e950f847ffa9c29866253fa22e443f2e22309",
+    "kf/1232.pcd": "50df0a12a76f423d995e39a6959c7f6874e18bf359d1b46fb83c507037ac9152",
+    "kf/1242.pcd": "a29ba1a883976c55a47ba8b2198b6007de8275cf730fa7760bc0a67678db5acb",
+    "kf/1252.pcd": "c24f27f02a4ed9eeaff0571a2c56a7992b391b4be024c16fa3c799a091bd5a8d",
+    "kf/1265.pcd": "e6a7c2b26ac5746a2e333ebf97fa4ec8e9d12d37245290ea6352cf999a4c904d",
+    "kf/1311.pcd": "c99cfb858aae3c57825ee2619ad0cc3e5070dd96e13bc00146a725c70260119e",
+    "kf/1321.pcd": "b5c8a47357a401c05ffee1d97edfed9465cd0ff24e80edcfb64801eab5d84ec2",
+    "kf/1331.pcd": "ff3c65f96a868191e1234b77827edc6c93971d409c41367e536cc80e11e083a8",
+    "kf/1341.pcd": "d8ac9f254700f29cb910b45e2ce6fcc7583830fd86f487a79411c706c0f59075",
+    "kf/1351.pcd": "7fc0ca4b644ae589ebc57da20f2de266ce86aa820b9a32d4d1e25ab2e620aae8",
+    "kf/1361.pcd": "18d2b4c28c77dcb4c5da630b91fa1946b2a6bb368de7fca49f89b8e028730202",
+    "kf/1371.pcd": "2fd13fe1d5ebedf9631a78284c5ec10dd29e837ce72c9ec543026cdf874b06fc",
+    "kf/1399.pcd": "d1223bbfa6d32126ddd018840651e66889dbaf03fee41bb6196b3d7dc195c0c4",
+    "kf/1409.pcd": "7ab68f358a2722a1666a9d0b81102e8b7196bebb906ba60d43aca424682c253d",
+    "kf/1419.pcd": "6cf1db375f1a61ccf2da642f91cfdca33accdf59378fdc70620c5b385bd5c580",
+    "kf/1429.pcd": "141a84c76926bac4842f5974afbf29b9fb7fb4cac8ecddd13a3a9740906bf273",
+    "kf/1439.pcd": "440467839c54c899c28c93e4b1da2480f0a86ddea2d869e4cc60e547d2912c9a",
+    "kf/1449.pcd": "41adfbebc5d8bab45ab12c02a915c3dfe3c5bbea1610b78ac52d746070f38d21",
+    "kf/1459.pcd": "0d50f77c6199c2bfe40543b3af73642a7c986c7826ad55d00da727874f5bc560",
+    "kf/1469.pcd": "619b872e4136e50405bb8b7bb0710f4b90d2aa7c445f00745ee75f45e1283e66",
+    "kf/1479.pcd": "e82129113f568d84cabd66a8feb48a7959c3552dc51aa95c5251f4965ae9121f",
+    "kf/1489.pcd": "a0b2d9db67ebe175103202a18a77fb7de87eab0d6bff174a977749245473a10b",
+    "kf/1499.pcd": "2f89d90d041017cf34b0986d2d935b5f5359884726cde3e4af9626891e2811d5",
+    "kf/1509.pcd": "ffcf4dba4fe5c10a874e5cff170e1553cd32afdc48a7d48a7b6ee37544bd7485",
+    "kf/1519.pcd": "74a412a1f3455166d0c2190ca57e67a1986d5973315ec8f339260abbe8399eca",
+    "kf/1529.pcd": "efe71bf305cb5508db2625115c45907e57fbbcf814d391f9c2347cd397b99107",
+    "kf/1539.pcd": "41730c696d1094205fcfbd4a5971412fc74380215494388e0e124313fe80297d",
+    "kf/1549.pcd": "cf7663d1fc75d25f895a252920c5011450e579f6f531273cd7c0f360531f7b4b",
+    "kf/1559.pcd": "ac80de33a9db64b8481a6e2bf2efd6af8ba887cd28ddbc61edc92d54470e7adb",
+    "kf/1569.pcd": "c37336f477858396caf52350bef06d820669cf17c34772be401d5c23ec0304f4",
+    "kf/1579.pcd": "a98f4712e36c73c8363227d1dc1d631b940a9cbb03152af16a8451bcf6732b64",
+    "kf/1589.pcd": "faaecf86fa4f391efbc2f160b53bb9641f8ba5fe3e225803eee6f2ee5558cd06",
+    "kf/1603.pcd": "dacc3791240b72d1ccc1c23db53656d8d5da64a62dc2c2bc1322eb77a2e0c775"
+  },
+  "source_code_sha256": {
+    "ws_robot/src/astribot_s1_mapping/src/height_slice_map_node.cpp": "0b55fc7994a5ec8d50d48e4c51458c63f2af8144ade60d4c7b1763e20e997728",
+    "ws_robot/src/astribot_s1_mapping/include/astribot_s1_mapping/height_slice_grid.hpp": "5ae1a2d0c22fe73e5283fcca332419945fd3574363e7b7822645506d564df3f4",
+    "ws_robot/src/astribot_slam_msgs/msg/HeightSliceMaps.msg": "d9ac5ffe26ecb023f8dd6d5b238d30eef475d2a20b12aec7953d0da8e74893a6"
+  },
+  "counts": {
+    "keyframes": 44,
+    "poses": 1911,
+    "all_points": 1337609,
+    "within_band_points": 363832,
+    "below_band_points": 76709,
+    "above_band_points": 897068,
+    "nonfinite_points": 0,
+    "conservation_pass": true
+  },
+  "layers": [
+    {
+      "name": "low_obstacle",
+      "height_interval_m": [
+        0.05,
+        0.25
+      ],
+      "interval_semantics": "lower_inclusive_upper_exclusive",
+      "source_point_count": 24939,
+      "occupied_cells": 2667,
+      "unknown_cells": 112981,
+      "free_cells": 0,
+      "different_pixels": 0,
+      "pixel_payload_bytes": 115648,
+      "pixel_values": [
+        0,
+        205
+      ],
+      "pgm_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/low_obstacle.pgm",
+      "pgm_sha256": "5009a02d670ce838e9f9215ffc50a4eb4757f9819a46691a3492db36b96bafef",
+      "yaml_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/low_obstacle.yaml",
+      "yaml_sha256": "353c8c2411c37bdcb56c5061c30cb47cb4ab50caed3e3b0714869ab340fd6be7"
+    },
+    {
+      "name": "main_nav",
+      "height_interval_m": [
+        0.25,
+        0.68
+      ],
+      "interval_semantics": "lower_inclusive_upper_exclusive",
+      "source_point_count": 79679,
+      "occupied_cells": 6615,
+      "unknown_cells": 109033,
+      "free_cells": 0,
+      "different_pixels": 0,
+      "pixel_payload_bytes": 115648,
+      "pixel_values": [
+        0,
+        205
+      ],
+      "pgm_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/main_nav.pgm",
+      "pgm_sha256": "2aa0970852977f759b1d45abb625c99a69be808a923adf9af0e4731b3569c2d7",
+      "yaml_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/main_nav.yaml",
+      "yaml_sha256": "674aa3c3bb18f2fe4fae46caa152ab8c6d35b4a3b9765baa5f0113f332d4aef6"
+    },
+    {
+      "name": "torso",
+      "height_interval_m": [
+        0.68,
+        1.18
+      ],
+      "interval_semantics": "lower_inclusive_upper_exclusive",
+      "source_point_count": 88958,
+      "occupied_cells": 8022,
+      "unknown_cells": 107626,
+      "free_cells": 0,
+      "different_pixels": 0,
+      "pixel_payload_bytes": 115648,
+      "pixel_values": [
+        0,
+        205
+      ],
+      "pgm_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/torso.pgm",
+      "pgm_sha256": "64ad9425a61b89e803251e5518cd7bbd20bfa6955f47f2caa1a01a2960782c4e",
+      "yaml_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/torso.yaml",
+      "yaml_sha256": "9edc7ad470d603ffac26c8c852afeb320fbcdb4bb0efdce2f33fa3752d516b2b"
+    },
+    {
+      "name": "head",
+      "height_interval_m": [
+        1.18,
+        1.63
+      ],
+      "interval_semantics": "lower_inclusive_upper_exclusive",
+      "source_point_count": 90098,
+      "occupied_cells": 14531,
+      "unknown_cells": 101117,
+      "free_cells": 0,
+      "different_pixels": 0,
+      "pixel_payload_bytes": 115648,
+      "pixel_values": [
+        0,
+        205
+      ],
+      "pgm_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/head.pgm",
+      "pgm_sha256": "a9491aa8e115d303390b9d0d306ef8470b4d00cf442681cde7128ae0b6bf296f",
+      "yaml_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/head.yaml",
+      "yaml_sha256": "30626d8474a8d38c3f1ab96a0711ed842a42414483ac4c24c3390dd15e9f94ee"
+    },
+    {
+      "name": "upper_extension",
+      "height_interval_m": [
+        1.63,
+        2.3
+      ],
+      "interval_semantics": "lower_inclusive_upper_exclusive",
+      "source_point_count": 80158,
+      "occupied_cells": 10015,
+      "unknown_cells": 105633,
+      "free_cells": 0,
+      "different_pixels": 0,
+      "pixel_payload_bytes": 115648,
+      "pixel_values": [
+        0,
+        205
+      ],
+      "pgm_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/upper_extension.pgm",
+      "pgm_sha256": "fab1093eb3fd33a91749211288e73afd0b37f36b3aecd07a805b72ee1ab1d16b",
+      "yaml_path": "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/height_layers_20260925/archive_maps/upper_extension.yaml",
+      "yaml_sha256": "a37a0226bbff403fe9b3cf3d6ddbadff87f7fbe36430794df4c6e558417be6d5"
+    }
+  ],
+  "all_five_images_pixel_identical": true,
+  "all_layers_share_geometry": true,
+  "unknown_preserved": true,
+  "ground_reference_is_calibration": false,
+  "static_contract_review": {
+    "height_intervals_match_message": true,
+    "single_message_contains_full_grid_bundle": true,
+    "shared_frame_stamp_and_geometry_in_source": true,
+    "does_not_publish_existing_map_topic": true,
+    "finding_unbounded_overflow_scope": "Closed by explicit finite-range scope; above-band count remains visible."
+  },
+  "not_tested": [
+    "DDS subscription/delivery of snapshot",
+    "ROS runtime lifecycle",
+    "live mapping",
+    "planning or collision avoidance",
+    "ground calibration or hardware"
+  ],
+  "operations": {
+    "source_modified": false,
+    "configuration_modified": false,
+    "ros_started": false,
+    "build_started": false,
+    "ground_refitting_performed": false,
+    "writes": "This new evidence JSON only"
+  }
+}

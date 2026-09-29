@@ -110,7 +110,7 @@ def _build(context, *args, **kwargs):
                   '并把整条栈起在那个 domain 上 !!!')
         else:
             relay = Node(
-                package='astribot_s1_perception',
+                package='astribot_s1_perception_native',
                 executable='map_domain_relay',
                 name='map_domain_relay',
                 output='screen',

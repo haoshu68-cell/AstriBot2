@@ -1,0 +1,16 @@
+std_msgs/Header header
+string detection_id
+string object_id
+string class_name
+int32 class_id
+float64 confidence
+int32 x_offset
+int32 y_offset
+int32 width
+int32 height
+sensor_msgs/Image mask
+string model_name
+string model_revision
+uint64 calibration_revision
+string source_camera_id
+string source_epoch

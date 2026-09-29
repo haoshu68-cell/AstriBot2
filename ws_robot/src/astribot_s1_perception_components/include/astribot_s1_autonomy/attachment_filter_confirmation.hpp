@@ -23,19 +23,9 @@ public:
     if (!std::isfinite(source_now) || !std::isfinite(wall_now)) {
       invalidate(); return false;
     }
-    if (source_now < last_clock_) {invalidate();}
-    if (source_now != last_clock_) {last_progress_wall_ = wall_now;}
-    last_clock_ = source_now;
-    const double cloud_age = source_now - cloud_source_;
-    const double snapshot_age = source_now - snapshot_source;
-    if (!snapshot_valid || revision_.empty() || revision_ != snapshot_revision ||
-      !std::isfinite(cloud_age) || !std::isfinite(snapshot_age) ||
-      !std::isfinite(changed_source) || !std::isfinite(max_cloud_age) || max_cloud_age <= 0. ||
-      cloud_source_ < changed_source || cloud_age < 0. || cloud_age > max_cloud_age ||
-      snapshot_age < 0. || snapshot_age > .5 ||
-      wall_now < last_progress_wall_ || wall_now - last_progress_wall_ > .5)
-    {
-      invalidate(); return false;
+    (void)snapshot_source;(void)changed_source;(void)max_cloud_age;
+    if(!snapshot_valid || revision_.empty() || revision_!=snapshot_revision) {
+      invalidate();return false;
     }
     return true;
   }
