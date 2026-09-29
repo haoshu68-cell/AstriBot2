@@ -28,6 +28,11 @@ void WholeBodyCollisionCritic::score(CriticData &data) {
   // exactly zero weight. Humble still updates controls before handling a
   // failed batch: keep that discarded batch finite to avoid infinity-infinity.
   if(rejected==batches) {data.costs.fill(0.f);data.fail_flag=true;}
+  if(rejected) {
+    RCLCPP_INFO_THROTTLE(logger_,*parent_.lock()->get_clock(),1000,
+      "WHOLE_BODY_COLLISION rejected=%zu batch=%zu all_blocked=%d",
+      rejected,batches,rejected==batches);
+  }
 }
 }
 PLUGINLIB_EXPORT_CLASS(mppi::critics::WholeBodyCollisionCritic,mppi::critics::CriticFunction)
