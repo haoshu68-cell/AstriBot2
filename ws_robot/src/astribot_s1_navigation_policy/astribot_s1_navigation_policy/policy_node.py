@@ -163,6 +163,41 @@ class PolicyNode(PolicyObserver):
             self.alignment_pub.publish(msg)
         except Exception as error:self.get_logger().warning('corridor alignment unavailable: '+str(error))
 
+    def publish_fixed_passage(self, passage):
+        from .observer_node import yaw
+        from geometry_msgs.msg import PoseStamped
+        from rclpy.time import Time
+        import math
+        if self.active_path_message is None:return
+        msg=CorridorAlignment();msg.stamp=self.get_clock().now().to_msg()
+        msg.lease_s=min(.3,self.profile.constraint_lease_s)
+        msg.reference_path=self.active_path_message;msg.phase=passage.state
+        msg.corridor_id=passage.corridor_id
+        msg.centering_tolerance_m=self.profile.narrow_centering_tolerance_m
+        c=self.corridor.policy.active
+        if c is not None:
+            frame=msg.reference_path.header.frame_id
+            transform=self.tf.lookup_transform(frame,self.profile.tracking_frame,Time())
+            robot=self.last_robot
+            along,_=c.coordinates(robot.x,robot.y)
+            offset=self.corridor.policy.target_offset(c)
+            # A fixed axis, including the asymmetric offset, is shared by all
+            # passage phases. The controller stops between phase changes.
+            target=self.corridor.policy.centering_target or c.point(along,offset)
+            if passage.state=='TRANSIT':
+                rear=-self.corridor.policy.support_bounds()[0]
+                target=c.point(c.length+rear+self.corridor.policy.margin(c)+.05,offset)
+            for field,point in (('anchor',c.point(0.,offset)),('target',target)):
+                pose=PoseStamped();pose.header.frame_id=frame
+                x,y,_=self.point((*point,0.),transform)
+                pose.pose.position.x=x;pose.pose.position.y=y
+                heading=c.heading+yaw(transform.transform.rotation)
+                pose.pose.orientation.z=math.sin(heading/2);pose.pose.orientation.w=math.cos(heading/2)
+                setattr(msg,field,pose)
+            msg.centering_required=passage.state=='CENTER'
+            msg.tracking_required=passage.state=='TRANSIT'
+        self.alignment_pub.publish(msg)
+
     def tick(self):
         processing_start=time.monotonic()
         processing_cpu_start=time.thread_time()
@@ -221,7 +256,9 @@ class PolicyNode(PolicyObserver):
                     self.coordinator.failure_code=ResolveRoute.Response.NONE
             elif self.coordinator is not None:
                 selection=self.coordinator.advance(selection,risk,valid)
-        if passage is not None and passage.tracking_heading is not None:
+        if passage is not None and self.corridor.fixed:
+            self.publish_fixed_passage(passage)
+        elif passage is not None and passage.tracking_heading is not None:
             self.publish_alignment(passage.tracking_heading,tracking=True)
         elif passage is not None and (passage.alignment_heading is not None or passage.centering_target is not None):
             self.publish_alignment(passage.alignment_heading,passage.centering_target)

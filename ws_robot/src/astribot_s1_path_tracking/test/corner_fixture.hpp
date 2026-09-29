@@ -163,6 +163,28 @@ public:
 };
 class ArrivalControllerTestPeer {
 public:
+  static void fixedPassage(ArrivalController & c) {c.fixed_corridor_=true;c.nominal_speed_=.35;}
+  static const std::string & passagePhase(const ArrivalController &c) {return c.corridor_phase_;}
+  static std::pair<bool,geometry_msgs::msg::Twist> passageTick(ArrivalController &c,
+      const std::string &phase,double now,double x,double y,double yaw=0.,bool sample=true,
+      bool matching_path=true,double target_y=0.) {
+    geometry_msgs::msg::PoseStamped pose;pose.header.frame_id="map";
+    pose.header.stamp=rclcpp::Time(static_cast<int64_t>(now*1e9),RCL_ROS_TIME);
+    pose.pose.position.x=x;pose.pose.position.y=y;
+    pose.pose.orientation.z=std::sin(yaw/2);pose.pose.orientation.w=std::cos(yaw/2);
+    if(sample) {ThreePhaseControllerTestPeer::slam(c,pose);ThreePhaseControllerTestPeer::received(c,now-.02);}
+    auto request=std::make_shared<ArrivalController::CorridorAlignment>();
+    request->phase=phase;request->reference_path=c.tracking_path_;request->lease_s=.3;
+    if(!matching_path)request->reference_path.header.frame_id="unrelated";
+    request->anchor.header=pose.header;request->anchor.pose.orientation.w=1.;
+    request->anchor.pose.position.y=target_y;
+    request->target=request->anchor;request->target.pose.position.x=phase=="CENTER"?x:4.;
+    request->centering_tolerance_m=.01;c.corridor_alignment_=request;
+    c.progress_at_=now;c.started_at_=now;
+    geometry_msgs::msg::TwistStamped command;
+    bool owned=c.passageCommand(pose,pose,{},command,now);
+    return {owned,command.twist};
+  }
   static double startedAt(const ArrivalController &c) {return c.started_at_;}
   static void setup(ArrivalController & c,
       const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> & costmap={}) {

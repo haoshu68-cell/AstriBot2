@@ -59,6 +59,7 @@ public:
     nav2_core::GoalChecker *) override;
 protected:
   void applyPlan(const nav_msgs::msg::Path &) override;
+  void beginExecution() override;
   double cornerStoppingDistance(double speed) const override;
   double cornerSettleDuration() const override {return settle_time_;}
   bool hasTerminalRefinement() const override {return true;}
@@ -88,6 +89,13 @@ private:
   std::mutex corridor_mutex_;
   std::chrono::steady_clock::time_point corridor_received_;
   bool corridor_simulated_{false};
+  bool fixed_corridor_{false}, normal_plan_pending_{false}, corridor_exited_{false};
+  std::string corridor_phase_;
+  CornerStopEvidence corridor_stop_;
+  bool passageCommand(const geometry_msgs::msg::PoseStamped & current,
+    const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
+    geometry_msgs::msg::TwistStamped & command, double now);
+
   nav_msgs::msg::Path tracking_path_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr active_path_pub_;
   double localSharpPathLimit(const geometry_msgs::msg::PoseStamped & pose) const;

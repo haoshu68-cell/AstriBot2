@@ -88,6 +88,13 @@ if(BUILD_TESTING)
   ament_target_dependencies(layered_alignment_reader_test astribot_navigation_msgs astribot_slam_msgs
     nav2_core nav2_costmap_2d nav_msgs pluginlib rclcpp rclcpp_lifecycle tf2 tf2_ros)
   add_test(NAME layered_alignment_reader COMMAND layered_alignment_reader_test)
+  add_executable(passage_execution_test test/passage_execution_test.cpp)
+  target_include_directories(passage_execution_test PRIVATE include)
+  target_compile_options(passage_execution_test PRIVATE -UNDEBUG)
+  target_link_libraries(passage_execution_test ${PROJECT_NAME})
+  ament_target_dependencies(passage_execution_test nav2_core nav2_costmap_2d nav_msgs pluginlib
+    rclcpp rclcpp_lifecycle tf2_ros)
+  add_test(NAME passage_execution COMMAND passage_execution_test)
   add_executable(arrival_clock_domain_test test/arrival_clock_domain_test.cpp)
   target_include_directories(arrival_clock_domain_test PRIVATE include)
   target_compile_options(arrival_clock_domain_test PRIVATE -UNDEBUG)

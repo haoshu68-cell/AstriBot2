@@ -21,6 +21,37 @@ class CorridorTests(unittest.TestCase):
         return self.policy.evaluate(Selection('PROCEED',.2,'CLEAR'),self.r,path,self.v,'any_posture',True,clear,1.,True,True)
     def test_aligned_85cm_no_stop(self):
         self.assertEqual(self.evaluate().state,'TRANSIT')
+    def test_centering_finishes_at_target_not_reservation_edge(self):
+        self.c=Corridor('wide',(0.,0.),(3.,0.),1.5,('unused',))
+        self.policy=FixedCorridorPolicy(self.p,[self.c])
+        for side in (.15,.10,.010001):
+            self.r.y=side
+            self.assertEqual(self.evaluate().state,'CENTER')
+        for side in (.01,.009999,0.):
+            self.r.y=side
+            self.assertEqual(self.evaluate().state,'TRANSIT')
+
+    def test_asymmetric_center_target_and_exit_are_retained(self):
+        self.c=Corridor('narrow',(0.,0.),(1.2,0.),1.25,('unused',))
+        self.p.footprint_xy=np.array([[-.4,-.368],[.4,-.368],[.4,.513],[-.4,.513]])
+        self.policy=FixedCorridorPolicy(self.p,[self.c])
+        target=-.0725
+        for side in (.15,-.045):
+            self.r.y=side
+            result=self.evaluate(((-1.,target),(2.,target)))
+            self.assertEqual(result.state,'CENTER')
+            self.assertAlmostEqual(result.centering_target[1],target)
+        self.r.x=1.3;self.r.y=target
+        self.assertEqual(self.evaluate(((-1.,target),(2.,target))).state,'TRANSIT')
+        self.r.x=1.2+.4+self.policy.margin(self.c)+.0001
+        self.assertEqual(self.evaluate(((-1.,target),(2.,target))).state,'NORMAL')
+
+    def test_far_transit_obstacle_does_not_block_entrance_alignment(self):
+        self.r.yaw=.1745
+        self.assertEqual(self.evaluate(clear=False).state,'ALIGN')
+        self.r.yaw=0.;self.r.y=.02
+        self.assertEqual(self.evaluate(clear=False).state,'CENTER')
+
     def test_concatenated_waypoint_endpoints_are_not_reverse_segments(self):
         path=((-1.,0.),(0.,0.),(0.,0.),(1.,0.),(1.,0.),(3.,0.),(4.,0.))
         self.assertEqual(self.evaluate(path).state,'TRANSIT')
@@ -50,10 +81,21 @@ class CorridorTests(unittest.TestCase):
         self.r.x=1.;self.r.yaw=.2
         self.assertEqual(self.evaluate(((1.,0.),)).selection.reason,'ROTATION_FORBIDDEN_IN_NARROW_PASSAGE')
         self.r.yaw=0.
-        self.assertEqual(self.evaluate(((1.,0.),)).state,'TRANSIT')
+        self.assertEqual(self.evaluate(((1.,0.),)).failure,'CORRIDOR_GOAL_BEFORE_FULL_EXIT')
     def test_side_extension_rejected(self):
         self.p.footprint_xy=np.array([[-.32,-.32],[.32,-.32],[.32,.6],[-.32,.6]])
         self.assertIn('INSUFFICIENT_WIDTH',self.evaluate().selection.reason)
+
+    def test_completed_entry_replaces_unused_approach_corner(self):
+        self.p.footprint_xy=np.array([[-.32,-.2],[1.,-.2],[1.,.44],[-.32,.44]])
+        self.r.x=-1.5;self.r.y=-.12;self.r.yaw=0.
+        route=((-1.5,.15),(-.65,-.12),(1.,-.12),(4.,-.12))
+        self.assertFalse(self.policy.route_fits(self.c,route))
+        self.assertEqual(self.evaluate(route).state,'TRANSIT')
+        # The same ownership does not permit a turn before the rear clears.
+        self.p.footprint_xy=np.array([[-1.,-.2],[.32,-.2],[.32,.44],[-1.,.44]])
+        bad_exit=((-1.5,.15),(-.65,-.12),(3.1,-.12),(3.1,1.))
+        self.assertEqual(self.evaluate(bad_exit).failure,'CORRIDOR_ROUTE_TURN_UNREACHABLE')
 
     def test_rear_arm_must_leave_before_exit_turn(self):
         self.p.footprint_xy=np.array([[-1.,-.32],[.32,-.32],[.32,.32],[-1.,.32]])
@@ -108,7 +150,7 @@ class AdapterEntryTests(unittest.TestCase):
         exec(compile(ast.Module(body=[method],type_ignores=[]),str(source),'exec'),namespace)
         self.advance=namespace['advance'];self.legacy_class=CorridorPolicy
 
-    def entry(self,side,*,fixed=True,mirror=False,sweep_clear=True,held_target=None):
+    def entry(self,side,*,fixed=True,mirror=False,sweep_clear=True,held_target=None,valid=True,repeats=1):
         import sys
         from unittest.mock import Mock,patch
         from astribot_s1_navigation_policy.robot_envelope import FIELDS
@@ -137,8 +179,19 @@ class AdapterEntryTests(unittest.TestCase):
             assessment_pub=SimpleNamespace(publish=lambda msg:None))
         message_module=SimpleNamespace(PassageAssessment=lambda:SimpleNamespace(header=SimpleNamespace()))
         with patch.dict(sys.modules,{'astribot_navigation_msgs.msg':message_module}):
-            result=self.advance(adapter,Selection('PROCEED',.2,'CLEAR'),True,1.)
+            for _ in range(repeats):
+                result=self.advance(adapter,Selection('PROCEED',.2,'CLEAR'),valid,1.)
+        self.last_evidence=adapter.evidence
         return result,rotation
+
+    def test_missing_input_heartbeat_evidence_stays_bounded(self):
+        import json
+        result,_=self.entry(-.42,valid=False,repeats=100)
+        self.assertEqual(result.selection.reason,'CORRIDOR_INPUT_UNAVAILABLE')
+        self.assertLess(len(json.dumps(self.last_evidence)),1000)
+        self.assertEqual(self.last_evidence['transit'],{})
+        self.assertEqual(self.last_evidence['alignment'],{})
+        self.assertEqual(self.last_evidence['centering'],{})
 
     def test_asymmetric_entry_moves_105mm_left_and_right(self):
         for mirror in (False,True):

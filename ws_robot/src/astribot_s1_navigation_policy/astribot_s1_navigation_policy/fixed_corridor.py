@@ -79,7 +79,7 @@ class FixedCorridorPolicy(CorridorPolicy):
         self.assessment=dict(width=c.width_m,lateral_min=low,lateral_max=high,target_offset=target,
             left_clearance=c.width_m/2-lateral-self.support_bounds(theta)[3],
             right_clearance=c.width_m/2+lateral+self.support_bounds(theta)[2],
-            in_place_rotation_allowed=outside and rotation_clear and math.hypot(robot.vx,robot.vy)<=.01)
+            in_place_rotation_allowed=outside and rotation_clear)
         if not valid:return self.hold('CORRIDOR_INPUT_UNAVAILABLE',now,selection)
         if not self.direction_allowed:return self.hold('CORRIDOR_DIRECTION_FORBIDDEN',now,selection)
         if selection.motion=='HOLD':return self.hold(selection.reason,now,selection)
@@ -87,24 +87,33 @@ class FixedCorridorPolicy(CorridorPolicy):
         if nominal_low>nominal_high:return self.hold('CORRIDOR_INSUFFICIENT_WIDTH: CHANGE_POSTURE_OUTSIDE_OR_REROUTE',now,selection)
         if abs(theta)>p.narrow_heading_limit_rad:
             if not outside:return self.hold('ROTATION_FORBIDDEN_IN_NARROW_PASSAGE',now,selection)
-            if math.hypot(robot.vx,robot.vy)>.01:return self.hold('CORRIDOR_STOP_BEFORE_ALIGNMENT',now,selection)
             if not rotation_clear:return self.hold('CORRIDOR_ALIGNMENT_SWEEP_BLOCKED',now,selection)
             self.state='ALIGN'
             return Passage(replace(selection,motion='ALIGN',speed=p.narrow_speed_m_s,reason='CORRIDOR_ALIGN_OUTSIDE'),
                 'ALIGN',c.corridor_id,p.narrow_angular_speed_rad_s,alignment_heading=c.heading)
-        if not low<=lateral<=high:
-            if not outside:return self.hold('CORRIDOR_RESERVATION_VIOLATED',now,selection)
+        if outside and abs(target-lateral)>p.narrow_centering_tolerance_m:
             if abs(target-lateral)>p.narrow_centering_max_offset_m or not centering_clear:return self.hold('CORRIDOR_OFFSET_SWEEP_BLOCKED',now,selection)
-            if math.hypot(robot.vx,robot.vy)>.01 and self.centering_target is None:return self.hold('CORRIDOR_STOP_BEFORE_OFFSET',now,selection)
             self.centering_target=self.centering_target or c.point(s,target);self.state='CENTER'
             return Passage(replace(selection,motion='CENTER',speed=p.narrow_centering_speed_m_s,reason='CORRIDOR_ASYMMETRIC_OFFSET'),
                 'CENTER',c.corridor_id,0.,centering_target=self.centering_target)
-        if not self.route_fits(c,path):
+        if not outside and not low<=lateral<=high:
+            return self.hold('CORRIDOR_RESERVATION_VIOLATED',now,selection)
+        # Entrance alignment/centering have replaced the original approach.
+        # Validate the still-executed passage and exit, not a discarded corner
+        # in the global path before entry. Keep all later points in order.
+        cursor=min(s,c.length)  # The rear may still occupy the passage after the base crosses its exit.
+        first=next((i for i,point in enumerate(path) if c.coordinates(*point)[0]>=max(0.,cursor)),len(path))
+        passage_path=(c.point(cursor,target),*path[first:])
+        if not self.route_fits(c,passage_path):
             if self.route_failure:
                 self.state='HOLD';self.permit=()
                 return Passage(replace(selection,motion='HOLD',speed=0.,reason=self.route_failure),
                     'HOLD',c.corridor_id,failure=self.route_failure)
             return self.hold('CORRIDOR_OFFSET_ROUTE_REQUIRED',now,selection)
+        if path and c.coordinates(*path[-1])[0] <= c.length-self.support_bounds()[0]+self.margin(c):
+            reason='CORRIDOR_GOAL_BEFORE_FULL_EXIT'
+            return Passage(replace(selection,motion='HOLD',speed=0.,reason=reason),
+                'HOLD',c.corridor_id,failure=reason)
         if not geometry_clear:return self.hold('CORRIDOR_GEOMETRY_UNAVAILABLE',now,selection)
         # Direct admission includes a restart inside an aligned passage. The
         # current world/path/geometry have just been revalidated; no width tier

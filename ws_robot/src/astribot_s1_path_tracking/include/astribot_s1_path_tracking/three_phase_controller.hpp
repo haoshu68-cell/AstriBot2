@@ -64,7 +64,7 @@ protected:
   enum class PlanUpdate {NewExecution, EquivalentRefresh, RouteReplacement};
   virtual void applyPlan(const nav_msgs::msg::Path & path);
   void applyPendingPlan();
-  void beginExecution();
+  virtual void beginExecution();
   PlanUpdate planUpdate() const {return plan_update_;}
   virtual double cornerStoppingDistance(double) const {return 0.;}
   virtual double cornerSettleDuration() const {return .6;}

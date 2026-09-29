@@ -1,0 +1,72 @@
+{
+  "scenario": "registered unattached obstacle during fixed passage",
+  "evidence_layer": "isolated full-stack simulation",
+  "outcome": "FAIL",
+  "action_status": 6,
+  "hold_terminal": {
+    "status": 6,
+    "result": {
+      "resources_released": true,
+      "reason": "HOLD_GEOMETRY_VERSION_CHANGED",
+      "lease_id": "cf022984-00f4-47f9-9cd3-ef48d9c19de0_1"
+    }
+  },
+  "first_revocation": "PAYLOAD_MASS_EVIDENCE_UNAVAILABLE / GEOMETRY_VERSION_CHANGED",
+  "task_reason": "ENVELOPE_EXPIRED",
+  "events": [
+    {
+      "event": "obstacle_inserted",
+      "wall": 1790664527.024226,
+      "ros_ns": 71939000000,
+      "state": {
+        "x": -0.5420880916262465,
+        "phase": "CORRIDOR_TRANSIT"
+      },
+      "bounds": [
+        0.225,
+        -0.125,
+        0.475,
+        0.125
+      ]
+    }
+  ],
+  "artifact_path": "/home/yjh/WorkSpace/astribot_narrow_passage/runs/narrow_passage_20260929/transit_hold_kinematic33_v2",
+  "runtime": {
+    "controller_pid": 2963912,
+    "environment": {
+      "ROS_DOMAIN_ID": "33",
+      "ROS_LOCALHOST_ONLY": "0",
+      "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp",
+      "FASTRTPS_DEFAULT_PROFILES_FILE": "/home/yjh/WorkSpace/astribot_narrow_passage/runs/narrow_passage_20260929/transit_hold_kinematic33_v2/stack/nav_udp.xml",
+      "IGN_IP": "127.0.0.1",
+      "GZ_IP": "127.0.0.1",
+      "IGN_PARTITION": "astribot_demo_transit_hold_kinematic33_v2",
+      "GZ_PARTITION": "astribot_demo_transit_hold_kinematic33_v2",
+      "IGN_DISCOVERY_MSG_PORT": "18066",
+      "IGN_DISCOVERY_SRV_PORT": "18067",
+      "ASTRIBOT_SIM_INSTANCE": "demo_transit_hold_kinematic33_v2",
+      "DISPLAY": ":1",
+      "XAUTHORITY": "/run/user/1001/gdm/Xauthority"
+    },
+    "libraries": {
+      "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/mainline_20260928/workstation_alignment/install/lib/libastribot_s1_navigation_recovery.so": "847298999916b040f67a361d0329f90ae2c3fc4b2a6dd17b4395fe84c5128430",
+      "/home/yjh/WorkSpace/astribot_narrow_passage/runs/narrow_passage_20260929/install/astribot_s1_path_tracking/lib/libastribot_s1_mppi_critics.so": "c026d867f52bbf753c587c599ad0a38e7fa2864ff00c07808be827256e14b1ae",
+      "/home/yjh/WorkSpace/astribot_narrow_passage/runs/narrow_passage_20260929/install/astribot_navigation_msgs/lib/libastribot_navigation_msgs__rosidl_typesupport_introspection_cpp.so": "81065d81991c0eef8a7c0c4a22071cf42f6c0f8ad584d44216654a9078bacc85",
+      "/home/yjh/WorkSpace/astribot_narrow_passage/runs/narrow_passage_20260929/install/astribot_s1_path_tracking/lib/libastribot_s1_path_tracking.so": "cd518d9eadb491fea475b5015933524ce4102253237036d550e08d1c93ccbf18",
+      "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/layered_stack_20260925/alignment_install/astribot_slam_msgs/lib/libastribot_slam_msgs__rosidl_typesupport_introspection_cpp.so": "de2b618420334e08e0af379df0a79f11bf9db1b76013e70e014bed77a011f4a7",
+      "/home/yjh/WorkSpace/astribot_narrow_passage/runs/narrow_passage_20260929/install/astribot_navigation_msgs/lib/libastribot_navigation_msgs__rosidl_typesupport_fastrtps_cpp.so": "a448c1b0e8c096ca611492694145232b4d2c3aac36d65a2bed342227f8644a1a",
+      "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/layered_stack_20260925/alignment_install/astribot_slam_msgs/lib/libastribot_slam_msgs__rosidl_typesupport_fastrtps_cpp.so": "f378f8c3b7cd2f302dc3b8e8a820c4eb93e4184b2c588521b4bc9b96e0505742",
+      "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_bridge_msgs/lib/libastribot_bridge_msgs__rosidl_typesupport_cpp.so": "37373331d7f4cc43cf32b8633b4f7b09067f924cff23f6c72640b857a633db34",
+      "/home/yjh/WorkSpace/astribot_narrow_passage/runs/narrow_passage_20260929/install/astribot_navigation_msgs/lib/libastribot_navigation_msgs__rosidl_typesupport_cpp.so": "c7ca9a6582fe61ec4937d0a86663a4bfbebe0bd2b8837c4367580a9760e80803",
+      "/home/yjh/WorkSpace/astribot_sdk_ros2/runs/layered_stack_20260925/alignment_install/astribot_slam_msgs/lib/libastribot_slam_msgs__rosidl_typesupport_cpp.so": "dbc7e2955161ef578a02a09c7e53e4e4b944a151485c30cbcfe24397be0c11cc",
+      "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_zones/lib/libzone_core.so": "54ffe815eb4443db6243e9de6a878dee99ce5340ba6c10e140122a69b132c50c",
+      "/home/yjh/WorkSpace/astribot_validation/unified_navigation_resume_20260921_01/I0_2_20260923_065115/install/astribot_navigation_zones/lib/libzone_layer.so": "07a93e807a222c30e339d6bb24a41376201bc63ab5e39ec86ddb5b41fc86a911"
+    }
+  },
+  "cleanup": {
+    "sessions": 28,
+    "problems": [],
+    "domain_32": "UNRESOLVED retained unchanged",
+    "domain_33": "IDLE / RELEASED"
+  }
+}

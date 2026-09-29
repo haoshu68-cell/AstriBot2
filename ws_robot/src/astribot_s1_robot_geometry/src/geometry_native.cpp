@@ -10,6 +10,7 @@
 #include "astribot_s1_robot_geometry/fusion_snapshot.hpp"
 #include "astribot_s1_robot_geometry/snapshot_objects.hpp"
 #include "astribot_s1_robot_geometry/corridor_turns.hpp"
+#include "astribot_s1_robot_geometry/passage_sweep.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -190,6 +191,13 @@ PYBIND11_MODULE(_geometry_native,m) {
   });
   m.doc()="Conservative batch geometry kernels; no clocks or robot authority";
   m.def("box_distance",&boxDistance);
+  m.def("passage_sweep",[](const Array & polygon,const Array & start,const Array & end,double margin) {
+    return toArray(astribot_s1_robot_geometry::passageSweep(rows<2>(polygon),values<3>(start),values<3>(end),margin));
+  });
+  m.def("passage_grid_clear",[](const Array & polygon,const Array & origin,double resolution,
+      int width,int height,const std::vector<int> & cells) {
+    return astribot_s1_robot_geometry::passageGridClear(rows<2>(polygon),values<3>(origin),resolution,width,height,cells);
+  });
   m.def("convex_hull",&convexHull);
   m.def("scan_boxes_free",&scanBoxesFree);
   m.def("scan_occupied_cells",&scanOccupiedCells);

@@ -132,6 +132,7 @@ void ArrivalController::configure(
   policy_takeover_=stage=="p3" || stage=="p4" || stage=="p5";
   if (policy_enabled_ && (stage=="p4" || stage=="p5")) {
     corridor_simulated_=node->get_parameter("use_sim_time").as_bool();
+    fixed_corridor_=node->get_parameter("navigation_geometry_mode").as_string()=="fixed_v2";
     corridor_alignment_sub_=node->create_subscription<CorridorAlignment>(
       "navigation_policy/corridor_alignment",1,[this](CorridorAlignment::ConstSharedPtr msg) {
         std::lock_guard<std::mutex> lock(corridor_mutex_);
@@ -267,6 +268,13 @@ void ArrivalController::cleanup()
   resetAttempt();
   ThreePhaseController::cleanup();
 }
+void ArrivalController::beginExecution()
+{
+  ThreePhaseController::beginExecution();
+  resetAttempt();
+  corridor_phase_.clear();corridor_stop_.reset();corridor_exited_=false;
+  normal_plan_pending_=false;
+}
 void ArrivalController::applyPlan(const nav_msgs::msg::Path & path)
 {
   if (path.poses.empty() || path.header.frame_id.empty()) {
@@ -275,6 +283,15 @@ void ArrivalController::applyPlan(const nav_msgs::msg::Path & path)
   for (const auto & pose : path.poses) {
     if (!validPose(pose.pose) || (!pose.header.frame_id.empty() &&
       pose.header.frame_id != path.header.frame_id)) {fail("INVALID_PATH: invalid pose/frame");}
+  }
+  if (fixed_corridor_) {
+    // Publish the selected route after basic validation, before normal-mode
+    // corner admission. A path-bound policy answer chooses its motion owner.
+    const auto & target=path.poses.back();
+    goal_=target;goal_.header=path.header;goal_.header.stamp=builtin_interfaces::msg::Time();
+    has_goal_=true;tracking_path_=path;normal_plan_pending_=true;++plan_revision_;
+    if (active_path_pub_) {active_path_pub_->publish(path);}
+    return;
   }
   ThreePhaseController::applyPlan(path);
   const bool refresh=planUpdate()==PlanUpdate::EquivalentRefresh;
@@ -496,6 +513,113 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeVelocityCommands(
   return command;
 }
 
+bool ArrivalController::passageCommand(
+  const geometry_msgs::msg::PoseStamped & current, const geometry_msgs::msg::PoseStamped & pose,
+  const geometry_msgs::msg::Twist & velocity, geometry_msgs::msg::TwistStamped & command, double now)
+{
+  CorridorAlignment::ConstSharedPtr request;
+  {std::lock_guard<std::mutex> lock(corridor_mutex_);request=corridor_alignment_;}
+  command.header=pose.header;
+  if (!request || request->reference_path!=tracking_path_) {
+    publishPhase("CORRIDOR_CLASSIFICATION_PENDING");return true;
+  }
+  const auto & next=request->phase;
+  if (now-started_at_>total_timeout_) {fail("GOAL_TIMEOUT");}
+  if (policy_enabled_ &&
+    ((next=="ALIGN")!=policy_lease_.alignmentRequired(clock_->now()) ||
+     (next=="CENTER")!=policy_lease_.centeringRequired(clock_->now()) ||
+     (next=="TRANSIT")!=policy_lease_.corridorTrackingRequired(clock_->now()))) {
+    publishPhase("CORRIDOR_POLICY_PENDING");return true;
+  }
+  if (next=="WAIT" || next=="HOLD") {publishPhase("CORRIDOR_HOLD");return true;}
+  if (next!="NORMAL" && next!="ALIGN" && next!="CENTER" && next!="TRANSIT") {
+    fail("CORRIDOR_PHASE_INVALID");
+  }
+  if (next!="NORMAL" && (!validPose(request->anchor.pose) || !validPose(request->target.pose) ||
+      request->anchor.header.frame_id!=current.header.frame_id ||
+      request->target.header.frame_id!=current.header.frame_id)) {fail("CORRIDOR_TARGET_INVALID");}
+  if (next!=corridor_phase_ && (next!="NORMAL" || !corridor_phase_.empty())) {
+    // Only new /slam/pose samples after zero command certify the transfer.
+    const auto sample=slamObservation();const auto & p=sample.first;
+    const bool stopped=corridor_stop_.observe(rclcpp::Time(p.header.stamp).seconds(),sample.second,
+        p.pose.position.x,p.pose.position.y,tf2::getYaw(p.pose.orientation),
+        settle_time_,.01,.005,.01);
+    corridor_stop_.command(0.,0.,0.,now);
+    if (!stopped) {
+      publishPhase("CORRIDOR_SETTLING");return true;
+    }
+  }
+  if (next=="NORMAL") {
+    if (!corridor_phase_.empty()) {
+      corridor_phase_.clear();corridor_exited_=true;normal_plan_pending_=true;
+      refining_=holding_=false;
+    }
+    if (normal_plan_pending_) {
+      auto remaining=tracking_path_;
+      if (corridor_exited_) {
+        // Rejoin only the remaining path; entrance corners are already behind us.
+        auto projection=current;std::size_t next=remaining.poses.size()-1;
+        double closest=std::numeric_limits<double>::infinity();
+        for (std::size_t i=1;i<remaining.poses.size();++i) {
+          const auto & a=remaining.poses[i-1].pose.position;
+          const auto & b=remaining.poses[i].pose.position;
+          const double dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy;
+          if (length2==0.) {continue;}
+          const auto & p=current.pose.position;
+          const double t=std::clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/length2,0.,1.);
+          const double x=a.x+t*dx,y=a.y+t*dy,d=std::hypot(x-p.x,y-p.y);
+          if (d<closest) {closest=d;next=i;projection.pose.position.x=x;projection.pose.position.y=y;}
+        }
+        // Start on the remaining segment, not at a sampled vertex behind the
+        // robot. Prepending the live pose would manufacture a short new corner.
+        remaining.poses.erase(remaining.poses.begin(),remaining.poses.begin()+next);
+        remaining.poses.insert(remaining.poses.begin(),projection);
+      }
+      const bool takeover=policy_takeover_ && !refining_;
+      ThreePhaseController::applyPlan(remaining);
+      normal_plan_pending_=false;
+      if (planUpdate()==PlanUpdate::RouteReplacement) {
+        refining_=holding_=completion_logged_=false;
+        xy_held_=yaw_held_=corridor_terminal_coast_=false;
+        xy_coast_.reset();yaw_coast_.reset();xy_settling_.reset();yaw_settling_.reset();
+        if (takeover) {preparePolicyTakeover();}
+      }
+      if (planUpdate()!=PlanUpdate::EquivalentRefresh) {metrics_anchor_.reset();}
+    }
+    return false;
+  }
+  corridor_phase_=next;refining_=holding_=false;
+  const double error=yawError(current.pose,request->anchor.pose);
+  if (next=="ALIGN") {
+    command=policyAlignment(error,velocity.angular.z,pose.header);
+  } else {
+    const double heading=tf2::getYaw(request->anchor.pose.orientation);
+    const double c=std::cos(heading),s=std::sin(heading);
+    const auto & a=current.pose.position;const auto & b=request->target.pose.position;
+    const double along=c*(b.x-a.x)+s*(b.y-a.y),side=-s*(b.x-a.x)+c*(b.y-a.y);
+    const double forward=next=="TRANSIT" ? std::clamp(along,0.,.15) : std::clamp(along,-.05,.05);
+    const double lateral=std::abs(side)<=request->centering_tolerance_m*.5 ? 0. : std::clamp(side,-.05,.05);
+    // Transform the corridor-axis velocity into chassis coordinates. Heading
+    // correction runs with translation; normal start/corner alignment is absent.
+    const double delta=heading-tf2::getYaw(current.pose.orientation);
+    command.twist.linear.x=std::cos(delta)*forward-std::sin(delta)*lateral;
+    command.twist.linear.y=std::sin(delta)*forward+std::cos(delta)*lateral;
+    if (next=="TRANSIT") {command.twist.angular.z=std::clamp(kp_yaw_*error,-.15,.15);}
+    limitCornerTranslation(command.twist);
+  }
+  if (geometry_guard_.enabled() && !safeCommand(pose,command.twist,velocity)) {
+    fail("CORRIDOR_COMMAND_SWEEP_BLOCKED");
+  }
+  corridor_stop_.command(command.twist.linear.x,command.twist.linear.y,command.twist.angular.z,now);
+  if (distance(current.pose,anchor_.pose)>=.01 || std::abs(yawError(current.pose,anchor_.pose))>=.02) {
+    anchor_=current;progress_at_=now;
+  }
+  if (now-progress_at_>progress_timeout_) {fail("CORRIDOR_NO_MOTION_PROGRESS");}
+  if (now-started_at_>total_timeout_) {fail("GOAL_TIMEOUT");}
+  publishPhase(("CORRIDOR_"+next).c_str());
+  return true;
+}
+
 geometry_msgs::msg::TwistStamped ArrivalController::computeCommand(
   const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
   nav2_core::GoalChecker * checker)
@@ -572,6 +696,10 @@ geometry_msgs::msg::TwistStamped ArrivalController::computeCommand(
     // Reapply each cycle: optimizer recovery may reset its speed constraints.
     // Zero is Nav2's reset sentinel and must never represent a policy stop.
     ThreePhaseController::setSpeedLimit(effective,false);
+  }
+  if (fixed_corridor_) {
+    geometry_msgs::msg::TwistStamped command;
+    if (passageCommand(current,pose,velocity,command,now)) {return command;}
   }
   // Lease/HOLD processing keeps priority, but every motion owner shares the
   // same replacement stop barrier before corridor or normal tracking.

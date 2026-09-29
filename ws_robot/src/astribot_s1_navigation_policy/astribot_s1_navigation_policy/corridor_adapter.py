@@ -82,6 +82,11 @@ class CorridorAdapter:
         return okay
 
     def geometry_clear(self, corridor, to_map):
+        if self.fixed:
+            offset=self.policy.target_offset(corridor)
+            return self.fixed_sweep_clear(corridor,to_map,
+                (*corridor.point(0.,offset),corridor.heading),
+                (*corridor.point(corridor.length,offset),corridor.heading))
         if not self.map_clear(corridor, to_map):
             self.evidence = {'reason': 'UNKNOWN_OR_OCCUPIED_MAP_SWEEP'}
             return False
@@ -112,7 +117,33 @@ class CorridorAdapter:
         self.evidence = {'reason': 'MAP_AND_PREDICTED_SWEEP_CLEAR'}
         return True
 
+    def fixed_sweep_clear(self, corridor, to_map, start, end):
+        from astribot_s1_robot_geometry._geometry_native import passage_sweep,passage_grid_clear,box_distance
+        n=self.node;m=n.map
+        if m is None:return False
+        sweep=passage_sweep(n.profile.footprint_xy,np.asarray(start),np.asarray(end),self.policy.margin(corridor))
+        mapped=np.asarray([n.point((*p,0.),to_map)[:2] for p in sweep])
+        info=m.info;o=info.origin
+        if not passage_grid_clear(mapped,np.array([o.position.x,o.position.y,yaw(o.orientation)]),
+                info.resolution,info.width,info.height,m.data):
+            self.evidence={'reason':'UNKNOWN_OR_OCCUPIED_MAP_SWEEP'}
+            return False
+        rows=prediction_rows(n.last_world,include_current=True)
+        boxes=np.column_stack((np.zeros((len(rows.lower),3)),rows.lower[:,:2],rows.upper[:,:2]))
+        hits=np.flatnonzero(box_distance(sweep,boxes)<=0.)
+        if hits.size:
+            i=int(hits[0]);track=n.last_world.tracks[int(rows.owners[i])]
+            self.evidence=dict(reason='PREDICTED_OCCUPANCY',track=track.fused_track_id,
+                prediction_offset_ns=int(rows.offsets_ns[i]),obstacle_lower=rows.lower[i].tolist(),obstacle_upper=rows.upper[i].tolist())
+            return False
+        self.evidence={'reason':'MAP_AND_PREDICTED_SWEEP_CLEAR'}
+        return True
+
     def rotation_clear(self, corridor, to_map, target=None):
+        if self.fixed:
+            r=self.node.last_robot
+            end=(*target,r.yaw) if target is not None else (r.x,r.y,corridor.heading)
+            return self.fixed_sweep_clear(corridor,to_map,(r.x,r.y,r.yaw),end)
         from .corridor_detection import Grid
         n=self.node;r=n.last_robot;m=n.map
         if r is None or m is None:return False
@@ -163,19 +194,25 @@ class CorridorAdapter:
             candidate = self.policy.active
             if candidate is None and n.last_robot is not None:
                 candidate, _ = self.policy.choose(n.last_robot, n.path)
+            self.evidence={}
             clear = valid and (candidate is None or self.geometry_clear(candidate, to_map))
+            transit_evidence=dict(self.evidence)
             beyond_exit=bool(candidate is not None and n.last_robot is not None and
                 candidate.coordinates(n.last_robot.x,n.last_robot.y)[0]>candidate.length)
             before_entry=bool(candidate is not None and n.last_robot is not None and
                 candidate.coordinates(n.last_robot.x,n.last_robot.y)[0]<0)
-            rotation_clear=bool(clear and candidate is not None and
+            self.evidence={}
+            rotation_clear=bool(valid and candidate is not None and
                 (not self.policy.permit or beyond_exit or before_entry) and self.rotation_clear(candidate,to_map))
+            alignment_evidence=dict(self.evidence)
+            self.evidence={}
             centering_clear=False
-            if rotation_clear and n.last_robot is not None and before_entry:
+            if valid and candidate is not None and n.last_robot is not None and before_entry:
                 along,lateral=candidate.coordinates(n.last_robot.x,n.last_robot.y)
                 target=self.policy.centering_target or candidate.point(along,self.policy.target_offset(candidate) if self.fixed else 0.)
                 if abs(candidate.coordinates(*target)[1]-lateral)<=n.profile.narrow_centering_max_offset_m:
                     centering_clear=self.rotation_clear(candidate,to_map,target)
+            centering_evidence=dict(self.evidence)
             self.invalid_since=None;self.last_error = ''
         except Exception as error:
             self.last_error = str(error)
@@ -190,6 +227,7 @@ class CorridorAdapter:
         passage=self.policy.evaluate(selection, n.last_robot, n.path, n.execution.version,
             envelope.posture_id if envelope is not None else '', valid, clear, now, rotation_clear,centering_clear)
         if self.fixed:
+            self.evidence=dict(transit=transit_evidence,alignment=alignment_evidence,centering=centering_evidence)
             from astribot_navigation_msgs.msg import PassageAssessment
             evidence=getattr(self.policy,'assessment',{});self.evidence.update(evidence)
             msg=PassageAssessment();msg.header.stamp=n.get_clock().now().to_msg();msg.header.frame_id=n.profile.tracking_frame
