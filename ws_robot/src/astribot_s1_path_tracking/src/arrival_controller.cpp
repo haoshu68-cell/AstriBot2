@@ -3,6 +3,7 @@
 // Copyright 2026 Astribot
 #include "astribot_s1_path_tracking/arrival_controller.hpp"
 #include "astribot_s1_path_tracking/corridor_refinement.hpp"
+#include "astribot_s1_robot_geometry/narrow_translation.hpp"
 #include "astribot_s1_path_tracking/arrival_braking.hpp"
 
 #include <algorithm>
@@ -528,11 +529,11 @@ bool ArrivalController::passageCommand(
   if (policy_enabled_ &&
     ((next=="ALIGN")!=policy_lease_.alignmentRequired(clock_->now()) ||
      (next=="CENTER")!=policy_lease_.centeringRequired(clock_->now()) ||
-     (next=="TRANSIT")!=policy_lease_.corridorTrackingRequired(clock_->now()))) {
+     (next=="TRANSIT" || next=="TRANSLATE")!=policy_lease_.corridorTrackingRequired(clock_->now()))) {
     publishPhase("CORRIDOR_POLICY_PENDING");return true;
   }
   if (next=="WAIT" || next=="HOLD") {publishPhase("CORRIDOR_HOLD");return true;}
-  if (next!="NORMAL" && next!="ALIGN" && next!="CENTER" && next!="TRANSIT") {
+  if (next!="NORMAL" && next!="ALIGN" && next!="CENTER" && next!="TRANSIT" && next!="TRANSLATE") {
     fail("CORRIDOR_PHASE_INVALID");
   }
   if (next!="NORMAL" && (!validPose(request->anchor.pose) || !validPose(request->target.pose) ||
@@ -592,6 +593,21 @@ bool ArrivalController::passageCommand(
   const double error=yawError(current.pose,request->anchor.pose);
   if (next=="ALIGN") {
     command=policyAlignment(error,velocity.angular.z,pose.header);
+  } else if(next=="TRANSLATE") {
+    std::vector<astribot_s1_robot_geometry::PassagePoint> prefix;
+    const double heading=tf2::getYaw(tracking_path_.poses.front().pose.orientation);
+    for(const auto &p:tracking_path_.poses) {
+      if(std::abs(std::remainder(tf2::getYaw(p.pose.orientation)-heading,2*M_PI))>.05)break;
+      prefix.push_back({p.pose.position.x,p.pose.position.y});
+    }
+    const auto &p=current.pose.position;
+    const auto target=astribot_s1_robot_geometry::translationLookahead(prefix,{p.x,p.y},.15);
+    const double yaw=tf2::getYaw(current.pose.orientation),dx=target[0]-p.x,dy=target[1]-p.y;
+    command.twist.linear.x=std::cos(yaw)*dx+std::sin(yaw)*dy;
+    command.twist.linear.y=-std::sin(yaw)*dx+std::cos(yaw)*dy;
+    limitCornerTranslation(command.twist);
+    if(std::hypot(velocity.linear.x,velocity.linear.y)>.003)
+      command.twist.angular.z=std::clamp(kp_yaw_*error,-.15,.15);
   } else {
     const double heading=tf2::getYaw(request->anchor.pose.orientation);
     const double c=std::cos(heading),s=std::sin(heading);

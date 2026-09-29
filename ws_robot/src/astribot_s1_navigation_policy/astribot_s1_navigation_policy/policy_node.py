@@ -187,15 +187,19 @@ class PolicyNode(PolicyObserver):
             if passage.state=='TRANSIT':
                 rear=-self.corridor.policy.support_bounds()[0]
                 target=c.point(c.length+rear+self.corridor.policy.margin(c)+.05,offset)
+            heading=c.heading
+            if passage.state=='TRANSLATE':
+                target=self.corridor.translation_target[:2]
+                heading=self.corridor.translation_target[2]
             for field,point in (('anchor',c.point(0.,offset)),('target',target)):
                 pose=PoseStamped();pose.header.frame_id=frame
                 x,y,_=self.point((*point,0.),transform)
                 pose.pose.position.x=x;pose.pose.position.y=y
-                heading=c.heading+yaw(transform.transform.rotation)
-                pose.pose.orientation.z=math.sin(heading/2);pose.pose.orientation.w=math.cos(heading/2)
+                transformed_heading=heading+yaw(transform.transform.rotation)
+                pose.pose.orientation.z=math.sin(transformed_heading/2);pose.pose.orientation.w=math.cos(transformed_heading/2)
                 setattr(msg,field,pose)
             msg.centering_required=passage.state=='CENTER'
-            msg.tracking_required=passage.state=='TRANSIT'
+            msg.tracking_required=passage.state in ('TRANSIT','TRANSLATE')
         self.alignment_pub.publish(msg)
 
     def tick(self):

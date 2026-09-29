@@ -10,6 +10,7 @@
 #include "astribot_s1_robot_geometry/fusion_snapshot.hpp"
 #include "astribot_s1_robot_geometry/snapshot_objects.hpp"
 #include "astribot_s1_robot_geometry/corridor_turns.hpp"
+#include "astribot_s1_robot_geometry/narrow_translation.hpp"
 #include "astribot_s1_robot_geometry/passage_sweep.hpp"
 #include <algorithm>
 #include <array>
@@ -190,6 +191,11 @@ PYBIND11_MODULE(_geometry_native,m) {
     return astribot_s1_robot_geometry::corridorTurnsOutside(p,route,length,width,margin,heading_limit);
   });
   m.doc()="Conservative batch geometry kernels; no clocks or robot authority";
+  m.def("narrow_translation_end",[](const Array &polygon,const Array &path,
+      const Array &entry,const Array &exit,double width,double margin) {
+    return astribot_s1_robot_geometry::narrowTranslationEnd(rows<2>(polygon),rows<3>(path),
+      values<2>(entry),values<2>(exit),width,margin);
+  });
   m.def("box_distance",&boxDistance);
   m.def("passage_sweep",[](const Array & polygon,const Array & start,const Array & end,double margin) {
     return toArray(astribot_s1_robot_geometry::passageSweep(rows<2>(polygon),values<3>(start),values<3>(end),margin));

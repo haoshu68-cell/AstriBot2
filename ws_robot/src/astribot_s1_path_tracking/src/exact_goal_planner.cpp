@@ -1,5 +1,7 @@
 #include "astribot_s1_path_tracking/envelope_guard.hpp"
 #include "astribot_s1_path_tracking/corridor_refinement.hpp"
+#include "astribot_s1_robot_geometry/narrow_translation.hpp"
+#include "astribot_navigation_msgs/msg/passage_assessment.hpp"
 #include "nav2_smac_planner/smac_planner_hybrid.hpp"
 #include "nav2_smac_planner/smac_planner_lattice.hpp"
 #include <type_traits>
@@ -47,6 +49,14 @@ public:
     nav2_util::declare_parameter_if_not_declared(node,"navigation_policy_stage",rclcpp::ParameterValue("off"));
     const auto stage=node->get_parameter("navigation_policy_stage").as_string();
     corridor_direct_=stage=="p4" || stage=="p5";
+    clock_=node->get_clock();
+    if(corridor_direct_ && geometry_guard_.enabled()) {
+      passage_sub_=node->create_subscription<astribot_navigation_msgs::msg::PassageAssessment>(
+        "/navigation/passage_assessment",10,[this](astribot_navigation_msgs::msg::PassageAssessment::ConstSharedPtr message) {
+          std::lock_guard<std::mutex> lock(passage_mutex_);
+          passage_=message;passage_received_=std::chrono::steady_clock::now();
+        });
+    }
     auto load=[&](const std::string & key,double fallback) {
       nav2_util::declare_parameter_if_not_declared(node,name+".quality."+key,rclcpp::ParameterValue(fallback));
       double v=node->get_parameter(name+".quality."+key).as_double();
@@ -90,7 +100,7 @@ public:
         risk_pub_->publish(evidence);
       });
   }
-  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);geometry_guard_.cleanup();candidate_service_.reset();valid_service_.reset();risk_pub_.reset();quality_pub_.reset();plan_pub_.reset();map_ros_.reset();Search::cleanup();}
+  void cleanup() override {std::lock_guard<std::recursive_mutex> lock(planning_mutex_);passage_sub_.reset();passage_.reset();geometry_guard_.cleanup();candidate_service_.reset();valid_service_.reset();risk_pub_.reset();quality_pub_.reset();plan_pub_.reset();map_ros_.reset();Search::cleanup();}
   nav_msgs::msg::Path createPlan(const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) override
   {
@@ -136,6 +146,12 @@ private:
     const int original_collision=collisionIndex(path,0);
     if (original_collision==-1) {
       throw nav2_core::PlannerException("PATH_CHECK_UNAVAILABLE: costmap unavailable during planning");
+    }
+    if constexpr (std::is_same_v<Search,nav2_smac_planner::SmacPlanner2D>) {
+      if(auto translation=narrowStartPath(start,path)) {
+        emit("narrow_start_translation",before,pathQuality(*translation));
+        return std::move(*translation);
+      }
     }
     if constexpr (!std::is_same_v<Search,nav2_smac_planner::SmacPlanner2D>) {
       // SE(2) primitive headings and reverse cusps must survive postprocessing.
@@ -208,6 +224,70 @@ private:
       std::to_string(original_collision));
   }
 private:
+  std::optional<nav_msgs::msg::Path> narrowStartPath(
+      const geometry_msgs::msg::PoseStamped &start,const nav_msgs::msg::Path &path) {
+    using namespace astribot_s1_robot_geometry;
+    if(!corridor_direct_ || !geometry_guard_.enabled() || path.poses.size()<2)return std::nullopt;
+    const double yaw=tf2::getYaw(start.pose.orientation);
+    nav_msgs::msg::Path turn;turn.header=path.header;turn.poses={start,start};
+    turn.poses.back().pose.orientation=path.poses.front().pose.orientation;
+    if(std::abs(std::remainder(tf2::getYaw(turn.poses.back().pose.orientation)-yaw,2*M_PI))<=.05)return std::nullopt;
+    astribot_navigation_msgs::msg::PassageAssessment::ConstSharedPtr passage;
+    {
+      std::lock_guard<std::mutex> lock(passage_mutex_);passage=passage_;
+      if(!passage || passage->corridor_id.empty() || passage->width_m<=0. ||
+         std::chrono::duration<double>(std::chrono::steady_clock::now()-passage_received_).count()>.3 ||
+         (clock_->now()-rclcpp::Time(passage->header.stamp)).seconds()<0. ||
+         (clock_->now()-rclcpp::Time(passage->header.stamp)).seconds()>.3)return std::nullopt;
+    }
+    const auto transform=map_ros_->getTfBuffer()->lookupTransform(path.header.frame_id,passage->header.frame_id,tf2::TimePointZero);
+    auto point=[&](const geometry_msgs::msg::Point &p) {
+      geometry_msgs::msg::PoseStamped a,b;a.header=passage->header;a.pose.position=p;a.pose.orientation.w=1.;
+      tf2::doTransform(a,b,transform);return PassagePoint{b.pose.position.x,b.pose.position.y};
+    };
+    const auto entry=point(passage->entry),exit=point(passage->exit);
+    if(!passageContains({start.pose.position.x,start.pose.position.y},entry,exit,passage->width_m))return std::nullopt;
+    if(passage->in_place_rotation_allowed && collisionIndex(turn,0,true)==-2)return std::nullopt;
+    const auto origin=passageCoordinates({start.pose.position.x,start.pose.position.y},entry,exit);
+    const auto destination=passageCoordinates({path.poses.back().pose.position.x,path.poses.back().pose.position.y},entry,exit);
+    if(!passage->bidirectional && destination[0]<origin[0])return std::nullopt;
+    std::vector<PassagePoint> footprint;
+    for(const auto &p:map_ros_->getRobotFootprint())footprint.push_back({p.x,p.y});
+    auto reference=path;
+    // The existing grid path may bow toward a wall between exactly aligned
+    // endpoints. Use the same straight-candidate displacement budget here;
+    // opposed body/travel headings are intentional for this maneuver.
+    const auto &goal=path.poses.back().pose.position;
+    const double dx=goal.x-start.pose.position.x,dy=goal.y-start.pose.position.y,length2=dx*dx+dy*dy;
+    bool straight=length2>1e-12;
+    for(const auto &p:path.poses) {
+      if(!straight)break;
+      const double x=p.pose.position.x-start.pose.position.x,y=p.pose.position.y-start.pose.position.y;
+      const double f=std::clamp((x*dx+y*dy)/length2,0.,1.);
+      straight=std::hypot(x-f*dx,y-f*dy)<=displacement_;
+    }
+    if(straight) {
+      const double heading=std::atan2(dy,dx);
+      for(auto &p:reference.poses) {
+        const double x=p.pose.position.x-start.pose.position.x,y=p.pose.position.y-start.pose.position.y;
+        const double f=std::clamp((x*dx+y*dy)/length2,0.,1.);
+        p.pose.position.x=start.pose.position.x+f*dx;p.pose.position.y=start.pose.position.y+f*dy;
+        p.pose.orientation.x=p.pose.orientation.y=0.;
+        p.pose.orientation.z=std::sin(heading/2);p.pose.orientation.w=std::cos(heading/2);
+      }
+      reference.poses.back()=path.poses.back();
+    }
+    for(std::size_t i=1;i+1<reference.poses.size();++i) {
+      const auto &at=reference.poses[i];
+      if(!passageBodyOutside(footprint,{at.pose.position.x,at.pose.position.y,yaw},entry,exit,
+          passage->boundary_tracking_margin_m))continue;
+      auto candidate=reference;
+      for(std::size_t j=0;j<=i;++j)candidate.poses[j].pose.orientation=start.pose.orientation;
+      candidate.poses.insert(candidate.poses.begin()+i+1,at);
+      if(collisionIndex(candidate,0,true)==-2)return candidate;
+    }
+    return std::nullopt;
+  }
   using Candidate=astribot_navigation_msgs::srv::PlanCandidate;
   static bool sameGoal(const geometry_msgs::msg::PoseStamped & a,
     const geometry_msgs::msg::PoseStamped & b) {
@@ -370,6 +450,11 @@ private:
   }
   EnvelopeGuard geometry_guard_;
   bool corridor_direct_{false};
+  rclcpp::Clock::SharedPtr clock_;
+  std::mutex passage_mutex_;
+  astribot_navigation_msgs::msg::PassageAssessment::ConstSharedPtr passage_;
+  std::chrono::steady_clock::time_point passage_received_;
+  rclcpp::Subscription<astribot_navigation_msgs::msg::PassageAssessment>::SharedPtr passage_sub_;
   std::recursive_mutex planning_mutex_;
   rclcpp::Service<Candidate>::SharedPtr candidate_service_;
   double max_k_{3},max_rate_{12},displacement_{.2};

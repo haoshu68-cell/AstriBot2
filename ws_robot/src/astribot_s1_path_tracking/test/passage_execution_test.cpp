@@ -61,6 +61,25 @@ int main() {
   bool rejected=false;
   try {ArrivalControllerTestPeer::passageTick(normal,"NORMAL",1.,0.,0.);} catch(const nav2_core::PlannerException &) {rejected=true;}
   assert(rejected);
+  // A blocked initial turn in a recognized passage follows the path with the
+  // measured body heading, including negative and lateral chassis commands.
+  for(bool sideways:{false,true}) {
+    ArrivalController translation;ArrivalControllerTestPeer::setup(translation);
+    ArrivalControllerTestPeer::fixedPassage(translation);
+    auto route=sideways?path({{0.,0.},{0.,.5},{0.,1.4},{0.,1.8}},1):
+      path({{0.,0.},{-.5,0.},{-1.4,0.},{-1.8,0.}},1);
+    for(auto &p:route.poses){p.pose.orientation.z=0.;p.pose.orientation.w=1.;}
+    translation.setPlan(route);
+    auto run=[&](const char *phase,double at){return ArrivalControllerTestPeer::passageTick(translation,phase,at,0.,0.);};
+    assert(zero(run("TRANSLATE",1.).second));
+    assert(zero(run("TRANSLATE",1.1).second));
+    const auto command=run("TRANSLATE",1.8).second;
+    assert(command.angular.z==0.);
+    assert(sideways?(command.linear.y>0.&&command.linear.x==0.):(command.linear.x<0.&&command.linear.y==0.));
+    assert(zero(run("HOLD",1.9).second));
+    assert(ArrivalControllerTestPeer::passagePhase(translation)=="TRANSLATE");
+    assert(!zero(run("TRANSLATE",2.).second));
+  }
   // Lifecycle stop ends the owned maneuver; the next execution reacquires it.
   tick("ALIGN",10.,-1.6,.15,.1745);tick("ALIGN",10.1,-1.6,.15,.1745);
   tick("ALIGN",10.8,-1.6,.15,.1745);

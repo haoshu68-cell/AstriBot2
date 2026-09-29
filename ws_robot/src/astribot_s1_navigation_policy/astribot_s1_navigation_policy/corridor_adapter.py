@@ -171,6 +171,7 @@ class CorridorAdapter:
 
     def advance(self, selection, valid, now):
         n = self.node
+        self.translation_target=None
         if self.clock_epoch != n.execution.version.clock_epoch:
             self.clock_epoch = n.execution.version.clock_epoch
             self.invalid_since = None
@@ -194,8 +195,27 @@ class CorridorAdapter:
             candidate = self.policy.active
             if candidate is None and n.last_robot is not None:
                 candidate, _ = self.policy.choose(n.last_robot, n.path)
+            translation_path=None
+            if self.fixed and candidate is not None and n.active_path_message is not None:
+                from astribot_s1_robot_geometry._geometry_native import narrow_translation_end
+                source=n.active_path_message
+                transform=n.tf.lookup_transform(n.profile.tracking_frame,source.header.frame_id,Time())
+                heading=yaw(transform.transform.rotation)
+                poses=np.asarray([(*n.point((p.pose.position.x,p.pose.position.y,0.),transform)[:2],
+                    yaw(p.pose.orientation)+heading) for p in source.poses])
+                end=narrow_translation_end(n.profile.footprint_xy,poses,np.asarray(candidate.entry),
+                    np.asarray(candidate.exit),candidate.width_m,self.policy.margin(candidate))
+                if end>=0:
+                    translation_path=poses[:end+1]
+                    self.translation_target=tuple(poses[end])
             self.evidence={}
-            clear = valid and (candidate is None or self.geometry_clear(candidate, to_map))
+            if translation_path is not None:
+                robot=n.last_robot
+                nearest=int(np.argmin(np.linalg.norm(translation_path[:,:2]-np.array([robot.x,robot.y]),axis=1)))
+                remaining=[(robot.x,robot.y,translation_path[0,2]),*map(tuple,translation_path[nearest+1:])]
+                clear=valid and all(self.fixed_sweep_clear(candidate,to_map,a,b) for a,b in zip(remaining,remaining[1:]))
+            else:
+                clear = valid and (candidate is None or self.geometry_clear(candidate, to_map))
             transit_evidence=dict(self.evidence)
             beyond_exit=bool(candidate is not None and n.last_robot is not None and
                 candidate.coordinates(n.last_robot.x,n.last_robot.y)[0]>candidate.length)
@@ -224,10 +244,32 @@ class CorridorAdapter:
             return Passage(replace(selection,motion='HOLD',speed=0.,reason=failure or 'CORRIDOR_FRAME_UNAVAILABLE'),
                            'WAIT',failure=failure)
         envelope = n.profile.envelope
-        passage=self.policy.evaluate(selection, n.last_robot, n.path, n.execution.version,
-            envelope.posture_id if envelope is not None else '', valid, clear, now, rotation_clear,centering_clear)
+        if self.translation_target is not None:
+            self.policy.begin_evaluation(n.execution.version,now)
+            robot=n.last_robot;target=self.translation_target
+            self.policy.active=candidate
+            if math.hypot(robot.x-target[0],robot.y-target[1])<=.008:
+                self.policy.active=None;self.policy.permit=();self.policy.state='NORMAL'
+                passage=Passage(selection)
+            elif not valid or n.last_risk.immediate or n.last_risk.uncertain or not clear:
+                passage=self.policy.hold('CORRIDOR_INPUT_UNAVAILABLE' if not valid else
+                    (selection.reason if n.last_risk.immediate or n.last_risk.uncertain else
+                     'CORRIDOR_TRANSLATION_SWEEP_BLOCKED'),now,selection)
+            else:
+                # The ordinary forecast rotates the body to the path tangent.
+                # This phase instead checked the entire fixed-heading sweep;
+                # current/braking collision and uncertain observations still hold.
+                self.policy.state='TRANSLATE';self.policy.wait_at=None
+                passage=Passage(replace(selection,motion='SLOW',speed=n.profile.narrow_speed_m_s,
+                    reason='CORRIDOR_FIXED_HEADING_TRANSLATION'),'TRANSLATE',candidate.corridor_id,
+                    n.profile.narrow_angular_speed_rad_s,tracking_heading=target[2])
+        else:
+            passage=self.policy.evaluate(selection, n.last_robot, n.path, n.execution.version,
+                envelope.posture_id if envelope is not None else '', valid, clear, now, rotation_clear,centering_clear)
         if self.fixed:
             self.evidence=dict(transit=transit_evidence,alignment=alignment_evidence,centering=centering_evidence)
+            if self.translation_target is not None:
+                self.evidence['translation_target']=self.translation_target
             from astribot_navigation_msgs.msg import PassageAssessment
             evidence=getattr(self.policy,'assessment',{});self.evidence.update(evidence)
             msg=PassageAssessment();msg.header.stamp=n.get_clock().now().to_msg();msg.header.frame_id=n.profile.tracking_frame
@@ -235,10 +277,15 @@ class CorridorAdapter:
             if envelope:
                 msg.envelope_epoch=envelope.epoch;msg.installed_geometry_hash=envelope.installed_geometry_hash
             msg.corridor_id=passage.corridor_id;msg.width_m=float(evidence.get('width',0.))
+            if candidate is not None:
+                msg.corridor_id=candidate.corridor_id;msg.width_m=candidate.width_m
+                msg.entry.x,msg.entry.y=candidate.entry;msg.exit.x,msg.exit.y=candidate.exit
+                msg.boundary_tracking_margin_m=candidate.boundary_margin_m+candidate.tracking_margin_m
+                msg.bidirectional=candidate.bidirectional
             msg.left_clearance_m=float(evidence.get('left_clearance',0.));msg.right_clearance_m=float(evidence.get('right_clearance',0.))
             msg.lateral_target_m=float(evidence.get('target_offset',0.))
             msg.heading_min_rad=-n.profile.narrow_heading_limit_rad;msg.heading_max_rad=n.profile.narrow_heading_limit_rad
             msg.in_place_rotation_allowed=bool(evidence.get('in_place_rotation_allowed',False))
-            msg.reverse_allowed=False  # Only the separately validated reverse-exit maneuver can grant this.
+            msg.reverse_allowed=passage.state=='TRANSLATE'
             msg.decision=passage.state;msg.reason=passage.selection.reason;self.assessment_pub.publish(msg)
         return passage

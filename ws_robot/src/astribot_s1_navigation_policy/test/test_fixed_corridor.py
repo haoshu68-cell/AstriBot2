@@ -146,11 +146,13 @@ class AdapterEntryTests(unittest.TestCase):
         tree=ast.parse(source.read_text())
         cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='CorridorAdapter')
         method=next(n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name=='advance')
-        namespace=dict(Time=lambda:None,replace=replace,Passage=Passage)
+        namespace=dict(Time=lambda:None,replace=replace,Passage=Passage,np=np,math=math,
+            yaw=lambda q:2*math.atan2(q.z,q.w))
         exec(compile(ast.Module(body=[method],type_ignores=[]),str(source),'exec'),namespace)
         self.advance=namespace['advance'];self.legacy_class=CorridorPolicy
 
-    def entry(self,side,*,fixed=True,mirror=False,sweep_clear=True,held_target=None,valid=True,repeats=1):
+    def entry(self,side,*,fixed=True,mirror=False,sweep_clear=True,held_target=None,valid=True,repeats=1,
+              translation=False,immediate=False,uncertain=False,previous_failure=False):
         import sys
         from unittest.mock import Mock,patch
         from astribot_s1_navigation_policy.robot_envelope import FIELDS
@@ -165,24 +167,56 @@ class AdapterEntryTests(unittest.TestCase):
             localization_epoch=1,envelope_epoch=1,clock_epoch=1)
         policy=(FixedCorridorPolicy if fixed else self.legacy_class)(profile,[corridor])
         policy.active=corridor;policy.direction_allowed=True;policy.task=('goal',1)
+        if previous_failure:policy.task=('previous',1);policy.failure='OLD_TASK_FAILURE';policy.wait_at=0.
         policy.entry_stopping=True;policy.centering_target=held_target
         target=policy.target_offset(corridor) if fixed else 0.
         node=SimpleNamespace(profile=profile,execution=SimpleNamespace(version=version),
+            active_path_message=None,
+            last_risk=SimpleNamespace(immediate=immediate,uncertain=uncertain),
             tf=SimpleNamespace(lookup_transform=lambda *args:None),
             point=lambda xyz,transform:xyz,path=((-1.,target),(4.,target)),
             last_robot=SimpleNamespace(x=-.8,y=side,yaw=0.,vx=0.,vy=0.,wz=0.),
             get_clock=lambda:SimpleNamespace(now=lambda:SimpleNamespace(to_msg=lambda:None)))
+        if translation:
+            points=((1.,target,0.),(.5,target,0.),(-1.2,target,0.),(-1.2,target,math.pi),(-1.5,target,math.pi))
+            node.active_path_message=SimpleNamespace(header=SimpleNamespace(frame_id='map'),poses=[
+                SimpleNamespace(pose=SimpleNamespace(position=SimpleNamespace(x=x,y=y),
+                    orientation=SimpleNamespace(z=math.sin(h/2),w=math.cos(h/2)))) for x,y,h in points])
+            node.last_robot.x=1.;node.last_robot.y=target
+            node.path=tuple((x,y) for x,y,h in points)
+            node.tf.lookup_transform=lambda *args:SimpleNamespace(transform=SimpleNamespace(
+                rotation=SimpleNamespace(z=0.,w=1.)))
         rotation=Mock(side_effect=lambda c,t,target=None:True if target is None else sweep_clear)
         adapter=SimpleNamespace(node=node,clock_epoch=1,automatic=False,fixed=fixed,
             annotations=(corridor,),policy=policy,evidence={},
             geometry_clear=lambda *args:True,rotation_clear=rotation,
+            fixed_sweep_clear=lambda *args:sweep_clear,
             assessment_pub=SimpleNamespace(publish=lambda msg:None))
-        message_module=SimpleNamespace(PassageAssessment=lambda:SimpleNamespace(header=SimpleNamespace()))
+        message_module=SimpleNamespace(PassageAssessment=lambda:SimpleNamespace(header=SimpleNamespace(),
+            entry=SimpleNamespace(),exit=SimpleNamespace()))
         with patch.dict(sys.modules,{'astribot_navigation_msgs.msg':message_module}):
             for _ in range(repeats):
-                result=self.advance(adapter,Selection('PROCEED',.2,'CLEAR'),valid,1.)
+                result=self.advance(adapter,Selection('HOLD',0.,'YIELD') if translation else
+                    Selection('PROCEED',.2,'CLEAR'),valid,1.)
         self.last_evidence=adapter.evidence
         return result,rotation
+
+    def test_translation_owns_the_admitted_heading_instead_of_tangent_forecast(self):
+        result,_=self.entry(0.,translation=True)
+        self.assertEqual(result.state,'TRANSLATE')
+        self.assertGreater(result.selection.speed,0.)
+        self.assertEqual(result.tracking_heading,0.)
+
+    def test_translation_keeps_live_sweep_current_collision_and_uncertainty_gates(self):
+        for failure in ({'sweep_clear':False},{'immediate':True},{'uncertain':True},{'valid':False}):
+            with self.subTest(failure=failure):
+                result,_=self.entry(0.,translation=True,**failure)
+                self.assertEqual(result.selection.motion,'HOLD')
+
+    def test_new_translation_task_does_not_inherit_startup_failure(self):
+        result,_=self.entry(0.,translation=True,previous_failure=True,valid=False)
+        self.assertEqual(result.selection.reason,'CORRIDOR_INPUT_UNAVAILABLE')
+        self.assertEqual(result.failure,'')
 
     def test_missing_input_heartbeat_evidence_stays_bounded(self):
         import json

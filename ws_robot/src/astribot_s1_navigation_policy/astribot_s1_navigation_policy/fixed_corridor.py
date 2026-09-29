@@ -58,11 +58,13 @@ class FixedCorridorPolicy(CorridorPolicy):
             seen=True
             if min(la+(lb-la)*lo,la+(lb-la)*hi)<low or max(la+(lb-la)*lo,la+(lb-la)*hi)>high:return False
         return seen
-    def evaluate(self,selection,robot,path,version,posture,valid,geometry_clear,now,rotation_clear=False,centering_clear=False):
+    def begin_evaluation(self,version,now):
         task=(version.goal_id,version.clock_epoch)
         if task!=self.task or (self.last_time is not None and now<self.last_time):
             self.active=None;self.permit=();self.failure='';self.wait_at=None;self.centering_target=None;self.task=task
         self.last_time=now
+    def evaluate(self,selection,robot,path,version,posture,valid,geometry_clear,now,rotation_clear=False,centering_clear=False):
+        self.begin_evaluation(version,now)
         if robot is None:return Passage(selection)
         if self.active is None:self.active,self.direction_allowed=self.choose(robot,path)
         if self.active is None:return Passage(selection)

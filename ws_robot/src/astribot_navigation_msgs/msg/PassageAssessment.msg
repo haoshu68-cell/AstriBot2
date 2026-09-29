@@ -2,6 +2,11 @@ std_msgs/Header header
 uint64 envelope_epoch
 string installed_geometry_hash
 string corridor_id
+# Recognized corridor bounds in header.frame_id, also available before a path exists.
+geometry_msgs/Point entry
+geometry_msgs/Point exit
+float64 boundary_tracking_margin_m
+bool bidirectional
 float64 width_m
 float64 left_clearance_m
 float64 right_clearance_m
