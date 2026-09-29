@@ -1,0 +1,263 @@
+{
+  "scope": "Gazebo T-shaped cross-section; diagnostic critic replay is not online MPPI execution; full passage acceptance FAILED",
+  "cases": {
+    "positive": {
+      "run": "/home/yjh/WorkSpace/astribot_whole_body_nav/runs/mppi_t_positive_20260929",
+      "domain": "99",
+      "arm_max_error_rad": 0.0008047250711042953,
+      "navigation_error": "RuntimeError('NAV_NOT_SUCCEEDED:6')",
+      "events": [
+        {
+          "kind": "formal_admission",
+          "wall": 95083.872018528,
+          "ros_s": 112.75500000000001,
+          "epoch": 94968278820971,
+          "hold_id": "583c9905-801e-4bae-9b9d-71e630afad3b_1_hold",
+          "request_id": "n4_fixed_486c32e5c667408ca505d453653835f2"
+        },
+        {
+          "kind": "nav_started",
+          "wall": 95084.02616206,
+          "ros_s": 112.90700000000001,
+          "target_map": [
+            1.8,
+            0.0,
+            0.0
+          ],
+          "pose_source": "/slam/pose"
+        },
+        {
+          "kind": "nav_terminal",
+          "wall": 95084.06727937,
+          "ros_s": 112.94900000000001,
+          "status": 6
+        },
+        {
+          "kind": "hold_released",
+          "wall": 95085.393526119,
+          "ros_s": 114.239,
+          "status": 5,
+          "reason": "TASK_CANCELED"
+        }
+      ],
+      "ack_consumers": [
+        "controller",
+        "global_costmap",
+        "local_costmap",
+        "planner",
+        "policy"
+      ],
+      "cleanup_complete": true,
+      "slam_stop": {
+        "passed": true,
+        "samples": 7,
+        "span_s": 0.6182942769955844,
+        "start_ros_s": 113.0,
+        "end_ros_s": 113.6,
+        "drift_m": 2.154019721357595e-09,
+        "rotation_rad": 9.28324807975521e-12,
+        "pose_source": "/slam/pose",
+        "frame": "map",
+        "command_max": null,
+        "command_observed": false,
+        "command_valid": true
+      },
+      "max_net_displacement_in_navigation_observation_m": 2.153496223181362e-08,
+      "actual_plan_count": 0,
+      "actual_command_count": 0,
+      "critic_replay": " gazebo_collision_geometry revision=dadd6607d101fd5315597bd53cf95d526b272402f14834f5cfd48d613100922d epoch=94968278820971\nactual_pose=0.00156728,0.000684347 obstacle_cell=1.8,0\nstationary_cost=0 direct_t_gate_cost=0 failed_batch=0\nlayered_sweep_blocked=0 full_projection_on_low_map_blocked=1 expected_blocked=0\n",
+      "independent_oracle": [
+        {
+          "layer": "low_obstacle",
+          "blocked": false,
+          "intersected_cell_count": 0
+        },
+        {
+          "layer": "main_nav",
+          "blocked": false,
+          "intersected_cell_count": 0
+        },
+        {
+          "layer": "torso",
+          "blocked": false,
+          "intersected_cell_count": 0
+        },
+        {
+          "layer": "head",
+          "blocked": false,
+          "intersected_cell_count": 0
+        },
+        {
+          "layer": "upper_extension",
+          "blocked": false,
+          "intersected_cell_count": 0
+        }
+      ],
+      "bag_counts": {
+        "/navigation/arm_hold": 937,
+        "/transformed_global_plan": 0,
+        "/path_tracking/phase": 0,
+        "/cmd_vel": 0,
+        "/height_maps/snapshot": 191,
+        "/trajectories": 0,
+        "/slam/pose": 910,
+        "/plan": 0,
+        "/tf": 15520,
+        "/clock": 90347,
+        "/tf_static": 10,
+        "/global_costmap/costmap": 48,
+        "/joint_states": 9034,
+        "/validation/t_gate_markers": 96,
+        "/navigation/envelope_applied": 6000,
+        "/navigation/envelope_v2": 3168,
+        "/navigation/geometry_state": 4545
+      },
+      "bag_total": 130806,
+      "remaining_owned_pids": [],
+      "sha256": {
+        "arm_result.json": "b0cb92edb44c9a4109e0e674f5aed5a89fb7336f02cb672667f24951f1d244a7",
+        "navigation/result.json": "aed6242a980e8d6c4fac0df792117dcb6bcc4d009021813703ea2bca8b22d812",
+        "empty_inventory/result.json": "c4dd584263edc3a70e91358f4fef6046de03788bacf3109a8c28d6b41d14e1cd",
+        "maps.cdr": "9f262792158fbe9410168705e652567d7fabc35e99e40c1ef0a3fa91fbeaf4d7",
+        "envelope.cdr": "50bab829d30b750bbb02a4d036e3b7ddd526366b359e50c6ef25222c33f570b9",
+        "pose.cdr": "f90a5cb30561cedc17a6d6918186ce18ceb4ba7089c9da4d4b8e6ccd2a6d720d",
+        "clock.cdr": "4041ed287954fdd0d03ac2f433e62399b5b1abf83bad69b66589e15ae6fac6ba",
+        "replay_result.log": "b62cf2d0f5276b84bf91641c5a7c8a9b5fc81f303dd9f7f5203f9046467b87b9",
+        "independent_sweep.json": "995512d40fa5772e4a51dfb88b63c3fd55684cb0a05a1d6d287b92ea48cae57c",
+        "world_reference.sdf": "4612fd7f3e8ad3e2967528c1b5a3c9b6b04d3aa2111beae5514e2ca791505700",
+        "t_gate.sdf": "042e3095140bcd5730d9e36f366fd1c6c1e191fd76c3b91cc113599108e92d01",
+        "stack/session.json": "d76197298bb8aea976b8841cda70a934c5dc0755b9d2f18f58288e40c30d9a27",
+        "motion_bag/metadata.yaml": "845948d66a76bc712c4baee3388a9dcfde913f037f922725164e06d8f13c3bfe",
+        "validation_screen.mp4": "8d5a40b96dab0a1e2dd410090fb6e730a2d71b1cf4bf3febe94105db9a1fda15"
+      }
+    },
+    "negative": {
+      "run": "/home/yjh/WorkSpace/astribot_whole_body_nav/runs/mppi_t_negative_retry_20260929",
+      "domain": "34",
+      "arm_max_error_rad": 0.00085281581152441,
+      "navigation_error": "RuntimeError('NAV_NOT_SUCCEEDED:6')",
+      "events": [
+        {
+          "kind": "formal_admission",
+          "wall": 95808.955161842,
+          "ros_s": 137.9,
+          "epoch": 95655135746311,
+          "hold_id": "d9024e63-0e86-44b7-b739-4ee0b8a7ddff_1_hold",
+          "request_id": "n4_fixed_5581c982ae8048abaf318c156a47069e"
+        },
+        {
+          "kind": "nav_started",
+          "wall": 95809.109519226,
+          "ros_s": 138.029,
+          "target_map": [
+            1.8,
+            0.0,
+            0.0
+          ],
+          "pose_source": "/slam/pose"
+        },
+        {
+          "kind": "nav_terminal",
+          "wall": 95809.15040408,
+          "ros_s": 138.053,
+          "status": 6
+        },
+        {
+          "kind": "hold_released",
+          "wall": 95810.604713329,
+          "ros_s": 139.25,
+          "status": 5,
+          "reason": "TASK_CANCELED"
+        }
+      ],
+      "ack_consumers": [
+        "controller",
+        "global_costmap",
+        "local_costmap",
+        "planner",
+        "policy"
+      ],
+      "cleanup_complete": true,
+      "slam_stop": {
+        "passed": true,
+        "samples": 7,
+        "span_s": 0.6978365219983971,
+        "start_ros_s": 138.0,
+        "end_ros_s": 138.6,
+        "drift_m": 6.151224458009244e-09,
+        "rotation_rad": 1.3992666247420512e-10,
+        "pose_source": "/slam/pose",
+        "frame": "map",
+        "command_max": null,
+        "command_observed": false,
+        "command_valid": true
+      },
+      "max_net_displacement_in_navigation_observation_m": 5.621658949264866e-08,
+      "actual_plan_count": 0,
+      "actual_command_count": 0,
+      "critic_replay": " gazebo_collision_geometry revision=2773ed971d3cfb4dfd8419697af6cd1e77b39be9beedb1f8ded292632751ccc2 epoch=95655135746311\nactual_pose=0.0012893,0.000785493 obstacle_cell=1.8,0\nstationary_cost=0 direct_t_gate_cost=inf failed_batch=0\nlayered_sweep_blocked=1 full_projection_on_low_map_blocked=1 expected_blocked=1\n",
+      "independent_oracle": [
+        {
+          "layer": "low_obstacle",
+          "blocked": false,
+          "intersected_cell_count": 0
+        },
+        {
+          "layer": "main_nav",
+          "blocked": false,
+          "intersected_cell_count": 0
+        },
+        {
+          "layer": "torso",
+          "blocked": true,
+          "intersected_cell_count": 136
+        },
+        {
+          "layer": "head",
+          "blocked": true,
+          "intersected_cell_count": 136
+        },
+        {
+          "layer": "upper_extension",
+          "blocked": false,
+          "intersected_cell_count": 0
+        }
+      ],
+      "bag_counts": {
+        "/validation/t_gate_markers": 114,
+        "/clock": 98118,
+        "/global_costmap/costmap": 58,
+        "/navigation/envelope_applied": 2691,
+        "/navigation/envelope_v2": 1365,
+        "/path_tracking/phase": 0,
+        "/plan": 0,
+        "/slam/pose": 989,
+        "/trajectories": 0,
+        "/robot_description": 1,
+        "/tf_static": 10,
+        "/tf": 17114,
+        "/joint_states": 9876,
+        "/height_maps/snapshot": 230,
+        "/cmd_vel": 0
+      },
+      "bag_total": 130566,
+      "remaining_owned_pids": [],
+      "sha256": {
+        "arm_result.json": "6837737d98e4f2df80e7dd21b001b45803e82fb4486e5f11ccb4e7cf97eef9f8",
+        "navigation/result.json": "cb4a250bef0d97af639bad7a49208d3b13fcafaa067aeaa24b26c663e00e1cbd",
+        "empty_inventory/result.json": "3de9eb9a27c292a594d971148feed2662a5e9ffa5c293b65f20c884c6d936bcf",
+        "maps.cdr": "fa8bcd8dad1bb62bf7ebf9ea5f374d1040b7062673d3924fbb36ea470859f57a",
+        "envelope.cdr": "b3d1c9350471fc79ac3e32633daac67e19a01ca0daf9058d4ca4f773a474c341",
+        "pose.cdr": "70370c3f4f635f6872ee2fcb7f792eb5101bebf5c401c225849db4ea5888347f",
+        "clock.cdr": "24dc4293ec26c51afe5807751623bce8049e00234a2d7a0936b5d0c65dffc468",
+        "replay_result.log": "b61d65a9d0186a6665a26b25fbb113ef5bc8a0353b289a96e281a3cfb2940a75",
+        "independent_sweep.json": "8f0593dbf193d84b62d97ece311cd8b95d7eaf31869ae78fc5c5af22267251f8",
+        "world_reference.sdf": "7a370ad1f837ba2a079ddd0cfbc76fba0da2741e7e77f0e143b9adf1b4663e14",
+        "t_gate.sdf": "cc3b04bc899a9e924ffca780179fed64e9fe60d2316f80f4bccea44d6efd0778",
+        "stack/session.json": "4029766442d6641d94c4778aeab33cceb7f23b9220c7d3623811c606cfaf1ca7",
+        "motion_bag/metadata.yaml": "0202515e0781187e8433394fa3bde146a71dfc77d371a3318fb76ea496f7b854",
+        "validation_screen.mp4": "cc360ba01a2ef8793910af95ba27a99a33ddb9b31561cf8ceb465b5e8732ce33"
+      }
+    }
+  }
+}
