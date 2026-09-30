@@ -1,5 +1,38 @@
 # 张臂 T 形通道验证（2026-09-29）
 
+## 2026-09-30 新增明确对照用例
+
+`SC-T-GATE-HEIGHT-SEPARATION` 对应用户要求：底盘可通过、双臂也可通过、分层碰撞检查允许，而整机二维包络不允许。复用下文正向物理场景，不重复计算仿真场景数；本次新增持久化 C++ 回归断言。
+
+| 对照对象 | 含净空宽度 | 对应通道净宽 | 预期 |
+|---|---:|---:|---|
+| 实测底盘包络 | 约 0.793 m | 下部 1.0 m | 可过 |
+| 实测双臂高度层包络 | 约 1.779 m | 上部 2.3 m | 可过 |
+| 整机分层包络 | 按各高度分别检查 | 同一 T 形通道 | 可过 |
+| 整机二维投影包络 | 约 1.779 m | 与下部 1.0 m 低墙也作碰撞检查 | 不可过 |
+
+此处“整体包络”特指现有二维整机投影，不指正确保留高度信息的三维模型；上部的宽度被投影至低墙高度，造成保守拒绝。
+
+场景卡：
+
+- 需求/主张：`R-HEIGHT-SEPARATION` → `C-BASE-ARM-CLEAR-PLANAR-BLOCKED` → `SC-T-GATE-HEIGHT-SEPARATION`；风险为低墙与抬起的双臂二维重叠导致误拒绝。
+- 基线：独立分支 `codex/fixed-posture-whole-body`，原场景及记录基线 `a4e5131d`；仅修改已有 `layered_alignment_collision_test.cpp`，不修改控制或碰撞算法。
+- 初态与刺激：无载荷、双臂固定；相同路径从 (0,0,0) 直行至 (1.8,0,0)。依次检查整机分层连续扫掠、只保留底盘层、只保留臂层；再检查整机二维投影在起点、通道中点 x=0.95 m 和终点的碰撞。预期仅二维投影的中点碰撞。最后把低墙的占据范围加入臂层，预期分层扫掠变为碰撞，防止“检查始终放行”的假阳性。
+- 几何核心夹具：底盘宽 0.8 m、臂层宽 1.8 m，均含净空，是简化矩形测试输入，不冒充实际机器人多边形；地图分辨率 0.05 m，墙体覆盖的栅格保守占据。下部边界距地 0.68 m；真实低墙高 0.65 m。非临界间隙用例，本次未增加阈值扫描或性能主张。
+- 独立判据：矩形宽度关系 `0.8 < 1.0 < 1.8 < 2.3`；实际原始多边形另有下文 GEOS 独立核对。核心夹具不替代真实机器人模型。
+- 执行预算/所有权：离线核心测试一次、无 ROS 节点和仿真启动，不取得机器人控制权；单次命令外部限时 30 s。只写本工作树独立 build 和证据目录，无需撤销物理注入。
+- 当前结果：离线 `readiness=READY, execution=PASS`，`functional_outcome=预期四项对照成立`，`safety_invariant=负向障碍被拒绝`，`performance_outcome=未验收`。2026-09-30 新增断言后完整 `layered_alignment_collision` 测试 1/1 通过，包含原有高度、扫掠、未知栅格、坐标及版本核对。
+- 证据：`/home/yjh/WorkSpace/astribot_whole_body_nav/runs/t_gate_height_regression_20260930/{build.log,ctest.log}`。输出 `base=clear arms=clear layered=clear planar=blocked; raised obstruction=blocked`。
+- 整栈状态沿用 2026-09-29 实测 `execution=FAIL, functional_outcome=非预期拒绝`；本次没有重新驱动机器人，也没有把离线通过记作实际穿行成功。真机 `NOT_RUN`，无真机结论。
+
+复现已有独立构建中的用例：
+
+```bash
+cd /home/yjh/WorkSpace/astribot_whole_body_nav
+cmake --build runs/whole_body_nav/build/astribot_s1_path_tracking --target layered_alignment_collision_test -j2
+ctest --test-dir runs/whole_body_nav/build/astribot_s1_path_tracking -R '^layered_alignment_collision$' --timeout 30 --output-on-failure -V
+```
+
 ## 结论
 
 双臂已通过 MoveIt 规划及真实仿真关节控制张开、抬升至胸前。分层碰撞插件在两组记录数据的回放中正确区分“底盘和双臂均可过”与“底盘可过、双臂会碰撞”；独立 GEOS 几何核对结果一致。

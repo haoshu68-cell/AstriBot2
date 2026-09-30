@@ -42,6 +42,57 @@ struct Fixture {
 };
 int main() {
   {
+    // SC-T-GATE-HEIGHT-SEPARATION: 1.0 m below the arms, 2.3 m at arm height.
+    // Conservative rectangular envelopes include clearance: base 0.8 m,
+    // raised arms 1.8 m. This is a geometry fixture, not a measured robot model.
+    Fixture f;
+    f.maps->height_edges={.05,.68,1.63,2.30};
+    f.envelope->installed_footprint=rectangle(.55,.9);
+    for(size_t i=0;i<3;++i) {
+      f.envelope->height_slices[i].z_min_m=f.maps->height_edges[i]-.1;
+      f.envelope->height_slices[i].z_max_m=f.maps->height_edges[i+1]-.1;
+    }
+    f.envelope->height_slices[0].footprint=rectangle(.4,.4);
+    f.envelope->height_slices[1].footprint=rectangle(.55,.9);
+    // Occupy every raster cell intersecting either side of the physical gate.
+    for(size_t layer=0;layer<2;++layer) {
+      auto &g=f.maps->grids[layer];const double resolution=g.info.resolution;
+      const double inner_y=layer?1.15:.5;
+      for(unsigned iy=0;iy<g.info.height;++iy)for(unsigned ix=0;ix<g.info.width;++ix) {
+        const double x=g.info.origin.position.x+ix*resolution;
+        const double y=g.info.origin.position.y+iy*resolution;
+        if(x<1.125&&x+resolution>.775&&
+            ((y<1.45&&y+resolution>inner_y)||(y<-inner_y&&y+resolution>-1.45)))
+          g.data[iy*g.info.width+ix]=100;
+      }
+    }
+    f.rehash();
+    assert(!f.snapshot().edgeCollision(0.,0.,0.,1.8,0.,0.));
+    const auto arm=f.envelope->height_slices[1].footprint;
+    f.envelope->height_slices[1].footprint.points.clear();f.rehash();
+    assert(!f.snapshot().edgeCollision(0.,0.,0.,1.8,0.,0.)); // Base alone.
+    f.envelope->height_slices[1].footprint=arm;
+    const auto base=f.envelope->height_slices[0].footprint;
+    f.envelope->height_slices[0].footprint.points.clear();f.rehash();
+    assert(!f.snapshot().edgeCollision(0.,0.,0.,1.8,0.,0.)); // Raised arm layer alone.
+    f.envelope->height_slices[0].footprint=base;f.rehash();
+    const auto &g=f.maps->grids[0];
+    nav2_costmap_2d::Costmap2D planar(g.info.width,g.info.height,g.info.resolution,-2.5,-2.5,0);
+    for(unsigned iy=0;iy<g.info.height;++iy)for(unsigned ix=0;ix<g.info.width;++ix)
+      if(g.data[iy*g.info.width+ix]>=65)planar.setCost(ix,iy,254);
+    geometry::Polygon full;
+    for(const auto &p:f.envelope->installed_footprint.points) {
+      geometry_msgs::msg::Point v;v.x=p.x;v.y=p.y;full.push_back(v);
+    }
+    assert(!geometry::collision(planar,full,0.,0.,0.));
+    assert(geometry::collision(planar,full,.95,0.,0.)); // Same path crosses this pose.
+    assert(!geometry::collision(planar,full,1.8,0.,0.));
+    // Move the same side obstacles up to the arm layer: passage must be rejected.
+    f.maps->grids[1].data=g.data;f.maps->map_revision="t-gate-arm-blocked";
+    assert(f.snapshot().edgeCollision(0.,0.,0.,1.8,0.,0.));
+    std::cout<<"SC-T-GATE-HEIGHT-SEPARATION: base=clear arms=clear layered=clear planar=blocked; raised obstruction=blocked\n";
+  }
+  {
     Fixture f;f.obstacle(0,.55,0.);assert(!f.snapshot().collision(0.,0.,0.));
     f.obstacle(1,.55,0.);assert(f.snapshot().collision(0.,0.,0.));
   }
