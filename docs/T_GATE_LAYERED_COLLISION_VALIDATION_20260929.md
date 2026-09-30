@@ -97,6 +97,37 @@ T 指从正面观察的通道截面。复用原有仓库世界，增加静态物
 
 ## 整栈阻塞原因与后续最小范围
 
+### 多地图融合的配置说明
+
+Nav2 的多个 Costmap Layer 可以合成一张全局代价地图。当前 MPPI 配置已启用 `static_layer`、`obstacle_layer`、`zone_layer`、`inflation_layer`。若仅增加一张普通二维障碍地图，可参考以下片段，保留现有其他插件参数：
+
+```yaml
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_maximum: true
+      plugins:
+        - static_layer
+        - additional_static_layer
+        - obstacle_layer
+        - zone_layer
+        - inflation_layer
+      static_layer:
+        plugin: nav2_costmap_2d::StaticLayer
+        map_topic: /map
+        map_subscribe_transient_local: true
+      additional_static_layer:
+        plugin: nav2_costmap_2d::StaticLayer
+        map_topic: /additional_obstacle_map
+        map_subscribe_transient_local: true
+```
+
+这是说明示例，**没有写入运行配置，也没有新增 `/additional_obstacle_map` 发布者**。Humble 的 StaticLayer 从 costmap 节点级读取 `use_maximum`；每个插件实例分别读取自己的 `map_topic`。参见 [Nav2 Humble StaticLayer 源码](https://github.com/ros-navigation/navigation2/blob/humble/nav2_costmap_2d/plugins/static_layer.cpp)。最小接入先统一坐标系、分辨率、原点和尺寸，确认 QoS，重新配置生命周期节点后检查障碍增加、移除及未知区域语义。
+
+这类逐格融合不能直接替代高度分层检查：低墙和抬起的双臂仍会在二维投影上重叠。T 场景需要将每层环境地图与同高度的机器人包络配对，按候选底盘 `(x,y,yaw)` 变换后检查，再合并各层碰撞结果。固定双臂可以缓存几何，但底盘朝向仍会改变碰撞结果。普通二维主代价地图无法精确表达所有朝向的整机可行性。
+
+下一步应复用已有 `LayeredCollisionSnapshot` 接入全局路径校验，并核对搜索阶段的代价和 footprint 是否提前封死通道。仅改末端路径校验只能拒绝不安全路径，不能保证搜索会找到存在的安全路径；本分支尚未完成该接入。以下保留实际阻塞证据。
+
 `ExactGoalPlannerBase::collisionIndex()` 在 `ws_robot/src/astribot_s1_path_tracking/src/exact_goal_planner.cpp` 约 292 行读取 `getRobotFootprint()`，对二维 costmap 检查整机投影。路径创建在约 116 行调用该检查，约 182 行抛出本次实际记录的 `PATH_QUALITY_UNSAFE`。低墙与张开的双臂在二维投影重叠，即便它们高度不相交，仍可能被拒绝。
 
 本次代码链路、实际规划器拒绝日志以及“同一条直线在分层地图可过、在整机二维投影不可过”的对照相互吻合。没有记录被拒绝路径的全部内部候选，不能进一步声称已逐点复现规划器的 segment=3。
