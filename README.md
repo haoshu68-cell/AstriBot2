@@ -16,11 +16,11 @@
 
 &nbsp;
 
-For the current architecture, simulation, and hardware procedures, start with the [Chinese reference and operations manuals (2026-09-17)](docs/manuals/README.md), including configuration and validation boundaries.
+For the current architecture, simulation, and hardware procedures, start with the [Chinese architecture and operations manuals (2026-09-29)](docs/manuals/README.md), including configuration and validation boundaries.
 
 For earlier staged simulation startup, event-driven replanning, and endurance measurements, see the [path tracking runbook](docs/PATH_TRACKING_ENDURANCE.md).
 
-For the ARM64 robot at `10.249.22.137`, use the [deployment and operation manual](docs/ROBOT_DEPLOYMENT_20260915.md).
+For the ARM64 robot at `10.249.22.137`, use the [hardware operation manual](docs/manuals/HARDWARE_OPERATIONS.md).
 
 Runtime logging uses **spdlog**. Build `astribot_logging` before running the SDK;
 see [logging setup and configuration](docs/LOGGING.md).

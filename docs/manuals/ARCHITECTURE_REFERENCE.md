@@ -1,219 +1,194 @@
-# 架构设计参考手册
+# AstriBot 总体架构
 
-2026-09-18：SLAM 接入已改为仿真/真机共用 Voxel-SLAM；接口、命令与逐项验收状态见[统一 SLAM 参考](../SLAM_INTEGRATION_REFERENCE_20260918.md)。旧中转链已删除；真机尚未实测。
+核对日期：2026-09-29；源码基点 `2c5354c3fe2d4df46103684182c1ab852a1cf64e`，分支 `chassis-effort-drive`。范围为当前检出仓库，不包括其他 worktree 未合入的能力。运行产物可能来自私有 overlay，HEAD 不能单独证明已经部署。
 
-版本范围与验收边界见[手册首页](README.md)。本文主体为 2026-09-18 的架构记录；2026-09-22 本次只更新源码索引、包数表述和已迁移的仲裁入口，没有重新验收所有参数、接线及功能。定位最新实现先查[项目源码入口索引](../../.agents/skills/astribot-architecture-design/references/project-map.md)，再核对实际源码、launch 和安装产物；不能把下文历史“当前”表述当作本轮实时验证。
+阅读入口：[模块细化](MODULE_ARCHITECTURE.md) · [完整包索引](PACKAGE_INDEX.md) · [仿真操作](SIMULATION_OPERATIONS.md) · [真机操作](HARDWARE_OPERATIONS.md)。
 
-整机层面的缺口、整合/拆分建议及分阶段实施方案见[轮式双臂整体架构审查](../WHOLE_ROBOT_ARCHITECTURE_REVIEW_20260917.md)。该方案是后续设计，不能当作当前已实现能力。
+## 1. 状态口径
 
-## 1. 总体结构与控制权
+| 标记 | 含义 |
+|---|---|
+| 已实现 | 当前源码存在实现及接口；不自动表示默认启用或已验收 |
+| 部分实现 | 子功能或限定场景已实现，目标闭环仍缺接线或功能 |
+| 未实现 | 当前源码未发现对应生产实现；接口、设计或测试夹具可能存在 |
+| 待验收 | 实现存在，指定场景缺少通过证据；与未实现不同 |
+| 历史验证 | 只适用于记录对应的版本、输入、参数及场景，本轮未重跑 |
+
+本次整理不启动/停止 ROS、Gazebo 或真机，不产生新的运动验收。简单启动参数转发修复与文档检查结果见[核验记录](DOCUMENTATION_AUDIT_20260929.md)。
+
+## 2. 总架构图
+
+[打开可缩放的总览 SVG](ARCHITECTURE_OVERVIEW.svg)；下方保留可编辑 Mermaid 源图。
+
+总图按职责分组，组间箭头表示主要运行流向；精确接口和控制权见第 3、4 节。M 编号与模块细化一一对应，分组不是新增的统一服务，也不表示全部组件默认启用。
 
 ```mermaid
-flowchart TD
-    Sensors[雷达 / 相机 / IMU / 厂家反馈] --> Perception[感知适配 / 自滤 / 扫描 / 定位 / 地图]
-    Perception --> World[观测融合 / 健康 / 时间与坐标 / 机器人包络]
-    Perception --> Costmap[全局与局部代价地图]
-    Human[人工目标 / 路线 / 探索] --> Arbiter[TaskArbiter 任务仲裁]
-    Arbiter --> BT[Nav2 BT 任务执行与路径提交]
-    Costmap --> Planner[ExactGoalPlanner / Smac]
-    Planner --> BT
-    World --> Policy[P2-P5 策略 / 路由联合决策]
-    Policy -->|候选与约束| BT
-    BT --> Tracking[ArrivalController / ThreePhase / MPPI或RPP]
-    Tracking --> Smooth[速度平滑 / 姿态检查 / 双臂约束]
-    Smooth --> Final[策略开启时 FinalProtection]
-    Smooth -->|策略 off| Actuator[Gazebo effort 或真机 SDK 桥接]
-    Final --> Actuator
-    Actuator -->|实际运动反馈| Perception
+flowchart TB
+  Human["操作员 / 外部任务意图"] --> UI["M14 操作台与控制网关"]
+  subgraph Tasks["任务与资源"]
+    direction LR
+    M06["M06 导航仲裁 / 路线 / 探索"]
+    M12["M12 搬运事务 / 资源保持"]
+    M06 ~~~ M12
+  end
+  subgraph Planning["决策、规划与控制"]
+    direction LR
+    M07["M07 导航策略 / 上肢限速 / 社交观测"]
+    M08["M08 路径规划 / 跟踪 / 脱困 / 工位对齐"]
+    M10["M10 MoveIt / MTC 操作规划"]
+    M07 ~~~ M08 ~~~ M10
+  end
+  subgraph World["独立的观测、地图与状态来源"]
+    direction LR
+    M03["M03 雷达 / RGB-D / 相机健康 / 同步"]
+    M04["M04 SLAM / 导航栅格 / 分层地图"]
+    M05["M05 地图资产 / 工位 / 禁行区"]
+    M09["M09 载荷账本 / 整机几何 / 包络"]
+    M11["M11 抓取候选 / 物体 6D"]
+    M03 ~~~ M04 ~~~ M05 ~~~ M09 ~~~ M11
+  end
+  subgraph Devices["仿真与真机的不同执行适配"]
+    direction LR
+    M02["M02 Gazebo / 传感器驱动 / effort 轮控 / JTC"]
+    M13["M13 轨迹与底盘桥接 / 厂家 SDK"]
+    M02 ~~~ M13
+  end
+  subgraph Common["跨模块基础"]
+    direction LR
+    M01["M01 模型 / 标定 / 设备配置"]
+    M15["M15 日志 / 诊断采集 / 验证 / 部署"]
+    M16["M16 领域消息 / Action / 服务契约"]
+    M01 ~~~ M15 ~~~ M16
+  end
+  UI -->|"导航等现有命令"| Tasks
+  Tasks -->|"规划请求与执行上下文"| Planning
+  World -->|"观测、地图、包络与版本"| Planning
+  Planning -->|"受权底盘速度与轨迹执行链"| Devices
+  Devices --> Robot["仿真世界或真实设备"]
+  Common ---|"模型、类型与证据基础"| World
 ```
 
-核心原则：探索负责选目标，仲裁器负责目标所有权，规划负责路径，跟踪器负责速度，末级保护负责最终运动许可，执行适配负责与设备交互。感知、视觉适配器、候选规划器不能绕过这些层直接写 `/cmd_vel`。
+总图省略测量反馈回路，具体生产者/消费者见模块图。M14 的原生完整搬运入口尚未接通；M12 当前由专用客户端调用。MTC 返回计划，执行仍由任务层拥有。
 
-此处仲裁器的范围是**导航任务**。当前没有统一持有底盘、双臂、躯干和夹爪的整机任务层；搬运示例也不能替代这样的资源协调。MoveIt 闭链规划、导航到位和 SDK 桥接分别可用，不等于真机同步双臂搬运或边走边操作已经验收。
+当前没有一个统一的“世界模型服务器”。SLAM、二维 costmap、分层占据、MoveIt PlanningScene、附件账本各有所有者，通过 frame、时间、对象 ID 和版本关联。覆盖全部直接 SDK/控制器入口的强制资源仲裁也尚未实现。
 
-## 2. 仓库与模块职责
+## 3. 实际控制链与控制权
 
-包清单随原生模块迁移和领域扩展变化，以 `ws_robot/src` 中的 `package.xml` 及实际构建选择为准，不使用固定包数判断能力。`build/install/log` 是构建产物；`tools` 是编排、部署和诊断入口；根目录 SDK 原生库与 ROS 工作区分开管理。下表为领域职责概览，不是完整包清单。
+### 底盘
 
-| 模块 | 负责 | 交互与边界 |
-|---|---|---|
-| `astribot_s1_description`、根目录 `astribot_config` | 模型、连杆与设备配置 | TF、关节名和实体外形的共同依据 |
-| `astribot_s1_perception` | 感知组合启动、地图来源和定位接线 | 具体运行节点按源码索引与 launch 核对；不派发导航目标 |
-| `astribot_s1_perception_components` | C++ 自滤、切片扫描、Livox 转换 | 高频数据处理与 ROS 组件 |
-| `astribot_autonomy_core` | 前沿搜索、几何和足迹等纯算法 | 不依赖 ROS 节点生命周期 |
-| `astribot_s1_exploration` | 前沿候选、目标验证、探索状态机 | 通过探索 Action 入口请求导航，不直接控底盘 |
-| `astribot_navigation_msgs` | 任务、路径风险、约束、健康、包络、起步动作契约 | 跨模块接口；修改需重建依赖包 |
-| `astribot_s1_navigation_policy` | 观测融合、让行、路由联合决策、窄通道、末级保护 | 领域算法与 ROS 适配分离 |
-| `astribot_s1_task_arbiter_native`、`astribot_s1_navigation_policy_native` | 原生导航仲裁及策略/保护实现入口 | 核对所用 launch 与安装产物；目录存在不代表整栈验收 |
-| `astribot_s1_navigation` | Nav2 launch、参数、BT、速度链接线 | 选择实现并配置，不复制控制律 |
-| `astribot_s1_path_tracking` | 精确终点规划、ThreePhase、到位精调、检查器、平滑器 | 运动控制与控制侧不可执行异常 |
-| `astribot_s1_dynamics_coupling` | 双臂姿态/运动引起的底盘约束 | 接入既有速度链，不能产生第二个运动主控 |
-| `astribot_s1_manipulation`、`astribot_s1_moveit_config` | 双臂任务和 MoveIt 配置 | 与导航通过包络和任务边界协作 |
-| `astribot_trajectory_bridge`、`astribot_bridge_msgs` | SDK 适配、状态反馈、轨迹与底盘执行 | 保留使能、时效、偏差及停车保护 |
-| `astribot_s1_gazebo_bringup`、`astribot_s1_chassis_effort_drive` | 仿真场景与底盘动力学执行 | 替换真机执行层，不替代真实执行器标定 |
-| `astribot_logging` | 统一日志、会话捕获、目录索引 | 运行链共同基础设施 |
-| `livox_ros_driver2`、仓库场景包 | 第三方依赖 | 真机跳过编译部分包不等于包已弃用 |
-
-探索主流程为候选生成→验证→导航→到位/驻留→下一候选，异常进入暂停/失败处理。当前增加了候选终点足迹检查与回退候选参数；它只提高目标选择质量，不能代替 Nav2 路径及执行碰撞检查，也不能从源码存在推导真机探索已通过新回归。
-
-`manipulation` 当前还包含导航/抓放/附着物/搬运示例。其 `planning_demo.launch.py` 读取 `moveit_config`，后者又依赖 `manipulation` 插件，形成包清单未完整表达的运行时双向依赖。建议将该组合入口上移到系统 bringup，算法与配置继续分开；该迁移尚未实施。
-
-旧包退役（2026-09-17）：`astribot_s1_autonomy` 已删除，组合 `autonomy_bringup.launch.py` 和 RViz 配置迁入 `astribot_s1_exploration`，配置直接读取实际归属包。4 个旧 launch 转发、4 个可执行别名及旧包组件索引不再提供。新包内的 `astribot_s1_autonomy::` 类名、include 路径和组件类 ID 保持，算法和参数未随包退役改动。外部旧命令须按[迁移说明](../AUTONOMY_PACKAGE_RETIREMENT_20260917.md)切换；退役验证与运动性能验收分开记录。
-
-## 3. 任务与路径的唯一所有权
-
-| 来源 | 对外 Action | 仲裁优先级 |
-|---|---|---:|
-| 人工 | `/navigate_to_pose`、`/navigate_through_poses` | 100 |
-| 路线集成接口 | `/route/navigate_to_pose`、`/route/navigate_through_poses` | 50 |
-| 探索 | `/exploration/navigate_to_pose`、`/exploration/navigate_through_poses` | 10 |
-| Nav2 执行后端 | `/navigation_executor/navigate_to_pose` 等 | 仲裁器后端，业务方不直接调用 |
-
-优先级与目标切换的源码入口已迁为 [C++ task_arbiter_node.cpp](../../ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp)；使用时另核对 launch 和实际安装目标。新所有权需要经过旧执行取消/交接；租约、任务标识、路径版本、地图/包络版本用于使过期请求失效。
-
-**现有测试工具的实际行为**：`run_waypoint_route.py` 和真机精度脚本使用人工 `/navigate_to_pose` 入口，不是表中的 50 级路线接口。不要与 RViz 或探索同时派发目标。
-
-`/plan` 可包含规划候选，不能一概当作正在执行的路径。策略使用控制器发布的 `/path_tracking/active_path` 及任务上下文绑定执行证据；候选通过校验后仍须交回 BT 提交。
-
-## 4. 事件重规划、让行和绕行
-
-当前单目标 BT 为 `PolicyExecution → KeepSafePath / ComputePathToPose → FollowPath`，没有定时 `RateController` 强制周期重规划。检查周期仍会运行，但**检查路径不等于重新生成路径**。
-
-目标变化、原路径无效/碰撞风险及相应策略事件触发路径处理。控制器输入失效仍会停车，不受“禁止定时重规划”影响。
-
-| 阶段 | 当前接入内容 | 操作边界 |
-|---|---|---|
-| `off` | 原跟踪、任务仲裁、BT 安全路径保留/事件检查 | 仿真和真机日常基线 |
-| `p2` | 观测融合、风险、限速、让行与 FinalProtection | 不引入 P3 动态路由联合请求 |
-| `p3` | P2 + 原路径/局部绕行/全局候选联合复核、起步恢复 | 默认仿真 profile，真机不能只改阶段开关 |
-| `p4` | P3 + 人工通道标注 | 必须提供合法 `corridor_file` |
-| `p5` | P4 相关策略 + 地图自动通道候选 | 自动候选仍需准入；不是无条件放行 |
-
-联合决策考虑实测运动的停车扫掠、未来冲突位置、观测新鲜度、让行预算、局部重接条件和全局候选。远处路径占据不应直接等价为当前碰撞；只有证据绑定当前路径且剩余制动空间足够，才允许谨慎接近。
-
-候选几何服务的 `geometry_valid` 不是执行许可。候选还需检查起始转向、足迹/动态预测、曲率和路径衔接、目标/地图/包络版本及证据时效。已有安全原路径及可验证的低速原路径应优先保留；曲率异常候选不得直接覆盖执行路径。具体门槛见 [ExactGoalPlanner](../../ws_robot/src/astribot_s1_path_tracking/src/exact_goal_planner.cpp)、[候选安全](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/candidate_safety.py) 和 [RouteCoordinator](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/route_coordinator.py)。
-
-窄通道重建仍存在未验收项，不能把这些原则当成所有场景已完全满足的证明。
-
-## 5. 跟踪、到位与执行链
-
-`ArrivalController` 继承恢复保留的 `ThreePhaseController`。捕获区外复用起始对齐、MPPI/RPP 跟踪和接近段控制；捕获区内执行 XY/yaw 精调、制动与停稳确认。独立 ThreePhase 插件仍存在，不能宣称已经整体替换或废弃。
-
-典型速度流：
-
-```text
-controller_server / behavior_server
-  → /cmd_vel_nav_body_raw
-  → velocity_smoother（精度档采用 jerk_velocity_smoother）
-  → /cmd_vel_nav_body
-  → cmd_vel_body_to_world_node（坐标转换开关与姿态检查）
-  → /cmd_vel_pre_arm_coupling（启用双臂耦合时）
-  → /cmd_vel_policy_input → FinalProtection → /cmd_vel（策略开启）
-  → /cmd_vel（策略 off）
-  → 仿真 effort / 真机 chassis bridge
+```mermaid
+flowchart LR
+  O["人工 100 / 路线 50 / 探索 10"] --> A["TaskArbiter"]
+  A -->|"navigation_executor Action"| B["Nav2 BT"]
+  B --> P["规划器 / 路径检查"]
+  P --> C["controller_server"]
+  R["策略 / 包络 / 上肢限速"] -->|"约束"| B
+  R --> C
+  C -->|"cmd_vel_nav_body_raw"| S["速度平滑"]
+  S -->|"cmd_vel_nav_body"| T["坐标转换 / 姿态检查"]
+  T -->|"cmd_vel"| E["仿真轮控 或 真机 chassis bridge"]
 ```
 
-节点名称不证明坐标转换已启用，须读取 `enable_body_to_world`；真机入口使用机身速度。真机桥接不再重复实现导航位置闭环或二次速度/加速度整形，SDK 偏差、超时、定位/扫描有效性及使能保护仍保留。绕开上游平滑器直接写速度会绕开相应运动约束。
+依据：[导航 launch](../../ws_robot/src/astribot_s1_navigation/launch/navigation.launch.py)、[仲裁器](../../ws_robot/src/astribot_s1_task_arbiter_native/src/task_arbiter_node.cpp)、[约束节点](../../ws_robot/src/astribot_s1_navigation_policy_native/src/navigation_constraint_node.cpp)。
 
-到位必须同时满足平面欧氏误差、最短角度误差、有效新鲜位姿、可执行足迹和连续停稳证据。位置达标不锁存，漂移后重新处理。两种精度档使用源时间推进的位姿窗口检查停稳；不能以单帧零速度代替。
+- TaskArbiter 只仲裁导航 Action，不是整机所有关节的资源服务器。
+- 上肢/载荷的限速、停车和不可执行判断前置到导航规划及控制约束。双臂耦合节点发布上游限速，不发布底盘速度。旧手册中的独立 `FinalProtection → /cmd_vel` 末级链不再适用；同名 core 文件仍存在不代表该节点部署。
+- 普通 BT 为 PolicyExecution → 起点准入/必要脱困 → 包络准入 → 保留安全路径或重新规划 → FollowPath；工位专用树另有受阻恢复和独立对齐。
+- `/plan` 可能是候选，`/path_tracking/active_path` 才关联当前执行路径。任务层不自行发布底盘速度。
+- `/odom` 保留正常导航控制职责；运动、漂移和停稳监测要求只用 `/slam/pose`。尚未迁移的工具见第 8 节。
 
-| 配置 | standard | simulation_precision | hardware |
-|---|---|---|---|
-| XY / yaw 容差 | 3 cm / 1.5° | 2 mm / 0.1° | 3 cm / 1.5° |
-| 公共 `arrival_motion.yaml` | 不加载 | 加载 | 加载 |
-| 当前微调预算 | 基础 YAML 45 s | 公共覆盖 135 s | 公共覆盖 135 s |
-| 精度定位条件 | 按实际 TF/来源 | 必须 `use_sim_time=true`；用于真值基线 | 实际定位，不是地面真值 |
-| 低速响应功能 | 默认 off | 默认 off | monitor |
+### 操作与搬运
 
-公共精调速度为 0.008～0.06 m/s、0.02～0.15 rad/s；这些是有运动请求时的下限/上限，HOLD、停稳及完成仍输出零。公共正常平移加速度/jerk 为 0.25 m/s² / 0.5 m/s³，角加速度/jerk 为 0.6 rad/s² / 1.2 rad/s³；停车约束另行生效。真机终端制动另有执行器响应和余移模型，不宜用仿真值覆盖。
+```mermaid
+flowchart LR
+  Req["固定工位任务"] --> Owner["trajectory_executor / 资源 journal"]
+  Owner --> Plan["MTC 只规划"]
+  Plan --> Check["碰撞 / 奇异 / 限位 / 场景绑定"]
+  Check --> Owner
+  Owner -->|"受管 FJT"| JTC["双臂 / 双夹爪 / 头 / 躯干"]
+  JTC -->|"UUID 终态与关节实测"| Hold["ArmHold"]
+  Hold --> Env["固定包络协调"]
+  Inv["仿真实际附件库存"] --> Ledger["账本与独立 Scene 回读"]
+  Ledger --> Env
+  Env -->|"同版本确认"| Nav["Nav2 导航阶段"]
+  Nav -->|"终态与 SLAM 停稳"| Owner
+```
 
-## 6. 感知、地图与多传感器扩展
+`hold_executor` 与 `trajectory_executor` 由同一 [hold_executor.cpp](../../ws_robot/src/astribot_s1_transport_native/src/hold_executor.cpp) 按不同编译定义生成。fixed_v2 使用原生执行器，MoveIt 只规划；legacy 保留 Python 搬运编排与 MoveIt 执行。合作式资源锁、租约和控制器检查不等于 DDS 身份鉴权或真机执行端 epoch 栅栏。
 
-| 数据 | 仿真基线 | 当前真机入口 |
+## 4. 数据与坐标契约
+
+| 接口 | 生产者 → 消费者 | 关键语义 |
 |---|---|---|
-| 地图 | `/map`，固定地图 | `astribot_s1_slam` → `astribot_s1_mapping` → `/map` |
-| 扫描 | `/scan_from_cloud` | `/scan_from_cloud` |
-| 定位/里程计 | 真值链及 `/odom` | Voxel 全局 TF；只读厂家 SDK `/odom` |
-| 基座 | `astribot_torso_base` | `astribot_torso_base` |
-| 时间 | ROS `/clock` | ROS 实际时钟；接收时效另检查 |
+| `/slam/pose` | Voxel → 停稳/搬运/工位控制 | PoseWithCovarianceStamped，map 下底盘；固定包络使用 SensorDataQoS 接收；同名 frame 不证明原点一致 |
+| `/odom` | 仿真/SDK → Nav2 | 正常控制输入；不能代替 SLAM 停稳证据 |
+| `/map` | mapping 或静态地图提供者 → costmap/探索 | OccupancyGrid；一个活动来源，静态图采用持久订阅 |
+| `/height_maps/snapshot` | 档案切片或 Gazebo 切片 → 分层检查 | HeightSliceMaps；源、层配置、地图版本必须一致，两种生产者不能同时占用同一接口 |
+| `/scan_from_cloud` | 点云切片 → 策略/costmap | LaserScan；策略启用时 costmap 读取 `/navigation_policy/costmap_scan` |
+| `/payload/attachment_observation` → `attachment_state` | 库存 → 账本 → 几何/执行器 | 完整库存、source/clock/ledger epoch、原始有效期；无消息不等于 EMPTY |
+| `/navigation/geometry_state`、`arm_hold` | 几何、资源执行器 → 包络 | RobotGeometryState、ArmHoldStatus；关节、附件、控制器、资源及时间共同约束 |
+| `/navigation/envelope_v2`、`envelope_applied` | 包络协调器 ↔ 消费者 | 发布队列 10，ACK 订阅队列 20；版本、时效、撤销均参与判断 |
+| `/navigation_policy/constraint` | 约束节点 → BT/控制器 | MotionConstraint，队列 10；不等同于速度命令 |
+| 导航 Action | 人工/路线/探索 → 仲裁 → Nav2 | `/navigate_to_pose`、`/route/navigate_to_pose`、`/exploration/navigate_to_pose`；取消须等终态 |
+| `/transport/plan_manipulation` | 任务 ↔ MTC | PlanManipulation，仅生成有序阶段 |
+| `/transport/fixed_station_transfer` | 场景客户端 ↔ 原生执行器 | FixedStationTransfer；工位、对象、目标、退出候选与预算；目前限定仿真 |
+| `/perception/compute_grasps`、`estimate_object_pose` | 调用者 ↔ 感知 | 抓取候选与物体姿态是两类 Action；不授予执行权 |
 
-全局代价地图含 static、obstacle、inflation；局部是 6×6 m rolling map，仅 obstacle+inflation。当前更新频率分别 1 Hz / 5 Hz，控制器 20 Hz。两图扫描 `expected_update_rate=0.3` 的单位是**秒**，用于观测缓冲时效，不是雷达频率设置，也不是承诺 0.3 s 内机械停车。
+完整类型见 [M16](MODULE_ARCHITECTURE.md#m16)。上表只记录已核对的主要契约，现场仍须核对各端 QoS、采集时间、接收龄期、频率与实际安装版本。
 
-全局膨胀层保留。实体足迹、膨胀代价、观测不确定性、预测扫掠及安全间距属于不同模型，不能为了通行把多处安全参数一起减小。源配置见 [MPPI](../../ws_robot/src/astribot_s1_navigation/config/nav2_params_mppi.yaml) / [RPP](../../ws_robot/src/astribot_s1_navigation/config/nav2_params_rpp.yaml)。
+当前 [FixedEnvelopeCore](../../ws_robot/src/astribot_s1_navigation_policy_native/src/fixed_envelope_core.cpp)要求 **五方 ACK**：global_costmap、local_costmap、planner、controller、policy。附件自滤确认在几何证据链内；历史“六方 ACK”不能不加版本说明地沿用。
 
-统一入口使用 `/map`、transient-local 地图订阅和 `/scan_from_cloud`。SLAM 与栅格直接使用 `map` 坐标系，`map_odom_tf` 独占 map→odom；当前机身栅格处理已并入 `astribot_s1_mapping`，不再转发 `/map_nav` 或清除历史轨迹。
+导航基座为 `astribot_torso_base`。MoveIt 操作在基座场景快照规划；固定工位 Action 的 `gazebo_world` 是物理仿真约定，不是 MoveIt 的 base-fixed `world`。重定位、换图、附件或场景变化后，依赖计划需要重新绑定或复核。
 
-建图/载图仿真和真机使用相同 SLAM 后端；静态地图/真值链仅作为仿真基线。源码按估计、导航栅格、感知组合与数值依赖分包。消息保留导航、桥接、SLAM 三个领域，详见[SLAM 架构评审](../SLAM_ARCHITECTURE_REVIEW_20260918.md)。
+## 5. 部署视图
 
-扩展新传感器时遵守三类接口：
+```mermaid
+flowchart TB
+  Shared["共享模型 / 契约 / SLAM / Nav2 / MoveIt / 日志"]
+  Shared --> Sim["开发机：use_sim_time=true"]
+  Shared --> HW["机器人 ARM64：use_sim_time=false"]
+  Sim --> Sup["sim_stack_supervisor / instance / domain / partition"]
+  Sup --> Gaz["Gazebo / ros_gz_bridge / gz_ros2_control"]
+  Gaz --> Ctrl["原生 effort 轮控 / JTC"]
+  HW --> Rel["独立 release / source_manifest / 本机构建"]
+  Rel --> HWS["hardware_exploration / Livox / 厂家反馈"]
+  HWS --> SDK["trajectory_bridge / SDK / 设备"]
+```
 
-1. **避障观测**：`observation_sources` 选择适配器，归一化为包含采集时间、frame、来源/标定版本、几何、方差及 provenance 的契约。视觉 JSON 入口 `/navigation_policy/vision_observations`，详细 schema 见[策略包说明](../../ws_robot/src/astribot_s1_navigation_policy/README.md)。图像框没有深度时保留未知风险，不伪造距离；同源证据不能重复融合为独立证据。
-2. **到位定位**：`arrival.source=nav2_pose|slam_pose|vision|mark`。`slam_pose` 接收 `PoseWithCovarianceStamped`，vision/mark 接收 `PoseStamped`；默认分别为 `/slam/pose`、`/arrival/vision/pose`、`/arrival/mark/pose`。输入表示基座在 header.frame_id 中的位姿，必须有采集时间、有效四元数和 TF。外参、识别置信度和标记坐标求解由上游负责；不自动切换来源。
-3. **任务/执行约束**：通过 `astribot_navigation_msgs`、Action 和服务交互，携带任务/版本/租约；不能由新模块另外发布控制速度。包络变化先更新版本，再重新评估缓存路径和许可。
+这是运行部署关系，不是源码依赖方向。源码通常为 adapter → core/contracts，组合 launch 负责装配。真机不复制 x86 构建产物；相机外参、载荷、制动与执行时延分别验收。domain/partition 隔离不保证 GPU/CPU 性能独占。
 
-视觉接口已有代码不代表实体相机已标定接入。真机策略仍需验证 profile 注入和传感器时效参数；当前 `navigation.launch.py` 默认给策略加载仿真 profile，不能在真机直接把 off 改成 p3。
+## 6. 故障与取消责任
 
-包络服务已支持停车提交与两张 costmap 足迹确认，但本次源码审查未找到双臂生产流程调用 `SetRobotEnvelope` 的客户端。导航包络与 MoveIt 附着物尚未形成自动一致性事务；`off` 入口也不启动包络协调器。当前固定运输姿态假设不能外推到任意伸臂或携物通行。
-
-## 7. 时间、异常与运行可观测性
-
-仿真策略以 ROS 物理时间衡量源龄期、租约及恢复过程，另用墙钟监视 `/clock` 停滞；正常暂停撤销运动授权，时钟回退使旧时间线失效。真机同时关注源时间和墙钟接收时间。不能以增大超时掩盖坐标错误、重复时间戳或处理堵塞。
-
-| 异常类别 | 代表原因 | 处理归属 |
+| 情况 | 处理所有者 | 完成证据 |
 |---|---|---|
-| 输入/坐标 | `POSE_STALE`、`TF_UNAVAILABLE`、`INPUT_UNAVAILABLE` | 输入恢复前不发有效运动许可 |
-| 当前执行不安全 | `REFINEMENT_BLOCKED`、即时碰撞风险 | 跟踪/末级保护停车；不宣称全局永久不可达 |
-| 运动/误差无改善 | `NO_MOTION_PROGRESS`、`REFINEMENT_NO_PROGRESS` | 跟踪失败、预算不因同目标重规划无限续期 |
-| 超时 | `REFINEMENT_TIMEOUT`、`GOAL_TIMEOUT` | 到位/任务结束失败 |
-| 起步航向恢复失败 | `START_HEADING_UNREACHABLE` | P3 起步许可与安全退出链 |
-| 终点窄通道航向受限 | 设计中的 `GOAL_HEADING_UNREACHABLE` | 尚无完整实现/验收，不作为已存在异常承诺 |
+| 导航抢占 | TaskArbiter 取消旧后端并等终态 | 旧执行终态与新所有权，cancel ACK 不等于交接 |
+| 起点受阻 | recovery 限次短段退出、停稳后重查实际起点 | READY 后规划原目标；无进展/预算耗尽明确失败 |
+| 工位受阻 | 专用 BT 按原因、距离与空间决定对齐或恢复 | 同 session 模式提交、旧动作终态、SLAM 停稳 |
+| 操作跟踪超差 | execution_guard 锁存，父任务取消子动作 | 各 UUID 终态、实测与保载处置 |
+| 附件或 Scene 不一致 | 账本/执行事务拒绝推进 | 库存、Scene、版本一致；不能删账本重试 |
+| 保持、租约、ACK 失效 | 撤销旧许可 | 新动作/新授权独立成立，迟到正向消息不复活旧事务 |
+| 进程退出 | 所属主管回收子进程 | 进程退出、资源释放、实际停稳分别记录 |
 
-Humble 当前导航 Action result 不提供项目需要的完整原因字段，排障需关联 Action 状态、任务/策略状态与 `PATH_TRACKING/...` 日志；不能假设调用者已收到异常文本。
+非导航 PICK/PLACE 不再以 SLAM 位移/转角取消任务；不得恢复该门禁或世界刚性固定。初始准入、导航与结束/取消交接的停稳保留。仿真轮控保持 `idle_position_hold=true`、`idle_position_kp=3.0`。
 
-统一 `session.log`、`TRACKING_METRICS`、`ARRIVAL_METRICS`、`ARRIVAL_REACHED`、`SLIP_METRICS` 与任务状态承担观测职责。指标与日志不能反向成为第二套控制器。具体公式见[指标手册](../PATH_TRACKING_METRICS.md)。
+## 7. 证据总览与整机缺口
 
-## 8. 窄通道能力边界
-
-0.62 m 方形机身的几何旋转外接直径约 0.877 m，尚未计定位、障碍不确定性及净空；约 0.95 m 的经验转向空间不是所有场景的安全证明。
-
-85 cm 设计目标保留两侧各 8 cm 净空后，仅余每侧 3.5 cm，用于横向误差、航向增宽和观测误差的**联合**预算。到位容差 3 cm / 1.5° 不等于全程允许同时达到两项上限。
-
-当前 P3 起步恢复可请求完整转向许可；转向不可行时尝试经验证的 x− 退出，停稳并重新验证后恢复原转向。后向覆盖、地图未知、扫掠、偏离限制及预算均需满足。
-
-以下仍按[窄通道重建设计](../NARROW_PASSAGE_REBUILD_20260914.md)作为待开发/待验收内容管理：85 cm 完整进出；1.00/1.10 m 外部对齐阈值与滞回；短斜入口/接近段完整回归；起点及终点统一禁止通道内原地旋转；任务级终点航向不可达原因传播。已有局部或较宽通道通过记录不能替代这些验收。
-
-## 9. 扩展设计原则与仍需改善处
-
-以下八项是本项目评审采用的设计原则口径，不宣称存在唯一的“八大原则”标准。
-
-| 原则 | 当前落点 | 后续改动约束 |
-|---|---|---|
-| 单一职责 | 感知、探索、规划、跟踪、执行分层 | 不向桥接复制导航反馈控制 |
-| 开闭原则 | Nav2 插件、观测/到位来源适配 | 新来源扩展适配器，保留基线控制行为 |
-| 里氏替换 | MPPI/RPP 内层控制接口 | 切换须保留生命周期、限速及失败契约；效果另回归 |
-| 接口隔离 | 观测、规划候选、执行约束独立 | 几何候选服务不能隐含控制权限 |
-| 依赖倒置 | 领域 contracts/ports 与 ROS 适配分开 | 纯算法不依赖设备 SDK 或 ROS 图 |
-| 最少知识 | 仲裁与 BT 统一提交 | 业务模块不直连另一模块内部状态 |
-| 组合复用 | 策略与控制器组合、执行适配替换 | 保留现有 ThreePhase 继承兼容；新策略优先组合 |
-| 关注点分离 | 运动控制、健康、日志、启动独立 | 诊断不能改变控制时序或成为运动授权 |
-
-优先改善项：配置与真实入口默认值统一并生成参数快照；地图/坐标/QoS 契约参数化；把剩余 JSON 状态逐步迁移为版本化强类型接口；将失败原因绑定任务传到上层；消除窄通道跨层余量重复计算；隔离运行版本与开发构建目录。这些是架构建议，本次手册整理未实施相应控制改动。
-
-## 10. 修改后必须保存的验收信息
-
-至少记录源码/安装文件哈希、地图和起始位姿、策略阶段、定位来源、全部有效参数、Action 结果、到位后漂移及全过程指标。仿真→真机分层验收；真机补齐包络/负载、制动、时延、传感器覆盖及急停现场条件。
-
-跟踪时长只用于超时与实验预算，不参与性能排名。横向误差、路径航向误差、速度波动、加减速/jerk、异常旋转、误停、净空及最终精度分别报告；不能用“全部到点”掩盖过程退化。
-
-## 11. 关键源码索引
-
-| 内容 | 源码入口 |
+| 能力 | 当前结论 |
 |---|---|
-| 仿真编排与参数选择 | [sim_stack_supervisor.py](../../tools/sim_stack_supervisor.py) |
-| 导航接线、参数重写与精度档合并 | [navigation.launch.py](../../ws_robot/src/astribot_s1_navigation/launch/navigation.launch.py) |
-| 三阶段控制和到位精调 | [three_phase_controller.cpp](../../ws_robot/src/astribot_s1_path_tracking/src/three_phase_controller.cpp)、[arrival_controller.cpp](../../ws_robot/src/astribot_s1_path_tracking/src/arrival_controller.cpp) |
-| 公共运动、仿真与真机覆盖 | [arrival_motion.yaml](../../ws_robot/src/astribot_s1_navigation/config/arrival_motion.yaml)、[仿真档](../../ws_robot/src/astribot_s1_navigation/config/arrival_precision_sim.yaml)、[真机档](../../ws_robot/src/astribot_s1_navigation/config/arrival_precision_hardware.yaml) |
-| 观测、领域契约与 profile | [observer_node.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/observer_node.py)、[contracts.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/contracts.py)、[profile.py](../../ws_robot/src/astribot_s1_navigation_policy/astribot_s1_navigation_policy/profile.py) |
-| 真机启动与传感器版本归属 | [hardware_exploration.py](../../tools/robot/hardware_exploration.py)、[hardware_sensors.py](../../tools/robot/hardware_sensors.py) |
-| 概率栅格/机身区域处理 | [nav_prob_grid_node.cpp](../../ws_robot/src/astribot_s1_mapping/src/nav_prob_grid_node.cpp)；旧独立 `grid_self_clear_node.py` 已移除，实际参数与接线按所用 launch 核对 |
-| SDK 底盘执行边界 | [chassis_bridge_core.py](../../ws_robot/src/astribot_trajectory_bridge/astribot_trajectory_bridge/chassis_bridge_core.py) |
+| 导航、SLAM、探索 | 已实现，有[历史 SLAM 仿真](../SLAM_SIMULATION_VALIDATION_20260918.md)；不代表当前默认命令已回归 |
+| 固定工位完整搬运 | scene96 记录 `TRANSFER_COMPLETE`、资源释放，进入 PLACE 时 1.854 cm / 0.0315°，最终 SLAM 停稳窗口 0.693 s；[验收说明](../evidence/mainline_20260929/PLACE_ACCEPTANCE.md)及原始 acceptance.json 已核对 |
+| scene96 边界 | 临时 3 cm / 0.1°、3.5 倍轨迹时间缩放、特定箱体工位；严格 2 mm 未验收，未证明偶发续约问题根治、耐久性、接触力学或真机 |
+| 工位对齐/脱困 | 已实现；[工位记录](../WORKSTATION_ALIGNMENT_IMPLEMENTATION_20260928.md)、[脱困记录](../DEPARTURE_ACTUAL_START_20260928.md)保留此前失败，不能被单轮成功覆盖 |
+| GraspNet / CAD 6D | 有算法、服务和隔离验证；模型输出不等于模型驱动抓放闭环已验收 |
+| FoundationPose | 有设计、资产/容器准备和 P0 夹具，尚未完成生产服务接入与连续跟踪闭环 |
+| 插装/力控、真机载荷闭环、边走边操作、自动回充 | 未发现当前生产闭环；装配 profile、电池显示或规划接口不能代替实现 |
+| 全系统强制资源隔离 | 部分实现于 UI 租约、导航仲裁、搬运资源层；未覆盖所有直接控制入口 |
+
+## 8. 当前操作阻塞
+
+1. `navigation.launch.py` 拒绝 `navigation_policy_stage=off + enable_arm_chassis_coupling=true`；仿真主管默认及真机主管仍产生这一组合。直接改真机为 p3 也不可行：launch 选用 simulation.json，真机仅有未验收的 hardware.template.json。不能通过关闭上肢保护或把模板标记为已验收“修好”启动。仿真手册采用显式 p3；真机运动列为待修复。
+2. baseline 的 static_map 若同时启动 SLAM，必须提供实测 `initial_chassis_pose`。原默认命令缺少此输入；不能拿 spawn 指令代替实测配准，也不能停用 SLAM 来宣称停稳监测可用。
+3. `robot_task_control.py` 仍按 `/odom` pose/twist 判停；`navigation_precision_check.py` 和 `run_waypoint_route.py` 仍包含 TF/odom 测量路径。其结果不能支持新的 SLAM 监测验收。readiness 检查正常控制 odom 不属于此冲突。
+4. UI 臂执行返回 `ARM.EXECUTION_ADAPTER_UNAVAILABLE`；`transport_session` 仍调用旧 Python transport_task，不能当作原生 fixed_v2 完整搬运入口。成功主线依赖专用运行器、真实场景和私有安装清单。
+
+以上为源码确认的边界，本轮未线上复现。已修正统一仿真 launch 遗漏的参数转发；这些能力/部署缺口不属于简单参数拼写错误，保留原安全拒绝。

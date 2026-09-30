@@ -1,285 +1,191 @@
-# Gazebo 与 RViz 仿真操作手册
+# 仿真操作手册
 
-2026-09-18：SLAM 接入已改为仿真/真机共用 Voxel-SLAM；接口、命令与逐项验收状态见[统一 SLAM 参考](../SLAM_INTEGRATION_REFERENCE_20260918.md)。旧中转链已删除；真机尚未实测。
+核对：2026-09-29。开发机仓库 `/home/yjh/WorkSpace/astribot_sdk_ros2`，ROS 2 Humble，当前仓库 Gazebo/Ignition 链。总览见[架构](ARCHITECTURE_REFERENCE.md)。本轮只验证静态接线、帮助和 dry-run，不启动仿真；下列运动步骤仍须在所属会话中验收。
 
-适用范围、版本和能力边界见[手册首页](README.md)。所有命令在开发机执行，默认仓库根目录 `/home/yjh/WorkSpace/astribot_sdk_ros2`。首次编写只核对入口；2026-09-17 补充删包后的实际 Gazebo/RViz 回归，已执行项与结果见[本轮记录](../AUTONOMY_SIMULATION_REGRESSION_20260917.md)，未覆盖场景仍需独立验收。
+## 1. 先选操作类型
 
-## 1. 启动前准备
+| 目的 | 入口与前提 |
+|---|---|
+| 建图并手动导航 | `--mode mapping --navigation-policy p3`，共享六相机默认保留 |
+| 自主探索 | `--mode explore --navigation-policy p3`；就绪后自动发目标，会移动 |
+| 已有 Voxel 会话定位 | `--mode localize --map <完整会话目录> --navigation-policy p3` |
+| 静态地图控制对照 | baseline 需要独立核对实测 SLAM 配准，见第 5 节；旧无参数 baseline 不能直接沿用 |
+| 固定工位搬运 | fixed_v2 原生任务 + 正式保持/账本/分层源，见第 7 节 |
+| 仅看界面/证据 | RViz 操作台/离线回放；打开界面不代表导航已就绪 |
 
-环境为 Ubuntu 22.04、ROS2 Humble、项目使用的 Gazebo/Ignition、Nav2 与 RViz。首次构建在未加载厂家 SDK 的干净终端执行：
+**当前默认启动缺口：** 主管默认策略 off，navigation launch 默认上肢限速 true，而该组合被明确拒绝。本文显式选择 p3，保留上肢约束；这属于策略启用的仿真，不称为旧 off 性能基线。不改用关闭保护的方式消除报错。
+
+## 2. 构建与环境
+
+仅在该安装目录没有被运行会话使用时构建。新终端先加载系统 ROS，勿混入厂家 SDK 环境。
 
 ```bash
 cd /home/yjh/WorkSpace/astribot_sdk_ros2
-git submodule update --init --recursive
 source /opt/ros/humble/setup.bash
 bash ws_robot/src/astribot_s1_perception/scripts/prepare_livox_driver2.sh
 bash tools/robot/build_slam_dependencies.sh
+source tools/setup_mtc_humble.sh
 export CMAKE_PREFIX_PATH="$PWD/ws_robot/deps/gtsam:${CMAKE_PREFIX_PATH:-}"
+rosdep install --from-paths ws_robot/src --ignore-src -r -y
 cd ws_robot
-rosdep install --from-paths src --ignore-src -r -y
 colcon build --base-paths src --symlink-install --cmake-args \
-  -DROS_EDITION=ROS2 -DDISTRO_ROS=humble \
+  -DCMAKE_BUILD_TYPE=Release -DROS_EDITION=ROS2 -DDISTRO_ROS=humble \
   -DGTSAM_DIR="$PWD/deps/gtsam/lib/cmake/GTSAM"
 ```
 
-不要在其他会话使用同一 `ws_robot/install` 时覆盖其运行库。修改 C++、接口或 launch 后构建相应包及依赖；`ros2 launch` 读取安装空间，源码改动不一定已进入运行版本。
+这些是构建步骤，不是本轮已执行结果。MTC 脚本可能下载其固定版本依赖；若版本不可取得，应记录失败，不能静默换版本。GraspNet worker 另需独立 LibTorch/模型，见[推理包说明](../../ws_robot/src/astribot_graspnet_runtime/README.md)。
 
-新的操作终端加载：
+已有会话占用共享安装时，另选唯一 build/install/log 目录进行 scoped build；启动器支持 `ASTRIBOT_OVERLAY_SETUP=/绝对路径/local_setup.bash`。不要只 source 私有 overlay 后假定启动器不会重新加载基础安装。检查 `ros2 pkg prefix`、ELF 实际链接和本次运行清单。
+
+普通查询终端：
 
 ```bash
 cd /home/yjh/WorkSpace/astribot_sdk_ros2
 source /opt/ros/humble/setup.bash
 source ws_robot/install/setup.bash
-export ROS_DOMAIN_ID=25 ROS_LOCALHOST_ONLY=1
-export IGN_IP=127.0.0.1 GZ_IP=127.0.0.1
 ```
 
-启动器和 Gazebo launch 固定域 25，单独修改当前 shell 的域不能建立第二套隔离仿真。真机同为域 25，但网络范围不同；不要把仿真改为对真机网络开放。
+继续加载与所属会话完全相同的 MTC/私有 overlay 和 DDS 配置。`session/env.sh` 仅为起点，不能保证重建全部 overlay。
 
-共享环境先按 [ros2-stack-ops](../../.agents/skills/ros2-stack-ops/SKILL.md) 确认旧栈归属。该流程中的 `/tmp/rosops/*.sh` 是按技能生成的临时工具，不保证每台机器已存在。存在其他人的栈时，由其主管正常停止或在已获授权后接管；不要用全局 `pkill` 清理。
+## 3. 会话隔离与启动
 
-## 2. 推荐基线：固定地图、真值定位
-
-先预览，不启动节点：
+先确认现有 Gazebo、ROS、GPU 使用者和目标域是否空闲。下面 61 只是示例，**必须换成确认未使用的域**；隔离实例支持 1–101，排除 25。instance 自动派生 partition、发现端口和锁，仍共享 CPU/GPU。
 
 ```bash
-bash tools/launch_sim_stack.sh --mode baseline --dry-run
+SIM_INSTANCE="manual_mapping_$(date +%Y%m%d_%H%M%S)"
+SIM_DOMAIN=61
+SIM_RUN="$HOME/.ros/log/astribot/$SIM_INSTANCE"
+SLAM_SAVE="$HOME/astribot_maps/$SIM_INSTANCE"
+bash tools/launch_sim_stack.sh --instance "$SIM_INSTANCE" --ros-domain-id "$SIM_DOMAIN" \
+  --mode mapping --navigation-policy p3 --save-session "$SLAM_SAVE" \
+  --log-dir "$SIM_RUN" --dry-run
 ```
 
-实际启动 Gazebo、RViz 和导航，保留该前台终端：
+SIM_RUN 和 SLAM_SAVE 应是新目录。核对输出中的 mode、传感器 profile、domain、partition、导航策略、地图保存目录。dry-run 不占资源，不检查全部子 launch 条件，不证明运行就绪。
+
+核对完成后，在所属前台终端启动同一配置：
 
 ```bash
-bash tools/launch_sim_stack.sh --mode baseline
+bash tools/launch_sim_stack.sh --instance "$SIM_INSTANCE" --ros-domain-id "$SIM_DOMAIN" \
+  --mode mapping --navigation-policy p3 --save-session "$SLAM_SAVE" --log-dir "$SIM_RUN"
 ```
 
-该入口显式选择：
+无显示环境可加 `--headless --no-rviz`；性能实验可加 `--exclusive-performance`，它不会自动停止其他人的仿真。不要无参数启动后猜采用的配置。
 
-| 项目 | 值 |
-|---|---|
-| 地图 | `maps/warehouse_baseline.yaml` |
-| 定位 | `ground_truth` |
-| 跟踪器 | MPPI |
-| 最大线速度 | x/y 各 0.35 m/s；不是对角合速度保证 |
-| 到位档位 | `simulation_precision`：2 mm / 0.1° |
-| 策略 | `off` |
-| 扫描 | `slice_scan`，Nav2 输入 `/scan_from_cloud` |
-| GUI | Gazebo 与 RViz 开启 |
-| 自动任务 | 不自动派发导航目标 |
-
-需要固定本次日志位置时使用一个**尚不存在**的目录：
+ROS 风格与 CLI 风格二选一，不混用。统一 launch 现已补齐地图保存等转发，例如以下**预览**与上面的意图一致：
 
 ```bash
-SIM_RUN="$HOME/.ros/log/astribot/manual_baseline_$(date +%Y%m%d_%H%M%S)"
-bash tools/launch_sim_stack.sh --mode baseline --log-dir "$SIM_RUN"
+bash tools/launch_sim_stack.sh instance:="$SIM_INSTANCE" ros_domain_id:="$SIM_DOMAIN" \
+  mode:=mapping navigation_policy:=p3 save_session:="$SLAM_SAVE" log_dir:="$SIM_RUN" dry_run:=true
 ```
 
-启动器会创建目录，不要预先 `mkdir "$SIM_RUN"`。无显示环境可用 `--headless --no-rviz`；这只改变显示，不保证解决物理插件加载故障。
+## 4. 分层就绪与人工导航
 
-## 3. 模式与默认值的区别
+查询环境必须来自本次会话的真实进程：ROS_DOMAIN_ID、RMW、FASTRTPS profile、localhost、partition、overlay。控制链采用 loopback UDP 时可能将 ROS_LOCALHOST_ONLY 设为 0，由 XML 限定网络，不能单凭该值判定对外广播。相机桥接可能使用独立 profile。
 
-| 入口 | 行为 |
-|---|---|
-| `--mode baseline` | 固定地图 + 真值定位 + 仿真精度档；用于控制效果对照 |
-| `--mode explore`，不传 `--map-yaml` | 显式 SLAM 建图定位，并启动自主探索，会自动行走 |
-| `--mode mapping` 或无参数 | 统一 Voxel-SLAM 建图和定位；保存需启动时传入新的 `--save-session` 目录 |
-| `--mode localize --map ...` | 接收 Voxel 会话目录；重定位成功后才启动导航 |
-| `--tracker rpp` | 更换内层控制器；需单独做效果验收 |
-| `--scan-source laserscan` | Nav2 直接选择 `/scan`；与默认切片链分开记录 |
-
-`--map` 是完整 Voxel 会话目录，不能仅指定 PGM/YAML。`--map-yaml` 仅供 `--mode baseline`。`--save-session` 指定新的会话目录；停稳并结束探索/导航后用 `ros2 run astribot_s1_perception slam_session save` 保存。mapping、explore 和 localize 均使用统一 Voxel 后端，无需修改共享地图来源 YAML。
-
-直接 `navigation.launch.py` 的默认值是 RPP、1.0 m/s、standard，和上述一键基线不同。开发调试若绕过主管，必须显式指定控制器、速度、时钟、扫描、地图及精度档，并自行负责启动时序和所有权。
-
-ROS launch 风格与兼容 CLI 风格二选一：
+在环境已对齐的另一个终端：
 
 ```bash
-bash tools/launch_sim_stack.sh mode:=baseline navigation_policy:=off max_linear_speed:=0.35
-# 等价的兼容 CLI 风格；不要与上一种参数语法混用
-bash tools/launch_sim_stack.sh --mode baseline --navigation-policy off --max-linear-speed 0.35
-```
-
-上面两条是替代命令，不是让两套栈同时启动。
-
-## 4. 按层确认就绪
-
-主管自动先检查仿真数据，再启动导航并检查生命周期；默认最多尝试两次导航启动。日志里的进程数量、发布者数量或 RViz 已打开，均不能单独证明就绪。
-
-1. **Gazebo 物理层**：transport 可见，`/stats` 的仿真时间和 iterations 推进。
-2. **ROS 时钟**：实际收到持续推进的 `/clock`。
-3. **TF**：`map → astribot_torso_base` 可查且龄期正常。
-4. **生命周期**：7 个导航节点 active。
-5. **数据与接线**：实收扫描和里程计；costmap 选择正确扫描，任务入口只有预期所有者。
-
-基础物理观察：
-
-```bash
-timeout 15 ign topic -e -t /stats -n 1
-```
-
-开始 ROS 查询前，从本次主管记录的子进程反读 DDS 环境，再按仓库技能生成并加载 `query_env.sh`；不能仅靠当前 shell 猜运行域。环境对齐后：
-
-```bash
-python3 tools/sim_stack_probe.py --phase data --timeout 15 --scan /scan_from_cloud
-python3 tools/sim_stack_probe.py --phase navigation --timeout 30 --scan /scan_from_cloud
-```
-
-策略开启时，导航探针还需要检查适配后的扫描：
-
-```bash
+cat "$SIM_RUN/session.json"
+python3 tools/sim_stack_probe.py --phase data --timeout 20 --scan /scan_from_cloud
 python3 tools/sim_stack_probe.py --phase navigation --timeout 30 \
-  --scan /scan_from_cloud --costmap-scan /navigation_policy/costmap_scan
+  --scan /scan_from_cloud --costmap-scan /navigation_policy/costmap_scan --require-policy
+ros2 param get /omni_effort_drive_node idle_position_hold
+ros2 param get /omni_effort_drive_node idle_position_kp
+ros2 param get /controller_server use_sim_time
+ros2 topic info /slam/pose --verbose
 ```
 
-选择 `laserscan` 时把原始 `--scan` 改为 `/scan`。探针是有界实际订阅，不发送导航目标。`ready=true` 只证明基础就绪，不证明路径跟踪质量或每个故障场景已通过。
+期望轮控为 true / 3.0、仿真时钟为 true。探针需实际接收推进中的 clock、扫描、odom，并检查导航生命周期；此外核对 `/slam/pose` 唯一来源、源时间推进和 map 原点。话题有发布者、RViz 有画面或单帧 echo 均不足以证明就绪/停稳。
 
-## 5. 人工目标与路线验证
+人工操作：RViz Fixed Frame 设 map，在已观测空旷区先选一个近距离目标。通过操作台时先申请控制会话；默认 WorkstationPanel 关闭后租约过期会请求取消。导航成功仍需 Action 终态、实际 SLAM 到位/停稳；不能只看机器人图标重合。
 
-先用 RViz 的 Nav2 Goal 在已知空旷区域设置近距离目标；Fixed Frame 用 `map`。基线使用真值定位，不需反复发送 2D Pose Estimate 改变定位。
-
-运行路线脚本前结束其他目标。脚本只支持 `use_sim_time=true`，预检发现活动导航任务会拒绝抢占。规划预检不发送运动目标，但会调用规划服务、生成候选路径。
+独立 UI（仅当本会话没有已合并的工作站窗口时）：
 
 ```bash
-ROUTE_ROOT="$HOME/.ros/log/astribot/route_$(date +%Y%m%d_%H%M%S)"
-python3 tools/run_waypoint_route.py --short-route --cycles 1 \
-  --dry-run --output "$ROUTE_ROOT/preflight"
+ros2 launch astribot_operator_station operator.launch.xml use_sim_time:=true
 ```
 
-预检通过后执行五目标短路线：
+“循环路线”中逐点绘制并确认，再执行；只让一个任务来源持有目标。`tools/run_waypoint_route.py` 仍有 TF/odom 测量路径，不能用其旧停稳/漂移统计支持当前 SLAM 监测契约。
+
+## 5. 地图保存、重定位及静态基线
+
+结束探索/取消导航后先等动作终态与 SLAM 停稳，保留 SLAM 进程，然后保存：
 
 ```bash
-python3 tools/run_waypoint_route.py --short-route --cycles 1 \
-  --duration 900 --timeout 180 --settle 3 --output "$ROUTE_ROOT/short"
+ros2 run astribot_s1_perception slam_session save --timeout 120
+ros2 run astribot_s1_perception slam_session inspect "$SLAM_SAVE"
 ```
 
-短路线的 map 坐标为 `(1,0,0°) → (1,-1,0°) → (0,-2,-90°) → (0,-2,90°) → (0,0,0°)`。是否安全以当前地图预检与运行碰撞检查为准。脚本使用人工 `/navigate_to_pose` 入口，运行期间不要从 RViz 另发目标。
+保存要求启动时已设置唯一保存路径，完成检查 manifest、alidarState.txt、关键帧和二维地图，不把进程退出当作存图完成。UI 的结束建图/保存使用受管 mapping_session，优先保持该会话所有权。
 
-完整默认六点路线持续跑机：
+结束旧会话后，新的定位会话可先预览：
 
 ```bash
-python3 tools/run_waypoint_route.py --cycles 3 --duration 7200 \
-  --timeout 300 --settle 3 --output "$ROUTE_ROOT/full"
+bash tools/launch_sim_stack.sh --instance manual_localize --ros-domain-id 62 \
+  --mode localize --map "$SLAM_SAVE" --navigation-policy p3 --dry-run
 ```
 
-`--cycles 0` 表示只受 duration 限制；duration、timeout 是墙钟实验预算，低实时率仿真需留足预算，它们不是控制质量排名指标。Ctrl+C 会尝试取消本工具持有的目标；随后确认停车。该脚本没有通用 STOP 文件接口，不要与真机精度工具混淆。
+62 同样是待确认空闲的示例域；真正启动时使用新的日志目录并移除 dry-run。`--map` 是完整 Voxel 会话，不是单个 PGM/YAML；定位成功后才可派发地图目标。
 
-自定义路线使用 JSON 文件，元素为 `[x_m, y_m, yaw_rad]`，不是角度：
+**静态基线的现有限制：** baseline 选 `static_map`，当 launch_slam=true 时必须提供实测的 `--initial-chassis-pose 'x,y,z,qx,qy,qz,qw'`。姿态来自实际落稳测量并与地图注册，不能复制 spawn、填零或伪造 SLAM 样本。若由本会话另一个受管节点拥有 Voxel，才可显式 `--launch-slam false`；该参数不免除 SLAM 停稳依赖。当前没有在通用主管中自动完成这段两阶段测量/配准，因此不提供假装开箱即用的 baseline 一行命令。
 
-```json
-[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
-```
+## 6. 探索、禁行区与诊断
 
-将文件路径传给 `--route /绝对路径/route.json`；先带 `--dry-run` 预检，再执行。目标坐标绑定当前地图和定位原点，不能跨 SLAM 重启无条件复用。
-
-结果目录包含 `status.json`、`metadata.json`、`preflight.json`、`samples.csv`、`plans.jsonl`、`results.jsonl` 及 runner 源码快照。`completed` 或 `duration_complete` 要结合成功目标数、失败原因和到位复测判断，不把达到时长上限当成全部目标通过。
-
-## 6. 策略与窄通道验证
-
-每阶段使用独立日志，先正常结束上一套。示例为 0.32 m/s 策略实验；对照 OFF 时也必须使用相同速度、地图、定位档和起点。
-
-```bash
-bash tools/launch_sim_stack.sh --mode baseline --navigation-policy p2 --max-linear-speed 0.32
-# 结束 P2 后，另一次运行才使用 P3
-bash tools/launch_sim_stack.sh --mode baseline --navigation-policy p3 --max-linear-speed 0.32
-```
-
-P4 需要人工通道文件，格式和地图坐标语义见[策略包](../../ws_robot/src/astribot_s1_navigation_policy/README.md)；P5 自动生成地图候选。它们是试验入口，不代表完整窄通道已验收。文件几何、Gazebo 实体和 Nav2 地图必须一致；只修改地图图片不能制造对应的物理通道。
-
-```bash
-# 将路径替换为本场景已核对的通道标注；先预览
-bash tools/launch_sim_stack.sh --mode baseline --navigation-policy p4 \
-  --corridor-file /绝对路径/corridors.json --max-linear-speed 0.32 --dry-run
-```
-
-回归矩阵按场景记录，不只测终点成功：
-
-| 场景 | 重点判据 |
-|---|---|
-| 开阔直线、曲线、短路径、接近段 | 原跟踪质量，直线航向、横向误差、速度平滑 |
-| 远处占据、近处横穿、暂时封堵 | 保留安全制动空间；合理慢行/让行，不无故提前停车 |
-| 障碍持续阻塞、移走 | 局部绕行/重规划及恢复，陈旧占据与候选撤销 |
-| 1.30/1.15/1.10/1.05/1.00/0.95 m | 原路径准入、阈值边界、入口/出口和滞回设计验证 |
-| 0.90/0.85/0.84/0.80 m | 联合误差预算及拒绝边界；85 cm 不预设必过 |
-| 偏心、带偏角、短斜入口、内部重启 | 完整机身与转向扫掠，不仅检查中心路径 |
-| 反向退出、后方遮挡、终点带朝向要求 | 后向覆盖、停稳恢复及航向不可达契约 |
-| 暂停/恢复、时钟回跳、扫描短抖动/断流 | 新鲜度、租约撤销、停机与恢复语义 |
-
-故障注入仅在隔离仿真完成，保存注入时间线并保证解除。真机不复制 SIGSTOP、制造碰撞或破坏 TF 的实验步骤。
-
-## 7. 评价与阶段放行
-
-固定基线后一次只改变一个因素，每组至少进行多个有效重复，并交替运行基线/候选。建议按相同路径进度和场景分组，避免把起点不同的两轮混算。
-
-- 到位：欧氏 XY、最短 yaw、Action 结果、停稳窗口、动作结束后的漂移；不放宽当前档位。
-- 过程：横向及路径航向误差 RMS/P95/max、直线速度波动、加速度/jerk、曲率过渡、非预期旋转、停滞/误停、最小净空及重规划次数。
-- 分段：完整 FOLLOW、距终点大于 0.5 m 的行进段、直线、弯道、接近和 REFINE 分开。
-- 数据质量：源时间去重，路径版本和阶段切换分段，不跨缺帧求导；标注定位来源、RTF 和无效样本。
-- 耗时只作预算/超时记录；不以更快抵消质量下降，也不以平均值改善掩盖某个场景退化。
-
-当前扫描超时[历史对照](../SCAN_OBSERVATION_TIMEOUT_20260917.md)支持指定场景中的短抖动改善与断流检出，不能替代后续源码的完整窄通道、RPP 或真机回归。
-
-2026-09-17 删包后 MPPI/off 真值基线实跑短路线 5/5、完整路线 6/6，最大到位误差 1.798 mm / 0.081°。完整路线 FOLLOW 横向 P95 为 6.641 cm、最大 11.499 cm；这只证明记录场景的功能与到位判据通过，不是 85 cm 通道或统计性能不退化的证据。原始目录和指标口径见[回归报告](../AUTONOMY_SIMULATION_REGRESSION_20260917.md)。
-
-2026-09-17 的 SLAM 自主探索**未通过**：首次 Nav2 生命周期启动由主管重试后恢复，但前沿每轮 8 个候选全部未通过回退位姿/完整足迹检查，3 次自动恢复耗尽，未派发目标。`exploration/complete=false`，不能当作探索完成。该记录对应旧链路；2026-09-18 统一 Voxel 链路的建图、载图、短路线和探索验证见[最新 SLAM 记录](../SLAM_SIMULATION_VALIDATION_20260918.md)，不覆盖整仓库探索或暂停后的恢复验收。
-
-### 7.1 包退役后的组合调试入口
-
-正常自主探索用 `--mode explore`。单独看前沿建议和 Marker 时，组合入口已改为：
-
-```bash
-ros2 launch astribot_s1_exploration autonomy_bringup.launch.py \
-  enable_perception:=false use_composition:=true use_rviz:=true \
-  goal_topic:=/debug/frontier_suggestion
-```
-
-此示例假设本栈已有切片扫描节点，故关闭重复感知启动；若使用完全独立环境，按[迁移表](../AUTONOMY_PACKAGE_RETIREMENT_20260917.md)选择完整组合。`use_composition:=false` 是另一种进程组织方式，不能与上一命令同时启动同名节点。组合入口没有探索任务协调器，不应把它作为自动导航入口；独立建议话题不得另外接一个目标转发器抢占正在执行的任务。
-
-前沿节点要求地图持续有效；固定地图长时间不更新时会按其 map_timeout_sec 进入 WAITING_MAP。本轮固定地图测试仅验证组件、Marker、资源路径和 RViz，自动选点执行需用独立 SLAM 探索会话确认。
-
-自主探索暂停/恢复服务为：
+新建探索会话将上述 mapping 改为 explore，保留保存目录，启动后会自动行走。暂停/恢复是不同操作时刻：
 
 ```bash
 ros2 service call /exploration_coordinator_node/pause std_srvs/srv/Trigger '{}'
-# 确认取消终态、实际底盘停稳及没有新目标后，再按任务需要恢复
+```
+
+确认目标终态及 SLAM 停稳后，按需要恢复：
+
+```bash
 ros2 service call /exploration_coordinator_node/resume std_srvs/srv/Trigger '{}'
 ```
 
-暂停服务返回成功不等于执行器已停稳；核对 `/exploration/state` 中 `manual_pause=1`、`goal_in_flight=0`，并观察新鲜 `/odom` 和 `/cmd_vel`。恢复会重新选目标并自动行走。
+暂停不是保存完成；结束建图后通过新会话继续，不复活旧目标。禁行区先绑定活动地图/版本，保存后检查消费者应用，详见[区域手册](VIRTUAL_WALLS_AND_KEEP_OUT.md)。
 
-## 8. 日志、参数与正常关停
+诊断录制可通过工作站“开始/停止记录”；默认不自动录制。同一图只运行一个 recorder，output_root 设持久目录。结束后检查状态、manifest、bag metadata 和 topic 计数，再打开离线回放；禁止读取活动 SQLite。
 
-启动终端打印的绝对 `session.log` 是本次主日志。默认索引为 `~/.ros/log/astribot/latest_sim`；设置 `ROS_HOME` 或日志根目录时以实际输出为准。
+## 7. 操作规划与固定工位搬运
 
-```bash
-SIM_SESSION="$(readlink -f "$HOME/.ros/log/astribot/latest_sim")"
-cat "$SIM_SESSION/session.json"
-rg 'PATH_TRACKING/|ARRIVAL_REACHED|TRACKING_METRICS|IMMEDIATE_RISK|INPUT_UNAVAILABLE' \
-  "$SIM_SESSION/session.log"
-```
-
-`latest_sim` 只指向最近记录，不证明仍在运行。参数查询在对齐 DDS 环境后执行：
+普通规划服务可在已有、确认归属的仿真上启动，模型和相机参数须与该世界一致：
 
 ```bash
-ros2 param get /controller_server use_sim_time
-ros2 param get /controller_server precise_goal_checker.xy_goal_tolerance
-ros2 param get /controller_server FollowPath.arrival.refine_timeout
-ros2 param get /local_costmap/local_costmap obstacle_layer.scan.expected_update_rate
-ros2 param get /global_costmap/global_costmap static_layer.map_topic
+source tools/setup_mtc_humble.sh
+ros2 launch astribot_s1_transport transport_skills.launch.py allow_trajectory_execution:=false
 ```
 
-正常停止顺序：停止路线工具并取消其目标→确认机器人停稳→在主管前台 Ctrl+C→检查本会话 `session.json` 与子进程清理结果。后台启动时只能在核对主管 PID、命令、启动身份与本会话归属后给该主管 SIGINT。不要杀整个域，也不要把临时报告中的旧 PID 当作当前目标。
+此命令启动 MoveIt/MTC/守卫，**只提供规划服务，不执行完整搬运**。不与同名服务或已有 MoveIt 叠加。
 
-## 9. 常见故障
+fixed_v2 正式流程要求：
 
-| 现象 | 优先检查与处理 |
+1. p4 或 p5 导航、geometry、真实附件库存及 ledger、同一高度地图来源；若 p4 还需真实通道文件。使用 `--payload-source-id` 时还须隔离 instance 和 fixed_v2。
+2. READY 姿态与全部受管控制器、源身份/版本、资源 journal 均一致；无未决事务。不用 fixture 伪造在线 Hold、ACK 或 EMPTY。
+3. 原生 trajectory_executor 使用仿真 commissioning；MoveIt 保持 planning-only；根据 [FixedStationTransfer](../../ws_robot/src/astribot_s1_transport_native/action/FixedStationTransfer.action)提交已核对的箱体、工位、抓放目标、退出候选、导航目标、touch_links、限值与预算。
+4. 客户端按原协议续约并持有 Action handle；取消自己的父目标，等待子 UUID 终态、SLAM 停稳、账本及资源处置。未确认释放不能再次提交。
+5. 结果须同时具备 TRANSFER_COMPLETE、resources_released、权威 EMPTY/Scene 读回、轨迹交接证据、停稳和完整采集；运动学附着单独标注。
+
+目前产品入口尚未收敛：旧 `transport_task` 拒绝 fixed_v2，UI transport_session 仍走旧入口。不要复制一个裸 `ros2 action send_goal` 后遗漏续约/上下文。
+
+成功记录为 [scene96](../evidence/mainline_20260929/PLACE_ACCEPTANCE.md)，原始[acceptance.json](../../runs/mainline_20260928/workstation_alignment/full_transfer_runner/front_transfer_scene96_transfer_budget_place_3cm_world44_20260928/acceptance.json)及同目录 runtime manifests 保存实际安装身份；[专用运行器](../../runs/mainline_20260928/workstation_alignment/full_transfer_runner/run_full_transfer.py)是本机复现入口，非通用安装命令。必须重核其固定路径、hash、case/domain、模型与现场；旧 run_candidate.bash 指向 scene68，不是 scene96 重放命令。本机 runs 不在普通 Git/真机发布包中。
+
+scene96 为临时 3 cm / 0.1°、指定工位、3.5 倍轨迹时间缩放；严格 2 mm 和接触/力控不在通过范围。FoundationPose、GraspNet 模型闭环、插装和 VLA 不因此获得放行。
+
+## 8. 正常关停与验收产物
+
+先在目标所有者取消导航/路线/搬运，等待终态并用新鲜 `/slam/pose` 确认停稳，再在所属主管前台 Ctrl+C。后台接管需核对 PID 启动身份和子树，不能凭旧 session.json PID 或 latest_sim 发信号。不用全局 pkill、clean_sim_stack.sh 或删 DDS 共享内存。
+
+停稳监测对 Δx/Δy/最短角 Δyaw 有符号累计，检查窗口净偏差；反向抖动抵消，不累加绝对路程。缺样本不算静止；不得在非导航 PICK/PLACE 重新加入位移取消门禁。各模块窗口阈值按源码分别使用，不把一个模块阈值推广为全系统标准。
+
+保留 session.log、session.json、实际 overlay/参数/hash、Action 结果、SLAM 源/时间、payload/资源事件、封口 bag 和视频。latest_sim 只定位最近目录，不证明当前会话。进程退出、资源释放、停稳、任务成功分别记录。
+
+| 现象 | 先查什么 |
 |---|---|
-| 已有栈/锁冲突 | 确认主管及日志归属，正常关闭旧会话；不直接删锁文件绕过 |
-| 所有话题都不可见 | 从运行进程反读域、localhost、RMW/DDS 环境，再检查实际订阅 |
-| Gazebo 有界面但时钟不走 | 先查 transport `/stats`、暂停状态与插件加载；不先调整 ROS 参数 |
-| 节点存在但 Nav2 不可用 | 看七个 lifecycle 状态和主管 readiness 报告 |
-| 发布者存在但没有扫描 | 检查 QoS、自滤所需连杆 TF、源时间与扫描实际拍率 |
-| 原点反复 HOLD、恢复确认不完成 | 分别查时钟停滞、ROS/墙钟年龄、租约、扫描与策略状态 |
-| 门口停止 | 区分原路径风险、转向扫掠、未知/越界、过期输入与通道接管；保存拒绝障碍/净空，不先减膨胀 |
-| 到点失败 | 查看实际精度档、位姿源、停稳漂移、`PATH_TRACKING` 原因；不只看 RViz 中心点 |
-| 源码改了效果没变 | 核对安装路径、启动日志参数和库哈希；先停止旧实例再加载新版本 |
-
-详细操作约束见仓库 [ros2-stack-ops](../../.agents/skills/ros2-stack-ops/SKILL.md)，日志字段见[统一日志](../LOGGING.md)。
+| 启动立刻退出 | off+上肢限速冲突、static_map 缺实测初值、fixed_v2 不是 p4/p5 |
+| 图可见但不收数据 | 真实 DDS 环境、QoS、推进中的 clock、TF 和采集时间 |
+| fixed_v2 不放行 | 库存来源、ledger/geometry、正式 ArmHold、五方 ACK、版本与期限 |
+| 工位失败 | 原因是否允许交接、分层图源/坐标、实际包络与停稳，不先改目标或缩小几何 |
+| 新代码无效果 | 实际 package prefix、库/hash/overlay，不覆盖运行中的安装 |
+| bag/录像不完整 | writer 返回码、metadata、终态覆盖；不将部分采集记为验收通过 |

@@ -36,16 +36,16 @@ def _start(context):
     os.environ['ASTRIBOT_LOG_CAPTURE'] = '1'
     configure_launch_logging()
     command = [sys.executable, '-u', str(supervisor)]
-    for name in ('instance','ros_domain_id','spawn_x','spawn_y','spawn_yaw','launch_slam','initial_chassis_pose','mode', 'map', 'map_yaml', 'navigation_policy', 'navigation_geometry_mode', 'corridor_file', 'social_scenario', 'tracker',
+    for name in ('instance','ros_domain_id','spawn_x','spawn_y','spawn_yaw','launch_slam','initial_chassis_pose','mode', 'map', 'save_session', 'match_threshold', 'map_yaml', 'navigation_policy', 'navigation_geometry_mode', 'payload_source_id', 'corridor_file', 'social_scenario', 'social_policy', 'tracker',
                  'max_linear_speed', 'real_time_factor', 'scan_source', 'nav_transport', 'nav_attempts',
                  'ready_timeout', 'log_dir', 'log_level', 'log_max_bytes', 'log_backup_count', 'runtime_manifest',
                  'use_lidar', 'use_camera', 'use_wrist_cameras', 'use_stereo_cameras',
                  'camera_preset', 'camera_profile', 'torso_camera_profile', 'camera_calibration_dir', 'camera_mounts_profile',
-                 'use_camera_postprocess', 'use_camera_pointcloud', 'enable_depth_obstacles'):
+                 'use_camera_postprocess', 'use_camera_pointcloud', 'enable_depth_obstacles', 'obstacle_layer_plugin'):
         value = LaunchConfiguration(name).perform(context)
         if value:
             command += ['--' + name.replace('_', '-'), value]
-    for name in ('headless', 'no_rviz', 'dry_run'):
+    for name in ('headless', 'no_rviz', 'exclusive_performance', 'dry_run'):
         value = LaunchConfiguration(name).perform(context).lower()
         if value not in ('true', 'false'):
             raise ValueError(f'{name} must be true or false')
@@ -68,11 +68,15 @@ def generate_launch_description():
         'repo_dir': (_repository(), 'Repository root containing tools/; required for this workspace launcher'),
         'mode': ('mapping', 'mapping / explore / localize / baseline'),
         'map': ('', 'Serialized SLAM map base path'),
+        'save_session': ('', 'New Voxel session directory to save'),
+        'match_threshold': ('0.3', 'Voxel localization match threshold in (0,1)'),
         'map_yaml': ('', 'Optional occupancy map YAML'),
         'navigation_policy': ('off', 'Existing policy stage: off / p2 / p3 / p4 / p5'),
         'navigation_geometry_mode': ('legacy', 'legacy / fixed_v2'),
+        'payload_source_id': ('', 'Explicit physical inventory source for isolated fixed_v2'),
         'corridor_file': ('', 'P4 map-frame corridor annotation JSON'),
         'social_scenario': ('', 'Optional H1 HuNav YAML; baseline simulation only'),
+        'social_policy': ('off', 'off / h2; H2 requires a social scenario and P2'),
         'tracker': ('mppi', 'mppi / rpp'),
         'max_linear_speed': ('0.35', 'Existing simulation speed limit; unchanged'),
         'real_time_factor': ('1.0', 'Gazebo simulation/wall time ratio in (0,1]'),
@@ -88,9 +92,11 @@ def generate_launch_description():
         'use_camera_postprocess': ('', 'Override preset calibration postprocess switch'),
         'use_camera_pointcloud': ('', 'Override preset pointcloud projection switch'),
         'enable_depth_obstacles': ('', 'Override preset depth obstacle processing switch'),
+        'obstacle_layer_plugin': ('nav2_costmap_2d::ObstacleLayer', 'Costmap obstacle layer plugin'),
         'scan_source': ('slice_scan', 'slice_scan / laserscan'),
         'headless': ('false', 'Disable Gazebo GUI'),
         'no_rviz': ('false', 'Disable RViz'),
+        'exclusive_performance': ('false', 'Require exclusive Gazebo performance ownership'),
         'nav_transport': ('udp', 'udp / default'),
         'nav_attempts': ('2', 'Maximum navigation startup attempts'),
         'ready_timeout': ('120', 'Readiness timeout in seconds'),

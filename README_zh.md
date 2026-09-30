@@ -16,11 +16,11 @@
 
 &nbsp;
 
-当前架构、仿真和真机操作统一入口见 [架构与运行手册（2026-09-17）](docs/manuals/README.md)，包含有效配置、操作命令及未验收能力边界。
+当前架构、仿真和真机操作统一入口见 [架构与运行手册（2026-09-29）](docs/manuals/README.md)，包含有效配置、操作命令及未验收能力边界。
 
 仿真导航的分阶段启动、事件重规划和持续跑机历史说明见 [路径跟踪运行说明](docs/PATH_TRACKING_ENDURANCE.md)。
 
-`10.249.22.137` 真机的部署目录、环境、启动、停车及回退见 [机器人操作手册](docs/ROBOT_DEPLOYMENT_20260915.md)。
+`10.249.22.137` 真机的部署目录、环境、启动、停车及回退见 [真机操作手册](docs/manuals/HARDWARE_OPERATIONS.md)。
 
 运行日志统一使用 **spdlog**。首次运行 SDK 前需构建 `astribot_logging`，
 配置、日志目录与轮转范围见 [统一日志说明](docs/LOGGING.md)。
